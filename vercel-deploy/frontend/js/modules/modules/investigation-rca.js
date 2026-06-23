@@ -613,60 +613,332 @@ const InvestigationRCA = {
         }
     },
 
-    buildPrintSection(rca) {
-        if (!rca || !rca.method) {
-            return '';
-        }
+    PRINT_THEMES: {
+        'five-whys': { accent: '#1d4ed8', light: '#eff6ff', border: '#93c5fd', badge: '#1e40af' },
+        icam: { accent: '#c2410c', light: '#fff7ed', border: '#fdba74', badge: '#9a3412' },
+        fishbone: { accent: '#0f766e', light: '#f0fdfa', border: '#5eead4', badge: '#115e59' },
+        'iso-barrier': { accent: '#4338ca', light: '#eef2ff', border: '#a5b4fc', badge: '#3730a3' }
+    },
 
-        const esc = (v) => this._esc(v);
-        const methodLabel = rca.methodLabel || (this.METHODS[rca.method]?.label) || rca.method;
-        const sd = rca.stepsData || {};
+    getPrintStyles() {
+        return `
+            .rca-print-section { border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; border: 2px solid; page-break-inside: avoid; }
+            .rca-print-section h3 { font-size: 18px; font-weight: 700; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 3px solid; }
+            .rca-print-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+            .rca-print-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #fff; }
+            .rca-print-badge-outline { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; border: 1px solid; background: #fff; }
+            .rca-root-box { padding: 16px 18px; border-radius: 10px; border: 2px solid #10b981; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); margin-bottom: 18px; }
+            .rca-root-box .rca-root-title { font-weight: 800; color: #047857; margin-bottom: 8px; font-size: 14px; }
+            .rca-root-box .rca-root-text { white-space: pre-wrap; line-height: 1.75; font-size: 13px; color: #064e3b; }
+            .rca-block { background: #fff; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; border: 1px solid #e5e7eb; }
+            .rca-block-title { font-weight: 700; font-size: 13px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+            .rca-block-num { width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #fff; flex-shrink: 0; }
+            .rca-text-panel { white-space: pre-wrap; line-height: 1.7; font-size: 13px; color: #374151; padding: 10px 12px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; }
+            .rca-list-print { margin: 0; padding: 0 18px 0 0; list-style: disc; }
+            .rca-list-print li { margin-bottom: 6px; line-height: 1.6; font-size: 13px; }
+            .rca-why-chain { display: flex; flex-direction: column; align-items: stretch; gap: 0; }
+            .rca-why-node { position: relative; padding: 12px 14px; border-radius: 10px; border: 2px solid; background: #fff; margin-bottom: 4px; }
+            .rca-why-node .rca-why-label { font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.03em; }
+            .rca-why-node .rca-why-text { font-size: 13px; line-height: 1.65; white-space: pre-wrap; }
+            .rca-why-arrow { text-align: center; color: #9ca3af; font-size: 18px; line-height: 1; margin: 2px 0 6px; }
+            .rca-why-node.rca-why-root { border-width: 3px; background: linear-gradient(135deg, #ecfdf5, #d1fae5); }
+            .rca-peeso-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+            .rca-peeso-col { border-radius: 10px; overflow: hidden; border: 1px solid #e5e7eb; background: #fff; }
+            .rca-peeso-head { padding: 8px 10px; font-size: 11px; font-weight: 800; color: #fff; text-align: center; }
+            .rca-peeso-body { padding: 10px; min-height: 60px; font-size: 12px; }
+            .rca-peeso-body ul { margin: 0; padding: 0 14px 0 0; }
+            .rca-peeso-body li { margin-bottom: 4px; line-height: 1.5; }
+            .rca-fishbone-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+            .rca-fishbone-branch { border-radius: 10px; padding: 12px; border: 2px solid; background: #fff; }
+            .rca-fishbone-branch-title { font-weight: 800; font-size: 12px; margin-bottom: 8px; }
+            .rca-fishbone-problem { grid-column: 1 / -1; text-align: center; padding: 16px; border-radius: 12px; border: 3px solid; font-weight: 800; font-size: 14px; background: #fff; }
+            .rca-flow { display: flex; flex-direction: column; gap: 0; }
+            .rca-flow-step { display: flex; align-items: flex-start; gap: 12px; }
+            .rca-flow-icon { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; color: #fff; flex-shrink: 0; }
+            .rca-flow-body { flex: 1; padding-bottom: 16px; border-right: 3px solid #e5e7eb; padding-right: 16px; margin-right: 17px; }
+            .rca-flow-step:last-child .rca-flow-body { border-right: none; padding-bottom: 0; }
+            .rca-flow-step-title { font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+            .rca-barrier-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+            .rca-barrier-tag { padding: 8px 12px; border-radius: 8px; font-size: 12px; border: 1px dashed; background: #fff; line-height: 1.5; }
+            .rca-kv-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 8px; }
+            .rca-kv { padding: 8px 12px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 12px; }
+            .rca-kv strong { display: block; font-size: 11px; color: #6b7280; margin-bottom: 4px; }
+            @media print {
+                .rca-print-section { box-shadow: none !important; }
+                .rca-peeso-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            }
+        `;
+    },
 
-        let stepsHtml = '';
-        const method = this.METHODS[rca.method];
-        if (method) {
-            method.steps.forEach(step => {
-                const data = sd[step.id];
-                if (!data) return;
-                let fieldsContent = '';
-                (step.fields || []).forEach(field => {
-                    const val = data[field.id];
-                    if (field.type === 'list' && Array.isArray(val) && val.length) {
-                        fieldsContent += `<div style="margin-bottom:8px;"><strong>${esc(field.label)}:</strong><ul style="margin:4px 20px 0 0;padding:0;">${val.map(v => `<li>${esc(v)}</li>`).join('')}</ul></div>`;
-                    } else if (val && field.type !== 'list') {
-                        fieldsContent += `<div style="margin-bottom:8px;"><strong>${esc(field.label)}:</strong> ${esc(val)}</div>`;
-                    }
-                });
-                if (fieldsContent) {
-                    stepsHtml += `
-                        <div style="margin-bottom:14px;padding:12px;background:#fff;border-radius:8px;border:1px solid #ddd6fe;">
-                            <div style="font-weight:700;color:#5b21b6;margin-bottom:8px;">${esc(step.title)}</div>
-                            ${fieldsContent}
-                        </div>
-                    `;
-                }
-            });
-        }
+    _printRootCauseBox(summary, category, esc) {
+        if (!summary) return '';
+        return `
+            <div class="rca-root-box">
+                <div class="rca-root-title">&#9670; السبب الجذري المؤكد${category ? ` — ${esc(category)}` : ''}</div>
+                <div class="rca-root-text">${esc(summary)}</div>
+            </div>
+        `;
+    },
 
-        const summary = rca.rootCauseSummary || this.buildRootCauseSummary(rca);
-        const category = rca.rootCauseCategory || '';
+    _printSectionHeader(methodLabel, reference, rca, theme, esc) {
+        const status = rca.status === 'complete' ? 'مكتمل' : 'قيد التنفيذ';
+        const statusBg = rca.status === 'complete' ? '#059669' : '#d97706';
+        return `
+            <h3 style="color:${theme.accent};border-color:${theme.accent};">
+                5.5) تحليل السبب الجذري — ${esc(methodLabel)}
+            </h3>
+            <div class="rca-print-meta">
+                <span class="rca-print-badge" style="background:${theme.badge};">${esc(methodLabel)}</span>
+                <span class="rca-print-badge-outline" style="border-color:${theme.border};color:${theme.accent};">${esc(reference)}</span>
+                <span class="rca-print-badge" style="background:${statusBg};">${esc(status)}</span>
+            </div>
+        `;
+    },
+
+    _printWhyChain(nodes, theme, esc, rootSummary) {
+        const items = nodes.filter(n => n.text);
+        if (!items.length && !rootSummary) return '';
+
+        let html = '<div class="rca-why-chain">';
+        items.forEach((node, i) => {
+            if (i > 0) html += '<div class="rca-why-arrow">&#8595;</div>';
+            const isLast = i === items.length - 1 && !rootSummary;
+            html += `
+                <div class="rca-why-node${isLast ? ' rca-why-root' : ''}" style="border-color:${isLast ? '#10b981' : theme.border};">
+                    <div class="rca-why-label" style="color:${theme.accent};">${esc(node.label)}</div>
+                    <div class="rca-why-text">${esc(node.text)}</div>
+                </div>
+            `;
+        });
+        if (rootSummary && items.length) html += '<div class="rca-why-arrow">&#8595;</div>';
+        html += '</div>';
+        return html;
+    },
+
+    _buildPrintFiveWhys(sd, rca, esc, theme) {
+        const problem = sd.problem?.problem || '';
+        const whys = [
+            { label: 'المشكلة / الحادث', text: problem },
+            { label: 'لماذا 1 — السبب المباشر', text: sd.why1?.why1 },
+            { label: 'لماذا 2', text: sd.why2?.why2 },
+            { label: 'لماذا 3', text: sd.why3?.why3 },
+            { label: 'لماذا 4', text: sd.why4?.why4 },
+            { label: 'لماذا 5', text: sd.why5?.why5 }
+        ].filter(w => w.text);
+
+        const summary = rca.rootCauseSummary || sd.rootCause?.rootCauseSummary || this.buildRootCauseSummary(rca);
+        const category = rca.rootCauseCategory || sd.rootCause?.rootCauseCategory || '';
 
         return `
-            <div class="inv-print-section inv-s-rca" style="background:linear-gradient(135deg,#f5f3ff 0%,#ede9fe 100%);border-color:#7c3aed;border-radius:12px;padding:20px 24px;margin-bottom:20px;border:2px solid #7c3aed;">
-                <h3 style="font-size:18px;font-weight:700;margin:0 0 16px;padding-bottom:10px;border-bottom:3px solid #7c3aed;color:#5b21b6;">
-                    5.5) تحليل السبب الجذري — ${esc(methodLabel)}
-                </h3>
-                <div style="margin-bottom:12px;font-size:0.9rem;color:#6b7280;">
-                    الحالة: ${rca.status === 'complete' ? 'مكتمل' : 'قيد التنفيذ'}
-                    ${category ? ` | التصنيف: ${esc(category)}` : ''}
+            <div class="rca-block">
+                <div class="rca-block-title">
+                    <span class="rca-block-num" style="background:${theme.accent};">&#8635;</span>
+                    سلسلة التحليل — 5 Whys
                 </div>
-                ${summary ? `
-                    <div style="margin-bottom:16px;padding:14px;background:#ecfdf5;border:2px solid #10b981;border-radius:8px;">
-                        <div style="font-weight:700;color:#047857;margin-bottom:6px;">السبب الجذري</div>
-                        <div>${esc(summary)}</div>
-                    </div>
-                ` : ''}
-                ${stepsHtml}
+                ${this._printWhyChain(whys, theme, esc)}
+            </div>
+            ${this._printRootCauseBox(summary, category, esc)}
+        `;
+    },
+
+    _buildPrintIcam(sd, rca, esc, theme) {
+        const peesoCols = [
+            { key: 'people', label: 'أشخاص', color: '#2563eb' },
+            { key: 'equipment', label: 'معدات', color: '#7c3aed' },
+            { key: 'environment', label: 'بيئة', color: '#059669' },
+            { key: 'structure', label: 'هيكل', color: '#d97706' },
+            { key: 'organization', label: 'منظمة', color: '#dc2626' }
+        ];
+
+        const peesoHtml = peesoCols.map(col => {
+            const items = sd.contributing?.[col.key];
+            const list = Array.isArray(items) && items.length
+                ? `<ul>${items.map(v => `<li>${esc(v)}</li>`).join('')}</ul>`
+                : '<span style="color:#9ca3af;font-size:11px;">—</span>';
+            return `
+                <div class="rca-peeso-col">
+                    <div class="rca-peeso-head" style="background:${col.color};">${esc(col.label)}</div>
+                    <div class="rca-peeso-body">${list}</div>
+                </div>
+            `;
+        }).join('');
+
+        const barriers = sd.barriers?.failedBarriers || rca.failedBarriers || [];
+        const barriersHtml = barriers.length
+            ? `<div class="rca-barrier-tags">${barriers.map(b =>
+                `<span class="rca-barrier-tag" style="border-color:${theme.border};color:${theme.accent};">&#9888; ${esc(b)}</span>`
+            ).join('')}</div>`
+            : '<span style="color:#9ca3af;">—</span>';
+
+        const rootList = sd.rootCauses?.rootCausesList || [];
+        const summary = rca.rootCauseSummary || sd.rootCauses?.rootCauseSummary || this.buildRootCauseSummary(rca);
+        const category = rca.rootCauseCategory || sd.rootCauses?.rootCauseCategory || '';
+
+        return `
+            ${sd.timeline?.timeline ? `
+            <div class="rca-block">
+                <div class="rca-block-title"><span class="rca-block-num" style="background:${theme.accent};">1</span>الخط الزمني للأحداث</div>
+                <div class="rca-text-panel">${esc(sd.timeline.timeline)}</div>
+            </div>` : ''}
+            <div class="rca-block">
+                <div class="rca-block-title"><span class="rca-block-num" style="background:${theme.accent};">2</span>الحواجز الفاشلة / الغائبة</div>
+                ${barriersHtml}
+            </div>
+            <div class="rca-block">
+                <div class="rca-block-title"><span class="rca-block-num" style="background:${theme.accent};">3</span>العوامل المساهمة — PEESO</div>
+                <div class="rca-peeso-grid">${peesoHtml}</div>
+            </div>
+            ${rootList.length ? `
+            <div class="rca-block">
+                <div class="rca-block-title"><span class="rca-block-num" style="background:${theme.accent};">4</span>قائمة الأسباب الجذرية</div>
+                <ul class="rca-list-print">${rootList.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
+            </div>` : ''}
+            ${this._printRootCauseBox(summary, category, esc)}
+        `;
+    },
+
+    _buildPrintFishbone(sd, rca, esc, theme) {
+        const branches = [
+            { key: 'man', label: 'Man — الإنسان', color: '#2563eb' },
+            { key: 'machine', label: 'Machine — الآلات', color: '#7c3aed' },
+            { key: 'method', label: 'Method — الطريقة', color: '#0891b2' },
+            { key: 'material', label: 'Material — المواد', color: '#d97706' },
+            { key: 'measurement', label: 'Measurement — القياس', color: '#db2777' },
+            { key: 'environment', label: 'Environment — البيئة', color: '#059669' }
+        ];
+
+        const problem = sd.problem?.problem || '';
+        const sixM = sd.sixM || {};
+
+        const branchHtml = branches.map(b => {
+            const items = sixM[b.key];
+            const list = Array.isArray(items) && items.length
+                ? `<ul class="rca-list-print" style="padding-right:14px;">${items.map(v => `<li>${esc(v)}</li>`).join('')}</ul>`
+                : '<span style="color:#9ca3af;font-size:11px;">لا توجد أسباب</span>';
+            return `
+                <div class="rca-fishbone-branch" style="border-color:${b.color};">
+                    <div class="rca-fishbone-branch-title" style="color:${b.color};">${esc(b.label)}</div>
+                    ${list}
+                </div>
+            `;
+        }).join('');
+
+        const whys = [
+            { label: 'لماذا 1', text: sd.whys?.why1 },
+            { label: 'لماذا 2', text: sd.whys?.why2 },
+            { label: 'لماذا 3', text: sd.whys?.why3 }
+        ];
+
+        const summary = rca.rootCauseSummary || sd.rootCause?.rootCauseSummary || this.buildRootCauseSummary(rca);
+        const category = rca.rootCauseCategory || sd.rootCause?.rootCauseCategory || '';
+
+        return `
+            ${problem ? `
+            <div class="rca-fishbone-problem" style="border-color:${theme.accent};color:${theme.accent};margin-bottom:14px;">
+                &#9670; المشكلة: ${esc(problem)}
+            </div>` : ''}
+            <div class="rca-fishbone-wrap">${branchHtml}</div>
+            ${sd.primaryCause?.primaryCause ? `
+            <div class="rca-block" style="border:2px solid ${theme.accent};">
+                <div class="rca-block-title"><span class="rca-block-num" style="background:${theme.accent};">&#9733;</span>السبب الرئيسي المختار</div>
+                <div class="rca-text-panel">${esc(sd.primaryCause.primaryCause)}</div>
+            </div>` : ''}
+            <div class="rca-block">
+                <div class="rca-block-title"><span class="rca-block-num" style="background:${theme.accent};">5W</span>تحليل 5 Whys على السبب الرئيسي</div>
+                ${this._printWhyChain(whys, theme, esc)}
+            </div>
+            ${this._printRootCauseBox(summary, category, esc)}
+        `;
+    },
+
+    _buildPrintIsoBarrier(sd, rca, esc, theme) {
+        const steps = [
+            {
+                num: '1', title: 'الوقائع الموضوعية', body: sd.facts?.facts
+                    ? `<div class="rca-text-panel">${esc(sd.facts.facts)}</div>` : ''
+            },
+            {
+                num: '2', title: 'السبب المباشر', body: sd.immediate?.immediateCause ? `
+                    <div class="rca-text-panel">${esc(sd.immediate.immediateCause)}</div>
+                    <div class="rca-kv-row">
+                        <div class="rca-kv"><strong>سلوك غير آمن</strong>${esc(sd.immediate.unsafeAct || '—')}</div>
+                        <div class="rca-kv"><strong>وضع غير آمن</strong>${esc(sd.immediate.unsafeCondition || '—')}</div>
+                    </div>` : ''
+            },
+            {
+                num: '3', title: 'الحواجز الفاشلة / الغائبة',
+                body: (sd.barriers?.failedBarriers || []).length
+                    ? `<div class="rca-barrier-tags">${sd.barriers.failedBarriers.map(b =>
+                        `<span class="rca-barrier-tag" style="border-color:${theme.border};color:${theme.accent};">&#9888; ${esc(b)}</span>`
+                    ).join('')}</div>` : ''
+            },
+            {
+                num: '4', title: 'العوامل المساهمة',
+                body: (sd.contributing?.contributingFactors || []).length
+                    ? `<ul class="rca-list-print">${sd.contributing.contributingFactors.map(f => `<li>${esc(f)}</li>`).join('')}</ul>` : ''
+            },
+            {
+                num: '5', title: '5 Whys — التعمق',
+                body: this._printWhyChain([
+                    { label: 'لماذا 1', text: sd.whys?.why1 },
+                    { label: 'لماذا 2', text: sd.whys?.why2 },
+                    { label: 'لماذا 3', text: sd.whys?.why3 }
+                ], theme, esc)
+            },
+            {
+                num: '6', title: 'فجوة نظام الإدارة (ISO 45001)',
+                body: sd.managementGap?.managementGap
+                    ? `<div class="rca-kv" style="margin-top:0;border:2px solid ${theme.accent};background:${theme.light};"><strong>نوع الفجوة</strong>${esc(sd.managementGap.managementGap)}</div>` : ''
+            }
+        ].filter(s => s.body);
+
+        const flowHtml = steps.map(s => `
+            <div class="rca-flow-step">
+                <div class="rca-flow-icon" style="background:${theme.accent};">${s.num}</div>
+                <div class="rca-flow-body">
+                    <div class="rca-flow-step-title" style="color:${theme.accent};">${esc(s.title)}</div>
+                    ${s.body}
+                </div>
+            </div>
+        `).join('');
+
+        const summary = rca.rootCauseSummary || sd.managementGap?.rootCauseSummary || this.buildRootCauseSummary(rca);
+        const category = rca.rootCauseCategory || sd.managementGap?.rootCauseCategory || '';
+
+        return `
+            <div class="rca-block">
+                <div class="rca-block-title"><span class="rca-block-num" style="background:${theme.accent};">ISO</span>مسار التحليل — ISO 45001 + الحواجز</div>
+                <div class="rca-flow">${flowHtml}</div>
+            </div>
+            ${this._printRootCauseBox(summary, category, esc)}
+        `;
+    },
+
+    buildPrintSection(rca) {
+        if (!rca || !rca.method) return '';
+
+        const esc = (v) => this._esc(v);
+        const method = this.METHODS[rca.method];
+        if (!method) return '';
+
+        const methodLabel = rca.methodLabel || method.label;
+        const reference = method.reference || '';
+        const theme = this.PRINT_THEMES[rca.method] || this.PRINT_THEMES['five-whys'];
+        const sd = rca.stepsData || {};
+
+        const builders = {
+            'five-whys': () => this._buildPrintFiveWhys(sd, rca, esc, theme),
+            icam: () => this._buildPrintIcam(sd, rca, esc, theme),
+            fishbone: () => this._buildPrintFishbone(sd, rca, esc, theme),
+            'iso-barrier': () => this._buildPrintIsoBarrier(sd, rca, esc, theme)
+        };
+
+        const bodyHtml = (builders[rca.method] || builders['five-whys'])();
+
+        return `
+            <div class="inv-print-section rca-print-section inv-s-rca" style="background:linear-gradient(135deg,${theme.light} 0%,#fff 100%);border-color:${theme.accent};">
+                ${this._printSectionHeader(methodLabel, reference, rca, theme, esc)}
+                ${bodyHtml}
             </div>
         `;
     }

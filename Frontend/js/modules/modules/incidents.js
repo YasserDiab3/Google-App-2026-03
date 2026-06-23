@@ -11250,6 +11250,9 @@ const Incidents = {
                 .inv-s6 h3 { color: #2E7D32; border-color: #4CAF50; }
                 .inv-s7 { background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%); border-color: #FFC107; }
                 .inv-s7 h3 { color: #F57F17; border-color: #FFC107; }
+                .inv-s-rca { background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border-color: #7c3aed; }
+                .inv-s-rca h3 { color: #5b21b6; border-color: #7c3aed; }
+                ${typeof InvestigationRCA !== 'undefined' && InvestigationRCA.getPrintStyles ? InvestigationRCA.getPrintStyles() : ''}
                 .inv-field-grid {
                     display: grid;
                     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -11478,14 +11481,9 @@ const Incidents = {
                 </div>
         `);
 
-        const sectionRca = (typeof InvestigationRCA !== 'undefined' && investigationData.rca)
+        const sectionRca = (typeof InvestigationRCA !== 'undefined' && investigationData.rca?.method)
             ? InvestigationRCA.buildPrintSection(investigationData.rca)
-            : (investigationData.rca?.rootCauseSummary ? `
-                <div class="inv-print-section" style="background:#f5f3ff;border:2px solid #7c3aed;border-radius:12px;padding:20px;margin-bottom:20px;">
-                    <h3 style="color:#5b21b6;">5.5) تحليل السبب الجذري</h3>
-                    <div>${esc(investigationData.rca.rootCauseSummary)}</div>
-                </div>
-            ` : '');
+            : '';
 
         const actionPlan = Array.isArray(investigationData.actionPlan) ? investigationData.actionPlan : [];
         const actionRowsCount = Math.max(3, actionPlan.length);
