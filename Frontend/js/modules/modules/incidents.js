@@ -1020,6 +1020,8 @@ const Incidents = {
                 this.registryData = [];
             }
 
+            this.normalizeAllIncidentsApprovalState();
+
             // مزامنة السجل مع الحوادث الموجودة فوراً - تحسين المزامنة
             // استخدام requestAnimationFrame لتسريع البدء
             requestAnimationFrame(() => {
@@ -3745,6 +3747,7 @@ const Incidents = {
             const incidents = (AppState.appData?.incidents || []).map(incident => {
                 // نسخة للعرض دون تحوير AppState
                 const item = { ...incident };
+                this._normalizeIncidentApprovalRecord(item);
                 if (item.investigation && typeof item.investigation === 'string') {
                     try {
                         item.investigation = JSON.parse(item.investigation);
@@ -3757,9 +3760,8 @@ const Incidents = {
             });
 
             const pendingApprovals = incidents.filter(incident => {
-                if (incident.requiresApproval === true) return true;
-                if (incident.status === 'في انتظار الموافقة') return true;
-                return false;
+                const state = this.getIncidentApprovalState(incident);
+                return state.awaitingApproval;
             });
 
             return `
@@ -3845,7 +3847,7 @@ const Incidents = {
                                                             <i class="fas fa-play"></i>
                                                         </button>
                                                     `}
-                                                    ${incident.requiresApproval && this.canApproveIncident() ? `
+                                                    ${this.getIncidentApprovalState(incident).awaitingApproval && this.canApproveIncident() ? `
                                                         <button 
                                                             onclick="Incidents.showIncidentApprovalFlow('${incident.id}')" 
                                                             class="btn-icon btn-icon-warning" 
@@ -6161,6 +6163,7 @@ const Incidents = {
         if (!container) return;
 
         const incidents = (AppState.appData.incidents || []).filter((item) => item && typeof item === 'object');
+        incidents.forEach((inc) => this._normalizeIncidentApprovalRecord(inc));
         const signature = incidents.map((item) => `${item?.id || 'NA'}-${item?.updatedAt || item?.createdAt || 'NA'}`).join('|');
         if (this.lastRenderedSignature === signature && container.dataset.renderSignature === signature) {
             this.refreshAnalytics();
@@ -6315,43 +6318,144 @@ const Incidents = {
     },
 
     renderWorkflowStatusBadge(incident) {
-        // التحقق من وجود Workflow في البيانات
-        if (!AppState.appData.workflows) {
-            return '<span class="badge badge-secondary">مسودة</span>';
+        const state = this.getIncidentApprovalState(incident);
+        const titleParts = [];
+        if (state.approverName) titleParts.push(`اعتمد: ${state.approverName}`);
+        if (state.approvedAt) titleParts.push(Utils.formatDate(state.approvedAt));
+        const titleAttr = titleParts.length
+            ? ` title="${Utils.escapeHTML(titleParts.join(' — '))}"`
+            : '';
+        return `<span class="badge badge-${state.badgeClass}"${titleAttr}>${Utils.escapeHTML(state.label)}</span>`;
+    },
+
+    _coerceIncidentBoolean(value) {
+        if (value === true || value === 1) return true;
+        if (value === false || value === 0 || value == null || value === '') return false;
+        const normalized = String(value).trim().toLowerCase();
+        return normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'نعم';
+    },
+
+    _resolveIncidentApproverInfo(approvedBy) {
+        if (!approvedBy) return { name: '', raw: '' };
+        if (typeof approvedBy === 'object') {
+            const name = String(approvedBy.name || approvedBy.displayName || approvedBy.fullName || '').trim();
+            const email = String(approvedBy.email || '').trim();
+            return { name: name || email, raw: name || email };
+        }
+        const raw = String(approvedBy).trim();
+        if (!raw) return { name: '', raw: '' };
+        const name = raw.includes(' - ') ? raw.split(' - ')[0].trim() : raw;
+        return { name, raw };
+    },
+
+    _normalizeIncidentApprovalRecord(incident) {
+        if (!incident || typeof incident !== 'object') return incident;
+
+        incident.requiresApproval = this._coerceIncidentBoolean(incident.requiresApproval);
+
+        ['approvedBy', 'rejectedBy', 'createdBy'].forEach((field) => {
+            const value = incident[field];
+            if (typeof value === 'string' && value.trim().startsWith('{')) {
+                try {
+                    incident[field] = JSON.parse(value);
+                } catch (_e) { /* keep string */ }
+            }
+        });
+
+        const hasApprovalStamp = !!(incident.approvedAt || this._resolveIncidentApproverInfo(incident.approvedBy).raw);
+        if (incident.requiresApproval && hasApprovalStamp && !incident.rejectionReason && !incident.rejectedAt) {
+            incident.requiresApproval = false;
         }
 
-        // البحث عن workflow مرتبط بهذا الحادث
-        const workflow = AppState.appData.workflows.find(w =>
-            w.module === 'incidents' && w.recordId === incident.id
+        return incident;
+    },
+
+    normalizeAllIncidentsApprovalState() {
+        (AppState.appData?.incidents || []).forEach((inc) => this._normalizeIncidentApprovalRecord(inc));
+    },
+
+    getIncidentApprovalState(incident) {
+        if (!incident) {
+            return {
+                key: 'unknown',
+                label: '—',
+                badgeClass: 'secondary',
+                awaitingApproval: false,
+                approved: false,
+                rejected: false,
+                approverName: '',
+                approvedAt: null
+            };
+        }
+
+        const normalized = { ...incident };
+        this._normalizeIncidentApprovalRecord(normalized);
+
+        const hasInvestigation = this.hasInvestigationData(normalized);
+        const approver = this._resolveIncidentApproverInfo(normalized.approvedBy);
+        const rejected = !!(normalized.rejectedAt || normalized.rejectionReason);
+        const awaitingApproval = normalized.requiresApproval === true
+            || normalized.status === 'في انتظار الموافقة';
+        const approved = !awaitingApproval && !rejected && (
+            !!(normalized.approvedAt || approver.raw)
+            || (normalized.status === 'مكتمل' && hasInvestigation)
         );
 
-        if (!workflow) {
-            return '<span class="badge badge-secondary">مسودة</span>';
-        }
-
-        const statusLabel = Workflow.getStatusLabel(workflow);
+        let key = 'draft';
+        let label = 'مسودة';
         let badgeClass = 'secondary';
-        switch (workflow.status) {
-            case Workflow.STATUSES.DRAFT:
-                badgeClass = 'secondary';
-                break;
-            case Workflow.STATUSES.IN_REVIEW:
-                badgeClass = 'info';
-                break;
-            case Workflow.STATUSES.AWAITING_APPROVAL:
-                badgeClass = 'warning';
-                break;
-            case Workflow.STATUSES.APPROVED:
-                badgeClass = 'success';
-                break;
-            case Workflow.STATUSES.REJECTED:
-                badgeClass = 'danger';
-                break;
-            default:
-                badgeClass = 'secondary';
+
+        if (rejected) {
+            key = 'rejected';
+            label = 'مرفوض';
+            badgeClass = 'danger';
+        } else if (approved) {
+            key = 'approved';
+            label = 'معتمد';
+            badgeClass = 'success';
+        } else if (awaitingApproval && hasInvestigation) {
+            key = 'pending';
+            label = 'بانتظار الاعتماد';
+            badgeClass = 'warning';
+        } else if (hasInvestigation) {
+            key = 'investigation_complete';
+            label = 'تحقيق مكتمل';
+            badgeClass = 'info';
+        } else if (normalized.investigation) {
+            key = 'in_progress';
+            label = 'قيد التحقيق';
+            badgeClass = 'info';
         }
 
-        return `<span class="badge badge-${badgeClass}">${Utils.escapeHTML(statusLabel)}</span>`;
+        return {
+            key,
+            label,
+            badgeClass,
+            awaitingApproval,
+            approved,
+            rejected,
+            approverName: approver.name,
+            approvedAt: normalized.approvedAt || null
+        };
+    },
+
+    _syncIncidentWorkflowOnApproval(incidentId, action) {
+        try {
+            if (!Array.isArray(AppState.appData?.workflows) || typeof Workflow === 'undefined') return;
+            const workflow = AppState.appData.workflows.find(w =>
+                w.module === 'incidents' && w.recordId === incidentId
+            );
+            if (!workflow) return;
+
+            if (action === 'approved') {
+                workflow.status = Workflow.STATUSES.APPROVED;
+            } else if (action === 'rejected') {
+                Workflow.reject(workflow, AppState.currentUser, { source: 'incidents' });
+            } else if (action === 'pending') {
+                workflow.status = Workflow.STATUSES.AWAITING_APPROVAL;
+            }
+            workflow.updatedAt = new Date().toISOString();
+        } catch (_e) { /* ignore */ }
     },
 
     setupEventListeners() {
@@ -8432,6 +8536,8 @@ const Incidents = {
         const incident = AppState.appData.incidents.find(i => i.id === id);
         if (!incident) return;
 
+        this._normalizeIncidentApprovalRecord(incident);
+
         // معالجة investigation - تحويل من JSON string إلى object إذا لزم الأمر
         if (incident.investigation && typeof incident.investigation === 'string') {
             try {
@@ -8441,6 +8547,8 @@ const Incidents = {
                 incident.investigation = {};
             }
         }
+
+        const approvalState = this.getIncidentApprovalState(incident);
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -8454,6 +8562,10 @@ const Incidents = {
                 </div>
                 <div class="modal-body">
                     ${this.renderApprovalFlowHtml(incident)}
+                    <div style="margin-bottom:16px;">
+                        <span class="text-sm font-semibold text-gray-600">حالة الاعتماد:</span>
+                        ${this.renderWorkflowStatusBadge(incident)}
+                    </div>
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
@@ -8553,7 +8665,7 @@ const Incidents = {
                     <button class="btn-secondary" onclick="Incidents.exportPDF('${incident.id}');">
                         <i class="fas fa-file-pdf ml-2"></i>تصدير تقرير الحادث
                     </button>
-                    ${incident.requiresApproval && this.hasInvestigationData(incident) && this.canApproveIncident() ? `
+                    ${approvalState.awaitingApproval && this.hasInvestigationData(incident) && this.canApproveIncident() ? `
                     <button class="btn-danger" onclick="Incidents.rejectIncident('${incident.id}'); this.closest('.modal-overlay').remove();">
                         <i class="fas fa-times ml-2"></i>رفض التحقيق
                     </button>
@@ -11531,7 +11643,10 @@ const Incidents = {
 
                 // تحديث حالة الحادث:
                 // - إذا كان مسئول السلامة: يحتاج موافقة مدير النظام
-                if (!isAdmin && isSafetyOfficer) {
+                const alreadyApproved = !!(incident.approvedAt || this._resolveIncidentApproverInfo(incident.approvedBy).raw)
+                    && !this._coerceIncidentBoolean(incident.requiresApproval);
+
+                if (!isAdmin && isSafetyOfficer && !alreadyApproved) {
                     incident.status = 'في انتظار الموافقة';
                     incident.requiresApproval = true;
                     incident.approvedBy = null;
@@ -12272,9 +12387,10 @@ const Incidents = {
     renderApprovalFlowHtml(incident) {
         const esc = (v) => Utils.escapeHTML(String(v ?? ''));
         const hasInvestigation = this.hasInvestigationData(incident);
-        const awaitingApproval = incident.requiresApproval === true;
-        const approved = !awaitingApproval && !!(incident.approvedAt || incident.approvedBy);
-        const rejected = !!(incident.rejectedAt || incident.rejectionReason);
+        const approvalState = this.getIncidentApprovalState(incident);
+        const awaitingApproval = approvalState.awaitingApproval;
+        const approved = approvalState.approved;
+        const rejected = approvalState.rejected;
 
         const stepState = (done, active, rejectedStep = false) => {
             if (rejectedStep) return { bg: '#FEE2E2', border: '#F87171', color: '#991B1B', icon: 'fa-times' };
@@ -12312,8 +12428,11 @@ const Incidents = {
         }).join('');
 
         const meta = [];
-        if (incident.approvedBy?.name) meta.push(`اعتمد: ${esc(incident.approvedBy.name)}${incident.approvedAt ? ' — ' + esc(Utils.formatDate(incident.approvedAt)) : ''}`);
-        if (incident.rejectedBy?.name) meta.push(`رفض: ${esc(incident.rejectedBy.name)}${incident.rejectionReason ? ' — ' + esc(incident.rejectionReason) : ''}`);
+        if (approvalState.approverName) {
+            meta.push(`اعتمد: ${esc(approvalState.approverName)}${approvalState.approvedAt ? ' — ' + esc(Utils.formatDate(approvalState.approvedAt)) : ''}`);
+        }
+        const rejectedBy = this._resolveIncidentApproverInfo(incident.rejectedBy);
+        if (rejectedBy.name) meta.push(`رفض: ${esc(rejectedBy.name)}${incident.rejectionReason ? ' — ' + esc(incident.rejectionReason) : ''}`);
 
         return `
             <div style="direction:rtl;margin-bottom:20px;padding:18px;border-radius:14px;background:linear-gradient(135deg,#f8fafc,#eff6ff);border:1px solid #bfdbfe;">
@@ -12334,8 +12453,11 @@ const Incidents = {
             return;
         }
 
+        this._normalizeIncidentApprovalRecord(incident);
+
         const canApprove = this.canApproveIncident();
-        const showActions = canApprove && incident.requiresApproval && this.hasInvestigationData(incident);
+        const approvalState = this.getIncidentApprovalState(incident);
+        const showActions = canApprove && approvalState.awaitingApproval && this.hasInvestigationData(incident);
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -12349,7 +12471,8 @@ const Incidents = {
                     ${this.renderApprovalFlowHtml(incident)}
                     <div style="font-size:13px;color:#64748b;line-height:1.7;">
                         <div><strong>الحالة:</strong> ${Utils.escapeHTML(incident.status || '—')}</div>
-                        <div><strong>بانتظار الاعتماد:</strong> ${incident.requiresApproval ? 'نعم' : 'لا'}</div>
+                        <div><strong>بانتظار الاعتماد:</strong> ${approvalState.awaitingApproval ? 'نعم' : 'لا'}</div>
+                        <div><strong>حالة الاعتماد:</strong> ${Utils.escapeHTML(approvalState.label)}</div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -12383,6 +12506,8 @@ const Incidents = {
                 return;
             }
 
+            this._normalizeIncidentApprovalRecord(incident);
+
             if (!this.canApproveIncident()) {
                 Notification.error('ليس لديك صلاحية للموافقة على الحوادث');
                 return;
@@ -12404,6 +12529,11 @@ const Incidents = {
             } : null;
             incident.approvedAt = new Date().toISOString();
             incident.updatedAt = new Date().toISOString();
+            incident.rejectedBy = null;
+            incident.rejectedAt = null;
+            incident.rejectionReason = null;
+
+            this._syncIncidentWorkflowOnApproval(incidentId, 'approved');
 
             // حفظ البيانات محلياً
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
@@ -12493,6 +12623,8 @@ const Incidents = {
                 return;
             }
 
+            this._normalizeIncidentApprovalRecord(incident);
+
             if (!this.canApproveIncident()) {
                 Notification.error('ليس لديك صلاحية لرفض الحوادث');
                 return;
@@ -12521,6 +12653,10 @@ const Incidents = {
             incident.rejectedAt = new Date().toISOString();
             incident.rejectionReason = reason.trim();
             incident.updatedAt = new Date().toISOString();
+            incident.approvedBy = null;
+            incident.approvedAt = null;
+
+            this._syncIncidentWorkflowOnApproval(incidentId, 'rejected');
 
             // حفظ البيانات محلياً
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
