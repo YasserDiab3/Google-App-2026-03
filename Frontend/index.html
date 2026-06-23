@@ -13082,6 +13082,7 @@
         <script src="js/modules/modules/users.js" defer></script>
         <!-- ✅ لوحة متابعة إصدارات المستخدمين (admin) — تستخدم google-integration الذي حُمّل أعلاه -->
         <script src="js/modules/modules/user-versions-admin.js" defer></script>
+        <script src="js/modules/modules/investigation-rca.js" defer></script>
         <script src="js/modules/modules/incidents.js?v=20260525-registry-dedupe" defer></script>
         <script src="js/modules/modules/nearmiss.js" defer></script>
         <script src="js/modules/modules/ptw.js?v=20260523-ptw-analytics-redesign" defer></script>
@@ -13209,7 +13210,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.273-20260623";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.274-20260623";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

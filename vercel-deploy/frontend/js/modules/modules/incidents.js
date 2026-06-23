@@ -8512,6 +8512,10 @@ const Incidents = {
                 .section-7 { background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%); border-color: #FFC107; }
                 .section-7 h3 { color: #F57F17; border-color: #FFC107; }
                 .section-7 h3 i { color: #F9A825; background: rgba(255, 193, 7, 0.1); }
+
+                .section-rca { background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border-color: #7c3aed; }
+                .section-rca h3 { color: #5b21b6; border-color: #7c3aed; }
+                .section-rca h3 i { color: #6d28d9; background: rgba(124, 58, 237, 0.1); }
             </style>
             <div class="modal-content" style="max-width: 1500px; width: 98%; max-height: 95vh; overflow-y: auto; padding: 0;">
                 <div class="modal-header modal-header-centered" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 20px 30px;">
@@ -8524,7 +8528,7 @@ const Incidents = {
                     </button>
                 </div>
                 <div class="modal-body" style="padding: 30px; max-height: calc(95vh - 180px); overflow-y: auto; background: #f5f7fa;">
-                    <form id="investigation-form">
+                    <form id="investigation-form" data-incident-id="${incidentId}">
                         <!-- 1) بيانات الحادث الأساسية -->
                         <div class="investigation-section section-1">
                             <h3>
@@ -8789,6 +8793,15 @@ const Incidents = {
                                     </p>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- 5.5) تحليل السبب الجذري -->
+                        <div class="investigation-section section-rca">
+                            <h3>
+                                <i class="fas fa-microscope"></i>
+                                <span>5.5) تحليل السبب الجذري (RCA)</span>
+                            </h3>
+                            <div id="investigation-rca-wizard" class="bg-white p-4 rounded-lg border-2" style="border-color:#c4b5fd;"></div>
                         </div>
 
                         <!-- 6) خطة العمل -->
@@ -10429,6 +10442,37 @@ const Incidents = {
 
         // Load factory and location options
         this.loadInvestigationFormOptions(modal);
+
+        // معالج تحليل السبب الجذري
+        this.initInvestigationRcaWizard(modal, canEdit);
+    },
+
+    initInvestigationRcaWizard(modal, canEdit = true) {
+        const container = modal.querySelector('#investigation-rca-wizard');
+        if (!container || typeof InvestigationRCA === 'undefined') {
+            if (container && typeof InvestigationRCA === 'undefined') {
+                container.innerHTML = '<p class="text-amber-600 text-sm p-4"><i class="fas fa-exclamation-triangle ml-2"></i>مكوّن تحليل السبب الجذري غير محمّل. يرجى إعادة تحميل الصفحة.</p>';
+            }
+            return;
+        }
+
+        const form = modal.querySelector('#investigation-form');
+        const incidentId = form?.dataset?.incidentId;
+        let savedRca = null;
+        if (incidentId && AppState?.appData?.incidents) {
+            const incident = AppState.appData.incidents.find(i => i.id === incidentId);
+            let inv = incident?.investigation;
+            if (inv && typeof inv === 'string') {
+                try { inv = JSON.parse(inv); } catch (_e) { inv = {}; }
+            }
+            savedRca = inv?.rca || null;
+        }
+
+        const descEl = modal.querySelector('#investigation-description');
+        const defaultDescription = descEl?.value || '';
+
+        InvestigationRCA.render(container, { savedRca, defaultDescription, canEdit });
+        InvestigationRCA.bindEvents(container, { canEdit });
     },
 
     async loadInvestigationFormOptions(modal) {
@@ -10674,6 +10718,26 @@ const Incidents = {
                     affectedAffiliationEl.value = incident.affiliation;
                 }
             }
+
+            // إعادة تهيئة معالج RCA بعد تحميل بيانات التحقيق
+            const rcaContainer = document.getElementById('investigation-rca-wizard');
+            if (rcaContainer && typeof InvestigationRCA !== 'undefined') {
+                let invForRca = investigation;
+                if (!invForRca && incident.investigation) {
+                    invForRca = typeof incident.investigation === 'string'
+                        ? (() => { try { return JSON.parse(incident.investigation); } catch (_e) { return {}; } })()
+                        : incident.investigation;
+                }
+                const descEl = document.querySelector('#investigation-description');
+                const submitBtn = document.getElementById('investigation-submit-btn');
+                const canEditRca = submitBtn ? !submitBtn.disabled : true;
+                InvestigationRCA.render(rcaContainer, {
+                    savedRca: invForRca?.rca || null,
+                    defaultDescription: descEl?.value || '',
+                    canEdit: canEditRca
+                });
+                InvestigationRCA.bindEvents(rcaContainer, { canEdit: canEditRca });
+            }
         }, 300);
     },
 
@@ -10788,6 +10852,15 @@ const Incidents = {
         if (document.getElementById('incident-type-injury-lost')?.checked) investigationData.incidentTypes.push('injury-lost');
         if (document.getElementById('incident-type-fatality')?.checked) investigationData.incidentTypes.push('fatality');
 
+        // جمع بيانات تحليل السبب الجذري
+        const rcaContainer = document.getElementById('investigation-rca-wizard');
+        if (rcaContainer && typeof InvestigationRCA !== 'undefined') {
+            const rcaData = InvestigationRCA.collect(rcaContainer);
+            if (rcaData && rcaData.method) {
+                investigationData.rca = rcaData;
+            }
+        }
+
         // Validation
         if (!investigationData.investigationDateTime || !investigationData.incidentDateTime ||
             !investigationData.factoryId || !investigationData.locationId || !investigationData.description) {
@@ -10813,6 +10886,14 @@ const Incidents = {
 
                 // دمج بيانات التحقيق الجديدة مع القديمة (إن وجدت)
                 incident.investigation = { ...(incident.investigation || {}), ...investigationData };
+
+                if (investigationData.rca?.rootCauseSummary) {
+                    incident.rootCause = investigationData.rca.rootCauseSummary;
+                }
+                if (!investigationData.riskExplanation && investigationData.rca?.rootCauseSummary) {
+                    incident.investigation.riskExplanation = investigationData.rca.rootCauseSummary;
+                }
+
                 incident.updatedAt = new Date().toISOString();
 
                 // التحقق من صلاحيات المستخدم
@@ -10881,6 +10962,7 @@ const Incidents = {
                     sublocationName: incident.sublocationName || '',
                     // بيانات التحقيق
                     investigation: investigationData,
+                    rootCause: incident.rootCause || investigationData.rca?.rootCauseSummary || '',
                     // بيانات إضافية
                     updatedAt: incident.updatedAt,
                     createdAt: incident.createdAt || new Date().toISOString(),
@@ -11396,6 +11478,15 @@ const Incidents = {
                 </div>
         `);
 
+        const sectionRca = (typeof InvestigationRCA !== 'undefined' && investigationData.rca)
+            ? InvestigationRCA.buildPrintSection(investigationData.rca)
+            : (investigationData.rca?.rootCauseSummary ? `
+                <div class="inv-print-section" style="background:#f5f3ff;border:2px solid #7c3aed;border-radius:12px;padding:20px;margin-bottom:20px;">
+                    <h3 style="color:#5b21b6;">5.5) تحليل السبب الجذري</h3>
+                    <div>${esc(investigationData.rca.rootCauseSummary)}</div>
+                </div>
+            ` : '');
+
         const actionPlan = Array.isArray(investigationData.actionPlan) ? investigationData.actionPlan : [];
         const actionRowsCount = Math.max(3, actionPlan.length);
         const actionRows = Array.from({ length: actionRowsCount }, (_, i) => {
@@ -11465,6 +11556,7 @@ const Incidents = {
                 ${section3}
                 ${section4}
                 ${section5}
+                ${sectionRca}
                 ${section6}
                 ${section7}
             </div>
