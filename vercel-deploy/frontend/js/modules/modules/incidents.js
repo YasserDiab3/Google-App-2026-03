@@ -927,7 +927,9 @@ const Incidents = {
 
         // حساب إجمالي أيام الإجازة من تاريخ بداية الإجازة حتى تاريخ العودة
         entry.totalLeaveDays = this.calculateTotalLeaveDays(leaveStartDate, returnToWorkDate);
-        entry.status = incident.status || 'مفتوح';
+        entry.status = this.isInvestigationComplete(incident)
+            ? 'مكتمل'
+            : (incident.status === 'مفتوح' ? 'مفتوح' : (incident.status || entry.status || 'مفتوح'));
         entry.updatedAt = new Date().toISOString();
 
         this.registryData[entryIndex] = entry;
@@ -1520,6 +1522,7 @@ const Incidents = {
                                 <option value="">جميع الحالات</option>
                                 <option value="مفتوح">مفتوح</option>
                                 <option value="قيد التحقيق">قيد التحقيق</option>
+                                <option value="تحقيق منتهي">تحقيق منتهي</option>
                                 <option value="مكتمل">مكتمل</option>
                                 <option value="مغلق">مغلق</option>
                             </select>
@@ -3834,8 +3837,8 @@ const Incidents = {
                                             <td>${Utils.escapeHTML(incident.title || 'بدون عنوان')}</td>
                                             <td>${incident.date ? new Date(incident.date).toLocaleDateString('ar-SA') : ''}</td>
                                             <td>
-                                                <span class="badge badge-${this.getStatusBadgeClass(incident.status)}">
-                                                    ${Utils.escapeHTML(incident.status || 'مفتوح')}
+                                                <span class="badge badge-${this.getStatusBadgeClass(this.getIncidentDisplayStatus(incident))}">
+                                                    ${Utils.escapeHTML(this.getIncidentDisplayStatus(incident))}
                                                     ${incident.requiresApproval ? ' <i class="fas fa-clock ml-1" title="في انتظار الموافقة"></i>' : ''}
                                                 </span>
                                             </td>
@@ -6159,8 +6162,10 @@ const Incidents = {
                             >
                             <select id="incidents-filter-status" class="form-input" style="max-width: 200px;">
                                 <option value="">جميع الحالات</option>
-                                <option value="مفتوح">متوح</option>
+                                <option value="مفتوح">مفتوح</option>
                                 <option value="قيد التحقيق">قيد التحقيق</option>
+                                <option value="تحقيق منتهي">تحقيق منتهي</option>
+                                <option value="مكتمل">مكتمل</option>
                                 <option value="مغلق">مغلق</option>
                             </select>
                         </div>
@@ -6269,8 +6274,8 @@ const Incidents = {
                                             ${incident?.employeeCode ? `<div class="text-xs text-gray-400">${Utils.escapeHTML(incident.employeeCode || '')}</div>` : ''}
                                         </td>
                                         <td>
-                                            <span class="badge badge-${this.getStatusBadgeClass(incident?.status)}">
-                                                ${incident?.status || '-'}
+                                            <span class="badge badge-${this.getStatusBadgeClass(this.getIncidentDisplayStatus(incident))}">
+                                                ${Utils.escapeHTML(this.getIncidentDisplayStatus(incident))}
                                             </span>
                                         </td>
                                         <td>
@@ -6336,7 +6341,8 @@ const Incidents = {
             'قيد التحقيق': 'warning',
             'مكتمل': 'success',
             'مغلق': 'success',
-            'في انتظار الموافقة': 'warning'
+            'في انتظار الموافقة': 'warning',
+            'تحقيق منتهي': 'success'
         };
         return classes[status] || 'secondary';
     },
@@ -6416,13 +6422,14 @@ const Incidents = {
         this._normalizeIncidentApprovalRecord(normalized);
 
         const hasInvestigation = this.hasInvestigationData(normalized);
+        const investigationComplete = this.isInvestigationComplete(normalized);
         const approver = this._resolveIncidentApproverInfo(normalized.approvedBy);
         const rejected = !!(normalized.rejectedAt || normalized.rejectionReason);
-        const awaitingApproval = normalized.requiresApproval === true
-            || normalized.status === 'في انتظار الموافقة';
+        const awaitingApproval = (normalized.requiresApproval === true
+            || normalized.status === 'في انتظار الموافقة') && investigationComplete;
         const approved = !awaitingApproval && !rejected && (
             !!(normalized.approvedAt || approver.raw)
-            || (normalized.status === 'مكتمل' && hasInvestigation)
+            || (normalized.status === 'مكتمل' && investigationComplete)
         );
 
         let key = 'draft';
@@ -6437,15 +6444,15 @@ const Incidents = {
             key = 'approved';
             label = 'معتمد';
             badgeClass = 'success';
-        } else if (awaitingApproval && hasInvestigation) {
+        } else if (awaitingApproval) {
             key = 'pending';
             label = 'بانتظار الاعتماد';
             badgeClass = 'warning';
-        } else if (hasInvestigation) {
+        } else if (investigationComplete) {
             key = 'investigation_complete';
-            label = 'تحقيق مكتمل';
-            badgeClass = 'info';
-        } else if (normalized.investigation) {
+            label = 'تحقيق منتهي';
+            badgeClass = 'success';
+        } else if (hasInvestigation) {
             key = 'in_progress';
             label = 'قيد التحقيق';
             badgeClass = 'info';
@@ -8629,8 +8636,8 @@ const Incidents = {
                             </div>
                             <div>
                                 <label class="text-sm font-semibold text-gray-600">الحالة:</label>
-                                <span class="badge badge-${this.getStatusBadgeClass(incident.status)}">
-                                    ${incident.status || '-'}
+                                <span class="badge badge-${this.getStatusBadgeClass(this.getIncidentDisplayStatus(incident))}">
+                                    ${Utils.escapeHTML(this.getIncidentDisplayStatus(incident))}
                                 </span>
                             </div>
                             <div class="col-span-2">
@@ -10920,7 +10927,8 @@ const Incidents = {
         }
 
         if (statusFilter) {
-            filtered = filtered.filter(incident => incident.status === statusFilter);
+            filtered = filtered.filter(incident => this.getIncidentDisplayStatus(incident) === statusFilter
+                || incident.status === statusFilter);
         }
 
         const tbody = document.querySelector('#incidents-table-container tbody');
@@ -10944,8 +10952,8 @@ const Incidents = {
                             ${incident.employeeCode ? `<div class="text-xs text-gray-400">${Utils.escapeHTML(incident.employeeCode || '')}</div>` : ''}
                         </td>
                         <td>
-                            <span class="badge badge-${this.getStatusBadgeClass(incident.status)}">
-                                ${incident.status || '-'}
+                            <span class="badge badge-${this.getStatusBadgeClass(this.getIncidentDisplayStatus(incident))}">
+                                ${Utils.escapeHTML(this.getIncidentDisplayStatus(incident))}
                             </span>
                         </td>
                         <td>${this.renderWorkflowStatusBadge(incident)}</td>
@@ -12165,7 +12173,9 @@ const Incidents = {
                 id: AppState.currentUser.id || '',
                 name: AppState.currentUser.name || AppState.currentUser.displayName || '',
                 email: AppState.currentUser.email || ''
-            } : null
+            } : null,
+            investigationStatus: 'مكتمل',
+            completedAt: new Date().toISOString()
         };
 
         // Collect incident types
@@ -12241,23 +12251,11 @@ const Incidents = {
                 const alreadyApproved = !!(incident.approvedAt || this._resolveIncidentApproverInfo(incident.approvedBy).raw)
                     && !this._coerceIncidentBoolean(incident.requiresApproval);
 
-                if (!isAdmin && isSafetyOfficer && !alreadyApproved) {
-                    incident.status = 'في انتظار الموافقة';
-                    incident.requiresApproval = true;
-                    incident.approvedBy = null;
-                    incident.approvedAt = null;
-                } else if (isAdmin) {
-                    // مدير النظام: يمكنه الموافقة مباشرة
-                    if (incident.status !== 'قيد التحقيق' && incident.status !== 'مغلق') {
-                        incident.status = 'قيد التحقيق';
-                    }
-                    incident.requiresApproval = false;
-                } else {
-                    // حالة افتراضية
-                    if (incident.status !== 'قيد التحقيق') {
-                        incident.status = 'قيد التحقيق';
-                    }
-                }
+                this._resolveIncidentStatusAfterInvestigationSave(incident, {
+                    isAdmin,
+                    isSafetyOfficer,
+                    alreadyApproved
+                });
 
                 // Save data
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
@@ -12942,16 +12940,94 @@ const Incidents = {
 
     hasInvestigationData(incident) {
         if (!incident || !incident.investigation) return false;
-        let inv = incident.investigation;
+        const inv = this._parseInvestigationRecord(incident);
+        return !!(inv && Object.keys(inv).length > 0);
+    },
+
+    _parseInvestigationRecord(incidentOrInv) {
+        let inv = incidentOrInv?.investigation !== undefined ? incidentOrInv.investigation : incidentOrInv;
+        if (!inv) return null;
         if (typeof inv === 'string') {
-            try { inv = JSON.parse(inv); } catch (_e) { return false; }
+            try { inv = JSON.parse(inv); } catch (_e) { return null; }
         }
-        return inv && typeof inv === 'object' && Object.keys(inv).length > 0;
+        return inv && typeof inv === 'object' ? inv : null;
+    },
+
+    isInvestigationComplete(incident) {
+        const inv = this._parseInvestigationRecord(incident);
+        if (!inv) return false;
+        if (inv.investigationStatus === 'مكتمل' || inv.completedAt) return true;
+        return !!(
+            inv.investigationNumber &&
+            inv.investigationDateTime &&
+            inv.incidentDateTime &&
+            inv.factoryId &&
+            inv.locationId &&
+            inv.description &&
+            inv.affectedName &&
+            inv.affectedAffiliation
+        );
+    },
+
+    getIncidentDisplayStatus(incident) {
+        if (!incident) return '—';
+        const state = this.getIncidentApprovalState(incident);
+        if (state.approved) return 'مكتمل';
+        if (this.isInvestigationComplete(incident)) {
+            return state.awaitingApproval ? 'تحقيق منتهي' : 'مكتمل';
+        }
+        if (this.hasInvestigationData(incident)) return 'قيد التحقيق';
+        return incident.status || 'مفتوح';
+    },
+
+    _resolveIncidentStatusAfterInvestigationSave(incident, context = {}) {
+        const { isAdmin = false, isSafetyOfficer = false, alreadyApproved = false } = context;
+        const inv = this._parseInvestigationRecord(incident) || {};
+        inv.investigationStatus = 'مكتمل';
+        inv.completedAt = new Date().toISOString();
+        inv.completedBy = AppState.currentUser ? {
+            id: AppState.currentUser.id || '',
+            name: AppState.currentUser.name || AppState.currentUser.displayName || '',
+            email: AppState.currentUser.email || ''
+        } : null;
+        incident.investigation = { ...inv };
+
+        if (alreadyApproved) {
+            incident.status = 'مكتمل';
+            incident.requiresApproval = false;
+            return;
+        }
+
+        if (isAdmin) {
+            incident.status = 'مكتمل';
+            incident.requiresApproval = false;
+            incident.approvedBy = AppState.currentUser ? {
+                id: AppState.currentUser.id || '',
+                name: AppState.currentUser.name || AppState.currentUser.displayName || '',
+                email: AppState.currentUser.email || ''
+            } : incident.approvedBy || null;
+            incident.approvedAt = incident.approvedAt || new Date().toISOString();
+            incident.rejectedBy = null;
+            incident.rejectedAt = null;
+            incident.rejectionReason = null;
+            return;
+        }
+
+        if (isSafetyOfficer) {
+            incident.status = 'في انتظار الموافقة';
+            incident.requiresApproval = true;
+            incident.approvedBy = null;
+            incident.approvedAt = null;
+            return;
+        }
+
+        incident.status = 'مكتمل';
+        incident.requiresApproval = false;
     },
 
     renderApprovalFlowHtml(incident) {
         const esc = (v) => Utils.escapeHTML(String(v ?? ''));
-        const hasInvestigation = this.hasInvestigationData(incident);
+        const investigationComplete = this.isInvestigationComplete(incident);
         const approvalState = this.getIncidentApprovalState(incident);
         const awaitingApproval = approvalState.awaitingApproval;
         const approved = approvalState.approved;
@@ -12966,11 +13042,11 @@ const Incidents = {
 
         const steps = [
             { label: 'تسجيل الحادث', done: true, active: false },
-            { label: 'إكمال التحقيق', done: hasInvestigation, active: !hasInvestigation && !approved },
+            { label: 'إكمال التحقيق', done: investigationComplete, active: !investigationComplete && !approved },
             {
                 label: rejected ? 'مرفوض' : (approved ? 'معتمد' : 'اعتماد المدير'),
                 done: approved,
-                active: awaitingApproval && hasInvestigation,
+                active: awaitingApproval,
                 rejected: rejected && !approved
             }
         ];
@@ -13035,7 +13111,7 @@ const Incidents = {
                 <div class="modal-body">
                     ${this.renderApprovalFlowHtml(incident)}
                     <div style="font-size:13px;color:#64748b;line-height:1.7;">
-                        <div><strong>الحالة:</strong> ${Utils.escapeHTML(incident.status || '—')}</div>
+                        <div><strong>الحالة:</strong> ${Utils.escapeHTML(this.getIncidentDisplayStatus(incident))}</div>
                         <div><strong>بانتظار الاعتماد:</strong> ${approvalState.awaitingApproval ? 'نعم' : 'لا'}</div>
                         <div><strong>حالة الاعتماد:</strong> ${Utils.escapeHTML(approvalState.label)}</div>
                     </div>
