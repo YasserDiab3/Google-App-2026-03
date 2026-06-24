@@ -3817,10 +3817,7 @@ const Dashboard = {
             updateOneSafetyValue('lti-value', this.formatNumber(rates.ltiCount || 0));
             updateOneSafetyValue('sr-value', this.formatMetricRate(rates.sr, 2));
             updateOneSafetyValue('ir-value', this.formatMetricRate(rates.ir, 2));
-            const manDaysYtd = snap.totals?.manDays
-                ?? (typeof HseMetrics.resolveYtdManDays === 'function'
-                    ? HseMetrics.resolveYtdManDays(snap.monthly, snap.ytdLimit)
-                    : 0);
+            const manDaysYtd = snap.totals?.manDays ?? 0;
             updateOneSafetyValue('man-days-value', this.formatNumber(manDaysYtd));
 
             if (typeof Utils !== 'undefined' && Utils.safeLog) {

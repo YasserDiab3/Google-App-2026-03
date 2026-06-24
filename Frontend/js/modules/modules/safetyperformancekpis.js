@@ -4253,6 +4253,14 @@ SafetyPerformanceKPIs.render = async function () {
                                 t('module.kpi.overview.unit.hour','ساعة'),
                                 t('module.kpi.overview.workforce.combinedHours.sub','الأساس المُستخدَم في معادلة TRIR و LTIFR')
                             )}
+                            ${this.renderWorkforceStatCard(
+                                'overview-combined-man-days',
+                                t('module.kpi.overview.workforce.combinedManDays','إجمالي أيام العمل'),
+                                'fa-calendar-day',
+                                'emerald',
+                                t('module.kpi.overview.unit.day','يوم'),
+                                t('module.kpi.overview.workforce.combinedManDays.sub','تراكمي YTD — مطابق لكارت لوحة التحكم (ساعات ÷ ساعات/يوم)')
+                            )}
                             <!-- بطاقة المراجع — Premium reference card -->
                             <div class="relative overflow-hidden rounded-[24px] p-5 flex flex-col justify-center" style="background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,58,138,0.94)); box-shadow: 0 12px 32px rgba(15,23,42,0.18);">
                                 <div class="absolute -top-8 -end-8 h-32 w-32 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(15,118,110,0.25) 0%, transparent 70%);"></div>
@@ -4481,6 +4489,12 @@ SafetyPerformanceKPIs.updateOverviewQuickStats = function () {
         setText('overview-permanent-hours', fmtInt(permanentHours));
         setText('overview-temporary-hours', fmtInt(temporaryHours));
         setText('overview-combined-hours', fmtInt(combinedHours));
+
+        if (typeof HseMetrics !== 'undefined' && HseMetrics.getDashboardSnapshot) {
+            const snap = HseMetrics.getDashboardSnapshot(AppState.appData || {});
+            const manDaysYtd = snap.totals?.manDays ?? 0;
+            setText('overview-combined-man-days', fmtInt(manDaysYtd));
+        }
     } catch (e) {
         if (typeof Utils !== 'undefined' && Utils.safeError) {
             Utils.safeError('Workforce overview update failed:', e);

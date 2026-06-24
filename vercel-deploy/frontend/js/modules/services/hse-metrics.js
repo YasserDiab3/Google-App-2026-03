@@ -421,12 +421,25 @@
 
     function resolveYtdManDays(monthlyBase, ytdLimit) {
         const cfg = getWorkConfig();
+        const ytdHours = resolveYtdManHours(monthlyBase, ytdLimit);
+        if (ytdHours > 0 && cfg.hoursPerDay > 0) {
+            return Math.round(ytdHours / cfg.hoursPerDay);
+        }
         let total = 0;
         const limit = Math.min(Math.max(ytdLimit, 0), 11);
         for (let i = 0; i <= limit; i += 1) {
             total += Math.round((monthlyBase.employeeCounts[i] || 0) * cfg.workDaysPerMonth);
         }
         return total;
+    }
+
+    function resolveManDaysForMonth(monthlyBase, monthIndex) {
+        const cfg = getWorkConfig();
+        const hours = parseFloat(monthlyBase?.manHours?.[monthIndex]) || 0;
+        if (hours > 0 && cfg.hoursPerDay > 0) {
+            return Math.round(hours / cfg.hoursPerDay);
+        }
+        return Math.round((monthlyBase?.employeeCounts?.[monthIndex] || 0) * cfg.workDaysPerMonth);
     }
 
     function aggregateYtd(monthlyBase, ytdLimit) {
@@ -498,7 +511,8 @@
                 fr: formatRate(rates.fr, 2),
                 sr: formatRate(rates.sr, 2),
                 ir: formatRate(rates.ir, 2),
-                lti: String(rates.ltiCount)
+                lti: String(rates.ltiCount),
+                manDays: String(totals.manDays || 0)
             }
         };
     }
@@ -558,6 +572,7 @@
         formatRateDisplay,
         resolveYtdManHours,
         resolveYtdManDays,
+        resolveManDaysForMonth,
         buildMonthlyBase,
         buildMonthlyRateSeries,
         aggregatePeriod,

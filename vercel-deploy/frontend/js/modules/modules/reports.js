@@ -917,13 +917,21 @@ const Reports = {
                 const base = this._msrGetMonthlyBaseForYear(y, scopedData, baseCache);
                 const count = base ? (base.employeeCounts[mi] || 0) : 0;
                 headSum += count;
-                manDaysMonth += Math.round(count * (workCfg.workDaysPerMonth || 22));
+                if (base && typeof HseMetrics.resolveManDaysForMonth === 'function') {
+                    manDaysMonth += HseMetrics.resolveManDaysForMonth(base, mi);
+                } else {
+                    manDaysMonth += Math.round(count * (workCfg.workDaysPerMonth || 22));
+                }
             });
             manpowerAvg = Math.round(headSum / rangeMonths.length);
         }
         if (cumBase) {
-            for (let i = 0; i <= cumEndIdx; i += 1) {
-                manDaysCum += Math.round((cumBase.employeeCounts[i] || 0) * (workCfg.workDaysPerMonth || 22));
+            if (typeof HseMetrics.resolveYtdManDays === 'function') {
+                manDaysCum = HseMetrics.resolveYtdManDays(cumBase, cumEndIdx);
+            } else {
+                for (let i = 0; i <= cumEndIdx; i += 1) {
+                    manDaysCum += Math.round((cumBase.employeeCounts[i] || 0) * (workCfg.workDaysPerMonth || 22));
+                }
             }
             manpowerCumAvg = cumEndIdx >= 0
                 ? Math.round(HseMetrics.sumSlice(cumBase.employeeCounts, cumEndIdx) / (cumEndIdx + 1))

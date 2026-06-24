@@ -97,6 +97,11 @@ assertClose(snap.totals.totalIncidents, 4, 'total incidents YTD');
 assertClose(snap.totals.daysLost, 5, 'days lost YTD');
 assertEq(snap.rates.ltiCount, 1, 'LTI card integer');
 
+const ytdHoursSnap = snap.totals.manHours;
+const expectedManDays = Math.round(ytdHoursSnap / 8);
+assertClose(snap.totals.manDays, expectedManDays, 'manDays YTD = round(YTD hours / 8)');
+assertClose(snap.totals.manDays, 88, 'manDays YTD (1 employee × 22 days × 4 months)');
+
 // دمج سجل الحوادث مع incidents
 const mergedFixtures = {
     employees: fixtures.employees,
