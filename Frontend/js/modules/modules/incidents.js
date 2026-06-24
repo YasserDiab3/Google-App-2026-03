@@ -6608,6 +6608,7 @@ const Incidents = {
         if (typeof Permissions !== 'undefined' && Permissions.ensureFormSettingsState) {
             try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
         }
+        if (incidentData) this._mergeIncidentWithInvestigationData(incidentData);
         this.currentEditId = incidentData?.id || null;
         const attachments = Array.isArray(incidentData?.attachments) ? incidentData.attachments : [];
         this.currentAttachments = attachments
@@ -6830,7 +6831,7 @@ const Incidents = {
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">اسم الطرف المتضرر *</label>
-                                    <input type="text" id="incident-affected-name" required class="form-input" value="${incidentData?.affectedName || ''}" placeholder="اسم الطرف المتضرر">
+                                    <input type="text" id="incident-affected-name" required class="form-input" value="${incidentData?.affectedName || ''}" placeholder="ابحث بالاسم أو الكود" autocomplete="off">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">المسمى الوظيفي</label>
@@ -8553,7 +8554,11 @@ const Incidents = {
         }
 
         const incident = AppState.appData.incidents.find(i => i.id === id);
-        if (incident) await this.showForm(incident);
+        if (incident) {
+            const merged = { ...incident };
+            this._mergeIncidentWithInvestigationData(merged);
+            await this.showForm(merged);
+        }
     },
 
     async viewIncident(id) {
@@ -9526,51 +9531,231 @@ const Incidents = {
         }
     },
 
-    renderInvestigationActionPlanRows(actionPlan) {
-        if (!actionPlan || actionPlan.length === 0) {
-            // إرجاع 3 صفوف فارغة
-            return Array(3).fill(0).map((_, idx) => `
-                <tr data-action-row="${idx}" style="border-bottom: 1px solid #c8e6c9;">
-                    <td style="padding: 12px; border: 1px solid #c8e6c9; vertical-align: top; box-sizing: border-box;">
-                        <textarea class="form-input" rows="3" placeholder="اكتب الإجراء التصحيحي هنا..." style="width: 100%; resize: vertical; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; min-height: 80px; box-sizing: border-box; display: block;"></textarea>
-                    </td>
-                    <td style="padding: 12px; border: 1px solid #c8e6c9; text-align: center; vertical-align: top; box-sizing: border-box;">
-                        <input type="date" class="form-input" style="width: 100%; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; text-align: center; box-sizing: border-box; display: block;">
-                    </td>
-                    <td style="padding: 12px; border: 1px solid #c8e6c9; vertical-align: top; box-sizing: border-box;">
-                        <input type="text" class="form-input mb-2" placeholder="اسم مسئول التنفيذ" style="width: 100%; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; box-sizing: border-box; display: block;">
-                        <input type="date" class="form-input" placeholder="تاريخ التنفيذ" style="width: 100%; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; box-sizing: border-box; display: block;">
-                    </td>
-                    <td style="padding: 12px; border: 1px solid #c8e6c9; vertical-align: top; box-sizing: border-box;">
-                        <input type="text" class="form-input mb-2" placeholder="اسم المتابع" style="width: 100%; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; box-sizing: border-box; display: block;">
-                        <input type="date" class="form-input" placeholder="تاريخ المتابعة" style="width: 100%; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; box-sizing: border-box; display: block;">
-                    </td>
-                </tr>
-            `).join('');
+    _formatInvestigationIncidentTypesLabel(types) {
+        const map = {
+            nearmiss: 'حادث وشيك',
+            property: 'تلف ممتلكات',
+            'injury-no-lost': 'إصابة بدون فقد أيام عمل',
+            'injury-lost': 'إصابة مع فقد أيام عمل',
+            fatality: 'وفاة'
+        };
+        return (types || []).map((t) => map[t] || t).join('، ');
+    },
+
+    _mergeIncidentWithInvestigationData(incident) {
+        if (!incident) return incident;
+        let inv = incident.investigation;
+        if (typeof inv === 'string') {
+            try { inv = JSON.parse(inv); } catch (_e) { inv = null; }
+        }
+        if (!inv || typeof inv !== 'object') return incident;
+
+        if (inv.affectedName) incident.affectedName = inv.affectedName;
+        if (inv.affectedJob) incident.affectedJobTitle = inv.affectedJob;
+        if (inv.affectedDepartment) incident.affectedDepartment = inv.affectedDepartment;
+        if (inv.affectedEmployeeCode) incident.affectedCode = inv.affectedEmployeeCode;
+        if (inv.affectedAffiliation === 'contractor') incident.affectedType = 'contractor';
+        else if (inv.affectedAffiliation === 'company') incident.affectedType = incident.affectedType || 'employee';
+        if (Array.isArray(inv.actionPlan) && inv.actionPlan.length) incident.actionPlan = inv.actionPlan;
+        if (Array.isArray(inv.incidentTypes) && inv.incidentTypes.length) {
+            incident.incidentType = this._formatInvestigationIncidentTypesLabel(inv.incidentTypes);
+        }
+        return incident;
+    },
+
+    _applyInvestigationToIncident(incident, inv) {
+        if (!incident || !inv) return;
+        if (inv.affectedName) incident.affectedName = inv.affectedName;
+        if (inv.affectedJob) incident.affectedJobTitle = inv.affectedJob;
+        if (inv.affectedDepartment) incident.affectedDepartment = inv.affectedDepartment;
+        if (inv.affectedEmployeeCode) incident.affectedCode = inv.affectedEmployeeCode;
+        if (inv.affectedAffiliation === 'contractor') incident.affectedType = 'contractor';
+        else if (inv.affectedAffiliation === 'company') incident.affectedType = incident.affectedType || 'employee';
+
+        if (Array.isArray(inv.incidentTypes) && inv.incidentTypes.length) {
+            incident.incidentType = this._formatInvestigationIncidentTypesLabel(inv.incidentTypes);
+        }
+        if (Array.isArray(inv.actionPlan)) {
+            incident.actionPlan = inv.actionPlan.map((action) => ({
+                correctiveAction: action.correctiveAction || '',
+                plannedDate: action.plannedDate || '',
+                responsibleName: action.responsibleName || '',
+                responsibleDepartment: action.responsibleDepartment || '',
+                responsibleDate: action.responsibleDate || '',
+                followUpName: action.followUpName || '',
+                followUpDepartment: action.followUpDepartment || '',
+                followUpDate: action.followUpDate || ''
+            }));
+        }
+        if (inv.factoryId) {
+            incident.siteId = inv.factoryId;
+            if (inv.factoryName) incident.siteName = inv.factoryName;
+        }
+        if (inv.locationId) {
+            incident.sublocationId = inv.locationId;
+            if (inv.locationName) incident.sublocationName = inv.locationName;
+        }
+        if (inv.description) incident.description = inv.description;
+    },
+
+    _closeInvestigationModal() {
+        document.querySelectorAll('.modal-overlay').forEach((overlay) => {
+            if (overlay.querySelector('#investigation-form')) overlay.remove();
+        });
+    },
+
+    async _refreshIncidentsViewsAfterUpdate(incidentId) {
+        this.lastRenderedSignature = null;
+
+        const tab = this.currentTab || 'incidents-list';
+        const contentContainer = document.getElementById('incidents-tab-content');
+
+        if (tab === 'incidents-list') {
+            await this.loadIncidentsList();
+        } else if (contentContainer) {
+            contentContainer.innerHTML = await this.renderTabContent(tab);
+            this.applyModuleI18n(contentContainer);
+            this.setupTabEventListeners(tab);
         }
 
-        // ملء الصفوف الموجودة وإضافة صفوف فارغة حتى 3
+        if (this.currentEditId === incidentId) {
+            const incident = AppState.appData.incidents.find((i) => i.id === incidentId);
+            if (incident) {
+                this._mergeIncidentWithInvestigationData(incident);
+                this._syncIncidentFormFromData(incident);
+            }
+        }
+
+        if (typeof Dashboard !== 'undefined' && Dashboard.refreshIncidents) {
+            Dashboard.refreshIncidents();
+        }
+    },
+
+    _syncIncidentFormFromData(incident) {
+        if (!incident || !document.getElementById('incident-form')) return;
+        const set = (id, val) => {
+            const el = document.getElementById(id);
+            if (el && val != null && val !== '') el.value = val;
+        };
+        set('incident-affected-name', incident.affectedName);
+        set('incident-affected-job', incident.affectedJobTitle);
+        set('incident-affected-department', incident.affectedDepartment);
+        set('incident-affected-code', incident.affectedCode);
+        if (Array.isArray(incident.actionPlan) && incident.actionPlan.length) {
+            this.populateActionPlanRows(incident.actionPlan);
+        }
+    },
+
+    _buildInvestigationActionPlanRowHtml(action = {}, rowIndex = 0) {
+        const cellStyle = 'padding: 12px; border: 1px solid #c8e6c9; vertical-align: top; box-sizing: border-box;';
+        const inputStyle = 'width: 100%; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; box-sizing: border-box; display: block;';
+        return `
+            <tr data-action-row="${rowIndex}" style="border-bottom: 1px solid #c8e6c9;">
+                <td style="${cellStyle}">
+                    <textarea class="form-input inv-ap-corrective" rows="3" placeholder="اكتب الإجراء التصحيحي هنا..." style="${inputStyle} resize: vertical; min-height: 80px;">${Utils.escapeHTML(action.correctiveAction || '')}</textarea>
+                </td>
+                <td style="${cellStyle} text-align: center;">
+                    <input type="date" class="form-input inv-ap-planned-date" value="${action.plannedDate || ''}" style="${inputStyle} text-align: center;">
+                </td>
+                <td style="${cellStyle}">
+                    <input type="text" class="form-input inv-ap-responsible-name" placeholder="ابحث عن مسئول التنفيذ" value="${Utils.escapeHTML(action.responsibleName || '')}" autocomplete="off" style="${inputStyle} margin-bottom: 8px;">
+                    <input type="text" class="form-input inv-ap-responsible-dept" placeholder="الإدارة / القسم" value="${Utils.escapeHTML(action.responsibleDepartment || '')}" readonly style="${inputStyle} margin-bottom: 8px; background: #f3f4f6;">
+                    <input type="date" class="form-input inv-ap-responsible-date" value="${action.responsibleDate || ''}" style="${inputStyle}">
+                </td>
+                <td style="${cellStyle}">
+                    <input type="text" class="form-input inv-ap-follow-name" placeholder="ابحث عن المتابع" value="${Utils.escapeHTML(action.followUpName || '')}" autocomplete="off" style="${inputStyle} margin-bottom: 8px;">
+                    <input type="text" class="form-input inv-ap-follow-dept" placeholder="الإدارة / القسم" value="${Utils.escapeHTML(action.followUpDepartment || '')}" readonly style="${inputStyle} margin-bottom: 8px; background: #f3f4f6;">
+                    <input type="date" class="form-input inv-ap-follow-date" value="${action.followUpDate || ''}" style="${inputStyle}">
+                </td>
+            </tr>
+        `;
+    },
+
+    setupInvestigationActionPlanRowPickers(row) {
+        if (!row || typeof EmployeeHelper === 'undefined') return;
+        const respName = row.querySelector('.inv-ap-responsible-name');
+        const respDept = row.querySelector('.inv-ap-responsible-dept');
+        const followName = row.querySelector('.inv-ap-follow-name');
+        const followDept = row.querySelector('.inv-ap-follow-dept');
+
+        if (respName && !respName.dataset.pickerBound) {
+            respName.dataset.pickerBound = '1';
+            EmployeeHelper.setupAutocomplete(respName, (employee) => {
+                if (!employee || !respDept) return;
+                respDept.value = employee.department || employee.dept || employee.section || employee.departmentName || '';
+            });
+        }
+        if (followName && !followName.dataset.pickerBound) {
+            followName.dataset.pickerBound = '1';
+            EmployeeHelper.setupAutocomplete(followName, (employee) => {
+                if (!employee || !followDept) return;
+                followDept.value = employee.department || employee.dept || employee.section || employee.departmentName || '';
+            });
+        }
+    },
+
+    bindInvestigationActionPlanPickers(modalOrRoot) {
+        const root = modalOrRoot || document;
+        root.querySelectorAll('#investigation-action-plan-body tr').forEach((row) => {
+            this.setupInvestigationActionPlanRowPickers(row);
+        });
+    },
+
+    _populateInvestigationFormFields(modalEl, incident, investigation) {
+        if (!modalEl) return;
+        const inv = investigation || {};
+        const setVal = (sel, val) => {
+            const el = modalEl.querySelector(sel);
+            if (el && val != null && val !== '') el.value = val;
+        };
+        const setCheck = (sel, checked) => {
+            const el = modalEl.querySelector(sel);
+            if (el) el.checked = !!checked;
+        };
+
+        const types = Array.isArray(inv.incidentTypes) ? inv.incidentTypes : [];
+        setCheck('#incident-type-nearmiss', types.includes('nearmiss'));
+        setCheck('#incident-type-property', types.includes('property'));
+        setCheck('#incident-type-injury-no-lost', types.includes('injury-no-lost'));
+        setCheck('#incident-type-injury-lost', types.includes('injury-lost'));
+        setCheck('#incident-type-fatality', types.includes('fatality'));
+
+        setVal('#investigation-description', inv.description || incident?.description);
+        setVal('#investigation-nearmiss-description', inv.nearmissDescription);
+
+        const nearMissCheckbox = modalEl.querySelector('#incident-type-nearmiss');
+        const nearMissWrapper = modalEl.querySelector('#nearmiss-description-wrapper');
+        if (nearMissWrapper) {
+            nearMissWrapper.style.display = nearMissCheckbox?.checked ? 'block' : 'none';
+        }
+
+        setVal('#investigation-unsafe-behavior', inv.unsafeBehavior);
+        setVal('#investigation-unsafe-condition', inv.unsafeCondition);
+        if (inv.riskProbability != null) setVal('#investigation-risk-probability', inv.riskProbability);
+        if (inv.riskSeverity != null) setVal('#investigation-risk-severity', inv.riskSeverity);
+        setVal('#investigation-risk-level', inv.riskLevel);
+        setVal('#investigation-risk-result', inv.riskResult);
+        setVal('#investigation-risk-explanation', inv.riskExplanation);
+
+        setVal('#investigation-signature-area-manager', inv.signatureAreaManager?.name);
+        setVal('#investigation-signature-area-manager-date', inv.signatureAreaManager?.date);
+        setVal('#investigation-signature-safety-manager', inv.signatureSafetyManager?.name);
+        setVal('#investigation-signature-safety-manager-date', inv.signatureSafetyManager?.date);
+        setVal('#investigation-signature-safety-director', inv.signatureSafetyDirector?.name);
+        setVal('#investigation-signature-safety-director-date', inv.signatureSafetyDirector?.date);
+
+        const tbody = modalEl.querySelector('#investigation-action-plan-body');
+        if (tbody) {
+            tbody.innerHTML = this.renderInvestigationActionPlanRows(inv.actionPlan || []);
+            this.bindInvestigationActionPlanPickers(modalEl);
+        }
+    },
+
+    renderInvestigationActionPlanRows(actionPlan) {
+        const rowCount = !actionPlan || actionPlan.length === 0 ? 3 : Math.max(3, actionPlan.length);
         const rows = [];
-        for (let i = 0; i < Math.max(3, actionPlan.length); i++) {
-            const action = actionPlan[i] || {};
-            rows.push(`
-                <tr data-action-row="${i}" style="border-bottom: 1px solid #c8e6c9;">
-                    <td style="padding: 12px; border: 1px solid #c8e6c9; vertical-align: top; box-sizing: border-box;">
-                        <textarea class="form-input" rows="3" placeholder="اكتب الإجراء التصحيحي هنا..." style="width: 100%; resize: vertical; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; min-height: 80px; box-sizing: border-box; display: block;">${Utils.escapeHTML(action.correctiveAction || '')}</textarea>
-                    </td>
-                    <td style="padding: 12px; border: 1px solid #c8e6c9; text-align: center; vertical-align: top; box-sizing: border-box;">
-                        <input type="date" class="form-input" value="${action.plannedDate || ''}" style="width: 100%; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; text-align: center; box-sizing: border-box; display: block;">
-                    </td>
-                    <td style="padding: 12px; border: 1px solid #c8e6c9; vertical-align: top; box-sizing: border-box;">
-                        <input type="text" class="form-input mb-2" placeholder="اسم مسئول التنفيذ" value="${Utils.escapeHTML(action.responsibleName || '')}" style="width: 100%; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; box-sizing: border-box; display: block;">
-                        <input type="date" class="form-input" placeholder="تاريخ التنفيذ" value="${action.responsibleDate || ''}" style="width: 100%; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; box-sizing: border-box; display: block;">
-                    </td>
-                    <td style="padding: 12px; border: 1px solid #c8e6c9; vertical-align: top; box-sizing: border-box;">
-                        <input type="text" class="form-input mb-2" placeholder="اسم المتابع" value="${Utils.escapeHTML(action.followUpName || '')}" style="width: 100%; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; box-sizing: border-box; display: block;">
-                        <input type="date" class="form-input" placeholder="تاريخ المتابعة" value="${action.followUpDate || ''}" style="width: 100%; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; box-sizing: border-box; display: block;">
-                    </td>
-                </tr>
-            `);
+        for (let i = 0; i < rowCount; i++) {
+            rows.push(this._buildInvestigationActionPlanRowHtml(actionPlan?.[i] || {}, i));
         }
         return rows.join('');
     },
@@ -10503,8 +10688,10 @@ const Incidents = {
                 correctiveAction: action.correctiveAction || action.description || '',
                 plannedDate: action.plannedDate || action.dueDate || '',
                 responsibleName: action.responsibleName || action.owner || '',
+                responsibleDepartment: action.responsibleDepartment || '',
                 responsibleDate: action.responsibleDate || '',
                 followUpName: action.followUpName || '',
+                followUpDepartment: action.followUpDepartment || '',
                 followUpDate: action.followUpDate || ''
             }));
         }
@@ -10838,7 +11025,8 @@ const Incidents = {
                 codeInput.disabled = false;
                 codeInput.placeholder = 'ادخل الكود الوظيفي';
             }
-            nameInput.readOnly = true;
+            nameInput.readOnly = false;
+            nameInput.placeholder = 'ابحث بالاسم أو الكود';
             if (jobInput) jobInput.readOnly = true;
             if (deptInput) deptInput.readOnly = true;
         } else {
@@ -11568,6 +11756,9 @@ const Incidents = {
         // بيانات المصاب — شركة / مقاول
         this.setupInvestigationAffectedPersonUI(modal);
 
+        // فلاتر موظفين لخطة العمل
+        this.bindInvestigationActionPlanPickers(modal);
+
         // معالج تحليل السبب الجذري
         this.initInvestigationRcaWizard(modal, canEdit);
     },
@@ -11844,7 +12035,7 @@ const Incidents = {
                 }
             }
 
-            const modalEl = document.querySelector('.modal-overlay');
+            const modalEl = document.getElementById('investigation-form')?.closest('.modal-overlay') || document.querySelector('.modal-overlay');
             if (modalEl) {
                 if (investigation) {
                     const inv = investigation;
@@ -11866,6 +12057,7 @@ const Incidents = {
                     }
                 }
                 this.updateInvestigationAffectedAffiliationUI(modalEl);
+                this._populateInvestigationFormFields(modalEl, incident, investigation);
             }
         }, 300);
     },
@@ -12025,6 +12217,7 @@ const Incidents = {
 
                 // دمج بيانات التحقيق الجديدة مع القديمة (إن وجدت)
                 incident.investigation = { ...(incident.investigation || {}), ...investigationData };
+                this._applyInvestigationToIncident(incident, incident.investigation);
 
                 if (investigationData.rca?.rootCauseSummary) {
                     incident.rootCause = investigationData.rca.rootCauseSummary;
@@ -12079,13 +12272,9 @@ const Incidents = {
                 } else {
                     Notification.success('تم حفظ التحقيق بنجاح');
                 }
-                
-                modal.remove();
 
-                // Refresh list if visible
-                if (document.getElementById('incidents-content')) {
-                    this.loadIncidentsList();
-                }
+                this._closeInvestigationModal();
+                await this._refreshIncidentsViewsAfterUpdate(incidentId);
 
                 // مزامنة في الخلفية بدون تعطيل واجهة المستخدم
                 const safeIncidentDateIso = (this.getIncidentDateValue(incident) || new Date()).toISOString();
@@ -12102,6 +12291,13 @@ const Incidents = {
                     siteName: incident.siteName || '',
                     sublocationId: incident.sublocationId || '',
                     sublocationName: incident.sublocationName || '',
+                    incidentType: incident.incidentType || '',
+                    affectedName: incident.affectedName || '',
+                    affectedCode: incident.affectedCode || '',
+                    affectedJobTitle: incident.affectedJobTitle || '',
+                    affectedDepartment: incident.affectedDepartment || '',
+                    affectedType: incident.affectedType || '',
+                    actionPlan: incident.actionPlan || [],
                     // بيانات التحقيق
                     investigation: investigationData,
                     rootCause: incident.rootCause || investigationData.rca?.rootCauseSummary || '',
@@ -12152,21 +12348,6 @@ const Incidents = {
                     this.updateRegistryEntry(incident).catch((err) => {
                         Utils.safeWarn('⚠️ فشل تحديث سجل الحوادث في الخلفية:', err);
                     });
-
-                    // Refresh approvals tab if currently open
-                    if (this.currentTab === 'approvals') {
-                        (async () => {
-                            try {
-                                const container = document.getElementById('incidents-tab-content');
-                                if (container) {
-                                    container.innerHTML = await this.renderApprovalsTab();
-                                    this.setupTabEventListeners('approvals');
-                                }
-                            } catch (e) {
-                                Utils.safeWarn('تعذر تحديث تبويب الموافقات بعد حفظ التحقيق:', e);
-                            }
-                        })();
-                    }
                 }, 0);
             } else {
                 throw new Error('الحادث غير موجود');
@@ -12184,26 +12365,27 @@ const Incidents = {
         const actionPlan = [];
         const rows = document.querySelectorAll('#investigation-action-plan-body tr');
 
-        rows.forEach((row, idx) => {
-            const inputs = row.querySelectorAll('textarea, input[type="date"], input[type="text"]');
-            if (inputs.length >= 6) {
-                const correctiveAction = inputs[0].value.trim();
-                const plannedDate = inputs[1].value;
-                const responsibleName = inputs[2].value.trim();
-                const responsibleDate = inputs[3].value;
-                const followUpName = inputs[4].value.trim();
-                const followUpDate = inputs[5].value;
+        rows.forEach((row) => {
+            const correctiveAction = row.querySelector('.inv-ap-corrective')?.value?.trim() || '';
+            const plannedDate = row.querySelector('.inv-ap-planned-date')?.value || '';
+            const responsibleName = row.querySelector('.inv-ap-responsible-name')?.value?.trim() || '';
+            const responsibleDepartment = row.querySelector('.inv-ap-responsible-dept')?.value?.trim() || '';
+            const responsibleDate = row.querySelector('.inv-ap-responsible-date')?.value || '';
+            const followUpName = row.querySelector('.inv-ap-follow-name')?.value?.trim() || '';
+            const followUpDepartment = row.querySelector('.inv-ap-follow-dept')?.value?.trim() || '';
+            const followUpDate = row.querySelector('.inv-ap-follow-date')?.value || '';
 
-                if (correctiveAction || plannedDate || responsibleName || followUpName) {
-                    actionPlan.push({
-                        correctiveAction,
-                        plannedDate,
-                        responsibleName,
-                        responsibleDate,
-                        followUpName,
-                        followUpDate
-                    });
-                }
+            if (correctiveAction || plannedDate || responsibleName || followUpName) {
+                actionPlan.push({
+                    correctiveAction,
+                    plannedDate,
+                    responsibleName,
+                    responsibleDepartment,
+                    responsibleDate,
+                    followUpName,
+                    followUpDepartment,
+                    followUpDate
+                });
             }
         });
 
@@ -12218,28 +12400,13 @@ const Incidents = {
         }
 
         const rowIndex = tbody.querySelectorAll('tr').length;
-        const tr = document.createElement('tr');
-        tr.setAttribute('data-action-row', rowIndex);
-        tr.style.borderBottom = '1px solid #c8e6c9';
-
-        tr.innerHTML = `
-            <td style="padding: 12px; border: 1px solid #c8e6c9; vertical-align: top;">
-                <textarea class="form-input" rows="3" placeholder="اكتب الإجراء التصحيحي هنا..." style="width: 100%; resize: vertical; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; min-height: 80px; box-sizing: border-box;">${Utils.escapeHTML(data.correctiveAction || '')}</textarea>
-            </td>
-            <td style="padding: 12px; border: 1px solid #c8e6c9; text-align: center; vertical-align: top;">
-                <input type="date" class="form-input" value="${data.plannedDate || ''}" style="width: 100%; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; text-align: center; box-sizing: border-box;">
-            </td>
-            <td style="padding: 12px; border: 1px solid #c8e6c9; vertical-align: top;">
-                <input type="text" class="form-input mb-2" placeholder="اسم مسئول التنفيذ" value="${Utils.escapeHTML(data.responsibleName || '')}" style="width: 100%; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; box-sizing: border-box;">
-                <input type="date" class="form-input" placeholder="تاريخ التنفيذ" value="${data.responsibleDate || ''}" style="width: 100%; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; box-sizing: border-box;">
-            </td>
-            <td style="padding: 12px; border: 1px solid #c8e6c9; vertical-align: top;">
-                <input type="text" class="form-input mb-2" placeholder="اسم المتابع" value="${Utils.escapeHTML(data.followUpName || '')}" style="width: 100%; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; box-sizing: border-box;">
-                <input type="date" class="form-input" placeholder="تاريخ المتابعة" value="${data.followUpDate || ''}" style="width: 100%; border: 2px solid #4CAF50; border-radius: 6px; padding: 8px; box-sizing: border-box;">
-            </td>
-        `;
-
-        tbody.appendChild(tr);
+        const temp = document.createElement('tbody');
+        temp.innerHTML = this._buildInvestigationActionPlanRowHtml(data, rowIndex);
+        const newRow = temp.querySelector('tr');
+        if (newRow) {
+            tbody.appendChild(newRow);
+            this.setupInvestigationActionPlanRowPickers(newRow);
+        }
     },
 
     // جمع بيانات نموذج التحقيق للطباعة/التصدير
@@ -12660,10 +12827,12 @@ const Incidents = {
                     <td style="padding: 12px; border: 1px solid #c8e6c9; text-align: center; vertical-align: top;">${action.plannedDate ? formatDateOnly(action.plannedDate) : ''}</td>
                     <td style="padding: 12px; border: 1px solid #c8e6c9; vertical-align: top;">
                         ${esc(action.responsibleName || '')}
+                        ${action.responsibleDepartment ? `<br><span style="font-size:11px;color:#64748b;">${esc(action.responsibleDepartment)}</span>` : ''}
                         ${action.responsibleDate ? `<br><span style="font-size:11px;color:#64748b;">${formatDateOnly(action.responsibleDate)}</span>` : ''}
                     </td>
                     <td style="padding: 12px; border: 1px solid #c8e6c9; vertical-align: top;">
                         ${esc(action.followUpName || '')}
+                        ${action.followUpDepartment ? `<br><span style="font-size:11px;color:#64748b;">${esc(action.followUpDepartment)}</span>` : ''}
                         ${action.followUpDate ? `<br><span style="font-size:11px;color:#64748b;">${formatDateOnly(action.followUpDate)}</span>` : ''}
                         </td>
                     </tr>
