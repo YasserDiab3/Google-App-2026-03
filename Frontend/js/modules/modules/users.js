@@ -1530,14 +1530,24 @@ const Users = {
     },
 
     async disableUserMfa(userId, userEmail) {
+        const isAdmin = (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserAdmin === 'function')
+            ? Permissions.isCurrentUserAdmin()
+            : (AppState.currentUser?.role || '').toLowerCase() === 'admin';
+
+        if (!isAdmin) {
+            Notification.error('ليس لديك صلاحية لتعطيل MFA');
+            return;
+        }
+
         const user = (AppState.appData.users || []).find(u => u && (u.id === userId || u.email === userEmail));
         if (!user) {
             Notification.error('المستخدم غير موجود');
             return;
         }
-        const confirmed = await Utils.confirmAction(
-            `تعطيل المصادقة الثنائية للمستخدم "${user.name}" (${user.email})؟`,
+        const confirmed = await Utils.confirmDialog(
             'تعطيل MFA',
+            `تعطيل المصادقة الثنائية للمستخدم "${user.name}" (${user.email})؟`,
+            'تعطيل',
             'إلغاء'
         );
         if (!confirmed) return;

@@ -4045,6 +4045,17 @@ function fixUsersSheetHeaders(spreadsheetId = null) {
             }
             headersUpdated = true;
         }
+
+        // إضافة أي رؤوس ناقصة من التعريف الافتراضي (مثل mfaEnabled / mfaSecretEnc / mfaEnrolledAt)
+        var defaultUsersHeaders = (typeof getDefaultHeaders === 'function') ? getDefaultHeaders('Users') : [];
+        if (defaultUsersHeaders && defaultUsersHeaders.length) {
+            defaultUsersHeaders.forEach(function(header) {
+                if (header && existingHeaders.indexOf(header) === -1) {
+                    existingHeaders.push(header);
+                    headersUpdated = true;
+                }
+            });
+        }
         
         if (headersUpdated) {
             // تحديث الرؤوس
@@ -4056,11 +4067,11 @@ function fixUsersSheetHeaders(spreadsheetId = null) {
             headerRange.setBackground('#f0f0f0');
             headerRange.setFontSize(11);
             
-            Logger.log('Fixed Users sheet headers: Added password and passwordHash columns');
-            return { success: true, message: 'تم إصلاح رأس ورقة Users بنجاح - تم إضافة أعمدة password و passwordHash' };
+            Logger.log('Fixed Users sheet headers: Added missing columns');
+            return { success: true, message: 'تم إصلاح رأس ورقة Users بنجاح - تمت إضافة الأعمدة الناقصة' };
         }
         
-        return { success: true, message: 'رأس ورقة Users صحيح بالفعل - password و passwordHash موجودان' };
+        return { success: true, message: 'رأس ورقة Users صحيح بالفعل' };
     } catch (error) {
         Logger.log('Error fixing Users sheet headers: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء إصلاح رأس ورقة Users: ' + error.toString() };

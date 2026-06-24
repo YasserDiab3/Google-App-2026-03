@@ -938,7 +938,7 @@ function confirmMfaEnrollment(code, actorUserData) {
             mfaEnabled: true,
             mfaSecretEnc: enc,
             mfaEnrolledAt: now
-        }, actorUserData, { internalCall: false });
+        }, actorUserData, { internalCall: true });
         if (upd && upd.success) {
             return { success: true, message: 'تم تفعيل المصادقة الثنائية بنجاح', mfaEnabled: true, mfaEnrolledAt: now };
         }
