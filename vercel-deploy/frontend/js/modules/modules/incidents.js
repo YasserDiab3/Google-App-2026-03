@@ -853,26 +853,31 @@ const Incidents = {
     /**
      * إضافة حادث للسجل (يُستدعى تلقائياً)
      */
-    async addToRegistry(incident) {
+    async addToRegistry(incident, options = {}) {
+        const { persist = true } = options;
         const existingEntry = this.registryData.find(r => r.incidentId === incident.id);
         if (existingEntry) {
-            return this.updateRegistryEntry(incident);
+            return this.updateRegistryEntry(incident, options);
         }
         const entry = this.createRegistryEntry(incident);
         if (entry) {
             this.registryData.push(entry);
-            await this.saveRegistryData();
+            if (persist) {
+                await this.saveRegistryData();
+            }
             Utils.safeLog(`✅ تم تسجيل الحادث #${entry.sequentialNumber} في السجل`);
         }
+        return !!entry;
     },
 
     /**
      * تحديث سجل حادث
      */
-    async updateRegistryEntry(incident) {
+    async updateRegistryEntry(incident, options = {}) {
+        const { persist = true } = options;
         const entryIndex = this.registryData.findIndex(r => r.incidentId === incident.id);
         if (entryIndex === -1) {
-            return this.addToRegistry(incident);
+            return this.addToRegistry(incident, options);
         }
 
         const entry = this.registryData[entryIndex];
@@ -926,7 +931,10 @@ const Incidents = {
         entry.updatedAt = new Date().toISOString();
 
         this.registryData[entryIndex] = entry;
-        await this.saveRegistryData();
+        if (persist) {
+            await this.saveRegistryData();
+        }
+        return true;
     },
 
     /**
@@ -955,23 +963,35 @@ const Incidents = {
                 return;
             }
 
-            // مزامنة محدودة لتجنب التعطيل
-            const maxSync = 50; // حد أقصى 50 حادث في المرة الواحدة
+            // مزامنة محدودة — تحديث بالذاكرة ثم حفظ واحد (تجنب 50 طلب شبكة متتالي)
+            const maxSync = 50;
             const incidentsToSync = incidents.slice(0, maxSync);
+            let registryChanged = false;
 
             for (const incident of incidentsToSync) {
                 if (!incident || !incident.id) continue;
                 try {
                     const existingEntry = this.registryData.find(r => r.incidentId === incident.id);
+                    const incidentStamp = incident.updatedAt || incident.createdAt || '';
+                    const entryStamp = existingEntry?.updatedAt || existingEntry?.createdAt || '';
+                    if (existingEntry && incidentStamp && entryStamp && incidentStamp === entryStamp) {
+                        continue;
+                    }
                     if (!existingEntry) {
-                        await this.addToRegistry(incident);
+                        const added = await this.addToRegistry(incident, { persist: false });
+                        if (added) registryChanged = true;
                     } else {
-                        await this.updateRegistryEntry(incident);
+                        const updated = await this.updateRegistryEntry(incident, { persist: false });
+                        if (updated) registryChanged = true;
                     }
                 } catch (incidentError) {
                     Utils.safeWarn(`خطأ في مزامنة حادث ${incident.id}:`, incidentError);
                     continue;
                 }
+            }
+
+            if (registryChanged) {
+                await this.saveRegistryData();
             }
 
             if (incidents.length > maxSync) {
@@ -1022,9 +1042,8 @@ const Incidents = {
 
             this.normalizeAllIncidentsApprovalState();
 
-            // مزامنة السجل مع الحوادث الموجودة فوراً - تحسين المزامنة
-            // استخدام requestAnimationFrame لتسريع البدء
-            requestAnimationFrame(() => {
+            // مزامنة السجل بالخلفية بعد عرض الواجهة (لا تُعطّل التحميل)
+            const scheduleRegistrySync = () => {
                 this.syncRegistryWithIncidents().catch(error => {
                     if (typeof Utils !== 'undefined' && Utils.safeError) {
                         Utils.safeError('خطأ في مزامنة السجل:', error);
@@ -1032,7 +1051,12 @@ const Incidents = {
                         console.error('خطأ في مزامنة السجل:', error);
                     }
                 });
-            });
+            };
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(scheduleRegistrySync, { timeout: 4000 });
+            } else {
+                setTimeout(scheduleRegistrySync, 800);
+            }
 
             // عرض المحتوى
             let mainViewContent = '';
@@ -11459,16 +11483,6 @@ const Incidents = {
             affiliationEl.addEventListener('change', refreshUI);
         }
 
-        if (codeInput && !codeInput.dataset.bound) {
-            codeInput.dataset.bound = '1';
-            const tryFill = () => this.fillInvestigationEmployeeFromCode(modal);
-            codeInput.addEventListener('blur', tryFill);
-            codeInput.addEventListener('change', tryFill);
-            codeInput.addEventListener('input', () => {
-                if (codeInput.value.trim().length >= 3) tryFill();
-            });
-        }
-
         if (typeof EmployeeHelper !== 'undefined') {
             EmployeeHelper.setupEmployeeCodeSearch('investigation-affected-employee-code', 'investigation-affected-name', (employee) => {
                 if ((affiliationEl?.value || '') !== 'company' || !employee) return;
@@ -11828,26 +11842,6 @@ const Incidents = {
                 if (affectedAffiliationEl) {
                     affectedAffiliationEl.value = incident.affiliation;
                 }
-            }
-
-            // إعادة تهيئة معالج RCA بعد تحميل بيانات التحقيق
-            const rcaContainer = document.getElementById('investigation-rca-wizard');
-            if (rcaContainer && typeof InvestigationRCA !== 'undefined') {
-                let invForRca = investigation;
-                if (!invForRca && incident.investigation) {
-                    invForRca = typeof incident.investigation === 'string'
-                        ? (() => { try { return JSON.parse(incident.investigation); } catch (_e) { return {}; } })()
-                        : incident.investigation;
-                }
-                const descEl = document.querySelector('#investigation-description');
-                const submitBtn = document.getElementById('investigation-submit-btn');
-                const canEditRca = submitBtn ? !submitBtn.disabled : true;
-                InvestigationRCA.render(rcaContainer, {
-                    savedRca: invForRca?.rca || null,
-                    defaultDescription: descEl?.value || '',
-                    canEdit: canEditRca
-                });
-                InvestigationRCA.bindEvents(rcaContainer, { canEdit: canEditRca });
             }
 
             const modalEl = document.querySelector('.modal-overlay');
