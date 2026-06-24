@@ -2312,15 +2312,9 @@ const PTW = {
         };
 
         try {
-            // تحميل إحداثيات المواقع من MapCoordinatesManager (إذا كان متاحاً)
-            if (typeof MapCoordinatesManager !== 'undefined' && MapCoordinatesManager.syncFromGoogleSheets) {
-                MapCoordinatesManager.syncFromGoogleSheets().then(() => {
-                    Utils.safeLog('✅ تم مزامنة إحداثيات المواقع من Google Sheets');
-                    this._notifyMapCoordinatesUpdated();
-                }).catch(error => {
-                    Utils.safeWarn('⚠️ تعذر مزامنة إحداثيات المواقع:', error);
-                });
-            }
+            // إحداثيات الخريطة: تعبئة فورية من الذاكرة المحلية ثم مزامنة Sheets بالخلفية
+            this._hydrateMapCoordinatesFromLocal();
+            this._scheduleMapCoordinatesBackgroundSync();
 
             // تحميل البيانات من Backend بشكل غير متزامن
             const loadDataPromises = [];
@@ -3270,7 +3264,7 @@ const PTW = {
                             <i class="fas fa-map-marked-alt ml-2 text-primary-500"></i>
                             ${t('module.ptw.map.title', 'خريطة مواقع التصاريح')}
                         </h2>
-                        <p class="text-sm text-gray-500 mt-1">${t('module.ptw.map.subtitle', 'عرض حالة ومواقع تصاريح العمل')}</p>
+                        <p class="text-sm text-gray-500 mt-1">${t('module.ptw.map.subtitle', 'عرض حالة ومواقع تصاريح العمل — مركز افتراضي مصر (القاهرة)')}</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
                         <select id="ptw-map-filter-status" class="form-select text-sm w-40 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500">
@@ -3430,6 +3424,59 @@ const PTW = {
         }, 50);
     },
 
+    _hydrateMapCoordinatesFromLocal() {
+        if (typeof MapCoordinatesManager !== 'undefined' && MapCoordinatesManager.hydrateLocalToAppState) {
+            MapCoordinatesManager.hydrateLocalToAppState();
+        }
+    },
+
+    _scheduleMapCoordinatesBackgroundSync() {
+        if (typeof MapCoordinatesManager === 'undefined' || !MapCoordinatesManager.scheduleBackgroundSync) return;
+        MapCoordinatesManager.scheduleBackgroundSync()
+            .then((ok) => {
+                if (ok) {
+                    Utils.safeLog('✅ تم مزامنة إحداثيات الخريطة من Google Sheets');
+                    this._notifyMapCoordinatesUpdated();
+                }
+            })
+            .catch((error) => {
+                Utils.safeWarn('⚠️ تعذر مزامنة إحداثيات المواقع:', error);
+            });
+    },
+
+    shouldUseGoogleMapsForPtw() {
+        if (!this.googleMapsApiKeyChecked) {
+            const apiKey = AppState.googleConfig?.maps?.apiKey;
+            this.hasGoogleMapsApiKey = !!(apiKey && apiKey.trim() !== '');
+            this.googleMapsApiKeyChecked = true;
+        }
+        return AppState.googleConfig?.maps?.ptwEngine === 'google' && this.hasGoogleMapsApiKey;
+    },
+
+    async ensureLeafletReady() {
+        if (typeof L !== 'undefined' && typeof L.map === 'function') return;
+
+        const existingScript = document.querySelector('script[src*="leaflet"]');
+        if (!existingScript) {
+            throw new Error('مكتبة Leaflet غير موجودة في الصفحة');
+        }
+
+        await new Promise((resolve, reject) => {
+            let attempts = 0;
+            const maxAttempts = 50;
+            const checkInterval = setInterval(() => {
+                attempts++;
+                if (typeof L !== 'undefined' && typeof L.map === 'function') {
+                    clearInterval(checkInterval);
+                    resolve();
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(checkInterval);
+                    reject(new Error('انتهت مهلة تحميل Leaflet'));
+                }
+            }, 100);
+        });
+    },
+
     getCurrentSiteCoordinates() {
         try {
             const user = AppState.currentUser || {};
@@ -3445,7 +3492,7 @@ const PTW = {
                     return {
                         lat: parseFloat(site.latitude),
                         lng: parseFloat(site.longitude),
-                        zoom: parseInt(site.zoom) || 15
+                        zoom: parseInt(site.zoom, 10) || 15
                     };
                 }
             }
@@ -3459,7 +3506,7 @@ const PTW = {
                         return {
                             lat: parseFloat(site.latitude),
                             lng: parseFloat(site.longitude),
-                            zoom: parseInt(site.zoom) || 15
+                            zoom: parseInt(site.zoom, 10) || 15
                         };
                     }
                 }
@@ -3675,38 +3722,27 @@ const PTW = {
         Utils.safeLog('✅ حاوية الخريطة جاهزة:', mapContainer.id);
 
         try {
-            // الحصول على الإحداثيات الافتراضية للمصنع
-            const defaultCoords = this.getDefaultFactoryCoordinates();
+            const siteCoords = this.getCurrentSiteCoordinates();
+            const defaultCoords = this._normalizeMapCoordinates_(siteCoords || this.getDefaultFactoryCoordinates());
 
-            // محاولة استخدام Google Maps أولاً
             let useGoogleMaps = false;
-            try {
-                // التحقق من وجود مفتاح API أولاً (مع cache)
-                if (!this.googleMapsApiKeyChecked) {
-                    const apiKey = AppState.googleConfig?.maps?.apiKey;
-                    this.hasGoogleMapsApiKey = !!(apiKey && apiKey.trim() !== '');
-                    this.googleMapsApiKeyChecked = true;
-                }
-
-                // إذا كان هناك مفتاح API، نحاول تحميل Google Maps
-                if (this.hasGoogleMapsApiKey) {
-                if (typeof google === 'undefined' || !google.maps) {
-                    await this.loadGoogleMapsAPI();
-                }
-
-                if (typeof google !== 'undefined' && google.maps) {
-                    useGoogleMaps = true;
+            if (this.shouldUseGoogleMapsForPtw()) {
+                try {
+                    if (typeof google === 'undefined' || !google.maps) {
+                        await Promise.race([
+                            this.loadGoogleMapsAPI(),
+                            new Promise((_, reject) => setTimeout(() => reject(new Error('Google Maps timeout')), 4000))
+                        ]);
                     }
-                } else {
-                    // لا يوجد مفتاح API - استخدام OpenStreetMap مباشرة بدون تحذير
-                    Utils.safeLog('ℹ️ استخدام OpenStreetMap (مفتاح Google Maps API غير محدد)');
+                    if (typeof google !== 'undefined' && google.maps) {
+                        useGoogleMaps = true;
+                    }
+                } catch (googleError) {
+                    Utils.safeLog('ℹ️ التحويل إلى Leaflet/OSM (مصر):', googleError?.message || googleError);
+                    useGoogleMaps = false;
                 }
-            } catch (googleError) {
-                // فقط عرض تحذير إذا كان هناك مفتاح API لكن فشل التحميل
-                if (this.hasGoogleMapsApiKey) {
-                Utils.safeWarn('⚠️ فشل تحميل Google Maps، سيتم استخدام OpenStreetMap:', googleError);
-                }
-                useGoogleMaps = false;
+            } else {
+                Utils.safeLog('ℹ️ خريطة تصاريح العمل: Leaflet/OSM — مركز افتراضي مصر');
             }
 
             if (useGoogleMaps) {
@@ -4056,7 +4092,7 @@ const PTW = {
                 reject(new Error('خطأ في تحميل Google Maps API - قد يكون المفتاح غير صالح أو هناك مشكلة في الاتصال'));
             };
 
-            // timeout بعد 8 ثواني
+            // timeout بعد 4 ثوانٍ
             timeoutId = setTimeout(() => {
                 if (resolved) return;
                 resolved = true;
@@ -4064,7 +4100,7 @@ const PTW = {
                     delete window[callbackName];
                     reject(new Error('انتهت مهلة تحميل Google Maps API'));
                 }
-            }, 8000);
+            }, 4000);
 
             document.head.appendChild(script);
         });
@@ -4096,82 +4132,7 @@ const PTW = {
         }
 
         if (typeof L === 'undefined') {
-            Utils.safeLog('🔄 بدء تحميل Leaflet...');
-            await new Promise((resolve, reject) => {
-                if (typeof L !== 'undefined') {
-                    Utils.safeLog('✅ Leaflet محمّل بالفعل');
-                    resolve();
-                    return;
-                }
-
-                const existingScript = document.querySelector('script[src*="leaflet"]');
-                if (existingScript) {
-                    Utils.safeLog('⏳ انتظار تحميل Leaflet من script موجود...');
-                    let attempts = 0;
-                    const maxAttempts = 100; // 10 ثواني
-                    const checkInterval = setInterval(() => {
-                        attempts++;
-                        if (typeof L !== 'undefined') {
-                            clearInterval(checkInterval);
-                            Utils.safeLog('✅ تم تحميل Leaflet بنجاح');
-                            resolve();
-                        } else if (attempts >= maxAttempts) {
-                            clearInterval(checkInterval);
-                            Utils.safeError('❌ انتهت مهلة تحميل Leaflet');
-                            reject(new Error('انتهت مهلة تحميل Leaflet - يرجى التحقق من الاتصال بالإنترنت'));
-                        }
-                    }, 100);
-                    return;
-                }
-
-                Utils.safeLog('📥 تحميل Leaflet من cdnjs.cloudflare.com...');
-                const leafletJS = document.createElement('script');
-                leafletJS.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';
-                leafletJS.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
-                leafletJS.crossOrigin = 'anonymous';
-
-                let timeoutId = null;
-                let resolved = false;
-
-                leafletJS.onload = () => {
-                    if (resolved) return;
-                    resolved = true;
-                    if (timeoutId) clearTimeout(timeoutId);
-                    Utils.safeLog('📦 تم تحميل ملف Leaflet، جاري التحقق...');
-                    setTimeout(() => {
-                        if (typeof L !== 'undefined') {
-                            Utils.safeLog('✅ تم تحميل Leaflet بنجاح');
-                            resolve();
-                        } else {
-                            Utils.safeError('❌ Leaflet غير متاح بعد التحميل');
-                            reject(new Error('فشل تحميل Leaflet - المكتبة غير متاحة'));
-                        }
-                    }, 500);
-                };
-
-                leafletJS.onerror = (error) => {
-                    if (resolved) return;
-                    resolved = true;
-                    if (timeoutId) clearTimeout(timeoutId);
-                    Utils.safeError('❌ خطأ في تحميل ملف Leaflet:', error);
-                    reject(new Error('خطأ في تحميل Leaflet - يرجى التحقق من الاتصال بالإنترنت أو CSP settings'));
-                };
-
-                // timeout بعد 15 ثانية
-                timeoutId = setTimeout(() => {
-                    if (resolved) return;
-                    resolved = true;
-                    if (typeof L === 'undefined') {
-                        Utils.safeError('❌ انتهت مهلة تحميل Leaflet');
-                        reject(new Error('انتهت مهلة تحميل Leaflet - يرجى التحقق من الاتصال بالإنترنت'));
-                    }
-                }, 15000);
-
-                document.head.appendChild(leafletJS);
-                Utils.safeLog('📝 تم إضافة script Leaflet إلى الصفحة');
-            });
-        } else {
-            Utils.safeLog('✅ Leaflet محمّل بالفعل');
+            await this.ensureLeafletReady();
         }
 
         // التحقق من أن Leaflet محمّل
@@ -4331,9 +4292,9 @@ const PTW = {
             }
 
             this.mapInstance = L.map(container, {
-                preferCanvas: false,
-                zoomControl: false // سنضيفه لاحقاً
-            }).setView([defaultCoords.lat, defaultCoords.lng], defaultCoords.zoom || 15);
+                preferCanvas: true,
+                zoomControl: false
+            }).setView([defaultCoords.lat, defaultCoords.lng], defaultCoords.zoom || this.EGYPT_MAP_DEFAULT.zoom);
 
             Utils.safeLog('✅ تم إنشاء instance الخريطة');
             Utils.safeLog('✅ mapInstance موجود:', this.mapInstance ? 'نعم' : 'لا');
@@ -4354,16 +4315,15 @@ const PTW = {
             // إضافة طبقات مختلفة للخريطة
             // طبقة الخريطة العادية (OpenStreetMap)
             this.leafletLayers.normal = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> — مصر',
                 maxZoom: 19,
                 subdomains: ['a', 'b', 'c'],
                 errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
                 tileSize: 256,
-                zoomOffset: 0,
                 crossOrigin: true,
                 keepBuffer: 2,
-                updateWhenIdle: false,
-                updateWhenZooming: true
+                updateWhenIdle: true,
+                updateWhenZooming: false
             });
 
             // إضافة معالجة للأخطاء للطبقة العادية
@@ -4592,6 +4552,9 @@ const PTW = {
             this.leafletLayers.normal.addTo(this.mapInstance);
             this.currentMapType = 'normal';
             Utils.safeLog('✅ تم إضافة طبقة OpenStreetMap');
+
+            const mapLoadingDiv = document.getElementById('ptw-map-loading');
+            if (mapLoadingDiv) mapLoadingDiv.style.display = 'none';
 
             // التحقق من أن الطبقة تم إضافتها
             const layers = this.mapInstance._layers || {};
@@ -4901,39 +4864,24 @@ const PTW = {
      * يعمل بشكل متزامن مع تحديث البيانات في الخلفية
      */
     getDefaultFactoryCoordinates() {
-        // استخدام AppState مباشرة للاستجابة الفورية
-        const companySettings = AppState.companySettings || {};
         let coords = null;
-        
-        if (companySettings.latitude && companySettings.longitude) {
-            coords = {
-                lat: parseFloat(companySettings.latitude),
-                lng: parseFloat(companySettings.longitude),
-                zoom: parseInt(companySettings.mapZoom) || this.EGYPT_MAP_DEFAULT.zoom
-            };
+
+        if (typeof MapCoordinatesManager !== 'undefined' && MapCoordinatesManager.getDefaultCoordinatesSync) {
+            coords = MapCoordinatesManager.getDefaultCoordinatesSync();
         } else {
-            coords = this.getEgyptMapDefault();
+            const companySettings = AppState.companySettings || {};
+            if (companySettings.latitude && companySettings.longitude) {
+                coords = {
+                    lat: parseFloat(companySettings.latitude),
+                    lng: parseFloat(companySettings.longitude),
+                    zoom: parseInt(companySettings.mapZoom, 10) || this.EGYPT_MAP_DEFAULT.zoom
+                };
+            } else {
+                coords = this.getEgyptMapDefault();
+            }
         }
 
-        coords = this._normalizeMapCoordinates_(coords);
-        
-        // تحديث البيانات من MapCoordinatesManager في الخلفية (إذا كان متاحاً)
-        if (typeof MapCoordinatesManager !== 'undefined' && MapCoordinatesManager.loadDefaultCoordinates) {
-            MapCoordinatesManager.loadDefaultCoordinates().then(updatedCoords => {
-                if (updatedCoords && updatedCoords.lat && updatedCoords.lng) {
-                    if (!AppState.companySettings) AppState.companySettings = {};
-                    AppState.companySettings.latitude = updatedCoords.lat;
-                    AppState.companySettings.longitude = updatedCoords.lng;
-                    AppState.companySettings.mapZoom = updatedCoords.zoom || 15;
-                    Utils.safeLog('✅ تم تحديث الإحداثيات الافتراضية من MapCoordinatesManager');
-                    this._notifyMapCoordinatesUpdated();
-                }
-            }).catch(error => {
-                Utils.safeWarn('⚠️ خطأ في تحديث الإحداثيات الافتراضية من MapCoordinatesManager:', error);
-            });
-        }
-        
-        return coords;
+        return this._normalizeMapCoordinates_(coords);
     },
 
     /**
@@ -5002,24 +4950,16 @@ const PTW = {
      * يعمل بشكل متزامن مع تحديث البيانات في الخلفية
      */
     getMapSites() {
-        // استخدام AppState مباشرة للاستجابة الفورية
         if (!AppState.appData) AppState.appData = {};
-        if (!AppState.appData.ptwMapSites) AppState.appData.ptwMapSites = [];
-        
-        // تحديث البيانات من MapCoordinatesManager في الخلفية (إذا كان متاحاً)
-        if (typeof MapCoordinatesManager !== 'undefined' && MapCoordinatesManager.loadMapSites) {
-            MapCoordinatesManager.loadMapSites().then(sites => {
-                if (sites && Array.isArray(sites) && sites.length > 0) {
-                    if (!AppState.appData) AppState.appData = {};
-                    AppState.appData.ptwMapSites = sites;
-                    Utils.safeLog('✅ تم تحديث المواقع من MapCoordinatesManager');
-                    this._notifyMapCoordinatesUpdated();
-                }
-            }).catch(error => {
-                Utils.safeWarn('⚠️ خطأ في تحديث المواقع من MapCoordinatesManager:', error);
-            });
+
+        if (typeof MapCoordinatesManager !== 'undefined' && MapCoordinatesManager.getMapSitesSync) {
+            const sites = MapCoordinatesManager.getMapSitesSync();
+            AppState.appData.ptwMapSites = sites;
+            this._scheduleMapCoordinatesBackgroundSync();
+            return sites;
         }
-        
+
+        if (!AppState.appData.ptwMapSites) AppState.appData.ptwMapSites = [];
         return AppState.appData.ptwMapSites;
     },
 

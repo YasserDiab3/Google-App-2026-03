@@ -11,13 +11,105 @@ const MapCoordinatesManager = {
     SHEETS_KEY: 'PTW_MAP_COORDINATES',
     // مفتاح الإحداثيات الافتراضية
     DEFAULT_COORDS_KEY: 'ptw_default_coordinates',
+    EGYPT_DEFAULT_COORDS: { lat: 30.0444, lng: 31.2357, zoom: 6 },
+    _backgroundSyncPromise: null,
+
+    _isLegacySaudiMapDefault(lat, lng) {
+        return Math.abs(lat - 24.7136) < 0.001 && Math.abs(lng - 46.6753) < 0.001;
+    },
+
+    _normalizeDefaultCoords(coords) {
+        if (!coords || typeof coords.lat !== 'number' || typeof coords.lng !== 'number' ||
+            isNaN(coords.lat) || isNaN(coords.lng)) {
+            return { ...this.EGYPT_DEFAULT_COORDS };
+        }
+        if (this._isLegacySaudiMapDefault(coords.lat, coords.lng)) {
+            return { ...this.EGYPT_DEFAULT_COORDS };
+        }
+        return {
+            lat: coords.lat,
+            lng: coords.lng,
+            zoom: parseInt(coords.zoom, 10) || this.EGYPT_DEFAULT_COORDS.zoom
+        };
+    },
+
+    /** إحداثيات افتراضية فورية — مصر — بدون انتظار الشبكة */
+    getDefaultCoordinatesSync() {
+        if (typeof AppState !== 'undefined' && AppState.companySettings) {
+            const settings = AppState.companySettings;
+            if (settings.latitude && settings.longitude) {
+                return this._normalizeDefaultCoords({
+                    lat: parseFloat(settings.latitude),
+                    lng: parseFloat(settings.longitude),
+                    zoom: parseInt(settings.mapZoom, 10) || 15
+                });
+            }
+        }
+        const localData = this.loadDefaultCoordinatesLocal();
+        if (localData && localData.lat != null && localData.lng != null) {
+            return this._normalizeDefaultCoords({
+                lat: parseFloat(localData.lat),
+                lng: parseFloat(localData.lng),
+                zoom: parseInt(localData.zoom, 10) || this.EGYPT_DEFAULT_COORDS.zoom
+            });
+        }
+        return { ...this.EGYPT_DEFAULT_COORDS };
+    },
+
+    /** مواقع الخريطة من الذاكرة المحلية فوراً */
+    getMapSitesSync() {
+        if (typeof AppState !== 'undefined' && AppState.appData?.ptwMapSites?.length) {
+            return [...AppState.appData.ptwMapSites];
+        }
+        const localData = this.loadMapSitesLocal();
+        return Array.isArray(localData) ? localData : [];
+    },
+
+    /** تعبئة AppState من localStorage عند فتح PTW */
+    hydrateLocalToAppState() {
+        const sites = this.loadMapSitesLocal();
+        if (sites.length > 0 && typeof AppState !== 'undefined') {
+            if (!AppState.appData) AppState.appData = {};
+            if (!AppState.appData.ptwMapSites?.length) {
+                AppState.appData.ptwMapSites = sites;
+            }
+        }
+        const def = this.loadDefaultCoordinatesLocal();
+        if (def?.lat != null && def?.lng != null && typeof AppState !== 'undefined') {
+            if (!AppState.companySettings) AppState.companySettings = {};
+            const normalized = this._normalizeDefaultCoords({
+                lat: parseFloat(def.lat),
+                lng: parseFloat(def.lng),
+                zoom: parseInt(def.zoom, 10) || this.EGYPT_DEFAULT_COORDS.zoom
+            });
+            if (!AppState.companySettings.latitude) {
+                AppState.companySettings.latitude = normalized.lat;
+                AppState.companySettings.longitude = normalized.lng;
+                AppState.companySettings.mapZoom = normalized.zoom;
+            }
+        }
+    },
+
+    /** مزامنة Sheets بالخلفية — طلب واحد */
+    scheduleBackgroundSync() {
+        if (this._backgroundSyncPromise) return this._backgroundSyncPromise;
+        this._backgroundSyncPromise = Promise.resolve()
+            .then(() => this.syncFromGoogleSheets())
+            .catch(() => false)
+            .finally(() => { this._backgroundSyncPromise = null; });
+        return this._backgroundSyncPromise;
+    },
 
     /**
      * تحميل إحداثيات المواقع من جميع المصادر
      */
     async loadMapSites() {
+        const cached = this.getMapSitesSync();
+        this.scheduleBackgroundSync();
+        if (cached.length > 0) return cached;
+
         try {
-            // 1. محاولة التحميل من Google Sheets (الأولوية الأولى - مشترك لجميع المستخدمين)
+            // بدون كاش محلي: جلب من Google Sheets
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.getData) {
                 try {
                     const sheetsData = await GoogleIntegration.getData(this.SHEETS_KEY);
@@ -164,8 +256,14 @@ const MapCoordinatesManager = {
      * تحميل الإحداثيات الافتراضية
      */
     async loadDefaultCoordinates() {
+        const cached = this.getDefaultCoordinatesSync();
+        this.scheduleBackgroundSync();
+        if (cached.lat !== this.EGYPT_DEFAULT_COORDS.lat || cached.lng !== this.EGYPT_DEFAULT_COORDS.lng) {
+            return cached;
+        }
+
         try {
-            // 1. محاولة التحميل من Google Sheets
+            // بدون إحداثيات محفوظة: محاولة الشبكة ثم مصر الافتراضي
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.getData) {
                 try {
                     const sheetsData = await GoogleIntegration.getData('PTW_DEFAULT_COORDINATES');
@@ -211,24 +309,12 @@ const MapCoordinatesManager = {
                 return localData;
             }
 
-            // 4. إرجاع القيم الافتراضية
-            if (typeof Utils !== 'undefined' && Utils.safeLog) {
-                Utils.safeLog('ℹ️ استخدام الإحداثيات الافتراضية');
-            }
-            return {
-                lat: 30.0444,
-                lng: 31.2357,
-                zoom: 6
-            };
+            return this.getDefaultCoordinatesSync();
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
                 Utils.safeError('❌ خطأ في تحميل الإحداثيات الافتراضية:', error);
             }
-            return {
-                lat: 30.0444,
-                lng: 31.2357,
-                zoom: 6
-            };
+            return this.getDefaultCoordinatesSync();
         }
     },
 
