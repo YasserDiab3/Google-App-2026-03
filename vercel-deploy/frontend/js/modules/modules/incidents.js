@@ -537,6 +537,62 @@ const Incidents = {
         }
     },
 
+    _calculateEmployeeAge(employee) {
+        if (!employee) return '';
+        if (employee.age != null && employee.age !== '') {
+            const directAge = parseInt(employee.age, 10);
+            if (!Number.isNaN(directAge) && directAge >= 0) return directAge;
+        }
+        const birthRaw = employee.birthDate || employee.dateOfBirth || employee.birth_date || '';
+        if (!birthRaw) return '';
+        if (typeof Employees !== 'undefined' && typeof Employees.calculateAge === 'function') {
+            const age = Employees.calculateAge(birthRaw);
+            if (age !== '' && age != null) return age;
+        }
+        try {
+            const birthDate = new Date(birthRaw);
+            if (Number.isNaN(birthDate.getTime())) return '';
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
+            return age >= 0 ? age : '';
+        } catch (_e) {
+            return '';
+        }
+    },
+
+    _applyInvestigationEmployeeToForm(modal, employee, options = {}) {
+        if (!modal || !employee) return;
+        const nameInput = modal.querySelector('#investigation-affected-name');
+        const jobInput = modal.querySelector('#investigation-affected-job');
+        const deptInput = modal.querySelector('#investigation-affected-department');
+        const ageInput = modal.querySelector('#investigation-affected-age');
+        const codeInput = modal.querySelector('#investigation-affected-employee-code');
+
+        if (codeInput) {
+            codeInput.value = employee.code || employee.employeeNumber || employee.sapId || employee.id || codeInput.value || '';
+        }
+        if (nameInput) nameInput.value = employee.name || employee.fullName || '';
+        if (jobInput) {
+            jobInput.value = employee.job || employee.position || employee.jobTitle || employee.title || '';
+        }
+        if (deptInput) {
+            deptInput.value = employee.department || employee.section || employee.division || employee.dept || employee.departmentName || '';
+        }
+        if (ageInput) {
+            const age = this._calculateEmployeeAge(employee);
+            if (age !== '' && age != null) ageInput.value = String(age);
+            else if (!options.keepExisting) ageInput.value = '';
+        }
+    },
+
+    _buildInvestigationBodyPartsDatalistOptions() {
+        return (this.BODY_PART_KEYWORDS || []).map((part) =>
+            `<option value="${Utils.escapeHTML(part.label)}"></option>`
+        ).join('');
+    },
+
     /**
      * تحديد اسم اليوم
      */
@@ -605,6 +661,10 @@ const Incidents = {
 
         const direct = String(incident.injuredPart || '').trim();
         if (direct && direct !== 'غير محدد') return direct;
+
+        const inv = this._parseInvestigationRecord(incident);
+        const invPart = String(inv?.injuredPart || '').trim();
+        if (invPart && invPart !== 'غير محدد') return invPart;
 
         const injuryDesc = String(incident.injuryDescription || '').trim();
         if (injuryDesc) {
@@ -779,8 +839,9 @@ const Incidents = {
     /**
      * استخراج المعدة المتسببة من الوصف
      */
-    extractEquipmentCause(description) {
-        // يمكن تحسين هذا لاحقاً باستخدام AI أو قواعد محددة
+    extractEquipmentCause(description, equipmentCause = '') {
+        const direct = String(equipmentCause || '').trim();
+        if (direct && direct !== 'غير محدد') return direct;
         return 'غير محدد';
     },
 
@@ -840,7 +901,7 @@ const Incidents = {
             employeeDepartment: employeeDepartment,
             incidentDetails: incident.description || 'غير محدد',
             injuredPart: this.resolveIncidentInjuredPart(incident),
-            equipmentCause: this.extractEquipmentCause(incident.description || ''),
+            equipmentCause: this.extractEquipmentCause(incident.description || '', incident.equipmentCause),
             leaveStartDate: leaveStartDate,
             returnToWorkDate: returnToWorkDate,
             totalLeaveDays: totalLeaveDays,
@@ -914,7 +975,7 @@ const Incidents = {
         entry.employeeDepartment = employeeDepartment;
         entry.incidentDetails = incident.description || entry.incidentDetails;
         entry.injuredPart = this.resolveIncidentInjuredPart(incident);
-        entry.equipmentCause = this.extractEquipmentCause(incident.description || '');
+        entry.equipmentCause = this.extractEquipmentCause(incident.description || '', incident.equipmentCause);
 
         // تحديث تواريخ الإجازة إذا كانت متوفرة في الحادث، وإلا نستخدم القيم الموجودة أو القيم الافتراضية
         const incidentIsoDate = (incidentDate && !Number.isNaN(incidentDate.getTime()))
@@ -6248,7 +6309,7 @@ const Incidents = {
                                 <th>الشدة</th>
                                 <th>نوع الحادث</th>
                                 <th>المبلغ</th>
-                                <th>الأطراف المتأثرة</th>
+                                <th>الأطراف / الجزء المتضرر</th>
                                 <th>الحالة</th>
                                 <th>حالة الاعتماد</th>
                                 <th>الإجراءات</th>
@@ -6268,10 +6329,16 @@ const Incidents = {
                                             </span>
                                         </td>
                                         <td>${Utils.escapeHTML(incident?.incidentType || '-')}</td>
+                                        <td>${Utils.escapeHTML(incident?.reportedBy || incident?.employeeCode || '-')}</td>
                                         <td>
-                                            ${Utils.escapeHTML(incident?.affectedName || incident?.reportedBy || '-')}
-                                            ${incident?.affectedType ? `<div class="text-xs text-gray-500">${Utils.escapeHTML(incident.affectedType || '')}</div>` : ''}
-                                            ${incident?.employeeCode ? `<div class="text-xs text-gray-400">${Utils.escapeHTML(incident.employeeCode || '')}</div>` : ''}
+                                            ${Utils.escapeHTML(this.resolveIncidentInjuredPart(incident) || '-')}
+                                            ${(() => {
+                                                const inv = this._parseInvestigationRecord(incident);
+                                                const eq = String(incident?.equipmentCause || inv?.equipmentCause || '').trim();
+                                                return eq && eq !== 'غير محدد'
+                                                    ? `<div class="text-xs text-gray-500">المعدة: ${Utils.escapeHTML(eq)}</div>`
+                                                    : '';
+                                            })()}
                                         </td>
                                         <td>
                                             <span class="badge badge-${this.getStatusBadgeClass(this.getIncidentDisplayStatus(incident))}">
@@ -8892,6 +8959,13 @@ const Incidents = {
             const contractorSelectHtml = this.buildInvestigationAffectedContractorSelectOptions(
                 affectedAffiliationInit === 'contractor' ? affectedDepartment : ''
             );
+            const injuredPartInit = investigationData.injuredPart
+                || incident.injuredPart
+                || this.resolveIncidentInjuredPart(incident);
+            const equipmentCauseInit = investigationData.equipmentCause
+                || incident.equipmentCause
+                || '';
+            const bodyPartsDatalist = this._buildInvestigationBodyPartsDatalistOptions();
 
             // توليد صفوف خطة العمل قبل template literal لتجنب مشكلة this
             const actionPlanRows = this.renderInvestigationActionPlanRows(investigationData.actionPlan || []);
@@ -9118,7 +9192,7 @@ const Incidents = {
                                             <input type="text" id="investigation-affected-employee-code" class="form-input"
                                                 value="${Utils.escapeHTML(affectedEmployeeCode)}"
                                                 placeholder="اكتب كود الموظف للبحث والتعبئة التلقائية" autocomplete="off">
-                                            <p class="text-xs text-gray-500 mt-2">عند إدخال الكود تُملأ الاسم والوظيفة والإدارة تلقائياً.</p>
+                                            <p class="text-xs text-gray-500 mt-2">عند إدخال الكود تُملأ الاسم والوظيفة والإدارة والسن تلقائياً.</p>
                                         </div>
                                     </div>
 
@@ -9151,7 +9225,7 @@ const Incidents = {
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">السن</label>
                                         <input type="number" id="investigation-affected-age" class="form-input"
                                             value="${investigationData.affectedAge || ''}"
-                                            placeholder="السن" min="1" max="100">
+                                            placeholder="يُعبَّأ تلقائياً من كود الموظف" min="1" max="100">
                                     </div>
 
                                     <div id="investigation-affected-department-wrapper" class="md:col-span-2">
@@ -9159,6 +9233,30 @@ const Incidents = {
                                         <input type="text" id="investigation-affected-department" class="form-input"
                                             value="${Utils.escapeHTML(affectedDepartment)}"
                                             placeholder="الجهة التابع لها">
+                                    </div>
+
+                                    <div id="investigation-injured-part-wrapper" class="md:col-span-2">
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                            <i class="fas fa-user-injured ml-1 text-pink-600"></i>
+                                            الأطراف / الجزء المتضرر من جسم المصاب
+                                        </label>
+                                        <input type="text" id="investigation-injured-part" class="form-input"
+                                            list="investigation-body-parts-datalist"
+                                            value="${Utils.escapeHTML(injuredPartInit && injuredPartInit !== 'غير محدد' ? injuredPartInit : '')}"
+                                            placeholder="اختر أو اكتب الجزء المتضرر (مثل: اليد، الرأس، الساق...)">
+                                        <datalist id="investigation-body-parts-datalist">
+                                            ${bodyPartsDatalist}
+                                        </datalist>
+                                    </div>
+
+                                    <div id="investigation-equipment-cause-wrapper" class="md:col-span-2">
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                            <i class="fas fa-cogs ml-1 text-pink-600"></i>
+                                            المعدة المتسببة في الإصابة
+                                        </label>
+                                        <input type="text" id="investigation-equipment-cause" class="form-input"
+                                            value="${Utils.escapeHTML(equipmentCauseInit && equipmentCauseInit !== 'غير محدد' ? equipmentCauseInit : '')}"
+                                            placeholder="اسم أو وصف المعدة / الآلة / الأداة المتسببة">
                                     </div>
                                 </div>
                             </div>
@@ -9603,6 +9701,8 @@ const Incidents = {
             if (inv.locationName) incident.sublocationName = inv.locationName;
         }
         if (inv.description) incident.description = inv.description;
+        if (inv.injuredPart) incident.injuredPart = inv.injuredPart;
+        if (inv.equipmentCause) incident.equipmentCause = inv.equipmentCause;
     },
 
     _closeInvestigationModal() {
@@ -9750,6 +9850,10 @@ const Incidents = {
         setVal('#investigation-signature-safety-manager-date', inv.signatureSafetyManager?.date);
         setVal('#investigation-signature-safety-director', inv.signatureSafetyDirector?.name);
         setVal('#investigation-signature-safety-director-date', inv.signatureSafetyDirector?.date);
+
+        const injuredVal = inv.injuredPart || this.resolveIncidentInjuredPart(incident);
+        setVal('#investigation-injured-part', injuredVal && injuredVal !== 'غير محدد' ? injuredVal : '');
+        setVal('#investigation-equipment-cause', inv.equipmentCause || incident?.equipmentCause || '');
 
         const tbody = modalEl.querySelector('#investigation-action-plan-body');
         if (tbody) {
@@ -10946,10 +11050,16 @@ const Incidents = {
                             </span>
                         </td>
                         <td>${Utils.escapeHTML(incident.incidentType || '-')}</td>
+                        <td>${Utils.escapeHTML(incident.reportedBy || incident.employeeCode || '-')}</td>
                         <td>
-                            ${Utils.escapeHTML(incident.affectedName || incident.reportedBy || '-')}
-                            ${incident.affectedType ? `<div class="text-xs text-gray-500">${Utils.escapeHTML(incident.affectedType || '')}</div>` : ''}
-                            ${incident.employeeCode ? `<div class="text-xs text-gray-400">${Utils.escapeHTML(incident.employeeCode || '')}</div>` : ''}
+                            ${Utils.escapeHTML(this.resolveIncidentInjuredPart(incident) || '-')}
+                            ${(() => {
+                                const inv = this._parseInvestigationRecord(incident);
+                                const eq = String(incident.equipmentCause || inv?.equipmentCause || '').trim();
+                                return eq && eq !== 'غير محدد'
+                                    ? `<div class="text-xs text-gray-500">المعدة: ${Utils.escapeHTML(eq)}</div>`
+                                    : '';
+                            })()}
                         </td>
                         <td>
                             <span class="badge badge-${this.getStatusBadgeClass(this.getIncidentDisplayStatus(incident))}">
@@ -11569,6 +11679,7 @@ const Incidents = {
         const nameInput = modal?.querySelector('#investigation-affected-name');
         const jobInput = modal?.querySelector('#investigation-affected-job');
         const deptInput = modal?.querySelector('#investigation-affected-department');
+        const ageInput = modal?.querySelector('#investigation-affected-age');
         const affiliationEl = modal?.querySelector('#investigation-affected-affiliation');
 
         if (!codeInput || !nameInput) return;
@@ -11580,22 +11691,18 @@ const Incidents = {
                 nameInput.value = '';
                 if (jobInput) jobInput.value = '';
                 if (deptInput) deptInput.value = '';
+                if (ageInput) ageInput.value = '';
             }
             return;
         }
 
         const employee = this.getEmployeeByCode(employeeCode);
         if (employee) {
-            nameInput.value = employee.name || employee.fullName || '';
-            if (jobInput) {
-                jobInput.value = employee.job || employee.position || employee.jobTitle || employee.title || '';
-            }
-            if (deptInput) {
-                deptInput.value = employee.department || employee.section || employee.division || employee.dept || '';
-            }
+            this._applyInvestigationEmployeeToForm(modal, employee, options);
         } else if (!options.silent) {
             nameInput.value = '';
             if (jobInput) jobInput.value = '';
+            if (ageInput) ageInput.value = '';
             if (document.activeElement !== codeInput) {
                 Notification.warning('لم يتم العثور على موظف بهذا الكود');
             }
@@ -11627,6 +11734,7 @@ const Incidents = {
         const nameInput = modal.querySelector('#investigation-affected-name');
         const jobInput = modal.querySelector('#investigation-affected-job');
         const deptInput = modal.querySelector('#investigation-affected-department');
+        const ageInput = modal.querySelector('#investigation-affected-age');
 
         const affiliation = affiliationEl?.value || '';
         const isCompany = affiliation === 'company';
@@ -11652,6 +11760,7 @@ const Incidents = {
 
         this._setInvestigationAffectedFieldLock(nameInput, isCompany);
         this._setInvestigationAffectedFieldLock(jobInput, isCompany);
+        this._setInvestigationAffectedFieldLock(ageInput, isCompany);
         this._setInvestigationAffectedFieldLock(deptInput, false);
 
         if (isCompany) {
@@ -11682,14 +11791,13 @@ const Incidents = {
         if (typeof EmployeeHelper !== 'undefined') {
             EmployeeHelper.setupEmployeeCodeSearch('investigation-affected-employee-code', 'investigation-affected-name', (employee) => {
                 if ((affiliationEl?.value || '') !== 'company' || !employee) return;
-                const nameInput = modal.querySelector('#investigation-affected-name');
-                const jobInput = modal.querySelector('#investigation-affected-job');
-                const deptInput = modal.querySelector('#investigation-affected-department');
-                if (codeInput) codeInput.value = employee.code || employee.employeeNumber || employee.sapId || employee.id || '';
-                if (nameInput) nameInput.value = employee.name || employee.fullName || '';
-                if (jobInput) jobInput.value = employee.job || employee.jobTitle || employee.position || '';
-                if (deptInput) deptInput.value = employee.department || employee.dept || employee.departmentName || '';
+                this._applyInvestigationEmployeeToForm(modal, employee);
             });
+        }
+
+        if (codeInput && !codeInput.dataset.blurBound) {
+            codeInput.dataset.blurBound = '1';
+            codeInput.addEventListener('blur', () => this.fillInvestigationEmployeeFromCode(modal, { keepExisting: true, silent: true }));
         }
 
         refreshUI();
@@ -12138,6 +12246,8 @@ const Incidents = {
             affectedJob: affectedJobEl.value,
             affectedAge: affectedAgeEl.value,
             affectedDepartment: this._resolveInvestigationAffectedDepartment(modal),
+            injuredPart: document.getElementById('investigation-injured-part')?.value?.trim() || '',
+            equipmentCause: document.getElementById('investigation-equipment-cause')?.value?.trim() || '',
 
             // Investigator section
             unsafeBehavior: unsafeBehaviorEl.value,
@@ -12295,6 +12405,8 @@ const Incidents = {
                     affectedJobTitle: incident.affectedJobTitle || '',
                     affectedDepartment: incident.affectedDepartment || '',
                     affectedType: incident.affectedType || '',
+                    injuredPart: incident.injuredPart || '',
+                    equipmentCause: incident.equipmentCause || '',
                     actionPlan: incident.actionPlan || [],
                     // بيانات التحقيق
                     investigation: investigationData,
@@ -12475,6 +12587,8 @@ const Incidents = {
             affectedJob: affectedJobEl.value,
             affectedAge: affectedAgeEl.value,
             affectedDepartment: this._resolveInvestigationAffectedDepartment(document.querySelector('.modal-overlay')),
+            injuredPart: document.getElementById('investigation-injured-part')?.value?.trim() || '',
+            equipmentCause: document.getElementById('investigation-equipment-cause')?.value?.trim() || '',
             unsafeBehavior: unsafeBehaviorEl.value,
             unsafeCondition: unsafeConditionEl.value,
             riskProbability: parseInt(riskProbabilityEl.value) || 0,
@@ -12773,6 +12887,8 @@ const Incidents = {
                 ${this._buildInvestigationFormPrintField('الاسم', esc(investigationData.affectedName || '—'), '#E91E63')}
                 ${this._buildInvestigationFormPrintField('الوظيفة', esc(investigationData.affectedJob || '—'), '#E91E63')}
                 ${this._buildInvestigationFormPrintField('السن', esc(investigationData.affectedAge || '—'), '#E91E63')}
+                ${this._buildInvestigationFormPrintField('الأطراف / الجزء المتضرر', esc(investigationData.injuredPart || this.resolveIncidentInjuredPart(incident) || '—'), '#E91E63')}
+                ${this._buildInvestigationFormPrintField('المعدة المتسببة في الإصابة', esc(investigationData.equipmentCause || incident.equipmentCause || '—'), '#E91E63')}
                 </div>
             ${!isContractorAff ? `
             <div style="margin-top:14px;">
