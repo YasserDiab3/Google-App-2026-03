@@ -2171,8 +2171,9 @@ window.Auth = {
             }
             return result;
         } catch (err) {
-            Notification.error('فشل الاتصال بالخادم');
-            return { success: false, message: err.message || 'فشل الاتصال' };
+            const msg = (err && err.message) ? String(err.message) : 'فشل الاتصال بالخادم';
+            Notification.error(msg);
+            return { success: false, message: msg };
         }
     },
 

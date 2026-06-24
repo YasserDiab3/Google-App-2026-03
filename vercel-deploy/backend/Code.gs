@@ -27,7 +27,7 @@
  * ============================================
  */
 // بصمة نسخة عامة (global) ليصل إليها ActionHandlers وغيره
-var BUILD_TAG = 'HSE_WEBAPP_BUILD_2026-06-16_leave_quota_v218';
+var BUILD_TAG = 'HSE_WEBAPP_BUILD_2026-06-25_mfa_totp_v288';
 
 function doPost(e) {
     Logger.log('🚀 [DOPOST] ===== doPost تم استدعاؤها =====');
@@ -453,6 +453,33 @@ function doPost(e) {
                 result = upsertClinicStaffLeaveQuota(payload || {}, actorUserData);
             } else if (action === 'getClinicStaffLeaveBalances' && typeof getClinicStaffLeaveBalances === 'function') {
                 result = getClinicStaffLeaveBalances(payload || {}, actorUserData);
+            } else if (action === 'verifyMfaLogin' && typeof verifyMfaLogin === 'function') {
+                result = verifyMfaLogin(
+                    (payload && (payload.challengeToken || payload.token)) || '',
+                    (payload && payload.email) || '',
+                    (payload && (payload.code || payload.otp)) || ''
+                );
+            } else if (action === 'startMfaEnrollment' && typeof startMfaEnrollment === 'function') {
+                var mfaActor = actorUserData || (postData && postData.userData);
+                if (!mfaActor || !mfaActor.email) {
+                    result = { success: false, message: 'مطلوب تسجيل الدخول', errorCode: 'AUTH_REQUIRED' };
+                } else {
+                    result = startMfaEnrollment(mfaActor);
+                }
+            } else if (action === 'confirmMfaEnrollment' && typeof confirmMfaEnrollment === 'function') {
+                var mfaConfirmActor = actorUserData || (postData && postData.userData);
+                if (!mfaConfirmActor || !mfaConfirmActor.email) {
+                    result = { success: false, message: 'مطلوب تسجيل الدخول', errorCode: 'AUTH_REQUIRED' };
+                } else {
+                    result = confirmMfaEnrollment((payload && (payload.code || payload.otp)) || '', mfaConfirmActor);
+                }
+            } else if (action === 'disableMfa' && typeof disableMfa === 'function') {
+                var mfaDisableActor = actorUserData || (postData && postData.userData);
+                if (!mfaDisableActor || !mfaDisableActor.email) {
+                    result = { success: false, message: 'مطلوب تسجيل الدخول', errorCode: 'AUTH_REQUIRED' };
+                } else {
+                    result = disableMfa(payload || {}, mfaDisableActor);
+                }
             } else {
                 result = {
                     success: false,
