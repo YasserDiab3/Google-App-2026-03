@@ -5447,6 +5447,16 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'suggestInvestigationAnalysis': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    result = suggestInvestigationAnalysis(payload || {});
+                    return;
+
+        })();
+        return result;
+    },
     'processAIQuestion': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

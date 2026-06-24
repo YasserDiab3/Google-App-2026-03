@@ -613,6 +613,59 @@ const InvestigationRCA = {
         }
     },
 
+    /**
+     * تعبئة معالج RCA من اقتراح Gemini
+     * @param {HTMLElement} container
+     * @param {Object} rcaPayload - { method, stepsData, rootCauseSummary, rootCauseCategory }
+     * @param {Object} options - { recommendedMethod, canEdit, callbacks }
+     */
+    applySuggestion(container, rcaPayload, options = {}) {
+        if (!container || !rcaPayload) return;
+
+        const state = this._getState(container);
+        const method = rcaPayload.method || options.recommendedMethod || 'five-whys';
+        const methodDef = this._getMethod(method);
+
+        state.method = methodDef ? method : '';
+        state.stepsData = rcaPayload.stepsData
+            ? JSON.parse(JSON.stringify(rcaPayload.stepsData))
+            : {};
+        state.startedAt = state.startedAt || new Date().toISOString();
+
+        const summary = String(rcaPayload.rootCauseSummary || '').trim();
+        const category = String(rcaPayload.rootCauseCategory || '').trim();
+
+        if (methodDef && summary) {
+            const rootStep = methodDef.steps.find(s =>
+                (s.fields || []).some(f => f.id === 'rootCauseSummary')
+            ) || methodDef.steps[methodDef.steps.length - 1];
+
+            if (rootStep) {
+                if (!state.stepsData[rootStep.id]) state.stepsData[rootStep.id] = {};
+                state.stepsData[rootStep.id].rootCauseSummary = summary;
+                if (category) state.stepsData[rootStep.id].rootCauseCategory = category;
+            }
+        }
+
+        state.currentStep = methodDef ? methodDef.steps.length - 1 : 0;
+
+        const canEdit = options.canEdit !== false;
+        const descEl = document.getElementById('investigation-description');
+        const defaultDescription = descEl ? descEl.value : '';
+
+        this.render(container, {
+            savedRca: {
+                method: state.method,
+                currentStep: state.currentStep,
+                stepsData: state.stepsData,
+                startedAt: state.startedAt
+            },
+            defaultDescription,
+            canEdit
+        });
+        this.bindEvents(container, options.callbacks || { canEdit });
+    },
+
     PRINT_THEMES: {
         'five-whys': { accent: '#1d4ed8', light: '#eff6ff', border: '#93c5fd', badge: '#1e40af' },
         icam: { accent: '#c2410c', light: '#fff7ed', border: '#fdba74', badge: '#9a3412' },

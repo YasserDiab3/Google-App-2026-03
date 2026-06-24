@@ -1084,6 +1084,238 @@ function askGeminiWithHSEContext(question, context) {
 }
 
 /**
+ * استخراج JSON من نص رد Gemini (يدعم markdown fences)
+ */
+function parseGeminiJsonResponse_(text) {
+  if (!text) return null;
+  var s = String(text).trim();
+  var fenceMatch = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenceMatch && fenceMatch[1]) {
+    s = fenceMatch[1].trim();
+  }
+  var start = s.indexOf('{');
+  var end = s.lastIndexOf('}');
+  if (start >= 0 && end > start) {
+    s = s.substring(start, end + 1);
+  }
+  try {
+    return JSON.parse(s);
+  } catch (e) {
+    Logger.log('parseGeminiJsonResponse_: ' + e.toString());
+    return null;
+  }
+}
+
+/**
+ * استدعاء Gemini وإرجاع JSON منظم
+ * @param {string} systemPrompt
+ * @param {Object|string} userPayload
+ * @return {{success:boolean, data?:Object, message?:string}}
+ */
+function askGeminiStructuredJson_(systemPrompt, userPayload) {
+  try {
+    var GEMINI_API_KEY = getGeminiApiKey_();
+    var GEMINI_MODEL = getGeminiModel_();
+    if (!GEMINI_API_KEY) {
+      return {
+        success: false,
+        message: 'مفتاح Gemini غير مضبوط (GEMINI_API_KEY) في إعدادات المشروع — أضف المفتاح في Script Properties.'
+      };
+    }
+
+    var userText = typeof userPayload === 'string'
+      ? userPayload
+      : JSON.stringify(userPayload, null, 2);
+
+    var payload = {
+      contents: [{
+        parts: [{ text: systemPrompt + '\n\nبيانات الحادث للتحليل:\n' + userText }]
+      }],
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 2048,
+        topP: 0.8
+      },
+      safetySettings: [
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+      ]
+    };
+
+    var response = UrlFetchApp.fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + GEMINI_API_KEY,
+      {
+        method: 'post',
+        contentType: 'application/json',
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      }
+    );
+
+    var responseCode = response.getResponseCode();
+    var responseBody = response.getContentText();
+    if (responseCode !== 200) {
+      Logger.log('Gemini structured JSON error ' + responseCode + ': ' + responseBody);
+      return { success: false, message: 'فشل الاتصال بـ Gemini (رمز ' + responseCode + ')' };
+    }
+
+    var parsed = JSON.parse(responseBody);
+    var text = null;
+    if (
+      parsed.candidates &&
+      parsed.candidates[0] &&
+      parsed.candidates[0].content &&
+      parsed.candidates[0].content.parts &&
+      parsed.candidates[0].content.parts[0]
+    ) {
+      text = parsed.candidates[0].content.parts[0].text;
+    }
+
+    if (!text) {
+      return { success: false, message: 'لم يُرجع Gemini رداً صالحاً' };
+    }
+
+    var jsonData = parseGeminiJsonResponse_(text);
+    if (!jsonData || typeof jsonData !== 'object') {
+      return { success: false, message: 'تعذّر تحليل JSON من رد Gemini — حاول مرة أخرى' };
+    }
+
+    return { success: true, data: jsonData };
+  } catch (error) {
+    Logger.log('askGeminiStructuredJson_: ' + error.toString());
+    return { success: false, message: 'خطأ أثناء استدعاء Gemini: ' + error.toString() };
+  }
+}
+
+var INVESTIGATION_RCA_METHODS_ = ['five-whys', 'icam', 'fishbone', 'iso-barrier'];
+var INVESTIGATION_ROOT_CAUSE_CATEGORIES_ = [
+  'نظام إدارة', 'بشري / سلوك', 'تقني / معدات', 'بيئة عمل', 'إجراءات / تدريب', 'أخرى'
+];
+
+function normalizeInvestigationAiSuggestion_(raw) {
+  var out = raw || {};
+  var method = String(out.recommendedMethod || (out.rca && out.rca.method) || 'five-whys').trim();
+  if (INVESTIGATION_RCA_METHODS_.indexOf(method) < 0) {
+    method = 'five-whys';
+  }
+
+  var rca = out.rca && typeof out.rca === 'object' ? out.rca : {};
+  rca.method = INVESTIGATION_RCA_METHODS_.indexOf(String(rca.method || '').trim()) >= 0
+    ? String(rca.method).trim()
+    : method;
+  rca.stepsData = rca.stepsData && typeof rca.stepsData === 'object' ? rca.stepsData : {};
+  rca.rootCauseSummary = String(rca.rootCauseSummary || '').trim();
+  rca.rootCauseCategory = String(rca.rootCauseCategory || '').trim();
+  if (rca.rootCauseCategory && INVESTIGATION_ROOT_CAUSE_CATEGORIES_.indexOf(rca.rootCauseCategory) < 0) {
+    rca.rootCauseCategory = 'أخرى';
+  }
+
+  var risk = out.risk && typeof out.risk === 'object' ? out.risk : {};
+  var prob = parseInt(risk.probability, 10);
+  var sev = parseInt(risk.severity, 10);
+  risk.probability = isNaN(prob) ? 3 : Math.min(5, Math.max(1, prob));
+  risk.severity = isNaN(sev) ? 3 : Math.min(5, Math.max(1, sev));
+  risk.explanation = String(risk.explanation || '').trim();
+
+  var unsafeBehavior = String(out.unsafeBehavior || '').toLowerCase();
+  var unsafeCondition = String(out.unsafeCondition || '').toLowerCase();
+  out.unsafeBehavior = (unsafeBehavior === 'yes' || unsafeBehavior === 'no') ? unsafeBehavior : '';
+  out.unsafeCondition = (unsafeCondition === 'yes' || unsafeCondition === 'no') ? unsafeCondition : '';
+
+  var actionPlan = Array.isArray(out.actionPlan) ? out.actionPlan : [];
+  out.actionPlan = actionPlan.slice(0, 6).map(function(item) {
+    item = item || {};
+    return {
+      correctiveAction: String(item.correctiveAction || '').trim(),
+      plannedDate: String(item.plannedDate || '').trim(),
+      responsibleName: String(item.responsibleName || '').trim(),
+      responsibleDepartment: String(item.responsibleDepartment || '').trim(),
+      followUpName: String(item.followUpName || '').trim(),
+      followUpDepartment: String(item.followUpDepartment || '').trim()
+    };
+  }).filter(function(item) {
+    return item.correctiveAction.length > 0;
+  });
+
+  out.recommendedMethod = method;
+  out.rca = rca;
+  out.risk = risk;
+  return out;
+}
+
+/**
+ * اقتراح تحليل تحقيق (RCA + مخاطر + خطة عمل) عبر Gemini
+ * @param {Object} payload - وصف الحادث، الأنواع، المصاب، المعدة...
+ * @return {{success:boolean, data?:Object, message?:string}}
+ */
+function suggestInvestigationAnalysis(payload) {
+  try {
+    payload = payload || {};
+    var description = String(payload.description || '').trim();
+    if (!description) {
+      return { success: false, message: 'وصف الحادث مطلوب لتوليد الاقتراح' };
+    }
+
+    var types = payload.incidentTypes || payload.incidentTypeLabels || [];
+    if (!Array.isArray(types)) types = [types];
+    types = types.filter(function(t) { return t && String(t).trim(); });
+    if (types.length === 0) {
+      return { success: false, message: 'نوع حادث واحد على الأقل مطلوب' };
+    }
+
+    var systemPrompt =
+      'أنت خبير HSE متخصص في تحقيقات الحوادث وتحليل السبب الجذري (RCA).\n' +
+      'مهمتك: اقتراح تحليل أولي للمراجعة البشرية — وليس حكماً نهائياً.\n\n' +
+      'قواعد صارمة:\n' +
+      '1. أجب بـ JSON فقط بدون markdown أو نص إضافي.\n' +
+      '2. لا تختلق حقائق غير موجودة في المدخلات — إن لم تتوفر معلومة اذكر «غير محدد في البيانات» داخل الحقول النصية.\n' +
+      '3. جميع المخرجات اقتراحات للمراجعة من المحقق.\n' +
+      '4. استخدم اللغة العربية في النصوص.\n' +
+      '5. recommendedMethod و rca.method أحد: five-whys | icam | fishbone | iso-barrier\n' +
+      '6. rootCauseCategory أحد: نظام إدارة | بشري / سلوك | تقني / معدات | بيئة عمل | إجراءات / تدريب | أخرى\n' +
+      '7. risk.probability و risk.severity أعداد صحيحة 1-5\n' +
+      '8. unsafeBehavior و unsafeCondition: yes أو no\n' +
+      '9. actionPlan: 2 إلى 4 إجراءات تصحيحية SMART مع plannedDate بصيغة YYYY-MM-DD (تواريخ مستقبلية منطقية)\n' +
+      '10. اترك responsibleName و followUpName فارغة "" — يختارها المستخدم لاحقاً\n\n' +
+      'هيكل JSON المطلوب:\n' +
+      '{\n' +
+      '  "recommendedMethod": "five-whys",\n' +
+      '  "rca": {\n' +
+      '    "method": "five-whys",\n' +
+      '    "stepsData": { "problem": { "problem": "..." }, "why1": { "why1": "..." } },\n' +
+      '    "rootCauseSummary": "...",\n' +
+      '    "rootCauseCategory": "إجراءات / تدريب"\n' +
+      '  },\n' +
+      '  "risk": { "probability": 3, "severity": 4, "explanation": "..." },\n' +
+      '  "unsafeBehavior": "yes",\n' +
+      '  "unsafeCondition": "no",\n' +
+      '  "actionPlan": [{ "correctiveAction": "...", "plannedDate": "2026-07-15", "responsibleName": "", "responsibleDepartment": "", "followUpName": "", "followUpDepartment": "" }]\n' +
+      '}\n' +
+      'لمنهجية five-whys املأ stepsData: problem, why1, why2, why3, why4 (اختياري), why5 (اختياري), rootCause.\n' +
+      'لمنهجية icam: timeline, barriers, contributing, rootCauses.\n' +
+      'لمنهجية fishbone: problem, sixM, primaryCause, whys, rootCause.\n' +
+      'لمنهجية iso-barrier: facts, immediate, barriers, contributing, whys, managementGap.';
+
+    var geminiResult = askGeminiStructuredJson_(systemPrompt, payload);
+    if (!geminiResult.success) {
+      return geminiResult;
+    }
+
+    var normalized = normalizeInvestigationAiSuggestion_(geminiResult.data);
+    if (!normalized.rca.rootCauseSummary) {
+      return { success: false, message: 'الرد من Gemini ناقص — لم يُحدد سبباً جذرياً. حاول مرة أخرى.' };
+    }
+
+    return { success: true, data: normalized };
+  } catch (error) {
+    Logger.log('suggestInvestigationAnalysis: ' + error.toString());
+    return { success: false, message: 'حدث خطأ أثناء توليد اقتراح التحقيق: ' + error.toString() };
+  }
+}
+
+/**
  * بناء ملخص إحصائي من بيانات الشيتات لتغذية Gemini (مع Cache لتسريع الاستجابة)
  * @return {Object} إحصاءات موجزة من جميع الوحدات
  */

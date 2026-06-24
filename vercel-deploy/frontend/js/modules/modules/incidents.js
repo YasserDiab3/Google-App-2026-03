@@ -9374,6 +9374,27 @@ const Incidents = {
                                 <i class="fas fa-microscope"></i>
                                 <span>5.5) تحليل السبب الجذري (RCA)</span>
                             </h3>
+                            ${canEdit ? `
+                            <div class="mb-4 p-4 rounded-lg border-2 border-indigo-200 bg-gradient-to-l from-indigo-50 to-purple-50" style="border-color:#a5b4fc;">
+                                <div class="flex flex-wrap items-center justify-between gap-3">
+                                    <div class="flex-1 min-w-[200px]">
+                                        <p class="text-sm font-semibold text-indigo-900 mb-1">
+                                            <i class="fas fa-robot ml-2 text-indigo-600"></i>
+                                            اقتراح تحليل ذكي (Gemini)
+                                        </p>
+                                        <p class="text-xs text-indigo-700">
+                                            <i class="fas fa-info-circle ml-1"></i>
+                                            اقتراحات للمراجعة — ليست بديلاً عن التحقيق البشري. املأ الأقسام 1–4 ثم اضغط الزر.
+                                        </p>
+                                    </div>
+                                    <button type="button" class="btn-primary" onclick="Incidents.suggestInvestigationWithAI('${incidentId}')"
+                                        style="background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);border:none;padding:10px 20px;white-space:nowrap;">
+                                        <i class="fas fa-magic ml-2"></i>
+                                        اقتراح تحليل ذكي
+                                    </button>
+                                </div>
+                            </div>
+                            ` : ''}
                             <div id="investigation-rca-wizard" class="bg-white p-4 rounded-lg border-2" style="border-color:#c4b5fd;"></div>
                         </div>
 
@@ -11905,6 +11926,164 @@ const Incidents = {
 
         InvestigationRCA.render(container, { savedRca, defaultDescription, canEdit });
         InvestigationRCA.bindEvents(container, { canEdit });
+    },
+
+    _getInvestigationModalEl() {
+        const form = document.getElementById('investigation-form');
+        if (form) return form.closest('.modal-overlay') || form.closest('.modal-content')?.parentElement || document.body;
+        return document.querySelector('.modal-overlay:has(#investigation-form)');
+    },
+
+    _collectInvestigationAiContext(modal) {
+        const root = modal || this._getInvestigationModalEl();
+        const q = (sel) => root?.querySelector(sel);
+        const getVal = (sel) => (q(sel)?.value || '').trim();
+
+        const typeMap = {
+            'incident-type-nearmiss': { key: 'nearmiss', label: 'حادث وشيك' },
+            'incident-type-property': { key: 'property', label: 'تلف ممتلكات' },
+            'incident-type-injury-no-lost': { key: 'injury-no-lost', label: 'إصابة بدون فقد أيام عمل' },
+            'incident-type-injury-lost': { key: 'injury-lost', label: 'إصابة مع فقد أيام عمل' },
+            'incident-type-fatality': { key: 'fatality', label: 'وفاة' }
+        };
+
+        const incidentTypes = [];
+        const incidentTypeLabels = [];
+        Object.entries(typeMap).forEach(([id, meta]) => {
+            if (q(`#${id}`)?.checked) {
+                incidentTypes.push(meta.key);
+                incidentTypeLabels.push(meta.label);
+            }
+        });
+
+        const factorySelect = q('#investigation-factory');
+        const locationSelect = q('#investigation-location');
+        const factoryName = factorySelect?.selectedOptions?.[0]?.textContent?.trim() || '';
+        const locationName = locationSelect?.selectedOptions?.[0]?.textContent?.trim() || '';
+
+        return {
+            description: getVal('#investigation-description'),
+            nearmissDescription: getVal('#investigation-nearmiss-description'),
+            incidentTypes,
+            incidentTypeLabels,
+            factoryId: getVal('#investigation-factory'),
+            factoryName,
+            locationId: getVal('#investigation-location'),
+            locationName,
+            location: [factoryName, locationName].filter(Boolean).join(' — '),
+            affectedName: getVal('#investigation-affected-name'),
+            affectedJob: getVal('#investigation-affected-job'),
+            affectedAge: getVal('#investigation-affected-age'),
+            affectedDepartment: getVal('#investigation-affected-department'),
+            injuredPart: getVal('#investigation-injured-part'),
+            equipmentCause: getVal('#investigation-equipment-cause'),
+            unsafeBehavior: getVal('#investigation-unsafe-behavior'),
+            unsafeCondition: getVal('#investigation-unsafe-condition')
+        };
+    },
+
+    async suggestInvestigationWithAI(incidentId) {
+        const modal = this._getInvestigationModalEl();
+        if (!modal) {
+            Notification.error('لم يُعثر على نموذج التحقيق');
+            return;
+        }
+
+        const context = this._collectInvestigationAiContext(modal);
+        if (!context.description) {
+            Notification.warning('يرجى إدخال وصف الحادث (القسم 3) أولاً');
+            return;
+        }
+        if (!context.incidentTypes.length) {
+            Notification.warning('يرجى اختيار نوع حادث واحد على الأقل (القسم 2)');
+            return;
+        }
+
+        if (!confirm('سيتم تعبئة RCA والمخاطر وخطة العمل باقتراحات Gemini.\nيجب مراجعتها قبل الحفظ.\n\nهل تريد المتابعة؟')) {
+            return;
+        }
+
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) {
+            Notification.error('الاتصال بالخادم غير متاح');
+            return;
+        }
+
+        try {
+            Loading.show('جاري توليد اقتراح التحليل الذكي...');
+            const result = await GoogleIntegration.sendRequest({
+                action: 'suggestInvestigationAnalysis',
+                data: context
+            });
+            Loading.hide();
+
+            if (!result || result.success === false) {
+                Notification.error(result?.message || 'فشل الحصول على اقتراح التحليل');
+                return;
+            }
+
+            const suggestion = result.data || result;
+            this._applyInvestigationAiSuggestion(modal, suggestion);
+            Notification.success('تم توليد اقتراح التحليل — راجع الأقسام 5–6 وRCA قبل الحفظ');
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('suggestInvestigationWithAI:', error);
+            Notification.error(error?.message || 'خطأ أثناء الاتصال بالذكاء الاصطناعي');
+        }
+    },
+
+    _applyInvestigationAiSuggestion(modal, suggestion) {
+        if (!suggestion || !modal) return;
+
+        const rcaContainer = modal.querySelector('#investigation-rca-wizard');
+        if (rcaContainer && suggestion.rca && typeof InvestigationRCA !== 'undefined') {
+            InvestigationRCA.applySuggestion(rcaContainer, suggestion.rca, {
+                recommendedMethod: suggestion.recommendedMethod,
+                canEdit: true
+            });
+        }
+
+        const risk = suggestion.risk || {};
+        const prob = parseInt(risk.probability, 10);
+        const sev = parseInt(risk.severity, 10);
+        if (prob >= 1 && prob <= 5 && sev >= 1 && sev <= 5) {
+            const probEl = modal.querySelector('#investigation-risk-probability');
+            const sevEl = modal.querySelector('#investigation-risk-severity');
+            const levelEl = modal.querySelector('#investigation-risk-level');
+            if (probEl) probEl.value = String(prob);
+            if (sevEl) sevEl.value = String(sev);
+            if (levelEl) levelEl.value = String(prob * sev);
+
+            const matrixContainer = modal.querySelector('#investigation-risk-matrix');
+            if (matrixContainer && typeof RiskMatrix !== 'undefined') {
+                const cell = matrixContainer.querySelector(
+                    `.risk-cell[data-likelihood="${prob}"][data-consequence="${sev}"]`
+                );
+                if (cell) {
+                    RiskMatrix.selectCell(cell, 'investigation-risk-matrix');
+                }
+            }
+        }
+
+        const explEl = modal.querySelector('#investigation-risk-explanation');
+        if (explEl && risk.explanation) {
+            explEl.value = risk.explanation;
+        }
+
+        if (suggestion.unsafeBehavior) {
+            const el = modal.querySelector('#investigation-unsafe-behavior');
+            if (el) el.value = suggestion.unsafeBehavior;
+        }
+        if (suggestion.unsafeCondition) {
+            const el = modal.querySelector('#investigation-unsafe-condition');
+            if (el) el.value = suggestion.unsafeCondition;
+        }
+
+        const actionPlan = Array.isArray(suggestion.actionPlan) ? suggestion.actionPlan : [];
+        const tbody = modal.querySelector('#investigation-action-plan-body');
+        if (tbody && actionPlan.length) {
+            tbody.innerHTML = this.renderInvestigationActionPlanRows(actionPlan);
+            this.bindInvestigationActionPlanPickers(modal);
+        }
     },
 
     async loadInvestigationFormOptions(modal) {
