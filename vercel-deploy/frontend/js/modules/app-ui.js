@@ -4847,7 +4847,7 @@ window.UI = {
                 }
             } catch (err) {
                 Loading.hide();
-                Notification.error('فشل التفعيل');
+                Notification.error(err?.message || 'فشل التفعيل');
             }
         });
         setTimeout(() => body.querySelector('#mfa-enroll-code')?.focus(), 100);

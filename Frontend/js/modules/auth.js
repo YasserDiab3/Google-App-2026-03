@@ -2200,8 +2200,9 @@ window.Auth = {
             }
             return result || { success: false };
         } catch (err) {
-            Notification.error('فشل تأكيد المصادقة الثنائية');
-            return { success: false, message: err.message || 'فشل' };
+            const msg = err?.message || 'فشل تأكيد المصادقة الثنائية';
+            Notification.error(msg);
+            return { success: false, message: msg };
         }
     },
 

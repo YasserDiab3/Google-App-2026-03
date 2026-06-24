@@ -7,7 +7,7 @@ var MFA_CHALLENGE_TTL_SEC_ = 300;
 var MFA_ENROLL_TTL_SEC_ = 600;
 var MFA_MAX_ATTEMPTS_ = 5;
 var MFA_LOCKOUT_SEC_ = 900;
-var MFA_TOTP_WINDOW_ = 1;
+var MFA_TOTP_WINDOW_ = 2;
 
 function ensureMfaEncryptionKey_() {
     var props = PropertiesService.getScriptProperties();
@@ -51,11 +51,15 @@ function generateTotpCodeAtStep_(secret, timeStep) {
     for (var i = 7; i >= 0; i--) {
         data.push((step >>> (i * 8)) & 0xff);
     }
-    var hash = Utilities.computeHmacSignature(
+    var hashRaw = Utilities.computeHmacSignature(
         Utilities.MacAlgorithm.HMAC_SHA_1,
         data,
         secretBytes
     );
+    var hash = [];
+    for (var h = 0; h < hashRaw.length; h++) {
+        hash.push((hashRaw[h] + 256) % 256);
+    }
     var offset = hash[hash.length - 1] & 0x0f;
     var code = ((hash[offset] & 0x7f) << 24) |
         ((hash[offset + 1] & 0xff) << 16) |
@@ -188,12 +192,21 @@ function storeMfaEnrollmentPending_(email, secret) {
     return true;
 }
 
-function consumeMfaEnrollmentPending_(email) {
+function peekMfaEnrollmentPending_(email) {
     var e = String(email || '').trim().toLowerCase();
     if (!e) return '';
     var cache = CacheService.getScriptCache();
-    var key = 'mfa_enroll_' + e;
-    var secret = cache.get(key);
-    if (secret) cache.remove(key);
-    return secret || '';
+    return cache.get('mfa_enroll_' + e) || '';
+}
+
+function clearMfaEnrollmentPending_(email) {
+    var e = String(email || '').trim().toLowerCase();
+    if (!e) return;
+    CacheService.getScriptCache().remove('mfa_enroll_' + e);
+}
+
+function consumeMfaEnrollmentPending_(email) {
+    var secret = peekMfaEnrollmentPending_(email);
+    if (secret) clearMfaEnrollmentPending_(email);
+    return secret;
 }

@@ -914,19 +914,103 @@ function startMfaEnrollment(actorUserData) {
 /**
  * تأكيد تفعيل MFA بعد مسح QR
  */
+function _fastWriteUserMfaFields_(userId, fields) {
+    if (!userId || !fields) {
+        return { success: false, message: 'بيانات ناقصة' };
+    }
+    try {
+        if (typeof fixUsersSheetHeaders === 'function') {
+            fixUsersSheetHeaders();
+        }
+        var spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) {
+            return { success: false, message: 'معرف Google Sheets غير محدد' };
+        }
+        var ss = SpreadsheetApp.openById(spreadsheetId);
+        var sheet = ss.getSheetByName('Users');
+        if (!sheet) {
+            return { success: false, message: 'الورقة غير موجودة' };
+        }
+
+        var lastRow = sheet.getLastRow();
+        var lastCol = sheet.getLastColumn();
+        if (lastRow < 2 || lastCol < 1) {
+            return { success: false, message: 'لا توجد بيانات مستخدمين' };
+        }
+
+        var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) {
+            return String(h || '').trim();
+        });
+        var idCol = headers.indexOf('id');
+        var emailCol = headers.indexOf('email');
+        if (idCol === -1 && emailCol === -1) {
+            return { success: false, message: 'رأس id/email مفقود في ورقة Users' };
+        }
+
+        var target = String(userId || '').trim();
+        var targetLower = target.toLowerCase();
+        var rowIndex = -1;
+        if (idCol !== -1) {
+            var ids = sheet.getRange(2, idCol + 1, lastRow - 1, 1).getValues();
+            for (var i = 0; i < ids.length; i++) {
+                if (String(ids[i][0] || '').trim() === target) {
+                    rowIndex = i + 2;
+                    break;
+                }
+            }
+        }
+        if (rowIndex === -1 && emailCol !== -1 && targetLower.indexOf('@') !== -1) {
+            var emails = sheet.getRange(2, emailCol + 1, lastRow - 1, 1).getValues();
+            for (var j = 0; j < emails.length; j++) {
+                if (String(emails[j][0] || '').trim().toLowerCase() === targetLower) {
+                    rowIndex = j + 2;
+                    break;
+                }
+            }
+        }
+        if (rowIndex === -1) {
+            return { success: false, message: 'المستخدم غير موجود في الشيت' };
+        }
+
+        var mfaKeys = ['mfaEnabled', 'mfaSecretEnc', 'mfaEnrolledAt'];
+        for (var k = 0; k < mfaKeys.length; k++) {
+            var key = mfaKeys[k];
+            if (Object.prototype.hasOwnProperty.call(fields, key)) {
+                var col = headers.indexOf(key);
+                if (col === -1) {
+                    return { success: false, message: 'عمود ' + key + ' غير موجود — شغّل إصلاح رؤوس Users' };
+                }
+                sheet.getRange(rowIndex, col + 1).setValue(fields[key]);
+            }
+        }
+        var updatedCol = headers.indexOf('updatedAt');
+        if (updatedCol !== -1) {
+            sheet.getRange(rowIndex, updatedCol + 1).setValue(new Date());
+        }
+        SpreadsheetApp.flush();
+        if (typeof markUsersUpdated_ === 'function') {
+            markUsersUpdated_();
+        }
+        return { success: true };
+    } catch (error) {
+        Logger.log('_fastWriteUserMfaFields_ error: ' + error.toString());
+        return { success: false, message: 'فشل حفظ MFA: ' + error.toString() };
+    }
+}
+
 function confirmMfaEnrollment(code, actorUserData) {
     try {
         var email = String((actorUserData && actorUserData.email) || '').trim().toLowerCase();
-        var otp = String(code || '').trim();
+        var otp = String(code || '').replace(/\s/g, '');
         if (!email || !otp) {
             return { success: false, message: 'رمز التأكيد مطلوب' };
         }
-        var pendingSecret = consumeMfaEnrollmentPending_(email);
+        var pendingSecret = peekMfaEnrollmentPending_(email);
         if (!pendingSecret) {
             return { success: false, message: 'انتهت جلسة التسجيل. أعد المحاولة من البداية.' };
         }
         if (!verifyTotpCode_(pendingSecret, otp)) {
-            return { success: false, message: 'رمز التأكيد غير صحيح' };
+            return { success: false, message: 'رمز التأكيد غير صحيح. تأكد من مزامنة وقت الجهاز وحاول رمزاً جديداً.' };
         }
         var user = getUserRecordFromUsersSheetByEmail_(email);
         if (!user) {
@@ -934,18 +1018,19 @@ function confirmMfaEnrollment(code, actorUserData) {
         }
         var enc = encryptMfaSecret_(pendingSecret);
         var now = new Date().toISOString();
-        var upd = updateUserInSheet(user.id, {
+        var upd = _fastWriteUserMfaFields_(user.id, {
             mfaEnabled: true,
             mfaSecretEnc: enc,
             mfaEnrolledAt: now
-        }, actorUserData, { internalCall: true });
+        });
         if (upd && upd.success) {
+            clearMfaEnrollmentPending_(email);
             return { success: true, message: 'تم تفعيل المصادقة الثنائية بنجاح', mfaEnabled: true, mfaEnrolledAt: now };
         }
         return upd || { success: false, message: 'تعذر حفظ إعدادات MFA' };
     } catch (error) {
         Logger.log('confirmMfaEnrollment error: ' + error.toString());
-        return { success: false, message: 'حدث خطأ أثناء تأكيد MFA' };
+        return { success: false, message: 'حدث خطأ أثناء تأكيد MFA: ' + error.toString() };
     }
 }
 
