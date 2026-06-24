@@ -716,6 +716,152 @@ Yasser.diab@icapp.com.eg`;
 
 })();
 
+var __pendingMfaLogin = null;
+
+function showLoginMfaStep(pending) {
+    __pendingMfaLogin = pending || null;
+    const mfaStep = document.getElementById('login-mfa-step');
+    const submitBtn = document.getElementById('login-submit-btn');
+    const helpBtn = document.getElementById('help-btn');
+    const credBlocks = ['username', 'password', 'remember-me', 'forgot-password-link'];
+    credBlocks.forEach(function (id) {
+        const el = document.getElementById(id);
+        const wrap = el && (el.closest('div.flex') || el.closest('div'));
+        if (wrap && wrap.parentElement && wrap.parentElement.id !== 'login-mfa-step') {
+            wrap.style.display = 'none';
+            wrap.dataset.mfaHidden = '1';
+        } else if (el && el.parentElement) {
+            const p = el.closest('div');
+            if (p) { p.style.display = 'none'; p.dataset.mfaHidden = '1'; }
+        }
+    });
+    const usernameField = document.getElementById('username');
+    if (usernameField) {
+        const labelWrap = usernameField.closest('div');
+        if (labelWrap) { labelWrap.style.display = 'none'; labelWrap.dataset.mfaHidden = '1'; }
+    }
+    const passwordField = document.getElementById('password');
+    if (passwordField) {
+        const pwWrap = passwordField.closest('div') && passwordField.closest('div').parentElement;
+        if (pwWrap) { pwWrap.style.display = 'none'; pwWrap.dataset.mfaHidden = '1'; }
+    }
+    const rememberRow = document.querySelector('#login-form .flex.items-center.justify-between');
+    if (rememberRow) { rememberRow.style.display = 'none'; rememberRow.dataset.mfaHidden = '1'; }
+    if (submitBtn) submitBtn.style.display = 'none';
+    if (helpBtn) helpBtn.style.display = 'none';
+    if (mfaStep) mfaStep.style.display = 'block';
+    const mfaInput = document.getElementById('mfa-code');
+    if (mfaInput) {
+        mfaInput.value = '';
+        setTimeout(function () { try { mfaInput.focus(); } catch (e) { /* ignore */ } }, 80);
+    }
+}
+
+function hideLoginMfaStep() {
+    __pendingMfaLogin = null;
+    document.querySelectorAll('[data-mfa-hidden="1"]').forEach(function (el) {
+        el.style.display = '';
+        el.removeAttribute('data-mfa-hidden');
+    });
+    const mfaStep = document.getElementById('login-mfa-step');
+    if (mfaStep) mfaStep.style.display = 'none';
+    const submitBtn = document.getElementById('login-submit-btn');
+    const helpBtn = document.getElementById('help-btn');
+    if (submitBtn) submitBtn.style.display = '';
+    if (helpBtn) helpBtn.style.display = '';
+    const mfaInput = document.getElementById('mfa-code');
+    if (mfaInput) mfaInput.value = '';
+}
+
+async function proceedAfterLoginSuccess(result, submitBtn, originalBtnText) {
+    let requiresPasswordChange = false;
+    let isFirstLogin = false;
+    if (result && typeof result === 'object') {
+        requiresPasswordChange = result.requiresPasswordChange === true;
+        isFirstLogin = result.isFirstLogin === true;
+    }
+    try {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.removeAttribute('aria-busy');
+            submitBtn.innerHTML = originalBtnText;
+        }
+    } catch (e) { /* ignore */ }
+    hideLoginMfaStep();
+    if (requiresPasswordChange || isFirstLogin) {
+        log('🔐 يتطلب تغيير كلمة المرور');
+    }
+    if (typeof window.UI !== 'undefined' && window.UI.showMainApp) {
+        try {
+            const warnTimer = setTimeout(function () {
+                try {
+                    if (submitBtn && !submitBtn.disabled) return;
+                    if (submitBtn) submitBtn.setAttribute('aria-busy', 'true');
+                } catch (e) { /* ignore */ }
+            }, 300);
+            await Promise.race([
+                window.UI.showMainApp(),
+                new Promise(function (_, reject) { setTimeout(function () { reject(new Error('showMainApp timeout')); }, 2500); })
+            ]);
+            clearTimeout(warnTimer);
+        } catch (err) {
+            log('⚠️ خطأ في showMainApp:', err);
+            try { if (typeof window.App !== 'undefined' && window.App.load) window.App.load(); } catch (e) { /* ignore */ }
+            const loginScreen = document.getElementById('login-screen');
+            if (loginScreen) { loginScreen.style.display = 'none'; loginScreen.classList.remove('active', 'show'); }
+            document.body.classList.add('app-active');
+            const mainApp = document.getElementById('main-app');
+            if (mainApp) mainApp.style.display = 'flex';
+        }
+    } else if (typeof window.App !== 'undefined' && window.App.load) {
+        window.App.load();
+        const mainApp = document.getElementById('main-app');
+        if (mainApp) mainApp.style.display = 'flex';
+    }
+}
+
+async function handleMfaVerify() {
+    const pending = __pendingMfaLogin;
+    const mfaInput = document.getElementById('mfa-code');
+    const verifyBtn = document.getElementById('mfa-verify-btn');
+    if (!pending || !pending.challengeToken) {
+        hideLoginMfaStep();
+        return;
+    }
+    const code = mfaInput ? mfaInput.value.trim() : '';
+    if (!code) {
+        if (typeof window.Notification !== 'undefined') window.Notification.warning('يرجى إدخال رمز المصادقة');
+        return;
+    }
+    const originalVerifyHtml = verifyBtn ? verifyBtn.innerHTML : '';
+    if (verifyBtn) {
+        verifyBtn.disabled = true;
+        verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري التحقق...';
+    }
+    try {
+        const result = await window.Auth.verifyMfaAndCompleteLogin(
+            pending.email,
+            code,
+            pending.challengeToken,
+            pending.remember
+        );
+        if (result && result.success) {
+            await proceedAfterLoginSuccess(result, document.getElementById('login-submit-btn'), '<i class="fas fa-sign-in-alt ml-2"></i><span id="login-submit-text">تسجيل الدخول</span>');
+        } else if (verifyBtn) {
+            verifyBtn.disabled = false;
+            verifyBtn.innerHTML = originalVerifyHtml;
+        }
+    } catch (err) {
+        if (verifyBtn) {
+            verifyBtn.disabled = false;
+            verifyBtn.innerHTML = originalVerifyHtml;
+        }
+        if (typeof window.Notification !== 'undefined') {
+            window.Notification.error('حدث خطأ أثناء التحقق من الرمز');
+        }
+    }
+}
+
 async function handleLogin(form, submitBtn) {
     // التأكد من أن submitBtn هو عنصر <button> الفعلي وليس عنصراً داخله (مثل <i>)
     if (submitBtn && submitBtn.tagName !== 'BUTTON') {
@@ -808,6 +954,18 @@ async function handleLogin(form, submitBtn) {
         if (result === true) {
             success = true;
         } else if (result && typeof result === 'object') {
+            if (result.mfaRequired) {
+                log('🔐 انتظار رمز MFA');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+                submitBtn.removeAttribute('aria-busy');
+                showLoginMfaStep({
+                    email: result.email,
+                    challengeToken: result.challengeToken,
+                    remember: result.remember
+                });
+                return;
+            }
             success = result.success === true;
             requiresPasswordChange = result.requiresPasswordChange === true;
             isFirstLogin = result.isFirstLogin === true;
@@ -815,51 +973,11 @@ async function handleLogin(form, submitBtn) {
         
         if (success) {
             log('✅ تسجيل دخول ناجح!');
-            try {
-                submitBtn.disabled = false;
-                submitBtn.removeAttribute('aria-busy');
-                submitBtn.innerHTML = originalBtnText;
-            } catch (e) { /* ignore */ }
-
-            // عدم إخفاء شاشة الدخول هنا — showMainApp يخفيها بعد تحميل الإعدادات ثم يعرض السياسة مباشرة (بدون شاشة تحضيرية)
-            // معالجة تغيير كلمة المرور إذا لزم الأمر
-            if (requiresPasswordChange || isFirstLogin) {
-                log('🔐 يتطلب تغيير كلمة المرور');
-            }
-            
-            // showMainApp يحمّل الإعدادات (الشاشة تبقى كما هي) ثم يخفي الدخول ويعرض السياسة مباشرة أو لوحة التحكم
-            if (typeof window.UI !== 'undefined' && window.UI.showMainApp) {
-                try {
-                    // حماية من التعليق: لو showMainApp تأخرت لا نترك المستخدم على شاشة الدخول بلا نهاية
-                    const warnAfterMs = 300;
-                    const hardTimeoutMs = 2500;
-                    const warnTimer = setTimeout(function () {
-                        try {
-                            if (submitBtn && !submitBtn.disabled) return;
-                            submitBtn.setAttribute('aria-busy', 'true');
-                        } catch (e) { /* ignore */ }
-                    }, warnAfterMs);
-
-                    await Promise.race([
-                        window.UI.showMainApp(),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('showMainApp timeout')), hardTimeoutMs))
-                    ]);
-                    clearTimeout(warnTimer);
-                } catch (err) {
-                    log('⚠️ خطأ في showMainApp:', err);
-                    // fallback: إظهار التطبيق حتى لو UI.showMainApp فشل/تأخر
-                    try { if (typeof window.App !== 'undefined' && window.App.load) window.App.load(); } catch (e) { /* ignore */ }
-                    const loginScreen = document.getElementById('login-screen');
-                    if (loginScreen) { loginScreen.style.display = 'none'; loginScreen.classList.remove('active', 'show'); }
-                    document.body.classList.add('app-active');
-                    const mainApp = document.getElementById('main-app');
-                    if (mainApp) mainApp.style.display = 'flex';
-                }
-            } else if (typeof window.App !== 'undefined' && window.App.load) {
-                window.App.load();
-                const mainApp = document.getElementById('main-app');
-                if (mainApp) mainApp.style.display = 'flex';
-            }
+            await proceedAfterLoginSuccess(
+                { success: true, requiresPasswordChange, isFirstLogin },
+                submitBtn,
+                originalBtnText
+            );
         } else {
             // تحسين رسالة الخطأ
             let errorMsg = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
@@ -948,7 +1066,39 @@ async function handleLogin(form, submitBtn) {
 // Expose to global scope
 if (typeof window !== 'undefined') {
     window.handleLogin = handleLogin;
+    window.handleMfaVerify = handleMfaVerify;
+    window.hideLoginMfaStep = hideLoginMfaStep;
 }
+
+(function bindMfaLoginHandlers() {
+    try {
+        if (typeof document === 'undefined' || window.__mfaLoginBound) return;
+        window.__mfaLoginBound = true;
+        document.addEventListener('click', function (e) {
+            const verifyBtn = e.target && e.target.closest ? e.target.closest('#mfa-verify-btn') : null;
+            if (verifyBtn) {
+                e.preventDefault();
+                handleMfaVerify();
+                return;
+            }
+            const backBtn = e.target && e.target.closest ? e.target.closest('#mfa-back-btn') : null;
+            if (backBtn) {
+                e.preventDefault();
+                hideLoginMfaStep();
+            }
+        }, true);
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter') return;
+            const mfaStep = document.getElementById('login-mfa-step');
+            if (!mfaStep || mfaStep.style.display === 'none') return;
+            const active = document.activeElement;
+            if (active && active.id === 'mfa-code') {
+                e.preventDefault();
+                handleMfaVerify();
+            }
+        }, true);
+    } catch (err) { /* ignore */ }
+})();
 
 // ربط احتياطي لزر تسجيل الدخول (delegation) لتفادي أي تعارض/استبدال للـ form
 (function bindLoginFallbackHandlers() {

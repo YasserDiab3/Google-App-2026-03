@@ -304,6 +304,12 @@ window.Auth = {
         }
     },
 
+    _isMfaEnabledForUser(user) {
+        if (!user) return false;
+        const v = user.mfaEnabled;
+        return v === true || v === 'true' || v === 1 || v === '1';
+    },
+
     /**
      * تسجيل الدخول
      */
@@ -391,6 +397,17 @@ window.Auth = {
                 });
 
                 if (loginResult && loginResult.success) {
+                    if (loginResult.mfaRequired) {
+                        Utils.safeLog('🔐 مطلوب MFA — انتظار رمز TOTP');
+                        await Utils.RateLimiter.clearAttempts(email);
+                        return {
+                            success: false,
+                            mfaRequired: true,
+                            challengeToken: loginResult.challengeToken,
+                            email,
+                            remember
+                        };
+                    }
                     Utils.safeLog('✅ نجح تسجيل الدخول عبر الخادم');
                     user = loginResult.user;
                     loginMethod = 'server';
@@ -462,6 +479,12 @@ window.Auth = {
                 return { success: false, message: errorMessage };
             }
 
+            if (this._isMfaEnabledForUser(foundUser)) {
+                const mfaOfflineMsg = 'هذا الحساب يتطلب مصادقة ثنائية. يُرجى الاتصال بالإنترنت لإكمال تسجيل الدخول.';
+                Notification.error(mfaOfflineMsg);
+                return { success: false, message: mfaOfflineMsg, mfaBlockedOffline: true };
+            }
+
             // التحقق من كلمة المرور محلياً
             const inputPasswordRaw = (password || '').trim();
             const storedHash = (foundUser.passwordHash || '').trim();
@@ -494,6 +517,63 @@ window.Auth = {
         }
 
         // 🔓 نجاح تسجيل الدخول
+        return await this._finishLoginAfterAuth(user, email, remember, foundUser);
+    },
+
+    /**
+     * الخطوة الثانية: التحقق من رمز TOTP وإكمال الجلسة
+     */
+    async verifyMfaAndCompleteLogin(email, code, challengeToken, remember = false) {
+        email = String(email || '').trim().toLowerCase();
+        const otp = String(code || '').replace(/\s/g, '');
+        const token = String(challengeToken || '').trim();
+
+        if (!email || !otp || !token) {
+            const msg = 'يرجى إدخال رمز المصادقة الثنائية';
+            Notification.error(msg);
+            return { success: false, message: msg };
+        }
+
+        if (!/^\d{6}$/.test(otp)) {
+            const msg = 'رمز المصادقة يجب أن يكون 6 أرقام';
+            Notification.error(msg);
+            return { success: false, message: msg };
+        }
+
+        const canSync = typeof GoogleIntegration !== 'undefined' &&
+            typeof Utils !== 'undefined' &&
+            typeof Utils.hasCloudBackendSync === 'function' &&
+            Utils.hasCloudBackendSync();
+
+        if (!canSync) {
+            const msg = 'يتطلب اتصالاً بالإنترنت لإكمال المصادقة الثنائية';
+            Notification.error(msg);
+            return { success: false, message: msg };
+        }
+
+        let verifyResult = null;
+        try {
+            verifyResult = await GoogleIntegration.sendRequest({
+                action: 'verifyMfaLogin',
+                data: { email, code: otp, challengeToken: token }
+            });
+        } catch (err) {
+            const msg = 'تعذر الاتصال بالخادم لإكمال المصادقة الثنائية';
+            Notification.error(msg);
+            return { success: false, message: msg };
+        }
+
+        if (!verifyResult || !verifyResult.success || !verifyResult.user) {
+            const msg = (verifyResult && verifyResult.message) || 'رمز المصادقة الثنائية غير صحيح';
+            Notification.error(msg);
+            return { success: false, message: msg };
+        }
+
+        await Utils.RateLimiter.clearAttempts(email);
+        return await this._finishLoginAfterAuth(verifyResult.user, email, remember, null);
+    },
+
+    async _finishLoginAfterAuth(user, email, remember, foundUser) {
         await Utils.RateLimiter.clearAttempts(email);
         const loginTime = new Date().toISOString();
 
@@ -2053,6 +2133,128 @@ window.Auth = {
             message: 'تم إعادة تعيين كلمة المرور بنجاح',
             tempPassword: tempPassword // إرجاع كلمة المرور المؤقتة للمدير
         };
+    },
+
+    getCurrentUserMfaStatus() {
+        const email = String(AppState.currentUser?.email || '').trim().toLowerCase();
+        if (!email) return { enabled: false, enrolledAt: '' };
+        const row = (AppState.appData.users || []).find(u => u && u.email && u.email.toLowerCase() === email);
+        return {
+            enabled: this._isMfaEnabledForUser(row),
+            enrolledAt: row?.mfaEnrolledAt || ''
+        };
+    },
+
+    _syncLocalUserMfaFlags(email, patch) {
+        const e = String(email || '').trim().toLowerCase();
+        const users = AppState.appData.users || [];
+        const idx = users.findIndex(u => u && u.email && u.email.toLowerCase() === e);
+        if (idx === -1) return;
+        Object.assign(users[idx], patch);
+        AppState.appData.users = users;
+        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+            window.DataManager.save();
+        }
+    },
+
+    async startMfaEnrollment() {
+        if (typeof GoogleIntegration === 'undefined' || !Utils.hasCloudBackendSync()) {
+            Notification.error('يتطلب اتصالاً بالخادم لتفعيل المصادقة الثنائية');
+            return { success: false, message: 'لا يوجد اتصال بالخادم' };
+        }
+        try {
+            const result = await GoogleIntegration.sendRequest({ action: 'startMfaEnrollment', data: {} });
+            if (!result || !result.success) {
+                const msg = (result && result.message) || 'تعذر بدء تسجيل المصادقة الثنائية';
+                Notification.error(msg);
+                return { success: false, message: msg };
+            }
+            return result;
+        } catch (err) {
+            Notification.error('فشل الاتصال بالخادم');
+            return { success: false, message: err.message || 'فشل الاتصال' };
+        }
+    },
+
+    async confirmMfaEnrollment(code) {
+        const otp = String(code || '').replace(/\s/g, '');
+        if (!/^\d{6}$/.test(otp)) {
+            Notification.error('رمز التأكيد يجب أن يكون 6 أرقام');
+            return { success: false, message: 'رمز غير صالح' };
+        }
+        try {
+            const result = await GoogleIntegration.sendRequest({
+                action: 'confirmMfaEnrollment',
+                data: { code: otp }
+            });
+            if (result && result.success) {
+                const email = AppState.currentUser?.email;
+                this._syncLocalUserMfaFlags(email, {
+                    mfaEnabled: true,
+                    mfaEnrolledAt: result.mfaEnrolledAt || new Date().toISOString()
+                });
+                Notification.success('تم تفعيل المصادقة الثنائية');
+            } else {
+                Notification.error((result && result.message) || 'رمز التأكيد غير صحيح');
+            }
+            return result || { success: false };
+        } catch (err) {
+            Notification.error('فشل تأكيد المصادقة الثنائية');
+            return { success: false, message: err.message || 'فشل' };
+        }
+    },
+
+    async disableMfa(password) {
+        const email = AppState.currentUser?.email;
+        if (!email) {
+            return { success: false, message: 'مطلوب تسجيل الدخول' };
+        }
+        try {
+            const result = await GoogleIntegration.sendRequest({
+                action: 'disableMfa',
+                data: { email, password: password || '' }
+            });
+            if (result && result.success) {
+                this._syncLocalUserMfaFlags(email, {
+                    mfaEnabled: false,
+                    mfaSecretEnc: '',
+                    mfaEnrolledAt: ''
+                });
+                Notification.success('تم تعطيل المصادقة الثنائية');
+            } else {
+                Notification.error((result && result.message) || 'تعذر تعطيل المصادقة الثنائية');
+            }
+            return result || { success: false };
+        } catch (err) {
+            Notification.error('فشل تعطيل المصادقة الثنائية');
+            return { success: false, message: err.message || 'فشل' };
+        }
+    },
+
+    async adminDisableUserMfa(targetEmail) {
+        if (typeof Permissions === 'undefined' || !Permissions.isCurrentUserEffectiveAdmin()) {
+            Notification.error('ليس لديك صلاحية');
+            return { success: false };
+        }
+        const email = String(targetEmail || '').trim().toLowerCase();
+        if (!email) return { success: false, message: 'بريد غير صالح' };
+        try {
+            const result = await GoogleIntegration.sendRequest({
+                action: 'disableMfa',
+                data: { email }
+            });
+            if (result && result.success) {
+                this._syncLocalUserMfaFlags(email, {
+                    mfaEnabled: false,
+                    mfaSecretEnc: '',
+                    mfaEnrolledAt: ''
+                });
+                Notification.success('تم تعطيل MFA للمستخدم');
+            }
+            return result || { success: false };
+        } catch (err) {
+            return { success: false, message: err.message };
+        }
     }
 };
 

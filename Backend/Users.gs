@@ -665,6 +665,69 @@ function _fastTouchUserLoginFields_(userId, fields) {
 }
 
 /**
+ * بناء كائن مستخدم آمن للإرجاع للعميل (بدون حقول حساسة)
+ */
+function buildSafeUserFromRecord_(user) {
+    if (!user) return null;
+    var safeUser = {};
+    var sensitiveFields = ['password', 'passwordHash', 'token', 'loginHistory', 'mfaSecretEnc'];
+    for (var key in user) {
+        if (user.hasOwnProperty(key) && sensitiveFields.indexOf(key) === -1) {
+            safeUser[key] = user[key];
+        }
+    }
+    if (typeof safeUser.permissions === 'string') {
+        try {
+            safeUser.permissions = JSON.parse(safeUser.permissions);
+        } catch (ex) {
+            safeUser.permissions = {};
+        }
+    }
+    return safeUser;
+}
+
+/**
+ * التحقق من كلمة المرور فقط (بدون إكمال جلسة أو MFA)
+ */
+function verifyUserPasswordOnly_(email, password) {
+    try {
+        var e = String(email || '').trim().toLowerCase();
+        var p = String(password || '').trim();
+        if (!e || !p) {
+            return { success: false, message: 'البريد الإلكتروني وكلمة المرور مطلوبان' };
+        }
+        var user = getUserRecordFromUsersSheetByEmail_(e);
+        if (!user) {
+            return { success: false, message: 'بيانات الاعتماد غير صحيحة' };
+        }
+        if (user.active === false || user.active === 'false' || user.active === 'inactive') {
+            return { success: false, message: 'هذا الحساب معطل. يرجى التواصل مع المدير.' };
+        }
+        var passwordMatch = false;
+        var needsHashUpdate = false;
+        var storedHash = String(user.passwordHash || '').trim();
+        if (isSha256Hash(storedHash)) {
+            var inputHash = hashPassword(p);
+            passwordMatch = (inputHash.toLowerCase() === storedHash.toLowerCase());
+        } else if (storedHash === p) {
+            passwordMatch = true;
+            needsHashUpdate = true;
+        }
+        if (!passwordMatch) {
+            return { success: false, message: 'بيانات الاعتماد غير صحيحة' };
+        }
+        if (needsHashUpdate) {
+            var newHash = hashPassword(p);
+            updateUserInSheet(user.id, { passwordHash: newHash, password: '***' }, null, { internalCall: true });
+        }
+        return { success: true, user: user };
+    } catch (err) {
+        Logger.log('verifyUserPasswordOnly_ error: ' + err.toString());
+        return { success: false, message: 'حدث خطأ أثناء التحقق من كلمة المرور' };
+    }
+}
+
+/**
  * المصادقة على المستخدم في جانب الخادم (Server-side Authentication)
  * دالة جديدة من Jules — تتحقق من المستخدم في الـ Backend مباشرةً
  * @param {string} email
@@ -713,6 +776,22 @@ function loginUser(email, password) {
             updateUserInSheet(user.id, { passwordHash: newHash, password: '***' }, null, { internalCall: true });
         }
 
+        // MFA: إذا مفعّل — لا نُكمل الجلسة حتى التحقق من TOTP
+        if (typeof isMfaEnabledForUser_ === 'function' && isMfaEnabledForUser_(user)) {
+            var challengeToken = (typeof createMfaChallenge_ === 'function')
+                ? createMfaChallenge_(e)
+                : '';
+            if (!challengeToken) {
+                return { success: false, message: 'تعذر بدء خطوة المصادقة الثنائية. حاول لاحقاً.' };
+            }
+            return {
+                success: true,
+                mfaRequired: true,
+                challengeToken: challengeToken,
+                message: 'مطلوب رمز المصادقة الثنائية'
+            };
+        }
+
         // تسجيل وقت الدخول — مسار سريع (تحديث خلايا مستهدفة فقط بدون قراءة الشيت كاملاً)
         try {
             _fastTouchUserLoginFields_(user.id, {
@@ -725,22 +804,7 @@ function loginUser(email, password) {
         }
 
         // تجهيز كائن المستخدم للإرجاع (بدون بيانات حساسة)
-        const safeUser = {};
-        const sensitiveFields = ['password', 'passwordHash', 'token', 'loginHistory'];
-        for (var key in user) {
-            if (user.hasOwnProperty(key) && !sensitiveFields.includes(key)) {
-                safeUser[key] = user[key];
-            }
-        }
-
-        // تطبيع الصلاحيات
-        if (typeof safeUser.permissions === 'string') {
-            try {
-                safeUser.permissions = JSON.parse(safeUser.permissions);
-            } catch (ex) {
-                safeUser.permissions = {};
-            }
-        }
+        const safeUser = buildSafeUserFromRecord_(user);
 
         return {
             success: true,
@@ -751,6 +815,182 @@ function loginUser(email, password) {
     } catch (error) {
         Logger.log('Error in loginUser: ' + error.toString());
         return { success: false, message: 'حدث خطأ في الخادم أثناء تسجيل الدخول' };
+    }
+}
+
+/**
+ * الخطوة الثانية لتسجيل الدخول — التحقق من رمز TOTP
+ */
+function verifyMfaLogin(challengeToken, email, code) {
+    try {
+        var e = String(email || '').trim().toLowerCase();
+        var token = String(challengeToken || '').trim();
+        var otp = String(code || '').trim();
+
+        if (!e || !token || !otp) {
+            return { success: false, message: 'بيانات المصادقة الثنائية ناقصة' };
+        }
+
+        if (typeof checkMfaRateLimit_ === 'function') {
+            var rl = checkMfaRateLimit_(e);
+            if (!rl.ok) return { success: false, message: rl.message };
+        }
+
+        if (typeof consumeMfaChallenge_ !== 'function' || !consumeMfaChallenge_(token, e)) {
+            return { success: false, message: 'انتهت صلاحية جلسة المصادقة. أعد تسجيل الدخول.' };
+        }
+
+        var user = getUserRecordFromUsersSheetByEmail_(e);
+        if (!user || !isMfaEnabledForUser_(user)) {
+            return { success: false, message: 'المصادقة الثنائية غير مفعّلة لهذا الحساب' };
+        }
+
+        var secretEnc = String(user.mfaSecretEnc || '').trim();
+        var secret = (typeof decryptMfaSecret_ === 'function') ? decryptMfaSecret_(secretEnc) : '';
+        if (!secret || typeof verifyTotpCode_ !== 'function' || !verifyTotpCode_(secret, otp)) {
+            if (typeof recordMfaFailure_ === 'function') recordMfaFailure_(e);
+            if (typeof logSecurityEvent === 'function') {
+                logSecurityEvent('mfa_login_failed', { email: e, severity: 'medium' });
+            }
+            return { success: false, message: 'رمز المصادقة الثنائية غير صحيح' };
+        }
+
+        if (typeof clearMfaFailures_ === 'function') clearMfaFailures_(e);
+
+        try {
+            _fastTouchUserLoginFields_(user.id, {
+                lastLogin: new Date().toISOString(),
+                isOnline: false,
+                activeSessionId: ''
+            });
+        } catch (loginTimeError) {
+            Logger.log('Warning: Could not update lastLogin after MFA: ' + loginTimeError.toString());
+        }
+
+        return {
+            success: true,
+            message: 'تم تسجيل الدخول بنجاح',
+            user: buildSafeUserFromRecord_(user)
+        };
+    } catch (error) {
+        Logger.log('verifyMfaLogin error: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء التحقق من المصادقة الثنائية' };
+    }
+}
+
+/**
+ * بدء تسجيل MFA — توليد سر مؤقت حتى التأكيد
+ */
+function startMfaEnrollment(actorUserData) {
+    try {
+        var email = String((actorUserData && actorUserData.email) || '').trim().toLowerCase();
+        if (!email) {
+            return { success: false, message: 'مطلوب تسجيل الدخول', errorCode: 'AUTH_REQUIRED' };
+        }
+        var user = getUserRecordFromUsersSheetByEmail_(email);
+        if (!user) {
+            return { success: false, message: 'المستخدم غير موجود' };
+        }
+        if (isMfaEnabledForUser_(user)) {
+            return { success: false, message: 'المصادقة الثنائية مفعّلة بالفعل' };
+        }
+        var secret = generateTotpSecret_();
+        if (!storeMfaEnrollmentPending_(email, secret)) {
+            return { success: false, message: 'تعذر بدء التسجيل. حاول لاحقاً.' };
+        }
+        var otpauthUrl = buildOtpAuthUri_(email, secret, 'HSE-04-2026');
+        return {
+            success: true,
+            secret: secret,
+            otpauthUrl: otpauthUrl,
+            message: 'امسح رمز QR ثم أدخل الرمز للتأكيد'
+        };
+    } catch (error) {
+        Logger.log('startMfaEnrollment error: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء بدء تسجيل MFA' };
+    }
+}
+
+/**
+ * تأكيد تفعيل MFA بعد مسح QR
+ */
+function confirmMfaEnrollment(code, actorUserData) {
+    try {
+        var email = String((actorUserData && actorUserData.email) || '').trim().toLowerCase();
+        var otp = String(code || '').trim();
+        if (!email || !otp) {
+            return { success: false, message: 'رمز التأكيد مطلوب' };
+        }
+        var pendingSecret = consumeMfaEnrollmentPending_(email);
+        if (!pendingSecret) {
+            return { success: false, message: 'انتهت جلسة التسجيل. أعد المحاولة من البداية.' };
+        }
+        if (!verifyTotpCode_(pendingSecret, otp)) {
+            return { success: false, message: 'رمز التأكيد غير صحيح' };
+        }
+        var user = getUserRecordFromUsersSheetByEmail_(email);
+        if (!user) {
+            return { success: false, message: 'المستخدم غير موجود' };
+        }
+        var enc = encryptMfaSecret_(pendingSecret);
+        var now = new Date().toISOString();
+        var upd = updateUserInSheet(user.id, {
+            mfaEnabled: true,
+            mfaSecretEnc: enc,
+            mfaEnrolledAt: now
+        }, actorUserData, { internalCall: false });
+        if (upd && upd.success) {
+            return { success: true, message: 'تم تفعيل المصادقة الثنائية بنجاح', mfaEnabled: true, mfaEnrolledAt: now };
+        }
+        return upd || { success: false, message: 'تعذر حفظ إعدادات MFA' };
+    } catch (error) {
+        Logger.log('confirmMfaEnrollment error: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء تأكيد MFA' };
+    }
+}
+
+/**
+ * تعطيل MFA (المستخدم نفسه بكلمة المرور، أو مدير لحساب آخر)
+ */
+function disableMfa(payload, actorUserData) {
+    try {
+        var targetEmail = String((payload && payload.email) || (actorUserData && actorUserData.email) || '').trim().toLowerCase();
+        var password = String((payload && payload.password) || '');
+        var actorEmail = String((actorUserData && actorUserData.email) || '').trim().toLowerCase();
+
+        if (!targetEmail) {
+            return { success: false, message: 'البريد الإلكتروني مطلوب' };
+        }
+
+        var isSelf = actorEmail && actorEmail === targetEmail;
+        if (!isSelf) {
+            var adminGate = (typeof requireAdminActor_ === 'function')
+                ? requireAdminActor_(actorUserData, 'disableMfa')
+                : { ok: false, success: false, message: 'لا يمكن تعطيل MFA لمستخدم آخر' };
+            if (!adminGate.ok) return adminGate;
+        } else {
+            if (!password) {
+                return { success: false, message: 'كلمة المرور مطلوبة لتعطيل المصادقة الثنائية' };
+            }
+            var verify = verifyUserPasswordOnly_(targetEmail, password);
+            if (!verify || !verify.success) {
+                return { success: false, message: 'كلمة المرور غير صحيحة' };
+            }
+        }
+
+        var user = getUserRecordFromUsersSheetByEmail_(targetEmail);
+        if (!user) {
+            return { success: false, message: 'المستخدم غير موجود' };
+        }
+
+        return updateUserInSheet(user.id, {
+            mfaEnabled: false,
+            mfaSecretEnc: '',
+            mfaEnrolledAt: ''
+        }, actorUserData, { internalCall: isSelf });
+    } catch (error) {
+        Logger.log('disableMfa error: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء تعطيل MFA' };
     }
 }
 
@@ -778,7 +1018,7 @@ function changeUserPassword(payload, actorUserData) {
             if (!adminGate.ok) return adminGate;
         }
 
-        var verify = loginUser(email, currentPassword);
+        var verify = verifyUserPasswordOnly_(email, currentPassword);
         if (!verify || !verify.success || !verify.user) {
             return { success: false, message: 'كلمة المرور الحالية غير صحيحة' };
         }

@@ -3616,7 +3616,7 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
 
         // ✅ Security: Filter out sensitive fields for Users sheet
         if (!skipSecurityFilter && (sheetName === 'Users' || sheetName === 'users_db')) {
-            const sensitiveFields = ['password', 'passwordHash', 'token', 'loginHistory', 'csrfToken', 'sessionToken'];
+            const sensitiveFields = ['password', 'passwordHash', 'token', 'loginHistory', 'csrfToken', 'sessionToken', 'mfaSecretEnc'];
             uniqueObjects.forEach(obj => {
                 sensitiveFields.forEach(field => {
                     if (obj.hasOwnProperty(field)) {

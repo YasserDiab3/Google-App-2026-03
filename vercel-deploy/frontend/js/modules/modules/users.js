@@ -591,7 +591,7 @@ const Users = {
                                         <span>${Utils.escapeHTML(user.name || '')}</span>
                                     </div>
                                 </td>
-                                <td>${Utils.escapeHTML(user.email || '')}</td>
+                                <td>${Utils.escapeHTML(user.email || '')}${(user.mfaEnabled === true || user.mfaEnabled === 'true') ? ' <span class="badge badge-info text-xs" title="مصادقة ثنائية"><i class="fas fa-shield-halved"></i> MFA</span>' : ''}</td>
                                 <td>
                                     <div class="flex items-center gap-2">
                                         <i class="fas fa-lock text-gray-400 text-sm"></i>
@@ -642,6 +642,14 @@ const Users = {
                                         >
                                             <i class="fas fa-key"></i>
                                         </button>
+                                        ${(user.mfaEnabled === true || user.mfaEnabled === 'true') ? `
+                                        <button 
+                                            onclick="Users.disableUserMfa('${user.id}', '${user.email}')" 
+                                            class="btn-icon btn-icon-secondary"
+                                            title="تعطيل MFA"
+                                        >
+                                            <i class="fas fa-shield-halved"></i>
+                                        </button>` : ''}
                                         <button 
                                             onclick="Users.editUser('${user.id}')" 
                                             class="btn-icon btn-icon-primary"
@@ -1518,6 +1526,29 @@ const Users = {
             await this.showForm(user);
         } else {
             Notification.error('المستخدم غير موجود');
+        }
+    },
+
+    async disableUserMfa(userId, userEmail) {
+        const user = (AppState.appData.users || []).find(u => u && (u.id === userId || u.email === userEmail));
+        if (!user) {
+            Notification.error('المستخدم غير موجود');
+            return;
+        }
+        const confirmed = await Utils.confirmAction(
+            `تعطيل المصادقة الثنائية للمستخدم "${user.name}" (${user.email})؟`,
+            'تعطيل MFA',
+            'إلغاء'
+        );
+        if (!confirmed) return;
+        Loading.show();
+        try {
+            const result = await Auth.adminDisableUserMfa(user.email);
+            Loading.hide();
+            if (result && result.success) this.load();
+        } catch (e) {
+            Loading.hide();
+            Notification.error('فشل تعطيل MFA');
         }
     },
 

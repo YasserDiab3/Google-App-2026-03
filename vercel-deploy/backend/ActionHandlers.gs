@@ -430,6 +430,53 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'verifyMfaLogin': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = verifyMfaLogin(
+                payload.challengeToken || payload.token,
+                payload.email,
+                payload.code || payload.otp
+            );
+        })();
+        return result;
+    },
+    'startMfaEnrollment': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            var actor = actorUserData || (postData && postData.userData);
+            if (!actor || !actor.email) {
+                result = { success: false, message: 'مطلوب تسجيل الدخول', errorCode: 'AUTH_REQUIRED' };
+                return;
+            }
+            result = startMfaEnrollment(actor);
+        })();
+        return result;
+    },
+    'confirmMfaEnrollment': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            var actor = actorUserData || (postData && postData.userData);
+            if (!actor || !actor.email) {
+                result = { success: false, message: 'مطلوب تسجيل الدخول', errorCode: 'AUTH_REQUIRED' };
+                return;
+            }
+            result = confirmMfaEnrollment(payload.code || payload.otp, actor);
+        })();
+        return result;
+    },
+    'disableMfa': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            var actor = actorUserData || (postData && postData.userData);
+            if (!actor || !actor.email) {
+                result = { success: false, message: 'مطلوب تسجيل الدخول', errorCode: 'AUTH_REQUIRED' };
+                return;
+            }
+            result = disableMfa(payload, actor);
+        })();
+        return result;
+    },
     'addUser': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

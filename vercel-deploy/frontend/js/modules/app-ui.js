@@ -4740,6 +4740,120 @@ window.UI = {
     },
 
     /**
+     * إعداد المصادقة الثنائية (TOTP)
+     */
+    async showMfaSettingsModal() {
+        const status = (typeof Auth !== 'undefined' && Auth.getCurrentUserMfaStatus)
+            ? Auth.getCurrentUserMfaStatus()
+            : { enabled: false };
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 480px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">المصادقة الثنائية (TOTP)</h2>
+                    <button type="button" class="modal-close" id="mfa-modal-close"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body" id="mfa-modal-body">
+                    <div class="text-center text-slate-500 text-sm py-4"><i class="fas fa-spinner fa-spin ml-2"></i> جاري التحميل...</div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const closeModal = () => { try { modal.remove(); } catch (_e) { /* ignore */ } };
+        modal.querySelector('#mfa-modal-close')?.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+        const body = modal.querySelector('#mfa-modal-body');
+        if (!body) return;
+
+        const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML)
+            ? Utils.escapeHTML(String(v ?? ''))
+            : String(v ?? '');
+
+        if (status.enabled) {
+            body.innerHTML = `
+                <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-4 text-sm text-emerald-800">
+                    <i class="fas fa-check-circle ml-2"></i>المصادقة الثنائية <strong>مفعّلة</strong> على حسابك.
+                </div>
+                <p class="text-sm text-gray-600 mb-3">لتعطيلها أدخل كلمة المرور الحالية:</p>
+                <input type="password" id="mfa-disable-password" class="form-input mb-3" autocomplete="current-password" placeholder="كلمة المرور">
+                <div class="flex gap-2 justify-end">
+                    <button type="button" class="btn-secondary" id="mfa-disable-cancel">إلغاء</button>
+                    <button type="button" class="btn-danger" id="mfa-disable-confirm"><i class="fas fa-shield-halved ml-1"></i>تعطيل</button>
+                </div>
+            `;
+            body.querySelector('#mfa-disable-cancel')?.addEventListener('click', closeModal);
+            body.querySelector('#mfa-disable-confirm')?.addEventListener('click', async () => {
+                const pw = body.querySelector('#mfa-disable-password')?.value || '';
+                if (!pw) {
+                    Notification.warning('أدخل كلمة المرور');
+                    return;
+                }
+                Loading.show();
+                try {
+                    const res = await Auth.disableMfa(pw);
+                    Loading.hide();
+                    if (res && res.success) {
+                        closeModal();
+                        if (AppState.currentSection === 'profile') this.renderMyProfileSection();
+                    }
+                } catch (err) {
+                    Loading.hide();
+                    Notification.error('فشل التعطيل');
+                }
+            });
+            return;
+        }
+
+        const start = await Auth.startMfaEnrollment();
+        if (!start || !start.success) {
+            body.innerHTML = `<p class="text-red-600 text-sm">${esc(start?.message || 'تعذر بدء التسجيل')}</p>`;
+            return;
+        }
+
+        const otpauthUrl = start.otpauthUrl || '';
+        const manualSecret = start.secret || '';
+        let qrHtml = '<p class="text-amber-600 text-sm">تعذر إنشاء QR — استخدم السر يدوياً في التطبيق.</p>';
+        if (otpauthUrl && typeof window.QRCode !== 'undefined' && typeof window.QRCode.generate === 'function') {
+            try {
+                const qrSrc = window.QRCode.generate(otpauthUrl, 200);
+                qrHtml = `<img src="${esc(qrSrc)}" alt="QR MFA" class="mx-auto profile-qr-image" style="max-width:200px;">`;
+            } catch (_qrErr) { /* fallback text */ }
+        }
+
+        body.innerHTML = `
+            <p class="text-sm text-gray-600 mb-3">امسح الرمز بتطبيق Google Authenticator أو Microsoft Authenticator:</p>
+            <div class="text-center mb-3">${qrHtml}</div>
+            <p class="text-xs text-gray-500 mb-2 text-center" dir="ltr">${esc(manualSecret)}</p>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">أدخل الرمز من التطبيق للتأكيد:</label>
+            <input type="text" id="mfa-enroll-code" class="form-input text-center tracking-widest mb-3" inputmode="numeric" maxlength="6" placeholder="000000" dir="ltr">
+            <div class="flex gap-2 justify-end">
+                <button type="button" class="btn-secondary" id="mfa-enroll-cancel">إلغاء</button>
+                <button type="button" class="btn-primary" id="mfa-enroll-confirm"><i class="fas fa-check ml-1"></i>تفعيل</button>
+            </div>
+        `;
+        body.querySelector('#mfa-enroll-cancel')?.addEventListener('click', closeModal);
+        body.querySelector('#mfa-enroll-confirm')?.addEventListener('click', async () => {
+            const code = body.querySelector('#mfa-enroll-code')?.value?.trim() || '';
+            Loading.show();
+            try {
+                const res = await Auth.confirmMfaEnrollment(code);
+                Loading.hide();
+                if (res && res.success) {
+                    closeModal();
+                    if (AppState.currentSection === 'profile') this.renderMyProfileSection();
+                }
+            } catch (err) {
+                Loading.hide();
+                Notification.error('فشل التفعيل');
+            }
+        });
+        setTimeout(() => body.querySelector('#mfa-enroll-code')?.focus(), 100);
+    },
+
+    /**
      * الحصول على نص إصدار النظام للعرض
      */
     getAppVersionDisplay_() {
@@ -5336,6 +5450,9 @@ window.UI = {
             }).join('')
             : `<span class="text-slate-500">${t('module.profile.noEmergencyPhones', 'لا توجد أرقام طوارئ متاحة حالياً')}</span>`;
         const isAdmin = typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserAdmin === 'function' && Permissions.isCurrentUserAdmin();
+        const mfaStatus = (typeof Auth !== 'undefined' && typeof Auth.getCurrentUserMfaStatus === 'function')
+            ? Auth.getCurrentUserMfaStatus()
+            : { enabled: false };
         const allAppEm = (isAdmin && Array.isArray(AppState.appData?.appEmergencyNumbers))
             ? [...AppState.appData.appEmergencyNumbers].sort((a, b) => (Number(a?.sortOrder) || 0) - (Number(b?.sortOrder) || 0))
             : [];
@@ -5445,6 +5562,9 @@ window.UI = {
                             <div class="profile-actions">
                                 <button id="profile-change-photo-btn" class="btn-secondary btn-sm"><i class="fas fa-camera ml-1"></i>${t('module.profile.changePhoto', 'تغيير الصورة')}</button>
                                 <button id="profile-change-password-btn" class="btn-primary btn-sm"><i class="fas fa-key ml-1"></i>${t('module.profile.changePassword', 'تغيير كلمة المرور')}</button>
+                                <button id="profile-mfa-btn" class="btn-secondary btn-sm" type="button">
+                                    <i class="fas fa-shield-halved ml-1"></i>${mfaStatus.enabled ? t('module.profile.mfaManage', 'إدارة المصادقة الثنائية') : t('module.profile.mfaEnable', 'تفعيل المصادقة الثنائية')}
+                                </button>
                                 ${teamsLinkHtml}
                                 ${whatsappLinkHtml}
                                 <input type="file" id="profile-photo-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
@@ -5577,6 +5697,13 @@ window.UI = {
             changePassBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.showChangePasswordModal(false);
+            });
+        }
+        const mfaBtn = document.getElementById('profile-mfa-btn');
+        if (mfaBtn) {
+            mfaBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.showMfaSettingsModal();
             });
         }
 

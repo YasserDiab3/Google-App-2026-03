@@ -9500,6 +9500,46 @@
                             <span id="login-submit-text">تسجيل الدخول</span>
                         </button>
 
+                        <div id="login-mfa-step" class="space-y-4" style="display: none;">
+                            <p id="login-mfa-hint" class="text-sm text-gray-600 text-center">
+                                أدخل رمز المصادقة الثنائية من تطبيق المصادقة (6 أرقام)
+                            </p>
+                            <div>
+                                <label for="mfa-code" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-shield-halved ml-2"></i>
+                                    <span id="login-mfa-label">رمز المصادقة</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    id="mfa-code"
+                                    name="mfa-code"
+                                    class="form-input text-center tracking-widest"
+                                    inputmode="numeric"
+                                    pattern="[0-9]*"
+                                    maxlength="6"
+                                    autocomplete="one-time-code"
+                                    placeholder="000000"
+                                    dir="ltr"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                id="mfa-verify-btn"
+                                class="btn-primary w-full"
+                            >
+                                <i class="fas fa-check ml-2" aria-hidden="true"></i>
+                                <span id="mfa-verify-text">تأكيد الرمز</span>
+                            </button>
+                            <button
+                                type="button"
+                                id="mfa-back-btn"
+                                class="btn-secondary w-full"
+                            >
+                                <i class="fas fa-arrow-right ml-2" aria-hidden="true"></i>
+                                <span id="mfa-back-text">رجوع</span>
+                            </button>
+                        </div>
+
                         <button
                             type="button"
                             id="help-btn"
@@ -13210,7 +13250,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.286-20260624";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.287-20260625";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

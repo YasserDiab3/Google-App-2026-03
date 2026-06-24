@@ -13,7 +13,7 @@ const DataManager = {
     _hasShownLargeDataWarning: false,
 
     /** حقول حساسة لا تُحفظ في localStorage أبداً */
-    _USER_SENSITIVE_FIELDS: ['password', 'passwordHash', 'token', 'loginHistory', 'activeSessionId', 'profilePublicToken', 'profilePublicTokenExpiry'],
+    _USER_SENSITIVE_FIELDS: ['password', 'passwordHash', 'token', 'loginHistory', 'activeSessionId', 'profilePublicToken', 'profilePublicTokenExpiry', 'mfaSecretEnc'],
 
     /**
      * مسح البيانات المحلية عند logout أو تبديل المستخدم (منع تسريب بين الجلسات)
