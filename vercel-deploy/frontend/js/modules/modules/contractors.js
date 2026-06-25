@@ -331,6 +331,150 @@ const Contractors = {
         endDate: ''
     },
 
+    /**
+     * تحميل محتوى تبويب واحد (كسول — لا يمس syncDataFromServer)
+     */
+    async loadContractorsTabContent(tab, options = {}) {
+        const isAdmin = this.isContractorApprovalAdminUser();
+        const tabContainerMap = {
+            'approval-request': 'contractors-approval-request-content',
+            approved: 'contractors-approved-content',
+            evaluations: 'contractors-evaluations-content',
+            requirements: 'contractors-requirements-content',
+            analytics: 'contractors-analytics-content'
+        };
+        const containerId = tabContainerMap[tab];
+        if (!containerId) return;
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const handleError = (sectionName, error) => {
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError(`خطأ في تحميل ${sectionName}:`, error);
+            }
+            return `
+                <div class="content-card">
+                    <div class="card-body">
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle text-4xl text-yellow-400 mb-3"></i>
+                            <p class="text-gray-500">حدث خطأ في تحميل ${sectionName}</p>
+                            <button onclick="Contractors.loadContractorsTabContent('${tab}', { forceData: true })" class="btn-secondary mt-3">إعادة المحاولة</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        try {
+            if (tab === 'approval-request') {
+                this.safeSetInnerHTML(container, this.renderApprovalRequestSection());
+                this._attachSendApprovalRequestBtn();
+                if (options.fetchData !== false) {
+                    this.ensureApprovalRequestsDataLoaded({ force: options.forceData === true })
+                        .then(() => this.refreshApprovalRequestsSection())
+                        .catch(() => {});
+                }
+                return;
+            }
+
+            if (tab === 'approved') {
+                this.ensureApprovedTabContentLoaded(true);
+                if (options.fetchData !== false) {
+                    this.ensureApprovedContractorsDataLoaded({
+                        force: options.forceData === true,
+                        reconcile: options.reconcile === true
+                    })
+                        .then(() => {
+                            this.ensureApprovedTabContentLoaded(true);
+                            this.refreshApprovedEntitiesList();
+                        })
+                        .catch(() => {});
+                }
+                return;
+            }
+
+            if (tab === 'evaluations') {
+                const html = await Promise.resolve(this.renderEvaluationsSection()).catch((err) => handleError('التقييمات', err));
+                this.safeSetInnerHTML(container, html);
+                this.ensureEvaluationsEventListeners();
+                if (options.fetchData !== false) {
+                    this.ensureEvaluationsDataLoaded();
+                }
+                return;
+            }
+
+            if (tab === 'requirements') {
+                const html = await Promise.resolve(this.renderRequirementsManagementSection()).catch((err) => handleError('الاشتراطات', err));
+                this.safeSetInnerHTML(container, html);
+                return;
+            }
+
+            if (tab === 'analytics' && isAdmin) {
+                const html = await Promise.resolve(this.renderAnalyticsSection()).catch((err) => handleError('التحليلات', err));
+                this.safeSetInnerHTML(container, html);
+                const root = document.getElementById('ctr-analytics-root');
+                if (root) root.dataset.bound = '';
+                this.bindContractorAnalyticsEvents();
+                if (options.fetchData !== false) {
+                    this.loadContractorAnalytics();
+                }
+            }
+        } catch (error) {
+            this.safeSetInnerHTML(container, handleError(tab, error));
+        }
+    },
+
+    _attachSendApprovalRequestBtn() {
+        const sendBtn = document.getElementById('send-approval-request-btn');
+        if (sendBtn && !sendBtn.hasAttribute('data-listener-attached')) {
+            sendBtn.setAttribute('data-listener-attached', 'true');
+            sendBtn.addEventListener('click', () => this.showApprovalRequestForm());
+        }
+    },
+
+    _scheduleContractorsBackgroundPrefetch(activeTab) {
+        const jobs = [];
+        if (this.shouldLoadContractorApprovalRequests()) {
+            jobs.push(this.ensureApprovalRequestsDataLoaded({ force: false }));
+        }
+        if (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function' &&
+            Permissions.hasAccess('contractors')) {
+            jobs.push(this.ensureApprovedContractorsDataLoaded({ force: false, reconcile: false }));
+        }
+        if (!jobs.length) return;
+        Promise.allSettled(jobs).then(() => {
+            if (this.currentTab !== activeTab) return;
+            if (activeTab === 'approval-request') {
+                this.refreshApprovalRequestsSection();
+            } else if (activeTab === 'approved') {
+                this.ensureApprovedTabContentLoaded(true);
+                this.refreshApprovedEntitiesList();
+            } else if (activeTab === 'analytics') {
+                this.loadContractorAnalytics();
+            }
+        }).catch(() => {});
+    },
+
+    _loadRemainingContractorsTabsInBackground(activeTab) {
+        const isAdmin = this.isContractorApprovalAdminUser();
+        const tabs = ['approval-request', 'approved', 'evaluations', 'requirements'];
+        if (isAdmin) tabs.push('analytics');
+        const remaining = tabs.filter((t) => t !== activeTab && !this._tabsLoaded?.[t]);
+        if (!remaining.length) return;
+
+        const run = async () => {
+            for (const tab of remaining) {
+                if (this._tabsLoaded?.[tab]) continue;
+                try {
+                    await this.loadContractorsTabContent(tab, { fetchData: false, background: true });
+                    this._tabsLoaded[tab] = true;
+                } catch (_e) { /* ignore */ }
+                await new Promise((resolve) => setTimeout(resolve, 0));
+            }
+        };
+        run().catch(() => {});
+    },
+
     async load(preserveCurrentTab = false) {
         // ✅ CRITICAL: منع استدعاء load() أكثر من مرة في نفس الوقت
         if (this._isLoading) {
@@ -371,67 +515,16 @@ const Contractors = {
             this.ensureEvaluationSetup();
             this.ensureApprovalRequestsSetup();
             this.ensureDeletionRequestsSetup();
+            this._tabsLoaded = {};
 
-            if (this.shouldLoadContractorApprovalRequests()) {
-                try {
-                    await this.ensureApprovalRequestsDataLoaded({ force: this.isContractorApprovalAdminUser() });
-                } catch (_prefetchErr) { /* ignore */ }
+            if (!AppState) {
+                window.AppState = window.AppState || {};
+            }
+            if (!AppState.appData) {
+                AppState.appData = {};
             }
 
-            if (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function' &&
-                Permissions.hasAccess('contractors')) {
-                try {
-                    await this.ensureApprovedContractorsDataLoaded({ force: false });
-                } catch (_approvedPrefetchErr) { /* ignore */ }
-            }
-
-            // ✅ تحسين: الانتظار حتى تكون AppState و appData جاهزة (تسريع التحميل)
-            if (!AppState || !AppState.appData) {
-                // الانتظار حتى تكون البيانات جاهزة (بحد أقصى 1 ثانية بدلاً من 2 ثانية)
-                // تحسين: تقليل التأخير من 50ms إلى 25ms لتسريع التحميل أكثر
-                let attempts = 0;
-                const maxAttempts = 40; // 1 ثانية (40 * 25ms)
-                while ((!AppState || !AppState.appData) && attempts < maxAttempts) {
-                    await new Promise(resolve => setTimeout(resolve, 25));
-                    attempts++;
-                }
-                
-                // إذا لم تصبح البيانات جاهزة بعد، إنشاء AppState.appData
-                if (!AppState) {
-                    if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                        Utils.safeWarn('⚠️ AppState غير موجود - إنشاء جديد');
-                    }
-                    window.AppState = window.AppState || {};
-                }
-                if (!AppState.appData) {
-                    AppState.appData = {};
-                }
-            }
-
-            // تحميل المحتوى بشكل متوازي لتحسين الأداء
             const isAdmin = this.isContractorApprovalAdminUser();
-
-            // دالة مساعدة لمعالجة الأخطاء
-            const handleError = (sectionName, error) => {
-                if (typeof Utils !== 'undefined' && Utils.safeError) {
-                    Utils.safeError(`خطأ في تحميل ${sectionName}:`, error);
-                } else {
-                    console.error(`خطأ في تحميل ${sectionName}:`, error);
-                }
-                return `
-                    <div class="content-card">
-                        <div class="card-body">
-                            <div class="empty-state">
-                                <i class="fas fa-exclamation-triangle text-4xl text-yellow-400 mb-3"></i>
-                                <p class="text-gray-500">حدث خطأ في تحميل ${sectionName}</p>
-                                <button onclick="Contractors.load()" class="btn-secondary mt-3">إعادة المحاولة</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            };
-
-            // هيكل المديول أولاً (عنوان + تبويبات)، ثم ملء الأقسام بعد الجاهزية — دون شاشة تحميل كاملة
             const TAB_PENDING_HTML = `
                 <div class="content-card">
                     <div class="card-body">
@@ -454,7 +547,12 @@ const Contractors = {
                 return `id="contractors-${suffix}-content" class="contractors-tab-content${active ? ' active' : ''}" style="display: ${active ? 'block' : 'none'};"`;
             };
 
-            const approvalShellBody = tc === 'approval-request' ? this.renderApprovalRequestSection() : TAB_PENDING_HTML;
+            const approvalShellBody = tc === 'approval-request'
+                ? this.renderApprovalRequestSection()
+                : TAB_PENDING_HTML;
+            const approvedShellBody = tc === 'approved'
+                ? this.renderApprovedEntitiesSection()
+                : TAB_PENDING_HTML;
 
             const shellHTML = `
                 <div class="section-header">
@@ -507,7 +605,7 @@ const Contractors = {
                     ${approvalShellBody}
                 </div>
                 <div ${tabPaneOpen('approved')}>
-                    ${TAB_PENDING_HTML}
+                    ${approvedShellBody}
                 </div>
                 <div ${tabPaneOpen('evaluations')}>
                     ${TAB_PENDING_HTML}
@@ -524,77 +622,28 @@ const Contractors = {
         `;
             this.safeSetInnerHTML(section, shellHTML);
             this.applyModuleI18n(section);
-
-            await new Promise((resolve) => {
-                if (typeof scheduler !== 'undefined' && typeof scheduler.yield === 'function') {
-                    scheduler.yield().then(resolve).catch(() => setTimeout(resolve, 0));
-                } else {
-                    setTimeout(resolve, 0);
-                }
-            });
-
-            const [
-                approvedSectionHTML,
-                evaluationsSectionHTML,
-                requirementsSectionHTML,
-                analyticsSectionHTML
-            ] = await Promise.all([
-                Promise.resolve().then(() => this.renderApprovedEntitiesSection()).catch(err => handleError('قائمة المعتمدين', err)),
-                Promise.resolve().then(() => this.renderEvaluationsSection()).catch(err => handleError('التقييمات', err)),
-                Promise.resolve().then(() => this.renderRequirementsManagementSection()).catch(err => handleError('الاشتراطات', err)),
-                isAdmin ? Promise.resolve().then(() => this.renderAnalyticsSection()).catch(err => handleError('التحليلات', err)) : Promise.resolve('')
-            ]);
-
-            const patchTabBody = (elementId, html) => {
-                if (html === undefined || html === '') return;
-                const el = document.getElementById(elementId);
-                if (el) this.safeSetInnerHTML(el, html);
-            };
-            if (tc === 'approved') {
-                try {
-                    await this.ensureApprovedContractorsDataLoaded({ force: true });
-                } catch (_e) { /* ignore */ }
-                this.ensureApprovedTabContentLoaded(true);
-            }
-            patchTabBody('contractors-approved-content', approvedSectionHTML);
-            patchTabBody('contractors-evaluations-content', evaluationsSectionHTML);
-            patchTabBody('contractors-requirements-content', requirementsSectionHTML);
-            if (isAdmin) {
-                patchTabBody('contractors-analytics-content', analyticsSectionHTML);
-                this.bindContractorAnalyticsEvents();
-                if (tc === 'analytics') {
-                    this.loadContractorAnalytics();
-                }
-            }
-            if (tc !== 'approval-request') {
-                patchTabBody('contractors-approval-request-content', this.renderApprovalRequestSection());
-            } else {
-                try {
-                    await this.ensureApprovalRequestsDataLoaded({ force: true });
-                    patchTabBody('contractors-approval-request-content', this.renderApprovalRequestSection());
-                } catch (e) { /* ignore */ }
-            }
-
             this.setupEventListeners();
             this.setupRealtimeListeners();
-            this.applyModuleI18n(section);
+            this._attachSendApprovalRequestBtn();
+
+            // ✅ إظهار الهيكل فوراً — ثم تبويب نشط فقط
+            this._isLoading = false;
+
+            await this.loadContractorsTabContent(tc, {
+                fetchData: true,
+                forceData: false,
+                reconcile: tc === 'approved'
+            });
+            this._tabsLoaded[tc] = true;
+
+            this._scheduleContractorsBackgroundPrefetch(tc);
+            this._loadRemainingContractorsTabsInBackground(tc);
 
             if (tc === 'evaluations') {
                 try {
                     this.ensureEvaluationsEventListeners();
-                    this.ensureEvaluationsDataLoaded();
                 } catch (e) { /* ignore */ }
             }
-
-            // ✅ ربط زر إرسال الطلب
-            const sendBtn = document.getElementById('send-approval-request-btn');
-            if (sendBtn && !sendBtn.hasAttribute('data-listener-attached')) {
-                sendBtn.setAttribute('data-listener-attached', 'true');
-                sendBtn.addEventListener('click', () => this.showApprovalRequestForm());
-            }
-
-            // ✅ التحميل اكتمل بنجاح
-            this._isLoading = false;
 
         } catch (error) {
             this._isLoading = false; // ✅ تنظيف في حالة الخطأ
@@ -1111,7 +1160,7 @@ const Contractors = {
         }
 
         const runLoad = async () => {
-            if (this.isContractorApprovalAdminUser() && (force || options.reconcile !== false)) {
+            if (this.isContractorApprovalAdminUser() && options.reconcile === true) {
                 await this.reconcileMissingApprovedContractors(options);
             }
             return this.fetchApprovedContractorsFromBackend();
@@ -1206,7 +1255,7 @@ const Contractors = {
      * ✅ مزامنة هادئة لطلبات الاعتماد (منفصلة عن syncDataFromServer — لا تلمس مسارات التحميل المحمية)
      */
     ensureApprovalRequestsDataLoaded(options = {}) {
-        const force = options.force === true || this.isContractorApprovalAdminUser();
+        const force = options.force === true;
         const debounceMs = 30000;
         const now = Date.now();
         if (!force && this._approvalRequestsLastLoadAt && (now - this._approvalRequestsLastLoadAt) < debounceMs) {
@@ -1323,35 +1372,55 @@ const Contractors = {
         }
 
         if (tab === 'approved') {
-            this.ensureApprovedTabContentLoaded();
-        }
-
-        if (tab === 'approved') {
-            this.ensureApprovedContractorsDataLoaded({ force: true })
-                .then(() => {
-                    this.ensureApprovedTabContentLoaded(true);
-                    this.refreshApprovedEntitiesList();
-                })
-                .catch(() => {
-                    this.ensureApprovedTabContentLoaded(true);
-                });
+            if (!this._tabsLoaded?.approved) {
+                this.loadContractorsTabContent('approved', { fetchData: true, forceData: true, reconcile: true });
+                this._tabsLoaded.approved = true;
+            } else {
+                this.ensureApprovedContractorsDataLoaded({ force: true, reconcile: true })
+                    .then(() => {
+                        this.ensureApprovedTabContentLoaded(true);
+                        this.refreshApprovedEntitiesList();
+                    })
+                    .catch(() => {
+                        this.ensureApprovedTabContentLoaded(true);
+                    });
+            }
         }
 
         if (tab === 'approval-request') {
-            this.ensureApprovalRequestsDataLoaded({ force: this.isContractorApprovalAdminUser() })
-                .then(() => this.refreshApprovalRequestsSection())
-                .catch(() => {});
+            if (!this._tabsLoaded?.['approval-request']) {
+                this.loadContractorsTabContent('approval-request', { fetchData: true, forceData: true });
+                this._tabsLoaded['approval-request'] = true;
+            } else {
+                this.ensureApprovalRequestsDataLoaded({ force: true })
+                    .then(() => this.refreshApprovalRequestsSection())
+                    .catch(() => {});
+            }
         }
 
-        // ✅ عند التبديل إلى تبويب التقييمات: ربط الـ listeners ثم تحميل التقييمات إن كانت غير محملة
         if (tab === 'evaluations') {
-            this.ensureEvaluationsEventListeners();
-            this.ensureEvaluationsDataLoaded();
+            if (!this._tabsLoaded?.evaluations) {
+                this.loadContractorsTabContent('evaluations', { fetchData: true, forceData: true });
+                this._tabsLoaded.evaluations = true;
+            } else {
+                this.ensureEvaluationsEventListeners();
+                this.ensureEvaluationsDataLoaded();
+            }
+        }
+
+        if (tab === 'requirements' && !this._tabsLoaded?.requirements) {
+            this.loadContractorsTabContent('requirements', { fetchData: false });
+            this._tabsLoaded.requirements = true;
         }
 
         if (tab === 'analytics') {
             this.bindContractorAnalyticsEvents();
-            this.loadContractorAnalytics();
+            if (!this._tabsLoaded?.analytics) {
+                this.loadContractorsTabContent('analytics', { fetchData: true, forceData: true });
+                this._tabsLoaded.analytics = true;
+            } else {
+                this.loadContractorAnalytics();
+            }
         }
     },
 
