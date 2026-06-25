@@ -11650,10 +11650,129 @@ const Contractors = {
         await this.updateContractorAnalyticsResults();
     },
 
-    async updateContractorAnalyticsResults() {
-        const root = document.getElementById('ctr-analytics-root');
-        if (!root) return;
+    _getCtrAnalysisPeriodLabel() {
+        const map = { '30': '30 يوم', '90': '3 أشهر', '180': '6 أشهر', '365': 'سنة', '0': 'الكل' };
+        return map[String(this._ctrAnalysisPeriod || '0')] || 'الكل';
+    },
 
+    _ctrFilterApprovedContractors(approvedList, entityFilter, statusFilter) {
+        let list = Array.isArray(approvedList) ? [...approvedList] : [];
+        if (entityFilter === 'contractor') {
+            list = list.filter((c) => this.normalizeApprovedEntityType(c.entityType || c.type) === 'contractor');
+        } else if (entityFilter === 'supplier') {
+            list = list.filter((c) => this.normalizeApprovedEntityType(c.entityType || c.type) === 'supplier');
+        }
+        if (statusFilter === 'active') {
+            list = list.filter((c) => this.isEntityEnabled(c) && this._ctrGetContractorContractState(c) !== 'expired');
+        } else if (statusFilter === 'inactive') {
+            list = list.filter((c) => !this.isEntityEnabled(c));
+        } else if (statusFilter === 'expired') {
+            list = list.filter((c) => this._ctrGetContractorContractState(c) === 'expired');
+        }
+        return list;
+    },
+
+    _ctrScopeRecordsToContractors(records, contractors, recordType) {
+        if (!Array.isArray(records) || !Array.isArray(contractors) || contractors.length === 0) return [];
+        const belongsKey = recordType === 'evaluation' ? 'evaluationBelongsToContractor' : 'violationBelongsToContractor';
+        const primaryKeys = recordType === 'evaluation'
+            ? ['evaluationId', 'id', 'isoCode']
+            : ['isoCode', 'id'];
+        const secondaryKeys = recordType === 'evaluation'
+            ? ['contractorId', 'contractorName', 'evaluationDate', 'projectName', 'finalScore']
+            : ['contractorId', 'contractorName', 'violationType', 'violationDate', 'violationTime'];
+        const matched = [];
+        contractors.forEach((contractor) => {
+            const prepared = this.prepareContractorForAnalytics(contractor);
+            const key = this.getPreferredContractorAnalyticsKey(prepared, contractor.id || contractor.contractorId);
+            const ctx = this.buildContractorAnalyticsMatchers(prepared, key);
+            matched.push(...records.filter((r) => ctx[belongsKey](r)));
+        });
+        return this.dedupeContractorRecords(matched, primaryKeys, secondaryKeys);
+    },
+
+    buildContractorDetailedStatsList(contractors, evaluations, violations) {
+        if (!Array.isArray(contractors) || contractors.length === 0) return [];
+        return contractors.map((contractor) => {
+            const analyticsContractor = this.prepareContractorForAnalytics(contractor);
+            const cId = this.getPreferredContractorAnalyticsKey(analyticsContractor, contractor.id || contractor.contractorId);
+            const ctx = this.buildContractorAnalyticsMatchers(analyticsContractor, cId);
+            const contractorEvaluationRows = this.dedupeContractorRecords(
+                (evaluations || []).filter(ctx.evaluationBelongsToContractor),
+                ['evaluationId', 'id', 'isoCode'],
+                ['contractorId', 'contractorName', 'evaluationDate', 'projectName', 'finalScore']
+            );
+            const uniqueEvaluationIds = new Set(
+                contractorEvaluationRows
+                    .map((record) => String(record?.evaluationId || record?.id || '').trim())
+                    .filter(Boolean)
+            );
+            const contractorEvaluationsCount = uniqueEvaluationIds.size > 0 ? uniqueEvaluationIds.size : contractorEvaluationRows.length;
+            const contractorViolations = this.dedupeContractorRecords(
+                (violations || []).filter(ctx.violationBelongsToContractor),
+                ['isoCode', 'id'],
+                ['contractorId', 'contractorName', 'violationType', 'violationDate', 'violationTime']
+            );
+
+            let avgScore = 0;
+            if (contractorEvaluationRows.length > 0) {
+                const validScores = contractorEvaluationRows
+                    .map((e) => parseFloat(e.finalScore) || parseFloat(e.score) || 0)
+                    .filter((score) => !isNaN(score) && score >= 0 && score <= 100);
+                if (validScores.length > 0) {
+                    avgScore = Math.round((validScores.reduce((a, b) => a + b, 0) / validScores.length) * 100) / 100;
+                }
+            }
+
+            const highViolations = contractorViolations.filter((v) => {
+                const severity = (v.severity || '').toString().trim();
+                return severity === 'عالية' || severity === 'high' || severity === 'حرجة';
+            }).length;
+            const resolvedViolations = contractorViolations.filter((v) => {
+                const status = (v.status || '').toString().trim();
+                return status === 'محلول' || status === 'resolved' || status === 'تم الحل';
+            }).length;
+            const resolutionRate = contractorViolations.length > 0
+                ? Math.round((resolvedViolations / contractorViolations.length) * 100)
+                : 100;
+
+            let contractStatus = 'active';
+            let daysRemaining = null;
+            const contractEndDate = contractor.endDate || contractor.expiryDate;
+            if (contractEndDate) {
+                try {
+                    const endDate = new Date(contractEndDate);
+                    const now = new Date();
+                    const diff = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+                    daysRemaining = diff;
+                    if (diff < 0) contractStatus = 'expired';
+                    else if (diff <= 30) contractStatus = 'expiring';
+                } catch (_e) {
+                    contractStatus = 'unknown';
+                }
+            }
+
+            return {
+                ...contractor,
+                analyticsLookupKey: cId,
+                analyticsDisplayName: analyticsContractor.name || analyticsContractor.companyName || contractor.name || contractor.companyName || '',
+                evaluationsCount: contractorEvaluationsCount,
+                violationsCount: contractorViolations.length,
+                avgScore,
+                highViolations,
+                resolvedViolations,
+                resolutionRate,
+                contractStatus,
+                daysRemaining
+            };
+        }).sort((a, b) => {
+            const scoreA = a.avgScore - (a.violationsCount * 5) - (a.highViolations * 10);
+            const scoreB = b.avgScore - (b.violationsCount * 5) - (b.highViolations * 10);
+            return scoreB - scoreA;
+        });
+    },
+
+    _collectContractorAnalyticsSnapshot() {
         const period = parseInt(this._ctrAnalysisPeriod || '0', 10);
         const allContractors = this.getContractorsForAnalyticsList();
         const approvedContractors = AppState.appData.approvedContractors || [];
@@ -11666,11 +11785,158 @@ const Contractors = {
         violations = this._ctrFilterRecordsByPeriod(violations, period, (v) => v.violationDate || v.date || v.createdAt);
 
         const { filteredContractors, filteredViolations } = this._ctrApplyAnalyticsFilters(allContractors, violations);
-        const analytics = this.calculateContractorAnalytics(filteredContractors, filteredContractors, evaluations, filteredViolations);
-        const expiringContracts = this.getExpiringContracts(filteredContractors, approvedContractors);
+        const entityFilter = document.getElementById('ctr-af-entity')?.value || '';
+        const statusFilter = document.getElementById('ctr-af-status')?.value || '';
+        const filteredApproved = this._ctrFilterApprovedContractors(approvedContractors, entityFilter, statusFilter);
+        const scopedEvaluations = this._ctrScopeRecordsToContractors(evaluations, filteredContractors, 'evaluation');
+        const scopedViolations = this._ctrScopeRecordsToContractors(filteredViolations, filteredContractors, 'violation');
+        const analytics = this.calculateContractorAnalytics(filteredContractors, filteredApproved, scopedEvaluations, scopedViolations);
+        const expiringContracts = this.getExpiringContracts(filteredContractors, filteredApproved);
+        const detailedStats = this.buildContractorDetailedStatsList(filteredContractors, scopedEvaluations, scopedViolations);
+
+        return {
+            period,
+            periodLabel: this._getCtrAnalysisPeriodLabel(),
+            filteredContractors,
+            filteredApproved,
+            evaluations: scopedEvaluations,
+            violations: scopedViolations,
+            analytics,
+            expiringContracts,
+            detailedStats,
+            resultsCountText: filteredContractors.length + ' مقاول • ' + scopedViolations.length + ' مخالفة'
+        };
+    },
+
+    _buildCtrAnalyticsExportLegend_(snapshot) {
+        const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(v) : String(v ?? '');
+        const exportDate = esc(new Date().toLocaleString('ar-SA', { hour: '2-digit', minute: '2-digit', year: 'numeric', month: 'long', day: 'numeric' }));
+        return [
+            '<div class="ia-export-legend" dir="rtl" style="margin-top:12px;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;page-break-inside:avoid;">',
+            '<div style="font-weight:700;font-size:12px;color:#475569;margin-bottom:10px;">ملخص التقرير</div>',
+            '<div style="display:flex;flex-wrap:wrap;gap:10px 18px;font-size:11px;line-height:1.55;color:#334155;">',
+            '<div><strong style="color:#64748b;">الفترة:</strong> ', esc(snapshot.periodLabel), '</div>',
+            '<div><strong style="color:#64748b;">السجلات:</strong> ', esc(snapshot.resultsCountText), '</div>',
+            '<div><strong style="color:#64748b;">تاريخ التصدير:</strong> ', exportDate, '</div>',
+            '</div></div>'
+        ].join('');
+    },
+
+    _buildCtrAnalyticsExportHtml_(snapshot) {
+        const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(String(v ?? '')) : String(v ?? '');
+        const a = snapshot.analytics;
+
+        const statusCounts = { 'نشط': 0, 'قريب الانتهاء': 0, 'منتهي': 0, 'غير محدد': 0 };
+        snapshot.filteredContractors.forEach((c) => {
+            const state = this._ctrGetContractorContractState(c);
+            if (state === 'expired') statusCounts['منتهي']++;
+            else if (state === 'expiring') statusCounts['قريب الانتهاء']++;
+            else if (this.isEntityEnabled(c)) statusCounts['نشط']++;
+            else statusCounts['غير محدد']++;
+        });
+
+        const severityRows = [
+            ['عالية', a.highSeverityViolations],
+            ['متوسطة', a.mediumSeverityViolations],
+            ['منخفضة', a.lowSeverityViolations]
+        ].filter((row) => row[1] > 0).map((row) => '<tr><td>' + esc(row[0]) + '</td><td class="text-center">' + row[1] + '</td></tr>').join('');
+
+        const topViolators = snapshot.detailedStats
+            .filter((row) => row.violationsCount > 0)
+            .sort((x, y) => y.violationsCount - x.violationsCount)
+            .slice(0, 10)
+            .map((row, i) => '<tr><td class="text-center">' + (i + 1) + '</td><td>' + esc(row.analyticsDisplayName || row.name || row.companyName) + '</td><td class="text-center">' + row.violationsCount + '</td><td class="text-center">' + row.highViolations + '</td><td class="text-center">' + row.resolutionRate + '%</td></tr>')
+            .join('');
+
+        const expiringRows = (snapshot.expiringContracts || []).map((c) =>
+            '<tr><td>' + esc(c.name) + '</td><td class="text-center">' + c.daysRemaining + '</td><td class="text-center">' + esc(c.endDate ? new Date(c.endDate).toLocaleDateString('ar-SA') : '-') + '</td></tr>'
+        ).join('');
+
+        const detailedRows = snapshot.detailedStats.map((row, i) => {
+            let contractLabel = 'نشط';
+            if (row.contractStatus === 'expired') contractLabel = 'منتهي';
+            else if (row.contractStatus === 'expiring') contractLabel = 'قريب (' + row.daysRemaining + ' يوم)';
+            else if (row.contractStatus === 'unknown') contractLabel = 'غير محدد';
+            return '<tr>' +
+                '<td class="text-center">' + (i + 1) + '</td>' +
+                '<td>' + esc(row.analyticsDisplayName || row.name || row.companyName) + '</td>' +
+                '<td class="text-center">' + esc(row.serviceType || row.entityType || '-') + '</td>' +
+                '<td class="text-center">' + esc(contractLabel) + '</td>' +
+                '<td class="text-center">' + row.evaluationsCount + '</td>' +
+                '<td class="text-center">' + row.avgScore + '%</td>' +
+                '<td class="text-center">' + row.violationsCount + '</td>' +
+                '<td class="text-center">' + row.highViolations + '</td>' +
+                '<td class="text-center">' + row.resolutionRate + '%</td>' +
+                '</tr>';
+        }).join('');
+
+        const statusRows = Object.entries(statusCounts).filter((entry) => entry[1] > 0)
+            .map((entry) => '<tr><td>' + esc(entry[0]) + '</td><td class="text-center">' + entry[1] + '</td></tr>').join('');
+
+        return [
+            '<div class="section-title">ملخص عام</div>',
+            '<table><tbody>',
+            '<tr><th>إجمالي المقاولين</th><td>', a.totalContractors, '</td></tr>',
+            '<tr><th>المعتمدون</th><td>', a.totalApproved, '</td></tr>',
+            '<tr><th>نشطون</th><td>', a.activeContractors, '</td></tr>',
+            '<tr><th>منتهي العقد</th><td>', a.expiredContractors, '</td></tr>',
+            '<tr><th>عقود قريبة الانتهاء (30 يوم)</th><td>', a.expiringSoon || 0, '</td></tr>',
+            '<tr><th>التقييمات</th><td>', a.totalEvaluations, '</td></tr>',
+            '<tr><th>المخالفات</th><td>', a.totalViolations, '</td></tr>',
+            '<tr><th>متوسط التقييم</th><td>', a.avgScore, '%</td></tr>',
+            '<tr><th>نسبة الاعتماد</th><td>', a.approvalRate, '%</td></tr>',
+            '<tr><th>نسبة النشاط</th><td>', a.activeRate, '%</td></tr>',
+            '<tr><th>معدل حل المخالفات</th><td>', a.violationResolutionRate, '% (', a.resolvedViolations, ' محلولة)</td></tr>',
+            '<tr><th>مخالفات لكل مقاول</th><td>', a.violationsPerContractor, '</td></tr>',
+            '</tbody></table>',
+            '<div class="section-title">حالة المقاولين</div>',
+            '<table><thead><tr><th>الحالة</th><th class="text-center">العدد</th></tr></thead><tbody>', statusRows || '<tr><td colspan="2">لا توجد بيانات</td></tr>', '</tbody></table>',
+            '<div class="section-title">المخالفات حسب الشدة</div>',
+            '<table><thead><tr><th>الشدة</th><th class="text-center">العدد</th></tr></thead><tbody>', severityRows || '<tr><td colspan="2">لا توجد مخالفات</td></tr>', '</tbody></table>',
+            topViolators ? ('<div class="section-title">أعلى المقاولين مخالفات</div><table><thead><tr><th class="text-center">#</th><th>المقاول</th><th class="text-center">المخالفات</th><th class="text-center">عالية</th><th class="text-center">معدل الحل</th></tr></thead><tbody>' + topViolators + '</tbody></table>') : '',
+            expiringRows ? ('<div class="section-title">عقود قريبة الانتهاء</div><table><thead><tr><th>الجهة</th><th class="text-center">الأيام المتبقية</th><th class="text-center">تاريخ الانتهاء</th></tr></thead><tbody>' + expiringRows + '</tbody></table>') : '',
+            '<div class="section-title">تحليل مفصل لكل مقاول</div>',
+            '<table><thead><tr>',
+            '<th class="text-center">#</th><th>المقاول</th><th class="text-center">نوع الخدمة</th><th class="text-center">حالة العقد</th>',
+            '<th class="text-center">التقييمات</th><th class="text-center">متوسط التقييم</th><th class="text-center">المخالفات</th>',
+            '<th class="text-center">عالية</th><th class="text-center">معدل الحل</th>',
+            '</tr></thead><tbody>', detailedRows || '<tr><td colspan="9">لا توجد بيانات</td></tr>', '</tbody></table>'
+        ].join('');
+    },
+
+    _ctrOpenAnalyticsPrintReport(htmlContent) {
+        try {
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const printWindow = window.open(url, '_blank');
+            if (printWindow) {
+                printWindow.onload = () => {
+                    setTimeout(() => {
+                        printWindow.print();
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    }, 450);
+                };
+                Notification?.success?.('جاري تحضير تقرير PDF للطباعة...');
+                return true;
+            }
+            Notification?.error?.('يرجى السماح للنوافذ المنبثقة لتصدير PDF');
+            return false;
+        } catch (error) {
+            Utils.safeError('فشل فتح تقرير التحليل:', error);
+            Notification?.error?.('تعذر تصدير التحليلات');
+            return false;
+        }
+    },
+
+    async updateContractorAnalyticsResults() {
+        const root = document.getElementById('ctr-analytics-root');
+        if (!root) return;
+
+        const snapshot = this._collectContractorAnalyticsSnapshot();
+        const { filteredContractors, filteredApproved: approvedContractors, evaluations, violations: filteredViolations, analytics, expiringContracts } = snapshot;
 
         const resultsCount = document.getElementById('ctr-filter-results-count');
-        if (resultsCount) resultsCount.textContent = `${filteredContractors.length} مقاول • ${filteredViolations.length} مخالفة`;
+        if (resultsCount) resultsCount.textContent = snapshot.resultsCountText;
 
         const kpiEl = document.getElementById('ctr-kpi-strip');
         if (kpiEl) {
@@ -11755,52 +12021,50 @@ const Contractors = {
     },
 
     exportContractorAnalyticsPDF() {
-        const contractors = this.getContractorsForAnalyticsList();
-        const approvedContractors = AppState.appData.approvedContractors || [];
-        const evaluations = AppState.appData.contractorEvaluations || [];
-        const violations = (AppState.appData.violations || []).filter((v) =>
-            v.contractorName || v.contractorId || (v.personType && (v.personType === 'contractor' || v.personType === 'مقاول'))
-        );
-        const analytics = this.calculateContractorAnalytics(contractors, approvedContractors, evaluations, violations);
-
-        const content = `
-            <div class="section-title">ملخص عام</div>
-            <table><tbody>
-                <tr><th>إجمالي المقاولين</th><td>${analytics.totalContractors}</td></tr>
-                <tr><th>المعتمدون</th><td>${analytics.totalApproved}</td></tr>
-                <tr><th>التقييمات</th><td>${analytics.totalEvaluations}</td></tr>
-                <tr><th>المخالفات</th><td>${analytics.totalViolations}</td></tr>
-                <tr><th>متوسط التقييم</th><td>${analytics.avgScore}%</td></tr>
-                <tr><th>معدل حل المخالفات</th><td>${analytics.violationResolutionRate}%</td></tr>
-                <tr><th>عقود قريبة الانتهاء</th><td>${analytics.expiringSoon || 0}</td></tr>
-            </tbody></table>
-        `;
-
-        const formCode = `CONTRACTORS-ANALYTICS-${new Date().toISOString().slice(0, 10)}`;
-        const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-            ? FormHeader.generatePDFHTML(formCode, 'تحليل بيانات المقاولين', content, false, true)
-            : `<html dir="rtl" lang="ar"><body>${content}</body></html>`;
-
+        const btn = document.getElementById('ctr-export-pdf-btn');
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        }
         try {
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    }, 400);
-                };
-                Notification?.success?.('جاري تحضير ملف PDF للطباعة...');
-            } else {
-                Notification?.error?.('يرجى السماح للنوافذ المنبثقة لتصدير PDF');
-            }
+            const snapshot = this._collectContractorAnalyticsSnapshot();
+            const content = this._buildCtrAnalyticsExportHtml_(snapshot);
+            const formCode = 'CONTRACTORS-ANALYTICS-' + new Date().toISOString().slice(0, 10);
+            const formTitleAr = 'تقرير تحليل بيانات المقاولين';
+            const nowIso = new Date().toISOString();
+            const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
+                ? FormHeader.generatePDFHTML(
+                    formCode,
+                    formTitleAr,
+                    content,
+                    false,
+                    true,
+                    {
+                        source: 'ContractorsAnalytics',
+                        titleEn: 'Contractors Analysis Report',
+                        titleAr: formTitleAr,
+                        includeQRCode: false,
+                        compactPdfFooter: true,
+                        footerLegendHtml: this._buildCtrAnalyticsExportLegend_(snapshot)
+                    },
+                    nowIso,
+                    nowIso
+                )
+                : '<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>' + formTitleAr + '</title></head><body>' + content + '</body></html>';
+
+            this._ctrOpenAnalyticsPrintReport(htmlContent);
         } catch (error) {
             Utils.safeError('فشل تصدير تحليل المقاولين:', error);
             Notification?.error?.('تعذر تصدير التحليلات');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
         }
     },
+
 
     calculateContractorAnalytics(contractors, approvedContractors, evaluations, violations) {
         // قائمة موحدة للمقاولين المسجلين (من contractors و approvedContractors) بدون تكرار حسب id/contractorId/اسم
@@ -12845,96 +13109,7 @@ const Contractors = {
             `;
         }
 
-        // حساب الإحصائيات لكل مقاول (دعم شكل المقاولين والمعتمدين: name/companyName، id/contractorId)
-        const contractorsWithStats = contractors.map(contractor => {
-            const analyticsContractor = this.prepareContractorForAnalytics(contractor);
-            const cId = this.getPreferredContractorAnalyticsKey(analyticsContractor, contractor.id || contractor.contractorId);
-            const ctx = this.buildContractorAnalyticsMatchers(analyticsContractor, cId);
-            const contractorEvaluationRows = this.dedupeContractorRecords(
-                evaluations.filter(ctx.evaluationBelongsToContractor),
-                ['evaluationId', 'id', 'isoCode'],
-                ['contractorId', 'contractorName', 'evaluationDate', 'projectName', 'finalScore']
-            );
-            const uniqueEvaluationIds = new Set(
-                contractorEvaluationRows
-                    .map(record => String(record?.evaluationId || record?.id || '').trim())
-                    .filter(Boolean)
-            );
-            const contractorEvaluationsCount = uniqueEvaluationIds.size > 0 ? uniqueEvaluationIds.size : contractorEvaluationRows.length;
-            const contractorViolations = this.dedupeContractorRecords(
-                violations.filter(ctx.violationBelongsToContractor),
-                ['isoCode', 'id'],
-                ['contractorId', 'contractorName', 'violationType', 'violationDate', 'violationTime']
-            );
-
-            // حساب متوسط التقييم بدقة
-            let avgScore = 0;
-            if (contractorEvaluationRows.length > 0) {
-                const validScores = contractorEvaluationRows
-                    .map(e => parseFloat(e.finalScore) || parseFloat(e.score) || 0)
-                    .filter(score => !isNaN(score) && score >= 0 && score <= 100);
-                
-                if (validScores.length > 0) {
-                    const sum = validScores.reduce((acc, score) => acc + score, 0);
-                    avgScore = Math.round((sum / validScores.length) * 100) / 100;
-                }
-            }
-
-            const highViolations = contractorViolations.filter(v => {
-                const severity = (v.severity || '').toString().trim();
-                return severity === 'عالية' || severity === 'high' || severity === 'حرجة';
-            }).length;
-
-            const resolvedViolations = contractorViolations.filter(v => {
-                const status = (v.status || '').toString().trim();
-                return status === 'محلول' || status === 'resolved' || status === 'تم الحل';
-            }).length;
-
-            const resolutionRate = contractorViolations.length > 0
-                ? Math.round((resolvedViolations / contractorViolations.length) * 100)
-                : 100;
-
-            // التحقق من حالة العقد (دعم endDate أو expiryDate)
-            let contractStatus = 'active';
-            let daysRemaining = null;
-            const contractEndDate = contractor.endDate || contractor.expiryDate;
-            if (contractEndDate) {
-                try {
-                    const endDate = new Date(contractEndDate);
-                    const now = new Date();
-                    const diff = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
-                    daysRemaining = diff;
-                    if (diff < 0) {
-                        contractStatus = 'expired';
-                    } else if (diff <= 30) {
-                        contractStatus = 'expiring';
-                    }
-                } catch (e) {
-                    contractStatus = 'unknown';
-                }
-            }
-
-            return {
-                ...contractor,
-                analyticsLookupKey: cId,
-                analyticsDisplayName: analyticsContractor.name || analyticsContractor.companyName || contractor.name || contractor.companyName || '',
-                evaluationsCount: contractorEvaluationsCount,
-                violationsCount: contractorViolations.length,
-                avgScore,
-                highViolations,
-                resolvedViolations,
-                resolutionRate,
-                contractStatus,
-                daysRemaining
-            };
-        });
-
-        // ترتيب المقاولين حسب الأداء (متوسط التقييم - المخالفات)
-        contractorsWithStats.sort((a, b) => {
-            const scoreA = a.avgScore - (a.violationsCount * 5) - (a.highViolations * 10);
-            const scoreB = b.avgScore - (b.violationsCount * 5) - (b.highViolations * 10);
-            return scoreB - scoreA;
-        });
+        const contractorsWithStats = this.buildContractorDetailedStatsList(contractors, evaluations, violations);
 
         const getScoreColor = (score) => {
             if (score >= 80) return 'text-green-600';
