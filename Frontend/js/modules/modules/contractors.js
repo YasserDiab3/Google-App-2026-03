@@ -2209,18 +2209,29 @@ const Contractors = {
      */
     getApprovedEntitiesStats() {
         const approvedEntities = this.getApprovedEntitiesStatsSource();
+        const activeEntities = approvedEntities.filter((entity) => this.isEntityEnabled(entity));
+        const inactiveEntities = approvedEntities.filter((entity) => !this.isEntityEnabled(entity));
 
-        const contractorsCount = approvedEntities.filter((entity) =>
+        // عدّاد الكروت الأساسية = النشطون فقط (ليتأثر فوراً عند التعطيل/التفعيل)
+        const contractorsCount = activeEntities.filter((entity) =>
             this.normalizeApprovedEntityType(entity.entityType || entity.type) === 'contractor'
         ).length;
-        const suppliersCount = approvedEntities.filter((entity) =>
+        const suppliersCount = activeEntities.filter((entity) =>
+            this.normalizeApprovedEntityType(entity.entityType || entity.type) === 'supplier'
+        ).length;
+
+        // توزيع نوع الجهة على كامل العناصر الظاهرة (نشط + غير نشط)
+        const contractorsTotal = approvedEntities.filter((entity) =>
+            this.normalizeApprovedEntityType(entity.entityType || entity.type) === 'contractor'
+        ).length;
+        const suppliersTotal = approvedEntities.filter((entity) =>
             this.normalizeApprovedEntityType(entity.entityType || entity.type) === 'supplier'
         ).length;
 
         // توزيع حسب نوع الجهة
         const entityTypeDistribution = {
-            'مقاول': contractorsCount,
-            'مورد': suppliersCount
+            'مقاول': contractorsTotal,
+            'مورد': suppliersTotal
         };
 
         // حساب الفترة المستغرقة للاعتماد (متوسط)
@@ -2247,6 +2258,8 @@ const Contractors = {
             contractorsCount,
             suppliersCount,
             total: approvedEntities.length,
+            activeCount: activeEntities.length,
+            inactiveCount: inactiveEntities.length,
             entityTypeDistribution,
             avgApprovalTime
         };
@@ -2259,57 +2272,75 @@ const Contractors = {
         const stats = this.getApprovedEntitiesStats();
 
         return `
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div class="content-card">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-600 mb-1">عدد المقاولين</p>
-                            <p class="text-2xl font-bold text-blue-600">${stats.contractorsCount}</p>
-                        </div>
-                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-users-cog text-blue-600 text-xl"></i>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="content-card">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-600 mb-1">عدد الموردين</p>
-                            <p class="text-2xl font-bold text-green-600">${stats.suppliersCount}</p>
-                        </div>
-                        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-truck text-green-600 text-xl"></i>
+            <div style="overflow-x:auto;margin-bottom:1.5rem;">
+                <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1rem;align-items:stretch;min-width:1500px;">
+                    <div class="content-card" style="height:100%;min-height:132px;border:2px solid #bfdbfe;border-radius:14px;background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 55%,#ffffff 100%);box-shadow:0 2px 8px rgba(30,64,175,.08);padding:1rem;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;height:100%;">
+                            <div>
+                                <p style="font-size:.78rem;font-weight:700;color:#1e3a8a;margin:0 0 .5rem;">عدد المقاولين</p>
+                                <p style="font-size:2rem;font-weight:900;line-height:1;color:#1d4ed8;margin:0;">${stats.contractorsCount}</p>
+                                <p style="font-size:.74rem;color:#1e40af;margin:.5rem 0 0;">نشط</p>
+                            </div>
+                            <div style="width:46px;height:46px;border-radius:999px;background:linear-gradient(135deg,#dbeafe,#bfdbfe);display:flex;align-items:center;justify-content:center;">
+                                <i class="fas fa-users-cog" style="color:#1d4ed8;font-size:1.1rem;"></i>
+                            </div>
                         </div>
                     </div>
-                </div>
-                
-                <div class="content-card">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-600 mb-1">نوع الجهة</p>
-                            <p class="text-lg font-semibold text-purple-600">
-                                ${stats.entityTypeDistribution['مقاول'] > stats.entityTypeDistribution['مورد'] ? 'مقاول' : 'مورد'}
-                            </p>
-                            <p class="text-xs text-gray-500">
-                                ${stats.entityTypeDistribution['مقاول']} مقاول / ${stats.entityTypeDistribution['مورد']} مورد
-                            </p>
-                        </div>
-                        <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-building text-purple-600 text-xl"></i>
+
+                    <div class="content-card" style="height:100%;min-height:132px;border:2px solid #bbf7d0;border-radius:14px;background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 55%,#ffffff 100%);box-shadow:0 2px 8px rgba(22,101,52,.08);padding:1rem;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;height:100%;">
+                            <div>
+                                <p style="font-size:.78rem;font-weight:700;color:#14532d;margin:0 0 .5rem;">عدد الموردين</p>
+                                <p style="font-size:2rem;font-weight:900;line-height:1;color:#15803d;margin:0;">${stats.suppliersCount}</p>
+                                <p style="font-size:.74rem;color:#166534;margin:.5rem 0 0;">نشط</p>
+                            </div>
+                            <div style="width:46px;height:46px;border-radius:999px;background:linear-gradient(135deg,#dcfce7,#bbf7d0);display:flex;align-items:center;justify-content:center;">
+                                <i class="fas fa-truck" style="color:#15803d;font-size:1.1rem;"></i>
+                            </div>
                         </div>
                     </div>
-                </div>
-                
-                <div class="content-card">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-600 mb-1">الفترة المستغرقة للاعتماد</p>
-                            <p class="text-2xl font-bold text-orange-600">${stats.avgApprovalTime}</p>
-                            <p class="text-xs text-gray-500">يوم (متوسط)</p>
+
+                    <div class="content-card" style="height:100%;min-height:132px;border:2px solid #a7f3d0;border-radius:14px;background:linear-gradient(135deg,#ecfdf5 0%,#ffffff 50%,#fff1f2 100%);box-shadow:0 2px 8px rgba(13,148,136,.1);padding:1rem;">
+                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;height:100%;">
+                            <p style="font-size:.9rem;font-weight:800;color:#374151;margin:0 0 .5rem;">المقاولين - الموردين</p>
+                            <div style="font-size:1rem;font-weight:700;color:#374151;line-height:1.8;">
+                                نشط <span style="font-size:2rem;font-weight:900;color:#059669;vertical-align:middle;">${stats.activeCount}</span>
+                                <span style="margin:0 .4rem;font-size:1.2rem;font-weight:900;color:#6b7280;vertical-align:middle;">*</span>
+                                غير نشط <span style="font-size:2rem;font-weight:900;color:#dc2626;vertical-align:middle;">${stats.inactiveCount}</span>
+                            </div>
+                            <div style="width:40px;height:40px;margin-top:.35rem;border-radius:999px;background:linear-gradient(135deg,#d1fae5,#a7f3d0);display:flex;align-items:center;justify-content:center;">
+                                <i class="fas fa-chart-pie" style="color:#047857;font-size:1rem;"></i>
+                            </div>
                         </div>
-                        <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-clock text-orange-600 text-xl"></i>
+                    </div>
+
+                    <div class="content-card" style="height:100%;min-height:132px;border:2px solid #ddd6fe;border-radius:14px;background:linear-gradient(135deg,#f5f3ff 0%,#ede9fe 55%,#ffffff 100%);box-shadow:0 2px 8px rgba(109,40,217,.08);padding:1rem;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;height:100%;">
+                            <div>
+                                <p style="font-size:.78rem;font-weight:700;color:#5b21b6;margin:0 0 .5rem;">نوع الجهة</p>
+                                <p style="font-size:1.35rem;font-weight:900;line-height:1;color:#6d28d9;margin:0;">
+                                    ${stats.entityTypeDistribution['مقاول'] > stats.entityTypeDistribution['مورد'] ? 'مقاول' : 'مورد'}
+                                </p>
+                                <p style="font-size:.74rem;color:#6d28d9;margin:.5rem 0 0;">
+                                    ${stats.entityTypeDistribution['مقاول']} مقاول / ${stats.entityTypeDistribution['مورد']} مورد
+                                </p>
+                            </div>
+                            <div style="width:46px;height:46px;border-radius:999px;background:linear-gradient(135deg,#ede9fe,#ddd6fe);display:flex;align-items:center;justify-content:center;">
+                                <i class="fas fa-building" style="color:#6d28d9;font-size:1.1rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-card" style="height:100%;min-height:132px;border:2px solid #fed7aa;border-radius:14px;background:linear-gradient(135deg,#fff7ed 0%,#ffedd5 55%,#ffffff 100%);box-shadow:0 2px 8px rgba(194,65,12,.08);padding:1rem;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;height:100%;">
+                            <div>
+                                <p style="font-size:.78rem;font-weight:700;color:#9a3412;margin:0 0 .5rem;">الفترة المستغرقة للاعتماد</p>
+                                <p style="font-size:2rem;font-weight:900;line-height:1;color:#c2410c;margin:0;">${stats.avgApprovalTime}</p>
+                                <p style="font-size:.74rem;color:#c2410c;margin:.5rem 0 0;">يوم (متوسط)</p>
+                            </div>
+                            <div style="width:46px;height:46px;border-radius:999px;background:linear-gradient(135deg,#ffedd5,#fdba74);display:flex;align-items:center;justify-content:center;">
+                                <i class="fas fa-clock" style="color:#c2410c;font-size:1.1rem;"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
