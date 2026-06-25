@@ -8,7 +8,112 @@ const Help = {
         expandedId: null
     },
 
+    getLang_() {
+        return (typeof AppState !== 'undefined' && AppState.currentLanguage)
+            || localStorage.getItem('language')
+            || 'ar';
+    },
+
+    isRtl_() {
+        return this.getLang_() !== 'en';
+    },
+
+    _enBundle_() {
+        return this.getLang_() === 'en' && typeof window.HELP_CONTENT_EN !== 'undefined'
+            ? window.HELP_CONTENT_EN
+            : null;
+    },
+
+    ui(key, ...args) {
+        const lang = this.getLang_();
+        const en = this._enBundle_();
+        const uiMap = en?.ui || null;
+        let val = uiMap ? uiMap[key] : null;
+        if (val == null) {
+            const arUi = {
+                pageTitle: 'دليل النظام — المساعدة',
+                version: 'الإصدار',
+                searchPlaceholder: 'ابحث في الدليل... (مثال: عيادة، تصريح، MFA)',
+                qaTitle: 'أسئلة وأجوبة (Q&A)',
+                qaExpandHint: (n) => `${n} سؤالاً — وسّع أي سؤال أدناه للإجابة الكاملة`,
+                qaSearchResults: (n) => `${n} نتيجة Q&A`,
+                qaQuickHint: 'إجابات سريعة — اضغط السؤال للتفاصيل',
+                showAllQa: (n) => `عرض كل الأسئلة (${n})`,
+                qBadge: 'س',
+                aBadge: 'ج',
+                purpose: 'الغرض:',
+                accessPath: 'كيف تصل للموديول',
+                features: 'أهم الوظائف',
+                workflow: 'خطوات الاستخدام',
+                commonTasks: 'مهام شائعة — خطوة بخطوة',
+                tips: 'نصائح',
+                extraDetails: 'تفاصيل إضافية',
+                policyTerms: 'البنود والأحكام',
+                policyObligations: 'التزامات وإرشادات',
+                policyNotes: 'ملاحظات',
+                permBanner: (title) => `يتطلب منح صلاحية «${title}» من مدير النظام — يمكنك قراءة الشرح هنا.`,
+                openModule: 'فتح الموديول',
+                metaUseQa: 'استخدم «عرض كل الأسئلة» أو اختر فئة أخرى من الأعلى',
+                metaFaqCount: (n) => n ? `${n} سؤالاً في Q&A` : 'لا توجد نتائج',
+                metaPolicy: '6 أقسام — سياسة الاستخدام والمسؤولية (بدون أسئلة وأجوبة)',
+                metaTopics: (n) => n ? `عرض ${n} موضوعاً` : 'لا توجد نتائج — جرّب كلمات أخرى أو اختر فئة «الكل»',
+                noResults: 'لا توجد نتائج مطابقة',
+                policyHeaderTitle: 'سياسة الاستخدام والمسؤولية',
+                policyHeaderDesc: 'ستة أقسام تنظيمية — اضغط على أي قسم لقراءة التفاصيل. هذا التبويب للأحكام فقط وليس لأسئلة وأجوبة.',
+                downloadPdf: 'تحميل PDF',
+                pdfLoading: 'جاري إعداد ملف PDF...',
+                pdfSuccess: 'تم تحميل سياسة الاستخدام بصيغة PDF',
+                pdfFail: 'تعذّر تحميل PDF — تحقق من الاتصال بالإنترنت ثم أعد المحاولة',
+                pdfError: 'تعذّر إنشاء ملف السياسة:',
+                pdfDocType: 'وثيقة رسمية — HSE',
+                pdfTitle: 'سياسة الاستخدام والمسؤولية',
+                pdfIntro: 'وثيقة تنظيمية تتضمن ستة أقسام تحدد شروط استخدام المنظومة، مسؤوليات المستخدم، سرية البيانات، والاستخدام المقبول وإخلاء المسؤولية.',
+                pdfAppVersion: 'إصدار التطبيق:',
+                pdfExportDate: 'تاريخ التصدير:',
+                pdfTermsTitle: 'البنود والأحكام',
+                pdfObligationsTitle: 'التزامات وإرشادات',
+                pdfNotesTitle: 'ملاحظات',
+                pdfFooterSummary: 'ملخص الوثيقة',
+                pdfFooterType: 'النوع:',
+                pdfFooterTypeVal: 'سياسة الاستخدام والمسؤولية',
+                pdfFooterSections: 'الأقسام:',
+                pdfFileName: 'سياسة-الاستخدام-والمسؤولية',
+                modSummaryFallback: (label) => `موديول ${label} لإدارة بيانات السلامة والصحة المهنية.`,
+                modPurposeFallback: (label) => `إدارة ${label} ضمن منظومة HSE.`,
+                modDefaultFeatures: ['تسجيل البيانات', 'بحث وفلترة', 'تقارير', 'تصدير'],
+                modDefaultWorkflow: ['افتح الموديول', 'أضف أو عدّل السجلات', 'احفظ وراجع التقارير'],
+                modDefaultTips: ['راجع الصلاحيات مع المدير إن لم يظهر الموديول'],
+                modPermAdmin: 'موديول محمي — للمدير أو بمنح صريح.',
+                modPermGrant: 'يحتاج منح صلاحية من مدير النظام.'
+            };
+            val = arUi[key];
+        }
+        if (typeof val === 'function') return val(...args);
+        return val != null ? val : key;
+    },
+
+    _iconMargin_() {
+        return this.isRtl_() ? 'margin-left:6px;' : 'margin-right:6px;';
+    },
+
+    _textAlign_() {
+        return this.isRtl_() ? 'right' : 'left';
+    },
+
+    _listPadding_() {
+        return this.isRtl_() ? 'padding-right:20px;' : 'padding-left:20px;';
+    },
+
+    getModuleLabel_(modKey, arLabel) {
+        const en = this._enBundle_();
+        if (en?.modLabels?.[modKey]) return en.modLabels[modKey];
+        if (en?.navLabels?.[modKey]) return en.navLabels[modKey];
+        return arLabel;
+    },
+
     getCategories() {
+        const en = this._enBundle_();
+        if (en?.categories) return en.categories;
         return [
             { id: 'all', label: 'الكل', icon: 'fa-border-all' },
             { id: 'overview', label: 'نظرة عامة', icon: 'fa-compass' },
@@ -24,6 +129,8 @@ const Help = {
 
     /** أسئلة وأجوبة افتراضية (من الكود) */
     getDefaultQaItems() {
+        const en = this._enBundle_();
+        if (en?.qaItems) return en.qaItems;
         return [
             {
                 id: 'faq-no-module',
@@ -220,6 +327,8 @@ const Help = {
     getHelpIntroText_() {
         const cfg = this.getHelpContentConfig_();
         if (cfg.enabled && cfg.introText) return cfg.introText;
+        const en = this._enBundle_();
+        if (en?.defaultIntro) return en.defaultIntro;
         return 'مرجع شامل لاستخدام منظومة السلامة والصحة المهنية والبيئة: دليل تفصيلي لكل الموديولات، سياسة الاستخدام والمسؤولية، أسئلة وأجوبة، وبحث سريع.';
     },
 
@@ -238,6 +347,8 @@ const Help = {
     },
 
     getModuleHelpDetails() {
+        const en = this._enBundle_();
+        if (en?.moduleDetails) return en.moduleDetails;
         return {
             dashboard: {
                 purpose: 'لوحة مركزية تعرض ملخصاً لأهم مؤشرات السلامة والصحة المهنية والبيئة — نقطة انطلاقك اليومية.',
@@ -569,6 +680,8 @@ const Help = {
     },
 
     getPolicyTopics() {
+        const en = this._enBundle_();
+        if (en?.policyTopics) return en.policyTopics;
         return [
             {
                 id: 'policy-intro', categoryId: 'policy', moduleId: null, isPolicy: true,
@@ -712,6 +825,7 @@ const Help = {
                 </div>`;
         };
         const accents = ['#003865', '#0f766e', '#1d4ed8', '#b45309', '#991b1b', '#6d28d9'];
+        const accentBorder = this.isRtl_() ? 'border-right' : 'border-left';
         return this.getPolicyTopics().map((t, i) => {
             const accent = accents[i % accents.length];
             const num = i + 1;
@@ -722,11 +836,11 @@ const Help = {
                     <h2 style="margin:0;color:#fff;font-size:16px;font-weight:800;line-height:1.45;">${esc(t.title)}</h2>
                 </div>
                 <div style="padding:18px 20px 20px;background:#ffffff;">
-                    ${t.summary ? `<div style="margin-bottom:12px;padding:10px 14px;border-radius:10px;background:#f8fafc;border-right:4px solid ${accent};font-size:13px;color:#475569;line-height:1.75;">${esc(t.summary)}</div>` : ''}
+                    ${t.summary ? `<div style="margin-bottom:12px;padding:10px 14px;border-radius:10px;background:#f8fafc;${accentBorder}:4px solid ${accent};font-size:13px;color:#475569;line-height:1.75;">${esc(t.summary)}</div>` : ''}
                     ${t.purpose ? `<p style="margin:0 0 4px;font-size:14px;line-height:1.9;color:#1e293b;font-weight:600;">${esc(t.purpose)}</p>` : ''}
-                    ${listBlock('البنود والأحكام', t.features, accent)}
-                    ${listBlock('التزامات وإرشادات', t.workflow, '#0f766e')}
-                    ${listBlock('ملاحظات', t.tips, '#64748b')}
+                    ${listBlock(this.ui('pdfTermsTitle'), t.features, accent)}
+                    ${listBlock(this.ui('pdfObligationsTitle'), t.workflow, '#0f766e')}
+                    ${listBlock(this.ui('pdfNotesTitle'), t.tips, '#64748b')}
                 </div>
             </div>`;
         }).join('');
@@ -740,15 +854,15 @@ const Help = {
             <div style="margin-bottom:26px;padding:22px 24px;border-radius:18px;background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 45%,#ffffff 100%);border:2px solid #fbbf24;box-shadow:0 10px 28px rgba(245,158,11,0.12);">
                 <div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:14px;">
                     <div style="flex:1;min-width:240px;">
-                        <div style="font-size:11px;font-weight:800;color:#b45309;letter-spacing:0.5px;margin-bottom:6px;">وثيقة رسمية — HSE</div>
-                        <h2 style="margin:0 0 10px;font-size:20px;font-weight:800;color:#78350f;line-height:1.4;">سياسة الاستخدام والمسؤولية</h2>
+                        <div style="font-size:11px;font-weight:800;color:#b45309;letter-spacing:0.5px;margin-bottom:6px;">${esc(this.ui('pdfDocType'))}</div>
+                        <h2 style="margin:0 0 10px;font-size:20px;font-weight:800;color:#78350f;line-height:1.4;">${esc(this.ui('pdfTitle'))}</h2>
                         <p style="margin:0;font-size:13px;line-height:1.9;color:#92400e;">
-                            وثيقة تنظيمية تتضمن ستة أقسام تحدد شروط استخدام المنظومة، مسؤوليات المستخدم، سرية البيانات، والاستخدام المقبول وإخلاء المسؤولية.
+                            ${esc(this.ui('pdfIntro'))}
                         </p>
                     </div>
                     <div style="display:flex;flex-direction:column;gap:8px;min-width:180px;">
-                        <div style="padding:10px 14px;border-radius:10px;background:rgba(255,255,255,0.85);border:1px solid #fde68a;font-size:12px;color:#78350f;"><strong>إصدار التطبيق:</strong> ${esc(version)}</div>
-                        <div style="padding:10px 14px;border-radius:10px;background:rgba(255,255,255,0.85);border:1px solid #fde68a;font-size:12px;color:#78350f;"><strong>تاريخ التصدير:</strong> ${esc(exportTsStr)}</div>
+                        <div style="padding:10px 14px;border-radius:10px;background:rgba(255,255,255,0.85);border:1px solid #fde68a;font-size:12px;color:#78350f;"><strong>${esc(this.ui('pdfAppVersion'))}</strong> ${esc(version)}</div>
+                        <div style="padding:10px 14px;border-radius:10px;background:rgba(255,255,255,0.85);border:1px solid #fde68a;font-size:12px;color:#78350f;"><strong>${esc(this.ui('pdfExportDate'))}</strong> ${esc(exportTsStr)}</div>
                     </div>
                 </div>
             </div>`;
@@ -758,14 +872,15 @@ const Help = {
         const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML)
             ? Utils.escapeHTML(String(v ?? ''))
             : String(v ?? '');
+        const dir = this.isRtl_() ? 'rtl' : 'ltr';
         return `
-        <div class="ia-export-legend" dir="rtl" style="margin-top:8px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;page-break-inside:avoid;">
-            <div style="font-weight:700;font-size:11px;color:#475569;margin-bottom:8px;">ملخص الوثيقة</div>
+        <div class="ia-export-legend" dir="${dir}" style="margin-top:8px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;page-break-inside:avoid;">
+            <div style="font-weight:700;font-size:11px;color:#475569;margin-bottom:8px;">${esc(this.ui('pdfFooterSummary'))}</div>
             <div style="display:flex;flex-wrap:wrap;gap:8px 16px;font-size:11px;line-height:1.55;color:#334155;">
-                <div><strong style="color:#64748b;">النوع:</strong> سياسة الاستخدام والمسؤولية</div>
-                <div><strong style="color:#64748b;">الأقسام:</strong> 6</div>
-                <div><strong style="color:#64748b;">الإصدار:</strong> ${esc(version)}</div>
-                <div><strong style="color:#64748b;">التصدير:</strong> ${esc(exportTsStr)}</div>
+                <div><strong style="color:#64748b;">${esc(this.ui('pdfFooterType'))}</strong> ${esc(this.ui('pdfFooterTypeVal'))}</div>
+                <div><strong style="color:#64748b;">${esc(this.ui('pdfFooterSections'))}</strong> 6</div>
+                <div><strong style="color:#64748b;">${this.isRtl_() ? 'الإصدار' : 'Version'}:</strong> ${esc(version)}</div>
+                <div><strong style="color:#64748b;">${this.isRtl_() ? 'التصدير' : 'Export'}:</strong> ${esc(exportTsStr)}</div>
             </div>
         </div>`;
     },
@@ -803,6 +918,7 @@ const Help = {
     },
 
     async _preloadCairoFontForPolicyPdf_() {
+        if (!this.isRtl_()) return;
         if (!document.getElementById('help-policy-cairo-font')) {
             const link = document.createElement('link');
             link.id = 'help-policy-cairo-font';
@@ -820,14 +936,22 @@ const Help = {
     },
 
     _preparePolicyPdfHtml_(htmlContent) {
-        const arabicFix = `
+        const rtl = this.isRtl_();
+        const dir = rtl ? 'rtl' : 'ltr';
+        const lang = rtl ? 'ar' : 'en';
+        const fontFamily = rtl
+            ? "'Cairo', 'Tahoma', 'Segoe UI', sans-serif"
+            : "'Segoe UI', 'Tahoma', 'Arial', sans-serif";
+        const fontLink = rtl ? `
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">` : '';
+        const pdfFix = `
+${fontLink}
 <style id="help-policy-pdf-fix">
     html, body, .report-wrapper, .report-wrapper * {
-        font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
-        direction: rtl !important;
+        font-family: ${fontFamily} !important;
+        direction: ${dir} !important;
         letter-spacing: 0 !important;
         word-spacing: normal !important;
     }
@@ -837,9 +961,9 @@ const Help = {
 </style>`;
         const cleaned = String(htmlContent || '').replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
         if (cleaned.includes('</head>')) {
-            return cleaned.replace('</head>', `${arabicFix}</head>`);
+            return cleaned.replace('</head>', `${pdfFix}</head>`);
         }
-        return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">${arabicFix}</head><body>${cleaned}</body></html>`;
+        return `<!DOCTYPE html><html lang="${lang}" dir="${dir}"><head><meta charset="UTF-8">${pdfFix}</head><body>${cleaned}</body></html>`;
     },
 
     async _waitPolicyPdfFontsReady_(doc) {
@@ -929,14 +1053,14 @@ const Help = {
     },
 
     _buildUsagePolicyPdfHtml_(version, exportTsStr) {
-        const title = 'سياسة الاستخدام والمسؤولية';
+        const title = this.ui('pdfTitle');
         const exportTs = new Date();
         const innerContent = this._buildPolicyPdfIntro_(version, exportTsStr) + this.buildUsagePolicyPdfContent_();
         const meta = {
-            'نوع المستند': 'سياسة الاستخدام والمسؤولية',
-            'إصدار التطبيق': String(version),
-            'تاريخ التصدير': exportTsStr,
-            titleAr: title,
+            [this.isRtl_() ? 'نوع المستند' : 'Document type']: this.ui('pdfFooterTypeVal'),
+            [this.isRtl_() ? 'إصدار التطبيق' : 'App version']: String(version),
+            [this.isRtl_() ? 'تاريخ التصدير' : 'Export date']: exportTsStr,
+            titleAr: 'سياسة الاستخدام والمسؤولية',
             titleEn: 'Usage Policy & Liability',
             includeQRCode: false,
             compactPdfFooter: true,
@@ -968,39 +1092,40 @@ const Help = {
         const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML)
             ? Utils.escapeHTML(String(v ?? ''))
             : String(v ?? '');
-        return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${esc(title)}</title></head><body>${innerContent}</body></html>`;
+        return `<!DOCTYPE html><html dir="${this.isRtl_() ? 'rtl' : 'ltr'}" lang="${this.isRtl_() ? 'ar' : 'en'}"><head><meta charset="UTF-8"><title>${esc(title)}</title></head><body>${innerContent}</body></html>`;
     },
 
     async exportUsagePolicyPdf() {
-        if (typeof Loading !== 'undefined') Loading.show('جاري إعداد ملف PDF...');
+        if (typeof Loading !== 'undefined') Loading.show(this.ui('pdfLoading'));
         try {
             const exportTs = new Date();
             const version = this.getAppVersion();
+            const locale = this.isRtl_() ? 'ar-EG' : 'en-US';
             let exportTsStr = '';
             try {
                 exportTsStr = typeof Utils !== 'undefined' && Utils.formatDateTime
-                    ? Utils.formatDateTime(exportTs, 'ar-EG')
-                    : exportTs.toLocaleString('ar-SA');
+                    ? Utils.formatDateTime(exportTs, locale)
+                    : exportTs.toLocaleString(locale);
             } catch (_e) {
-                exportTsStr = exportTs.toLocaleString('ar-SA');
+                exportTsStr = exportTs.toLocaleString(locale);
             }
 
             const htmlContent = this._buildUsagePolicyPdfHtml_(version, exportTsStr);
             const dateFile = exportTs.toISOString().slice(0, 10);
-            const fileName = `سياسة-الاستخدام-والمسؤولية-${dateFile}.pdf`;
+            const fileName = `${this.ui('pdfFileName')}-${dateFile}.pdf`;
             const downloaded = await this._downloadPolicyHtmlAsPdf_(htmlContent, fileName);
 
             if (downloaded) {
                 if (typeof Notification !== 'undefined') {
-                    Notification.success('تم تحميل سياسة الاستخدام بصيغة PDF');
+                    Notification.success(this.ui('pdfSuccess'));
                 }
             } else if (typeof Notification !== 'undefined') {
-                Notification.error('تعذّر تحميل PDF — تحقق من الاتصال بالإنترنت ثم أعد المحاولة');
+                Notification.error(this.ui('pdfFail'));
             }
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) Utils.safeError('exportUsagePolicyPdf:', error);
             if (typeof Notification !== 'undefined') {
-                Notification.error('تعذّر إنشاء ملف السياسة: ' + (error?.message || String(error)));
+                Notification.error(this.ui('pdfError') + ' ' + (error?.message || String(error)));
             }
         } finally {
             if (typeof Loading !== 'undefined') Loading.hide();
@@ -1008,6 +1133,8 @@ const Help = {
     },
 
     getStaticTopics() {
+        const en = this._enBundle_();
+        if (en?.staticTopics) return en.staticTopics;
         return [
             {
                 id: 'system-intro', categoryId: 'overview', moduleId: null,
@@ -1179,21 +1306,22 @@ const Help = {
             if (seen.has(mod.key)) return;
             seen.add(mod.key);
             const d = details[mod.key] || {};
+            const modLabel = this.getModuleLabel_(mod.key, mod.label);
             topics.push({
                 id: 'mod-' + mod.key,
                 categoryId: 'modules',
                 moduleId: mod.key,
-                title: mod.label,
+                title: modLabel,
                 icon: mod.icon || 'fa-cube',
-                summary: d.purpose || `موديول ${mod.label} لإدارة بيانات السلامة والصحة المهنية.`,
-                purpose: d.purpose || `إدارة ${mod.label} ضمن منظومة HSE.`,
+                summary: d.purpose || this.ui('modSummaryFallback', modLabel),
+                purpose: d.purpose || this.ui('modPurposeFallback', modLabel),
                 accessPath: d.accessPath || [],
-                features: d.features || ['تسجيل البيانات', 'بحث وفلترة', 'تقارير', 'تصدير'],
-                workflow: d.workflow || ['افتح الموديول', 'أضف أو عدّل السجلات', 'احفظ وراجع التقارير'],
+                features: d.features || this.ui('modDefaultFeatures').slice(),
+                workflow: d.workflow || this.ui('modDefaultWorkflow').slice(),
                 commonTasks: d.commonTasks || [],
-                tips: d.tips || ['راجع الصلاحيات مع المدير إن لم يظهر الموديول'],
-                permissionsNote: d.permissionsNote || (mod.adminOnly ? 'موديول محمي — للمدير أو بمنح صريح.' : 'يحتاج منح صلاحية من مدير النظام.'),
-                keywords: [mod.label, mod.key, (d.accessPath || []).join(' ')].join(' ')
+                tips: d.tips || this.ui('modDefaultTips').slice(),
+                permissionsNote: d.permissionsNote || (mod.adminOnly ? this.ui('modPermAdmin') : this.ui('modPermGrant')),
+                keywords: [modLabel, mod.key, (d.accessPath || []).join(' ')].join(' ')
             });
         });
 
@@ -1203,11 +1331,12 @@ const Help = {
             const labels = { profile: 'ملفي الشخصي', reports: 'التقارير', apptester: 'اختبار التطبيق', help: 'المساعدة ومركز الدعم' };
             const icons = { profile: 'fa-user', reports: 'fa-file-lines', apptester: 'fa-vial', help: 'fa-circle-question' };
             const d = details[key] || {};
+            const title = this.getModuleLabel_(key, labels[key]);
             topics.push({
                 id: 'mod-' + key,
                 categoryId: 'modules',
                 moduleId: key,
-                title: labels[key],
+                title,
                 icon: icons[key],
                 summary: d.purpose || '',
                 purpose: d.purpose || '',
@@ -1217,7 +1346,7 @@ const Help = {
                 commonTasks: d.commonTasks || [],
                 tips: d.tips || [],
                 permissionsNote: d.permissionsNote || '',
-                keywords: labels[key] + ' ' + key
+                keywords: title + ' ' + key
             });
         });
 
@@ -1280,36 +1409,39 @@ const Help = {
     renderShell() {
         const version = this.getAppVersion();
         const cats = this.getCategories();
+        const rtl = this.isRtl_();
+        const searchIconSide = rtl ? 'right' : 'left';
+        const searchPad = rtl ? '12px 44px 12px 16px' : '12px 16px 12px 44px';
         return `
-            <div class="help-module-root" style="max-width:1100px;margin:0 auto;padding:8px 4px 32px;">
+            <div class="help-module-root" style="max-width:1100px;margin:0 auto;padding:8px 4px 32px;" dir="${rtl ? 'rtl' : 'ltr'}">
                 <div class="content-card" style="padding:24px 28px;margin-bottom:20px;background:linear-gradient(135deg,#f0fdfa 0%,#ecfeff 50%,#eff6ff 100%);border:1px solid #99f6e4;">
                     <div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:16px;">
                         <div>
                             <h1 style="margin:0 0 8px;font-size:1.55rem;font-weight:800;color:#0f766e;display:flex;align-items:center;gap:10px;">
-                                <i class="fas fa-circle-question"></i> دليل النظام — المساعدة
+                                <i class="fas fa-circle-question"></i> ${Utils.escapeHTML(this.ui('pageTitle'))}
                             </h1>
                             <p style="margin:0;color:#475569;font-size:0.92rem;max-width:560px;line-height:1.6;">
                                 ${Utils.escapeHTML(this.getHelpIntroText_())}
                             </p>
                         </div>
                         <span style="background:#0d9488;color:#fff;padding:6px 14px;border-radius:20px;font-size:0.78rem;font-weight:700;white-space:nowrap;">
-                            <i class="fas fa-code-branch" style="margin-left:6px;"></i> الإصدار ${Utils.escapeHTML(version)}
+                            <i class="fas fa-code-branch" style="${this._iconMargin_()}"></i> ${Utils.escapeHTML(this.ui('version'))} ${Utils.escapeHTML(version)}
                         </span>
                     </div>
                 </div>
 
                 <div class="content-card" style="padding:16px 18px;margin-bottom:16px;">
                     <div style="position:relative;">
-                        <i class="fas fa-search" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#94a3b8;"></i>
-                        <input type="search" id="help-search-input" placeholder="ابحث في الدليل... (مثال: عيادة، تصريح، MFA)"
-                            style="width:100%;padding:12px 44px 12px 16px;border:1px solid #e2e8f0;border-radius:10px;font-size:0.9rem;outline:none;"
-                            autocomplete="off" />
+                        <i class="fas fa-search" style="position:absolute;${searchIconSide}:14px;top:50%;transform:translateY(-50%);color:#94a3b8;"></i>
+                        <input type="search" id="help-search-input" placeholder="${Utils.escapeHTML(this.ui('searchPlaceholder'))}"
+                            style="width:100%;padding:${searchPad};border:1px solid #e2e8f0;border-radius:10px;font-size:0.9rem;outline:none;text-align:${this._textAlign_()};"
+                            autocomplete="off" dir="${rtl ? 'rtl' : 'ltr'}" />
                     </div>
                     <div id="help-category-tabs" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;">
                         ${cats.map(c => `
                             <button type="button" class="help-cat-btn" data-cat="${c.id}"
                                 style="padding:8px 14px;border-radius:20px;border:1px solid #e2e8f0;background:#fff;font-size:0.8rem;font-weight:600;cursor:pointer;color:#475569;">
-                                <i class="fas ${c.icon}" style="margin-left:6px;"></i>${Utils.escapeHTML(c.label)}
+                                <i class="fas ${c.icon}" style="${this._iconMargin_()}"></i>${Utils.escapeHTML(c.label)}
                             </button>`).join('')}
                     </div>
                 </div>
@@ -1352,6 +1484,8 @@ const Help = {
         const headerOnly = cat === 'faq' && !hasSearch;
         const preview = headerOnly ? [] : (cat === 'all' && !hasSearch ? items.slice(0, 5) : items.slice(0, hasSearch ? 8 : items.length));
         const total = items.length;
+        const rtl = this.isRtl_();
+        const chevron = rtl ? 'fa-chevron-left' : 'fa-chevron-right';
 
         panel.style.display = 'block';
         panel.innerHTML = `
@@ -1359,24 +1493,24 @@ const Help = {
                 <div style="padding:16px 20px;background:linear-gradient(90deg,#ecfdf5,#f0fdfa);border-bottom:1px solid #ccfbf1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;">
                     <div>
                         <h2 style="margin:0;font-size:1.05rem;font-weight:800;color:#0f766e;display:flex;align-items:center;gap:8px;">
-                            <i class="fas fa-comments"></i> أسئلة وأجوبة (Q&amp;A)
+                            <i class="fas fa-comments"></i> ${Utils.escapeHTML(this.ui('qaTitle'))}
                         </h2>
-                        <p style="margin:4px 0 0;font-size:0.82rem;color:#64748b;">${headerOnly ? `${total} سؤالاً — وسّع أي سؤال أدناه للإجابة الكاملة` : (hasSearch ? `${preview.length} نتيجة Q&A` : 'إجابات سريعة — اضغط السؤال للتفاصيل')}</p>
+                        <p style="margin:4px 0 0;font-size:0.82rem;color:#64748b;">${headerOnly ? Utils.escapeHTML(this.ui('qaExpandHint', total)) : (hasSearch ? Utils.escapeHTML(this.ui('qaSearchResults', preview.length)) : Utils.escapeHTML(this.ui('qaQuickHint')))}</p>
                     </div>
                     ${cat === 'all' && !hasSearch ? `<button type="button" id="help-show-all-qa" style="padding:8px 16px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:0.8rem;font-weight:600;cursor:pointer;">
-                        <i class="fas fa-list" style="margin-left:6px;"></i> عرض كل الأسئلة (${total})
+                        <i class="fas fa-list" style="${this._iconMargin_()}"></i> ${Utils.escapeHTML(this.ui('showAllQa', total))}
                     </button>` : ''}
                 </div>
                 ${preview.length ? `<div style="padding:12px 16px 16px;">
                     ${preview.map(item => `
                         <button type="button" class="help-qa-quick-item" data-qa-id="${Utils.escapeHTML(item.id)}"
-                            style="width:100%;text-align:right;padding:12px 14px;margin-bottom:8px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;cursor:pointer;display:flex;gap:12px;align-items:flex-start;">
-                            <span style="flex-shrink:0;width:28px;height:28px;background:#0d9488;color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;">س</span>
+                            style="width:100%;text-align:${this._textAlign_()};padding:12px 14px;margin-bottom:8px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;cursor:pointer;display:flex;gap:12px;align-items:flex-start;">
+                            <span style="flex-shrink:0;width:28px;height:28px;background:#0d9488;color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;">${Utils.escapeHTML(this.ui('qBadge'))}</span>
                             <span style="flex:1;min-width:0;">
                                 <span style="display:block;font-weight:700;font-size:0.88rem;color:#134e4a;margin-bottom:4px;">${Utils.escapeHTML(item.question)}</span>
                                 <span style="display:block;font-size:0.82rem;color:#64748b;line-height:1.55;">${Utils.escapeHTML(item.answer.length > 120 && cat === 'all' ? item.answer.slice(0, 117) + '…' : item.answer)}</span>
                             </span>
-                            <i class="fas fa-chevron-left" style="color:#94a3b8;flex-shrink:0;margin-top:4px;font-size:0.75rem;"></i>
+                            <i class="fas ${chevron}" style="color:#94a3b8;flex-shrink:0;margin-top:4px;font-size:0.75rem;"></i>
                         </button>
                     `).join('')}
                 </div>` : ''}
@@ -1395,9 +1529,9 @@ const Help = {
             return `
                 <div style="margin-top:12px;">
                     <div style="font-weight:700;font-size:0.82rem;color:#334155;margin-bottom:6px;">
-                        <i class="fas ${icon}" style="margin-left:6px;color:#0d9488;"></i>${title}
+                        <i class="fas ${icon}" style="${this._iconMargin_()}color:#0d9488;"></i>${title}
                     </div>
-                    <ul style="margin:0;padding-right:20px;color:#475569;font-size:0.84rem;line-height:1.7;">
+                    <ul style="margin:0;${this._listPadding_()}color:#475569;font-size:0.84rem;line-height:1.7;">
                         ${items.map(li => `<li>${Utils.escapeHTML(li)}</li>`).join('')}
                     </ul>
                 </div>`;
@@ -1408,12 +1542,12 @@ const Help = {
             return `
                 <div style="margin-top:12px;">
                     <div style="font-weight:700;font-size:0.82rem;color:#334155;margin-bottom:8px;">
-                        <i class="fas fa-list-check" style="margin-left:6px;color:#0d9488;"></i>مهام شائعة — خطوة بخطوة
+                        <i class="fas fa-list-check" style="${this._iconMargin_()}color:#0d9488;"></i>${this.ui('commonTasks')}
                     </div>
                     ${tasks.map(t => `
                         <div style="margin-bottom:10px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
                             <div style="font-weight:700;font-size:0.84rem;color:#0f766e;margin-bottom:6px;">${Utils.escapeHTML(t.task || '')}</div>
-                            <ol style="margin:0;padding-right:20px;color:#475569;font-size:0.82rem;line-height:1.65;">
+                            <ol style="margin:0;${this._listPadding_()}color:#475569;font-size:0.82rem;line-height:1.65;">
                                 ${(t.steps || []).map(s => `<li>${Utils.escapeHTML(s)}</li>`).join('')}
                             </ol>
                         </div>
@@ -1425,12 +1559,12 @@ const Help = {
         if (isFaq) {
             if (topic.answer) {
                 body += `<div style="display:flex;gap:10px;align-items:flex-start;margin-top:4px;">
-                    <span style="flex-shrink:0;width:26px;height:26px;background:#059669;color:#fff;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;">ج</span>
+                    <span style="flex-shrink:0;width:26px;height:26px;background:#059669;color:#fff;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;">${Utils.escapeHTML(this.ui('aBadge'))}</span>
                     <p style="margin:0;color:#334155;font-size:0.88rem;line-height:1.75;flex:1;">${Utils.escapeHTML(topic.answer)}</p>
                 </div>`;
             }
             if (topic.features && topic.features.length) {
-                body += renderList('تفاصيل إضافية', topic.features, 'fa-list-ul');
+                body += renderList(this.ui('extraDetails'), topic.features, 'fa-list-ul');
             }
         } else if (isPolicy) {
             if (topic.summary) {
@@ -1439,49 +1573,51 @@ const Help = {
             if (topic.purpose) {
                 body += `<p style="margin:0 0 10px;color:#334155;font-size:0.86rem;line-height:1.7;">${Utils.escapeHTML(topic.purpose)}</p>`;
             }
-            body += renderList('البنود والأحكام', topic.features, 'fa-list-check');
-            body += renderList('التزامات وإرشادات', topic.workflow, 'fa-gavel');
-            body += renderList('ملاحظات', topic.tips, 'fa-circle-info');
+            body += renderList(this.ui('policyTerms'), topic.features, 'fa-list-check');
+            body += renderList(this.ui('policyObligations'), topic.workflow, 'fa-gavel');
+            body += renderList(this.ui('policyNotes'), topic.tips, 'fa-circle-info');
         } else {
             if (topic.summary) {
                 body += `<p style="margin:0 0 8px;color:#64748b;font-size:0.86rem;">${Utils.escapeHTML(topic.summary)}</p>`;
             }
             if (topic.purpose) {
-                body += `<p style="margin:0;color:#334155;font-size:0.86rem;"><strong>الغرض:</strong> ${Utils.escapeHTML(topic.purpose)}</p>`;
+                body += `<p style="margin:0;color:#334155;font-size:0.86rem;"><strong>${this.ui('purpose')}</strong> ${Utils.escapeHTML(topic.purpose)}</p>`;
             }
-            body += renderList('كيف تصل للموديول', topic.accessPath, 'fa-route');
-            body += renderList('أهم الوظائف', topic.features, 'fa-star');
-            body += renderList('خطوات الاستخدام', topic.workflow, 'fa-shoe-prints');
+            body += renderList(this.ui('accessPath'), topic.accessPath, 'fa-route');
+            body += renderList(this.ui('features'), topic.features, 'fa-star');
+            body += renderList(this.ui('workflow'), topic.workflow, 'fa-shoe-prints');
             body += renderCommonTasks(topic.commonTasks);
-            body += renderList('نصائح', topic.tips, 'fa-lightbulb');
+            body += renderList(this.ui('tips'), topic.tips, 'fa-lightbulb');
             if (topic.permissionsNote) {
                 body += `<div style="margin-top:12px;padding:10px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:0.82rem;color:#92400e;">
-                    <i class="fas fa-shield-halved" style="margin-left:6px;"></i>${Utils.escapeHTML(topic.permissionsNote)}
+                    <i class="fas fa-shield-halved" style="${this._iconMargin_()}"></i>${Utils.escapeHTML(topic.permissionsNote)}
                 </div>`;
             }
         }
 
         const permBanner = !isPolicy && hasModule && !canOpen ? `
             <div style="margin-top:10px;padding:8px 12px;background:#f1f5f9;border-radius:8px;font-size:0.8rem;color:#64748b;">
-                <i class="fas fa-lock" style="margin-left:6px;"></i> يتطلب منح صلاحية «${Utils.escapeHTML(topic.title)}» من مدير النظام — يمكنك قراءة الشرح هنا.
+                <i class="fas fa-lock" style="${this._iconMargin_()}"></i> ${Utils.escapeHTML(this.ui('permBanner', topic.title))}
             </div>` : '';
 
         const openBtn = !isPolicy && canOpen ? `
             <button type="button" class="help-open-module-btn" data-module="${Utils.escapeHTML(topic.moduleId)}"
                 style="margin-top:12px;padding:8px 16px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;">
-                <i class="fas fa-external-link-alt" style="margin-left:6px;"></i> فتح الموديول
+                <i class="fas fa-external-link-alt" style="${this._iconMargin_()}"></i> ${this.ui('openModule')}
             </button>` : '';
+
+        const faqBadge = isFaq
+            ? `<span style="font-size:0.75rem;font-weight:800;color:#0d9488;">${Utils.escapeHTML(this.ui('qBadge'))}</span>`
+            : `<i class="fas ${topic.icon || 'fa-book'}" style="color:${isPolicy ? '#b45309' : '#0d9488'};"></i>`;
 
         return `
             <div class="content-card help-topic-card" data-topic-id="${Utils.escapeHTML(topic.id)}"
                 style="padding:0;margin-bottom:10px;overflow:hidden;border:1px solid ${isOpen ? (isPolicy ? '#fde68a' : '#99f6e4') : '#f1f5f9'};">
                 <button type="button" class="help-topic-toggle" data-topic-id="${Utils.escapeHTML(topic.id)}"
-                    style="width:100%;text-align:right;padding:14px 18px;background:${isOpen ? (isPolicy ? '#fffbeb' : '#f0fdfa') : '#fff'};border:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                    style="width:100%;text-align:${this._textAlign_()};padding:14px 18px;background:${isOpen ? (isPolicy ? '#fffbeb' : '#f0fdfa') : '#fff'};border:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;">
                     <span style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
                         <span style="width:36px;height:36px;background:${isPolicy ? '#fffbeb' : '#ecfdf5'};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            ${isFaq
-                                ? '<span style="font-size:0.75rem;font-weight:800;color:#0d9488;">س</span>'
-                                : `<i class="fas ${topic.icon || 'fa-book'}" style="color:${isPolicy ? '#b45309' : '#0d9488'};"></i>`}
+                            ${faqBadge}
                         </span>
                         <span style="font-weight:700;font-size:0.9rem;color:${isPolicy ? '#92400e' : '#134e4a'};">${Utils.escapeHTML(topic.title)}</span>
                     </span>
@@ -1505,15 +1641,13 @@ const Help = {
 
         if (metaEl) {
             if (hideList) {
-                metaEl.textContent = 'استخدم «عرض كل الأسئلة» أو اختر فئة أخرى من الأعلى';
+                metaEl.textContent = this.ui('metaUseQa');
             } else if (faqOnly) {
-                metaEl.textContent = topics.length ? `${topics.length} سؤالاً في Q&A` : 'لا توجد نتائج';
+                metaEl.textContent = this.ui('metaFaqCount', topics.length);
             } else if (cat === 'policy') {
-                metaEl.textContent = '6 أقسام — سياسة الاستخدام والمسؤولية (بدون أسئلة وأجوبة)';
+                metaEl.textContent = this.ui('metaPolicy');
             } else {
-                metaEl.textContent = topics.length
-                    ? `عرض ${topics.length} موضوعاً`
-                    : 'لا توجد نتائج — جرّب كلمات أخرى أو اختر فئة «الكل»';
+                metaEl.textContent = this.ui('metaTopics', topics.length);
             }
         }
 
@@ -1524,7 +1658,7 @@ const Help = {
 
         if (!topics.length) {
             listEl.innerHTML = `<div class="content-card" style="padding:32px;text-align:center;color:#94a3b8;">
-                <i class="fas fa-search" style="font-size:2rem;margin-bottom:12px;"></i><br>لا توجد نتائج مطابقة
+                <i class="fas fa-search" style="font-size:2rem;margin-bottom:12px;"></i><br>${Utils.escapeHTML(this.ui('noResults'))}
             </div>`;
             return;
         }
@@ -1534,13 +1668,13 @@ const Help = {
                 <div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;">
                     <div style="flex:1;min-width:220px;">
                         <h2 style="margin:0 0 6px;font-size:1.05rem;font-weight:800;color:#92400e;display:flex;align-items:center;gap:8px;">
-                            <i class="fas fa-scale-balanced"></i> سياسة الاستخدام والمسؤولية
+                            <i class="fas fa-scale-balanced"></i> ${Utils.escapeHTML(this.ui('policyHeaderTitle'))}
                         </h2>
-                        <p style="margin:0;font-size:0.84rem;color:#78350f;line-height:1.6;">ستة أقسام تنظيمية — اضغط على أي قسم لقراءة التفاصيل. هذا التبويب للأحكام فقط وليس لأسئلة وأجوبة.</p>
+                        <p style="margin:0;font-size:0.84rem;color:#78350f;line-height:1.6;">${Utils.escapeHTML(this.ui('policyHeaderDesc'))}</p>
                     </div>
                     <button type="button" id="help-export-policy-pdf"
                         style="padding:10px 16px;background:#b45309;color:#fff;border:none;border-radius:10px;font-size:0.82rem;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(180,83,9,0.25);">
-                        <i class="fas fa-download" style="margin-left:8px;"></i> تحميل PDF
+                        <i class="fas fa-download" style="${this._iconMargin_()}"></i> ${Utils.escapeHTML(this.ui('downloadPdf'))}
                     </button>
                 </div>
             </div>` : '';
