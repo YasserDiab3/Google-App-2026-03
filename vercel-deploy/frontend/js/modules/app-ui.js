@@ -9423,7 +9423,8 @@ window.UI = {
                 const currentUserEmail = String(cu.email || '').trim().toLowerCase();
                 const isContractorApprovalAdmin = (typeof Contractors !== 'undefined' && typeof Contractors.isContractorApprovalAdminUser === 'function')
                     ? Contractors.isContractorApprovalAdminUser()
-                    : (cu.role === 'admin' ||
+                    : ((typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function' && Permissions.isCurrentUserEffectiveAdmin()) ||
+                        cu.role === 'admin' ||
                         cu.role === 'مدير النظام' ||
                         (typeof Permissions !== 'undefined' && Permissions.isCurrentUserAdmin && Permissions.isCurrentUserAdmin()));
                 const normalizeCarStatus = (status) => {

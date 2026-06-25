@@ -738,6 +738,9 @@ function normalizeContractorRequestStatus_(status) {
 function getAllContractorApprovalRequests(filters = {}) {
     try {
         const sheetName = 'ContractorApprovalRequests';
+        if (filters && filters.forceRefresh === true) {
+            invalidateHseSheetCaches(sheetName);
+        }
         let data = readFromSheet(sheetName, getSpreadsheetId());
         
         // ✅ معالجة evaluationData للتأكد من تحليلها بشكل صحيح
@@ -1307,6 +1310,9 @@ function updateContractorDeletionRequest(requestId, updateData) {
 function getAllContractorDeletionRequests(filters = {}) {
     try {
         const sheetName = 'ContractorDeletionRequests';
+        if (filters && filters.forceRefresh === true) {
+            invalidateHseSheetCaches(sheetName);
+        }
         let data = readFromSheet(sheetName, getSpreadsheetId());
         
         // تطبيق الفلاتر

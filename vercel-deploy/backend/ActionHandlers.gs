@@ -2216,7 +2216,11 @@ var ActionHandlers = {
         var result = { success: false, message: '' };
         (function() {
 
-                    result = getAllContractorApprovalRequests(payload.filters || {});
+                    var filters = (payload && payload.filters) ? payload.filters : {};
+                    if (payload && payload.forceRefresh === true) {
+                        filters.forceRefresh = true;
+                    }
+                    result = getAllContractorApprovalRequests(filters);
                     return;
 
         })();
@@ -2268,7 +2272,11 @@ var ActionHandlers = {
         var result = { success: false, message: '' };
         (function() {
 
-                    result = getAllContractorDeletionRequests(payload.filters || {});
+                    var filters = (payload && payload.filters) ? payload.filters : {};
+                    if (payload && payload.forceRefresh === true) {
+                        filters.forceRefresh = true;
+                    }
+                    result = getAllContractorDeletionRequests(filters);
                     return;
 
         })();

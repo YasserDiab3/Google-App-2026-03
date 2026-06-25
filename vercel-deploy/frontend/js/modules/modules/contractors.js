@@ -666,7 +666,9 @@ const Contractors = {
             'under_review': 'under_review',
             'pending': 'pending'
         };
-        return aliases[normalized] || normalized;
+        if (aliases[normalized]) return aliases[normalized];
+        if (normalized === 'approved' || normalized === 'rejected') return normalized;
+        return 'pending';
     },
 
     extractApprovalRequestRowsFromResponse(res) {
@@ -690,7 +692,7 @@ const Contractors = {
         try {
             const res = await GoogleIntegration.sendRequest({
                 action: 'getAllContractorApprovalRequests',
-                data: {}
+                data: { forceRefresh: true }
             });
             const rows = this.extractApprovalRequestRowsFromResponse(res);
             if (Array.isArray(rows)) return rows;
@@ -713,7 +715,7 @@ const Contractors = {
         try {
             const res = await GoogleIntegration.sendRequest({
                 action: 'getAllContractorDeletionRequests',
-                data: {}
+                data: { forceRefresh: true }
             });
             const rows = this.extractApprovalRequestRowsFromResponse(res);
             if (Array.isArray(rows)) return rows;
@@ -739,8 +741,18 @@ const Contractors = {
     normalizeApprovalRequestRecord(record) {
         if (!record || typeof record !== 'object') return record;
         const r = { ...record };
-        if ((!r.status || !String(r.status).trim()) && r.Status) {
-            r.status = String(r.Status).trim();
+        if (!r.status || !String(r.status).trim()) {
+            if (r.Status) {
+                r.status = String(r.Status).trim();
+            } else {
+                const statusKey = Object.keys(r).find((k) => {
+                    const kl = String(k || '').trim().toLowerCase();
+                    return kl === 'status' || kl === 'الحالة' || kl === 'state';
+                });
+                if (statusKey && r[statusKey] != null && String(r[statusKey]).trim()) {
+                    r.status = String(r[statusKey]).trim();
+                }
+            }
         }
         if ((!r.createdBy || !String(r.createdBy).trim()) && r.CreatedBy) {
             r.createdBy = String(r.CreatedBy).trim();
@@ -794,14 +806,22 @@ const Contractors = {
 
             if (Array.isArray(approvalRows)) {
                 const serverRows = approvalRows.map((r) => this.normalizeApprovalRequestRecord(r));
-                AppState.appData.contractorApprovalRequests = this.mergeApprovalRequestsWithLocalOnly(serverRows, localApprovals);
-                loaded = true;
+                const keepLocalOnEmptyServer = approvalRows.length === 0 && localApprovals.length > 0;
+                if (!keepLocalOnEmptyServer) {
+                    AppState.appData.contractorApprovalRequests = this.mergeApprovalRequestsWithLocalOnly(serverRows, localApprovals);
+                    loaded = true;
+                } else if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ الخادم أرجع 0 طلب اعتماد — الاحتفاظ بالبيانات المحلية مؤقتاً');
+                }
             }
 
             if (Array.isArray(deletionRows)) {
                 const serverRows = deletionRows.map((r) => this.normalizeApprovalRequestRecord(r));
-                AppState.appData.contractorDeletionRequests = this.mergeApprovalRequestsWithLocalOnly(serverRows, localDeletions);
-                loaded = true;
+                const keepLocalOnEmptyServer = deletionRows.length === 0 && localDeletions.length > 0;
+                if (!keepLocalOnEmptyServer) {
+                    AppState.appData.contractorDeletionRequests = this.mergeApprovalRequestsWithLocalOnly(serverRows, localDeletions);
+                    loaded = true;
+                }
             }
 
             if (loaded && typeof window.DataManager !== 'undefined' && window.DataManager.save) {
@@ -809,7 +829,7 @@ const Contractors = {
             }
 
             if (this.currentTab === 'approval-request') {
-                this.refreshApprovalRequestsSection();
+                this.mountApprovalRequestSection();
             }
             if (typeof AppUI !== 'undefined' && typeof AppUI.updateNotificationsBadge === 'function') {
                 AppUI.updateNotificationsBadge();
@@ -839,15 +859,23 @@ const Contractors = {
 
     isContractorApprovalAdminUser() {
         if (typeof Permissions !== 'undefined') {
+            if (typeof Permissions.isCurrentUserEffectiveAdmin === 'function' &&
+                Permissions.isCurrentUserEffectiveAdmin()) {
+                return true;
+            }
             if (typeof Permissions.isCurrentUserAdmin === 'function' && Permissions.isCurrentUserAdmin()) {
                 return true;
             }
             if (typeof Permissions.isAdmin === 'function' && Permissions.isAdmin()) {
                 return true;
             }
+            if (typeof Permissions.isAdminRole === 'function' &&
+                Permissions.isAdminRole(AppState.currentUser?.role)) {
+                return true;
+            }
         }
-        const role = String(AppState.currentUser?.role || '').toLowerCase();
-        return role === 'admin' || role === 'مدير' || role === 'مدير النظام';
+        const role = String(AppState.currentUser?.role || '').trim().toLowerCase();
+        return role === 'admin' || role === 'administrator' || role === 'مدير' || role === 'مدير النظام';
     },
 
     isApprovalRequestPendingForReview(req) {
@@ -876,6 +904,13 @@ const Contractors = {
             AppState.googleConfig?.appsScript?.scriptUrl;
         if (!canLoad) {
             return Promise.resolve();
+        }
+
+        if (force && typeof GoogleIntegration._buildLocalDataStorageKey === 'function') {
+            try {
+                localStorage.removeItem(GoogleIntegration._buildLocalDataStorageKey('getAllContractorApprovalRequests', {}));
+                localStorage.removeItem(GoogleIntegration._buildLocalDataStorageKey('getAllContractorDeletionRequests', {}));
+            } catch (_clearErr) { /* ignore */ }
         }
 
         this._approvalRequestsSyncInFlight = this.fetchContractorApprovalRequestsFromBackend()
@@ -8438,17 +8473,15 @@ const Contractors = {
                         </div>
                     </div>
 
-                    ${isAdmin ? `
-                        <div class="border-t pt-4">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                                <i class="fas fa-clipboard-check ml-2"></i>
-                                طلبات قيد المراجعة (للمدير)
-                            </h3>
-                            <div id="pending-approval-requests-container">
-                                ${this.renderApprovalRequestsTable(pendingRequests, true)}
-                            </div>
+                    <div class="border-t pt-4" id="pending-approval-requests-section" style="display: ${isAdmin ? 'block' : 'none'};">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                            <i class="fas fa-clipboard-check ml-2"></i>
+                            طلبات قيد المراجعة (للمدير)
+                        </h3>
+                        <div id="pending-approval-requests-container">
+                            ${isAdmin ? this.renderApprovalRequestsTable(pendingRequests, true) : ''}
                         </div>
-                    ` : ''}
+                    </div>
                 </div>
             </div>
         `;
@@ -9448,6 +9481,22 @@ const Contractors = {
         }
     },
 
+    mountApprovalRequestSection() {
+        const el = document.getElementById('contractors-approval-request-content');
+        if (!el) return;
+        const html = this.renderApprovalRequestSection();
+        if (typeof this.safeSetInnerHTML === 'function') {
+            this.safeSetInnerHTML(el, html);
+        } else {
+            el.innerHTML = html;
+        }
+        const sendBtn = document.getElementById('send-approval-request-btn');
+        if (sendBtn && !sendBtn.hasAttribute('data-listener-attached')) {
+            sendBtn.setAttribute('data-listener-attached', 'true');
+            sendBtn.addEventListener('click', () => this.showApprovalRequestForm());
+        }
+    },
+
     /**
      * تحديث قسم طلبات الاعتماد
      * ✅ إصلاح: تحديث بسيط بدون debounce أو تعقيد
@@ -9455,6 +9504,15 @@ const Contractors = {
     refreshApprovalRequestsSection() {
         // ✅ التحقق من أن التبويب نشط
         if (this.currentTab !== 'approval-request') {
+            return;
+        }
+
+        const isAdmin = this.isContractorApprovalAdminUser();
+        const pendingSection = document.getElementById('pending-approval-requests-section');
+        const pendingContainer = document.getElementById('pending-approval-requests-container');
+
+        if (isAdmin && !pendingContainer) {
+            this.mountApprovalRequestSection();
             return;
         }
         
@@ -9467,14 +9525,16 @@ const Contractors = {
         
         try {
             const myContainer = document.getElementById('my-approval-requests-container');
-            const pendingContainer = document.getElementById('pending-approval-requests-container');
             
             if (myContainer) {
                 const myRequests = this.getMyApprovalRequests();
                 myContainer.innerHTML = this.renderApprovalRequestsTable(myRequests, false);
             }
 
-            if (this.isContractorApprovalAdminUser() && pendingContainer) {
+            if (pendingSection) {
+                pendingSection.style.display = isAdmin ? 'block' : 'none';
+            }
+            if (isAdmin && pendingContainer) {
                 const pendingRequests = this.getPendingApprovalRequests();
                 pendingContainer.innerHTML = this.renderApprovalRequestsTable(pendingRequests, true);
             }
