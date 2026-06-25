@@ -1104,7 +1104,14 @@ const Contractors = {
             } catch (_clearErr) { /* ignore */ }
         }
 
-        this._approvedContractorsSyncInFlight = this.fetchApprovedContractorsFromBackend()
+        const runLoad = async () => {
+            if (this.isContractorApprovalAdminUser() && (force || options.reconcile !== false)) {
+                await this.reconcileMissingApprovedContractors(options);
+            }
+            return this.fetchApprovedContractorsFromBackend();
+        };
+
+        this._approvedContractorsSyncInFlight = runLoad()
             .then((loaded) => {
                 if (loaded) {
                     this._approvedContractorsLastLoadAt = Date.now();
@@ -1117,6 +1124,36 @@ const Contractors = {
             });
 
         return this._approvedContractorsSyncInFlight;
+    },
+
+    /**
+     * مزامنة طلبات معتمدة بدون سجل في ApprovedContractors (مثل CAR_0114)
+     */
+    async reconcileMissingApprovedContractors(options = {}) {
+        if (!this.isContractorApprovalAdminUser()) return false;
+        if (typeof GoogleIntegration === 'undefined') return false;
+        try {
+            const apiData = { ...this._approvalRequestApiPayload() };
+            if (options.requestId) apiData.requestId = options.requestId;
+            const res = await GoogleIntegration.sendRequest({
+                action: 'reconcileMissingApprovedContractors',
+                data: apiData
+            });
+            if (res && res.success && res.createdCount > 0) {
+                if (typeof Utils !== 'undefined' && Utils.safeLog) {
+                    Utils.safeLog('✅ reconcileMissingApprovedContractors: أُنشئ ' + res.createdCount + ' سجل معتمد');
+                }
+            }
+            if (res && res.errors && res.errors.length > 0 && typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ reconcileMissingApprovedContractors أخطاء:', res.errors);
+            }
+            return !!(res && res.success);
+        } catch (err) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ reconcileMissingApprovedContractors فشل:', err?.message || err);
+            }
+            return false;
+        }
     },
 
     isCurrentUserApprovalRequestOwner(req) {

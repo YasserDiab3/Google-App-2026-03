@@ -2256,6 +2256,16 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'reconcileMissingApprovedContractors': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    result = reconcileMissingApprovedContractorsFromRequests(payload || {}, actorUserData || payload.userData || {});
+                    return;
+
+        })();
+        return result;
+    },
     'rejectContractorApprovalRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

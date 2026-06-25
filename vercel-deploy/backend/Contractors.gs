@@ -214,11 +214,13 @@ function addApprovedContractorToSheet(contractorData) {
             });
         }
         
-        // ✅ إذا لم يوجد تكرار بالكود، التحقق من السجل التجاري (يجب أن يكون فريداً أيضاً)
+        // ✅ إذا لم يوجد تكرار بالكود، التحقق من السجل التجاري + اسم الشركة معاً
         if (!duplicate && contractorData.licenseNumber && contractorData.licenseNumber.trim() !== '') {
-            duplicate = existingData.find(c => {
+            var incomingCompanyKey = normalizeCompanyNameForMatch_(contractorData.companyName);
+            duplicate = existingData.find(function(c) {
                 if (!c || !c.licenseNumber) return false;
-                return c.licenseNumber.trim() === contractorData.licenseNumber.trim();
+                if (String(c.licenseNumber).trim() !== String(contractorData.licenseNumber).trim()) return false;
+                return normalizeCompanyNameForMatch_(c.companyName) === incomingCompanyKey;
             });
         }
         
@@ -951,6 +953,171 @@ function parseContractorEvaluationData(raw) {
 }
 
 /**
+ * تطبيع اسم الشركة للمقارنة
+ */
+function normalizeCompanyNameForMatch_(name) {
+    return String(name || '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+/**
+ * هل يوجد سجل معتمد يطابق طلب الاعتماد؟
+ */
+function findApprovedContractorForRequest_(request, approvedList) {
+    if (!request || !Array.isArray(approvedList)) return null;
+    var reqCompany = normalizeCompanyNameForMatch_(request.companyName);
+    var reqLicense = String(request.licenseNumber || '').trim();
+    var reqType = String(request.requestType || 'contractor').trim();
+    for (var i = 0; i < approvedList.length; i++) {
+        var ac = approvedList[i];
+        if (!ac) continue;
+        var acCompany = normalizeCompanyNameForMatch_(ac.companyName);
+        if (reqCompany && acCompany && reqCompany === acCompany) {
+            if (!reqType || !ac.entityType || ac.entityType === reqType) {
+                return ac;
+            }
+        }
+        if (reqLicense && reqCompany &&
+            String(ac.licenseNumber || '').trim() === reqLicense &&
+            acCompany === reqCompany) {
+            return ac;
+        }
+    }
+    return null;
+}
+
+/**
+ * بناء كيان معتمد من طلب اعتماد
+ */
+function buildApprovedEntityFromApprovalRequest_(request, spreadsheetId) {
+    var contractorCode = generateContractorCode(spreadsheetId, { skipLock: true });
+    var approvedAt = request.approvedAt ? new Date(request.approvedAt) : new Date();
+    var expiryMs = approvedAt.getTime() + (365 * 24 * 60 * 60 * 1000);
+    return {
+        id: generateSequentialId('ACN', 'ApprovedContractors', spreadsheetId),
+        code: contractorCode,
+        isoCode: contractorCode,
+        companyName: request.companyName,
+        entityType: request.requestType === 'supplier' ? 'supplier' : 'contractor',
+        serviceType: request.serviceType || '',
+        licenseNumber: request.licenseNumber || '',
+        contactPerson: request.contactPerson || '',
+        phone: request.phone || '',
+        email: request.email || '',
+        approvalDate: approvedAt,
+        expiryDate: new Date(expiryMs),
+        status: 'approved',
+        notes: request.notes || '',
+        createdAt: request.createdAt ? new Date(request.createdAt) : new Date(),
+        updatedAt: new Date()
+    };
+}
+
+/**
+ * إنشاء سجل معتمد من طلب معتمد مسبقاً (إصلاح/مزامنة)
+ */
+function materializeApprovedContractorFromRequest_(request, spreadsheetId, userData) {
+    if (!request) {
+        return { success: false, message: 'الطلب غير موجود' };
+    }
+    var rt = String(request.requestType || '').trim();
+    if (rt !== 'contractor' && rt !== 'supplier') {
+        return { success: false, message: 'نوع الطلب لا يتطلب سجل معتمد' };
+    }
+    invalidateHseSheetCaches('ApprovedContractors');
+    var approvedList = readFromSheet('ApprovedContractors', spreadsheetId);
+    var existing = findApprovedContractorForRequest_(request, approvedList);
+    if (existing) {
+        return {
+            success: true,
+            alreadyExists: true,
+            approvedEntity: existing,
+            message: 'السجل موجود مسبقاً في قائمة المعتمدين'
+        };
+    }
+    var approvedEntity = buildApprovedEntityFromApprovalRequest_(request, spreadsheetId);
+    var addResult = addApprovedContractorToSheet(approvedEntity);
+    if (addResult && addResult.success) {
+        if (addResult.id) approvedEntity.id = addResult.id;
+        invalidateHseSheetCaches('ApprovedContractors');
+        return { success: true, approvedEntity: approvedEntity };
+    }
+    if (addResult && addResult.isDuplicate && addResult.duplicateInfo) {
+        var dup = addResult.duplicateInfo;
+        if (normalizeCompanyNameForMatch_(dup.companyName) === normalizeCompanyNameForMatch_(request.companyName)) {
+            return {
+                success: true,
+                alreadyExists: true,
+                approvedEntity: dup,
+                message: addResult.message
+            };
+        }
+    }
+    return {
+        success: false,
+        message: (addResult && addResult.message) ? addResult.message : 'فشل إنشاء سجل المعتمد'
+    };
+}
+
+/**
+ * مزامنة الطلبات المعتمدة التي لا يوجد لها سجل في ApprovedContractors
+ */
+function reconcileMissingApprovedContractorsFromRequests(options, userData) {
+    try {
+        options = options || {};
+        if (!checkAdminPermissions(userData)) {
+            return { success: false, message: 'ليس لديك صلاحية لتنفيذ المزامنة' };
+        }
+        var spreadsheetId = resolveContractorSpreadsheetId_(options, null);
+        invalidateHseSheetCaches('ContractorApprovalRequests');
+        invalidateHseSheetCaches('ApprovedContractors');
+        var requests = readFromSheet('ContractorApprovalRequests', spreadsheetId);
+        var approved = readFromSheet('ApprovedContractors', spreadsheetId);
+        var singleId = options.requestId || options.id || '';
+        var created = [];
+        var skipped = [];
+        var errors = [];
+        (requests || []).forEach(function(request) {
+            if (!request) return;
+            if (singleId && String(request.id) !== String(singleId)) return;
+            var st = normalizeContractorRequestStatus_(request.status);
+            if (st !== 'approved') return;
+            var rt = String(request.requestType || '').trim();
+            if (rt !== 'contractor' && rt !== 'supplier') return;
+            if (findApprovedContractorForRequest_(request, approved)) {
+                skipped.push(request.id);
+                return;
+            }
+            var result = materializeApprovedContractorFromRequest_(request, spreadsheetId, userData);
+            if (result.success && result.approvedEntity) {
+                created.push({
+                    requestId: request.id,
+                    approvedId: result.approvedEntity.id,
+                    companyName: result.approvedEntity.companyName,
+                    code: result.approvedEntity.code || result.approvedEntity.isoCode,
+                    alreadyExists: !!result.alreadyExists
+                });
+                if (!result.alreadyExists) {
+                    approved.push(result.approvedEntity);
+                }
+            } else {
+                errors.push({ requestId: request.id, message: result.message || 'فشل' });
+            }
+        });
+        return {
+            success: true,
+            created: created,
+            skipped: skipped,
+            errors: errors,
+            createdCount: created.filter(function(c) { return !c.alreadyExists; }).length,
+            message: 'تمت المزامنة: ' + created.length + ' معالجة، ' + errors.length + ' أخطاء'
+        };
+    } catch (error) {
+        Logger.log('reconcileMissingApprovedContractorsFromRequests error: ' + error.toString());
+        return { success: false, message: 'خطأ أثناء المزامنة: ' + error.toString() };
+    }
+}
+
+/**
  * اعتماد طلب اعتماد مقاول
  */
 
@@ -991,34 +1158,24 @@ function approveContractorApprovalRequest(requestId, userData) {
         
         // إضافة المقاول/المورد إلى قائمة المعتمدين
         if (request.requestType === 'contractor' || request.requestType === 'supplier') {
-            // ✅ توليد كود CON-xxx موحد
-            const contractorCode = generateContractorCode(spreadsheetId, { skipLock: true });
-            
-            approvedEntity = {
-                id: generateSequentialId('ACN', 'ApprovedContractors', spreadsheetId),
-                code: contractorCode,          // ✅ إضافة كود CON-xxx
-                isoCode: contractorCode,       // ✅ إضافة isoCode أيضاً للتوافق
-                companyName: request.companyName,
-                entityType: request.requestType === 'contractor' ? 'contractor' : 'supplier',
-                serviceType: request.serviceType,
-                licenseNumber: request.licenseNumber || '',
-                contactPerson: request.contactPerson || '',  // ✅ إضافة شخص الاتصال
-                phone: request.phone || '',                   // ✅ إضافة الهاتف
-                email: request.email || '',                   // ✅ إضافة البريد
-                approvalDate: new Date(),
-                expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // سنة من الآن
-                status: 'approved',
-                notes: request.notes || '',
-                createdAt: new Date(),
-                updatedAt: new Date()
-            };
+            approvedEntity = buildApprovedEntityFromApprovalRequest_(request, spreadsheetId);
+            var contractorCode = approvedEntity.code;
             
             Logger.log('✅ Approving contractor with code: ' + contractorCode);
             Logger.log('📝 Adding approved contractor to ApprovedContractors sheet (separate from ContractorApprovalRequests)');
             
-            const addResult = addApprovedContractorToSheet(approvedEntity);
+            var addResult = addApprovedContractorToSheet(approvedEntity);
             
-            // التكرار هنا ليس خطأ تشغيلياً: نكمل اعتماد الطلب بدون إنشاء سجل جديد
+            // تكرار بشركة مختلفة (مثلاً رقم ترخيص مشترك) — إعادة محاولة بعد تصحيح فحص التكرار
+            if (addResult && addResult.isDuplicate && addResult.duplicateInfo) {
+                var dupName = addResult.duplicateInfo.companyName;
+                if (normalizeCompanyNameForMatch_(dupName) !== normalizeCompanyNameForMatch_(request.companyName)) {
+                    Logger.log('⚠️ Duplicate license with different company — retrying add for: ' + request.companyName);
+                    addResult = addApprovedContractorToSheet(approvedEntity);
+                }
+            }
+            
+            // التكرار الحقيقي (نفس الشركة): نكمل اعتماد الطلب ونربط بالسجل الموجود
             if (addResult && addResult.isDuplicate) {
                 Logger.log('⚠️ Duplicate contractor detected during approval; request will be approved without creating a new approved-contractor record');
                 approvedEntity.id = (addResult.duplicateInfo && addResult.duplicateInfo.id) || approvedEntity.id;
