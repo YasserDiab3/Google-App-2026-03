@@ -17,8 +17,146 @@ const Help = {
             { id: 'modules', label: 'دليل الموديولات', icon: 'fa-th-large' },
             { id: 'reports', label: 'التقارير والتحليل', icon: 'fa-chart-line' },
             { id: 'technical', label: 'الدعم التقني', icon: 'fa-wrench' },
-            { id: 'faq', label: 'أسئلة شائعة', icon: 'fa-circle-question' }
+            { id: 'faq', label: 'أسئلة وأجوبة (Q&A)', icon: 'fa-comments' }
         ];
+    },
+
+    /** أسئلة وأجوبة منظمة — تُعرض في فئة Q&A وفي لوحة الأسئلة السريعة */
+    getQaItems() {
+        return [
+            {
+                id: 'faq-no-module',
+                question: 'لماذا لا أرى موديولاً في القائمة الجانبية؟',
+                answer: 'الصلاحيات تُمنح من مدير النظام فقط. إذا لم يُفعّل لك الموديول لن يظهر في القائمة. تواصل مع المدير واذكر اسم الموديول المطلوب، ثم أعد تحميل الصفحة بعد المنح.',
+                keywords: 'صلاحية موديول قائمة إخفاء'
+            },
+            {
+                id: 'faq-slow',
+                question: 'النظام بطيء أو البيانات لا تظهر',
+                answer: 'تحقق من الاتصال بالإنترنت أولاً. بعض الموديولات (مثل العيادة وسجل التردد) تحتاج وقتاً للمزامنة — انتظر حتى يكتمل التحميل دون إغلاق الصفحة. جرّب تحديث الصفحة (F5) أو متصفح Chrome محدّث.',
+                keywords: 'بطء تحميل مزامنة'
+            },
+            {
+                id: 'faq-mfa-fail',
+                question: 'رمز المصادقة الثنائية (MFA) غير صحيح',
+                answer: 'تأكد أن وقت جهازك مضبوط تلقائياً. استخدم أحدث رمز من تطبيق المصادقة (يتغير كل 30 ثانية). التفعيل والدخول بـ MFA يتطلبان اتصالاً بالإنترنت. إن استمرت المشكلة اطلب من المدير إعادة ضبط MFA من إدارة المستخدمين.',
+                moduleId: 'profile',
+                keywords: 'MFA TOTP رمز مصادقة'
+            },
+            {
+                id: 'faq-password',
+                question: 'نسيت كلمة المرور — ماذا أفعل؟',
+                answer: 'من شاشة تسجيل الدخول اضغط «نسيت كلمة المرور؟»، أدخل بريدك المسجّل في النظام، ثم اتبع الرابط في البريد لإعادة التعيين. تحقق من مجلد الرسائل غير المرغوبة إن لم يصل البريد.',
+                keywords: 'كلمة مرور استرجاع'
+            },
+            {
+                id: 'faq-export',
+                question: 'فشل التصدير إلى Excel أو PDF',
+                answer: 'انتظر حتى تكتمل تحميل البيانات في الشاشة. قلّص نطاق التاريخ أو الفلاتر. اسمح بالنوافذ المنبثقة في المتصفح. يُفضّل Chrome للتصدير. أعد المحاولة بعد المزامنة.',
+                keywords: 'تصدير excel pdf'
+            },
+            {
+                id: 'faq-update',
+                question: 'كيف أحدّث التطبيق لآخر إصدار؟',
+                answer: 'عند ظهور إشعار التحديث اضغط «تحديث». أو نفّذ إعادة تحميل كاملة (Ctrl+F5). رقم الإصدار الحالي يظهر أسفل القائمة الجانبية وفي أعلى صفحة المساعدة.',
+                keywords: 'تحديث إصدار'
+            },
+            {
+                id: 'faq-help-module',
+                question: 'أين أجد شرحاً كاملاً لكل النظام؟',
+                answer: 'أنت في المكان الصحيح — موديول «المساعدة» فوق «الإعدادات» في القائمة. يتضمن دليل كل الموديولات، قسم أسئلة وأجوبة، وبحثاً سريعاً. متاح لكل مستخدم مسجّل دخول.',
+                moduleId: 'help',
+                keywords: 'دليل مساعدة شرح'
+            },
+            {
+                id: 'faq-clinic-meds',
+                question: 'كيف أرى أكثر الأدوية استهلاكاً في العيادة؟',
+                answer: 'افتح موديول العيادة الطبية → تبويب «تحليل البيانات» → قسم «تحليل الأدوية المستخدمة والمنصرفة». ستجد رسوماً وجدولاً لأعلى الأدوية مع فلترة بالفترة.',
+                moduleId: 'clinic',
+                keywords: 'عيادة أدوية استهلاك تحليل'
+            },
+            {
+                id: 'faq-ptw-approve',
+                question: 'كيف أصدر تصريح عمل (PTW) وأحصل على الموافقات؟',
+                answer: 'من موديول تصاريح العمل أنشئ تصريحاً جديداً، أكمل بيانات العمل والمخاطر وموقع العمل، ثم أرسله لسلسلة الموافقات. لا تبدأ العمل الميداني قبل اكتمال التوقيعات وصلاحية التصريح.',
+                moduleId: 'ptw',
+                keywords: 'تصريح عمل PTW موافقة'
+            },
+            {
+                id: 'faq-employees-add',
+                question: 'كيف أضيف موظفاً جديداً لقاعدة البيانات؟',
+                answer: 'افتح «قاعدة بيانات الموظفين» (يتطلب صلاحية). اضغط إضافة موظف، أدخل البيانات الأساسية (الاسم، القسم، البريد...) واحفظ. يُستخدم السجل في العيادة والتدريب والحوادث.',
+                moduleId: 'employees',
+                keywords: 'موظف إضافة قاعدة'
+            },
+            {
+                id: 'faq-read-only',
+                question: 'دور «قراءة فقط» — ماذا يعني؟',
+                answer: 'يمكنك عرض البيانات في الموديولات الممنوحة لك دون إضافة أو تعديل أو حذف. إن احتجت صلاحية كتابة اطلب من مدير النظام تعديل دورك أو صلاحياتك.',
+                keywords: 'قراءة فقط صلاحية'
+            },
+            {
+                id: 'faq-detailed-perm',
+                question: 'ما الفرق بين صلاحية الموديول والصلاحية التفصيلية؟',
+                answer: 'صلاحية الموديول تتيح الدخول إليه. الصلاحية التفصيلية تحدد ما داخله (مثل: عرض سجل التردد دون تحليل البيانات في العيادة). المدير يضبطها من إدارة المستخدمين لكل شخص.',
+                moduleId: 'users',
+                keywords: 'صلاحية تفصيلية تبويب'
+            },
+            {
+                id: 'faq-sync-fail',
+                question: 'فشلت المزامنة أو ظهرت رسالة خطأ من الخادم',
+                answer: 'تحقق من الاتصال. انتظر دقيقة وأعد المحاولة. لا تكرر الحفظ بسرعة لتجنب التكرار. إن استمر الخطأ سجّل نص الرسالة وتواصل مع مدير النظام أو استخدم «تتبع المشاكل» إن وُجدت صلاحية.',
+                keywords: 'مزامنة خطأ خادم'
+            },
+            {
+                id: 'faq-incident-report',
+                question: 'متى أسجّل حادثاً ومتى حادثاً وشيكاً؟',
+                answer: 'الحادث الوشيك (Near Miss): حدث كاد يحدث ولم يُصبَ أحد. الحادث (Incident): وقع فعلاً (إصابة، ضرر، خسارة). سجّل الوشيك فور الملاحظة والحادث فور وقوعه مع أقصى تفاصيل ممكنة.',
+                moduleId: 'incidents',
+                keywords: 'حادث وشيك near miss'
+            },
+            {
+                id: 'faq-training-cert',
+                question: 'كيف أتابع تدريبات الموظفين وانتهاء الشهادات؟',
+                answer: 'من موديول التدريب: أنشئ الدورات، سجّل الحضور، وراجع التقارير والتنبيهات. اربط المتدربين بسجلات الموظفين في قاعدة البيانات لدقة التقارير.',
+                moduleId: 'training',
+                keywords: 'تدريب شهادة'
+            },
+            {
+                id: 'faq-fire-inspection',
+                question: 'كيف أتابع فحص طفايات الحريق وتواريخ انتهائها؟',
+                answer: 'في موديول معدات الإطفاء سجّل كل معدة وتاريخ الفحص والانتهاء. فعّل المتابعة الدورية وراجع التنبيهات قبل انتهاء الصلاحية.',
+                moduleId: 'fire-equipment',
+                keywords: 'طفاية إطفاء فحص'
+            },
+            {
+                id: 'faq-change-password',
+                question: 'كيف أغيّر كلمة المرور بعد الدخول؟',
+                answer: 'افتح «ملفي الشخصي» من القائمة → قسم كلمة المرور → أدخل الحالية والجديدة واحفظ. يُفضّل كلمة مرور قوية وفريدة.',
+                moduleId: 'profile',
+                keywords: 'تغيير كلمة مرور'
+            },
+            {
+                id: 'faq-contact',
+                question: 'من أتصل به عند مشكلة لا أجد لها جواباً هنا؟',
+                answer: 'مدير النظام هو جهة الاتصال الأولى للصلاحيات والمشاكل التقنية. صف المشكلة وخطوات إعادة إنتاجها وأرفق لقطة شاشة. يمكن استخدام «تتبع المشاكل» إن مُنحت الصلاحية.',
+                keywords: 'دعم تواصل مدير'
+            }
+        ];
+    },
+
+    buildFaqTopics() {
+        return this.getQaItems().map(q => ({
+            id: q.id,
+            categoryId: 'faq',
+            moduleId: q.moduleId || null,
+            isFaq: true,
+            title: q.question,
+            answer: q.answer,
+            features: q.bullets || [],
+            icon: 'fa-comments',
+            keywords: [q.keywords, q.question, q.answer].filter(Boolean).join(' ')
+        }));
     },
 
     getModuleHelpDetails() {
@@ -416,62 +554,6 @@ const Help = {
                 features: ['بريد المدير', 'وصف المشكلة', 'لقطة شاشة'],
                 workflow: ['صف المشكلة بوضوح', 'أرفق الخطوات', 'انتظر الرد'],
                 tips: ['استخدم تتبع المشاكل إن وُجدت صلاحية']
-            },
-            {
-                id: 'faq-no-module', categoryId: 'faq', moduleId: null, isFaq: true,
-                title: 'لماذا لا أرى موديولاً في القائمة؟', icon: 'fa-question',
-                summary: '', purpose: '',
-                features: ['الصلاحية لم تُمنح لك بعد', 'تواصل مع مدير النظام', 'أعد تحميل الصفحة بعد المنح'],
-                workflow: [], tips: []
-            },
-            {
-                id: 'faq-slow', categoryId: 'faq', moduleId: null, isFaq: true,
-                title: 'النظام بطيء أو البيانات لا تظهر', icon: 'fa-question',
-                summary: '', purpose: '',
-                features: ['تحقق من الاتصال', 'انتظر المزامنة (بعض الموديولات ثقيلة)', 'حدّث الصفحة', 'جرب متصفحاً محدّثاً'],
-                workflow: [], tips: []
-            },
-            {
-                id: 'faq-mfa-fail', categoryId: 'faq', moduleId: null, isFaq: true,
-                title: 'رمز MFA غير صحيح', icon: 'fa-question',
-                summary: '', purpose: '',
-                features: ['تأكد من وقت الجهاز', 'استخدم أحدث رمز', 'أعد مسح QR إن لزم من المدير', 'يتطلب اتصالاً'],
-                workflow: [], tips: []
-            },
-            {
-                id: 'faq-password', categoryId: 'faq', moduleId: null, isFaq: true,
-                title: 'نسيت كلمة المرور', icon: 'fa-question',
-                summary: '', purpose: '',
-                features: ['من شاشة الدخول: نسيت كلمة المرور', 'أدخل بريدك المسجّل', 'تحقق من البريد'],
-                workflow: [], tips: []
-            },
-            {
-                id: 'faq-export', categoryId: 'faq', moduleId: null, isFaq: true,
-                title: 'فشل التصدير Excel أو PDF', icon: 'fa-question',
-                summary: '', purpose: '',
-                features: ['انتظر اكتمال تحميل البيانات', 'قلّص نطاق التاريخ', 'اسمح بالنوافذ المنبثقة', 'جرّب متصفح Chrome'],
-                workflow: [], tips: []
-            },
-            {
-                id: 'faq-update', categoryId: 'faq', moduleId: null, isFaq: true,
-                title: 'كيف أحدّث التطبيق؟', icon: 'fa-question',
-                summary: '', purpose: '',
-                features: ['اضغط «تحديث» في إشعار الإصدار', 'أو Ctrl+F5 لإعادة تحميل كاملة', 'تحقق من رقم الإصدار أسفل القائمة'],
-                workflow: [], tips: []
-            },
-            {
-                id: 'faq-help-module', categoryId: 'faq', moduleId: 'help', isFaq: true,
-                title: 'أين أجد شرحاً كاملاً للنظام؟', icon: 'fa-question',
-                summary: '', purpose: '',
-                features: ['أنت هنا — موديول المساعدة', 'فوق الإعدادات في القائمة', 'متاح لكل مستخدم مسجّل', 'استخدم البحث للوصول السريع'],
-                workflow: [], tips: []
-            },
-            {
-                id: 'faq-clinic-meds', categoryId: 'faq', moduleId: 'clinic', isFaq: true,
-                title: 'كيف أرى أكثر الأدوية استهلاكاً؟', icon: 'fa-question',
-                summary: '', purpose: '',
-                features: ['العيادة → تبويب تحليل البيانات', 'قسم تحليل الأدوية المنصرفة', 'جدول ورسوم بيانية', 'فلترة بالفترة'],
-                workflow: [], tips: []
             }
         ];
     },
@@ -531,7 +613,11 @@ const Help = {
 
     getAllTopics() {
         if (!this._allTopicsCache) {
-            this._allTopicsCache = [...this.getStaticTopics(), ...this.buildModuleTopics()];
+            this._allTopicsCache = [
+                ...this.getStaticTopics(),
+                ...this.buildFaqTopics(),
+                ...this.buildModuleTopics()
+            ];
         }
         return this._allTopicsCache;
     },
@@ -551,7 +637,7 @@ const Help = {
     topicMatchesSearch(topic, q) {
         if (!q) return true;
         const blob = [
-            topic.title, topic.summary, topic.purpose,
+            topic.title, topic.summary, topic.purpose, topic.answer || '',
             (topic.features || []).join(' '),
             (topic.workflow || []).join(' '),
             (topic.tips || []).join(' '),
@@ -615,7 +701,71 @@ const Help = {
                 </div>
 
                 <div id="help-results-meta" style="font-size:0.8rem;color:#64748b;margin-bottom:10px;padding:0 4px;"></div>
+                <div id="help-qa-panel" style="margin-bottom:16px;"></div>
                 <div id="help-topics-list"></div>
+            </div>`;
+    },
+
+    getFilteredQaItems() {
+        const q = this.normalizeSearch(this.state.searchQuery);
+        return this.getQaItems().filter(item => {
+            if (!q) return true;
+            const blob = [item.question, item.answer, item.keywords || ''].join(' ').toLowerCase();
+            return blob.includes(q);
+        });
+    },
+
+    renderQaPanel(section) {
+        const panel = section.querySelector('#help-qa-panel');
+        if (!panel) return;
+
+        const cat = this.state.activeCategory;
+        const hasSearch = !!this.normalizeSearch(this.state.searchQuery);
+        const items = this.getFilteredQaItems();
+
+        if (cat !== 'all' && cat !== 'faq') {
+            panel.style.display = 'none';
+            panel.innerHTML = '';
+            return;
+        }
+
+        if (hasSearch && !items.length) {
+            panel.style.display = 'none';
+            panel.innerHTML = '';
+            return;
+        }
+
+        const headerOnly = cat === 'faq' && !hasSearch;
+        const preview = headerOnly ? [] : (cat === 'all' && !hasSearch ? items.slice(0, 5) : items.slice(0, hasSearch ? 8 : items.length));
+        const total = items.length;
+
+        panel.style.display = 'block';
+        panel.innerHTML = `
+            <div class="content-card" style="padding:0;overflow:hidden;border:1px solid #a7f3d0;">
+                <div style="padding:16px 20px;background:linear-gradient(90deg,#ecfdf5,#f0fdfa);border-bottom:1px solid #ccfbf1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;">
+                    <div>
+                        <h2 style="margin:0;font-size:1.05rem;font-weight:800;color:#0f766e;display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-comments"></i> أسئلة وأجوبة (Q&amp;A)
+                        </h2>
+                        <p style="margin:4px 0 0;font-size:0.82rem;color:#64748b;">${headerOnly ? `${total} سؤالاً — وسّع أي سؤال أدناه للإجابة الكاملة` : (hasSearch ? `${preview.length} نتيجة Q&A` : 'إجابات سريعة — اضغط السؤال للتفاصيل')}</p>
+                    </div>
+                    ${cat === 'all' && !hasSearch ? `<button type="button" id="help-show-all-qa" style="padding:8px 16px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:0.8rem;font-weight:600;cursor:pointer;">
+                        <i class="fas fa-list" style="margin-left:6px;"></i> عرض كل الأسئلة (${total})
+                    </button>` : ''}
+                </div>
+                ${preview.length ? `<div style="padding:12px 16px 16px;">
+                    ${preview.map(item => `
+                        <button type="button" class="help-qa-quick-item" data-qa-id="${Utils.escapeHTML(item.id)}"
+                            style="width:100%;text-align:right;padding:12px 14px;margin-bottom:8px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;cursor:pointer;display:flex;gap:12px;align-items:flex-start;">
+                            <span style="flex-shrink:0;width:28px;height:28px;background:#0d9488;color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;">س</span>
+                            <span style="flex:1;min-width:0;">
+                                <span style="display:block;font-weight:700;font-size:0.88rem;color:#134e4a;margin-bottom:4px;">${Utils.escapeHTML(item.question)}</span>
+                                <span style="display:block;font-size:0.82rem;color:#64748b;line-height:1.55;">${Utils.escapeHTML(item.answer.length > 120 && cat === 'all' ? item.answer.slice(0, 117) + '…' : item.answer)}</span>
+                            </span>
+                            <i class="fas fa-chevron-left" style="color:#94a3b8;flex-shrink:0;margin-top:4px;font-size:0.75rem;"></i>
+                        </button>
+                    `).join('')}
+                </div>` : ''}
             </div>`;
     },
 
@@ -640,7 +790,15 @@ const Help = {
 
         let body = '';
         if (isFaq) {
-            body = renderList('الإجابة', topic.features, 'fa-check');
+            if (topic.answer) {
+                body += `<div style="display:flex;gap:10px;align-items:flex-start;margin-top:4px;">
+                    <span style="flex-shrink:0;width:26px;height:26px;background:#059669;color:#fff;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;">ج</span>
+                    <p style="margin:0;color:#334155;font-size:0.88rem;line-height:1.75;flex:1;">${Utils.escapeHTML(topic.answer)}</p>
+                </div>`;
+            }
+            if (topic.features && topic.features.length) {
+                body += renderList('تفاصيل إضافية', topic.features, 'fa-list-ul');
+            }
         } else {
             if (topic.summary) {
                 body += `<p style="margin:0 0 8px;color:#64748b;font-size:0.86rem;">${Utils.escapeHTML(topic.summary)}</p>`;
@@ -676,9 +834,11 @@ const Help = {
                     style="width:100%;text-align:right;padding:14px 18px;background:${isOpen ? '#f0fdfa' : '#fff'};border:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;">
                     <span style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
                         <span style="width:36px;height:36px;background:#ecfdf5;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <i class="fas ${topic.icon || 'fa-book'}" style="color:#0d9488;"></i>
+                            ${isFaq
+                                ? '<span style="font-size:0.75rem;font-weight:800;color:#0d9488;">س</span>'
+                                : `<i class="fas ${topic.icon || 'fa-book'}" style="color:#0d9488;"></i>`}
                         </span>
-                        <span style="font-weight:700;font-size:0.9rem;color:#134e4a;">${Utils.escapeHTML(topic.title)}</span>
+                        <span style="font-weight:700;font-size:0.9rem;color:#134e4a;">${Utils.escapeHTML(isFaq ? topic.title : topic.title)}</span>
                     </span>
                     <i class="fas fa-chevron-${isOpen ? 'up' : 'down'}" style="color:#94a3b8;flex-shrink:0;"></i>
                 </button>
@@ -691,11 +851,28 @@ const Help = {
         const metaEl = section.querySelector('#help-results-meta');
         if (!listEl) return;
 
+        this.renderQaPanel(section);
+
         const topics = this.getFilteredTopics();
+        const cat = this.state.activeCategory;
+        const faqOnly = cat === 'faq';
+        const hideList = cat === 'all' && !this.normalizeSearch(this.state.searchQuery);
+
         if (metaEl) {
-            metaEl.textContent = topics.length
-                ? `عرض ${topics.length} موضوعاً`
-                : 'لا توجد نتائج — جرّب كلمات أخرى أو اختر فئة «الكل»';
+            if (hideList) {
+                metaEl.textContent = 'استخدم «عرض كل الأسئلة» أو اختر فئة أخرى من الأعلى';
+            } else if (faqOnly) {
+                metaEl.textContent = topics.length ? `${topics.length} سؤالاً في Q&A` : 'لا توجد نتائج';
+            } else {
+                metaEl.textContent = topics.length
+                    ? `عرض ${topics.length} موضوعاً`
+                    : 'لا توجد نتائج — جرّب كلمات أخرى أو اختر فئة «الكل»';
+            }
+        }
+
+        if (hideList) {
+            listEl.innerHTML = '';
+            return;
         }
 
         if (!topics.length) {
@@ -730,11 +907,33 @@ const Help = {
             const btn = e.target.closest('.help-cat-btn');
             if (!btn) return;
             this.state.activeCategory = btn.getAttribute('data-cat') || 'all';
+            this.state.expandedId = null;
             this.updateCategoryButtons(section);
             this.renderTopics(section);
         });
 
         section.addEventListener('click', (e) => {
+            const showAllQa = e.target.closest('#help-show-all-qa');
+            if (showAllQa) {
+                this.state.activeCategory = 'faq';
+                this.state.expandedId = null;
+                this.updateCategoryButtons(section);
+                this.renderTopics(section);
+                section.querySelector('#help-qa-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                return;
+            }
+            const qaQuick = e.target.closest('.help-qa-quick-item');
+            if (qaQuick) {
+                const qaId = qaQuick.getAttribute('data-qa-id');
+                this.state.activeCategory = 'faq';
+                this.state.expandedId = qaId;
+                this.updateCategoryButtons(section);
+                this.renderTopics(section);
+                setTimeout(() => {
+                    section.querySelector(`[data-topic-id="${qaId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 50);
+                return;
+            }
             const toggle = e.target.closest('.help-topic-toggle');
             if (toggle) {
                 const id = toggle.getAttribute('data-topic-id');
@@ -760,6 +959,7 @@ const Help = {
         this.state.activeCategory = 'all';
         this.state.searchQuery = '';
         this.state.expandedId = null;
+        this._allTopicsCache = null;
         section.innerHTML = this.renderShell();
         this.bindEvents(section);
         this.renderTopics(section);
