@@ -816,7 +816,7 @@ const Help = {
                     </div>
                     <ul style="margin:0;padding:0;list-style:none;">
                         ${items.map((li, idx) => `
-                            <li style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;line-height:1.8;font-size:13px;color:#334155;">
+                            <li class="policy-pdf-list-item" style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;line-height:1.8;font-size:13px;color:#334155;page-break-inside:avoid;break-inside:avoid;">
                                 <span style="flex-shrink:0;width:22px;height:22px;border-radius:6px;background:${color}18;color:${color};font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;">${idx + 1}</span>
                                 <span style="flex:1;">${esc(li)}</span>
                             </li>
@@ -830,7 +830,7 @@ const Help = {
             const accent = accents[i % accents.length];
             const num = i + 1;
             return `
-            <div class="policy-pdf-section" style="margin-bottom:22px;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 8px 24px rgba(15,23,42,0.06);page-break-inside:avoid;">
+            <div class="policy-pdf-section policy-pdf-block" style="margin-bottom:24px;border-radius:16px;border:1px solid #e2e8f0;box-shadow:0 8px 24px rgba(15,23,42,0.06);page-break-inside:avoid;break-inside:avoid;">
                 <div style="background:linear-gradient(135deg,${accent},${accent}dd);padding:14px 18px;display:flex;align-items:center;gap:12px;">
                     <span style="width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,0.22);color:#fff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${num}</span>
                     <h2 style="margin:0;color:#fff;font-size:16px;font-weight:800;line-height:1.45;">${esc(t.title)}</h2>
@@ -851,7 +851,7 @@ const Help = {
             ? Utils.escapeHTML(String(v ?? ''))
             : String(v ?? '');
         return `
-            <div style="margin-bottom:26px;padding:22px 24px;border-radius:18px;background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 45%,#ffffff 100%);border:2px solid #fbbf24;box-shadow:0 10px 28px rgba(245,158,11,0.12);">
+            <div class="policy-pdf-intro policy-pdf-block" style="margin-bottom:26px;padding:22px 24px;border-radius:18px;background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 45%,#ffffff 100%);border:2px solid #fbbf24;box-shadow:0 10px 28px rgba(245,158,11,0.12);page-break-inside:avoid;break-inside:avoid;">
                 <div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:14px;">
                     <div style="flex:1;min-width:240px;">
                         <div style="font-size:11px;font-weight:800;color:#b45309;letter-spacing:0.5px;margin-bottom:6px;">${esc(this.ui('pdfDocType'))}</div>
@@ -874,7 +874,7 @@ const Help = {
             : String(v ?? '');
         const dir = this.isRtl_() ? 'rtl' : 'ltr';
         return `
-        <div class="ia-export-legend" dir="${dir}" style="margin-top:8px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;page-break-inside:avoid;">
+        <div class="ia-export-legend policy-pdf-block" dir="${dir}" style="margin-top:8px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;page-break-inside:avoid;break-inside:avoid;">
             <div style="font-weight:700;font-size:11px;color:#475569;margin-bottom:8px;">${esc(this.ui('pdfFooterSummary'))}</div>
             <div style="display:flex;flex-wrap:wrap;gap:8px 16px;font-size:11px;line-height:1.55;color:#334155;">
                 <div><strong style="color:#64748b;">${esc(this.ui('pdfFooterType'))}</strong> ${esc(this.ui('pdfFooterTypeVal'))}</div>
@@ -955,8 +955,22 @@ ${fontLink}
         letter-spacing: 0 !important;
         word-spacing: normal !important;
     }
-    .policy-pdf-section { page-break-inside: avoid; break-inside: avoid; }
-    .report-body { line-height: 1.75; }
+    .policy-pdf-block,
+    .policy-pdf-intro,
+    .policy-pdf-section,
+    .ia-export-legend,
+    .pdf-footer-legend-wrap {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+    .policy-pdf-section + .policy-pdf-section {
+        page-break-before: auto;
+    }
+    .policy-pdf-section .policy-pdf-list-item {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+    .report-body { line-height: 1.75; padding-bottom: 8px; }
     .footer-bottom-qr, #qrcode, .footer-bottom-qr canvas { display: none !important; }
 </style>`;
         const cleaned = String(htmlContent || '').replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
@@ -977,6 +991,127 @@ ${fontLink}
             ]);
             await doc.fonts.ready;
         } catch (_e) { /* ignore */ }
+    },
+
+    _collectPolicyPdfBlocks_(iDoc) {
+        if (!iDoc) return [];
+        const blocks = [];
+        const seen = new Set();
+        const push = (el) => {
+            if (!el || seen.has(el)) return;
+            seen.add(el);
+            blocks.push(el);
+        };
+
+        push(iDoc.querySelector('.report-header'));
+
+        const body = iDoc.querySelector('.report-body') || iDoc.body;
+        push(body.querySelector('.policy-pdf-intro'));
+        body.querySelectorAll('.policy-pdf-section').forEach((section) => push(section));
+
+        const legendWrap = iDoc.querySelector('.pdf-footer-legend-wrap');
+        if (legendWrap) {
+            push(legendWrap);
+        } else {
+            push(iDoc.querySelector('.ia-export-legend'));
+        }
+
+        push(iDoc.querySelector('.report-footer'));
+
+        if (blocks.length) return blocks;
+
+        push(iDoc.querySelector('.report-wrapper') || iDoc.body);
+        return blocks;
+    },
+
+    async _captureElementToCanvas_(element, scale = 2.2) {
+        if (!element || typeof html2canvas === 'undefined') return null;
+        const width = Math.max(element.scrollWidth || 0, element.offsetWidth || 0, 860);
+        const height = Math.max(element.scrollHeight || 0, element.offsetHeight || 0, 1);
+        const baseOpts = {
+            scale,
+            backgroundColor: '#ffffff',
+            logging: false,
+            width,
+            height,
+            windowWidth: width,
+            windowHeight: height,
+            scrollX: 0,
+            scrollY: 0
+        };
+        const attempts = [
+            { ...baseOpts, useCORS: true, allowTaint: false },
+            { ...baseOpts, useCORS: true, allowTaint: true },
+            { ...baseOpts, useCORS: false, allowTaint: true }
+        ];
+        for (let i = 0; i < attempts.length; i++) {
+            try {
+                const canvas = await html2canvas(element, attempts[i]);
+                if (canvas?.width > 0 && canvas?.height > 0) return canvas;
+            } catch (_e) { /* retry */ }
+        }
+        return null;
+    },
+
+    _appendCanvasBlockToPdf_(pdf, canvas, layout, options = {}) {
+        if (!pdf || !canvas || !Utils?.PdfExport) return;
+        const PE = Utils.PdfExport;
+        const marginMm = options.marginMm ?? 8;
+        const gapMm = options.gapMm ?? 5;
+        const pdfW = pdf.internal.pageSize.getWidth();
+        const pdfH = pdf.internal.pageSize.getHeight();
+        const contentWmm = pdfW - marginMm * 2;
+        const contentHmm = pdfH - marginMm * 2;
+        const blockHmm = (canvas.height / canvas.width) * contentWmm;
+        const bytesBudget = options.maxBytes || Math.floor(PE.TARGET_MAX_BYTES / 6);
+
+        const remainingMm = () => (marginMm + contentHmm) - layout.yMm;
+
+        const ensureFits = (neededHmm) => {
+            if (!layout.started) {
+                layout.started = true;
+                return;
+            }
+            if (neededHmm + gapMm > remainingMm()) {
+                pdf.addPage();
+                layout.yMm = marginMm;
+            }
+        };
+
+        if (blockHmm <= contentHmm) {
+            ensureFits(blockHmm);
+            PE.addCanvasToPdf(pdf, canvas, marginMm, layout.yMm, contentWmm, blockHmm, { maxBytes: bytesBudget });
+            layout.yMm += blockHmm + gapMm;
+            return;
+        }
+
+        // قسم أطول من صفحة — صفحة جديدة ثم تقسيم داخلي فقط لنفس القسم
+        if (layout.started && layout.yMm > marginMm + 1) {
+            pdf.addPage();
+            layout.yMm = marginMm;
+        }
+        layout.started = true;
+
+        const pxPerMm = canvas.width / contentWmm;
+        const pageHeightPx = Math.max(1, Math.floor(contentHmm * pxPerMm));
+        let yPx = 0;
+        while (yPx < canvas.height) {
+            const sliceH = Math.min(pageHeightPx, canvas.height - yPx);
+            const sliceCanvas = PE.createSliceCanvas(canvas, yPx, sliceH);
+            const sliceHmm = (sliceCanvas.height / sliceCanvas.width) * contentWmm;
+            if (sliceHmm + 1 > remainingMm() && layout.yMm > marginMm + 1) {
+                pdf.addPage();
+                layout.yMm = marginMm;
+            }
+            PE.addCanvasToPdf(pdf, sliceCanvas, marginMm, layout.yMm, contentWmm, Math.min(sliceHmm, contentHmm), { maxBytes: bytesBudget });
+            layout.yMm += sliceHmm;
+            yPx += sliceH;
+            if (yPx < canvas.height) {
+                pdf.addPage();
+                layout.yMm = marginMm;
+            }
+        }
+        layout.yMm += gapMm;
     },
 
     async _capturePolicyHtmlToCanvas_(root) {
@@ -1035,13 +1170,27 @@ ${fontLink}
                 img.onerror = resolve;
                 setTimeout(resolve, 3000);
             })));
-            const root = iDoc.querySelector('.report-wrapper') || iDoc.body;
-            if (!root) return false;
-            const canvas = await this._capturePolicyHtmlToCanvas_(root);
-            if (!canvas) return false;
+            const blocks = this._collectPolicyPdfBlocks_(iDoc);
             const pdf = Utils.PdfExport.createPdf({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             if (!pdf) return false;
-            Utils.PdfExport.appendCanvasAsPdfPages(pdf, canvas, { marginMm: 8 });
+
+            const layout = { yMm: 8, started: false };
+            let rendered = 0;
+
+            for (const block of blocks) {
+                const canvas = await this._captureElementToCanvas_(block, 2.2);
+                if (!canvas) continue;
+                this._appendCanvasBlockToPdf_(pdf, canvas, layout, { marginMm: 8, gapMm: 6 });
+                rendered += 1;
+            }
+
+            if (!rendered) {
+                const root = iDoc.querySelector('.report-wrapper') || iDoc.body;
+                const fallbackCanvas = await this._capturePolicyHtmlToCanvas_(root);
+                if (!fallbackCanvas) return false;
+                Utils.PdfExport.appendCanvasAsPdfPages(pdf, fallbackCanvas, { marginMm: 8 });
+            }
+
             Utils.PdfExport.savePdf(pdf, pdfFileName);
             return true;
         } catch (error) {
