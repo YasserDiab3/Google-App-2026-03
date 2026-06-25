@@ -282,6 +282,26 @@ const Clinic = {
                 enabled: true,
                 mode: 'metric',
                 metric: 'lowStockMedications'
+            },
+            {
+                id: 'card_visits_with_meds',
+                title: 'زيارات بصرف دواء',
+                icon: 'fas fa-capsules',
+                color: 'teal',
+                description: 'عدد الزيارات التي تم فيها صرف دواء واحد على الأقل',
+                enabled: false,
+                mode: 'metric',
+                metric: 'visitsWithMedications'
+            },
+            {
+                id: 'card_unique_dispensed',
+                title: 'أدوية مختلفة منصرفة',
+                icon: 'fas fa-pills',
+                color: 'purple',
+                description: 'عدد أسماء الأدوية المختلفة المنصرفة عبر الزيارات',
+                enabled: false,
+                mode: 'metric',
+                metric: 'uniqueDispensedMedications'
             }
         ];
     },
@@ -293,6 +313,10 @@ const Clinic = {
             { id: 'visits_by_factory', label: 'زيارات حسب المصنع', enabled: false, dataset: 'visits', field: 'factoryName', chartType: 'bar' },
             { id: 'meds_by_status', label: 'الأدوية حسب الحالة', enabled: true, dataset: 'medications', field: 'status', chartType: 'doughnut' },
             { id: 'meds_by_type', label: 'الأدوية حسب النوع', enabled: false, dataset: 'medications', field: 'type', chartType: 'bar' },
+            { id: 'disp_top_meds', label: 'أكثر الأدوية صرفاً (مرات)', enabled: true, dataset: 'dispensedMedications', field: 'medicationName', chartType: 'bar' },
+            { id: 'disp_by_dept', label: 'صرف الأدوية حسب الإدارة', enabled: false, dataset: 'dispensedMedications', field: 'department', chartType: 'bar' },
+            { id: 'disp_by_ptype', label: 'صرف الأدوية حسب نوع الشخص', enabled: false, dataset: 'dispensedMedications', field: 'personType', chartType: 'doughnut' },
+            { id: 'disp_by_reason', label: 'صرف الأدوية حسب سبب الزيارة', enabled: false, dataset: 'dispensedMedications', field: 'visitReason', chartType: 'bar' },
             { id: 'injuries_by_type', label: 'الإصابات حسب النوع', enabled: false, dataset: 'injuries', field: 'injuryType', chartType: 'bar' },
             { id: 'sickleave_by_status', label: 'الإجازات المرضية حسب الحالة', enabled: false, dataset: 'sickLeave', field: 'status', chartType: 'doughnut' },
             { id: 'supply_by_status', label: 'طلبات الاحتياجات حسب الحالة', enabled: false, dataset: 'supplyRequests', field: 'status', chartType: 'doughnut' }
@@ -1044,6 +1068,14 @@ const Clinic = {
                 { value: 'type', label: 'نوع الطلب' },
                 { value: 'priority', label: 'الأولوية' },
                 { value: 'byMonth', label: 'حسب الشهر' }
+            ],
+            dispensedMedications: [
+                { value: 'medicationName', label: 'اسم الدواء' },
+                { value: 'department', label: 'الإدارة' },
+                { value: 'personType', label: 'نوع الشخص' },
+                { value: 'visitReason', label: 'سبب الزيارة' },
+                { value: 'unit', label: 'وحدة القياس' },
+                { value: 'byMonth', label: 'حسب الشهر' }
             ]
         };
     },
@@ -1061,9 +1093,193 @@ const Clinic = {
                 return Array.isArray(AppState.appData.injuries) ? AppState.appData.injuries : [];
             case 'supplyRequests':
                 return Array.isArray(AppState.appData.clinicSupplyRequests) ? AppState.appData.clinicSupplyRequests : [];
+            case 'dispensedMedications':
+                return this.getDispensedMedicationsDataset_(this.getClinicVisitsForAnalysis_());
             default:
                 return [];
         }
+    },
+
+    /** دمج زيارات العيادة لأغراض التحليل (بدون تكرار id) */
+    getClinicVisitsForAnalysis_() {
+        const clinicVisits = Array.isArray(AppState.appData.clinicVisits) ? AppState.appData.clinicVisits : [];
+        const employeeVisits = Array.isArray(AppState.appData.employeeVisits) ? AppState.appData.employeeVisits : [];
+        const contractorVisits = Array.isArray(AppState.appData.contractorVisits) ? AppState.appData.contractorVisits : [];
+        const allVisitIds = new Set();
+        const visits = [];
+        [...clinicVisits, ...employeeVisits, ...contractorVisits].forEach(v => {
+            if (!v) return;
+            const vid = String(v.id || '').trim();
+            if (vid && allVisitIds.has(vid)) return;
+            if (vid) allVisitIds.add(vid);
+            visits.push(v);
+        });
+        return visits;
+    },
+
+    /** استخراج أدوية الزيارة للتحليل (بدون تعديل السجل) */
+    getVisitMedicationsForAnalysis_(visit) {
+        if (!visit) return [];
+        let normalizedMeds = [];
+        if (visit.medications) {
+            normalizedMeds = this.normalizeVisitMedications(visit.medications);
+        }
+        if ((!normalizedMeds || normalizedMeds.length === 0) && visit.medicationsDispensed) {
+            const medsFromText = this.normalizeVisitMedications(visit.medicationsDispensed);
+            if (medsFromText && medsFromText.length > 0) normalizedMeds = medsFromText;
+        }
+        if ((!normalizedMeds || normalizedMeds.length === 0) && visit.medicationsDispensedQty && visit.medicationsDispensedQty > 0) {
+            const totalQty = parseInt(visit.medicationsDispensedQty, 10) || 0;
+            if (totalQty > 0) {
+                normalizedMeds = [{
+                    medicationName: visit.medicationsDispensed || 'دواء غير محدد',
+                    quantity: totalQty,
+                    unit: 'وحدة',
+                    notes: ''
+                }];
+            }
+        }
+        return Array.isArray(normalizedMeds) ? normalizedMeds : [];
+    },
+
+    buildMedicationInventoryLookup_() {
+        const meds = Array.isArray(AppState.appData.clinicMedications)
+            ? AppState.appData.clinicMedications
+            : (Array.isArray(AppState.appData.clinicInventory) ? AppState.appData.clinicInventory : []);
+        const lookup = {};
+        meds.forEach(m => {
+            const rec = this.normalizeMedicationRecord(m);
+            const key = String(rec.name || rec.medicationName || '').trim().toLowerCase();
+            if (key && !lookup[key]) lookup[key] = rec;
+        });
+        return lookup;
+    },
+
+    getDispensedMedicationsDataset_(visits) {
+        const rows = [];
+        (visits || []).forEach(v => {
+            const meds = this.getVisitMedicationsForAnalysis_(v);
+            if (!meds.length) return;
+            const dept = String(v.employeeDepartment || v.department || 'غير محدد').trim() || 'غير محدد';
+            const ptypeRaw = String(v.personType || '').toLowerCase();
+            const personType = ptypeRaw === 'contractor' || ptypeRaw === 'external' ? 'مقاول' : 'موظف';
+            const visitReason = String(v.reason || v.diagnosis || 'غير محدد').trim() || 'غير محدد';
+            const visitDate = v.visitDate || v.createdAt || '';
+            meds.forEach(m => {
+                rows.push({
+                    medicationName: m.medicationName,
+                    quantity: parseInt(m.quantity, 10) || 1,
+                    unit: m.unit || 'وحدة',
+                    personType,
+                    department: dept,
+                    visitReason,
+                    visitDate,
+                    visitId: v.id || ''
+                });
+            });
+        });
+        return rows;
+    },
+
+    analyzeDispensedMedications_(visits, inventoryMeds) {
+        const lookup = this.buildMedicationInventoryLookup_();
+        const byName = {};
+        let totalQty = 0;
+        let dispenseLines = 0;
+        const visitsWithMeds = new Set();
+        const byMonth = {};
+        const byPersonType = { 'موظف': 0, 'مقاول': 0 };
+        const byDepartment = {};
+
+        (visits || []).forEach(v => {
+            const meds = this.getVisitMedicationsForAnalysis_(v);
+            if (!meds.length) return;
+            const visitKey = String(v.id || '').trim() || JSON.stringify([v.visitDate, v.employeeName, v.contractorWorkerName]);
+            visitsWithMeds.add(visitKey);
+            const dept = String(v.employeeDepartment || v.department || 'غير محدد').trim() || 'غير محدد';
+            const ptypeRaw = String(v.personType || '').toLowerCase();
+            const personType = ptypeRaw === 'contractor' || ptypeRaw === 'external' ? 'مقاول' : 'موظف';
+            const d = new Date(v.visitDate || v.createdAt || '');
+            const monthKey = !isNaN(d.getTime())
+                ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+                : 'غير محدد';
+
+            meds.forEach(m => {
+                const name = String(m.medicationName || '').trim();
+                if (!name) return;
+                const qty = parseInt(m.quantity, 10) || 1;
+                const key = name.toLowerCase();
+                const inv = lookup[key] || null;
+                if (!byName[key]) {
+                    byName[key] = {
+                        name,
+                        totalQty: 0,
+                        dispenseCount: 0,
+                        visits: new Set(),
+                        type: inv?.type || inv?.medicationType || '—',
+                        stockRemaining: inv?.remainingQuantity ?? null,
+                        stockStatus: inv?.status || '—'
+                    };
+                }
+                byName[key].totalQty += qty;
+                byName[key].dispenseCount += 1;
+                byName[key].visits.add(visitKey);
+                totalQty += qty;
+                dispenseLines += 1;
+                byMonth[monthKey] = (byMonth[monthKey] || 0) + qty;
+                byPersonType[personType] = (byPersonType[personType] || 0) + qty;
+                byDepartment[dept] = (byDepartment[dept] || 0) + qty;
+            });
+        });
+
+        const topByQuantity = Object.values(byName)
+            .map(row => ({
+                name: row.name,
+                totalQty: row.totalQty,
+                dispenseCount: row.dispenseCount,
+                visitsCount: row.visits.size,
+                avgQty: row.dispenseCount > 0 ? (row.totalQty / row.dispenseCount).toFixed(1) : '0',
+                type: row.type,
+                stockRemaining: row.stockRemaining,
+                stockStatus: row.stockStatus
+            }))
+            .sort((a, b) => b.totalQty - a.totalQty);
+
+        const topByFrequency = [...topByQuantity].sort((a, b) => b.dispenseCount - a.dispenseCount);
+
+        const monthEntries = Object.entries(byMonth)
+            .filter(([k]) => k !== 'غير محدد')
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .slice(-12);
+
+        const deptEntries = Object.entries(byDepartment)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 8);
+
+        const lowStockHighDemand = topByQuantity
+            .slice(0, 10)
+            .filter(r => r.stockRemaining !== null && r.stockRemaining <= 10)
+            .map(r => ({ ...r }));
+
+        return {
+            totalDispensedQty: totalQty,
+            dispenseLines,
+            uniqueMedicines: topByQuantity.length,
+            visitsWithMedications: visitsWithMeds.size,
+            visitsWithoutMedications: Math.max(0, (visits || []).length - visitsWithMeds.size),
+            topByQuantity,
+            topByFrequency,
+            byMonth: {
+                labels: monthEntries.map(e => e[0]),
+                data: monthEntries.map(e => e[1])
+            },
+            byPersonType,
+            byDepartment: {
+                labels: deptEntries.map(e => e[0]),
+                data: deptEntries.map(e => e[1])
+            },
+            lowStockHighDemand
+        };
     },
 
     getClinicAnalysisValue(dataset, field, record) {
@@ -1072,6 +1288,7 @@ const Clinic = {
         if (field === 'byMonth') {
             const dateStr =
                 dataset === 'visits' ? (record.visitDate || record.createdAt) :
+                    dataset === 'dispensedMedications' ? (record.visitDate || record.createdAt) :
                     dataset === 'sickLeave' ? (record.startDate || record.createdAt) :
                         dataset === 'injuries' ? (record.injuryDate || record.createdAt) :
                             dataset === 'supplyRequests' ? (record.createdAt || record.requestDate) :
@@ -1347,27 +1564,19 @@ const Clinic = {
         const enabledCards = (Array.isArray(cards) ? cards : []).filter(c => c.enabled);
 
         // ✅ إصلاح عدد الزيارات: نجمع clinicVisits + employeeVisits + contractorVisits لتطابق قاعدة البيانات
-        const clinicVisits = Array.isArray(AppState.appData.clinicVisits) ? AppState.appData.clinicVisits : [];
-        const employeeVisits = Array.isArray(AppState.appData.employeeVisits) ? AppState.appData.employeeVisits : [];
-        const contractorVisits = Array.isArray(AppState.appData.contractorVisits) ? AppState.appData.contractorVisits : [];
-
-        // دمج الزيارات مع إزالة التكرار بالـ id
-        const allVisitIds = new Set();
-        const visits = [];
-        [...clinicVisits, ...employeeVisits, ...contractorVisits].forEach(v => {
-            if (!v) return;
-            const vid = String(v.id || '').trim();
-            if (vid && allVisitIds.has(vid)) return;
-            if (vid) allVisitIds.add(vid);
-            visits.push(v);
-        });
+        const visits = this.getClinicVisitsForAnalysis_();
 
         const totalVisits = visits.length;
 
         const totalDispensedQty = visits.reduce((sum, v) => {
-            const arr = this.normalizeVisitMedications(v.medications);
+            const arr = this.getVisitMedicationsForAnalysis_(v);
             return sum + arr.reduce((s, m) => s + (parseInt(m.quantity, 10) || 0), 0);
         }, 0);
+
+        const visitsWithMedications = visits.filter(v => this.getVisitMedicationsForAnalysis_(v).length > 0).length;
+        const uniqueDispensedMedications = new Set(
+            visits.flatMap(v => this.getVisitMedicationsForAnalysis_(v).map(m => String(m.medicationName || '').trim().toLowerCase()).filter(Boolean))
+        ).size;
 
         const meds = Array.isArray(AppState.appData.clinicMedications)
             ? AppState.appData.clinicMedications
@@ -1382,7 +1591,9 @@ const Clinic = {
             totalDispensedQty,
             expiredMedications,
             lowStockMedications,
-            totalMedications
+            totalMedications,
+            visitsWithMedications,
+            uniqueDispensedMedications
         };
 
         enabledCards.forEach(card => {
@@ -1532,12 +1743,15 @@ const Clinic = {
             { value: 'totalDispensedQty', label: 'إجمالي المنصرف' },
             { value: 'totalMedications', label: 'إجمالي الأدوية' },
             { value: 'expiredMedications', label: 'أدوية منتهية' },
-            { value: 'lowStockMedications', label: 'مخزون منخفض (≤10)' }
+            { value: 'lowStockMedications', label: 'مخزون منخفض (≤10)' },
+            { value: 'visitsWithMedications', label: 'زيارات بصرف دواء' },
+            { value: 'uniqueDispensedMedications', label: 'أدوية مختلفة منصرفة' }
         ];
 
         const datasets = [
             { value: 'visits', label: 'زيارات' },
-            { value: 'medications', label: 'أدوية' },
+            { value: 'medications', label: 'أدوية (مخزون)' },
+            { value: 'dispensedMedications', label: 'أدوية منصرفة (من الزيارات)' },
             { value: 'sickLeave', label: 'إجازات مرضية' },
             { value: 'injuries', label: 'إصابات' },
             { value: 'supplyRequests', label: 'طلبات احتياجات' }
@@ -6425,6 +6639,102 @@ const Clinic = {
                 </div>
             </div>
 
+            <!-- ══ تحليل استهلاك الأدوية المنصرفة ══ -->
+            <div style="margin-bottom:20px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-prescription-bottle-alt" style="color:#10b981;font-size:18px;"></i>
+                        <span style="font-weight:800;font-size:1rem;color:#134e4a;">تحليل الأدوية المستخدمة والمنصرفة</span>
+                    </div>
+                    <span id="clinic-med-analysis-summary" style="font-size:0.75rem;color:#64748b;"></span>
+                </div>
+                <div id="clinic-med-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;">
+                    <div style="text-align:center;padding:12px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                    <div class="content-card" style="padding:0;overflow:hidden;">
+                        <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-sort-amount-down" style="color:#10b981;"></i>
+                            <span style="font-weight:700;font-size:0.88rem;">أكثر الأدوية استهلاكاً (كمية منصرفة — أعلى 10)</span>
+                        </div>
+                        <div style="padding:12px;position:relative;height:300px;">
+                            <canvas id="clinic-chart-med-top-qty"></canvas>
+                            <div id="clinic-chart-med-top-qty-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد أدوية منصرفة في الفترة المحددة</div>
+                        </div>
+                    </div>
+                    <div class="content-card" style="padding:0;overflow:hidden;">
+                        <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-chart-line" style="color:#059669;"></i>
+                            <span style="font-weight:700;font-size:0.88rem;">اتجاه صرف الأدوية شهرياً (كمية)</span>
+                        </div>
+                        <div style="padding:12px;position:relative;height:300px;">
+                            <canvas id="clinic-chart-med-monthly"></canvas>
+                            <div id="clinic-chart-med-monthly-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات شهرية</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                    <div class="content-card" style="padding:0;overflow:hidden;">
+                        <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-user-tag" style="color:#3b82f6;"></i>
+                            <span style="font-weight:700;font-size:0.88rem;">المنصرف حسب نوع الشخص</span>
+                        </div>
+                        <div style="padding:12px;position:relative;height:240px;">
+                            <canvas id="clinic-chart-med-ptype"></canvas>
+                            <div id="clinic-chart-med-ptype-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                        </div>
+                    </div>
+                    <div class="content-card" style="padding:0;overflow:hidden;">
+                        <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-building" style="color:#6366f1;"></i>
+                            <span style="font-weight:700;font-size:0.88rem;">المنصرف حسب الإدارة (أعلى 8)</span>
+                        </div>
+                        <div style="padding:12px;position:relative;height:240px;">
+                            <canvas id="clinic-chart-med-dept"></canvas>
+                            <div id="clinic-chart-med-dept-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                    <div style="padding:13px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-tablets" style="color:#0d9488;"></i>
+                            <span style="font-weight:700;font-size:0.88rem;">تفاصيل أكثر الأدوية استهلاكاً (أعلى 15)</span>
+                        </div>
+                        <span id="clinic-med-table-count" style="background:#ecfdf5;color:#047857;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                            <thead>
+                                <tr style="background:#fafafa;border-bottom:2px solid #f1f5f9;">
+                                    <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;">#</th>
+                                    <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;">الدواء</th>
+                                    <th style="padding:10px 12px;text-align:center;font-weight:700;color:#374151;">الكمية المنصرفة</th>
+                                    <th style="padding:10px 12px;text-align:center;font-weight:700;color:#374151;">مرات الصرف</th>
+                                    <th style="padding:10px 12px;text-align:center;font-weight:700;color:#374151;">زيارات</th>
+                                    <th style="padding:10px 12px;text-align:center;font-weight:700;color:#374151;">متوسط/صرف</th>
+                                    <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;">النوع</th>
+                                    <th style="padding:10px 12px;text-align:center;font-weight:700;color:#374151;">المخزون</th>
+                                    <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;">حالة المخزون</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clinic-med-top-tbody">
+                                <tr><td colspan="9" style="padding:20px;text-align:center;color:#94a3b8;">جارٍ التحميل…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="clinic-med-low-stock-alert" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:14px 18px;margin-bottom:16px;">
+                    <div style="display:flex;align-items:flex-start;gap:10px;">
+                        <i class="fas fa-exclamation-triangle" style="color:#ea580c;margin-top:2px;"></i>
+                        <div>
+                            <div style="font-weight:700;color:#9a3412;font-size:0.88rem;margin-bottom:6px;">تنبيه: أدوية عالية الاستهلاك ومخزون منخفض</div>
+                            <ul id="clinic-med-low-stock-list" style="margin:0;padding-right:18px;font-size:0.82rem;color:#7c2d12;"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- ══ جدول أكثر المراجعين ══ -->
             <div class="content-card" style="padding:0;overflow:hidden;">
                 <div style="padding:13px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
@@ -6518,6 +6828,8 @@ const Clinic = {
         const monthCount      = new Set(filteredVisits.map(v=>{ const d=new Date(v.visitDate||v.createdAt||''); return isNaN(d.getTime())?null:`${d.getFullYear()}-${d.getMonth()}`; }).filter(Boolean)).size;
         const avgPerMonth     = monthCount>0 ? (total/monthCount).toFixed(1) : 0;
 
+        const medAnalysis = this.analyzeDispensedMedications_(filteredVisits, allMeds);
+
         const kpiEl = document.getElementById('clinic-kpi-strip');
         if (kpiEl) {
             const kpis = [
@@ -6540,6 +6852,29 @@ const Clinic = {
                         <div style="font-size:1.3rem;font-weight:800;color:${k.color};line-height:1;">${k.value}</div>
                         <div style="font-size:0.68rem;color:#64748b;margin-top:2px;white-space:nowrap;">${k.label}</div>
                     </div>
+                </div>`).join('');
+        }
+
+        const medSummaryEl = document.getElementById('clinic-med-analysis-summary');
+        if (medSummaryEl) {
+            medSummaryEl.textContent = medAnalysis.totalDispensedQty > 0
+                ? `${medAnalysis.uniqueMedicines} دواء مختلف • ${medAnalysis.dispenseLines} عملية صرف • ${medAnalysis.visitsWithMedications} زيارة بدواء`
+                : 'لا توجد أدوية منصرفة ضمن الفلاتر الحالية';
+        }
+        const medKpiEl = document.getElementById('clinic-med-kpi-strip');
+        if (medKpiEl) {
+            const medKpis = [
+                { label: 'إجمالي الكمية المنصرفة', value: medAnalysis.totalDispensedQty, icon: 'fas fa-prescription-bottle-alt', color: '#10b981', bg: '#ecfdf5', border: '#a7f3d0' },
+                { label: 'أدوية مختلفة', value: medAnalysis.uniqueMedicines, icon: 'fas fa-pills', color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
+                { label: 'زيارات بصرف دواء', value: medAnalysis.visitsWithMedications, icon: 'fas fa-capsules', color: '#0d9488', bg: '#f0fdfa', border: '#99f6e4' },
+                { label: 'زيارات بدون دواء', value: medAnalysis.visitsWithoutMedications, icon: 'fas fa-hospital', color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
+                { label: 'عمليات صرف', value: medAnalysis.dispenseLines, icon: 'fas fa-hand-holding-medical', color: '#0891b2', bg: '#ecfeff', border: '#a5f3fc' }
+            ];
+            medKpiEl.innerHTML = medKpis.map(k => `
+                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:11px 12px;text-align:center;">
+                    <i class="${k.icon}" style="color:${k.color};font-size:14px;"></i>
+                    <div style="font-size:1.15rem;font-weight:800;color:${k.color};margin-top:4px;">${Number(k.value || 0).toLocaleString('en-US')}</div>
+                    <div style="font-size:0.65rem;color:#64748b;margin-top:2px;">${k.label}</div>
                 </div>`).join('');
         }
 
@@ -6612,6 +6947,106 @@ const Clinic = {
 
         // مخطط مقارنة شهري (Multi-line)
         this._cCompare('clinic-chart-compare', allVisits, allSL, allInj);
+
+        // ── تحليل الأدوية المنصرفة (رسوم + جدول) ──
+        const medTop = medAnalysis.topByQuantity.slice(0, 10);
+        this._cHBar('clinic-chart-med-top-qty', medTop.map(r => r.name), medTop.map(r => r.totalQty), 'rgba(16,185,129,0.78)');
+
+        const medMonthLabels = medAnalysis.byMonth.labels;
+        const medMonthData = medAnalysis.byMonth.data;
+        if (medMonthLabels.length && medMonthData.reduce((a, b) => a + b, 0) > 0) {
+            const canvas = document.getElementById('clinic-chart-med-monthly');
+            const emptyEl = document.getElementById('clinic-chart-med-monthly-empty');
+            if (canvas) {
+                if (emptyEl) emptyEl.style.display = 'none';
+                canvas.style.display = '';
+                if (!this._clinicCharts) this._clinicCharts = {};
+                try { if (this._clinicCharts['clinic-chart-med-monthly']) this._clinicCharts['clinic-chart-med-monthly'].destroy(); } catch (e) {}
+                this._clinicCharts['clinic-chart-med-monthly'] = new Chart(canvas, {
+                    type: 'line',
+                    data: {
+                        labels: medMonthLabels,
+                        datasets: [{
+                            label: 'كمية منصرفة',
+                            data: medMonthData,
+                            borderColor: 'rgba(5,150,105,0.9)',
+                            backgroundColor: 'rgba(16,185,129,0.12)',
+                            borderWidth: 2.5,
+                            pointRadius: 4,
+                            tension: 0.35,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45 } },
+                            y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f1f5f9' } }
+                        }
+                    }
+                });
+            }
+        } else {
+            const canvas = document.getElementById('clinic-chart-med-monthly');
+            const emptyEl = document.getElementById('clinic-chart-med-monthly-empty');
+            if (canvas) canvas.style.display = 'none';
+            if (emptyEl) emptyEl.style.display = 'flex';
+        }
+
+        this._cDoughnut(
+            'clinic-chart-med-ptype',
+            ['موظف', 'مقاول'],
+            [medAnalysis.byPersonType['موظف'] || 0, medAnalysis.byPersonType['مقاول'] || 0],
+            ['rgba(59,130,246,0.85)', 'rgba(249,115,22,0.85)']
+        );
+        this._cHBar(
+            'clinic-chart-med-dept',
+            medAnalysis.byDepartment.labels,
+            medAnalysis.byDepartment.data,
+            'rgba(99,102,241,0.75)'
+        );
+
+        const medTableCount = document.getElementById('clinic-med-table-count');
+        const medTbody = document.getElementById('clinic-med-top-tbody');
+        const topMedRows = medAnalysis.topByQuantity.slice(0, 15);
+        if (medTableCount) medTableCount.textContent = topMedRows.length ? `${topMedRows.length} دواء` : '';
+        if (medTbody) {
+            medTbody.innerHTML = topMedRows.length === 0
+                ? `<tr><td colspan="9" style="padding:24px;text-align:center;color:#94a3b8;">لا توجد أدوية منصرفة في الفترة المحددة</td></tr>`
+                : topMedRows.map((row, i) => {
+                    const stock = row.stockRemaining === null ? '—' : Number(row.stockRemaining).toLocaleString('en-US');
+                    const stockColor = row.stockRemaining !== null && row.stockRemaining <= 10 ? '#dc2626' : '#0f766e';
+                    const statusColor = row.stockStatus === 'منتهي' ? '#dc2626' : row.stockStatus === 'قريب الانتهاء' ? '#d97706' : '#64748b';
+                    const rowBg = i % 2 === 0 ? '#fff' : '#fafafa';
+                    return `<tr style="border-bottom:1px solid #f8fafc;background:${rowBg};" onmouseover="this.style.background='#ecfdf5'" onmouseout="this.style.background='${rowBg}'">
+                        <td style="padding:9px 12px;font-weight:700;color:#64748b;">${i + 1}</td>
+                        <td style="padding:9px 12px;font-weight:600;color:#047857;">${Utils.escapeHTML(row.name)}</td>
+                        <td style="padding:9px 12px;text-align:center;font-weight:700;">${Number(row.totalQty).toLocaleString('en-US')}</td>
+                        <td style="padding:9px 12px;text-align:center;">${row.dispenseCount}</td>
+                        <td style="padding:9px 12px;text-align:center;">${row.visitsCount}</td>
+                        <td style="padding:9px 12px;text-align:center;">${row.avgQty}</td>
+                        <td style="padding:9px 12px;">${Utils.escapeHTML(row.type)}</td>
+                        <td style="padding:9px 12px;text-align:center;font-weight:700;color:${stockColor};">${stock}</td>
+                        <td style="padding:9px 12px;color:${statusColor};">${Utils.escapeHTML(row.stockStatus)}</td>
+                    </tr>`;
+                }).join('');
+        }
+
+        const lowStockAlert = document.getElementById('clinic-med-low-stock-alert');
+        const lowStockList = document.getElementById('clinic-med-low-stock-list');
+        if (lowStockAlert && lowStockList) {
+            if (medAnalysis.lowStockHighDemand.length > 0) {
+                lowStockAlert.style.display = 'block';
+                lowStockList.innerHTML = medAnalysis.lowStockHighDemand.map(r =>
+                    `<li><strong>${Utils.escapeHTML(r.name)}</strong>: منصرف ${r.totalQty} — مخزون ${r.stockRemaining ?? '—'}</li>`
+                ).join('');
+            } else {
+                lowStockAlert.style.display = 'none';
+                lowStockList.innerHTML = '';
+            }
+        }
 
         // ── 8. جدول أكثر المراجعين ──
         // ✅ إصلاح: زيارات المقاولين تأتي من جدول ClinicContractorVisits بحقول مختلفة
