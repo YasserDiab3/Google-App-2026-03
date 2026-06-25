@@ -559,7 +559,13 @@ const Contractors = {
             patchTabBody('contractors-approved-content', approvedSectionHTML);
             patchTabBody('contractors-evaluations-content', evaluationsSectionHTML);
             patchTabBody('contractors-requirements-content', requirementsSectionHTML);
-            if (isAdmin) patchTabBody('contractors-analytics-content', analyticsSectionHTML);
+            if (isAdmin) {
+                patchTabBody('contractors-analytics-content', analyticsSectionHTML);
+                this.bindContractorAnalyticsEvents();
+                if (tc === 'analytics') {
+                    this.loadContractorAnalytics();
+                }
+            }
             if (tc !== 'approval-request') {
                 patchTabBody('contractors-approval-request-content', this.renderApprovalRequestSection());
             } else {
@@ -1341,6 +1347,11 @@ const Contractors = {
         if (tab === 'evaluations') {
             this.ensureEvaluationsEventListeners();
             this.ensureEvaluationsDataLoaded();
+        }
+
+        if (tab === 'analytics') {
+            this.bindContractorAnalyticsEvents();
+            this.loadContractorAnalytics();
         }
     },
 
@@ -10993,9 +11004,166 @@ const Contractors = {
     },
 
     // ===== تحليل بيانات المقاولين =====
+
+    getContractorsForAnalyticsList() {
+        if (typeof this.getAllContractorsForModules === 'function') {
+            return this.getAllContractorsForModules()
+                .filter((c) => (c.entityType || 'contractor') === 'contractor')
+                .map((c) => ({
+                    ...c,
+                    name: c.name || c.companyName || '',
+                    endDate: c.endDate || c.expiryDate,
+                    status: c.status || 'نشط'
+                }));
+        }
+        const contractors = AppState.appData.contractors || [];
+        if (Array.isArray(contractors) && contractors.length > 0) return contractors;
+        const approvedContractors = AppState.appData.approvedContractors || [];
+        return Array.isArray(approvedContractors)
+            ? approvedContractors.map((ac) => ({
+                ...ac,
+                id: ac.id || ac.contractorId,
+                name: ac.companyName || ac.name || '',
+                endDate: ac.expiryDate || ac.endDate,
+                status: ac.status || 'نشط'
+            }))
+            : [];
+    },
+
+    _renderContractorAnalyticsShellHTML() {
+        const period = String(this._ctrAnalysisPeriod ?? '0');
+        const periodLabels = ['30 يوم', '3 أشهر', '6 أشهر', 'سنة', 'الكل'];
+        const periodValues = ['30', '90', '180', '365', '0'];
+        const periodBtns = periodValues.map((v, i) => {
+            const active = period === v;
+            return `<button type="button" class="ctr-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active ? '#fff' : 'rgba(255,255,255,0.15)'};color:${active ? '#4338ca' : '#fff'};">${periodLabels[i]}</button>`;
+        }).join('');
+
+        return `
+        <div id="ctr-analytics-root" style="font-family:inherit;">
+            <div id="ctr-analytics-toolbar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding:16px 20px;background:linear-gradient(135deg,#312e81 0%,#6366f1 100%);border-radius:14px;color:#fff;box-shadow:0 4px 20px rgba(99,102,241,0.35);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:44px;height:44px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-chart-line" style="font-size:20px;"></i>
+                    </div>
+                    <div>
+                        <h2 style="margin:0;font-size:1.15rem;font-weight:700;">لوحة تحليل المقاولين</h2>
+                        <p style="margin:0;font-size:0.75rem;opacity:0.85;">تحليل شامل وفوري • فلاتر تفاعلية • تصدير PDF</p>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <span style="font-size:0.72rem;opacity:0.85;margin-left:2px;">الفترة:</span>
+                    <div style="display:flex;gap:3px;flex-wrap:wrap;">${periodBtns}</div>
+                    <button type="button" id="ctr-toggle-filters-btn" title="فلاتر تفاعلية" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;display:flex;align-items:center;gap:5px;">
+                        <i class="fas fa-sliders-h"></i><span>فلاتر</span><span id="ctr-filter-active-badge" style="display:none;background:#ef4444;color:#fff;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-right:2px;">•</span>
+                    </button>
+                    <button type="button" id="ctr-export-pdf-btn" title="تصدير PDF" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(239,68,68,0.85);color:#fff;font-size:0.78rem;font-weight:600;display:flex;align-items:center;gap:5px;">
+                        <i class="fas fa-file-pdf"></i><span>PDF</span>
+                    </button>
+                    <button type="button" id="ctr-analytics-refresh" title="تحديث" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="ctr-filter-panel" style="display:none;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-sliders-h" style="color:#6366f1;font-size:14px;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;color:#312e81;">الفلاتر التفاعلية</span>
+                        <span id="ctr-filter-results-count" style="background:#e0e7ff;color:#4338ca;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
+                    </div>
+                    <button type="button" id="ctr-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;">
+                        <i class="fas fa-times ml-1"></i>مسح الكل
+                    </button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;">
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">نوع الجهة</label>
+                        <select id="ctr-af-entity" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;">
+                            <option value="">الكل</option>
+                            <option value="contractor">مقاول</option>
+                            <option value="supplier">مورد</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">حالة المقاول</label>
+                        <select id="ctr-af-status" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;">
+                            <option value="">الكل</option>
+                            <option value="active">نشط</option>
+                            <option value="inactive">غير نشط</option>
+                            <option value="expired">منتهي العقد</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">شدة المخالفة</label>
+                        <select id="ctr-af-severity" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;">
+                            <option value="">الكل</option>
+                            <option value="high">عالية</option>
+                            <option value="medium">متوسطة</option>
+                            <option value="low">منخفضة</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="ctr-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:20px;">
+                <div style="text-align:center;padding:8px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-circle-notch" style="color:#6366f1;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">حالة المقاولين</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:240px;">
+                        <canvas id="ctr-chart-status"></canvas>
+                        <div id="ctr-chart-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-exclamation-triangle" style="color:#ef4444;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">المخالفات حسب الشدة</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:240px;">
+                        <canvas id="ctr-chart-severity"></canvas>
+                        <div id="ctr-chart-severity-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-chart-area" style="color:#8b5cf6;"></i>
+                    <span style="font-weight:700;font-size:0.88rem;">اتجاه المخالفات (آخر 12 شهر)</span>
+                </div>
+                <div style="padding:12px;position:relative;height:260px;">
+                    <canvas id="ctr-chart-trend"></canvas>
+                    <div id="ctr-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                </div>
+            </div>
+
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-user-hard-hat" style="color:#f59e0b;"></i>
+                    <span style="font-weight:700;font-size:0.88rem;">أعلى المقاولين مخالفات (8)</span>
+                </div>
+                <div style="padding:12px;position:relative;height:280px;">
+                    <canvas id="ctr-chart-top-violators"></canvas>
+                    <div id="ctr-chart-top-violators-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                </div>
+            </div>
+
+            <div id="ctr-violations-analysis"></div>
+            <div id="ctr-expiring-contracts"></div>
+            <div id="ctr-detailed-analysis"></div>
+        </div>`;
+    },
+
     async renderAnalyticsSection() {
-        const isAdmin = this.isContractorApprovalAdminUser();
-        if (!isAdmin) {
+        if (!this.isContractorApprovalAdminUser()) {
             return `
                 <div class="content-card">
                     <div class="card-body">
@@ -11008,95 +11176,455 @@ const Contractors = {
             `;
         }
 
-        let evaluations = AppState.appData.contractorEvaluations || [];
-        let violations = AppState.appData.violations || [];
-        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.readFromSheets && AppState.googleConfig?.appsScript?.enabled) {
-            try {
-                const [v, ev] = await Promise.all([
-                    GoogleIntegration.readFromSheets('Violations'),
-                    GoogleIntegration.readFromSheets('ContractorEvaluations')
-                ]);
-                if (Array.isArray(v)) {
-                    AppState.appData.violations = v;
-                    violations = v;
-                }
-                if (Array.isArray(ev)) {
-                    AppState.appData.contractorEvaluations = ev;
-                    evaluations = ev;
-                }
-            } catch (e) {
-                if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('تعذر جلب مخالفات أو تقييمات لتحليل المقاولين:', e);
-            }
+        if (this._ctrAnalysisPeriod === undefined) this._ctrAnalysisPeriod = '0';
+        this.ensureContractorChartJSLoaded().catch(() => {});
+        return this._renderContractorAnalyticsShellHTML();
+    },
+
+    async ensureContractorChartJSLoaded() {
+        if (typeof Chart !== 'undefined') return true;
+        const existingScript = document.querySelector('script[src*="chart.js"], script[src*="chartjs"]');
+        if (existingScript) {
+            return new Promise((resolve) => {
+                const checkInterval = setInterval(() => {
+                    if (typeof Chart !== 'undefined') {
+                        clearInterval(checkInterval);
+                        resolve(true);
+                    }
+                }, 100);
+                setTimeout(() => { clearInterval(checkInterval); resolve(false); }, 5000);
+            });
+        }
+        return new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.async = true;
+            script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
+            script.crossOrigin = 'anonymous';
+            script.onload = () => resolve(typeof Chart !== 'undefined');
+            script.onerror = () => resolve(false);
+            document.head.appendChild(script);
+        });
+    },
+
+    _ctrFilterRecordsByPeriod(records, days, getDateValue) {
+        if (!days || days === 0) return records;
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+        return (records || []).filter((record) => {
+            const raw = typeof getDateValue === 'function' ? getDateValue(record) : record?.date;
+            if (!raw) return true;
+            const dt = new Date(raw);
+            return !isNaN(dt.getTime()) && dt >= cutoff;
+        });
+    },
+
+    _ctrGetContractorContractState(contractor) {
+        const endDateVal = contractor?.endDate || contractor?.expiryDate;
+        if (!endDateVal) return 'unknown';
+        try {
+            const endDate = new Date(endDateVal);
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+            endDate.setHours(0, 0, 0, 0);
+            const diff = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+            if (diff < 0) return 'expired';
+            if (diff <= 30) return 'expiring';
+            return 'active';
+        } catch (_e) {
+            return 'unknown';
+        }
+    },
+
+    _ctrApplyAnalyticsFilters(contractors, violations) {
+        const entityFilter = document.getElementById('ctr-af-entity')?.value || '';
+        const statusFilter = document.getElementById('ctr-af-status')?.value || '';
+        const severityFilter = document.getElementById('ctr-af-severity')?.value || '';
+
+        let filteredContractors = Array.isArray(contractors) ? [...contractors] : [];
+        if (entityFilter === 'contractor') {
+            filteredContractors = filteredContractors.filter((c) => this.normalizeApprovedEntityType(c.entityType || c.type) === 'contractor');
+        } else if (entityFilter === 'supplier') {
+            filteredContractors = filteredContractors.filter((c) => this.normalizeApprovedEntityType(c.entityType || c.type) === 'supplier');
         }
 
-        const contractors = AppState.appData.contractors || [];
+        if (statusFilter === 'active') {
+            filteredContractors = filteredContractors.filter((c) => this.isEntityEnabled(c) && this._ctrGetContractorContractState(c) !== 'expired');
+        } else if (statusFilter === 'inactive') {
+            filteredContractors = filteredContractors.filter((c) => !this.isEntityEnabled(c));
+        } else if (statusFilter === 'expired') {
+            filteredContractors = filteredContractors.filter((c) => this._ctrGetContractorContractState(c) === 'expired');
+        }
+
+        let filteredViolations = Array.isArray(violations) ? [...violations] : [];
+        if (severityFilter === 'high') {
+            filteredViolations = filteredViolations.filter((v) => ['عالية', 'high', 'حرجة'].includes(String(v.severity || '').trim()));
+        } else if (severityFilter === 'medium') {
+            filteredViolations = filteredViolations.filter((v) => ['متوسطة', 'medium'].includes(String(v.severity || '').trim()));
+        } else if (severityFilter === 'low') {
+            filteredViolations = filteredViolations.filter((v) => ['منخفضة', 'low', 'قليلة', 'منخضة'].includes(String(v.severity || '').trim()));
+        }
+
+        const hasFilters = !!(entityFilter || statusFilter || severityFilter);
+        const badge = document.getElementById('ctr-filter-active-badge');
+        if (badge) badge.style.display = hasFilters ? 'inline' : 'none';
+
+        return { filteredContractors, filteredViolations, hasFilters };
+    },
+
+    _ctrGroupByField(records, getLabel, limit = 0) {
+        const map = {};
+        (records || []).forEach((record) => {
+            const label = String(typeof getLabel === 'function' ? getLabel(record) : record?.label || 'غير محدد').trim() || 'غير محدد';
+            map[label] = (map[label] || 0) + 1;
+        });
+        let entries = Object.entries(map).sort((a, b) => b[1] - a[1]);
+        if (limit > 0) entries = entries.slice(0, limit);
+        return { labels: entries.map((e) => e[0]), data: entries.map((e) => e[1]) };
+    },
+
+    _ctrChartColors(count) {
+        const palette = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#0ea5e9', '#ec4899', '#14b8a6', '#f97316', '#64748b'];
+        return Array.from({ length: count }, (_, i) => palette[i % palette.length]);
+    },
+
+    _ctrDestroyChart(canvasId) {
+        const prev = this._ctrAnalyticsCharts && this._ctrAnalyticsCharts[canvasId];
+        if (prev) {
+            try { prev.destroy(); } catch (_e) { /* ignore */ }
+            delete this._ctrAnalyticsCharts[canvasId];
+        }
+    },
+
+    _ctrDrawDoughnut(canvasId, labels, data, colors) {
+        const canvas = document.getElementById(canvasId);
+        const emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        if (!data.length || data.reduce((a, b) => a + b, 0) === 0) {
+            canvas.style.display = 'none';
+            if (emptyEl) emptyEl.style.display = 'flex';
+            this._ctrDestroyChart(canvasId);
+            return;
+        }
+        canvas.style.display = 'block';
+        if (emptyEl) emptyEl.style.display = 'none';
+        this._ctrDestroyChart(canvasId);
+        if (typeof Chart === 'undefined') return;
+        const total = data.reduce((a, b) => a + b, 0);
+        const chart = new Chart(canvas, {
+            type: 'doughnut',
+            data: { labels, datasets: [{ data, backgroundColor: colors || this._ctrChartColors(data.length), borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '62%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 10, font: { size: 11 }, usePointStyle: true, boxWidth: 9 } },
+                    tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.parsed} (${total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0}%)` } }
+                }
+            }
+        });
+        if (!this._ctrAnalyticsCharts) this._ctrAnalyticsCharts = {};
+        this._ctrAnalyticsCharts[canvasId] = chart;
+    },
+
+    _ctrDrawHBar(canvasId, labels, data, color) {
+        const canvas = document.getElementById(canvasId);
+        const emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        if (!data.length || data.reduce((a, b) => a + b, 0) === 0) {
+            canvas.style.display = 'none';
+            if (emptyEl) emptyEl.style.display = 'flex';
+            this._ctrDestroyChart(canvasId);
+            return;
+        }
+        canvas.style.display = 'block';
+        if (emptyEl) emptyEl.style.display = 'none';
+        this._ctrDestroyChart(canvasId);
+        if (typeof Chart === 'undefined') return;
+        const chart = new Chart(canvas, {
+            type: 'bar',
+            data: { labels, datasets: [{ data, backgroundColor: color || 'rgba(99,102,241,0.75)', borderRadius: 5, borderSkipped: false }] },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f1f5f9' } },
+                    y: { ticks: { font: { size: 11 }, callback: (v) => { const t = String(labels[v] || ''); return t.length > 18 ? `${t.slice(0, 17)}…` : t; } } }
+                }
+            }
+        });
+        if (!this._ctrAnalyticsCharts) this._ctrAnalyticsCharts = {};
+        this._ctrAnalyticsCharts[canvasId] = chart;
+    },
+
+    _ctrDrawTrend(canvasId, violations) {
+        const canvas = document.getElementById(canvasId);
+        const emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        const months = [];
+        const counts = [];
+        const now = new Date();
+        for (let i = 11; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            months.push(d.toLocaleDateString('ar-SA', { month: 'short', year: '2-digit' }));
+            const y = d.getFullYear();
+            const m = d.getMonth();
+            counts.push((violations || []).filter((v) => {
+                const raw = v.violationDate || v.date || v.createdAt;
+                if (!raw) return false;
+                const dt = new Date(raw);
+                return !isNaN(dt.getTime()) && dt.getFullYear() === y && dt.getMonth() === m;
+            }).length);
+        }
+        if (counts.reduce((a, b) => a + b, 0) === 0) {
+            canvas.style.display = 'none';
+            if (emptyEl) emptyEl.style.display = 'flex';
+            this._ctrDestroyChart(canvasId);
+            return;
+        }
+        canvas.style.display = 'block';
+        if (emptyEl) emptyEl.style.display = 'none';
+        this._ctrDestroyChart(canvasId);
+        if (typeof Chart === 'undefined') return;
+        const chart = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [{ data: counts, borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.12)', fill: true, tension: 0.35, pointRadius: 3 }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { ticks: { font: { size: 10 } } } }
+            }
+        });
+        if (!this._ctrAnalyticsCharts) this._ctrAnalyticsCharts = {};
+        this._ctrAnalyticsCharts[canvasId] = chart;
+    },
+
+    async _fetchContractorAnalyticsData() {
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.readFromSheets || !AppState.googleConfig?.appsScript?.enabled) {
+            return;
+        }
+        try {
+            const [v, ev] = await Promise.all([
+                GoogleIntegration.readFromSheets('Violations'),
+                GoogleIntegration.readFromSheets('ContractorEvaluations')
+            ]);
+            if (Array.isArray(v)) AppState.appData.violations = v;
+            if (Array.isArray(ev)) AppState.appData.contractorEvaluations = ev;
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('تعذر جلب بيانات تحليل المقاولين:', e);
+        }
+    },
+
+    bindContractorAnalyticsEvents() {
+        const root = document.getElementById('ctr-analytics-root');
+        if (!root || root.dataset.bound === '1') return;
+        root.dataset.bound = '1';
+
+        root.querySelectorAll('.ctr-period-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                this._ctrAnalysisPeriod = btn.getAttribute('data-period') || '0';
+                root.querySelectorAll('.ctr-period-btn').forEach((b) => {
+                    const isActive = b === btn;
+                    b.style.background = isActive ? '#fff' : 'rgba(255,255,255,0.15)';
+                    b.style.color = isActive ? '#4338ca' : '#fff';
+                });
+                this.updateContractorAnalyticsResults();
+            });
+        });
+
+        document.getElementById('ctr-analytics-refresh')?.addEventListener('click', () => this.loadContractorAnalytics());
+        document.getElementById('ctr-export-pdf-btn')?.addEventListener('click', () => this.exportContractorAnalyticsPDF());
+
+        const toggleFiltersBtn = document.getElementById('ctr-toggle-filters-btn');
+        const filterPanel = document.getElementById('ctr-filter-panel');
+        toggleFiltersBtn?.addEventListener('click', () => {
+            if (!filterPanel) return;
+            const isOpen = filterPanel.style.display !== 'none';
+            filterPanel.style.display = isOpen ? 'none' : 'block';
+        });
+
+        document.getElementById('ctr-filter-reset-btn')?.addEventListener('click', () => {
+            ['ctr-af-entity', 'ctr-af-status', 'ctr-af-severity'].forEach((id) => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            this.updateContractorAnalyticsResults();
+        });
+
+        ['ctr-af-entity', 'ctr-af-status', 'ctr-af-severity'].forEach((id) => {
+            document.getElementById(id)?.addEventListener('change', () => this.updateContractorAnalyticsResults());
+        });
+    },
+
+    async loadContractorAnalytics() {
+        const root = document.getElementById('ctr-analytics-root');
+        if (!root) return;
+        try {
+            await Promise.allSettled([
+                this.ensureApprovedContractorsDataLoaded({ force: false }),
+                this._fetchContractorAnalyticsData()
+            ]);
+        } catch (_e) { /* ignore */ }
+        await this.updateContractorAnalyticsResults();
+    },
+
+    async updateContractorAnalyticsResults() {
+        const root = document.getElementById('ctr-analytics-root');
+        if (!root) return;
+
+        const period = parseInt(this._ctrAnalysisPeriod || '0', 10);
+        const allContractors = this.getContractorsForAnalyticsList();
         const approvedContractors = AppState.appData.approvedContractors || [];
+        let evaluations = AppState.appData.contractorEvaluations || [];
+        let violations = (AppState.appData.violations || []).filter((v) =>
+            v.contractorName || v.contractorId || (v.personType && (v.personType === 'contractor' || v.personType === 'مقاول'))
+        );
 
-        // قائمة موحدة لعرض "تحليل مفصل لكل مقاول": استخدام المقاولين إن وُجدوا، وإلا قائمة المعتمدين بشكل معياري
-        const contractorsForDetailed = typeof this.getAllContractorsForModules === 'function'
-            ? this.getAllContractorsForModules()
-                .filter(c => (c.entityType || 'contractor') === 'contractor')
-                .map(c => ({
-                    ...c,
-                    name: c.name || c.companyName || '',
-                    endDate: c.endDate || c.expiryDate,
-                    status: c.status || 'نشط'
-                }))
-            : (Array.isArray(contractors) && contractors.length > 0)
-                ? contractors
-                : (Array.isArray(approvedContractors) && approvedContractors.length > 0)
-                    ? approvedContractors.map(ac => ({
-                        ...ac,
-                        id: ac.id || ac.contractorId,
-                        name: ac.companyName || ac.name || '',
-                        endDate: ac.expiryDate || ac.endDate,
-                        status: ac.status || 'نشط'
-                    }))
-                    : [];
+        evaluations = this._ctrFilterRecordsByPeriod(evaluations, period, (e) => e.evaluationDate || e.createdAt || e.date);
+        violations = this._ctrFilterRecordsByPeriod(violations, period, (v) => v.violationDate || v.date || v.createdAt);
 
-        // تحليل البيانات
+        const { filteredContractors, filteredViolations } = this._ctrApplyAnalyticsFilters(allContractors, violations);
+        const analytics = this.calculateContractorAnalytics(filteredContractors, filteredContractors, evaluations, filteredViolations);
+        const expiringContracts = this.getExpiringContracts(filteredContractors, approvedContractors);
+
+        const resultsCount = document.getElementById('ctr-filter-results-count');
+        if (resultsCount) resultsCount.textContent = `${filteredContractors.length} مقاول • ${filteredViolations.length} مخالفة`;
+
+        const kpiEl = document.getElementById('ctr-kpi-strip');
+        if (kpiEl) {
+            const kpis = [
+                { label: 'إجمالي المقاولين', value: analytics.totalContractors, icon: 'fas fa-users', color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe' },
+                { label: 'المعتمدون', value: analytics.totalApproved, icon: 'fas fa-check-circle', color: '#10b981', bg: '#ecfdf5', border: '#a7f3d0' },
+                { label: 'نشطون', value: analytics.activeContractors, icon: 'fas fa-bolt', color: '#f97316', bg: '#fff7ed', border: '#fed7aa' },
+                { label: 'التقييمات', value: analytics.totalEvaluations, icon: 'fas fa-clipboard-check', color: '#eab308', bg: '#fefce8', border: '#fde047' },
+                { label: 'المخالفات', value: analytics.totalViolations, icon: 'fas fa-exclamation-triangle', color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+                { label: 'متوسط التقييم', value: `${analytics.avgScore}%`, icon: 'fas fa-star', color: '#6366f1', bg: '#eef2ff', border: '#c7d2fe' },
+                { label: 'معدل حل المخالفات', value: `${analytics.violationResolutionRate}%`, icon: 'fas fa-check-double', color: '#8b5cf6', bg: '#f5f3ff', border: '#ddd6fe' },
+                { label: 'عقود قريبة الانتهاء', value: analytics.expiringSoon || 0, icon: 'fas fa-hourglass-half', color: '#0d9488', bg: '#f0fdfa', border: '#99f6e4' }
+            ];
+            kpiEl.innerHTML = kpis.map((k) => `
+                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;">
+                    <div style="width:38px;height:38px;background:${k.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="${k.icon}" style="color:#fff;font-size:15px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:1.3rem;font-weight:800;color:${k.color};line-height:1;">${k.value}</div>
+                        <div style="font-size:0.7rem;color:#64748b;margin-top:2px;white-space:nowrap;">${k.label}</div>
+                    </div>
+                </div>`).join('');
+        }
+
+        const chartReady = await this.ensureContractorChartJSLoaded();
+        if (chartReady && typeof Chart !== 'undefined') {
+            const statusCounts = { نشط: 0, 'قريب الانتهاء': 0, منتهي: 0, 'غير محدد': 0 };
+            filteredContractors.forEach((c) => {
+                const state = this._ctrGetContractorContractState(c);
+                if (state === 'expired') statusCounts['منتهي']++;
+                else if (state === 'expiring') statusCounts['قريب الانتهاء']++;
+                else if (this.isEntityEnabled(c)) statusCounts['نشط']++;
+                else statusCounts['غير محدد']++;
+            });
+            const statusEntries = Object.entries(statusCounts).filter(([, v]) => v > 0);
+            this._ctrDrawDoughnut('ctr-chart-status', statusEntries.map((e) => e[0]), statusEntries.map((e) => e[1]), ['#10b981', '#f59e0b', '#ef4444', '#94a3b8']);
+
+            const severityGroup = this._ctrGroupByField(filteredViolations, (v) => {
+                const s = String(v.severity || '').trim();
+                if (['عالية', 'high', 'حرجة'].includes(s)) return 'عالية';
+                if (['متوسطة', 'medium'].includes(s)) return 'متوسطة';
+                if (['منخفضة', 'low', 'قليلة', 'منخضة'].includes(s)) return 'منخفضة';
+                return s || 'غير محدد';
+            });
+            this._ctrDrawDoughnut('ctr-chart-severity', severityGroup.labels, severityGroup.data, ['#ef4444', '#f59e0b', '#10b981', '#94a3b8']);
+
+            this._ctrDrawTrend('ctr-chart-trend', filteredViolations);
+
+            const topViolatorsMap = {};
+            filteredContractors.forEach((contractor) => {
+                const prepared = this.prepareContractorForAnalytics(contractor);
+                const key = this.getPreferredContractorAnalyticsKey(prepared, contractor.id || contractor.contractorId);
+                const ctx = this.buildContractorAnalyticsMatchers(prepared, key);
+                const count = this.dedupeContractorRecords(
+                    filteredViolations.filter(ctx.violationBelongsToContractor),
+                    ['isoCode', 'id'],
+                    ['contractorId', 'contractorName', 'violationType', 'violationDate']
+                ).length;
+                if (count > 0) {
+                    const name = prepared.name || prepared.companyName || contractor.name || contractor.companyName || 'غير محدد';
+                    topViolatorsMap[name] = count;
+                }
+            });
+            const topEntries = Object.entries(topViolatorsMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
+            this._ctrDrawHBar('ctr-chart-top-violators', topEntries.map((e) => e[0]), topEntries.map((e) => e[1]), 'rgba(245,158,11,0.8)');
+        }
+
+        const violationsEl = document.getElementById('ctr-violations-analysis');
+        if (violationsEl) this.safeSetInnerHTML(violationsEl, this.renderContractorViolationsAnalysis(filteredContractors, filteredViolations));
+
+        const expiringEl = document.getElementById('ctr-expiring-contracts');
+        if (expiringEl) this.safeSetInnerHTML(expiringEl, this.renderExpiringContractsAlert(expiringContracts));
+
+        const detailedEl = document.getElementById('ctr-detailed-analysis');
+        if (detailedEl) {
+            this.safeSetInnerHTML(
+                detailedEl,
+                this.renderDetailedContractorAnalysis(filteredContractors, approvedContractors, evaluations, filteredViolations)
+            );
+        }
+    },
+
+    exportContractorAnalyticsPDF() {
+        const contractors = this.getContractorsForAnalyticsList();
+        const approvedContractors = AppState.appData.approvedContractors || [];
+        const evaluations = AppState.appData.contractorEvaluations || [];
+        const violations = (AppState.appData.violations || []).filter((v) =>
+            v.contractorName || v.contractorId || (v.personType && (v.personType === 'contractor' || v.personType === 'مقاول'))
+        );
         const analytics = this.calculateContractorAnalytics(contractors, approvedContractors, evaluations, violations);
 
-        // التحقق من العقود المنتهية
-        const expiringContracts = this.getExpiringContracts(contractors, approvedContractors);
-
-        return `
-            <div class="content-card border-2 border-indigo-200 rounded-xl shadow-xl overflow-hidden">
-                <div class="card-header bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 text-white">
-                    <div class="flex items-center justify-between p-6">
-                        <div class="flex items-center">
-                            <div class="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center ml-4">
-                                <i class="fas fa-chart-line text-3xl"></i>
-                            </div>
-                            <div>
-                                <h2 class="card-title text-2xl font-bold mb-1">
-                                    تحليل بيانات المقاولين
-                                </h2>
-                                <p class="text-indigo-100 text-sm">نظرة شاملة على أداء المقاولين والإحصائيات</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <div class="bg-white bg-opacity-20 rounded-lg px-4 py-2">
-                                <p class="text-xs text-indigo-100">آخر تحديث</p>
-                                <p class="text-sm font-bold">${new Date().toLocaleDateString('ar-SA', { 
-                                    year: 'numeric', 
-                                    month: 'long', 
-                                    day: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                })}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body p-6 bg-gray-50">
-                    ${this.renderAnalyticsOverview(analytics)}
-                    ${this.renderContractorViolationsAnalysis(contractors, violations)}
-                    ${this.renderExpiringContractsAlert(expiringContracts)}
-                    ${this.renderDetailedContractorAnalysis(contractorsForDetailed, approvedContractors, evaluations, violations)}
-                </div>
-            </div>
+        const content = `
+            <div class="section-title">ملخص عام</div>
+            <table><tbody>
+                <tr><th>إجمالي المقاولين</th><td>${analytics.totalContractors}</td></tr>
+                <tr><th>المعتمدون</th><td>${analytics.totalApproved}</td></tr>
+                <tr><th>التقييمات</th><td>${analytics.totalEvaluations}</td></tr>
+                <tr><th>المخالفات</th><td>${analytics.totalViolations}</td></tr>
+                <tr><th>متوسط التقييم</th><td>${analytics.avgScore}%</td></tr>
+                <tr><th>معدل حل المخالفات</th><td>${analytics.violationResolutionRate}%</td></tr>
+                <tr><th>عقود قريبة الانتهاء</th><td>${analytics.expiringSoon || 0}</td></tr>
+            </tbody></table>
         `;
+
+        const formCode = `CONTRACTORS-ANALYTICS-${new Date().toISOString().slice(0, 10)}`;
+        const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
+            ? FormHeader.generatePDFHTML(formCode, 'تحليل بيانات المقاولين', content, false, true)
+            : `<html dir="rtl" lang="ar"><body>${content}</body></html>`;
+
+        try {
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const printWindow = window.open(url, '_blank');
+            if (printWindow) {
+                printWindow.onload = () => {
+                    setTimeout(() => {
+                        printWindow.print();
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    }, 400);
+                };
+                Notification?.success?.('جاري تحضير ملف PDF للطباعة...');
+            } else {
+                Notification?.error?.('يرجى السماح للنوافذ المنبثقة لتصدير PDF');
+            }
+        } catch (error) {
+            Utils.safeError('فشل تصدير تحليل المقاولين:', error);
+            Notification?.error?.('تعذر تصدير التحليلات');
+        }
     },
 
     calculateContractorAnalytics(contractors, approvedContractors, evaluations, violations) {
@@ -11561,6 +12089,10 @@ const Contractors = {
     },
 
     renderContractorViolationsAnalysis(contractors, violations) {
+        const contractorList = (Array.isArray(contractors) && contractors.length > 0)
+            ? contractors
+            : this.getContractorsForAnalyticsList();
+
         if (!violations || violations.length === 0) {
             return `
                 <div class="content-card mb-6 border-2 border-gray-200 rounded-xl shadow-lg">
@@ -11582,7 +12114,7 @@ const Contractors = {
         }
 
         // توحيد المطابقة مع "التحليل المفصل لكل مقاول" لضمان نفس الأرقام عبر الموديول
-        const contractorsWithStats = (contractors || []).map((contractor) => {
+        const contractorsWithStats = (contractorList || []).map((contractor) => {
             const analyticsContractor = this.prepareContractorForAnalytics(contractor);
             const lookupKey = this.getPreferredContractorAnalyticsKey(
                 analyticsContractor,
