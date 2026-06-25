@@ -1709,7 +1709,9 @@ const GoogleIntegration = {
                 }
             };
 
-            if (sheetName === 'ContractorApprovalRequests' || sheetName === 'ContractorDeletionRequests') {
+            if (sheetName === 'ContractorApprovalRequests' ||
+                sheetName === 'ContractorDeletionRequests' ||
+                sheetName === 'ApprovedContractors') {
                 payload.data.skipCache = true;
             }
 
@@ -3027,14 +3029,20 @@ const GoogleIntegration = {
                 const isLoaded = Array.isArray(hasData) && hasData.length > 0;
 
                 const isApprovalSheet = sheetName === 'ContractorApprovalRequests' || sheetName === 'ContractorDeletionRequests';
+                const isApprovedSheet = sheetName === 'ApprovedContractors';
                 const isAdminUser = !!(AppState.currentUser && typeof Permissions !== 'undefined'
                     && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
                     && Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser));
                 const needsAdminApprovalRefresh = isApprovalSheet && isAdminUser && lastSync > 0
                     && (currentTime - lastSync) > 30000;
+                const hasContractorsAccess = !!(typeof Permissions !== 'undefined'
+                    && typeof Permissions.hasAccess === 'function'
+                    && Permissions.hasAccess('contractors'));
+                const needsApprovedRefresh = isApprovedSheet && (isAdminUser || hasContractorsAccess)
+                    && lastSync > 0 && (currentTime - lastSync) > 30000;
                 
                 // إذا لم يتم تحميلها أو انتهت صلاحيتها أو لا توجد بيانات
-                if (!lastSync || isExpired || !isLoaded || needsAdminApprovalRefresh) {
+                if (!lastSync || isExpired || !isLoaded || needsAdminApprovalRefresh || needsApprovedRefresh) {
                     incompleteSheets.push(sheetName);
                 }
             });
@@ -3719,6 +3727,14 @@ const GoogleIntegration = {
                             try {
                                 Contractors.ingestApprovalRequestsFromSync(data, { refreshUi: true });
                             } catch (_carSync) { /* ignore */ }
+                        }
+                        if (key === 'approvedContractors' &&
+                            Array.isArray(data) && data.length > 0 &&
+                            typeof Contractors !== 'undefined' &&
+                            typeof Contractors.ingestApprovedContractorsFromSync === 'function') {
+                            try {
+                                Contractors.ingestApprovedContractorsFromSync(data, { refreshUi: true });
+                            } catch (_acSync) { /* ignore */ }
                         }
                         if (!AppState.syncMeta) {
                             AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };

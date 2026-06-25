@@ -403,10 +403,13 @@ function updateApprovedContractor(approvedContractorId, updateData) {
 /**
  * الحصول على جميع المقاولين المعتمدين
  */
-function getAllApprovedContractors(filters = {}) {
+function getAllApprovedContractors(filters = {}, spreadsheetIdOverride) {
     try {
+        filters = filters || {};
         const sheetName = 'ApprovedContractors';
-        let data = readFromSheet(sheetName, getSpreadsheetId());
+        const finalSpreadsheetId = spreadsheetIdOverride || resolveContractorSpreadsheetId_(filters, null);
+        invalidateHseSheetCaches(sheetName);
+        let data = readFromSheet(sheetName, finalSpreadsheetId);
         
         // تطبيق الفلاتر
         if (filters.status) {

@@ -378,6 +378,13 @@ const Contractors = {
                 } catch (_prefetchErr) { /* ignore */ }
             }
 
+            if (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function' &&
+                Permissions.hasAccess('contractors')) {
+                try {
+                    await this.ensureApprovedContractorsDataLoaded({ force: false });
+                } catch (_approvedPrefetchErr) { /* ignore */ }
+            }
+
             // ✅ تحسين: الانتظار حتى تكون AppState و appData جاهزة (تسريع التحميل)
             if (!AppState || !AppState.appData) {
                 // الانتظار حتى تكون البيانات جاهزة (بحد أقصى 1 ثانية بدلاً من 2 ثانية)
@@ -544,6 +551,9 @@ const Contractors = {
                 if (el) this.safeSetInnerHTML(el, html);
             };
             if (tc === 'approved') {
+                try {
+                    await this.ensureApprovedContractorsDataLoaded({ force: true });
+                } catch (_e) { /* ignore */ }
                 this.ensureApprovedTabContentLoaded(true);
             }
             patchTabBody('contractors-approved-content', approvedSectionHTML);
@@ -945,6 +955,170 @@ const Contractors = {
         }
     },
 
+    extractApprovedContractorRowsFromResponse(res) {
+        if (!res || res.success === false) return null;
+        if (Array.isArray(res.data)) return res.data;
+        if (Array.isArray(res)) return res;
+        if (res.data && Array.isArray(res.data.data)) return res.data.data;
+        return null;
+    },
+
+    mergeApprovedContractorsWithLocalOnly(serverRows, localRows) {
+        const server = Array.isArray(serverRows) ? serverRows : [];
+        const local = Array.isArray(localRows) ? localRows : [];
+        const serverIds = new Set(server.map((r) => r && r.id).filter(Boolean));
+        const serverCodes = new Set(server.map((r) => {
+            const c = r && (r.code || r.isoCode);
+            return c ? String(c).trim() : '';
+        }).filter(Boolean));
+        const localOnly = local.filter((r) => {
+            if (!r) return false;
+            const id = String(r.id || '').trim();
+            if (id.startsWith('TEMP_') || r._isPendingSync) {
+                return !serverIds.has(id);
+            }
+            if (id && !serverIds.has(id)) {
+                const code = String(r.code || r.isoCode || '').trim();
+                if (code && serverCodes.has(code)) return false;
+                return true;
+            }
+            return false;
+        });
+        return [...server, ...localOnly];
+    },
+
+    async _fetchApprovedContractorsFromBackend() {
+        if (typeof GoogleIntegration === 'undefined') return null;
+
+        if (typeof GoogleIntegration.readFromSheets === 'function') {
+            try {
+                const sheetRows = await GoogleIntegration.readFromSheets('ApprovedContractors', 45000);
+                if (Array.isArray(sheetRows) && sheetRows.length > 0) {
+                    return sheetRows;
+                }
+            } catch (err) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ readFromSheets(ApprovedContractors) فشل:', err?.message || err);
+                }
+            }
+        }
+
+        const apiData = this._approvalRequestApiPayload();
+        try {
+            const res = await GoogleIntegration.sendRequest({
+                action: 'getAllApprovedContractors',
+                data: apiData
+            });
+            const rows = this.extractApprovedContractorRowsFromResponse(res);
+            if (Array.isArray(rows) && rows.length > 0) {
+                return rows;
+            }
+        } catch (err) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ getAllApprovedContractors فشل:', err?.message || err);
+            }
+        }
+
+        const synced = AppState?.appData?.approvedContractors;
+        if (Array.isArray(synced) && synced.length > 0) {
+            return synced.slice();
+        }
+
+        return null;
+    },
+
+    ingestApprovedContractorsFromSync(rows, options = {}) {
+        if (!Array.isArray(rows) || rows.length === 0) return false;
+        this.ensureApprovedSetup();
+        const localRows = Array.isArray(AppState.appData.approvedContractors)
+            ? AppState.appData.approvedContractors.slice()
+            : [];
+        AppState.appData.approvedContractors = this.mergeApprovedContractorsWithLocalOnly(rows, localRows);
+        this.ensureApprovedSetup();
+        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+            window.DataManager.save();
+        }
+        if (options.refreshUi !== false) {
+            if (this.currentTab === 'approved') {
+                this.refreshApprovedEntitiesList();
+            }
+        }
+        return true;
+    },
+
+    async fetchApprovedContractorsFromBackend() {
+        try {
+            this.ensureApprovedSetup();
+            const localRows = Array.isArray(AppState.appData.approvedContractors)
+                ? AppState.appData.approvedContractors.slice()
+                : [];
+            const rows = await this._fetchApprovedContractorsFromBackend();
+
+            if (Array.isArray(rows) && rows.length > 0) {
+                AppState.appData.approvedContractors = this.mergeApprovedContractorsWithLocalOnly(rows, localRows);
+                this.ensureApprovedSetup();
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                }
+                if (this.currentTab === 'approved') {
+                    this.refreshApprovedEntitiesList();
+                }
+                return true;
+            }
+            if (localRows.length > 0 && typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ جلب المعتمدين فارغ — الاحتفاظ بـ ' + localRows.length + ' سجل محلي');
+            }
+            return false;
+        } catch (err) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ فشل جلب المقاولين المعتمدين من الخادم:', err);
+            }
+            return false;
+        }
+    },
+
+    ensureApprovedContractorsDataLoaded(options = {}) {
+        const force = options.force === true;
+        const debounceMs = 30000;
+        const now = Date.now();
+        if (!force && this._approvedContractorsLastLoadAt && (now - this._approvedContractorsLastLoadAt) < debounceMs) {
+            return Promise.resolve();
+        }
+        if (this._approvedContractorsSyncInFlight) {
+            return this._approvedContractorsSyncInFlight;
+        }
+
+        const canLoad = typeof GoogleIntegration !== 'undefined' &&
+            typeof GoogleIntegration.sendRequest === 'function' &&
+            typeof GoogleIntegration._isBackendRpcConfigured === 'function' &&
+            GoogleIntegration._isBackendRpcConfigured();
+
+        if (!canLoad) {
+            return Promise.resolve();
+        }
+
+        if (force && typeof GoogleIntegration._buildLocalDataStorageKey === 'function') {
+            try {
+                localStorage.removeItem(GoogleIntegration._buildLocalDataStorageKey('getAllApprovedContractors', {}));
+                localStorage.removeItem(GoogleIntegration._buildLocalDataStorageKey('readFromSheet', { sheetName: 'ApprovedContractors' }));
+            } catch (_clearErr) { /* ignore */ }
+        }
+
+        this._approvedContractorsSyncInFlight = this.fetchApprovedContractorsFromBackend()
+            .then((loaded) => {
+                if (loaded) {
+                    this._approvedContractorsLastLoadAt = Date.now();
+                }
+                return loaded;
+            })
+            .catch(() => false)
+            .finally(() => {
+                this._approvedContractorsSyncInFlight = null;
+            });
+
+        return this._approvedContractorsSyncInFlight;
+    },
+
     isCurrentUserApprovalRequestOwner(req) {
         if (!req) return false;
         const cu = AppState.currentUser || {};
@@ -1107,6 +1281,17 @@ const Contractors = {
 
         if (tab === 'approved') {
             this.ensureApprovedTabContentLoaded();
+        }
+
+        if (tab === 'approved') {
+            this.ensureApprovedContractorsDataLoaded({ force: true })
+                .then(() => {
+                    this.ensureApprovedTabContentLoaded(true);
+                    this.refreshApprovedEntitiesList();
+                })
+                .catch(() => {
+                    this.ensureApprovedTabContentLoaded(true);
+                });
         }
 
         if (tab === 'approval-request') {
@@ -10593,10 +10778,9 @@ const Contractors = {
                 this.refreshEvaluationsList(this.currentEvaluationFilter || '');
             }
 
-            // تحديث قائمة المعتمدين إذا كان التبويب مفتوحاً
-            if (this.currentTab === 'approved') {
-                this.refreshApprovedEntitiesList();
-            }
+            await this.ensureApprovedContractorsDataLoaded({ force: true });
+            this.ensureApprovedTabContentLoaded(true);
+            this.refreshApprovedEntitiesList();
 
             // تحديث الإشعارات
             if (typeof AppUI !== 'undefined' && AppUI.updateNotificationsBadge) {

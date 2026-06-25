@@ -246,7 +246,8 @@ var ActionHandlers = {
                                         // طلبات الاعتماد/الحذف تتغير باستمرار — لا نعتمد على كاش batch قديم
                                         const skipCache = !!(payload && payload.skipCache) ||
                                             sheetName === 'ContractorApprovalRequests' ||
-                                            sheetName === 'ContractorDeletionRequests';
+                                            sheetName === 'ContractorDeletionRequests' ||
+                                            sheetName === 'ApprovedContractors';
                                         const cache = CacheService.getScriptCache();
                                         const cacheKey = 'batch_' + sheetName + '_v2';
                                         const cached = skipCache ? null : cache.get(cacheKey);
@@ -2102,7 +2103,11 @@ var ActionHandlers = {
         var result = { success: false, message: '' };
         (function() {
 
-                    result = getAllApprovedContractors(payload.filters || {});
+                    var acFilters = (payload && payload.filters) ? payload.filters : {};
+                    var acSid = (typeof resolveContractorSpreadsheetId_ === 'function')
+                        ? resolveContractorSpreadsheetId_(payload, postData)
+                        : (spreadsheetId || getSpreadsheetId());
+                    result = getAllApprovedContractors(acFilters, acSid);
                     return;
 
         })();
