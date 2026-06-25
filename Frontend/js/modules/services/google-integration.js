@@ -4087,6 +4087,48 @@ const GoogleIntegration = {
         };
 
         return actionDataTypes[action] || 'static_data';
+    },
+
+    /**
+     * مزامنة طلبات معتمدة بدون سجل في ApprovedContractors
+     * fallback: إعادة approveContractorApprovalRequest إذا action جديد غير منشور بعد
+     */
+    async reconcileMissingApprovedContractors(options = {}) {
+        const sheetId = AppState?.googleConfig?.sheets?.spreadsheetId;
+        const data = { forceRefresh: true, ...(options || {}) };
+        if (sheetId && String(sheetId).trim() && sheetId !== 'YOUR_SPREADSHEET_ID_HERE') {
+            data.spreadsheetId = String(sheetId).trim();
+        }
+        if (!data.userData && AppState?.currentUser) {
+            data.userData = AppState.currentUser;
+        }
+        try {
+            return await this.sendRequest({ action: 'reconcileMissingApprovedContractors', data });
+        } catch (err) {
+            const msg = String(err?.message || err || '');
+            const requestId = options?.requestId || options?.id;
+            if (requestId && (msg.includes('غير معترف') || msg.includes('ACTION_NOT_RECOGNIZED'))) {
+                return await this.sendRequest({
+                    action: 'approveContractorApprovalRequest',
+                    data: { requestId, userData: AppState.currentUser }
+                });
+            }
+            throw err;
+        }
+    },
+
+    async refreshApprovedContractorsFromSheet() {
+        const rows = await this.readFromSheets('ApprovedContractors', 45000);
+        if (Array.isArray(rows) && AppState?.appData) {
+            AppState.appData.approvedContractors = rows;
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+            if (typeof Contractors !== 'undefined' && typeof Contractors.refreshApprovedEntitiesList === 'function') {
+                Contractors.refreshApprovedEntitiesList();
+            }
+        }
+        return rows;
     }
 };
 

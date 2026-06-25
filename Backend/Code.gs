@@ -480,6 +480,9 @@ function doPost(e) {
                 } else {
                     result = disableMfa(payload || {}, mfaDisableActor);
                 }
+            } else if (action === 'reconcileMissingApprovedContractors' && typeof reconcileMissingApprovedContractorsFromRequests === 'function') {
+                var reconActor = actorUserData || (payload && payload.userData) || (postData && postData.userData) || {};
+                result = reconcileMissingApprovedContractorsFromRequests(payload || {}, reconActor);
             } else {
                 result = {
                     success: false,
