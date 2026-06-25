@@ -712,6 +712,12 @@ function getAllContractorApprovalRequests(filters = {}) {
                 if ((!record.status || String(record.status).trim() === '') && record.Status) {
                     record.status = String(record.Status).trim();
                 }
+                if ((!record.createdBy || String(record.createdBy).trim() === '') && record.CreatedBy) {
+                    record.createdBy = String(record.CreatedBy).trim();
+                }
+                if ((!record.createdAt || String(record.createdAt).trim() === '') && record.CreatedAt) {
+                    record.createdAt = record.CreatedAt;
+                }
             }
             if (record && record.evaluationData) {
                 // محاولة تحليل evaluationData إذا كانت نصاً
@@ -751,7 +757,12 @@ function getAllContractorApprovalRequests(filters = {}) {
             data = data.filter(r => r.createdBy === filters.createdBy);
         }
         if (filters.pendingOnly) {
-            data = data.filter(r => r.status === 'pending' || r.status === 'under_review');
+            data = data.filter(function(r) {
+                var st = String((r && r.status) || '').trim().toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
+                return st === 'pending' || st === 'under_review' || st === '' ||
+                    st === 'تم_الإرسال' || st === 'قيد_المراجعة' || st === 'تحت_المراجعة' ||
+                    st === 'في_الانتظار' || st === 'submitted';
+            });
         }
         
         // ترتيب حسب تاريخ الإنشاء
