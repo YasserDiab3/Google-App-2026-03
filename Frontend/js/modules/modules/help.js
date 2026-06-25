@@ -571,7 +571,7 @@ const Help = {
     getPolicyTopics() {
         return [
             {
-                id: 'policy-intro', categoryId: 'policy', moduleId: null,
+                id: 'policy-intro', categoryId: 'policy', moduleId: null, isPolicy: true,
                 title: 'مقدمة — قبول الاستخدام', icon: 'fa-file-contract',
                 summary: 'باستخدامك النظام فإنك توافق على الشروط التالية.',
                 purpose: 'يحدد هذا القسم القواعد العامة لاستخدام منظومة السلامة والصحة المهنية والبيئة التابعة لجهتك المنظمة.',
@@ -586,10 +586,10 @@ const Help = {
                     'إن لم توافق على البنود تواصل مع مدير النظام لإيقاف حسابك',
                     'استمرار الاستخدام يُعد قبولاً للنسخة المعروضة هنا'
                 ],
-                tips: ['للمدير: يمكن تخصيص أسئلة المساعدة من الإعدادات — السياسة ثابتة في الدليل']
+                tips: ['راجع الأقسام الستة عند كل تحديث رئيسي للتطبيق']
             },
             {
-                id: 'policy-user-responsibility', categoryId: 'policy', moduleId: null,
+                id: 'policy-user-responsibility', categoryId: 'policy', moduleId: null, isPolicy: true,
                 title: 'مسؤولية المستخدم', icon: 'fa-user-check',
                 summary: 'ما يُتوقع منك عند استخدام النظام.',
                 purpose: 'كل مستخدم مسؤول عن تصرفاته داخل النظام وعن دقة البيانات التي يُدخلها.',
@@ -608,7 +608,7 @@ const Help = {
                 tips: ['المستخدم بصلاحية «قراءة فقط» مسؤول أيضاً عن سرية ما يطلع عليه']
             },
             {
-                id: 'policy-data-privacy', categoryId: 'policy', moduleId: null,
+                id: 'policy-data-privacy', categoryId: 'policy', moduleId: null, isPolicy: true,
                 title: 'سرية البيانات والخصوصية', icon: 'fa-user-secret',
                 summary: 'حماية معلومات الموظفين والعمليات.',
                 purpose: 'بيانات السلامة والصحة المهنية حساسة وتخضع لسياسات الجهة والأنظمة المعمول بها.',
@@ -627,7 +627,7 @@ const Help = {
                 tips: ['MFA يعزز حماية الحساب — فعّله من ملفي الشخصي']
             },
             {
-                id: 'policy-acceptable-use', categoryId: 'policy', moduleId: null,
+                id: 'policy-acceptable-use', categoryId: 'policy', moduleId: null, isPolicy: true,
                 title: 'الاستخدام المقبول والمحظور', icon: 'fa-ban',
                 summary: 'ما يُسمح به وما يُمنع صراحةً.',
                 purpose: 'ضمان استخدام النظام بما يخدم السلامة دون إساءة أو مخاطر على البيانات.',
@@ -647,7 +647,7 @@ const Help = {
                 tips: ['السجلات قد تُستخدم في تحقيقات وتدقيق — الدقة أمانة']
             },
             {
-                id: 'policy-disclaimer', categoryId: 'policy', moduleId: null,
+                id: 'policy-disclaimer', categoryId: 'policy', moduleId: null, isPolicy: true,
                 title: 'إخلاء المسؤولية وحدود النظام', icon: 'fa-triangle-exclamation',
                 summary: 'ما لا يتحمله النظام أو مقدّم الخدمة مسؤوليته.',
                 purpose: 'توضيح حدود الأداة التقنية أمام الالتزامات القانونية والمهنية للجهة والمستخدم.',
@@ -667,7 +667,7 @@ const Help = {
                 tips: ['في حالات الطوارئ اتبع خطة الطوارئ المعتمدة — لا تنتظر النظام']
             },
             {
-                id: 'policy-ip-updates', categoryId: 'policy', moduleId: null,
+                id: 'policy-ip-updates', categoryId: 'policy', moduleId: null, isPolicy: true,
                 title: 'الملكية الفكرية وتعديل السياسة', icon: 'fa-copyright',
                 summary: 'حقوق النظام وتحديث الشروط.',
                 purpose: 'حماية حقوق البرمجيات والمحتوى وآلية تحديث السياسة.',
@@ -1018,7 +1018,7 @@ const Help = {
         const hasSearch = !!this.normalizeSearch(this.state.searchQuery);
         const items = this.getFilteredQaItems();
 
-        if (cat !== 'all' && cat !== 'faq' && cat !== 'policy') {
+        if (cat !== 'all' && cat !== 'faq') {
             panel.style.display = 'none';
             panel.innerHTML = '';
             return;
@@ -1069,6 +1069,7 @@ const Help = {
         const hasModule = !!topic.moduleId;
         const canOpen = hasModule && this.canOpenModule(topic.moduleId);
         const isFaq = !!topic.isFaq;
+        const isPolicy = !!(topic.isPolicy || topic.categoryId === 'policy');
 
         const renderList = (title, items, icon) => {
             if (!items || !items.length) return '';
@@ -1112,6 +1113,16 @@ const Help = {
             if (topic.features && topic.features.length) {
                 body += renderList('تفاصيل إضافية', topic.features, 'fa-list-ul');
             }
+        } else if (isPolicy) {
+            if (topic.summary) {
+                body += `<p style="margin:0 0 8px;color:#64748b;font-size:0.86rem;">${Utils.escapeHTML(topic.summary)}</p>`;
+            }
+            if (topic.purpose) {
+                body += `<p style="margin:0 0 10px;color:#334155;font-size:0.86rem;line-height:1.7;">${Utils.escapeHTML(topic.purpose)}</p>`;
+            }
+            body += renderList('البنود والأحكام', topic.features, 'fa-list-check');
+            body += renderList('التزامات وإرشادات', topic.workflow, 'fa-gavel');
+            body += renderList('ملاحظات', topic.tips, 'fa-circle-info');
         } else {
             if (topic.summary) {
                 body += `<p style="margin:0 0 8px;color:#64748b;font-size:0.86rem;">${Utils.escapeHTML(topic.summary)}</p>`;
@@ -1131,12 +1142,12 @@ const Help = {
             }
         }
 
-        const permBanner = hasModule && !canOpen ? `
+        const permBanner = !isPolicy && hasModule && !canOpen ? `
             <div style="margin-top:10px;padding:8px 12px;background:#f1f5f9;border-radius:8px;font-size:0.8rem;color:#64748b;">
                 <i class="fas fa-lock" style="margin-left:6px;"></i> يتطلب منح صلاحية «${Utils.escapeHTML(topic.title)}» من مدير النظام — يمكنك قراءة الشرح هنا.
             </div>` : '';
 
-        const openBtn = canOpen ? `
+        const openBtn = !isPolicy && canOpen ? `
             <button type="button" class="help-open-module-btn" data-module="${Utils.escapeHTML(topic.moduleId)}"
                 style="margin-top:12px;padding:8px 16px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;">
                 <i class="fas fa-external-link-alt" style="margin-left:6px;"></i> فتح الموديول
@@ -1144,16 +1155,16 @@ const Help = {
 
         return `
             <div class="content-card help-topic-card" data-topic-id="${Utils.escapeHTML(topic.id)}"
-                style="padding:0;margin-bottom:10px;overflow:hidden;border:1px solid ${isOpen ? '#99f6e4' : '#f1f5f9'};">
+                style="padding:0;margin-bottom:10px;overflow:hidden;border:1px solid ${isOpen ? (isPolicy ? '#fde68a' : '#99f6e4') : '#f1f5f9'};">
                 <button type="button" class="help-topic-toggle" data-topic-id="${Utils.escapeHTML(topic.id)}"
-                    style="width:100%;text-align:right;padding:14px 18px;background:${isOpen ? '#f0fdfa' : '#fff'};border:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                    style="width:100%;text-align:right;padding:14px 18px;background:${isOpen ? (isPolicy ? '#fffbeb' : '#f0fdfa') : '#fff'};border:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;">
                     <span style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
-                        <span style="width:36px;height:36px;background:#ecfdf5;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <span style="width:36px;height:36px;background:${isPolicy ? '#fffbeb' : '#ecfdf5'};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                             ${isFaq
                                 ? '<span style="font-size:0.75rem;font-weight:800;color:#0d9488;">س</span>'
-                                : `<i class="fas ${topic.icon || 'fa-book'}" style="color:#0d9488;"></i>`}
+                                : `<i class="fas ${topic.icon || 'fa-book'}" style="color:${isPolicy ? '#b45309' : '#0d9488'};"></i>`}
                         </span>
-                        <span style="font-weight:700;font-size:0.9rem;color:#134e4a;">${Utils.escapeHTML(isFaq ? topic.title : topic.title)}</span>
+                        <span style="font-weight:700;font-size:0.9rem;color:${isPolicy ? '#92400e' : '#134e4a'};">${Utils.escapeHTML(topic.title)}</span>
                     </span>
                     <i class="fas fa-chevron-${isOpen ? 'up' : 'down'}" style="color:#94a3b8;flex-shrink:0;"></i>
                 </button>
@@ -1179,7 +1190,7 @@ const Help = {
             } else if (faqOnly) {
                 metaEl.textContent = topics.length ? `${topics.length} سؤالاً في Q&A` : 'لا توجد نتائج';
             } else if (cat === 'policy') {
-                metaEl.textContent = topics.length ? `${topics.length} بنداً في سياسة الاستخدام` : 'لا توجد نتائج';
+                metaEl.textContent = '6 أقسام — سياسة الاستخدام والمسؤولية (بدون أسئلة وأجوبة)';
             } else {
                 metaEl.textContent = topics.length
                     ? `عرض ${topics.length} موضوعاً`
@@ -1199,7 +1210,15 @@ const Help = {
             return;
         }
 
-        listEl.innerHTML = topics.map((t, i) => this.renderTopicCard(t, i)).join('');
+        const policyHeader = cat === 'policy' ? `
+            <div class="content-card" style="padding:16px 20px;margin-bottom:14px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;">
+                <h2 style="margin:0 0 6px;font-size:1.05rem;font-weight:800;color:#92400e;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-scale-balanced"></i> سياسة الاستخدام والمسؤولية
+                </h2>
+                <p style="margin:0;font-size:0.84rem;color:#78350f;line-height:1.6;">ستة أقسام تنظيمية — اضغط على أي قسم لقراءة التفاصيل. هذا التبويب للأحكام فقط وليس لأسئلة وأجوبة.</p>
+            </div>` : '';
+
+        listEl.innerHTML = policyHeader + topics.map((t, i) => this.renderTopicCard(t, i)).join('');
     },
 
     updateCategoryButtons(section) {
