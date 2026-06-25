@@ -11790,9 +11790,9 @@ const Contractors = {
         const filteredApproved = this._ctrFilterApprovedContractors(approvedContractors, entityFilter, statusFilter);
         const scopedEvaluations = this._ctrScopeRecordsToContractors(evaluations, filteredContractors, 'evaluation');
         const scopedViolations = this._ctrScopeRecordsToContractors(filteredViolations, filteredContractors, 'violation');
-        const analytics = this.calculateContractorAnalytics(filteredContractors, filteredApproved, scopedEvaluations, scopedViolations);
-        const expiringContracts = this.getExpiringContracts(filteredContractors, filteredApproved);
         const detailedStats = this.buildContractorDetailedStatsList(filteredContractors, scopedEvaluations, scopedViolations);
+        const analytics = this.buildContractorAnalyticsKpis(filteredContractors, filteredApproved, detailedStats, scopedViolations);
+        const expiringContracts = this.getExpiringContracts(filteredContractors, filteredApproved);
 
         return {
             period,
@@ -11804,8 +11804,135 @@ const Contractors = {
             analytics,
             expiringContracts,
             detailedStats,
-            resultsCountText: filteredContractors.length + ' مقاول • ' + scopedViolations.length + ' مخالفة'
+            resultsCountText: filteredContractors.length + ' مقاول • ' + detailedStats.reduce((s, r) => s + (r.violationsCount || 0), 0) + ' مخالفة'
         };
+    },
+
+    _ctrContractorIsApproved(contractor, approvedList) {
+        if (!contractor) return false;
+        if (contractor.approvedEntityId) return true;
+        const prepared = this.prepareContractorForAnalytics(contractor);
+        const lookupKey = this.getPreferredContractorAnalyticsKey(prepared, contractor.id || contractor.contractorId);
+        return (approvedList || []).some((ac) => {
+            if (!this.isApprovalActive(ac, true)) return false;
+            if (String(ac.id || '') === String(contractor.approvedEntityId || '')) return true;
+            if (String(ac.contractorId || '') && String(ac.contractorId) === String(contractor.id || contractor.contractorId || '')) {
+                return true;
+            }
+            const acPrepared = this.prepareContractorForAnalytics({
+                ...ac,
+                name: ac.companyName || ac.name || '',
+                companyName: ac.companyName || ac.name || ''
+            });
+            const acKey = this.getPreferredContractorAnalyticsKey(acPrepared, ac.contractorId || ac.id);
+            return !!(lookupKey && acKey && lookupKey === acKey);
+        });
+    },
+
+    /**
+     * KPIs من نفس مصدر الجدول المفصل — تطابق أرقام المديول
+     */
+    buildContractorAnalyticsKpis(filteredContractors, filteredApproved, detailedStats, violations) {
+        const contractors = Array.isArray(filteredContractors) ? filteredContractors : [];
+        const detailed = Array.isArray(detailedStats) ? detailedStats : [];
+        const viols = Array.isArray(violations) ? violations : [];
+        const approvedList = Array.isArray(filteredApproved) ? filteredApproved : [];
+
+        const totalContractors = contractors.length;
+        const totalApproved = contractors.filter((c) => this._ctrContractorIsApproved(c, approvedList)).length;
+        const activeContractors = contractors.filter(
+            (c) => this.isEntityEnabled(c) && this._ctrGetContractorContractState(c) !== 'expired'
+        ).length;
+
+        const totalEvaluations = detailed.reduce((sum, row) => sum + (row.evaluationsCount || 0), 0);
+        const totalViolations = detailed.reduce((sum, row) => sum + (row.violationsCount || 0), 0);
+        const resolvedViolations = detailed.reduce((sum, row) => sum + (row.resolvedViolations || 0), 0);
+
+        let scoreWeightedSum = 0;
+        let scoreWeight = 0;
+        detailed.forEach((row) => {
+            const count = row.evaluationsCount || 0;
+            if (count > 0 && !isNaN(row.avgScore)) {
+                scoreWeightedSum += row.avgScore * count;
+                scoreWeight += count;
+            }
+        });
+        const avgScore = scoreWeight > 0 ? Math.round((scoreWeightedSum / scoreWeight) * 100) / 100 : 0;
+
+        const violationResolutionRate = totalViolations > 0
+            ? Math.round((resolvedViolations / totalViolations) * 10000) / 100
+            : 0;
+
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+        let expiredContractors = 0;
+        let expiringSoon = 0;
+        contractors.forEach((c) => {
+            const state = this._ctrGetContractorContractState(c);
+            if (state === 'expired') expiredContractors++;
+            else if (state === 'expiring') expiringSoon++;
+        });
+
+        const approvalRate = totalContractors > 0
+            ? Math.round((totalApproved / totalContractors) * 10000) / 100
+            : 0;
+        const activeRate = totalContractors > 0
+            ? Math.round((activeContractors / totalContractors) * 10000) / 100
+            : 0;
+        const violationsPerContractor = totalContractors > 0
+            ? Math.round((totalViolations / totalContractors) * 100) / 100
+            : 0;
+
+        const contractorViolations = viols.filter((v) =>
+            v.contractorName || v.contractorId || (v.personType && (v.personType === 'contractor' || v.personType === 'مقاول'))
+        );
+        const highSeverityViolations = contractorViolations.filter((v) => {
+            const severity = (v.severity || '').toString().trim();
+            return severity === 'عالية' || severity === 'high' || severity === 'حرجة';
+        }).length;
+        const mediumSeverityViolations = contractorViolations.filter((v) => {
+            const severity = (v.severity || '').toString().trim();
+            return severity === 'متوسطة' || severity === 'medium';
+        }).length;
+        const lowSeverityViolations = contractorViolations.filter((v) => {
+            const severity = (v.severity || '').toString().trim();
+            return severity === 'منخفضة' || severity === 'low' || severity === 'قليلة';
+        }).length;
+
+        return {
+            totalContractors,
+            totalApproved,
+            totalEvaluations,
+            totalViolations,
+            avgScore,
+            activeContractors,
+            expiredContractors,
+            expiringSoon,
+            approvalRate,
+            violationsPerContractor,
+            activeRate,
+            violationResolutionRate,
+            resolvedViolations,
+            highSeverityViolations,
+            mediumSeverityViolations,
+            lowSeverityViolations
+        };
+    },
+
+    calculateContractorAnalytics(contractors, approvedContractors, evaluations, violations) {
+        const detailedStats = this.buildContractorDetailedStatsList(
+            Array.isArray(contractors) ? contractors : [],
+            Array.isArray(evaluations) ? evaluations : [],
+            Array.isArray(violations) ? violations : []
+        );
+        return this.buildContractorAnalyticsKpis(
+            Array.isArray(contractors) ? contractors : [],
+            Array.isArray(approvedContractors) ? approvedContractors : [],
+            detailedStats,
+            Array.isArray(violations) ? violations : []
+        );
     },
 
     _buildCtrAnalyticsExportLegend_(snapshot) {
@@ -12063,159 +12190,6 @@ const Contractors = {
                 btn.innerHTML = origHtml;
             }
         }
-    },
-
-
-    calculateContractorAnalytics(contractors, approvedContractors, evaluations, violations) {
-        // قائمة موحدة للمقاولين المسجلين (من contractors و approvedContractors) بدون تكرار حسب id/contractorId/اسم
-        const seenIds = new Set();
-        const mergedContractors = [];
-        const addUnique = (list) => {
-            if (!Array.isArray(list)) return;
-            list.forEach((c, idx) => {
-                if (!c || typeof c !== 'object') return;
-                const id = (c.id || c.contractorId || (c.companyName || c.name || '').toString().trim() || `_idx_${idx}`);
-                if (seenIds.has(id)) return;
-                seenIds.add(id);
-                mergedContractors.push({
-                    ...c,
-                    _endDate: c.endDate || c.expiryDate,
-                    _status: (c.status || '').toString().trim()
-                });
-            });
-        };
-        addUnique(contractors);
-        addUnique(approvedContractors);
-
-        // إجمالي المقاولين المسجلين = عدد السجلات الفريدة في القائمتين
-        const totalContractors = mergedContractors.length;
-
-        // المقاولين المعتمدين: كل سجل في قائمة المعتمدين يُحسب معتمداً ما لم تكن حالته صريحة غير معتمدة
-        const totalApproved = approvedContractors.filter(ac => {
-            const status = (ac.status || '').toString().trim();
-            const s = status.toLowerCase();
-            if (!status) return true; // وجود السجل في قائمة المعتمدين = معتمد
-            return s === 'approved' || s === 'معتمد' || s === 'نشط' || s === 'active';
-        }).length;
-
-        // إجمالي التقييمات
-        const totalEvaluations = evaluations.length;
-
-        // إجمالي المخالفات (جميع المخالفات المتعلقة بالمقاولين)
-        const totalViolations = violations.filter(v => {
-            return v.contractorName ||
-                   v.contractorId ||
-                   (v.personType && (v.personType === 'contractor' || v.personType === 'مقاول'));
-        }).length;
-
-        // حساب متوسط التقييمات بدقة
-        let avgScore = 0;
-        if (evaluations.length > 0) {
-            const validScores = evaluations
-                .map(e => parseFloat(e.finalScore) || parseFloat(e.score) || 0)
-                .filter(score => !isNaN(score) && score >= 0 && score <= 100);
-
-            if (validScores.length > 0) {
-                const sum = validScores.reduce((acc, score) => acc + score, 0);
-                avgScore = sum / validScores.length;
-            }
-        }
-
-        // المقاولين النشطين (من القائمة الموحدة)
-        const activeContractors = mergedContractors.filter(c => {
-            const s = (c._status || (c.status || '').toString()).toLowerCase();
-            return s === 'نشط' || s === 'active' || s === 'معتمد' || s === 'approved';
-        }).length;
-
-        // المقاولين المنتهية عقودهم (من القائمة الموحدة، endDate أو expiryDate)
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-
-        const expiredContractors = mergedContractors.filter(c => {
-            const endDateVal = c._endDate || c.endDate || c.expiryDate;
-            if (!endDateVal) return false;
-            try {
-                const endDate = new Date(endDateVal);
-                endDate.setHours(0, 0, 0, 0);
-                return endDate < now;
-            } catch (e) {
-                return false;
-            }
-        }).length;
-
-        // المقاولين قريبين من الانتهاء (خلال 30 يوم)
-        const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-        const expiringSoon = mergedContractors.filter(c => {
-            const endDateVal = c._endDate || c.endDate || c.expiryDate;
-            if (!endDateVal) return false;
-            try {
-                const endDate = new Date(endDateVal);
-                endDate.setHours(0, 0, 0, 0);
-                return endDate >= now && endDate <= thirtyDaysFromNow;
-            } catch (e) {
-                return false;
-            }
-        }).length;
-
-        // نسبة الاعتماد (من إجمالي المقاولين)
-        const approvalRate = totalContractors > 0 
-            ? Math.round((totalApproved / totalContractors) * 100 * 100) / 100 
-            : 0;
-
-        // نسبة المخالفات (مخالفات لكل مقاول)
-        const violationsPerContractor = totalContractors > 0
-            ? Math.round((totalViolations / totalContractors) * 100) / 100
-            : 0;
-
-        // نسبة المقاولين النشطين
-        const activeRate = totalContractors > 0
-            ? Math.round((activeContractors / totalContractors) * 100 * 100) / 100
-            : 0;
-
-        // معدل حل المخالفات
-        const contractorViolations = violations.filter(v => 
-            v.contractorName || v.contractorId || (v.personType && (v.personType === 'contractor' || v.personType === 'مقاول'))
-        );
-        const resolvedViolations = contractorViolations.filter(v => {
-            const status = (v.status || '').toString().trim();
-            return status === 'محلول' || status === 'resolved' || status === 'تم الحل';
-        }).length;
-        const violationResolutionRate = totalViolations > 0
-            ? Math.round((resolvedViolations / totalViolations) * 100 * 100) / 100
-            : 0;
-
-        // توزيع المخالفات حسب الشدة
-        const highSeverityViolations = contractorViolations.filter(v => {
-            const severity = (v.severity || '').toString().trim();
-            return severity === 'عالية' || severity === 'high' || severity === 'حرجة';
-        }).length;
-        const mediumSeverityViolations = contractorViolations.filter(v => {
-            const severity = (v.severity || '').toString().trim();
-            return severity === 'متوسطة' || severity === 'medium';
-        }).length;
-        const lowSeverityViolations = contractorViolations.filter(v => {
-            const severity = (v.severity || '').toString().trim();
-            return severity === 'منخفضة' || severity === 'low' || severity === 'قليلة';
-        }).length;
-
-        return {
-            totalContractors,
-            totalApproved,
-            totalEvaluations,
-            totalViolations,
-            avgScore: Math.round(avgScore * 100) / 100,
-            activeContractors,
-            expiredContractors,
-            expiringSoon,
-            approvalRate,
-            violationsPerContractor,
-            activeRate,
-            violationResolutionRate,
-            resolvedViolations,
-            highSeverityViolations,
-            mediumSeverityViolations,
-            lowSeverityViolations
-        };
     },
 
     renderAnalyticsOverview(analytics) {
