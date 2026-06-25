@@ -1847,8 +1847,8 @@ const Permissions = {
             return false;
         }
 
-        // ملفي الشخصي متاح دائماً لأي مستخدم مسجل الدخول
-        if (moduleName === 'profile') {
+        // ملفي الشخصي والمساعدة متاحان دائماً لأي مستخدم مسجل الدخول
+        if (moduleName === 'profile' || moduleName === 'help') {
             return true;
         }
 
@@ -2874,7 +2874,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.293',
+    appVersion: '1.0.294',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,

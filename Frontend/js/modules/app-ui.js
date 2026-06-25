@@ -4572,6 +4572,16 @@ window.UI = {
                             </ol>
                         </div>
                         
+                        <div class="border-t pt-4 bg-teal-50 border border-teal-200 rounded-lg p-4">
+                            <h3 class="text-sm font-semibold text-teal-800 mb-2">
+                                <i class="fas fa-book ml-2"></i>
+                                دليل النظام الكامل
+                            </h3>
+                            <p class="text-sm text-teal-700">
+                                بعد تسجيل الدخول ستجد شرحاً تفصيلياً لكل الموديولات في <strong>المساعدة</strong> من القائمة الجانبية (فوق الإعدادات).
+                            </p>
+                        </div>
+                        
                         <div class="border-t pt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                             <h3 class="text-sm font-semibold text-yellow-800 mb-2">
                                 <i class="fas fa-envelope ml-2"></i>
@@ -7000,6 +7010,13 @@ window.UI = {
                         if (!silent) {
                             Utils.safeError('❌ موديول SafetyPerformanceKPIs غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
+                    }
+                    break;
+                case 'help':
+                    if (typeof Help !== 'undefined' && Help.load) {
+                        Help.load();
+                    } else if (!silent) {
+                        Utils.safeError('❌ موديول Help غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                     }
                     break;
                 case 'settings':
@@ -10589,6 +10606,7 @@ window.UI = {
                 'nav.aiAssistant': 'مساعد الذكاء الاصطناعي',
                 'nav.appTester': 'اختبار التطبيق',
                 'nav.settings': 'الإعدادات',
+                'nav.help': 'المساعدة',
                 'nav.logout': 'تسجيل الخروج'
             },
             en: {
@@ -10694,6 +10712,7 @@ window.UI = {
                 'nav.aiAssistant': 'AI Assistant',
                 'nav.appTester': 'Application Testing',
                 'nav.settings': 'Settings',
+                'nav.help': 'Help',
                 'nav.logout': 'Logout'
             }
         };

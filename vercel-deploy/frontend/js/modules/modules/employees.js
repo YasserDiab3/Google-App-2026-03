@@ -721,11 +721,47 @@ const Employees = {
     },
 
     /**
+     * أنماط كروت الإحصائيات — منفصلة عن content-card لتجنب الاستطالة العمودية
+     */
+    ensureEmployeesStatsCardsStyles() {
+        const styleId = 'employees-stats-cards-styles';
+        if (document.getElementById(styleId)) return;
+
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            #employees-stats-cards {
+                align-items: start;
+            }
+            #employees-stats-cards .employee-stat-card {
+                display: block !important;
+                height: auto !important;
+                min-height: 0 !important;
+                align-self: start;
+                width: 100%;
+                padding: 1rem 1.15rem;
+                box-sizing: border-box;
+                border-radius: 16px;
+                transition: transform 0.25s ease, box-shadow 0.25s ease;
+            }
+            #employees-stats-cards .employee-stat-card:hover {
+                transform: translateY(-2px);
+            }
+            #employees-stats-cards .employees-gender-stat-card {
+                padding: 0.9rem 1rem;
+            }
+        `;
+        document.head.appendChild(style);
+    },
+
+    /**
      * عرض كروت الإحصائيات
      */
     renderStatsCards() {
         const container = document.getElementById('employees-stats-cards');
         if (!container) return;
+
+        this.ensureEmployeesStatsCardsStyles();
 
         const stats = this.calculateStatistics();
         
@@ -800,53 +836,47 @@ const Employees = {
             const femalePct = genderTotal > 0 ? 100 - malePct : 0;
 
             return `
-                <div class="stats-card content-card employees-gender-stat-card transform transition-all duration-300 hover:scale-[1.02] hover:shadow-xl border-2 ${card.borderColor} bg-gradient-to-br ${card.bgGradient}"
+                <div class="employee-stat-card employees-gender-stat-card border-2 ${card.borderColor} bg-gradient-to-br ${card.bgGradient}"
                      style="position: relative; overflow: hidden;">
                     <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 opacity-80"></div>
-                    <div class="absolute -top-6 -left-6 w-24 h-24 rounded-full bg-blue-200 opacity-20"></div>
-                    <div class="absolute -bottom-8 -right-4 w-28 h-28 rounded-full bg-pink-200 opacity-20"></div>
 
-                    <div class="relative z-10 p-1">
-                        <div class="flex items-start justify-between mb-3">
-                            <div>
-                                <h3 class="text-sm font-semibold ${card.textColor} mb-0.5">${card.title}</h3>
-                                <p class="text-xs text-gray-500">${card.description}</p>
+                    <div class="relative z-10">
+                        <div class="flex items-center justify-between gap-2 mb-2.5">
+                            <div class="min-w-0">
+                                <h3 class="text-sm font-semibold ${card.textColor} leading-tight">${card.title}</h3>
+                                <p class="text-[11px] text-gray-500 mt-0.5 leading-snug">${card.description}</p>
                             </div>
-                            <div class="${card.iconBg} p-2.5 rounded-xl shadow-sm">
-                                <i class="${card.icon} text-purple-600 text-xl"></i>
+                            <div class="${card.iconBg} p-2 rounded-lg shadow-sm shrink-0">
+                                <i class="${card.icon} text-purple-600 text-base"></i>
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-2 mb-3">
-                            <div class="rounded-xl bg-white/70 border border-blue-100 px-3 py-2.5 text-center shadow-sm">
-                                <div class="flex items-center justify-center gap-1.5 mb-1">
-                                    <i class="fas fa-mars text-blue-500 text-sm"></i>
-                                    <span class="text-xs font-medium text-blue-700">${maleLabel}</span>
+                        <div class="grid grid-cols-2 gap-2 mb-2">
+                            <div class="rounded-lg bg-white/80 border border-blue-100 px-2 py-2 text-center">
+                                <div class="flex items-center justify-center gap-1 mb-0.5">
+                                    <i class="fas fa-mars text-blue-500 text-xs"></i>
+                                    <span class="text-[11px] font-medium text-blue-700">${maleLabel}</span>
                                 </div>
-                                <div class="text-xl font-bold text-blue-800 leading-none">${maleCount.toLocaleString('en-US')}</div>
-                                <div class="text-[10px] text-blue-500 mt-1 font-medium">${malePct}%</div>
+                                <div class="text-lg font-bold text-blue-800 leading-none">${maleCount.toLocaleString('en-US')}</div>
+                                <div class="text-[10px] text-blue-500 mt-0.5">${malePct}%</div>
                             </div>
-                            <div class="rounded-xl bg-white/70 border border-pink-100 px-3 py-2.5 text-center shadow-sm">
-                                <div class="flex items-center justify-center gap-1.5 mb-1">
-                                    <i class="fas fa-venus text-pink-500 text-sm"></i>
-                                    <span class="text-xs font-medium text-pink-700">${femaleLabel}</span>
+                            <div class="rounded-lg bg-white/80 border border-pink-100 px-2 py-2 text-center">
+                                <div class="flex items-center justify-center gap-1 mb-0.5">
+                                    <i class="fas fa-venus text-pink-500 text-xs"></i>
+                                    <span class="text-[11px] font-medium text-pink-700">${femaleLabel}</span>
                                 </div>
-                                <div class="text-xl font-bold text-pink-800 leading-none">${femaleCount.toLocaleString('en-US')}</div>
-                                <div class="text-[10px] text-pink-500 mt-1 font-medium">${femalePct}%</div>
+                                <div class="text-lg font-bold text-pink-800 leading-none">${femaleCount.toLocaleString('en-US')}</div>
+                                <div class="text-[10px] text-pink-500 mt-0.5">${femalePct}%</div>
                             </div>
                         </div>
 
                         ${genderTotal > 0 ? `
-                            <div class="h-2 rounded-full bg-gray-200/80 overflow-hidden flex" title="${maleLabel} ${malePct}% / ${femaleLabel} ${femalePct}%">
-                                <div class="h-full bg-gradient-to-r from-blue-400 to-blue-500 transition-all duration-500" style="width: ${malePct}%"></div>
-                                <div class="h-full bg-gradient-to-r from-pink-400 to-pink-500 transition-all duration-500" style="width: ${femalePct}%"></div>
-                            </div>
-                            <div class="flex justify-between text-[10px] text-gray-500 mt-1.5 px-0.5">
-                                <span>${maleLabel} ${malePct}%</span>
-                                <span>${femaleLabel} ${femalePct}%</span>
+                            <div class="h-1.5 rounded-full bg-gray-200/80 overflow-hidden flex" title="${maleLabel} ${malePct}% / ${femaleLabel} ${femalePct}%">
+                                <div class="h-full bg-blue-500" style="width: ${malePct}%"></div>
+                                <div class="h-full bg-pink-500" style="width: ${femalePct}%"></div>
                             </div>
                         ` : `
-                            <p class="text-xs text-gray-400 text-center py-1">${this.t('module.common.notAvailable', 'غير متاح')}</p>
+                            <p class="text-xs text-gray-400 text-center">${this.t('module.common.notAvailable', 'غير متاح')}</p>
                         `}
                     </div>
                 </div>
@@ -858,25 +888,24 @@ const Employees = {
                 return renderGenderCard(card);
             }
             return `
-                <div class="stats-card content-card transform transition-all duration-300 hover:scale-105 hover:shadow-xl border-2 ${card.borderColor} bg-gradient-to-br ${card.bgGradient}" 
+                <div class="employee-stat-card border-2 ${card.borderColor} bg-gradient-to-br ${card.bgGradient}" 
                      style="position: relative; overflow: hidden;">
-                    <!-- Pattern overlay -->
-                    <div class="absolute top-0 right-0 w-32 h-32 opacity-10" style="background: radial-gradient(circle, rgba(0,0,0,0.1) 1px, transparent 1px); background-size: 20px 20px;"></div>
+                    <div class="absolute top-0 right-0 w-24 h-24 opacity-10" style="background: radial-gradient(circle, rgba(0,0,0,0.1) 1px, transparent 1px); background-size: 16px 16px;"></div>
                     
                     <div class="relative z-10">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="${card.iconBg} p-3 rounded-xl shadow-md">
-                                <i class="${card.icon} text-${card.color}-600 text-2xl"></i>
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="${card.iconBg} p-2.5 rounded-xl shadow-sm">
+                                <i class="${card.icon} text-${card.color}-600 text-xl"></i>
                             </div>
                         </div>
                         
-                        <div class="mb-2">
-                            <h3 class="text-sm font-semibold ${card.textColor} mb-1">${card.title}</h3>
-                            <p class="text-xs text-gray-600">${card.description}</p>
+                        <div class="mb-1">
+                            <h3 class="text-sm font-semibold ${card.textColor} mb-0.5">${card.title}</h3>
+                            <p class="text-xs text-gray-600 leading-snug">${card.description}</p>
                         </div>
                         
-                        <div class="flex items-end justify-between mt-4">
-                            <div class="text-2xl font-bold ${card.textColor}">
+                        <div class="mt-3">
+                            <div class="text-2xl font-bold ${card.textColor} leading-none">
                                 ${typeof card.value === 'number' ? card.value.toLocaleString('en-US') : card.value}
                             </div>
                         </div>
@@ -1782,7 +1811,7 @@ const Employees = {
                 ${canViewExternal ? `<button type="button" class="employees-tab-btn ${this.activeTab === 'external-workforce' ? 'active' : ''}" data-employees-tab="external-workforce"><i class="fas fa-helmet-safety ml-2"></i>${this.getExternalWorkforceViewState().labels.externalTab}</button>` : ''}
             </div>
             <div id="employees-list-panel" class="${this.activeTab !== 'employees-list' || !canViewRegistry ? 'hidden' : ''}">
-            <div id="employees-stats-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"></div>
+            <div id="employees-stats-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 items-start"></div>
             <div class="content-card">
                 <div class="card-header">
                     <div class="flex items-center justify-between">

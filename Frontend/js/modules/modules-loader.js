@@ -16,6 +16,7 @@ const MODULES_TO_LOAD = [
     'incidents',
     'nearmiss',
     'reports',
+    'help',
     'settings',
     'fireequipment',
     'ppe',

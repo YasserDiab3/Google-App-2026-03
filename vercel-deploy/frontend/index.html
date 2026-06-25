@@ -10643,6 +10643,16 @@
                         <span data-i18n="nav.appTester">اختبار التطبيق</span>
                     </a>
                     <a
+                        href="#help"
+                        class="nav-item"
+                        data-section="help"
+                        role="menuitem"
+                        title="المساعدة"
+                    >
+                        <i class="fas fa-circle-question" aria-hidden="true"></i>
+                        <span data-i18n="nav.help">المساعدة</span>
+                    </a>
+                    <a
                         href="#settings"
                         class="nav-item"
                         data-section="settings"
@@ -12828,6 +12838,13 @@
                         aria-label="قسم الملاحظات اليومية"
                         style="display: none"
                     ></section>
+                    <!-- Help Section -->
+                    <section
+                        id="help-section"
+                        class="section"
+                        role="region"
+                        aria-label="قسم المساعدة ودليل النظام"
+                    ></section>
                     <!-- App Tester Section -->
                     <section
                         id="apptester-section"
@@ -13127,6 +13144,7 @@
         <script src="js/modules/modules/nearmiss.js" defer></script>
         <script src="js/modules/modules/ptw.js?v=20260523-ptw-analytics-redesign" defer></script>
         <script src="js/modules/modules/reports.js" defer></script>
+        <script src="js/modules/modules/help.js" defer></script>
         <script src="js/modules/modules/settings.js?v=20260426-2" defer></script>
         <script src="js/modules/modules/clinic.js?v=20260524-med-unified" defer></script>
         <script src="js/modules/modules/fireequipment.js" defer></script>
@@ -13250,7 +13268,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.293-20260625";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.294-20260625";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +
