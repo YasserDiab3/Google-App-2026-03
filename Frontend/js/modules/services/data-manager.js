@@ -1016,7 +1016,10 @@ const DataManager = {
                             profileWhatsAppUrl: String(result.data.profileWhatsAppUrl ?? AppState.companySettings?.profileWhatsAppUrl ?? '').trim(),
                             ppeEligibilityRules: ppeEligibilityRules,
                             ppeEligibilityMonths: legacyMonths,
-                            ppeEligibilityDays: legacyDays
+                            ppeEligibilityDays: legacyDays,
+                            helpContent: result.data.helpContent != null
+                                ? String(result.data.helpContent)
+                                : (AppState.companySettings?.helpContent || '')
                         });
                         
                         // تحديث شعار الشركة (حتى لو كان فارغاً لمسحه)

@@ -21,8 +21,8 @@ const Help = {
         ];
     },
 
-    /** أسئلة وأجوبة منظمة — تُعرض في فئة Q&A وفي لوحة الأسئلة السريعة */
-    getQaItems() {
+    /** أسئلة وأجوبة افتراضية (من الكود) */
+    getDefaultQaItems() {
         return [
             {
                 id: 'faq-no-module',
@@ -143,6 +143,55 @@ const Help = {
                 keywords: 'دعم تواصل مدير'
             }
         ];
+    },
+
+    parseHelpContentConfig_(raw) {
+        const empty = { version: 1, enabled: false, introText: '', qaItems: [] };
+        if (!raw) return empty;
+        try {
+            const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            if (!parsed || typeof parsed !== 'object') return empty;
+            return {
+                version: 1,
+                enabled: parsed.enabled === true,
+                introText: String(parsed.introText || '').trim(),
+                qaItems: Array.isArray(parsed.qaItems) ? parsed.qaItems : []
+            };
+        } catch (_e) {
+            return empty;
+        }
+    },
+
+    getHelpContentConfig_() {
+        if (typeof Settings !== 'undefined' && typeof Settings.getHelpContentConfig === 'function') {
+            return Settings.getHelpContentConfig();
+        }
+        const raw = AppState?.companySettings?.helpContent;
+        return this.parseHelpContentConfig_(raw);
+    },
+
+    getQaItems() {
+        const cfg = this.getHelpContentConfig_();
+        if (cfg.enabled) {
+            const custom = (cfg.qaItems || [])
+                .filter(q => q && q.active !== false && String(q.question || '').trim())
+                .sort((a, b) => (a.order ?? 999) - (b.order ?? 999))
+                .map((q, i) => ({
+                    id: String(q.id || ('custom-qa-' + i)).trim(),
+                    question: String(q.question || '').trim(),
+                    answer: String(q.answer || '').trim(),
+                    moduleId: q.moduleId ? String(q.moduleId).trim() : null,
+                    keywords: String(q.keywords || '').trim()
+                }));
+            if (custom.length) return custom;
+        }
+        return this.getDefaultQaItems();
+    },
+
+    getHelpIntroText_() {
+        const cfg = this.getHelpContentConfig_();
+        if (cfg.enabled && cfg.introText) return cfg.introText;
+        return 'مرجع شامل لاستخدام منظومة السلامة والصحة المهنية والبيئة: الموديولات، الصلاحيات، التقارير، والدعم التقني.';
     },
 
     buildFaqTopics() {
@@ -612,13 +661,11 @@ const Help = {
     },
 
     getAllTopics() {
-        if (!this._allTopicsCache) {
-            this._allTopicsCache = [
-                ...this.getStaticTopics(),
-                ...this.buildFaqTopics(),
-                ...this.buildModuleTopics()
-            ];
-        }
+        this._allTopicsCache = [
+            ...this.getStaticTopics(),
+            ...this.buildFaqTopics(),
+            ...this.buildModuleTopics()
+        ];
         return this._allTopicsCache;
     },
 
@@ -675,7 +722,7 @@ const Help = {
                                 <i class="fas fa-circle-question"></i> دليل النظام — المساعدة
                             </h1>
                             <p style="margin:0;color:#475569;font-size:0.92rem;max-width:560px;line-height:1.6;">
-                                مرجع شامل لاستخدام منظومة السلامة والصحة المهنية والبيئة: الموديولات، الصلاحيات، التقارير، والدعم التقني.
+                                ${Utils.escapeHTML(this.getHelpIntroText_())}
                             </p>
                         </div>
                         <span style="background:#0d9488;color:#fff;padding:6px 14px;border-radius:20px;font-size:0.78rem;font-weight:700;white-space:nowrap;">
@@ -959,7 +1006,6 @@ const Help = {
         this.state.activeCategory = 'all';
         this.state.searchQuery = '';
         this.state.expandedId = null;
-        this._allTopicsCache = null;
         section.innerHTML = this.renderShell();
         this.bindEvents(section);
         this.renderTopics(section);

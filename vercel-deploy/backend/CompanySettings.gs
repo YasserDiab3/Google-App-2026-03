@@ -370,6 +370,20 @@ function saveCompanySettingsToSheet(settingsData) {
             // عند عدم الإرسال من الواجهة الحالية، نحتفظ بالموجود في الجدول المستقل
             normalizedPpeRulesArray = readPPEEligibilityRulesTable_(spreadsheetId);
         }
+        // helpContent: JSON (محتوى مخصص لموديول المساعدة — أسئلة وأجوبة ونص مقدمة)
+        let helpContentValue = '';
+        if (settingsData.helpContent !== undefined && settingsData.helpContent !== null) {
+            if (typeof settingsData.helpContent === 'string') {
+                helpContentValue = settingsData.helpContent;
+            } else if (typeof settingsData.helpContent === 'object') {
+                try {
+                    helpContentValue = JSON.stringify(settingsData.helpContent);
+                } catch (e) {
+                    helpContentValue = '';
+                }
+            }
+        }
+
         let settingsToSave = {
             id: 'COMPANY-SETTINGS-1',
             name: settingsData.name || '',
@@ -387,6 +401,7 @@ function saveCompanySettingsToSheet(settingsData) {
             clinicVisitTypes: clinicVisitTypesValue,
             profileTeamsUrl: settingsData.profileTeamsUrl != null ? String(settingsData.profileTeamsUrl) : '',
             profileWhatsAppUrl: settingsData.profileWhatsAppUrl != null ? String(settingsData.profileWhatsAppUrl) : '',
+            helpContent: helpContentValue,
             updatedAt: now,
             updatedBy: userName
         };
@@ -406,6 +421,9 @@ function saveCompanySettingsToSheet(settingsData) {
             // لا نمسح أنواع الزيارة إذا لم تُرسل من الواجهة الحالية
             if (settingsData.clinicVisitTypes === undefined && existing.clinicVisitTypes != null && String(existing.clinicVisitTypes).trim() !== '') {
                 settingsToSave.clinicVisitTypes = String(existing.clinicVisitTypes);
+            }
+            if (settingsData.helpContent === undefined && existing.helpContent != null && String(existing.helpContent).trim() !== '') {
+                settingsToSave.helpContent = String(existing.helpContent);
             }
         } else {
             settingsToSave.createdAt = now;
@@ -478,6 +496,7 @@ function buildPublicCompanySettingsView_(settingsData) {
         clinicVisitTypes: src.clinicVisitTypes || '',
         profileTeamsUrl: src.profileTeamsUrl || '',
         profileWhatsAppUrl: src.profileWhatsAppUrl || '',
+        helpContent: src.helpContent || '',
         ppeEligibilityRules: src.ppeEligibilityRules || '[]',
         updatedAt: src.updatedAt || ''
     };
@@ -573,6 +592,7 @@ function getDefaultCompanySettings() {
         ppeEligibilityMonths: 0,
         ppeEligibilityDays: 0,
         ppeEligibilityRules: '[]',
+        helpContent: '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         createdBy: 'System',

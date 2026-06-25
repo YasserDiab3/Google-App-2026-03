@@ -134,6 +134,282 @@ const Settings = {
         }).join('');
     },
 
+    parseHelpContent(raw) {
+        const empty = { version: 1, enabled: false, introText: '', qaItems: [] };
+        if (!raw) return empty;
+        try {
+            const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            if (!parsed || typeof parsed !== 'object') return empty;
+            return {
+                version: 1,
+                enabled: parsed.enabled === true,
+                introText: String(parsed.introText || '').trim(),
+                qaItems: Array.isArray(parsed.qaItems) ? parsed.qaItems : []
+            };
+        } catch (_e) {
+            return empty;
+        }
+    },
+
+    getHelpContentConfig() {
+        return this.parseHelpContent(AppState?.companySettings?.helpContent);
+    },
+
+    getHelpContentQaItems() {
+        return this.getHelpContentConfig().qaItems.slice().sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+    },
+
+    setHelpContentConfig(config) {
+        if (!AppState.companySettings) AppState.companySettings = {};
+        AppState.companySettings.helpContent = JSON.stringify(config || { version: 1, enabled: false, introText: '', qaItems: [] });
+    },
+
+    renderHelpContentQaList() {
+        const listEl = document.getElementById('help-content-qa-list');
+        if (!listEl) return;
+        const items = this.getHelpContentQaItems();
+        if (!items.length) {
+            listEl.innerHTML = '<p class="text-sm text-gray-500">لا توجد أسئلة مخصصة. اضغط «إضافة سؤال» أو فعّل المحتوى الافتراضي من الكود.</p>';
+            return;
+        }
+        listEl.innerHTML = items.map((item, idx) => {
+            const q = Utils.escapeHTML((item.question || '').slice(0, 80)) || '(بدون سؤال)';
+            const active = item.active !== false;
+            return `
+                <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white" data-help-qa-index="${idx}">
+                    <div class="flex-1 min-w-0">
+                        <span class="font-medium text-gray-800">${q}</span>
+                        ${active ? '<span class="text-xs text-green-600 mr-2">مفعّل</span>' : '<span class="text-xs text-gray-400 mr-2">معطّل</span>'}
+                        ${item.moduleId ? `<span class="text-xs text-blue-600">موديول: ${Utils.escapeHTML(item.moduleId)}</span>` : ''}
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button type="button" class="help-qa-edit-btn btn-icon btn-icon-secondary p-2" title="تعديل" data-index="${idx}"><i class="fas fa-edit"></i></button>
+                        <button type="button" class="help-qa-delete-btn btn-icon btn-icon-secondary p-2 text-red-600" title="حذف" data-index="${idx}"><i class="fas fa-trash"></i></button>
+                        <button type="button" class="help-qa-up-btn btn-icon btn-icon-secondary p-2" title="أعلى" data-index="${idx}"><i class="fas fa-arrow-up"></i></button>
+                        <button type="button" class="help-qa-down-btn btn-icon btn-icon-secondary p-2" title="أسفل" data-index="${idx}"><i class="fas fa-arrow-down"></i></button>
+                    </div>
+                </div>`;
+        }).join('');
+    },
+
+    async saveHelpContentToBackend() {
+        if (!AppState.companySettings) AppState.companySettings = {};
+        const cfg = this.getHelpContentConfig();
+        this.setHelpContentConfig(cfg);
+        if (typeof DataManager !== 'undefined' && DataManager.saveCompanySettings) {
+            DataManager.saveCompanySettings();
+        }
+        if (!(AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined')) {
+            return { success: true };
+        }
+        try {
+            const userData = AppState.currentUser || {};
+            const result = await GoogleIntegration.sendToAppsScript('saveCompanySettings', {
+                name: AppState.companySettings.name || '',
+                secondaryName: AppState.companySettings.secondaryName || '',
+                formVersion: AppState.companySettings.formVersion || '1.0',
+                nameFontSize: AppState.companySettings.nameFontSize || 16,
+                secondaryNameFontSize: AppState.companySettings.secondaryNameFontSize || 14,
+                secondaryNameColor: AppState.companySettings.secondaryNameColor || '#6B7280',
+                clinicMonthlyVisitsAlertThreshold: AppState.companySettings.clinicMonthlyVisitsAlertThreshold ?? 10,
+                profileTeamsUrl: AppState.companySettings.profileTeamsUrl || '',
+                profileWhatsAppUrl: AppState.companySettings.profileWhatsAppUrl || '',
+                address: AppState.companySettings.address || '',
+                phone: AppState.companySettings.phone || '',
+                email: AppState.companySettings.email || '',
+                logo: AppState.companySettings.logo || AppState.companyLogo || '',
+                postLoginItems: typeof AppState.companySettings.postLoginItems === 'string'
+                    ? AppState.companySettings.postLoginItems
+                    : JSON.stringify(AppState.companySettings.postLoginItems || []),
+                helpContent: AppState.companySettings.helpContent || JSON.stringify(cfg),
+                userData: { email: userData.email, name: userData.name, role: userData.role, permissions: userData.permissions }
+            });
+            return result || { success: false };
+        } catch (e) {
+            return { success: false, message: e?.message || String(e) };
+        }
+    },
+
+    initHelpContentTabUI() {
+        const cfg = this.getHelpContentConfig();
+        const enabledEl = document.getElementById('help-content-enabled');
+        const introEl = document.getElementById('help-content-intro');
+        if (enabledEl) enabledEl.checked = cfg.enabled === true;
+        if (introEl) introEl.value = cfg.introText || '';
+        this.renderHelpContentQaList();
+    },
+
+    bindHelpContentSettingsEvents() {
+        if (this._helpContentEventsBound) {
+            this.initHelpContentTabUI();
+            return;
+        }
+        this._helpContentEventsBound = true;
+
+        const form = document.getElementById('help-content-qa-form');
+        const formTitle = document.getElementById('help-content-qa-form-title');
+        const qInput = document.getElementById('help-content-qa-question');
+        const aInput = document.getElementById('help-content-qa-answer');
+        const modInput = document.getElementById('help-content-qa-module');
+        const kwInput = document.getElementById('help-content-qa-keywords');
+        const activeInput = document.getElementById('help-content-qa-active');
+        const listEl = document.getElementById('help-content-qa-list');
+        let editingIndex = -1;
+
+        const hideForm = () => {
+            if (form) form.classList.add('hidden');
+            editingIndex = -1;
+            if (formTitle) formTitle.textContent = 'إضافة سؤال جديد';
+            if (qInput) qInput.value = '';
+            if (aInput) aInput.value = '';
+            if (modInput) modInput.value = '';
+            if (kwInput) kwInput.value = '';
+            if (activeInput) activeInput.checked = true;
+        };
+
+        const persistLocalFromUI = () => {
+            const enabledEl = document.getElementById('help-content-enabled');
+            const introEl = document.getElementById('help-content-intro');
+            const cfg = this.getHelpContentConfig();
+            cfg.enabled = enabledEl ? enabledEl.checked : cfg.enabled;
+            cfg.introText = introEl ? introEl.value.trim() : cfg.introText;
+            this.setHelpContentConfig(cfg);
+        };
+
+        this.initHelpContentTabUI();
+
+        document.getElementById('help-content-add-qa-btn')?.addEventListener('click', () => {
+            editingIndex = -1;
+            if (formTitle) formTitle.textContent = 'إضافة سؤال جديد';
+            if (qInput) qInput.value = '';
+            if (aInput) aInput.value = '';
+            if (modInput) modInput.value = '';
+            if (kwInput) kwInput.value = '';
+            if (activeInput) activeInput.checked = true;
+            form?.classList.remove('hidden');
+        });
+        document.getElementById('help-content-qa-cancel-btn')?.addEventListener('click', hideForm);
+
+        document.getElementById('help-content-qa-save-btn')?.addEventListener('click', () => {
+            const question = qInput?.value?.trim() || '';
+            const answer = aInput?.value?.trim() || '';
+            if (!question || !answer) {
+                Notification.error('يرجى إدخال السؤال والإجابة.');
+                return;
+            }
+            const cfg = this.getHelpContentConfig();
+            const items = this.getHelpContentQaItems();
+            const maxOrder = items.length ? Math.max(...items.map(i => i.order ?? 0)) : 0;
+            const row = {
+                id: editingIndex >= 0 && items[editingIndex]?.id ? items[editingIndex].id : ('qa-' + Date.now()),
+                question,
+                answer,
+                moduleId: modInput?.value?.trim() || '',
+                keywords: kwInput?.value?.trim() || '',
+                active: activeInput ? activeInput.checked : true,
+                order: editingIndex >= 0 ? (items[editingIndex].order ?? editingIndex) : maxOrder + 1
+            };
+            if (editingIndex >= 0 && editingIndex < items.length) {
+                items[editingIndex] = row;
+            } else {
+                items.push(row);
+            }
+            cfg.qaItems = items;
+            persistLocalFromUI();
+            this.setHelpContentConfig(cfg);
+            this.renderHelpContentQaList();
+            hideForm();
+            Notification.success('تم إضافة السؤال محلياً — اضغط «حفظ محتوى المساعدة» للنشر.');
+        });
+
+        listEl?.addEventListener('click', (e) => {
+            const editBtn = e.target.closest('.help-qa-edit-btn');
+            const deleteBtn = e.target.closest('.help-qa-delete-btn');
+            const upBtn = e.target.closest('.help-qa-up-btn');
+            const downBtn = e.target.closest('.help-qa-down-btn');
+            const index = editBtn?.dataset?.index ?? deleteBtn?.dataset?.index ?? upBtn?.dataset?.index ?? downBtn?.dataset?.index;
+            if (index === undefined) return;
+            const idx = parseInt(index, 10);
+            const cfg = this.getHelpContentConfig();
+            const items = this.getHelpContentQaItems();
+            const item = items[idx];
+            if (!item) return;
+
+            if (editBtn) {
+                editingIndex = idx;
+                if (formTitle) formTitle.textContent = 'تعديل سؤال';
+                if (qInput) qInput.value = item.question || '';
+                if (aInput) aInput.value = item.answer || '';
+                if (modInput) modInput.value = item.moduleId || '';
+                if (kwInput) kwInput.value = item.keywords || '';
+                if (activeInput) activeInput.checked = item.active !== false;
+                form?.classList.remove('hidden');
+                return;
+            }
+            if (deleteBtn) {
+                if (!confirm('حذف هذا السؤال؟')) return;
+                items.splice(idx, 1);
+                cfg.qaItems = items;
+                this.setHelpContentConfig(cfg);
+                this.renderHelpContentQaList();
+                return;
+            }
+            if (upBtn && idx > 0) {
+                const o = items[idx].order ?? idx;
+                items[idx].order = items[idx - 1].order ?? (idx - 1);
+                items[idx - 1].order = o;
+                cfg.qaItems = items;
+                this.setHelpContentConfig(cfg);
+                this.renderHelpContentQaList();
+            }
+            if (downBtn && idx < items.length - 1) {
+                const o = items[idx].order ?? idx;
+                items[idx].order = items[idx + 1].order ?? (idx + 1);
+                items[idx + 1].order = o;
+                cfg.qaItems = items;
+                this.setHelpContentConfig(cfg);
+                this.renderHelpContentQaList();
+            }
+        });
+
+        document.getElementById('help-content-save-all-btn')?.addEventListener('click', async () => {
+            persistLocalFromUI();
+            const res = await this.saveHelpContentToBackend();
+            if (res?.success) {
+                Notification.success('تم حفظ محتوى المساعدة بنجاح.');
+                if (typeof DataManager !== 'undefined' && DataManager.loadCompanySettings) {
+                    try { await DataManager.loadCompanySettings(true); } catch (_e) {}
+                }
+            } else {
+                Notification.error('تعذر الحفظ: ' + (res?.message || 'خطأ غير معروف'));
+            }
+        });
+
+        document.getElementById('help-content-load-defaults-btn')?.addEventListener('click', () => {
+            if (!confirm('استيراد الأسئلة الافتراضية من النظام للتحرير؟ سيستبدل القائمة الحالية في الواجهة (لم يُحفظ بعد).')) return;
+            if (typeof Help === 'undefined' || typeof Help.getDefaultQaItems !== 'function') {
+                Notification.error('موديول المساعدة غير محمّل.');
+                return;
+            }
+            const cfg = this.getHelpContentConfig();
+            cfg.enabled = true;
+            cfg.qaItems = Help.getDefaultQaItems().map((q, i) => ({
+                id: q.id,
+                question: q.question,
+                answer: q.answer,
+                moduleId: q.moduleId || '',
+                keywords: q.keywords || '',
+                active: true,
+                order: i + 1
+            }));
+            const enabledEl = document.getElementById('help-content-enabled');
+            if (enabledEl) enabledEl.checked = true;
+            this.setHelpContentConfig(cfg);
+            this.renderHelpContentQaList();
+            Notification.info('تم الاستيراد — راجع ثم اضغط «حفظ محتوى المساعدة».');
+        });
+    },
+
     async load() {
         // إضافة مستمع لتغيير اللغة
         if (!this._languageChangeListenerAdded) {
@@ -226,6 +502,10 @@ const Settings = {
                     <button class="tab-btn" data-tab="notifications">
                         <i class="fas fa-envelope ml-2"></i>
                         ${I18n.t('settings.tabs.email')}
+                    </button>
+                    <button class="tab-btn" data-tab="help-content" ${!isAdmin ? 'style="display:none;"' : ''}>
+                        <i class="fas fa-circle-question ml-2"></i>
+                        محتوى المساعدة
                     </button>
                     <button class="tab-btn" data-tab="permissions">
                         <i class="fas fa-shield-alt ml-2"></i>
@@ -1025,6 +1305,82 @@ const Settings = {
                 </div>
             </div>
 
+            <!-- Tab Content: محتوى المساعدة و Q&A -->
+            <div class="tab-content" id="tab-help-content">
+                ${isAdmin ? `
+                <div class="settings-group mt-6">
+                    <div class="settings-group-header">
+                        <h2 class="settings-group-title">
+                            <i class="fas fa-circle-question text-teal-600 ml-2"></i>
+                            محتوى المساعدة وأسئلة وأجوبة (Q&amp;A)
+                        </h2>
+                        <p class="settings-group-subtitle">تخصيص نص المقدمة وأسئلة المساعدة للمستخدمين — مع بقاء الدليل الافتراضي احتياطياً</p>
+                    </div>
+                    <div class="settings-group-content space-y-4">
+                        <div class="content-card">
+                            <div class="card-body space-y-4">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="help-content-enabled" class="rounded border-gray-300 text-teal-600">
+                                    <span class="text-sm font-semibold text-gray-800">تفعيل محتوى المساعدة المخصص</span>
+                                </label>
+                                <p class="text-xs text-gray-500">عند التفعيل: تُستخدم الأسئلة أدناه (إن وُجدت) ونص المقدمة. إن لم تُضف أسئلة، يبقى المحتوى الافتراضي من النظام.</p>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-1">نص مقدمة صفحة المساعدة (اختياري)</label>
+                                    <textarea id="help-content-intro" class="form-input" rows="3" maxlength="500" placeholder="نص يظهر أعلى صفحة المساعدة..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="content-card">
+                            <div class="card-header">
+                                <h2 class="card-title"><i class="fas fa-comments ml-2"></i>أسئلة وأجوبة مخصصة</h2>
+                            </div>
+                            <div class="card-body space-y-4">
+                                <div id="help-content-qa-list" class="space-y-3"></div>
+                                <button type="button" id="help-content-add-qa-btn" class="btn-primary">
+                                    <i class="fas fa-plus ml-2"></i>إضافة سؤال
+                                </button>
+                                <div id="help-content-qa-form" class="hidden mt-4 p-4 border border-gray-200 rounded-lg bg-gray-50 space-y-3">
+                                    <h3 class="font-semibold text-gray-800" id="help-content-qa-form-title">إضافة سؤال جديد</h3>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-1">السؤال</label>
+                                        <input type="text" id="help-content-qa-question" class="form-input" maxlength="300" placeholder="اكتب السؤال...">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-1">الإجابة</label>
+                                        <textarea id="help-content-qa-answer" class="form-input" rows="4" maxlength="3000" placeholder="اكتب الإجابة..."></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-1">ربط بموديول (اختياري — slug مثل clinic)</label>
+                                        <input type="text" id="help-content-qa-module" class="form-input" maxlength="80" placeholder="مثال: clinic أو profile">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-1">كلمات بحث (اختياري)</label>
+                                        <input type="text" id="help-content-qa-keywords" class="form-input" maxlength="200" placeholder="كلمات للبحث داخل المساعدة">
+                                    </div>
+                                    <label class="flex items-center gap-2">
+                                        <input type="checkbox" id="help-content-qa-active" class="rounded border-gray-300 text-teal-600" checked>
+                                        <span class="text-sm text-gray-700">مفعّل</span>
+                                    </label>
+                                    <div class="flex gap-2">
+                                        <button type="button" id="help-content-qa-save-btn" class="btn-primary"><i class="fas fa-save ml-2"></i>حفظ السؤال</button>
+                                        <button type="button" id="help-content-qa-cancel-btn" class="btn-secondary"><i class="fas fa-times ml-2"></i>إلغاء</button>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap gap-2 pt-2 border-t">
+                                    <button type="button" id="help-content-save-all-btn" class="btn-success">
+                                        <i class="fas fa-cloud-upload-alt ml-2"></i>حفظ محتوى المساعدة
+                                    </button>
+                                    <button type="button" id="help-content-load-defaults-btn" class="btn-secondary" title="نسخ الأسئلة الافتراضية للتحرير">
+                                        <i class="fas fa-copy ml-2"></i>استيراد الأسئلة الافتراضية للتحرير
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ` : '<div class="settings-group mt-6"><p class="text-gray-600">هذا القسم متاح لمدير النظام فقط</p></div>'}
+            </div>
+
             <!-- Tab Content: الصلاحيات والاعتمادات -->
             <div class="tab-content" id="tab-permissions">
                 <div class="settings-group mt-6">
@@ -1436,6 +1792,9 @@ const Settings = {
                             Utils.safeError('❌ خطأ في تحميل إعدادات النماذج:', error);
                         });
                     }
+                }
+                if (targetTab === 'help-content' && this.isCurrentUserAdmin()) {
+                    Settings.bindHelpContentSettingsEvents();
                 }
             });
         });
@@ -2511,6 +2870,10 @@ const Settings = {
                         Settings.renderPostLoginItemsList();
                     }
                 });
+            }
+
+            if (this.isCurrentUserAdmin()) {
+                Settings.bindHelpContentSettingsEvents();
             }
 
             if (resetCompanyNameBtn && companyNameInput) {
