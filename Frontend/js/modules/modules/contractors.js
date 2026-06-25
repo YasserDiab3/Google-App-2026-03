@@ -559,6 +559,12 @@ const Contractors = {
                 } catch (e) { /* ignore */ }
             }
 
+            if (tc === 'approval-request') {
+                try {
+                    this.ensureApprovalRequestsDataLoaded();
+                } catch (e) { /* ignore */ }
+            }
+
             // ✅ ربط زر إرسال الطلب
             const sendBtn = document.getElementById('send-approval-request-btn');
             if (sendBtn && !sendBtn.hasAttribute('data-listener-attached')) {
@@ -611,23 +617,123 @@ const Contractors = {
             const icon = btn.querySelector('i.fa-sync-alt');
             if (icon) icon.classList.add('fa-spin');
         }
-        this.load(true).finally(() => {
+        const finish = () => {
             const refBtn = document.getElementById('contractors-btn-refresh');
             if (refBtn) {
                 refBtn.disabled = false;
                 const refIcon = refBtn.querySelector('i.fa-sync-alt');
                 if (refIcon) refIcon.classList.remove('fa-spin');
             }
-        });
+        };
+        this.ensureApprovalRequestsDataLoaded({ force: true })
+            .catch(() => {})
+            .finally(() => {
+                this.load(true).finally(finish);
+            });
     },
 
     /**
-     * ✅ مزامنة/تحميل بيانات طلبات الاعتماد
-     * ✅ معطل مؤقتاً لمنع الاهتزاز
+     * تطبيع حالة طلب الاعتماد للمقارنة في الفلاتر والإشعارات
+     */
+    normalizeApprovalRequestStatus(status) {
+        const raw = String(status || '').trim();
+        if (!raw) return 'pending';
+        const normalized = raw.toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
+        const aliases = {
+            'تم_الإرسال': 'pending',
+            'قيد_المراجعة': 'under_review',
+            'تحت_المراجعة': 'under_review',
+            'معتمد': 'approved',
+            'مرفوض': 'rejected'
+        };
+        return aliases[normalized] || normalized;
+    },
+
+    isCurrentUserApprovalRequestOwner(req) {
+        if (!req) return false;
+        const cu = AppState.currentUser || {};
+        const userId = String(cu.id || '').trim();
+        const userEmail = String(cu.email || '').trim().toLowerCase();
+        const creator = String(req.createdBy || '').trim();
+        if (!creator) return false;
+        const creatorLower = creator.toLowerCase();
+        return (userId && creator === userId) ||
+            (userEmail && creatorLower === userEmail) ||
+            (userId && creatorLower === userId.toLowerCase());
+    },
+
+    isContractorApprovalAdminUser() {
+        if (typeof Permissions !== 'undefined') {
+            if (typeof Permissions.isCurrentUserAdmin === 'function' && Permissions.isCurrentUserAdmin()) {
+                return true;
+            }
+            if (typeof Permissions.isAdmin === 'function' && Permissions.isAdmin()) {
+                return true;
+            }
+        }
+        const role = String(AppState.currentUser?.role || '').toLowerCase();
+        return role === 'admin' || role === 'مدير' || role === 'مدير النظام';
+    },
+
+    isApprovalRequestPendingForReview(req) {
+        if (!req) return false;
+        const st = this.normalizeApprovalRequestStatus(req.status);
+        return st === 'pending' || st === 'under_review';
+    },
+
+    /**
+     * ✅ مزامنة هادئة لطلبات الاعتماد (منفصلة عن syncDataFromServer — لا تلمس مسارات التحميل المحمية)
+     */
+    ensureApprovalRequestsDataLoaded(options = {}) {
+        const force = options.force === true;
+        if (this._approvalRequestsSyncInFlight) {
+            return this._approvalRequestsSyncInFlight;
+        }
+
+        const canSync = typeof GoogleIntegration !== 'undefined' &&
+            typeof GoogleIntegration.syncData === 'function' &&
+            AppState.googleConfig?.appsScript?.enabled &&
+            AppState.googleConfig?.appsScript?.scriptUrl;
+        if (!canSync) {
+            return Promise.resolve();
+        }
+
+        const hasLocal = Array.isArray(AppState.appData.contractorApprovalRequests) &&
+            AppState.appData.contractorApprovalRequests.length > 0;
+        if (!force && (hasLocal || this._approvalRequestsSyncedOnce)) {
+            return Promise.resolve();
+        }
+
+        this._approvalRequestsSyncInFlight = GoogleIntegration.syncData({
+            sheets: ['ContractorApprovalRequests', 'ContractorDeletionRequests'],
+            silent: true,
+            showLoader: false,
+            notifyOnSuccess: false,
+            notifyOnError: false
+        }).then(() => {
+            this._approvalRequestsSyncedOnce = true;
+            if (this.currentTab === 'approval-request') {
+                this.refreshApprovalRequestsSection();
+            }
+            if (typeof AppUI !== 'undefined' && typeof AppUI.updateNotificationsBadge === 'function') {
+                AppUI.updateNotificationsBadge();
+            }
+        }).catch((err) => {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ فشل مزامنة طلبات اعتماد المقاولين:', err);
+            }
+        }).finally(() => {
+            this._approvalRequestsSyncInFlight = null;
+        });
+
+        return this._approvalRequestsSyncInFlight;
+    },
+
+    /**
+     * إعادة محاولة تحميل طلبات الاعتماد من الخادم (زر placeholder)
      */
     async bootstrapApprovalRequestsData() {
-        // ✅ معطل مؤقتاً - كان يسبب مزامنة متكررة واهتزاز
-        return;
+        return this.ensureApprovalRequestsDataLoaded({ force: true });
     },
 
     /**
@@ -672,6 +778,10 @@ const Contractors = {
 
         if (tab === 'approved') {
             this.ensureApprovedTabContentLoaded();
+        }
+
+        if (tab === 'approval-request') {
+            this.ensureApprovalRequestsDataLoaded();
         }
 
         // ✅ عند التبديل إلى تبويب التقييمات: ربط الـ listeners ثم تحميل التقييمات إن كانت غير محملة
@@ -6167,8 +6277,10 @@ const Contractors = {
                         });
 
                         if (backendResult && backendResult.success) {
-                            // ✅ بعد نجاح الحفظ في Backend، إضافة الطلب إلى AppState محلياً
-                            AppState.appData.contractorApprovalRequests.push(approvalRequest);
+                            const savedRequest = backendResult.data
+                                ? { ...approvalRequest, ...backendResult.data }
+                                : approvalRequest;
+                            AppState.appData.contractorApprovalRequests.push(savedRequest);
                             
                             // حفظ البيانات محلياً
                             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
@@ -8334,7 +8446,7 @@ const Contractors = {
                                                 <button class="btn-icon btn-icon-info" title="عرض التفاصيل" onclick="Contractors.viewApprovalRequest('${request.id}', '${isDeletionRequest ? 'deletion' : 'approval'}')">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                ${(request.status === 'pending' || request.status === 'under_review') ? `
+                                                ${this.isApprovalRequestPendingForReview(request) ? `
                                                     <button class="btn-icon btn-icon-success" title="اعتماد" onclick="Contractors.approveRequest('${request.id}', '${isDeletionRequest ? 'deletion' : 'approval'}')">
                                                         <i class="fas fa-check"></i>
                                                     </button>
@@ -8371,8 +8483,10 @@ const Contractors = {
             AppState.appData.contractorDeletionRequests = [];
         }
         
-        const currentUserId = AppState.currentUser?.id || '';
-        if (!currentUserId) return [];
+        const cu = AppState.currentUser || {};
+        const currentUserId = String(cu.id || '').trim();
+        const currentUserEmail = String(cu.email || '').trim().toLowerCase();
+        if (!currentUserId && !currentUserEmail) return [];
         
         // ✅ تحسين: استخدام filter و map بشكل أكثر كفاءة
         // ✅ إصلاح: استثناء الطلبات المعتمدة القديمة (أكثر من 7 أيام) لتجنب الازدحام
@@ -8380,26 +8494,26 @@ const Contractors = {
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         
         const approvalRequests = AppState.appData.contractorApprovalRequests
-            .filter(req => req && req.createdBy === currentUserId)
+            .filter(req => req && this.isCurrentUserApprovalRequestOwner(req))
             .filter(req => {
-                // استثناء الطلبات المعتمدة القديمة
-                if (req.status === 'approved' && req.approvedAt) {
+                const st = this.normalizeApprovalRequestStatus(req.status);
+                if (st === 'approved' && req.approvedAt) {
                     const approvedDate = new Date(req.approvedAt);
                     return approvedDate >= sevenDaysAgo;
                 }
-                return true; // الاحتفاظ بالطلبات الأخرى
+                return true;
             })
             .map(req => ({ ...req, requestCategory: 'approval' }));
         
         const deletionRequests = AppState.appData.contractorDeletionRequests
-            .filter(req => req && req.createdBy === currentUserId)
+            .filter(req => req && this.isCurrentUserApprovalRequestOwner(req))
             .filter(req => {
-                // استثناء الطلبات المعتمدة القديمة
-                if (req.status === 'approved' && req.approvedAt) {
+                const st = this.normalizeApprovalRequestStatus(req.status);
+                if (st === 'approved' && req.approvedAt) {
                     const approvedDate = new Date(req.approvedAt);
                     return approvedDate >= sevenDaysAgo;
                 }
-                return true; // الاحتفاظ بالطلبات الأخرى
+                return true;
             })
             .map(req => ({ ...req, requestCategory: 'deletion' }));
         
@@ -8425,20 +8539,17 @@ const Contractors = {
             AppState.appData.contractorDeletionRequests = [];
         }
         
-        // ✅ إصلاح: الحصول على ID المستخدم الحالي لاستثناء طلباته من قائمة المراجعة
-        const currentUserId = AppState.currentUser?.id || '';
-        
         // ✅ إصلاح: فلترة الطلبات قيد المراجعة مع استثناء طلبات المستخدم نفسه
         const approvalRequests = AppState.appData.contractorApprovalRequests
-            .filter(req => req && 
-                (req.status === 'pending' || req.status === 'under_review') &&
-                req.createdBy !== currentUserId) // ✅ استثناء طلبات المستخدم نفسه
+            .filter(req => req &&
+                this.isApprovalRequestPendingForReview(req) &&
+                !this.isCurrentUserApprovalRequestOwner(req))
             .map(req => ({ ...req, requestCategory: 'approval' }));
         
         const deletionRequests = AppState.appData.contractorDeletionRequests
-            .filter(req => req && 
-                (req.status === 'pending' || req.status === 'under_review') &&
-                req.createdBy !== currentUserId) // ✅ استثناء طلبات المستخدم نفسه
+            .filter(req => req &&
+                this.isApprovalRequestPendingForReview(req) &&
+                !this.isCurrentUserApprovalRequestOwner(req))
             .map(req => ({ ...req, requestCategory: 'deletion' }));
         
         // ✅ تحسين: دمج وترتيب في خطوة واحدة
@@ -8454,11 +8565,7 @@ const Contractors = {
      * الحصول على شارة حالة طلب الاعتماد
      */
     getApprovalRequestStatusBadge(status) {
-        const normalizedStatus = String(status || '')
-            .trim()
-            .toLowerCase()
-            .replace(/\s+/g, '_')
-            .replace(/-/g, '_');
+        const normalizedStatus = this.normalizeApprovalRequestStatus(status);
         const statusMap = {
             'pending': { label: 'تم الإرسال', class: 'badge-warning' },
             'under_review': { label: 'تحت المراجعة', class: 'badge-info' },
@@ -9237,7 +9344,7 @@ const Contractors = {
         const statusBadge = this.getApprovalRequestStatusBadge(request.status);
         const isDeletionRequest = requestCategory === 'deletion';
         const isEvaluationRequest = !isDeletionRequest && request.requestType === 'evaluation';
-        const canEdit = isAdmin && !isDeletionRequest && (request.status === 'pending' || request.status === 'under_review');
+        const canEdit = isAdmin && !isDeletionRequest && this.isApprovalRequestPendingForReview(request);
 
         // ✅ إصلاح: البحث عن بيانات التقييم في عدة أماكن
         let evaluationData = null;
@@ -9593,7 +9700,7 @@ const Contractors = {
                             <i class="fas fa-clipboard-check ml-2"></i>عرض التقييم كاملاً
                         </button>
                     ` : ''}
-                    ${isAdmin && (request.status === 'pending' || request.status === 'under_review') ? `
+                    ${isAdmin && this.isApprovalRequestPendingForReview(request) ? `
                         <button class="btn-success" onclick="Contractors.approveRequest('${request.id}', '${requestCategory}'); this.closest('.modal-overlay').remove();">
                             <i class="fas fa-check ml-2"></i>اعتماد
                         </button>

@@ -9407,39 +9407,59 @@ window.UI = {
 
             // 5. طلبات اعتماد المقاولين (للمستخدمين - طلباتهم الخاصة)
             if (AppState.appData.contractorApprovalRequests) {
-                const currentUserId = AppState.currentUser?.id || '';
+                const cu = AppState.currentUser || {};
+                const currentUserId = String(cu.id || '').trim();
+                const currentUserEmail = String(cu.email || '').trim().toLowerCase();
+                const isContractorApprovalAdmin = (typeof Contractors !== 'undefined' && typeof Contractors.isContractorApprovalAdminUser === 'function')
+                    ? Contractors.isContractorApprovalAdminUser()
+                    : (cu.role === 'admin' ||
+                        cu.role === 'مدير النظام' ||
+                        (typeof Permissions !== 'undefined' && Permissions.isCurrentUserAdmin && Permissions.isCurrentUserAdmin()));
+                const normalizeCarStatus = (status) => {
+                    if (typeof Contractors !== 'undefined' && typeof Contractors.normalizeApprovalRequestStatus === 'function') {
+                        return Contractors.normalizeApprovalRequestStatus(status);
+                    }
+                    const s = String(status || '').trim().toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
+                    return s || 'pending';
+                };
+                const isCarOwner = (req) => {
+                    if (typeof Contractors !== 'undefined' && typeof Contractors.isCurrentUserApprovalRequestOwner === 'function') {
+                        return Contractors.isCurrentUserApprovalRequestOwner(req);
+                    }
+                    const creator = String(req?.createdBy || '').trim();
+                    const creatorLower = creator.toLowerCase();
+                    return (currentUserId && creator === currentUserId) ||
+                        (currentUserEmail && creatorLower === currentUserEmail);
+                };
+
                 AppState.appData.contractorApprovalRequests
                     .filter(req => {
-                        // للمستخدمين العاديين: طلباتهم الخاصة فقط
-                        // للمدير: جميع الطلبات قيد المراجعة
-                        const isAdmin = AppState.currentUser?.role === 'admin';
-                        if (isAdmin) {
-                            return req.status === 'pending' || req.status === 'under_review';
-                        } else {
-                            return req.createdBy === currentUserId &&
-                                (req.status === 'pending' || req.status === 'under_review' || req.status === 'approved' || req.status === 'rejected');
+                        if (!req) return false;
+                        const st = normalizeCarStatus(req.status);
+                        if (isContractorApprovalAdmin) {
+                            return st === 'pending' || st === 'under_review';
                         }
+                        if (!isCarOwner(req)) return false;
+                        return st === 'pending' || st === 'under_review' || st === 'approved' || st === 'rejected';
                     })
                     .forEach(request => {
                         const notificationId = 'contractor-approval-' + (request.id || Date.now());
                         if (!readNotifications.includes(notificationId)) {
-                            const isAdmin = AppState.currentUser?.role === 'admin';
+                            const st = normalizeCarStatus(request.status);
                             let title, message, type;
 
-                            if (isAdmin) {
-                                // للمدير: إشعار بطلب جديد يحتاج مراجعة
+                            if (isContractorApprovalAdmin) {
                                 const requestType = request.requestType === 'contractor' ? 'مقاول' :
                                     request.requestType === 'evaluation' ? 'تقييم' : 'مورد';
                                 title = 'طلب اعتماد جديد يحتاج مراجعة';
                                 message = `طلب اعتماد ${requestType}: ${request.companyName || request.contractorName || 'غير محدد'}`;
                                 type = 'warning';
                             } else {
-                                // للمستخدم: إشعار بحالة طلبه
-                                if (request.status === 'approved') {
+                                if (st === 'approved') {
                                     title = 'تم اعتماد طلبك';
                                     message = `تم اعتماد طلب اعتماد: ${request.companyName || request.contractorName || 'غير محدد'}`;
                                     type = 'success';
-                                } else if (request.status === 'rejected') {
+                                } else if (st === 'rejected') {
                                     title = 'تم رفض طلبك';
                                     message = `تم رفض طلب اعتماد: ${request.companyName || request.contractorName || 'غير محدد'}`;
                                     type = 'error';
