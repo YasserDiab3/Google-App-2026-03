@@ -372,6 +372,12 @@ const Contractors = {
             this.ensureApprovalRequestsSetup();
             this.ensureDeletionRequestsSetup();
 
+            if (this.shouldLoadContractorApprovalRequests()) {
+                try {
+                    await this.ensureApprovalRequestsDataLoaded({ force: this.isContractorApprovalAdminUser() });
+                } catch (_prefetchErr) { /* ignore */ }
+            }
+
             // ✅ تحسين: الانتظار حتى تكون AppState و appData جاهزة (تسريع التحميل)
             if (!AppState || !AppState.appData) {
                 // الانتظار حتى تكون البيانات جاهزة (بحد أقصى 1 ثانية بدلاً من 2 ثانية)
@@ -645,12 +651,89 @@ const Contractors = {
             'في_الانتظار': 'pending',
             'بانتظار_الاعتماد': 'pending',
             'بانتظار_الموافقة': 'pending',
+            'قيد_الاعتماد': 'pending',
+            'جديد': 'pending',
+            'new': 'pending',
+            'awaiting': 'pending',
+            'awaiting_approval': 'pending',
+            'open': 'pending',
             'معتمد': 'approved',
+            'approved': 'approved',
             'مرفوض': 'rejected',
+            'rejected': 'rejected',
             'submitted': 'pending',
-            'in_progress': 'under_review'
+            'in_progress': 'under_review',
+            'under_review': 'under_review',
+            'pending': 'pending'
         };
         return aliases[normalized] || normalized;
+    },
+
+    extractApprovalRequestRowsFromResponse(res) {
+        if (!res || res.success === false) return null;
+        if (Array.isArray(res.data)) return res.data;
+        if (Array.isArray(res)) return res;
+        if (res.data && Array.isArray(res.data.data)) return res.data.data;
+        return null;
+    },
+
+    shouldLoadContractorApprovalRequests() {
+        if (this.isContractorApprovalAdminUser()) return true;
+        if (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function') {
+            return Permissions.hasAccess('contractors');
+        }
+        return false;
+    },
+
+    async _fetchApprovalRequestRowsFromBackend() {
+        if (typeof GoogleIntegration === 'undefined') return null;
+        try {
+            const res = await GoogleIntegration.sendRequest({
+                action: 'getAllContractorApprovalRequests',
+                data: {}
+            });
+            const rows = this.extractApprovalRequestRowsFromResponse(res);
+            if (Array.isArray(rows)) return rows;
+        } catch (err) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ getAllContractorApprovalRequests فشل — محاولة readFromSheet:', err?.message || err);
+            }
+        }
+        if (typeof GoogleIntegration.readFromSheets === 'function') {
+            try {
+                const sheetRows = await GoogleIntegration.readFromSheets('ContractorApprovalRequests');
+                if (Array.isArray(sheetRows)) return sheetRows;
+            } catch (_e) { /* ignore */ }
+        }
+        return null;
+    },
+
+    async _fetchDeletionRequestRowsFromBackend() {
+        if (typeof GoogleIntegration === 'undefined') return null;
+        try {
+            const res = await GoogleIntegration.sendRequest({
+                action: 'getAllContractorDeletionRequests',
+                data: {}
+            });
+            const rows = this.extractApprovalRequestRowsFromResponse(res);
+            if (Array.isArray(rows)) return rows;
+        } catch (err) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ getAllContractorDeletionRequests فشل — محاولة readFromSheet:', err?.message || err);
+            }
+        }
+        if (typeof GoogleIntegration.readFromSheets === 'function') {
+            try {
+                const sheetRows = await GoogleIntegration.readFromSheets('ContractorDeletionRequests');
+                if (Array.isArray(sheetRows)) return sheetRows;
+            } catch (_e) { /* ignore */ }
+        }
+        return null;
+    },
+
+    prefetchApprovalRequestsForNotifications() {
+        if (!this.shouldLoadContractorApprovalRequests()) return Promise.resolve(false);
+        return this.ensureApprovalRequestsDataLoaded({ force: this.isContractorApprovalAdminUser() });
     },
 
     normalizeApprovalRequestRecord(record) {
@@ -702,31 +785,21 @@ const Contractors = {
                 ? AppState.appData.contractorDeletionRequests.slice()
                 : [];
 
-            const [approvalRes, deletionRes] = await Promise.allSettled([
-                GoogleIntegration.sendRequest({
-                    action: 'getAllContractorApprovalRequests',
-                    data: {}
-                }),
-                GoogleIntegration.sendRequest({
-                    action: 'getAllContractorDeletionRequests',
-                    data: {}
-                })
+            const [approvalRows, deletionRows] = await Promise.all([
+                this._fetchApprovalRequestRowsFromBackend(),
+                this._fetchDeletionRequestRowsFromBackend()
             ]);
 
             let loaded = false;
 
-            if (approvalRes.status === 'fulfilled' &&
-                approvalRes.value?.success &&
-                Array.isArray(approvalRes.value.data)) {
-                const serverRows = approvalRes.value.data.map((r) => this.normalizeApprovalRequestRecord(r));
+            if (Array.isArray(approvalRows)) {
+                const serverRows = approvalRows.map((r) => this.normalizeApprovalRequestRecord(r));
                 AppState.appData.contractorApprovalRequests = this.mergeApprovalRequestsWithLocalOnly(serverRows, localApprovals);
                 loaded = true;
             }
 
-            if (deletionRes.status === 'fulfilled' &&
-                deletionRes.value?.success &&
-                Array.isArray(deletionRes.value.data)) {
-                const serverRows = deletionRes.value.data.map((r) => this.normalizeApprovalRequestRecord(r));
+            if (Array.isArray(deletionRows)) {
+                const serverRows = deletionRows.map((r) => this.normalizeApprovalRequestRecord(r));
                 AppState.appData.contractorDeletionRequests = this.mergeApprovalRequestsWithLocalOnly(serverRows, localDeletions);
                 loaded = true;
             }
@@ -780,7 +853,7 @@ const Contractors = {
     isApprovalRequestPendingForReview(req) {
         if (!req) return false;
         const st = this.normalizeApprovalRequestStatus(req.status);
-        return st === 'pending' || st === 'under_review';
+        return st !== 'approved' && st !== 'rejected';
     },
 
     /**

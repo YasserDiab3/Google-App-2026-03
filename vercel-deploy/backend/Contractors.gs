@@ -699,6 +699,40 @@ function updateContractorApprovalRequest(requestId, updateData) {
 }
 
 /**
+ * تطبيع حالة طلب اعتماد/حذف مقاول
+ */
+function normalizeContractorRequestStatus_(status) {
+    var raw = String(status || '').trim();
+    if (!raw) return 'pending';
+    var normalized = raw.toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
+    var aliases = {
+        'تم_الإرسال': 'pending',
+        'قيد_المراجعة': 'under_review',
+        'تحت_المراجعة': 'under_review',
+        'في_الانتظار': 'pending',
+        'بانتظار_الاعتماد': 'pending',
+        'بانتظار_الموافقة': 'pending',
+        'قيد_الاعتماد': 'pending',
+        'جديد': 'pending',
+        'new': 'pending',
+        'awaiting': 'pending',
+        'awaiting_approval': 'pending',
+        'open': 'pending',
+        'معتمد': 'approved',
+        'approved': 'approved',
+        'مرفوض': 'rejected',
+        'rejected': 'rejected',
+        'submitted': 'pending',
+        'in_progress': 'under_review',
+        'under_review': 'under_review',
+        'pending': 'pending'
+    };
+    if (aliases[normalized]) return aliases[normalized];
+    if (normalized === 'approved' || normalized === 'rejected') return normalized;
+    return 'pending';
+}
+
+/**
  * الحصول على جميع طلبات الاعتماد
  */
 function getAllContractorApprovalRequests(filters = {}) {
@@ -718,6 +752,13 @@ function getAllContractorApprovalRequests(filters = {}) {
                 if ((!record.createdAt || String(record.createdAt).trim() === '') && record.CreatedAt) {
                     record.createdAt = record.CreatedAt;
                 }
+                if ((!record.companyName || String(record.companyName).trim() === '') && record.CompanyName) {
+                    record.companyName = String(record.CompanyName).trim();
+                }
+                if ((!record.id || String(record.id).trim() === '') && record.ID) {
+                    record.id = String(record.ID).trim();
+                }
+                record.status = normalizeContractorRequestStatus_(record.status);
             }
             if (record && record.evaluationData) {
                 // محاولة تحليل evaluationData إذا كانت نصاً
@@ -758,10 +799,8 @@ function getAllContractorApprovalRequests(filters = {}) {
         }
         if (filters.pendingOnly) {
             data = data.filter(function(r) {
-                var st = String((r && r.status) || '').trim().toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
-                return st === 'pending' || st === 'under_review' || st === '' ||
-                    st === 'تم_الإرسال' || st === 'قيد_المراجعة' || st === 'تحت_المراجعة' ||
-                    st === 'في_الانتظار' || st === 'submitted';
+                var st = normalizeContractorRequestStatus_(r && r.status);
+                return st === 'pending' || st === 'under_review';
             });
         }
         

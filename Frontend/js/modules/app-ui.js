@@ -3466,6 +3466,17 @@ window.UI = {
                     Utils.safeWarn('⚠️ فشل تحديث Dashboard بعد المزامنة:', error);
                 }
             }
+
+            // ✅ جلب طلبات اعتماد المقاولين بعد المزامنة (للإشعارات وقائمة المدير — منفصل عن syncDataFromServer)
+            if (typeof Contractors !== 'undefined' && typeof Contractors.prefetchApprovalRequestsForNotifications === 'function') {
+                Contractors.prefetchApprovalRequestsForNotifications()
+                    .then(() => {
+                        if (typeof this.updateNotificationsBadge === 'function') {
+                            this.updateNotificationsBadge();
+                        }
+                    })
+                    .catch(() => {});
+            }
         };
 
         window.addEventListener('syncDataCompleted', this._syncDataCompletedHandler);
@@ -9435,11 +9446,15 @@ window.UI = {
                 AppState.appData.contractorApprovalRequests
                     .filter(req => {
                         if (!req) return false;
-                        const st = normalizeCarStatus(req.status);
                         if (isContractorApprovalAdmin) {
+                            if (typeof Contractors !== 'undefined' && typeof Contractors.isApprovalRequestPendingForReview === 'function') {
+                                return Contractors.isApprovalRequestPendingForReview(req);
+                            }
+                            const st = normalizeCarStatus(req.status);
                             return st === 'pending' || st === 'under_review';
                         }
                         if (!isCarOwner(req)) return false;
+                        const st = normalizeCarStatus(req.status);
                         return st === 'pending' || st === 'under_review' || st === 'approved' || st === 'rejected';
                     })
                     .forEach(request => {

@@ -3021,9 +3021,16 @@ const GoogleIntegration = {
                 const key = sheetMapping[sheetName];
                 const hasData = key && AppState.appData && AppState.appData[key];
                 const isLoaded = Array.isArray(hasData) && hasData.length > 0;
+
+                const isApprovalSheet = sheetName === 'ContractorApprovalRequests' || sheetName === 'ContractorDeletionRequests';
+                const isAdminUser = !!(AppState.currentUser && typeof Permissions !== 'undefined'
+                    && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
+                    && Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser));
+                const needsAdminApprovalRefresh = isApprovalSheet && isAdminUser && lastSync > 0
+                    && (currentTime - lastSync) > 30000;
                 
                 // إذا لم يتم تحميلها أو انتهت صلاحيتها أو لا توجد بيانات
-                if (!lastSync || isExpired || !isLoaded) {
+                if (!lastSync || isExpired || !isLoaded || needsAdminApprovalRefresh) {
                     incompleteSheets.push(sheetName);
                 }
             });
