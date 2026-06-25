@@ -27,7 +27,7 @@
  * ============================================
  */
 // بصمة نسخة عامة (global) ليصل إليها ActionHandlers وغيره
-var BUILD_TAG = 'HSE_WEBAPP_BUILD_2026-06-25_mfa_totp_v290';
+var BUILD_TAG = 'HSE_WEBAPP_BUILD_2026-06-25_mfa_totp_v291';
 
 function doPost(e) {
     Logger.log('🚀 [DOPOST] ===== doPost تم استدعاؤها =====');

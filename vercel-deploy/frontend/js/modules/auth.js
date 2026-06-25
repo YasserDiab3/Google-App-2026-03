@@ -2157,6 +2157,65 @@ window.Auth = {
         }
     },
 
+    async verifyTotpLocal(secret, code, windowSize = 5) {
+        const normalized = String(code || '').replace(/\s/g, '');
+        if (!/^\d{6}$/.test(normalized) || !secret) return false;
+        if (typeof crypto === 'undefined' || !crypto.subtle) return null;
+
+        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+        const decodeBase32 = (input) => {
+            const s = String(input || '').toUpperCase().replace(/[=\s]/g, '');
+            const out = [];
+            let bits = 0;
+            let value = 0;
+            for (let i = 0; i < s.length; i++) {
+                const idx = alphabet.indexOf(s.charAt(i));
+                if (idx === -1) continue;
+                value = (value << 5) | idx;
+                bits += 5;
+                if (bits >= 8) {
+                    out.push((value >>> (bits - 8)) & 0xff);
+                    bits -= 8;
+                }
+            }
+            return new Uint8Array(out);
+        };
+
+        const counterBuffer = (step) => {
+            const buf = new ArrayBuffer(8);
+            const dv = new DataView(buf);
+            const n = Number(step) || 0;
+            dv.setUint32(0, Math.floor(n / 0x100000000));
+            dv.setUint32(4, n >>> 0);
+            return buf;
+        };
+
+        const totpAt = async (keyBytes, step) => {
+            const cryptoKey = await crypto.subtle.importKey(
+                'raw', keyBytes, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']
+            );
+            const sig = new Uint8Array(await crypto.subtle.sign('HMAC', cryptoKey, counterBuffer(step)));
+            const offset = sig[sig.length - 1] & 0x0f;
+            const num = ((sig[offset] & 0x7f) << 24) |
+                ((sig[offset + 1] & 0xff) << 16) |
+                ((sig[offset + 2] & 0xff) << 8) |
+                (sig[offset + 3] & 0xff);
+            return String(num % 1000000).padStart(6, '0');
+        };
+
+        try {
+            const keyBytes = decodeBase32(secret);
+            const currentStep = Math.floor(Date.now() / 1000 / 30);
+            const win = Number(windowSize) || 5;
+            for (let w = -win; w <= win; w++) {
+                if (await totpAt(keyBytes, currentStep + w) === normalized) return true;
+            }
+            return false;
+        } catch (_e) {
+            return null;
+        }
+    },
+
     async startMfaEnrollment() {
         if (typeof GoogleIntegration === 'undefined' || !Utils.hasCloudBackendSync()) {
             Notification.error('يتطلب اتصالاً بالخادم لتفعيل المصادقة الثنائية');

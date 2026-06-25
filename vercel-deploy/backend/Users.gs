@@ -894,8 +894,9 @@ function startMfaEnrollment(actorUserData) {
         if (isMfaEnabledForUser_(user)) {
             return { success: false, message: 'المصادقة الثنائية مفعّلة بالفعل' };
         }
-        var secret = generateTotpSecret_();
-        if (!storeMfaEnrollmentPending_(email, secret)) {
+        var pending = peekMfaEnrollmentPending_(email);
+        var secret = pending || generateTotpSecret_();
+        if (!pending && !storeMfaEnrollmentPending_(email, secret)) {
             return { success: false, message: 'تعذر بدء التسجيل. حاول لاحقاً.' };
         }
         var otpauthUrl = buildOtpAuthUri_(email, secret, 'HSE-04-2026');
@@ -1009,7 +1010,7 @@ function confirmMfaEnrollment(code, actorUserData) {
         if (!pendingSecret) {
             return { success: false, message: 'انتهت جلسة التسجيل. أعد المحاولة من البداية.' };
         }
-        if (!verifyTotpCode_(pendingSecret, otp)) {
+        if (!verifyTotpCode_(pendingSecret, otp, { window: (typeof MFA_ENROLL_TOTP_WINDOW_ !== 'undefined') ? MFA_ENROLL_TOTP_WINDOW_ : 5 })) {
             return { success: false, message: 'رمز التأكيد غير صحيح. تأكد من مزامنة وقت الجهاز وحاول رمزاً جديداً.' };
         }
         var user = getUserRecordFromUsersSheetByEmail_(email);

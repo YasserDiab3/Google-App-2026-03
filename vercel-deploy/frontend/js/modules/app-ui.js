@@ -4824,11 +4824,13 @@ window.UI = {
         }
 
         body.innerHTML = `
-            <p class="text-sm text-gray-600 mb-3">امسح الرمز بتطبيق Google Authenticator أو Microsoft Authenticator:</p>
+            <p class="text-sm text-gray-600 mb-2">امسح الرمز بتطبيق Google Authenticator أو Microsoft Authenticator:</p>
+            <p class="text-xs text-amber-700 mb-3">احذف أي حساب HSE قديم من التطبيق أولاً. إن فشل المسح: أدخل السر يدوياً (بالأسفل) ثم أدخل رمزاً جديداً.</p>
             <div class="text-center mb-3">${qrHtml}</div>
-            <p class="text-xs text-gray-500 mb-2 text-center" dir="ltr">${esc(manualSecret)}</p>
+            <p class="text-xs text-gray-500 mb-1 text-center">السر اليدوي:</p>
+            <p class="text-sm font-mono text-center mb-3 select-all" dir="ltr">${esc(manualSecret)}</p>
             <label class="block text-sm font-semibold text-gray-700 mb-2">أدخل الرمز من التطبيق للتأكيد:</label>
-            <input type="text" id="mfa-enroll-code" class="form-input text-center tracking-widest mb-3" inputmode="numeric" maxlength="6" placeholder="000000" dir="ltr">
+            <input type="text" id="mfa-enroll-code" class="form-input text-center tracking-widest mb-3" inputmode="numeric" maxlength="6" placeholder="000000" dir="ltr" autocomplete="one-time-code">
             <div class="flex gap-2 justify-end">
                 <button type="button" class="btn-secondary" id="mfa-enroll-cancel">إلغاء</button>
                 <button type="button" class="btn-primary" id="mfa-enroll-confirm"><i class="fas fa-check ml-1"></i>تفعيل</button>
@@ -4837,8 +4839,20 @@ window.UI = {
         body.querySelector('#mfa-enroll-cancel')?.addEventListener('click', closeModal);
         body.querySelector('#mfa-enroll-confirm')?.addEventListener('click', async () => {
             const code = body.querySelector('#mfa-enroll-code')?.value?.trim() || '';
+            if (!/^\d{6}$/.test(code.replace(/\s/g, ''))) {
+                Notification.warning('أدخل 6 أرقام من التطبيق');
+                return;
+            }
             Loading.show();
             try {
+                if (manualSecret && typeof Auth.verifyTotpLocal === 'function') {
+                    const localOk = await Auth.verifyTotpLocal(manualSecret, code, 5);
+                    if (localOk === false) {
+                        Loading.hide();
+                        Notification.error('الرمز لا يطابق السر المعروض. احذف الحساب القديم من التطبيق وأعد المسح أو الإدخال اليدوي.');
+                        return;
+                    }
+                }
                 const res = await Auth.confirmMfaEnrollment(code);
                 Loading.hide();
                 if (res && res.success) {

@@ -8,6 +8,7 @@ var MFA_ENROLL_TTL_SEC_ = 600;
 var MFA_MAX_ATTEMPTS_ = 5;
 var MFA_LOCKOUT_SEC_ = 900;
 var MFA_TOTP_WINDOW_ = 2;
+var MFA_ENROLL_TOTP_WINDOW_ = 5;
 
 function ensureMfaEncryptionKey_() {
     var props = PropertiesService.getScriptProperties();
@@ -19,47 +20,107 @@ function ensureMfaEncryptionKey_() {
     return key;
 }
 
-function generateTotpSecret_() {
+function base32Encode_(bytes) {
     var chars = MFA_BASE32_CHARS_;
-    var secret = '';
-    for (var i = 0; i < 20; i++) {
-        secret += chars.charAt(Math.floor(Math.random() * 32));
+    var output = '';
+    var bits = 0;
+    var value = 0;
+    for (var i = 0; i < bytes.length; i++) {
+        value = (value << 8) | (Number(bytes[i]) & 0xff);
+        bits += 8;
+        while (bits >= 5) {
+            output += chars.charAt((value >>> (bits - 5)) & 31);
+            bits -= 5;
+        }
     }
-    return secret;
+    if (bits > 0) {
+        output += chars.charAt((value << (5 - bits)) & 31);
+    }
+    return output;
 }
 
 function base32Decode_(input) {
-    input = String(input || '').toUpperCase().replace(/=+$/, '').replace(/\s/g, '');
-    var bits = '';
-    for (var i = 0; i < input.length; i++) {
-        var val = MFA_BASE32_CHARS_.indexOf(input.charAt(i));
-        if (val === -1) continue;
-        bits += ('00000' + val.toString(2)).slice(-5);
-    }
+    input = String(input || '').toUpperCase().replace(/[=\s]/g, '');
     var bytes = [];
-    for (var j = 0; j + 8 <= bits.length; j += 8) {
-        bytes.push(parseInt(bits.substr(j, 8), 2));
+    var bits = 0;
+    var value = 0;
+    for (var i = 0; i < input.length; i++) {
+        var idx = MFA_BASE32_CHARS_.indexOf(input.charAt(i));
+        if (idx === -1) continue;
+        value = (value << 5) | idx;
+        bits += 5;
+        if (bits >= 8) {
+            bytes.push((value >>> (bits - 8)) & 0xff);
+            bits -= 8;
+        }
     }
     return bytes;
 }
 
-function generateTotpCodeAtStep_(secret, timeStep) {
-    var secretBytes = base32Decode_(secret);
-    if (!secretBytes || secretBytes.length === 0) return '';
-    var data = [];
-    var step = Number(timeStep) || 0;
+/** تحويل base32 → بايتات مفتاح HMAC (متوافق مع GAS) */
+function base32ToHmacKeyBytes_(secret) {
+    return normalizeGasByteArray_(base32Decode_(secret));
+}
+
+function counterBytesFromStep_(timeStep) {
+    var counter = Number(timeStep) || 0;
+    var bytes = new Array(8);
     for (var i = 7; i >= 0; i--) {
-        data.push((step >>> (i * 8)) & 0xff);
+        bytes[i] = counter & 0xff;
+        counter = Math.floor(counter / 256);
     }
-    var hashRaw = Utilities.computeHmacSignature(
+    return bytes;
+}
+
+function normalizeGasByteArray_(arr) {
+    if (!arr || !arr.length) return [];
+    var unsigned = [];
+    for (var i = 0; i < arr.length; i++) {
+        unsigned.push(Number(arr[i]) & 0xff);
+    }
+    try {
+        return Utilities.base64Decode(Utilities.base64Encode(unsigned));
+    } catch (e) {
+        return unsigned.map(function (b) {
+            return b > 127 ? b - 256 : b;
+        });
+    }
+}
+
+function gasSignatureToUnsigned_(sig) {
+    var out = [];
+    if (!sig) return out;
+    for (var i = 0; i < sig.length; i++) {
+        out.push((Math.round(Number(sig[i])) + 256) % 256);
+    }
+    return out;
+}
+
+function hmacSha1Totp_(messageBytes, keyBytes) {
+    var msg = normalizeGasByteArray_(messageBytes);
+    var key = normalizeGasByteArray_(keyBytes);
+    var sig = Utilities.computeHmacSignature(
         Utilities.MacAlgorithm.HMAC_SHA_1,
-        data,
-        secretBytes
+        msg,
+        key
     );
-    var hash = [];
-    for (var h = 0; h < hashRaw.length; h++) {
-        hash.push((hashRaw[h] + 256) % 256);
+    return gasSignatureToUnsigned_(sig);
+}
+
+function generateTotpSecret_() {
+    var bytes = [];
+    for (var i = 0; i < 10; i++) {
+        bytes.push(Math.floor(Math.random() * 256));
     }
+    return base32Encode_(bytes);
+}
+
+function generateTotpCodeAtStep_(secret, timeStep) {
+    var secretBytes = base32ToHmacKeyBytes_(secret);
+    if (!secretBytes || secretBytes.length === 0) return '';
+    var data = counterBytesFromStep_(timeStep);
+    var hash = hmacSha1Totp_(data, secretBytes);
+    if (!hash || hash.length < 20) return '';
     var offset = hash[hash.length - 1] & 0x0f;
     var code = ((hash[offset] & 0x7f) << 24) |
         ((hash[offset + 1] & 0xff) << 16) |
@@ -68,11 +129,15 @@ function generateTotpCodeAtStep_(secret, timeStep) {
     return ('000000' + (code % 1000000)).slice(-6);
 }
 
-function verifyTotpCode_(secret, code) {
+function verifyTotpCode_(secret, code, options) {
+    options = options || {};
     var normalized = String(code || '').replace(/\s/g, '');
     if (!/^\d{6}$/.test(normalized)) return false;
+    var windowSize = (options.window != null && !isNaN(options.window))
+        ? Number(options.window)
+        : MFA_TOTP_WINDOW_;
     var currentStep = Math.floor(Date.now() / 1000 / 30);
-    for (var w = -MFA_TOTP_WINDOW_; w <= MFA_TOTP_WINDOW_; w++) {
+    for (var w = -windowSize; w <= windowSize; w++) {
         if (generateTotpCodeAtStep_(secret, currentStep + w) === normalized) {
             return true;
         }
@@ -82,10 +147,10 @@ function verifyTotpCode_(secret, code) {
 
 function buildOtpAuthUri_(email, secret, issuer) {
     var iss = String(issuer || 'HSE-04-2026').trim() || 'HSE-04-2026';
-    var label = encodeURIComponent(iss + ':' + String(email || '').trim());
-    var sec = encodeURIComponent(String(secret || '').trim());
+    var account = encodeURIComponent(String(email || '').trim());
+    var sec = String(secret || '').trim().toUpperCase().replace(/\s/g, '');
     var issEnc = encodeURIComponent(iss);
-    return 'otpauth://totp/' + label + '?secret=' + sec + '&issuer=' + issEnc + '&algorithm=SHA1&digits=6&period=30';
+    return 'otpauth://totp/' + issEnc + ':' + account + '?secret=' + sec + '&issuer=' + issEnc + '&algorithm=SHA1&digits=6&period=30';
 }
 
 function encryptMfaSecret_(plain) {
@@ -188,7 +253,7 @@ function storeMfaEnrollmentPending_(email, secret) {
     var e = String(email || '').trim().toLowerCase();
     if (!e || !secret) return false;
     var cache = CacheService.getScriptCache();
-    cache.put('mfa_enroll_' + e, String(secret), MFA_ENROLL_TTL_SEC_);
+    cache.put('mfa_enroll_' + e, String(secret).toUpperCase().replace(/\s/g, ''), MFA_ENROLL_TTL_SEC_);
     return true;
 }
 
