@@ -688,6 +688,141 @@ const Help = {
         ];
     },
 
+    buildUsagePolicyPdfContent_() {
+        const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML)
+            ? Utils.escapeHTML(String(v ?? ''))
+            : String(v ?? '');
+        const listBlock = (title, items) => {
+            if (!items || !items.length) return '';
+            return `
+                <h3 style="font-size:15px;font-weight:700;color:#1e40af;margin:18px 0 10px;padding-right:12px;border-right:3px solid #003865;">${esc(title)}</h3>
+                <ul class="report-list" style="margin:0 0 8px;padding-right:22px;line-height:1.85;">${items.map(li => `<li style="margin-bottom:8px;">${esc(li)}</li>`).join('')}</ul>`;
+        };
+        return this.getPolicyTopics().map((t, i) => `
+            <div class="permit-section" style="margin-top:${i === 0 ? '0' : '32px'};page-break-inside:avoid;">
+                <h2 class="section-title" style="margin-top:${i === 0 ? '0' : '24px'};">${esc(t.title)}</h2>
+                ${t.summary ? `<p style="color:#64748b;font-size:14px;margin-bottom:10px;">${esc(t.summary)}</p>` : ''}
+                ${t.purpose ? `<p style="font-size:14px;line-height:1.85;color:#334155;margin-bottom:12px;">${esc(t.purpose)}</p>` : ''}
+                ${listBlock('البنود والأحكام', t.features)}
+                ${listBlock('التزامات وإرشادات', t.workflow)}
+                ${listBlock('ملاحظات', t.tips)}
+            </div>
+        `).join('');
+    },
+
+    async exportUsagePolicyPdf() {
+        if (typeof Loading !== 'undefined') Loading.show();
+        try {
+            const title = 'سياسة الاستخدام والمسؤولية';
+            const exportTs = new Date();
+            const version = this.getAppVersion();
+            let exportTsStr = '';
+            try {
+                exportTsStr = typeof Utils !== 'undefined' && Utils.formatDateTime
+                    ? Utils.formatDateTime(exportTs, 'ar-EG')
+                    : exportTs.toLocaleString('ar-SA');
+            } catch (_e) {
+                exportTsStr = exportTs.toLocaleString('ar-SA');
+            }
+            const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML)
+                ? Utils.escapeHTML(String(v ?? ''))
+                : String(v ?? '');
+
+            const body = this.buildUsagePolicyPdfContent_();
+            const innerContent = `
+                <div style="margin-bottom:20px;padding:14px 16px;border-radius:14px;background:linear-gradient(135deg,rgba(251,191,36,0.12),rgba(245,158,11,0.06));border:1px solid rgba(245,158,11,0.35);">
+                    <p style="margin:0;font-size:13px;line-height:1.85;color:#78350f;">
+                        هذا المستند يتضمن الأقسام الستة لسياسة الاستخدام والمسؤولية في منظومة السلامة والصحة المهنية والبيئة.
+                        يُعرض بنفس ترويسة وتذييل التقارير الرسمية للنظام. للحفظ كملف PDF استخدم «طباعة» ثم «حفظ كـ PDF».
+                    </p>
+                </div>
+                ${body}`;
+
+            let htmlContent;
+            if (typeof PDFTemplates !== 'undefined' && PDFTemplates.buildDocument) {
+                htmlContent = PDFTemplates.buildDocument({
+                    title,
+                    formCode: 'HSE-USAGE-POLICY',
+                    content: innerContent,
+                    createdAt: exportTs,
+                    updatedAt: exportTs,
+                    meta: {
+                        'نوع المستند': 'سياسة الاستخدام والمسؤولية',
+                        'إصدار التطبيق': String(version),
+                        'تاريخ التصدير': exportTsStr
+                    },
+                    includeQRCode: true,
+                    qrData: `HSE Usage Policy | v${version} | ${exportTs.toISOString()}`
+                });
+            } else if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function') {
+                htmlContent = FormHeader.generatePDFHTML(
+                    'HSE-USAGE-POLICY',
+                    title,
+                    innerContent,
+                    false,
+                    true,
+                    {
+                        'نوع المستند': 'سياسة الاستخدام والمسؤولية',
+                        'إصدار التطبيق': String(version),
+                        'تاريخ التصدير': exportTsStr
+                    },
+                    exportTs,
+                    exportTs
+                );
+            } else {
+                htmlContent = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8">
+<title>${esc(title)}</title></head><body style="font-family:Tahoma,Arial,sans-serif;padding:20px;">${innerContent}</body></html>`;
+            }
+
+            if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {
+                const ok = await FormHeader.generatePDF(htmlContent, 'usage-policy.pdf');
+                if (ok && typeof Notification !== 'undefined') {
+                    Notification.success('استخدم «حفظ كـ PDF» من نافذة الطباعة');
+                } else if (!ok && typeof Notification !== 'undefined') {
+                    Notification.error('تعذّر فتح نافذة الطباعة — اسمح بالنوافذ المنبثقة');
+                }
+                return;
+            }
+
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const printWindow = window.open(url, 'hse_usage_policy_pdf');
+            let printed = false;
+            const finishPrint = () => {
+                if (printed || !printWindow || printWindow.closed) return;
+                printed = true;
+                try {
+                    printWindow.focus();
+                    printWindow.print();
+                } catch (_e) { /* ignore */ }
+                setTimeout(() => {
+                    try { URL.revokeObjectURL(url); } catch (_e2) { /* ignore */ }
+                    if (typeof Notification !== 'undefined') {
+                        Notification.success('استخدم «حفظ كـ PDF» من نافذة الطباعة');
+                    }
+                }, 400);
+            };
+            if (printWindow) {
+                printWindow.onload = () => finishPrint();
+                setTimeout(() => {
+                    if (!printed && printWindow.document && printWindow.document.readyState === 'complete') finishPrint();
+                }, 500);
+            } else {
+                try { URL.revokeObjectURL(url); } catch (_e3) { /* ignore */ }
+                if (typeof Notification !== 'undefined') {
+                    Notification.error('يرجى السماح بالنوافذ المنبثقة لطباعة السياسة');
+                }
+            }
+        } catch (error) {
+            if (typeof Utils !== 'undefined' && Utils.safeError) Utils.safeError('exportUsagePolicyPdf:', error);
+            if (typeof Notification !== 'undefined') {
+                Notification.error('تعذّر إنشاء ملف السياسة: ' + (error?.message || String(error)));
+            }
+        } finally {
+            if (typeof Loading !== 'undefined') Loading.hide();
+        }
+    },
+
     getStaticTopics() {
         return [
             {
@@ -1212,10 +1347,18 @@ const Help = {
 
         const policyHeader = cat === 'policy' ? `
             <div class="content-card" style="padding:16px 20px;margin-bottom:14px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;">
-                <h2 style="margin:0 0 6px;font-size:1.05rem;font-weight:800;color:#92400e;display:flex;align-items:center;gap:8px;">
-                    <i class="fas fa-scale-balanced"></i> سياسة الاستخدام والمسؤولية
-                </h2>
-                <p style="margin:0;font-size:0.84rem;color:#78350f;line-height:1.6;">ستة أقسام تنظيمية — اضغط على أي قسم لقراءة التفاصيل. هذا التبويب للأحكام فقط وليس لأسئلة وأجوبة.</p>
+                <div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;">
+                    <div style="flex:1;min-width:220px;">
+                        <h2 style="margin:0 0 6px;font-size:1.05rem;font-weight:800;color:#92400e;display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-scale-balanced"></i> سياسة الاستخدام والمسؤولية
+                        </h2>
+                        <p style="margin:0;font-size:0.84rem;color:#78350f;line-height:1.6;">ستة أقسام تنظيمية — اضغط على أي قسم لقراءة التفاصيل. هذا التبويب للأحكام فقط وليس لأسئلة وأجوبة.</p>
+                    </div>
+                    <button type="button" id="help-export-policy-pdf"
+                        style="padding:10px 16px;background:#b45309;color:#fff;border:none;border-radius:10px;font-size:0.82rem;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(180,83,9,0.25);">
+                        <i class="fas fa-file-pdf" style="margin-left:8px;"></i> طباعة / PDF
+                    </button>
+                </div>
             </div>` : '';
 
         listEl.innerHTML = policyHeader + topics.map((t, i) => this.renderTopicCard(t, i)).join('');
@@ -1283,6 +1426,10 @@ const Help = {
                 if (mod && typeof UI !== 'undefined' && typeof UI.showSection === 'function') {
                     UI.showSection(mod);
                 }
+                return;
+            }
+            if (e.target.closest('#help-export-policy-pdf')) {
+                void this.exportUsagePolicyPdf();
             }
         });
 
