@@ -863,7 +863,128 @@ const Contractors = {
 
     prefetchApprovalRequestsForNotifications() {
         if (!this.shouldLoadContractorApprovalRequests()) return Promise.resolve(false);
-        return this.ensureApprovalRequestsDataLoaded({ force: this.isContractorApprovalAdminUser() });
+        return this.ensureApprovalRequestsDataLoaded({ force: false })
+            .then((loaded) => {
+                if (typeof AppUI !== 'undefined' && typeof AppUI.updateNotificationsBadge === 'function') {
+                    AppUI.updateNotificationsBadge();
+                }
+                return loaded;
+            })
+            .catch(() => false);
+    },
+
+    normalizeCompanyNameForApprovalMatch(name) {
+        return String(name || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    },
+
+    /**
+     * التحقق من إمكانية إرسال طلب اعتماد جديد (محلي — قبل الإرسال)
+     */
+    validateNewApprovalRequest(requestData) {
+        if (!requestData) {
+            return { ok: false, message: 'بيانات الطلب غير صالحة' };
+        }
+
+        const companyName = String(requestData.companyName || '').trim();
+        const licenseNumber = String(requestData.licenseNumber || '').trim();
+        const requestType = String(requestData.requestType || '').trim();
+
+        if (!companyName || !requestData.serviceType || !requestType) {
+            return { ok: false, message: 'يرجى تعبئة جميع الحقول المطلوبة' };
+        }
+        if (!licenseNumber) {
+            return { ok: false, message: 'رقم السجل التجاري / الترخيص مطلوب' };
+        }
+
+        const normalizedCompany = this.normalizeCompanyNameForApprovalMatch(companyName);
+        const entityType = requestType === 'supplier' ? 'supplier' : 'contractor';
+
+        const approved = AppState.appData.approvedContractors || [];
+        const duplicateApproved = approved.find((ac) => {
+            if (!ac) return false;
+            const acLicense = String(ac.licenseNumber || '').trim();
+            const acCompany = this.normalizeCompanyNameForApprovalMatch(ac.companyName);
+            if (licenseNumber && acLicense && acLicense === licenseNumber) return true;
+            if (normalizedCompany && acCompany === normalizedCompany) {
+                const acType = this.normalizeApprovedEntityType(ac.entityType || ac.type);
+                return !entityType || acType === entityType;
+            }
+            return false;
+        });
+        if (duplicateApproved) {
+            return {
+                ok: false,
+                message: `الجهة مسجلة بالفعل في قائمة المعتمدين (${duplicateApproved.companyName || companyName}).`
+            };
+        }
+
+        const contractors = AppState.appData.contractors || [];
+        const duplicateContractor = contractors.find((c) => {
+            if (!c) return false;
+            const cName = this.normalizeCompanyNameForApprovalMatch(c.name || c.companyName || c.company);
+            const cLicense = String(c.licenseNumber || c.contractNumber || '').trim();
+            if (licenseNumber && cLicense && cLicense === licenseNumber) return true;
+            return normalizedCompany && cName && cName === normalizedCompany;
+        });
+        if (duplicateContractor) {
+            return {
+                ok: false,
+                message: `المقاول/المورد مسجل مسبقاً في النظام (${duplicateContractor.name || duplicateContractor.companyName || companyName}).`
+            };
+        }
+
+        const pendingRequests = (AppState.appData.contractorApprovalRequests || [])
+            .map((r) => this.normalizeApprovalRequestRecord(r))
+            .filter((r) => r && this.isApprovalRequestPendingForReview(r));
+
+        const duplicatePending = pendingRequests.find((req) => {
+            const rt = String(req.requestType || 'contractor').trim();
+            if (rt !== 'contractor' && rt !== 'supplier') return false;
+            if (requestType && rt !== requestType) return false;
+            const reqCompany = this.normalizeCompanyNameForApprovalMatch(req.companyName);
+            const reqLicense = String(req.licenseNumber || '').trim();
+            if (normalizedCompany && reqCompany && reqCompany === normalizedCompany) return true;
+            return !!(licenseNumber && reqLicense && reqLicense === licenseNumber);
+        });
+        if (duplicatePending) {
+            return {
+                ok: false,
+                message: `يوجد طلب اعتماد قيد المراجعة لنفس الشركة أو رقم السجل (${duplicatePending.id || ''}).`
+            };
+        }
+
+        return { ok: true };
+    },
+
+    _closeApprovalRequestModal(modal) {
+        try {
+            if (modal && modal.parentNode) {
+                modal.remove();
+            }
+        } catch (removeError) {
+            Utils.safeWarn('⚠️ خطأ في إزالة النموذج:', removeError);
+            if (modal && modal.parentNode) {
+                modal.parentNode.removeChild(modal);
+            }
+        }
+    },
+
+    _scheduleApprovalNotificationsRefresh() {
+        if (typeof AppUI !== 'undefined' && typeof AppUI.scheduleContractorApprovalNotificationsRefresh === 'function') {
+            AppUI.scheduleContractorApprovalNotificationsRefresh();
+        } else if (typeof AppUI !== 'undefined' && typeof AppUI.updateNotificationsBadge === 'function') {
+            AppUI.updateNotificationsBadge();
+        }
+    },
+
+    _removeLocalApprovalRequestById(requestId) {
+        if (!requestId || !Array.isArray(AppState.appData.contractorApprovalRequests)) return;
+        AppState.appData.contractorApprovalRequests = AppState.appData.contractorApprovalRequests.filter(
+            (r) => r && r.id !== requestId
+        );
+        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+            window.DataManager.save();
+        }
     },
 
     async diagnoseApprovalRequests() {
@@ -9245,72 +9366,87 @@ const Contractors = {
     showApprovalRequestForm() {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
+        modal.id = 'contractor-approval-request-modal';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 800px;">
-                <div class="modal-header">
-                    <h2 class="modal-title">
-                        <i class="fas fa-paper-plane ml-2"></i>
-                        إرسال طلب اعتماد مقاول أو مقدم خدمة
-                    </h2>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
+            <div class="modal-content" style="max-width:860px;border-radius:16px;overflow:hidden;box-shadow:0 24px 48px rgba(15,23,42,0.18);">
+                <div style="background:linear-gradient(135deg,#312e81 0%,#6366f1 100%);color:#fff;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-paper-plane" style="font-size:18px;"></i>
+                        </div>
+                        <div>
+                            <h2 style="margin:0;font-size:1.15rem;font-weight:700;">طلب اعتماد مقاول / مورد</h2>
+                            <p style="margin:4px 0 0;font-size:0.78rem;opacity:0.9;">يُراجع من مدير النظام — تحقق من عدم التكرار قبل الإرسال</p>
+                        </div>
+                    </div>
+                    <button type="button" class="modal-close" style="color:#fff;opacity:0.9;" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="modal-body">
-                    <form id="approval-request-form" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">نوع الطلب *</label>
-                            <select id="approval-request-type" class="form-input" required>
-                                <option value="">اختر نوع الطلب</option>
-                                <option value="contractor">اعتماد مقاول جديد</option>
-                                <option value="supplier">اعتماد مورد جديد</option>
-                            </select>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">اسم الشركة / المقاول *</label>
-                                <input type="text" id="approval-request-company-name" class="form-input" required placeholder="اسم الشركة أو المقاول">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">نوع الخدمة / النشاط *</label>
-                                <input type="text" id="approval-request-service-type" class="form-input" required placeholder="نوع الخدمة أو النشاط">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">رقم السجل التجاري / الترخيص</label>
-                                <input type="text" id="approval-request-license" class="form-input" placeholder="رقم السجل التجاري أو الترخيص">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">الشخص المسؤول</label>
-                                <input type="text" id="approval-request-contact-person" class="form-input" placeholder="اسم الشخص المسؤول">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">رقم الهاتف</label>
-                                <input type="tel" id="approval-request-phone" class="form-input" placeholder="رقم الهاتف">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">البريد الإلكتروني</label>
-                                <input type="email" id="approval-request-email" class="form-input" placeholder="البريد الإلكتروني">
+                <div class="modal-body" style="padding:24px;background:#f8fafc;">
+                    <div id="approval-request-validation-hint" style="display:none;margin-bottom:16px;padding:12px 14px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:0.85rem;"></div>
+                    <form id="approval-request-form" class="space-y-5">
+                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;">
+                            <p style="margin:0 0 12px;font-size:0.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;">بيانات الطلب</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">نوع الطلب *</label>
+                                    <select id="approval-request-type" class="form-input" required>
+                                        <option value="">اختر نوع الطلب</option>
+                                        <option value="contractor">اعتماد مقاول جديد</option>
+                                        <option value="supplier">اعتماد مورد جديد</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">اسم الشركة / المقاول *</label>
+                                    <input type="text" id="approval-request-company-name" class="form-input" required placeholder="اسم الشركة أو المقاول" autocomplete="organization">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">رقم السجل التجاري / الترخيص *</label>
+                                    <input type="text" id="approval-request-license" class="form-input" required placeholder="رقم السجل أو الترخيص">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">نوع الخدمة / النشاط *</label>
+                                    <input type="text" id="approval-request-service-type" class="form-input" required placeholder="نوع الخدمة أو النشاط">
+                                </div>
                             </div>
                         </div>
-                        <div>
+                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;">
+                            <p style="margin:0 0 12px;font-size:0.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;">بيانات التواصل</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">الشخص المسؤول</label>
+                                    <input type="text" id="approval-request-contact-person" class="form-input" placeholder="اسم الشخص المسؤول">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">رقم الهاتف</label>
+                                    <input type="tel" id="approval-request-phone" class="form-input" placeholder="رقم الهاتف">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">البريد الإلكتروني</label>
+                                    <input type="email" id="approval-request-email" class="form-input" placeholder="البريد الإلكتروني">
+                                </div>
+                            </div>
+                        </div>
+                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">ملاحظات إضافية</label>
-                            <textarea id="approval-request-notes" class="form-input" rows="4" placeholder="أي معلومات إضافية قد تساعد في مراجعة الطلب"></textarea>
+                            <textarea id="approval-request-notes" class="form-input" rows="3" placeholder="أي معلومات إضافية تساعد في المراجعة"></textarea>
                         </div>
-                        <div class="border-t pt-4">
+                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-paperclip ml-2"></i>
                                 المرفقات
                             </label>
                             <input type="file" id="approval-request-attachments" class="form-input" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx">
-                            <p class="text-xs text-gray-500 mt-1">يمكنك رفع ملفات متعددة (PDF, Word, Excel, صور). الحد الأقصى لحجم كل ملف 5MB.</p>
+                            <p class="text-xs text-gray-500 mt-1">PDF, Word, Excel, صور — حتى 5MB لكل ملف</p>
                             <div id="approval-request-attachments-list" class="mt-3 space-y-2"></div>
                         </div>
                         ${Permissions.isAdmin() ? `
-                        <div class="border-t pt-4">
+                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;">
                             <div class="flex items-center justify-between mb-2">
                                 <label class="block text-sm font-semibold text-gray-700">
                                     <i class="fas fa-cog ml-2"></i>
-                                    البنود المطلوبة الإضافية (للمدير فقط)
+                                    بنود إضافية (للمدير)
                                 </label>
                                 <button type="button" id="add-custom-field-btn" class="btn-secondary btn-sm">
                                     <i class="fas fa-plus ml-1"></i>
@@ -9320,15 +9456,11 @@ const Contractors = {
                             <div id="custom-fields-container" class="space-y-2"></div>
                         </div>
                         ` : ''}
-                        <div class="modal-footer">
-                            <button type="button" class="btn-secondary" id="approval-request-cancel-btn" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                        <div class="modal-footer" style="padding:0;border:none;background:transparent;display:flex;justify-content:flex-end;gap:10px;">
+                            <button type="button" class="btn-secondary" id="approval-request-cancel-btn">إلغاء</button>
                             <button type="submit" class="btn-primary" id="approval-request-submit-btn">
                                 <i class="fas fa-paper-plane ml-2"></i>
                                 <span class="submit-text">إرسال الطلب</span>
-                                <span class="submitting-text" style="display: none;">
-                                    <i class="fas fa-spinner fa-spin ml-2"></i>
-                                    جاري الإرسال...
-                                </span>
                             </button>
                         </div>
                     </form>
@@ -9424,6 +9556,10 @@ const Contractors = {
             return;
         }
         
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => modal.remove());
+        }
+
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             
@@ -9439,32 +9575,15 @@ const Contractors = {
                 return;
             }
             
-            this.submitApprovalRequest(modal, attachments, () => {
-                // ✅ Callback لتعطيل الزر - التحقق من وجود العناصر أولاً
-                isSubmitting = true;
-                if (submitBtn && document.contains(submitBtn)) {
-                    submitBtn.disabled = true;
-                    const submitText = submitBtn.querySelector('.submit-text');
-                    const submittingText = submitBtn.querySelector('.submitting-text');
-                    if (submitText) submitText.style.display = 'none';
-                    if (submittingText) submittingText.style.display = 'inline';
-                }
-                if (cancelBtn && document.contains(cancelBtn)) {
-                    cancelBtn.disabled = true;
-                }
-            }, () => {
-                // ✅ Callback لإعادة تفعيل الزر (في حالة الخطأ) - التحقق من وجود العناصر أولاً
+            isSubmitting = true;
+            const hintEl = modal.querySelector('#approval-request-validation-hint');
+            if (hintEl) {
+                hintEl.style.display = 'none';
+                hintEl.textContent = '';
+            }
+
+            this.submitApprovalRequest(modal, attachments).finally(() => {
                 isSubmitting = false;
-                if (submitBtn && document.contains(submitBtn)) {
-                    submitBtn.disabled = false;
-                    const submitText = submitBtn.querySelector('.submit-text');
-                    const submittingText = submitBtn.querySelector('.submitting-text');
-                    if (submitText) submitText.style.display = 'inline';
-                    if (submittingText) submittingText.style.display = 'none';
-                }
-                if (cancelBtn && document.contains(cancelBtn)) {
-                    cancelBtn.disabled = false;
-                }
             });
         });
 
@@ -9477,21 +9596,17 @@ const Contractors = {
      * إرسال طلب الاعتماد
      * ✅ محسّن: استجابة سريعة، حفظ محلي أولاً، إغلاق سريع، مزامنة في الخلفية
      */
-    async submitApprovalRequest(modal, attachments = [], onStart = null, onError = null) {
+    async submitApprovalRequest(modal, attachments = []) {
         try {
-            // ✅ التحقق من وجود modal قبل الاستمرار
             if (!modal || !modal.parentNode) {
                 Utils.safeWarn('⚠️ submitApprovalRequest: modal غير موجود أو تم حذفه');
-                if (onError) onError();
                 return;
             }
-            
+
             const form = modal.querySelector('#approval-request-form');
-            // ✅ التحقق من وجود form قبل الاستمرار
             if (!form) {
                 Utils.safeWarn('⚠️ submitApprovalRequest: form غير موجود');
-                Loading.hide();
-                if (onError) onError();
+                Notification.warning('حدث خطأ في النموذج. يرجى تحديث الصفحة وإعادة المحاولة.');
                 return;
             }
 
@@ -9528,12 +9643,9 @@ const Contractors = {
             const emailInput = form.querySelector('#approval-request-email');
             const notesTextarea = form.querySelector('#approval-request-notes');
             
-            // ✅ التحقق من وجود الحقول المطلوبة
-            if (!typeSelect || !companyInput || !serviceInput) {
+            if (!typeSelect || !companyInput || !serviceInput || !licenseInput) {
                 Utils.safeWarn('⚠️ submitApprovalRequest: الحقول المطلوبة غير موجودة');
-                Loading.hide();
                 Notification.warning('حدث خطأ في النموذج. يرجى تحديث الصفحة وإعادة المحاولة.');
-                if (onError) onError();
                 return;
             }
             
@@ -9543,7 +9655,7 @@ const Contractors = {
                 requestType: typeSelect.value,
                 companyName: companyInput.value.trim(),
                 serviceType: serviceInput.value.trim(),
-                licenseNumber: (licenseInput?.value || '').trim(),
+                licenseNumber: licenseInput.value.trim(),
                 contactPerson: (contactInput?.value || '').trim(),
                 phone: (phoneInput?.value || '').trim(),
                 email: (emailInput?.value || '').trim(),
@@ -9557,14 +9669,16 @@ const Contractors = {
                 createdByName: AppState.currentUser?.name || ''
             };
 
-            if (!requestData.companyName || !requestData.serviceType || !requestData.requestType) {
-                Loading.hide();
-                Notification.warning('يرجى تعبئة جميع الحقول المطلوبة');
-                if (onError) onError();
+            const validation = this.validateNewApprovalRequest(requestData);
+            if (!validation.ok) {
+                const hintEl = modal.querySelector('#approval-request-validation-hint');
+                if (hintEl) {
+                    hintEl.textContent = validation.message;
+                    hintEl.style.display = 'block';
+                }
+                Notification.error(validation.message);
                 return;
             }
-
-            if (onStart) onStart();
 
             this.ensureApprovalRequestsSetup();
             
@@ -9575,49 +9689,32 @@ const Contractors = {
             
             AppState.appData.contractorApprovalRequests.push(requestData);
             
-            // ✅ إغلاق النموذج قبل DataManager.save() — الحفظ المحلي قد يكون ثقيلاً ويؤخر الإغلاق بصرياً
-            try {
-                if (modal && modal.parentNode) {
-                    modal.remove();
-                }
-            } catch (removeError) {
-                Utils.safeWarn('⚠️ خطأ في إزالة النموذج:', removeError);
-                if (modal && modal.parentNode) {
-                    modal.parentNode.removeChild(modal);
-                }
-            }
+            this._closeApprovalRequestModal(modal);
 
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                 window.DataManager.save();
             }
-            
+
             Utils.safeLog('✅ تم حفظ الطلب محلياً. ID مؤقت: ' + tempId);
-            
-            Loading.hide();
-            Notification.success('تم حفظ الطلب بنجاح. جاري المزامنة مع الخادم...');
-            
-            // ✅ تحديث قائمة الطلبات مباشرة بعد الحفظ المحلي
+
+            Notification.success('تم إرسال الطلب. جاري المزامنة مع الخادم...');
+
             this.refreshApprovalRequestsSection();
-            if (typeof AppUI !== 'undefined' && typeof AppUI.updateNotificationsBadge === 'function') {
-                AppUI.updateNotificationsBadge();
-            }
-            
-            // ✅ المزامنة مع Backend في الخلفية فقط (لا await — لا تغيير في بنية التطبيق)
-            this.syncApprovalRequestToBackend(requestData, attachments, tempId).then(() => {
-                Utils.safeLog('✅ تمت مزامنة الطلب بنجاح. يمكن الآن اعتماد الطلب.');
-                // ✅ تحديث العرض بعد المزامنة لضمان تحديث ID من TEMP_ إلى CAR_
-                this.refreshApprovalRequestsSection();
-            }).catch(error => {
-                Utils.safeError('❌ خطأ في مزامنة الطلب مع Backend:', error);
-                // إظهار تنبيه خفيف للمستخدم
-                Notification.warning('تم حفظ الطلب محلياً. سيتم المزامنة تلقائياً لاحقاً.');
-            });
-            
+            this._scheduleApprovalNotificationsRefresh();
+
+            this.syncApprovalRequestToBackend(requestData, attachments, tempId)
+                .then(() => {
+                    Utils.safeLog('✅ تمت مزامنة الطلب بنجاح.');
+                    this.refreshApprovalRequestsSection();
+                    this._scheduleApprovalNotificationsRefresh();
+                })
+                .catch((error) => {
+                    Utils.safeError('❌ خطأ في مزامنة الطلب مع Backend:', error);
+                });
+
         } catch (error) {
-            Loading.hide();
             Utils.safeError('خطأ في إرسال طلب الاعتماد:', error);
             Notification.error('تعذر إرسال طلب الاعتماد: ' + error.message);
-            if (onError) onError();
         }
     },
     
@@ -9827,10 +9924,7 @@ const Contractors = {
                     Utils.safeWarn('⚠️ فشل إرسال إشعارات للمديرين:', error);
                 });
 
-            // تحديث الإشعارات
-            if (typeof AppUI !== 'undefined' && AppUI.updateNotificationsBadge) {
-                AppUI.updateNotificationsBadge();
-                }
+            this._scheduleApprovalNotificationsRefresh();
                 
                 // ✅ إظهار إشعار النجاح النهائي
                 if (requestData.requestType === 'evaluation') {
@@ -9839,20 +9933,32 @@ const Contractors = {
                     Notification.success('تم إرسال طلب الاعتماد بنجاح. سيتم مراجعته من قبل مدير النظام.');
                 }
             } else {
-                // ✅ في حالة فشل المزامنة، الحفاظ على الطلب المحلي
-                Utils.safeWarn('⚠️ فشل مزامنة طلب الاعتماد مع Backend، تم الحفظ محلياً فقط');
-                const tempIndex = AppState.appData.contractorApprovalRequests.findIndex(r => r.id === tempId);
-                if (tempIndex !== -1) {
-                    AppState.appData.contractorApprovalRequests[tempIndex]._syncError = true;
-                    AppState.appData.contractorApprovalRequests[tempIndex]._syncErrorMessage = backendResult?.message || 'فشل المزامنة';
+                const errMsg = backendResult?.message || 'فشل المزامنة';
+                const isDuplicateRejection = !!(backendResult?.duplicateInfo) ||
+                    /مسجلة بالفعل|قيد المراجعة|مطلوب|غير مدعوم/i.test(errMsg);
+                const rejectId = tempId || actualTempId;
+
+                if (isDuplicateRejection) {
+                    Utils.safeWarn('⚠️ رفض Backend لطلب مكرر أو غير صالح: ' + errMsg);
+                    this._removeLocalApprovalRequestById(rejectId);
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        window.DataManager.save();
+                    }
+                    Notification.error(errMsg);
+                    this.refreshApprovalRequestsSection();
+                    this._scheduleApprovalNotificationsRefresh();
+                } else {
+                    Utils.safeWarn('⚠️ فشل مزامنة طلب الاعتماد مع Backend، تم الحفظ محلياً فقط');
+                    const tempIndex = AppState.appData.contractorApprovalRequests.findIndex(r => r.id === rejectId);
+                    if (tempIndex !== -1) {
+                        AppState.appData.contractorApprovalRequests[tempIndex]._syncError = true;
+                        AppState.appData.contractorApprovalRequests[tempIndex]._syncErrorMessage = errMsg;
+                    }
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        window.DataManager.save();
+                    }
+                    Notification.warning('تم حفظ الطلب محلياً. سيتم المزامنة تلقائياً لاحقاً.');
                 }
-                
-                // حفظ البيانات المحلية
-                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                    window.DataManager.save();
-                }
-                
-                Notification.warning('تم حفظ الطلب محلياً. سيتم المزامنة تلقائياً لاحقاً.');
             }
         } catch (error) {
             // ✅ في حالة الخطأ، الحفاظ على الطلب المحلي

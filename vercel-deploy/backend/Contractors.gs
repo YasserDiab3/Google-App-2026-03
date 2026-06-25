@@ -653,6 +653,49 @@ function addContractorApprovalRequest(requestData, spreadsheetIdOverride) {
         if (!requestData.status) {
             requestData.status = 'pending';
         }
+
+        var companyName = String(requestData.companyName || '').trim();
+        var licenseNumber = String(requestData.licenseNumber || '').trim();
+        var requestType = String(requestData.requestType || '').trim();
+        if (!companyName || !requestType) {
+            return { success: false, message: 'اسم الشركة ونوع الطلب مطلوبان' };
+        }
+        if (!licenseNumber) {
+            return { success: false, message: 'رقم السجل التجاري / الترخيص مطلوب' };
+        }
+        if (requestType !== 'contractor' && requestType !== 'supplier') {
+            return { success: false, message: 'نوع الطلب غير مدعوم لهذه العملية' };
+        }
+
+        invalidateHseSheetCaches('ApprovedContractors');
+        invalidateHseSheetCaches('ContractorApprovalRequests');
+        var approvedList = readFromSheet('ApprovedContractors', spreadsheetId) || [];
+        var existingApproved = findApprovedContractorForRequest_(requestData, approvedList);
+        if (existingApproved) {
+            return {
+                success: false,
+                message: 'الجهة مسجلة بالفعل في قائمة المعتمدين (' + (existingApproved.companyName || companyName) + '). لا يمكن إرسال طلب جديد.',
+                duplicateInfo: {
+                    id: existingApproved.id,
+                    companyName: existingApproved.companyName,
+                    licenseNumber: existingApproved.licenseNumber
+                }
+            };
+        }
+
+        var requestsList = readFromSheet('ContractorApprovalRequests', spreadsheetId) || [];
+        var pendingDuplicate = findPendingApprovalRequestDuplicate_(requestData, requestsList);
+        if (pendingDuplicate) {
+            return {
+                success: false,
+                message: 'يوجد طلب اعتماد قيد المراجعة لنفس الشركة أو رقم السجل (' + (pendingDuplicate.id || '') + ').',
+                duplicateInfo: {
+                    id: pendingDuplicate.id,
+                    companyName: pendingDuplicate.companyName,
+                    licenseNumber: pendingDuplicate.licenseNumber
+                }
+            };
+        }
         
         // ✅ استخدام appendToSheet مع spreadsheetId للاتساق
         const appendResult = appendToSheet(sheetName, requestData, spreadsheetId);
@@ -971,15 +1014,44 @@ function findApprovedContractorForRequest_(request, approvedList) {
         var ac = approvedList[i];
         if (!ac) continue;
         var acCompany = normalizeCompanyNameForMatch_(ac.companyName);
+        var acLicense = String(ac.licenseNumber || '').trim();
+        if (reqLicense && acLicense && reqLicense === acLicense) {
+            return ac;
+        }
         if (reqCompany && acCompany && reqCompany === acCompany) {
             if (!reqType || !ac.entityType || ac.entityType === reqType) {
                 return ac;
             }
         }
-        if (reqLicense && reqCompany &&
-            String(ac.licenseNumber || '').trim() === reqLicense &&
-            acCompany === reqCompany) {
-            return ac;
+    }
+    return null;
+}
+
+/**
+ * طلب اعتماد مكرر قيد المراجعة؟
+ */
+function findPendingApprovalRequestDuplicate_(requestData, requestsList) {
+    if (!requestData || !Array.isArray(requestsList)) return null;
+    var reqCompany = normalizeCompanyNameForMatch_(requestData.companyName);
+    var reqLicense = String(requestData.licenseNumber || '').trim();
+    var reqType = String(requestData.requestType || 'contractor').trim();
+    for (var i = 0; i < requestsList.length; i++) {
+        var req = requestsList[i];
+        if (!req) continue;
+        var st = normalizeContractorRequestStatus_(req.status);
+        if (st === 'approved' || st === 'rejected') continue;
+        var rt = String(req.requestType || 'contractor').trim();
+        if (rt !== 'contractor' && rt !== 'supplier') continue;
+        if (reqType && rt !== reqType) continue;
+        var existingCompany = normalizeCompanyNameForMatch_(req.companyName);
+        if (reqCompany && existingCompany && reqCompany === existingCompany) {
+            return req;
+        }
+        if (reqLicense) {
+            var exLic = String(req.licenseNumber || '').trim();
+            if (exLic && exLic === reqLicense) {
+                return req;
+            }
         }
     }
     return null;
