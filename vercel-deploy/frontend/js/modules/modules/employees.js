@@ -724,31 +724,167 @@ const Employees = {
      * أنماط كروت الإحصائيات — منفصلة عن content-card لتجنب الاستطالة العمودية
      */
     ensureEmployeesStatsCardsStyles() {
-        const styleId = 'employees-stats-cards-styles';
-        if (document.getElementById(styleId)) return;
+        const styleId = 'employees-stats-cards-styles-v2';
+        const existing = document.getElementById(styleId);
+        if (existing) return;
+
+        document.getElementById('employees-stats-cards-styles')?.remove();
 
         const style = document.createElement('style');
         style.id = styleId;
         style.textContent = `
             #employees-stats-cards {
                 align-items: start;
+                gap: 1rem;
             }
             #employees-stats-cards .employee-stat-card {
-                display: block !important;
+                --emp-stat-accent: #2563eb;
+                --emp-stat-accent-light: #eff6ff;
+                display: flex !important;
+                flex-direction: column;
+                justify-content: flex-start;
                 height: auto !important;
-                min-height: 0 !important;
+                min-height: 0;
                 align-self: start;
                 width: 100%;
-                padding: 1rem 1.15rem;
+                padding: 1rem 1.15rem 1.05rem;
                 box-sizing: border-box;
-                border-radius: 16px;
-                transition: transform 0.25s ease, box-shadow 0.25s ease;
+                border-radius: 14px;
+                background: linear-gradient(145deg, #ffffff 0%, var(--emp-stat-accent-light) 140%);
+                border: 1px solid color-mix(in srgb, var(--emp-stat-accent) 18%, #e5e7eb);
+                box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 6px 18px rgba(15, 23, 42, 0.04);
+                position: relative;
+                overflow: hidden;
+                transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+            }
+            #employees-stats-cards .employee-stat-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                inset-inline-end: 0;
+                width: 4px;
+                background: linear-gradient(180deg, var(--emp-stat-accent) 0%, color-mix(in srgb, var(--emp-stat-accent) 55%, #fff) 100%);
+                border-radius: 0 14px 14px 0;
+            }
+            [dir="rtl"] #employees-stats-cards .employee-stat-card::before {
+                border-radius: 14px 0 0 14px;
             }
             #employees-stats-cards .employee-stat-card:hover {
                 transform: translateY(-2px);
+                box-shadow: 0 4px 10px rgba(15, 23, 42, 0.07), 0 10px 24px rgba(15, 23, 42, 0.06);
+                border-color: color-mix(in srgb, var(--emp-stat-accent) 32%, #e5e7eb);
             }
-            #employees-stats-cards .employees-gender-stat-card {
-                padding: 0.9rem 1rem;
+            #employees-stats-cards .employee-stat-card__head {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.7rem;
+                margin-bottom: 0.65rem;
+                position: relative;
+                z-index: 1;
+            }
+            #employees-stats-cards .employee-stat-card__icon {
+                width: 40px;
+                height: 40px;
+                border-radius: 11px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                background: color-mix(in srgb, var(--emp-stat-accent) 12%, #fff);
+                color: var(--emp-stat-accent);
+                font-size: 1rem;
+                box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--emp-stat-accent) 16%, transparent);
+            }
+            #employees-stats-cards .employee-stat-card__meta {
+                min-width: 0;
+                flex: 1;
+            }
+            #employees-stats-cards .employee-stat-card__title {
+                margin: 0;
+                font-size: 0.84rem;
+                font-weight: 700;
+                color: #1e293b;
+                line-height: 1.35;
+            }
+            #employees-stats-cards .employee-stat-card__desc {
+                margin: 0.2rem 0 0;
+                font-size: 0.72rem;
+                color: #64748b;
+                line-height: 1.45;
+            }
+            #employees-stats-cards .employee-stat-card__value {
+                position: relative;
+                z-index: 1;
+                margin-top: 0.15rem;
+                font-size: 1.65rem;
+                font-weight: 800;
+                line-height: 1.1;
+                color: var(--emp-stat-accent);
+                letter-spacing: -0.02em;
+            }
+            #employees-stats-cards .employee-stat-card--gender .employee-stat-gender-row {
+                display: flex;
+                align-items: center;
+                gap: 0.55rem;
+                position: relative;
+                z-index: 1;
+            }
+            #employees-stats-cards .employee-stat-gender-item {
+                flex: 1;
+                min-width: 0;
+                display: flex;
+                align-items: baseline;
+                gap: 0.35rem;
+                padding: 0.45rem 0.55rem;
+                border-radius: 10px;
+                background: rgba(255, 255, 255, 0.72);
+                box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.22);
+            }
+            #employees-stats-cards .employee-stat-gender-item--male {
+                color: #1d4ed8;
+            }
+            #employees-stats-cards .employee-stat-gender-item--female {
+                color: #be185d;
+            }
+            #employees-stats-cards .employee-stat-gender-num {
+                font-size: 1.15rem;
+                font-weight: 800;
+                line-height: 1;
+            }
+            #employees-stats-cards .employee-stat-gender-label {
+                font-size: 0.72rem;
+                font-weight: 600;
+            }
+            #employees-stats-cards .employee-stat-gender-pct {
+                margin-inline-start: auto;
+                font-size: 0.68rem;
+                font-weight: 700;
+                opacity: 0.85;
+            }
+            #employees-stats-cards .employee-stat-gender-bar {
+                margin-top: 0.55rem;
+                height: 5px;
+                border-radius: 999px;
+                background: #e2e8f0;
+                overflow: hidden;
+                display: flex;
+                position: relative;
+                z-index: 1;
+            }
+            #employees-stats-cards .employee-stat-gender-bar__male {
+                background: linear-gradient(90deg, #3b82f6, #2563eb);
+            }
+            #employees-stats-cards .employee-stat-gender-bar__female {
+                background: linear-gradient(90deg, #ec4899, #db2777);
+            }
+            @media (max-width: 640px) {
+                #employees-stats-cards .employee-stat-card {
+                    min-height: 0;
+                }
+                #employees-stats-cards .employee-stat-card__value {
+                    font-size: 1.45rem;
+                }
             }
         `;
         document.head.appendChild(style);
@@ -774,12 +910,8 @@ const Employees = {
                 title: this.t('module.employees.stats.totalEmployees', 'عدد الموظفين'),
                 value: stats.total,
                 icon: 'fas fa-users',
-                color: 'blue',
-                gradient: 'from-blue-500 to-blue-600',
-                bgGradient: 'from-blue-50 to-blue-100',
-                borderColor: 'border-blue-200',
-                textColor: 'text-blue-700',
-                iconBg: 'bg-blue-100',
+                accent: '#2563eb',
+                accentLight: '#eff6ff',
                 description: this.t('module.employees.stats.totalEmployeesDesc', 'إجمالي الموظفين النشطين')
             },
             {
@@ -787,12 +919,8 @@ const Employees = {
                 title: this.t('module.employees.stats.avgAge', 'متوسط السن'),
                 value: stats.averageAge > 0 ? `${stats.averageAge} ${this.t('module.common.yearsUnit', 'سنة')}` : this.t('module.common.notAvailable', 'غير متاح'),
                 icon: 'fas fa-birthday-cake',
-                color: 'green',
-                gradient: 'from-green-500 to-green-600',
-                bgGradient: 'from-green-50 to-green-100',
-                borderColor: 'border-green-200',
-                textColor: 'text-green-700',
-                iconBg: 'bg-green-100',
+                accent: '#16a34a',
+                accentLight: '#f0fdf4',
                 description: this.t('module.employees.stats.avgAgeDesc', 'متوسط عمر الموظفين')
             },
             {
@@ -802,12 +930,8 @@ const Employees = {
                 maleCount: stats.genderStats.male,
                 femaleCount: stats.genderStats.female,
                 icon: 'fas fa-venus-mars',
-                color: 'purple',
-                gradient: 'from-purple-500 to-purple-600',
-                bgGradient: 'from-purple-50 via-indigo-50 to-pink-50',
-                borderColor: 'border-purple-200',
-                textColor: 'text-purple-700',
-                iconBg: 'bg-purple-100',
+                accent: '#7c3aed',
+                accentLight: '#f5f3ff',
                 description: this.t('module.employees.stats.genderDistDesc', 'توزيع الموظفين النشطين حسب النوع')
             },
             {
@@ -815,18 +939,24 @@ const Employees = {
                 title: this.t('module.employees.stats.avgExperience', 'متوسط سنوات الخبرة'),
                 value: stats.averageExperience > 0 ? `${stats.averageExperience} ${this.t('module.common.yearsUnit', 'سنة')}` : this.t('module.common.notAvailable', 'غير متاح'),
                 icon: 'fas fa-briefcase',
-                color: 'orange',
-                gradient: 'from-orange-500 to-orange-600',
-                bgGradient: 'from-orange-50 to-orange-100',
-                borderColor: 'border-orange-200',
-                textColor: 'text-orange-700',
-                iconBg: 'bg-orange-100',
+                accent: '#ea580c',
+                accentLight: '#fff7ed',
                 description: this.t('module.employees.stats.avgExperienceDesc', 'متوسط سنوات الخبرة من تاريخ التعيين')
             }
         ];
 
         const maleLabel = this.t('module.employees.genderMale', 'ذكر');
         const femaleLabel = this.t('module.employees.genderFemale', 'أنثى');
+
+        const renderStatCardHead = (card) => `
+            <div class="employee-stat-card__head">
+                <div class="employee-stat-card__icon"><i class="${card.icon}" aria-hidden="true"></i></div>
+                <div class="employee-stat-card__meta">
+                    <h3 class="employee-stat-card__title">${card.title}</h3>
+                    <p class="employee-stat-card__desc">${card.description}</p>
+                </div>
+            </div>
+        `;
 
         const renderGenderCard = (card) => {
             const maleCount = card.maleCount || 0;
@@ -836,49 +966,29 @@ const Employees = {
             const femalePct = genderTotal > 0 ? 100 - malePct : 0;
 
             return `
-                <div class="employee-stat-card employees-gender-stat-card border-2 ${card.borderColor} bg-gradient-to-br ${card.bgGradient}"
-                     style="position: relative; overflow: hidden;">
-                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 opacity-80"></div>
-
-                    <div class="relative z-10">
-                        <div class="flex items-center justify-between gap-2 mb-2.5">
-                            <div class="min-w-0">
-                                <h3 class="text-sm font-semibold ${card.textColor} leading-tight">${card.title}</h3>
-                                <p class="text-[11px] text-gray-500 mt-0.5 leading-snug">${card.description}</p>
+                <div class="employee-stat-card employee-stat-card--gender"
+                     style="--emp-stat-accent:${card.accent};--emp-stat-accent-light:${card.accentLight};">
+                    ${renderStatCardHead(card)}
+                    ${genderTotal > 0 ? `
+                        <div class="employee-stat-gender-row">
+                            <div class="employee-stat-gender-item employee-stat-gender-item--male" title="${maleLabel}: ${maleCount}">
+                                <span class="employee-stat-gender-num">${maleCount.toLocaleString('en-US')}</span>
+                                <span class="employee-stat-gender-label">${maleLabel}</span>
+                                <span class="employee-stat-gender-pct">${malePct}%</span>
                             </div>
-                            <div class="${card.iconBg} p-2 rounded-lg shadow-sm shrink-0">
-                                <i class="${card.icon} text-purple-600 text-base"></i>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-2 mb-2">
-                            <div class="rounded-lg bg-white/80 border border-blue-100 px-2 py-2 text-center">
-                                <div class="flex items-center justify-center gap-1 mb-0.5">
-                                    <i class="fas fa-mars text-blue-500 text-xs"></i>
-                                    <span class="text-[11px] font-medium text-blue-700">${maleLabel}</span>
-                                </div>
-                                <div class="text-lg font-bold text-blue-800 leading-none">${maleCount.toLocaleString('en-US')}</div>
-                                <div class="text-[10px] text-blue-500 mt-0.5">${malePct}%</div>
-                            </div>
-                            <div class="rounded-lg bg-white/80 border border-pink-100 px-2 py-2 text-center">
-                                <div class="flex items-center justify-center gap-1 mb-0.5">
-                                    <i class="fas fa-venus text-pink-500 text-xs"></i>
-                                    <span class="text-[11px] font-medium text-pink-700">${femaleLabel}</span>
-                                </div>
-                                <div class="text-lg font-bold text-pink-800 leading-none">${femaleCount.toLocaleString('en-US')}</div>
-                                <div class="text-[10px] text-pink-500 mt-0.5">${femalePct}%</div>
+                            <div class="employee-stat-gender-item employee-stat-gender-item--female" title="${femaleLabel}: ${femaleCount}">
+                                <span class="employee-stat-gender-num">${femaleCount.toLocaleString('en-US')}</span>
+                                <span class="employee-stat-gender-label">${femaleLabel}</span>
+                                <span class="employee-stat-gender-pct">${femalePct}%</span>
                             </div>
                         </div>
-
-                        ${genderTotal > 0 ? `
-                            <div class="h-1.5 rounded-full bg-gray-200/80 overflow-hidden flex" title="${maleLabel} ${malePct}% / ${femaleLabel} ${femalePct}%">
-                                <div class="h-full bg-blue-500" style="width: ${malePct}%"></div>
-                                <div class="h-full bg-pink-500" style="width: ${femalePct}%"></div>
-                            </div>
-                        ` : `
-                            <p class="text-xs text-gray-400 text-center">${this.t('module.common.notAvailable', 'غير متاح')}</p>
-                        `}
-                    </div>
+                        <div class="employee-stat-gender-bar" title="${maleLabel} ${malePct}% / ${femaleLabel} ${femalePct}%">
+                            <div class="employee-stat-gender-bar__male" style="width:${malePct}%"></div>
+                            <div class="employee-stat-gender-bar__female" style="width:${femalePct}%"></div>
+                        </div>
+                    ` : `
+                        <div class="employee-stat-card__value">${this.t('module.common.notAvailable', 'غير متاح')}</div>
+                    `}
                 </div>
             `;
         };
@@ -887,29 +997,12 @@ const Employees = {
             if (card.isGenderCard) {
                 return renderGenderCard(card);
             }
+            const valueDisplay = typeof card.value === 'number' ? card.value.toLocaleString('en-US') : card.value;
             return `
-                <div class="employee-stat-card border-2 ${card.borderColor} bg-gradient-to-br ${card.bgGradient}" 
-                     style="position: relative; overflow: hidden;">
-                    <div class="absolute top-0 right-0 w-24 h-24 opacity-10" style="background: radial-gradient(circle, rgba(0,0,0,0.1) 1px, transparent 1px); background-size: 16px 16px;"></div>
-                    
-                    <div class="relative z-10">
-                        <div class="flex items-center justify-between mb-3">
-                            <div class="${card.iconBg} p-2.5 rounded-xl shadow-sm">
-                                <i class="${card.icon} text-${card.color}-600 text-xl"></i>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-1">
-                            <h3 class="text-sm font-semibold ${card.textColor} mb-0.5">${card.title}</h3>
-                            <p class="text-xs text-gray-600 leading-snug">${card.description}</p>
-                        </div>
-                        
-                        <div class="mt-3">
-                            <div class="text-2xl font-bold ${card.textColor} leading-none">
-                                ${typeof card.value === 'number' ? card.value.toLocaleString('en-US') : card.value}
-                            </div>
-                        </div>
-                    </div>
+                <div class="employee-stat-card"
+                     style="--emp-stat-accent:${card.accent};--emp-stat-accent-light:${card.accentLight};">
+                    ${renderStatCardHead(card)}
+                    <div class="employee-stat-card__value">${valueDisplay}</div>
                 </div>
             `;
         }).join('');
