@@ -692,28 +692,288 @@ const Help = {
         const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML)
             ? Utils.escapeHTML(String(v ?? ''))
             : String(v ?? '');
-        const listBlock = (title, items) => {
+        const listBlock = (title, items, accent) => {
             if (!items || !items.length) return '';
+            const color = accent || '#003865';
             return `
-                <h3 style="font-size:15px;font-weight:700;color:#1e40af;margin:18px 0 10px;padding-right:12px;border-right:3px solid #003865;">${esc(title)}</h3>
-                <ul class="report-list" style="margin:0 0 8px;padding-right:22px;line-height:1.85;">${items.map(li => `<li style="margin-bottom:8px;">${esc(li)}</li>`).join('')}</ul>`;
+                <div style="margin-top:16px;">
+                    <div style="font-size:13px;font-weight:800;color:${color};margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid ${color}22;display:flex;align-items:center;gap:8px;">
+                        <span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block;"></span>
+                        ${esc(title)}
+                    </div>
+                    <ul style="margin:0;padding:0;list-style:none;">
+                        ${items.map((li, idx) => `
+                            <li style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;line-height:1.8;font-size:13px;color:#334155;">
+                                <span style="flex-shrink:0;width:22px;height:22px;border-radius:6px;background:${color}18;color:${color};font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;">${idx + 1}</span>
+                                <span style="flex:1;">${esc(li)}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>`;
         };
-        return this.getPolicyTopics().map((t, i) => `
-            <div class="permit-section" style="margin-top:${i === 0 ? '0' : '32px'};page-break-inside:avoid;">
-                <h2 class="section-title" style="margin-top:${i === 0 ? '0' : '24px'};">${esc(t.title)}</h2>
-                ${t.summary ? `<p style="color:#64748b;font-size:14px;margin-bottom:10px;">${esc(t.summary)}</p>` : ''}
-                ${t.purpose ? `<p style="font-size:14px;line-height:1.85;color:#334155;margin-bottom:12px;">${esc(t.purpose)}</p>` : ''}
-                ${listBlock('البنود والأحكام', t.features)}
-                ${listBlock('التزامات وإرشادات', t.workflow)}
-                ${listBlock('ملاحظات', t.tips)}
+        const accents = ['#003865', '#0f766e', '#1d4ed8', '#b45309', '#991b1b', '#6d28d9'];
+        return this.getPolicyTopics().map((t, i) => {
+            const accent = accents[i % accents.length];
+            const num = i + 1;
+            return `
+            <div class="policy-pdf-section" style="margin-bottom:22px;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 8px 24px rgba(15,23,42,0.06);page-break-inside:avoid;">
+                <div style="background:linear-gradient(135deg,${accent},${accent}dd);padding:14px 18px;display:flex;align-items:center;gap:12px;">
+                    <span style="width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,0.22);color:#fff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${num}</span>
+                    <h2 style="margin:0;color:#fff;font-size:16px;font-weight:800;line-height:1.45;">${esc(t.title)}</h2>
+                </div>
+                <div style="padding:18px 20px 20px;background:#ffffff;">
+                    ${t.summary ? `<div style="margin-bottom:12px;padding:10px 14px;border-radius:10px;background:#f8fafc;border-right:4px solid ${accent};font-size:13px;color:#475569;line-height:1.75;">${esc(t.summary)}</div>` : ''}
+                    ${t.purpose ? `<p style="margin:0 0 4px;font-size:14px;line-height:1.9;color:#1e293b;font-weight:600;">${esc(t.purpose)}</p>` : ''}
+                    ${listBlock('البنود والأحكام', t.features, accent)}
+                    ${listBlock('التزامات وإرشادات', t.workflow, '#0f766e')}
+                    ${listBlock('ملاحظات', t.tips, '#64748b')}
+                </div>
+            </div>`;
+        }).join('');
+    },
+
+    _buildPolicyPdfIntro_(version, exportTsStr) {
+        const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML)
+            ? Utils.escapeHTML(String(v ?? ''))
+            : String(v ?? '');
+        return `
+            <div style="margin-bottom:26px;padding:22px 24px;border-radius:18px;background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 45%,#ffffff 100%);border:2px solid #fbbf24;box-shadow:0 10px 28px rgba(245,158,11,0.12);">
+                <div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:14px;">
+                    <div style="flex:1;min-width:240px;">
+                        <div style="font-size:11px;font-weight:800;color:#b45309;letter-spacing:0.5px;margin-bottom:6px;">وثيقة رسمية — HSE</div>
+                        <h2 style="margin:0 0 10px;font-size:20px;font-weight:800;color:#78350f;line-height:1.4;">سياسة الاستخدام والمسؤولية</h2>
+                        <p style="margin:0;font-size:13px;line-height:1.9;color:#92400e;">
+                            وثيقة تنظيمية تتضمن ستة أقسام تحدد شروط استخدام المنظومة، مسؤوليات المستخدم، سرية البيانات، والاستخدام المقبول وإخلاء المسؤولية.
+                        </p>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:8px;min-width:180px;">
+                        <div style="padding:10px 14px;border-radius:10px;background:rgba(255,255,255,0.85);border:1px solid #fde68a;font-size:12px;color:#78350f;"><strong>إصدار التطبيق:</strong> ${esc(version)}</div>
+                        <div style="padding:10px 14px;border-radius:10px;background:rgba(255,255,255,0.85);border:1px solid #fde68a;font-size:12px;color:#78350f;"><strong>تاريخ التصدير:</strong> ${esc(exportTsStr)}</div>
+                    </div>
+                </div>
+            </div>`;
+    },
+
+    _buildPolicyPdfFooterLegend_(version, exportTsStr) {
+        const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML)
+            ? Utils.escapeHTML(String(v ?? ''))
+            : String(v ?? '');
+        return `
+        <div class="ia-export-legend" dir="rtl" style="margin-top:8px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;page-break-inside:avoid;">
+            <div style="font-weight:700;font-size:11px;color:#475569;margin-bottom:8px;">ملخص الوثيقة</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px 16px;font-size:11px;line-height:1.55;color:#334155;">
+                <div><strong style="color:#64748b;">النوع:</strong> سياسة الاستخدام والمسؤولية</div>
+                <div><strong style="color:#64748b;">الأقسام:</strong> 6</div>
+                <div><strong style="color:#64748b;">الإصدار:</strong> ${esc(version)}</div>
+                <div><strong style="color:#64748b;">التصدير:</strong> ${esc(exportTsStr)}</div>
             </div>
-        `).join('');
+        </div>`;
+    },
+
+    async _loadPolicyPdfLib_(src, checkFn) {
+        if (checkFn()) return true;
+        return new Promise((resolve) => {
+            const existing = Array.from(document.querySelectorAll('script[src]'))
+                .find((s) => String(s.src || '').includes(src));
+            if (existing) {
+                const done = () => resolve(!!checkFn());
+                existing.addEventListener('load', done, { once: true });
+                setTimeout(done, 4000);
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = true;
+            script.onload = () => resolve(!!checkFn());
+            script.onerror = () => resolve(false);
+            document.head.appendChild(script);
+        });
+    },
+
+    async _ensurePolicyPdfLibs_() {
+        const html2canvasOk = await this._loadPolicyPdfLib_(
+            'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+            () => typeof html2canvas !== 'undefined'
+        );
+        const jsPdfOk = await this._loadPolicyPdfLib_(
+            'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+            () => typeof window.jspdf !== 'undefined'
+        );
+        return html2canvasOk && jsPdfOk;
+    },
+
+    async _preloadCairoFontForPolicyPdf_() {
+        if (!document.getElementById('help-policy-cairo-font')) {
+            const link = document.createElement('link');
+            link.id = 'help-policy-cairo-font';
+            link.rel = 'stylesheet';
+            link.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap';
+            document.head.appendChild(link);
+        }
+        try {
+            if (document.fonts && typeof document.fonts.load === 'function') {
+                await document.fonts.load('400 14px Cairo');
+                await document.fonts.load('700 18px Cairo');
+                await document.fonts.ready;
+            }
+        } catch (_e) { /* ignore */ }
+    },
+
+    _preparePolicyPdfHtml_(htmlContent) {
+        const arabicFix = `
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style id="help-policy-pdf-fix">
+    html, body, .report-wrapper, .report-wrapper * {
+        font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
+        direction: rtl !important;
+        letter-spacing: 0 !important;
+        word-spacing: normal !important;
+    }
+    .policy-pdf-section { page-break-inside: avoid; break-inside: avoid; }
+    .report-body { line-height: 1.75; }
+    .footer-bottom-qr, #qrcode, .footer-bottom-qr canvas { display: none !important; }
+</style>`;
+        const cleaned = String(htmlContent || '').replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+        if (cleaned.includes('</head>')) {
+            return cleaned.replace('</head>', `${arabicFix}</head>`);
+        }
+        return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">${arabicFix}</head><body>${cleaned}</body></html>`;
+    },
+
+    async _waitPolicyPdfFontsReady_(doc) {
+        if (!doc?.fonts?.load) return;
+        try {
+            await Promise.all([
+                doc.fonts.load('400 12px Cairo'),
+                doc.fonts.load('600 14px Cairo'),
+                doc.fonts.load('700 18px Cairo'),
+                doc.fonts.load('800 22px Cairo')
+            ]);
+            await doc.fonts.ready;
+        } catch (_e) { /* ignore */ }
+    },
+
+    async _capturePolicyHtmlToCanvas_(root) {
+        const baseOpts = {
+            scale: 2.2,
+            backgroundColor: '#ffffff',
+            logging: false,
+            windowWidth: Math.max(root.scrollWidth, 900),
+            windowHeight: Math.max(root.scrollHeight, 1),
+            scrollX: 0,
+            scrollY: 0
+        };
+        const attempts = [
+            { ...baseOpts, useCORS: true, allowTaint: false },
+            { ...baseOpts, useCORS: true, allowTaint: true },
+            { ...baseOpts, useCORS: false, allowTaint: true }
+        ];
+        for (let i = 0; i < attempts.length; i++) {
+            try {
+                const canvas = await html2canvas(root, attempts[i]);
+                if (canvas?.width > 0 && canvas?.height > 0) return canvas;
+            } catch (_e) { /* retry */ }
+        }
+        return null;
+    },
+
+    async _downloadPolicyHtmlAsPdf_(htmlContent, fileName) {
+        const libsReady = await this._ensurePolicyPdfLibs_();
+        if (!libsReady || typeof html2canvas === 'undefined' || !Utils?.PdfExport?.createPdf) {
+            return false;
+        }
+        await this._preloadCairoFontForPolicyPdf_();
+        const preparedHtml = this._preparePolicyPdfHtml_(htmlContent);
+        const pdfFileName = String(fileName || 'policy.pdf').toLowerCase().endsWith('.pdf')
+            ? String(fileName)
+            : `${String(fileName)}.pdf`;
+
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.style.cssText = 'position:fixed;left:-100000px;top:0;width:900px;height:1200px;border:0;visibility:hidden;';
+        document.body.appendChild(iframe);
+
+        try {
+            iframe.srcdoc = preparedHtml;
+            await new Promise((resolve) => {
+                iframe.onload = resolve;
+                iframe.onerror = resolve;
+                setTimeout(resolve, 6000);
+            });
+            const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
+            if (!iDoc) return false;
+            await this._waitPolicyPdfFontsReady_(iDoc);
+            await Promise.all(Array.from(iDoc.images || []).map((img) => new Promise((resolve) => {
+                if (img.complete) return resolve();
+                img.onload = resolve;
+                img.onerror = resolve;
+                setTimeout(resolve, 3000);
+            })));
+            const root = iDoc.querySelector('.report-wrapper') || iDoc.body;
+            if (!root) return false;
+            const canvas = await this._capturePolicyHtmlToCanvas_(root);
+            if (!canvas) return false;
+            const pdf = Utils.PdfExport.createPdf({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            if (!pdf) return false;
+            Utils.PdfExport.appendCanvasAsPdfPages(pdf, canvas, { marginMm: 8 });
+            Utils.PdfExport.savePdf(pdf, pdfFileName);
+            return true;
+        } catch (error) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('_downloadPolicyHtmlAsPdf_:', error);
+            return false;
+        } finally {
+            iframe.remove();
+        }
+    },
+
+    _buildUsagePolicyPdfHtml_(version, exportTsStr) {
+        const title = 'سياسة الاستخدام والمسؤولية';
+        const exportTs = new Date();
+        const innerContent = this._buildPolicyPdfIntro_(version, exportTsStr) + this.buildUsagePolicyPdfContent_();
+        const meta = {
+            'نوع المستند': 'سياسة الاستخدام والمسؤولية',
+            'إصدار التطبيق': String(version),
+            'تاريخ التصدير': exportTsStr,
+            titleAr: title,
+            titleEn: 'Usage Policy & Liability',
+            includeQRCode: false,
+            compactPdfFooter: true,
+            footerLegendHtml: this._buildPolicyPdfFooterLegend_(version, exportTsStr)
+        };
+        if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function') {
+            return FormHeader.generatePDFHTML(
+                'HSE-USAGE-POLICY',
+                title,
+                innerContent,
+                false,
+                false,
+                meta,
+                exportTs,
+                exportTs
+            );
+        }
+        if (typeof PDFTemplates !== 'undefined' && PDFTemplates.buildDocument) {
+            return PDFTemplates.buildDocument({
+                title,
+                formCode: 'HSE-USAGE-POLICY',
+                content: innerContent,
+                createdAt: exportTs,
+                updatedAt: exportTs,
+                meta,
+                includeQRCode: false
+            });
+        }
+        const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML)
+            ? Utils.escapeHTML(String(v ?? ''))
+            : String(v ?? '');
+        return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${esc(title)}</title></head><body>${innerContent}</body></html>`;
     },
 
     async exportUsagePolicyPdf() {
-        if (typeof Loading !== 'undefined') Loading.show();
+        if (typeof Loading !== 'undefined') Loading.show('جاري إعداد ملف PDF...');
         try {
-            const title = 'سياسة الاستخدام والمسؤولية';
             const exportTs = new Date();
             const version = this.getAppVersion();
             let exportTsStr = '';
@@ -724,94 +984,18 @@ const Help = {
             } catch (_e) {
                 exportTsStr = exportTs.toLocaleString('ar-SA');
             }
-            const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML)
-                ? Utils.escapeHTML(String(v ?? ''))
-                : String(v ?? '');
 
-            const body = this.buildUsagePolicyPdfContent_();
-            const innerContent = `
-                <div style="margin-bottom:20px;padding:14px 16px;border-radius:14px;background:linear-gradient(135deg,rgba(251,191,36,0.12),rgba(245,158,11,0.06));border:1px solid rgba(245,158,11,0.35);">
-                    <p style="margin:0;font-size:13px;line-height:1.85;color:#78350f;">
-                        هذا المستند يتضمن الأقسام الستة لسياسة الاستخدام والمسؤولية في منظومة السلامة والصحة المهنية والبيئة.
-                        يُعرض بنفس ترويسة وتذييل التقارير الرسمية للنظام. للحفظ كملف PDF استخدم «طباعة» ثم «حفظ كـ PDF».
-                    </p>
-                </div>
-                ${body}`;
+            const htmlContent = this._buildUsagePolicyPdfHtml_(version, exportTsStr);
+            const dateFile = exportTs.toISOString().slice(0, 10);
+            const fileName = `سياسة-الاستخدام-والمسؤولية-${dateFile}.pdf`;
+            const downloaded = await this._downloadPolicyHtmlAsPdf_(htmlContent, fileName);
 
-            let htmlContent;
-            if (typeof PDFTemplates !== 'undefined' && PDFTemplates.buildDocument) {
-                htmlContent = PDFTemplates.buildDocument({
-                    title,
-                    formCode: 'HSE-USAGE-POLICY',
-                    content: innerContent,
-                    createdAt: exportTs,
-                    updatedAt: exportTs,
-                    meta: {
-                        'نوع المستند': 'سياسة الاستخدام والمسؤولية',
-                        'إصدار التطبيق': String(version),
-                        'تاريخ التصدير': exportTsStr
-                    },
-                    includeQRCode: true,
-                    qrData: `HSE Usage Policy | v${version} | ${exportTs.toISOString()}`
-                });
-            } else if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function') {
-                htmlContent = FormHeader.generatePDFHTML(
-                    'HSE-USAGE-POLICY',
-                    title,
-                    innerContent,
-                    false,
-                    true,
-                    {
-                        'نوع المستند': 'سياسة الاستخدام والمسؤولية',
-                        'إصدار التطبيق': String(version),
-                        'تاريخ التصدير': exportTsStr
-                    },
-                    exportTs,
-                    exportTs
-                );
-            } else {
-                htmlContent = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8">
-<title>${esc(title)}</title></head><body style="font-family:Tahoma,Arial,sans-serif;padding:20px;">${innerContent}</body></html>`;
-            }
-
-            if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {
-                const ok = await FormHeader.generatePDF(htmlContent, 'usage-policy.pdf');
-                if (ok && typeof Notification !== 'undefined') {
-                    Notification.success('استخدم «حفظ كـ PDF» من نافذة الطباعة');
-                } else if (!ok && typeof Notification !== 'undefined') {
-                    Notification.error('تعذّر فتح نافذة الطباعة — اسمح بالنوافذ المنبثقة');
-                }
-                return;
-            }
-
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, 'hse_usage_policy_pdf');
-            let printed = false;
-            const finishPrint = () => {
-                if (printed || !printWindow || printWindow.closed) return;
-                printed = true;
-                try {
-                    printWindow.focus();
-                    printWindow.print();
-                } catch (_e) { /* ignore */ }
-                setTimeout(() => {
-                    try { URL.revokeObjectURL(url); } catch (_e2) { /* ignore */ }
-                    if (typeof Notification !== 'undefined') {
-                        Notification.success('استخدم «حفظ كـ PDF» من نافذة الطباعة');
-                    }
-                }, 400);
-            };
-            if (printWindow) {
-                printWindow.onload = () => finishPrint();
-                setTimeout(() => {
-                    if (!printed && printWindow.document && printWindow.document.readyState === 'complete') finishPrint();
-                }, 500);
-            } else {
-                try { URL.revokeObjectURL(url); } catch (_e3) { /* ignore */ }
+            if (downloaded) {
                 if (typeof Notification !== 'undefined') {
-                    Notification.error('يرجى السماح بالنوافذ المنبثقة لطباعة السياسة');
+                    Notification.success('تم تحميل سياسة الاستخدام بصيغة PDF');
                 }
+            } else if (typeof Notification !== 'undefined') {
+                Notification.error('تعذّر تحميل PDF — تحقق من الاتصال بالإنترنت ثم أعد المحاولة');
             }
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) Utils.safeError('exportUsagePolicyPdf:', error);
@@ -1356,7 +1540,7 @@ const Help = {
                     </div>
                     <button type="button" id="help-export-policy-pdf"
                         style="padding:10px 16px;background:#b45309;color:#fff;border:none;border-radius:10px;font-size:0.82rem;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(180,83,9,0.25);">
-                        <i class="fas fa-file-pdf" style="margin-left:8px;"></i> طباعة / PDF
+                        <i class="fas fa-download" style="margin-left:8px;"></i> تحميل PDF
                     </button>
                 </div>
             </div>` : '';
