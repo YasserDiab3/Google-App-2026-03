@@ -927,7 +927,7 @@ const Reports = {
         }
         if (cumBase) {
             if (typeof HseMetrics.resolveYtdManDays === 'function') {
-                manDaysCum = HseMetrics.resolveYtdManDays(cumBase, cumEndIdx);
+                manDaysCum = HseMetrics.resolveYtdManDays(cumBase, cumEndIdx, { appData: scopedData });
             } else {
                 for (let i = 0; i <= cumEndIdx; i += 1) {
                     manDaysCum += Math.round((cumBase.employeeCounts[i] || 0) * (workCfg.workDaysPerMonth || 22));

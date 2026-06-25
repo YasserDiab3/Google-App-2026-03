@@ -102,6 +102,25 @@ const expectedManDays = Math.round(ytdHoursSnap / 8);
 assertClose(snap.totals.manDays, expectedManDays, 'manDays YTD = round(YTD hours / 8)');
 assertClose(snap.totals.manDays, 88, 'manDays YTD (1 employee × 22 days × 4 months)');
 
+// الشهر الحالي يُناسَب يومياً (لا يُحسب كاملاً من اليوم الأول)
+const juneFixtures = {
+    employees: [{ id: 'e1', status: 'active', hireDate: '2020-01-01' }],
+    incidents: [],
+    externalWorkforceMonthly: []
+};
+const juneMonthly = HseMetrics.buildMonthlyBase(2026, juneFixtures);
+const midJuneTotals = HseMetrics.aggregateYtd(juneMonthly, 5, {
+    asOfDate: new Date(2026, 5, 15),
+    appData: juneFixtures
+});
+const fullJuneMonthDays = Math.round((juneMonthly.employeeCounts[5] || 0) * 22);
+let expectedMidJune = 0;
+for (let i = 0; i < 5; i += 1) {
+    expectedMidJune += Math.round((juneMonthly.employeeCounts[i] || 0) * 22);
+}
+expectedMidJune += Math.round(fullJuneMonthDays * (15 / 30));
+assertClose(midJuneTotals.manDays, expectedMidJune, 'June YTD prorated by day 15/30');
+
 // دمج سجل الحوادث مع incidents
 const mergedFixtures = {
     employees: fixtures.employees,

@@ -405,31 +405,82 @@
         return year === now.getFullYear() ? now.getMonth() : 11;
     }
 
-    function resolveYtdManHours(monthlyBase, ytdLimit) {
-        const summed = sumSlice(monthlyBase.manHours, ytdLimit);
+    function getDaysInMonth(year, monthIndex) {
+        return new Date(year, monthIndex + 1, 0).getDate();
+    }
+
+    /**
+     * نسبة الشهر الحالي المنقضية (1 = شهر كامل) — لتحديث YTD يومياً وليس فقط عند بداية الشهر.
+     */
+    function getCurrentMonthProrationFactor(year, monthIndex, asOfDate) {
+        const asOf = asOfDate instanceof Date ? asOfDate : new Date();
+        if (Number(year) !== asOf.getFullYear() || Number(monthIndex) !== asOf.getMonth()) {
+            return 1;
+        }
+        const daysInMonth = getDaysInMonth(year, monthIndex);
+        if (daysInMonth <= 0) return 1;
+        return Math.min(1, Math.max(0, asOf.getDate() / daysInMonth));
+    }
+
+    function prorateMonthlyValue(value, year, monthIndex, asOfDate) {
+        const base = parseFloat(value) || 0;
+        return base * getCurrentMonthProrationFactor(year, monthIndex, asOfDate);
+    }
+
+    function sumYtdManHours(monthlyBase, ytdLimit, options) {
+        const year = monthlyBase?.year;
+        const limit = Math.min(Math.max(ytdLimit, 0), 11);
+        const asOf = options?.asOfDate instanceof Date ? options.asOfDate : new Date();
+        const appData = options?.appData;
+        let total = 0;
+
+        for (let i = 0; i < limit; i += 1) {
+            total += parseFloat(monthlyBase.manHours[i]) || 0;
+        }
+
+        const currentMonthHours = parseFloat(monthlyBase.manHours[limit]) || 0;
+        const hasManualCurrent = appData && getManualHoursForMonth(year, limit, appData) !== null;
+        total += hasManualCurrent
+            ? currentMonthHours
+            : prorateMonthlyValue(currentMonthHours, year, limit, asOf);
+
+        return total;
+    }
+
+    function resolveYtdManHours(monthlyBase, ytdLimit, options) {
+        const summed = sumYtdManHours(monthlyBase, ytdLimit, options);
         const ls = typeof localStorage !== 'undefined' ? localStorage : null;
         if (!ls) return summed;
         const raw = ls.getItem('hse_total_work_hours');
         if (raw == null || String(raw).trim() === '') return summed;
         const annual = parseNum(String(raw).replace(/,/g, ''));
         if (!Number.isFinite(annual) || annual <= 0) return summed;
-        const monthsElapsed = Math.min(ytdLimit + 1, 12);
         const mo = parseNum(ls.getItem('hse_work_months_per_year'));
         const monthsPerYear = Number.isFinite(mo) && mo > 0 ? mo : 12;
-        return annual * (monthsElapsed / monthsPerYear);
+        const year = monthlyBase?.year;
+        const limit = Math.min(Math.max(ytdLimit, 0), 11);
+        const asOf = options?.asOfDate instanceof Date ? options.asOfDate : new Date();
+        const completeMonths = limit;
+        const currentMonthFraction = getCurrentMonthProrationFactor(year, limit, asOf);
+        const yearFraction = (completeMonths + currentMonthFraction) / monthsPerYear;
+        return annual * yearFraction;
     }
 
-    function resolveYtdManDays(monthlyBase, ytdLimit) {
+    function resolveYtdManDays(monthlyBase, ytdLimit, options) {
         const cfg = getWorkConfig();
-        const ytdHours = resolveYtdManHours(monthlyBase, ytdLimit);
+        const ytdHours = resolveYtdManHours(monthlyBase, ytdLimit, options);
         if (ytdHours > 0 && cfg.hoursPerDay > 0) {
             return Math.round(ytdHours / cfg.hoursPerDay);
         }
-        let total = 0;
+        const year = monthlyBase?.year;
         const limit = Math.min(Math.max(ytdLimit, 0), 11);
-        for (let i = 0; i <= limit; i += 1) {
+        const asOf = options?.asOfDate instanceof Date ? options.asOfDate : new Date();
+        let total = 0;
+        for (let i = 0; i < limit; i += 1) {
             total += Math.round((monthlyBase.employeeCounts[i] || 0) * cfg.workDaysPerMonth);
         }
+        const currentMonthDays = (monthlyBase.employeeCounts[limit] || 0) * cfg.workDaysPerMonth;
+        total += Math.round(prorateMonthlyValue(currentMonthDays, year, limit, asOf));
         return total;
     }
 
@@ -442,7 +493,11 @@
         return Math.round((monthlyBase?.employeeCounts?.[monthIndex] || 0) * cfg.workDaysPerMonth);
     }
 
-    function aggregateYtd(monthlyBase, ytdLimit) {
+    function aggregateYtd(monthlyBase, ytdLimit, options) {
+        const ytdOptions = {
+            asOfDate: options?.asOfDate,
+            appData: options?.appData
+        };
         return {
             recordables: sumSlice(monthlyBase.recordables, ytdLimit),
             injuries: sumSlice(monthlyBase.injuries, ytdLimit),
@@ -450,8 +505,8 @@
             lti: sumSlice(monthlyBase.lti, ytdLimit),
             daysLost: sumSlice(monthlyBase.daysLost, ytdLimit),
             totalIncidents: sumSlice(monthlyBase.totalIncidents, ytdLimit),
-            manHours: resolveYtdManHours(monthlyBase, ytdLimit),
-            manDays: resolveYtdManDays(monthlyBase, ytdLimit)
+            manHours: resolveYtdManHours(monthlyBase, ytdLimit, ytdOptions),
+            manDays: resolveYtdManDays(monthlyBase, ytdLimit, ytdOptions)
         };
     }
 
@@ -494,7 +549,7 @@
         const year = opts.year || new Date().getFullYear();
         const ytdLimit = opts.ytdLimit !== undefined ? opts.ytdLimit : currentYtdLimit(year);
         const monthly = buildMonthlyBase(year, appData);
-        const totals = aggregateYtd(monthly, ytdLimit);
+        const totals = aggregateYtd(monthly, ytdLimit, { appData });
         const multipliers = loadMultipliers();
         const rates = computeRates(totals, multipliers);
         return {
@@ -572,6 +627,8 @@
         formatRateDisplay,
         resolveYtdManHours,
         resolveYtdManDays,
+        sumYtdManHours,
+        getCurrentMonthProrationFactor,
         resolveManDaysForMonth,
         buildMonthlyBase,
         buildMonthlyRateSeries,
