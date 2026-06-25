@@ -2220,7 +2220,10 @@ var ActionHandlers = {
                     if (payload && payload.forceRefresh === true) {
                         filters.forceRefresh = true;
                     }
-                    result = getAllContractorApprovalRequests(filters);
+                    var sid = (typeof resolveContractorSpreadsheetId_ === 'function')
+                        ? resolveContractorSpreadsheetId_(payload, postData)
+                        : (spreadsheetId || getSpreadsheetId());
+                    result = getAllContractorApprovalRequests(filters, sid);
                     return;
 
         })();
@@ -2276,7 +2279,10 @@ var ActionHandlers = {
                     if (payload && payload.forceRefresh === true) {
                         filters.forceRefresh = true;
                     }
-                    result = getAllContractorDeletionRequests(filters);
+                    var sid = (typeof resolveContractorSpreadsheetId_ === 'function')
+                        ? resolveContractorSpreadsheetId_(payload, postData)
+                        : (spreadsheetId || getSpreadsheetId());
+                    result = getAllContractorDeletionRequests(filters, sid);
                     return;
 
         })();

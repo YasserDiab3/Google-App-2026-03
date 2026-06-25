@@ -733,15 +733,31 @@ function normalizeContractorRequestStatus_(status) {
 }
 
 /**
+ * معرف الجدول الفعلي: أولوية إعداد الواجهة ثم Script Properties
+ */
+function resolveContractorSpreadsheetId_(payload, postData) {
+    var fromPayload = payload && payload.spreadsheetId;
+    var fromPost = postData && postData.spreadsheetId;
+    if (fromPayload && String(fromPayload).trim()) {
+        return String(fromPayload).trim();
+    }
+    if (fromPost && String(fromPost).trim()) {
+        return String(fromPost).trim();
+    }
+    return getSpreadsheetId();
+}
+
+/**
  * الحصول على جميع طلبات الاعتماد
  */
-function getAllContractorApprovalRequests(filters = {}) {
+function getAllContractorApprovalRequests(filters, spreadsheetIdOverride) {
     try {
+        filters = filters || {};
         const sheetName = 'ContractorApprovalRequests';
-        if (filters && filters.forceRefresh === true) {
-            invalidateHseSheetCaches(sheetName);
-        }
-        let data = readFromSheet(sheetName, getSpreadsheetId());
+        const finalSpreadsheetId = spreadsheetIdOverride || resolveContractorSpreadsheetId_(filters, null);
+        // طلبات الاعتماد تتغير باستمرار — لا نعتمد على كاش قديم
+        invalidateHseSheetCaches(sheetName);
+        let data = readFromSheet(sheetName, finalSpreadsheetId);
         
         // ✅ معالجة evaluationData للتأكد من تحليلها بشكل صحيح
         data = data.map(function(record) {
@@ -1307,13 +1323,13 @@ function updateContractorDeletionRequest(requestId, updateData) {
 /**
  * الحصول على جميع طلبات الحذف
  */
-function getAllContractorDeletionRequests(filters = {}) {
+function getAllContractorDeletionRequests(filters, spreadsheetIdOverride) {
     try {
+        filters = filters || {};
         const sheetName = 'ContractorDeletionRequests';
-        if (filters && filters.forceRefresh === true) {
-            invalidateHseSheetCaches(sheetName);
-        }
-        let data = readFromSheet(sheetName, getSpreadsheetId());
+        const finalSpreadsheetId = spreadsheetIdOverride || resolveContractorSpreadsheetId_(filters, null);
+        invalidateHseSheetCaches(sheetName);
+        let data = readFromSheet(sheetName, finalSpreadsheetId);
         
         // تطبيق الفلاتر
         if (filters.status) {

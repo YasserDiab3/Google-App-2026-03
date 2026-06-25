@@ -687,15 +687,30 @@ const Contractors = {
         return false;
     },
 
+    _approvalRequestApiPayload() {
+        const sheetId = AppState?.googleConfig?.sheets?.spreadsheetId;
+        const data = { forceRefresh: true };
+        if (sheetId && String(sheetId).trim() && sheetId !== 'YOUR_SPREADSHEET_ID_HERE') {
+            data.spreadsheetId = String(sheetId).trim();
+        }
+        return data;
+    },
+
     async _fetchApprovalRequestRowsFromBackend() {
         if (typeof GoogleIntegration === 'undefined') return null;
+        const apiData = this._approvalRequestApiPayload();
         try {
             const res = await GoogleIntegration.sendRequest({
                 action: 'getAllContractorApprovalRequests',
-                data: { forceRefresh: true }
+                data: apiData
             });
             const rows = this.extractApprovalRequestRowsFromResponse(res);
-            if (Array.isArray(rows)) return rows;
+            if (Array.isArray(rows)) {
+                if (AppState?.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
+                    Utils.safeLog(`✅ getAllContractorApprovalRequests: ${rows.length} سجل`);
+                }
+                return rows;
+            }
         } catch (err) {
             if (typeof Utils !== 'undefined' && Utils.safeWarn) {
                 Utils.safeWarn('⚠️ getAllContractorApprovalRequests فشل — محاولة readFromSheet:', err?.message || err);
@@ -712,10 +727,11 @@ const Contractors = {
 
     async _fetchDeletionRequestRowsFromBackend() {
         if (typeof GoogleIntegration === 'undefined') return null;
+        const apiData = this._approvalRequestApiPayload();
         try {
             const res = await GoogleIntegration.sendRequest({
                 action: 'getAllContractorDeletionRequests',
-                data: { forceRefresh: true }
+                data: apiData
             });
             const rows = this.extractApprovalRequestRowsFromResponse(res);
             if (Array.isArray(rows)) return rows;
@@ -736,6 +752,29 @@ const Contractors = {
     prefetchApprovalRequestsForNotifications() {
         if (!this.shouldLoadContractorApprovalRequests()) return Promise.resolve(false);
         return this.ensureApprovalRequestsDataLoaded({ force: this.isContractorApprovalAdminUser() });
+    },
+
+    async diagnoseApprovalRequests() {
+        const sheetId = AppState?.googleConfig?.sheets?.spreadsheetId || '';
+        const loaded = await this.fetchContractorApprovalRequestsFromBackend();
+        const all = AppState.appData.contractorApprovalRequests || [];
+        const pending = this.getPendingApprovalRequests();
+        const report = {
+            loaded,
+            spreadsheetId: sheetId,
+            total: all.length,
+            pendingForAdmin: pending.length,
+            isAdmin: this.isContractorApprovalAdminUser(),
+            currentUserId: AppState.currentUser?.id || '',
+            sampleIds: all.slice(0, 5).map((r) => r && r.id).filter(Boolean),
+            pendingIds: pending.slice(0, 10).map((r) => r && r.id).filter(Boolean)
+        };
+        if (typeof Utils !== 'undefined' && Utils.safeLog) {
+            Utils.safeLog('🔍 تشخيص طلبات الاعتماد:', report);
+        } else {
+            console.log('🔍 تشخيص طلبات الاعتماد:', report);
+        }
+        return report;
     },
 
     normalizeApprovalRequestRecord(record) {
@@ -8698,6 +8737,7 @@ const Contractors = {
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         
         const approvalRequests = AppState.appData.contractorApprovalRequests
+            .map((req) => this.normalizeApprovalRequestRecord(req))
             .filter(req => req && this.isCurrentUserApprovalRequestOwner(req))
             .filter(req => {
                 const st = this.normalizeApprovalRequestStatus(req.status);
@@ -8710,6 +8750,7 @@ const Contractors = {
             .map(req => ({ ...req, requestCategory: 'approval' }));
         
         const deletionRequests = AppState.appData.contractorDeletionRequests
+            .map((req) => this.normalizeApprovalRequestRecord(req))
             .filter(req => req && this.isCurrentUserApprovalRequestOwner(req))
             .filter(req => {
                 const st = this.normalizeApprovalRequestStatus(req.status);
@@ -8742,10 +8783,12 @@ const Contractors = {
         }
 
         const approvalRequests = AppState.appData.contractorApprovalRequests
+            .map((req) => this.normalizeApprovalRequestRecord(req))
             .filter(req => req && this.isApprovalRequestPendingForReview(req))
             .map(req => ({ ...req, requestCategory: 'approval' }));
 
         const deletionRequests = AppState.appData.contractorDeletionRequests
+            .map((req) => this.normalizeApprovalRequestRecord(req))
             .filter(req => req && this.isApprovalRequestPendingForReview(req))
             .map(req => ({ ...req, requestCategory: 'deletion' }));
         
