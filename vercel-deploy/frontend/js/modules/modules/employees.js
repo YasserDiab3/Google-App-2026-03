@@ -583,10 +583,10 @@ const Employees = {
         const activeEmployees = employees.filter(e => !this.isEmployeeInactive(e));
         const total = activeEmployees.length;
 
-        // حساب متوسط السن
+        // حساب متوسط السن (النشطين فقط)
         let totalAge = 0;
         let ageCount = 0;
-        employees.forEach(emp => {
+        activeEmployees.forEach(emp => {
             const age = this.calculateAge(emp.birthDate);
             if (age && age > 0) {
                 totalAge += age;
@@ -595,7 +595,7 @@ const Employees = {
         });
         const averageAge = ageCount > 0 ? Math.round(totalAge / ageCount) : 0;
 
-        // حساب النوع (ذكر/أنثى)
+        // حساب النوع (ذكر/أنثى) — النشطين فقط
         let maleCount = 0;
         let femaleCount = 0;
         let unknownCount = 0; // لتتبع القيم غير المعروفة للتشخيص
@@ -655,7 +655,7 @@ const Employees = {
             return { isMale, isFemale, normalized };
         };
         
-        employees.forEach(emp => {
+        activeEmployees.forEach(emp => {
             const genderCheck = checkGender(emp.gender);
             
             if (genderCheck.isMale) {
@@ -670,15 +670,15 @@ const Employees = {
         
         // تسجيل إحصائية واحدة فقط عند وجود قيم غير محددة (وفي وضع التصحيح فقط لتقليل الضوضاء)
         if (unknownCount > 0 && typeof AppState !== 'undefined' && AppState.debugMode && typeof console !== 'undefined' && console.log) {
-            console.log(`📊 [Employees] إحصائيات النوع - ذكر: ${maleCount}, أنثى: ${femaleCount}, غير محدد/فارغ: ${unknownCount} من ${total}`);
+            console.log(`📊 [Employees] إحصائيات النوع (نشطين) - ذكر: ${maleCount}, أنثى: ${femaleCount}, غير محدد/فارغ: ${unknownCount} من ${total}`);
         }
 
-        // حساب متوسط سنوات الخبرة (من تاريخ التعيين)
+        // حساب متوسط سنوات الخبرة (من تاريخ التعيين) — النشطين فقط
         let totalExperience = 0;
         let experienceCount = 0;
         const today = new Date();
         
-        employees.forEach(emp => {
+        activeEmployees.forEach(emp => {
             if (emp.hireDate) {
                 try {
                     const hireDate = this.parseLocalDate(emp.hireDate);
@@ -744,7 +744,7 @@ const Employees = {
                 borderColor: 'border-blue-200',
                 textColor: 'text-blue-700',
                 iconBg: 'bg-blue-100',
-                description: this.t('module.employees.stats.totalEmployeesDesc', 'إجمالي عدد الموظفين المسجلين')
+                description: this.t('module.employees.stats.totalEmployeesDesc', 'إجمالي الموظفين النشطين')
             },
             {
                 id: 'average-age',
@@ -762,15 +762,17 @@ const Employees = {
             {
                 id: 'gender',
                 title: this.t('module.employees.gender', 'النوع'),
-                value: `${stats.genderStats.male} ${this.t('module.employees.genderMale', 'ذكر')} / ${stats.genderStats.female} ${this.t('module.employees.genderFemale', 'أنثى')}`,
+                isGenderCard: true,
+                maleCount: stats.genderStats.male,
+                femaleCount: stats.genderStats.female,
                 icon: 'fas fa-venus-mars',
                 color: 'purple',
                 gradient: 'from-purple-500 to-purple-600',
-                bgGradient: 'from-purple-50 to-purple-100',
+                bgGradient: 'from-purple-50 via-indigo-50 to-pink-50',
                 borderColor: 'border-purple-200',
                 textColor: 'text-purple-700',
                 iconBg: 'bg-purple-100',
-                description: this.t('module.employees.stats.genderDistDesc', 'توزيع الموظفين حسب النوع')
+                description: this.t('module.employees.stats.genderDistDesc', 'توزيع الموظفين النشطين حسب النوع')
             },
             {
                 id: 'experience',
@@ -787,7 +789,74 @@ const Employees = {
             }
         ];
 
+        const maleLabel = this.t('module.employees.genderMale', 'ذكر');
+        const femaleLabel = this.t('module.employees.genderFemale', 'أنثى');
+
+        const renderGenderCard = (card) => {
+            const maleCount = card.maleCount || 0;
+            const femaleCount = card.femaleCount || 0;
+            const genderTotal = maleCount + femaleCount;
+            const malePct = genderTotal > 0 ? Math.round((maleCount / genderTotal) * 100) : 0;
+            const femalePct = genderTotal > 0 ? 100 - malePct : 0;
+
+            return `
+                <div class="stats-card content-card employees-gender-stat-card transform transition-all duration-300 hover:scale-[1.02] hover:shadow-xl border-2 ${card.borderColor} bg-gradient-to-br ${card.bgGradient}"
+                     style="position: relative; overflow: hidden;">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 opacity-80"></div>
+                    <div class="absolute -top-6 -left-6 w-24 h-24 rounded-full bg-blue-200 opacity-20"></div>
+                    <div class="absolute -bottom-8 -right-4 w-28 h-28 rounded-full bg-pink-200 opacity-20"></div>
+
+                    <div class="relative z-10 p-1">
+                        <div class="flex items-start justify-between mb-3">
+                            <div>
+                                <h3 class="text-sm font-semibold ${card.textColor} mb-0.5">${card.title}</h3>
+                                <p class="text-xs text-gray-500">${card.description}</p>
+                            </div>
+                            <div class="${card.iconBg} p-2.5 rounded-xl shadow-sm">
+                                <i class="${card.icon} text-purple-600 text-xl"></i>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 mb-3">
+                            <div class="rounded-xl bg-white/70 border border-blue-100 px-3 py-2.5 text-center shadow-sm">
+                                <div class="flex items-center justify-center gap-1.5 mb-1">
+                                    <i class="fas fa-mars text-blue-500 text-sm"></i>
+                                    <span class="text-xs font-medium text-blue-700">${maleLabel}</span>
+                                </div>
+                                <div class="text-xl font-bold text-blue-800 leading-none">${maleCount.toLocaleString('en-US')}</div>
+                                <div class="text-[10px] text-blue-500 mt-1 font-medium">${malePct}%</div>
+                            </div>
+                            <div class="rounded-xl bg-white/70 border border-pink-100 px-3 py-2.5 text-center shadow-sm">
+                                <div class="flex items-center justify-center gap-1.5 mb-1">
+                                    <i class="fas fa-venus text-pink-500 text-sm"></i>
+                                    <span class="text-xs font-medium text-pink-700">${femaleLabel}</span>
+                                </div>
+                                <div class="text-xl font-bold text-pink-800 leading-none">${femaleCount.toLocaleString('en-US')}</div>
+                                <div class="text-[10px] text-pink-500 mt-1 font-medium">${femalePct}%</div>
+                            </div>
+                        </div>
+
+                        ${genderTotal > 0 ? `
+                            <div class="h-2 rounded-full bg-gray-200/80 overflow-hidden flex" title="${maleLabel} ${malePct}% / ${femaleLabel} ${femalePct}%">
+                                <div class="h-full bg-gradient-to-r from-blue-400 to-blue-500 transition-all duration-500" style="width: ${malePct}%"></div>
+                                <div class="h-full bg-gradient-to-r from-pink-400 to-pink-500 transition-all duration-500" style="width: ${femalePct}%"></div>
+                            </div>
+                            <div class="flex justify-between text-[10px] text-gray-500 mt-1.5 px-0.5">
+                                <span>${maleLabel} ${malePct}%</span>
+                                <span>${femaleLabel} ${femalePct}%</span>
+                            </div>
+                        ` : `
+                            <p class="text-xs text-gray-400 text-center py-1">${this.t('module.common.notAvailable', 'غير متاح')}</p>
+                        `}
+                    </div>
+                </div>
+            `;
+        };
+
         container.innerHTML = cards.map(card => {
+            if (card.isGenderCard) {
+                return renderGenderCard(card);
+            }
             return `
                 <div class="stats-card content-card transform transition-all duration-300 hover:scale-105 hover:shadow-xl border-2 ${card.borderColor} bg-gradient-to-br ${card.bgGradient}" 
                      style="position: relative; overflow: hidden;">
