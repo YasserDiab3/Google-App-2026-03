@@ -1709,6 +1709,10 @@ const GoogleIntegration = {
                 }
             };
 
+            if (sheetName === 'ContractorApprovalRequests' || sheetName === 'ContractorDeletionRequests') {
+                payload.data.skipCache = true;
+            }
+
             if (AppState.googleConfig.sheets?.spreadsheetId) {
                 payload.data.spreadsheetId = AppState.googleConfig.sheets.spreadsheetId;
             }
@@ -3359,6 +3363,12 @@ const GoogleIntegration = {
                     }
                 }
 
+                // ✅ إضافة أوراق طلبات الاعتماد لمن لديه صلاحية موديول المقاولين
+                if (Permissions.hasAccess('contractors')) {
+                    allowedSheets.add('ContractorApprovalRequests');
+                    allowedSheets.add('ContractorDeletionRequests');
+                }
+
                 sheets = sheets.filter(sheet => allowedSheets.has(sheet));
 
                 if (shouldLog) {
@@ -3702,6 +3712,14 @@ const GoogleIntegration = {
 
                     if (!shouldKeepOld) {
                         AppState.appData[key] = data;
+                        if (key === 'contractorApprovalRequests' &&
+                            Array.isArray(data) && data.length > 0 &&
+                            typeof Contractors !== 'undefined' &&
+                            typeof Contractors.ingestApprovalRequestsFromSync === 'function') {
+                            try {
+                                Contractors.ingestApprovalRequestsFromSync(data, { refreshUi: true });
+                            } catch (_carSync) { /* ignore */ }
+                        }
                         if (!AppState.syncMeta) {
                             AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
                         }

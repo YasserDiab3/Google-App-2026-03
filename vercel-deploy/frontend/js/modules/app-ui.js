@@ -3380,6 +3380,8 @@ window.UI = {
                 }
 
                 // تحديث الإشعارات بعد تحميل البيانات
+                this.scheduleContractorApprovalNotificationsRefresh();
+
                 if (this.updateNotificationsBadge) {
                     setTimeout(() => {
                         this.updateNotificationsBadge();
@@ -3390,11 +3392,29 @@ window.UI = {
             }
         })();
 
-        // تحديث الإشعارات عند تحميل التطبيق
-        if (this.updateNotificationsBadge) {
-            setTimeout(() => {
-                this.updateNotificationsBadge();
-            }, 1500);
+        this.scheduleContractorApprovalNotificationsRefresh();
+    },
+
+    /**
+     * جلب طلبات اعتماد المقاولين للإشعارات (خارج موديول المقاولين)
+     */
+    scheduleContractorApprovalNotificationsRefresh() {
+        if (typeof Contractors === 'undefined' ||
+            typeof Contractors.prefetchApprovalRequestsForNotifications !== 'function') {
+            return;
+        }
+        const run = () => {
+            Contractors.prefetchApprovalRequestsForNotifications()
+                .then(() => {
+                    if (typeof this.updateNotificationsBadge === 'function') {
+                        this.updateNotificationsBadge();
+                    }
+                })
+                .catch(() => {});
+        };
+        setTimeout(run, 400);
+        if (!this._carNotificationPrefetchInterval) {
+            this._carNotificationPrefetchInterval = setInterval(run, 60000);
         }
     },
 
@@ -3468,15 +3488,30 @@ window.UI = {
             }
 
             // ✅ جلب طلبات اعتماد المقاولين بعد المزامنة (للإشعارات وقائمة المدير — منفصل عن syncDataFromServer)
-            if (typeof Contractors !== 'undefined' && typeof Contractors.prefetchApprovalRequestsForNotifications === 'function') {
-                Contractors.prefetchApprovalRequestsForNotifications()
-                    .then(() => {
-                        if (typeof this.updateNotificationsBadge === 'function') {
-                            this.updateNotificationsBadge();
-                        }
-                    })
-                    .catch(() => {});
-            }
+            const syncCar = () => {
+                if (typeof Contractors === 'undefined') return Promise.resolve(false);
+                if (typeof Contractors.shouldLoadContractorApprovalRequests === 'function' &&
+                    !Contractors.shouldLoadContractorApprovalRequests()) {
+                    return Promise.resolve(false);
+                }
+                if (typeof Contractors.ensureApprovalRequestsDataLoaded === 'function') {
+                    return Contractors.ensureApprovalRequestsDataLoaded({ force: true });
+                }
+                return Promise.resolve(false);
+            };
+            syncCar()
+                .then(() => {
+                    if (typeof this.updateNotificationsBadge === 'function') {
+                        this.updateNotificationsBadge();
+                    }
+                    if (AppState.currentSection === 'contractors' &&
+                        typeof Contractors !== 'undefined' &&
+                        typeof Contractors.mountApprovalRequestSection === 'function' &&
+                        Contractors.currentTab === 'approval-request') {
+                        Contractors.mountApprovalRequestSection();
+                    }
+                })
+                .catch(() => {});
         };
 
         window.addEventListener('syncDataCompleted', this._syncDataCompletedHandler);

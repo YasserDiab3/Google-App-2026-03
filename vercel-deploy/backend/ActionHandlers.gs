@@ -185,6 +185,9 @@ var ActionHandlers = {
                             return;
                         }
                         Logger.log('readFromSheet called with sheetName: ' + readSheetName);
+                        if (payload.skipCache && typeof invalidateHseSheetCaches === 'function') {
+                            invalidateHseSheetCaches(readSheetName);
+                        }
                         var readRaw = readFromSheet(readSheetName, readSpreadsheetId);
                         if (readSheetName === 'DailyObservations' && payload.observationsRequestContext) {
                             readRaw = filterDailyObservationsForRequestContext(readRaw, payload.observationsRequestContext);
@@ -240,7 +243,10 @@ var ActionHandlers = {
                                             continue;
                                         }
                                         // ✅ Use CacheService for frequently-read sheets
-                                        const skipCache = !!(payload && payload.skipCache);
+                                        // طلبات الاعتماد/الحذف تتغير باستمرار — لا نعتمد على كاش batch قديم
+                                        const skipCache = !!(payload && payload.skipCache) ||
+                                            sheetName === 'ContractorApprovalRequests' ||
+                                            sheetName === 'ContractorDeletionRequests';
                                         const cache = CacheService.getScriptCache();
                                         const cacheKey = 'batch_' + sheetName + '_v2';
                                         const cached = skipCache ? null : cache.get(cacheKey);
@@ -250,6 +256,9 @@ var ActionHandlers = {
                                             batchResults[sheetName] = JSON.parse(cached);
                                             Logger.log('Cache HIT for batch sheet: ' + sheetName);
                                         } else {
+                                            if (skipCache && typeof invalidateHseSheetCaches === 'function') {
+                                                invalidateHseSheetCaches(sheetName);
+                                            }
                                             // Read from sheet
                                             var sheetData = readFromSheet(sheetName, batchSpreadsheetId);
 
@@ -2165,7 +2174,10 @@ var ActionHandlers = {
         var result = { success: false, message: '' };
         (function() {
 
-                    result = addContractorApprovalRequest(payload);
+                    var addSid = (typeof resolveContractorSpreadsheetId_ === 'function')
+                        ? resolveContractorSpreadsheetId_(payload, postData)
+                        : (spreadsheetId || getSpreadsheetId());
+                    result = addContractorApprovalRequest(payload, addSid);
                     return;
 
         })();

@@ -698,6 +698,22 @@ const Contractors = {
 
     async _fetchApprovalRequestRowsFromBackend() {
         if (typeof GoogleIntegration === 'undefined') return null;
+
+        // 1) نفس مسار المزامنة الناجح — readFromSheet مباشرة
+        if (typeof GoogleIntegration.readFromSheets === 'function') {
+            try {
+                const sheetRows = await GoogleIntegration.readFromSheets('ContractorApprovalRequests', 45000);
+                if (Array.isArray(sheetRows) && sheetRows.length > 0) {
+                    return sheetRows;
+                }
+            } catch (err) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ readFromSheets(ContractorApprovalRequests) فشل:', err?.message || err);
+                }
+            }
+        }
+
+        // 2) API مخصص
         const apiData = this._approvalRequestApiPayload();
         try {
             const res = await GoogleIntegration.sendRequest({
@@ -705,28 +721,36 @@ const Contractors = {
                 data: apiData
             });
             const rows = this.extractApprovalRequestRowsFromResponse(res);
-            if (Array.isArray(rows)) {
-                if (AppState?.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
-                    Utils.safeLog(`✅ getAllContractorApprovalRequests: ${rows.length} سجل`);
-                }
+            if (Array.isArray(rows) && rows.length > 0) {
                 return rows;
             }
         } catch (err) {
             if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                Utils.safeWarn('⚠️ getAllContractorApprovalRequests فشل — محاولة readFromSheet:', err?.message || err);
+                Utils.safeWarn('⚠️ getAllContractorApprovalRequests فشل:', err?.message || err);
             }
         }
-        if (typeof GoogleIntegration.readFromSheets === 'function') {
-            try {
-                const sheetRows = await GoogleIntegration.readFromSheets('ContractorApprovalRequests');
-                if (Array.isArray(sheetRows)) return sheetRows;
-            } catch (_e) { /* ignore */ }
+
+        // 3) إن وُجدت بيانات من المزامنة العامة استخدمها
+        const synced = AppState?.appData?.contractorApprovalRequests;
+        if (Array.isArray(synced) && synced.length > 0) {
+            return synced.slice();
         }
+
         return null;
     },
 
     async _fetchDeletionRequestRowsFromBackend() {
         if (typeof GoogleIntegration === 'undefined') return null;
+
+        if (typeof GoogleIntegration.readFromSheets === 'function') {
+            try {
+                const sheetRows = await GoogleIntegration.readFromSheets('ContractorDeletionRequests', 45000);
+                if (Array.isArray(sheetRows) && sheetRows.length > 0) {
+                    return sheetRows;
+                }
+            } catch (_e) { /* ignore */ }
+        }
+
         const apiData = this._approvalRequestApiPayload();
         try {
             const res = await GoogleIntegration.sendRequest({
@@ -734,19 +758,42 @@ const Contractors = {
                 data: apiData
             });
             const rows = this.extractApprovalRequestRowsFromResponse(res);
-            if (Array.isArray(rows)) return rows;
-        } catch (err) {
-            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                Utils.safeWarn('⚠️ getAllContractorDeletionRequests فشل — محاولة readFromSheet:', err?.message || err);
+            if (Array.isArray(rows) && rows.length > 0) {
+                return rows;
+            }
+        } catch (_e) { /* ignore */ }
+
+        const synced = AppState?.appData?.contractorDeletionRequests;
+        if (Array.isArray(synced) && synced.length > 0) {
+            return synced.slice();
+        }
+
+        return null;
+    },
+
+    /**
+     * استيعاب بيانات المزامنة العامة (batchRead) لطلبات الاعتماد
+     */
+    ingestApprovalRequestsFromSync(rows, options = {}) {
+        if (!Array.isArray(rows) || rows.length === 0) return false;
+        this.ensureApprovalRequestsSetup();
+        const localApprovals = Array.isArray(AppState.appData.contractorApprovalRequests)
+            ? AppState.appData.contractorApprovalRequests.slice()
+            : [];
+        const serverRows = rows.map((r) => this.normalizeApprovalRequestRecord(r));
+        AppState.appData.contractorApprovalRequests = this.mergeApprovalRequestsWithLocalOnly(serverRows, localApprovals);
+        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+            window.DataManager.save();
+        }
+        if (options.refreshUi !== false) {
+            if (this.currentTab === 'approval-request') {
+                this.mountApprovalRequestSection();
+            }
+            if (typeof AppUI !== 'undefined' && typeof AppUI.updateNotificationsBadge === 'function') {
+                AppUI.updateNotificationsBadge();
             }
         }
-        if (typeof GoogleIntegration.readFromSheets === 'function') {
-            try {
-                const sheetRows = await GoogleIntegration.readFromSheets('ContractorDeletionRequests');
-                if (Array.isArray(sheetRows)) return sheetRows;
-            } catch (_e) { /* ignore */ }
-        }
-        return null;
+        return true;
     },
 
     prefetchApprovalRequestsForNotifications() {
@@ -756,12 +803,35 @@ const Contractors = {
 
     async diagnoseApprovalRequests() {
         const sheetId = AppState?.googleConfig?.sheets?.spreadsheetId || '';
+        let readFromSheetCount = null;
+        let apiCount = null;
+        if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.readFromSheets === 'function') {
+            try {
+                const direct = await GoogleIntegration.readFromSheets('ContractorApprovalRequests', 45000);
+                readFromSheetCount = Array.isArray(direct) ? direct.length : null;
+            } catch (e) {
+                readFromSheetCount = 'error: ' + (e?.message || e);
+            }
+        }
+        try {
+            const apiData = this._approvalRequestApiPayload();
+            const res = await GoogleIntegration.sendRequest({
+                action: 'getAllContractorApprovalRequests',
+                data: apiData
+            });
+            const rows = this.extractApprovalRequestRowsFromResponse(res);
+            apiCount = Array.isArray(rows) ? rows.length : null;
+        } catch (e) {
+            apiCount = 'error: ' + (e?.message || e);
+        }
         const loaded = await this.fetchContractorApprovalRequestsFromBackend();
         const all = AppState.appData.contractorApprovalRequests || [];
         const pending = this.getPendingApprovalRequests();
         const report = {
             loaded,
             spreadsheetId: sheetId,
+            readFromSheetCount,
+            apiCount,
             total: all.length,
             pendingForAdmin: pending.length,
             isAdmin: this.isContractorApprovalAdminUser(),
@@ -769,11 +839,7 @@ const Contractors = {
             sampleIds: all.slice(0, 5).map((r) => r && r.id).filter(Boolean),
             pendingIds: pending.slice(0, 10).map((r) => r && r.id).filter(Boolean)
         };
-        if (typeof Utils !== 'undefined' && Utils.safeLog) {
-            Utils.safeLog('🔍 تشخيص طلبات الاعتماد:', report);
-        } else {
-            console.log('🔍 تشخيص طلبات الاعتماد:', report);
-        }
+        console.log('🔍 تشخيص طلبات الاعتماد:', report);
         return report;
     },
 
@@ -843,24 +909,20 @@ const Contractors = {
 
             let loaded = false;
 
-            if (Array.isArray(approvalRows)) {
+            if (Array.isArray(approvalRows) && approvalRows.length > 0) {
                 const serverRows = approvalRows.map((r) => this.normalizeApprovalRequestRecord(r));
-                const keepLocalOnEmptyServer = approvalRows.length === 0 && localApprovals.length > 0;
-                if (!keepLocalOnEmptyServer) {
-                    AppState.appData.contractorApprovalRequests = this.mergeApprovalRequestsWithLocalOnly(serverRows, localApprovals);
-                    loaded = true;
-                } else if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                    Utils.safeWarn('⚠️ الخادم أرجع 0 طلب اعتماد — الاحتفاظ بالبيانات المحلية مؤقتاً');
+                AppState.appData.contractorApprovalRequests = this.mergeApprovalRequestsWithLocalOnly(serverRows, localApprovals);
+                loaded = true;
+            } else if (localApprovals.length > 0) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ جلب الخادم فارغ — الاحتفاظ بـ ' + localApprovals.length + ' طلب محلي');
                 }
             }
 
-            if (Array.isArray(deletionRows)) {
+            if (Array.isArray(deletionRows) && deletionRows.length > 0) {
                 const serverRows = deletionRows.map((r) => this.normalizeApprovalRequestRecord(r));
-                const keepLocalOnEmptyServer = deletionRows.length === 0 && localDeletions.length > 0;
-                if (!keepLocalOnEmptyServer) {
-                    AppState.appData.contractorDeletionRequests = this.mergeApprovalRequestsWithLocalOnly(serverRows, localDeletions);
-                    loaded = true;
-                }
+                AppState.appData.contractorDeletionRequests = this.mergeApprovalRequestsWithLocalOnly(serverRows, localDeletions);
+                loaded = true;
             }
 
             if (loaded && typeof window.DataManager !== 'undefined' && window.DataManager.save) {
@@ -939,9 +1001,13 @@ const Contractors = {
 
         const canLoad = typeof GoogleIntegration !== 'undefined' &&
             typeof GoogleIntegration.sendRequest === 'function' &&
-            AppState.googleConfig?.appsScript?.enabled &&
-            AppState.googleConfig?.appsScript?.scriptUrl;
+            typeof GoogleIntegration._isBackendRpcConfigured === 'function' &&
+            GoogleIntegration._isBackendRpcConfigured();
+
         if (!canLoad) {
+            if (force) {
+                return this._waitForBackendThenLoadApprovalRequests(options);
+            }
             return Promise.resolve();
         }
 
@@ -970,6 +1036,26 @@ const Contractors = {
             });
 
         return this._approvalRequestsSyncInFlight;
+    },
+
+    async _waitForBackendThenLoadApprovalRequests(options, attempt = 0) {
+        const maxAttempts = 24;
+        if (attempt >= maxAttempts) {
+            return false;
+        }
+        const ready = typeof GoogleIntegration !== 'undefined' &&
+            typeof GoogleIntegration._isBackendRpcConfigured === 'function' &&
+            GoogleIntegration._isBackendRpcConfigured();
+        if (ready) {
+            if (this._approvalRequestsSyncInFlight) {
+                return this._approvalRequestsSyncInFlight;
+            }
+            this._approvalRequestsSyncInFlight = this.fetchContractorApprovalRequestsFromBackend()
+                .finally(() => { this._approvalRequestsSyncInFlight = null; });
+            return this._approvalRequestsSyncInFlight;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        return this._waitForBackendThenLoadApprovalRequests(options, attempt + 1);
     },
 
     /**
@@ -4740,6 +4826,10 @@ const Contractors = {
         delete payload._syncError;
         delete payload._syncErrorMessage;
         delete payload.attachmentFiles;
+        const sheetId = AppState?.googleConfig?.sheets?.spreadsheetId;
+        if (sheetId && String(sheetId).trim() && sheetId !== 'YOUR_SPREADSHEET_ID_HERE') {
+            payload.spreadsheetId = String(sheetId).trim();
+        }
         if (payload.requestType === 'evaluation' && payload.evaluationData && typeof payload.evaluationData === 'object') {
             const evalData = payload.evaluationData;
             if (Array.isArray(evalData.items)) {
@@ -9175,6 +9265,9 @@ const Contractors = {
             
             // ✅ تحديث قائمة الطلبات مباشرة بعد الحفظ المحلي
             this.refreshApprovalRequestsSection();
+            if (typeof AppUI !== 'undefined' && typeof AppUI.updateNotificationsBadge === 'function') {
+                AppUI.updateNotificationsBadge();
+            }
             
             // ✅ المزامنة مع Backend في الخلفية فقط (لا await — لا تغيير في بنية التطبيق)
             this.syncApprovalRequestToBackend(requestData, attachments, tempId).then(() => {

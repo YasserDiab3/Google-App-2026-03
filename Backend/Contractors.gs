@@ -612,14 +612,14 @@ function getContractorEvaluations(contractorId) {
 /**
  * إضافة طلب اعتماد مقاول
  */
-function addContractorApprovalRequest(requestData) {
+function addContractorApprovalRequest(requestData, spreadsheetIdOverride) {
     try {
         if (!requestData) {
             return { success: false, message: 'بيانات الطلب غير موجودة' };
         }
         
         const sheetName = 'ContractorApprovalRequests';
-        const spreadsheetId = getSpreadsheetId();
+        const spreadsheetId = spreadsheetIdOverride || resolveContractorSpreadsheetId_(requestData, null);
         
         // ✅ إصلاح: التحقق من أن ID غير موجود أو مؤقت (TEMP_) قبل توليد ID جديد
         // ✅ إذا كان ID غير موجود أو يبدأ بـ TEMP_ أو لا يبدأ بـ CAR_، نولد ID جديد
