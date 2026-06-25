@@ -11334,6 +11334,32 @@ const Contractors = {
             <div id="ctr-violations-analysis"></div>
             <div id="ctr-expiring-contracts"></div>
             <div id="ctr-detailed-analysis"></div>
+            <style>
+                #ctr-analytics-root .ctr-panel { margin-bottom:16px;border-radius:14px;overflow:hidden;background:#fff;border:1px solid #e2e8f0;box-shadow:0 4px 20px rgba(15,23,42,.06); }
+                #ctr-analytics-root .ctr-panel-header { padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;color:#fff; }
+                #ctr-analytics-root .ctr-panel-header-icon { width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0; }
+                #ctr-analytics-root .ctr-panel-badge { background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.35);padding:4px 12px;border-radius:999px;font-size:.72rem;font-weight:700;white-space:nowrap; }
+                #ctr-analytics-root .ctr-panel-summary { display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;padding:14px 16px;border-bottom:1px solid #f1f5f9; }
+                #ctr-analytics-root .ctr-panel-summary-item { border-radius:10px;padding:10px 12px;text-align:center; }
+                #ctr-analytics-root .ctr-panel-summary-item .val { font-size:1.35rem;font-weight:800;line-height:1.1; }
+                #ctr-analytics-root .ctr-panel-summary-item .lbl { font-size:.68rem;color:#64748b;margin-top:4px;font-weight:600; }
+                #ctr-analytics-root .ctr-data-table { width:100%;border-collapse:collapse;font-size:.82rem; }
+                #ctr-analytics-root .ctr-data-table thead th { padding:11px 14px;font-weight:700;font-size:.74rem;white-space:nowrap;border-bottom:2px solid;position:sticky;top:0;z-index:2; }
+                #ctr-analytics-root .ctr-data-table tbody td { padding:11px 14px;border-bottom:1px solid #f1f5f9;vertical-align:middle; }
+                #ctr-analytics-root .ctr-data-table tbody tr:hover { background:#f8fafc; }
+                #ctr-analytics-root .ctr-data-table-wrap { overflow-x:auto;max-height:65vh;overflow-y:auto; }
+                #ctr-analytics-root .ctr-sev-pill { display:inline-flex;align-items:center;justify-content:center;min-width:28px;padding:3px 8px;border-radius:999px;font-size:.72rem;font-weight:800; }
+                #ctr-analytics-root .ctr-sev-high { background:#fee2e2;color:#b91c1c;border:1px solid #fecaca; }
+                #ctr-analytics-root .ctr-sev-med { background:#fef3c7;color:#b45309;border:1px solid #fde68a; }
+                #ctr-analytics-root .ctr-sev-low { background:#dcfce7;color:#15803d;border:1px solid #bbf7d0; }
+                #ctr-analytics-root .ctr-progress { width:72px;height:6px;background:#e2e8f0;border-radius:999px;overflow:hidden;margin:0 auto 4px; }
+                #ctr-analytics-root .ctr-progress > span { display:block;height:100%;border-radius:999px;transition:width .3s; }
+                #ctr-analytics-root .ctr-rank { width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:.78rem;flex-shrink:0; }
+                #ctr-analytics-root .ctr-act-active { display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:.68rem;font-weight:700;background:#dcfce7;color:#15803d;border:1px solid #bbf7d0; }
+                #ctr-analytics-root .ctr-act-inactive { display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:.68rem;font-weight:700;background:#fee2e2;color:#b91c1c;border:1px solid #fecaca; }
+                #ctr-analytics-root .ctr-empty-state { padding:48px 24px;text-align:center; }
+                #ctr-analytics-root .ctr-empty-state i { font-size:2.8rem;margin-bottom:12px;display:block; }
+            </style>
         </div>`;
     },
 
@@ -11843,6 +11869,7 @@ const Contractors = {
         const activeContractors = contractors.filter(
             (c) => this.isEntityEnabled(c) && this._ctrGetContractorContractState(c) !== 'expired'
         ).length;
+        const inactiveContractors = contractors.filter((c) => !this.isEntityEnabled(c)).length;
 
         const totalEvaluations = detailed.reduce((sum, row) => sum + (row.evaluationsCount || 0), 0);
         const totalViolations = detailed.reduce((sum, row) => sum + (row.violationsCount || 0), 0);
@@ -11881,6 +11908,9 @@ const Contractors = {
         const activeRate = totalContractors > 0
             ? Math.round((activeContractors / totalContractors) * 10000) / 100
             : 0;
+        const inactiveRate = totalContractors > 0
+            ? Math.round((inactiveContractors / totalContractors) * 10000) / 100
+            : 0;
         const violationsPerContractor = totalContractors > 0
             ? Math.round((totalViolations / totalContractors) * 100) / 100
             : 0;
@@ -11908,11 +11938,13 @@ const Contractors = {
             totalViolations,
             avgScore,
             activeContractors,
+            inactiveContractors,
             expiredContractors,
             expiringSoon,
             approvalRate,
             violationsPerContractor,
             activeRate,
+            inactiveRate,
             violationResolutionRate,
             resolvedViolations,
             highSeverityViolations,
@@ -11953,13 +11985,13 @@ const Contractors = {
         const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(String(v ?? '')) : String(v ?? '');
         const a = snapshot.analytics;
 
-        const statusCounts = { 'نشط': 0, 'قريب الانتهاء': 0, 'منتهي': 0, 'غير محدد': 0 };
+        const statusCounts = { 'نشط': 0, 'غير نشط': 0, 'قريب الانتهاء': 0, 'منتهي': 0 };
         snapshot.filteredContractors.forEach((c) => {
             const state = this._ctrGetContractorContractState(c);
             if (state === 'expired') statusCounts['منتهي']++;
             else if (state === 'expiring') statusCounts['قريب الانتهاء']++;
-            else if (this.isEntityEnabled(c)) statusCounts['نشط']++;
-            else statusCounts['غير محدد']++;
+            else if (!this.isEntityEnabled(c)) statusCounts['غير نشط']++;
+            else statusCounts['نشط']++;
         });
 
         const severityRows = [
@@ -12006,6 +12038,7 @@ const Contractors = {
             '<tr><th>إجمالي المقاولين</th><td>', a.totalContractors, '</td></tr>',
             '<tr><th>المعتمدون</th><td>', a.totalApproved, '</td></tr>',
             '<tr><th>نشطون</th><td>', a.activeContractors, '</td></tr>',
+            '<tr><th>غير نشط</th><td>', a.inactiveContractors || 0, '</td></tr>',
             '<tr><th>منتهي العقد</th><td>', a.expiredContractors, '</td></tr>',
             '<tr><th>عقود قريبة الانتهاء (30 يوم)</th><td>', a.expiringSoon || 0, '</td></tr>',
             '<tr><th>التقييمات</th><td>', a.totalEvaluations, '</td></tr>',
@@ -12071,6 +12104,7 @@ const Contractors = {
                 { label: 'إجمالي المقاولين', value: analytics.totalContractors, icon: 'fas fa-users', color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe' },
                 { label: 'المعتمدون', value: analytics.totalApproved, icon: 'fas fa-check-circle', color: '#10b981', bg: '#ecfdf5', border: '#a7f3d0' },
                 { label: 'نشطون', value: analytics.activeContractors, icon: 'fas fa-bolt', color: '#f97316', bg: '#fff7ed', border: '#fed7aa' },
+                { label: 'غير نشط', value: analytics.inactiveContractors || 0, icon: 'fas fa-ban', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
                 { label: 'التقييمات', value: analytics.totalEvaluations, icon: 'fas fa-clipboard-check', color: '#eab308', bg: '#fefce8', border: '#fde047' },
                 { label: 'المخالفات', value: analytics.totalViolations, icon: 'fas fa-exclamation-triangle', color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
                 { label: 'متوسط التقييم', value: `${analytics.avgScore}%`, icon: 'fas fa-star', color: '#6366f1', bg: '#eef2ff', border: '#c7d2fe' },
@@ -12091,16 +12125,16 @@ const Contractors = {
 
         const chartReady = await this.ensureContractorChartJSLoaded();
         if (chartReady && typeof Chart !== 'undefined') {
-            const statusCounts = { نشط: 0, 'قريب الانتهاء': 0, منتهي: 0, 'غير محدد': 0 };
+            const statusCounts = { نشط: 0, 'غير نشط': 0, 'قريب الانتهاء': 0, منتهي: 0 };
             filteredContractors.forEach((c) => {
                 const state = this._ctrGetContractorContractState(c);
                 if (state === 'expired') statusCounts['منتهي']++;
                 else if (state === 'expiring') statusCounts['قريب الانتهاء']++;
-                else if (this.isEntityEnabled(c)) statusCounts['نشط']++;
-                else statusCounts['غير محدد']++;
+                else if (!this.isEntityEnabled(c)) statusCounts['غير نشط']++;
+                else statusCounts['نشط']++;
             });
             const statusEntries = Object.entries(statusCounts).filter(([, v]) => v > 0);
-            this._ctrDrawDoughnut('ctr-chart-status', statusEntries.map((e) => e[0]), statusEntries.map((e) => e[1]), ['#10b981', '#f59e0b', '#ef4444', '#94a3b8']);
+            this._ctrDrawDoughnut('ctr-chart-status', statusEntries.map((e) => e[0]), statusEntries.map((e) => e[1]), ['#10b981', '#ef4444', '#f59e0b', '#94a3b8']);
 
             const severityGroup = this._ctrGroupByField(filteredViolations, (v) => {
                 const s = String(v.severity || '').trim();
@@ -12501,32 +12535,50 @@ const Contractors = {
         return unique;
     },
 
+    _ctrAnalyticsActivationBadge(contractor) {
+        if (this.isEntityEnabled(contractor)) {
+            return '<span class="ctr-act-active"><i class="fas fa-circle" style="font-size:5px;"></i>نشط</span>';
+        }
+        return '<span class="ctr-act-inactive"><i class="fas fa-circle" style="font-size:5px;"></i>غير نشط</span>';
+    },
+
+    _ctrAnalyticsResolutionBar(rate) {
+        const pct = Math.min(Math.max(Number(rate) || 0, 0), 100);
+        const color = pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+        const textColor = pct >= 80 ? '#15803d' : pct >= 50 ? '#b45309' : '#b91c1c';
+        return `<div class="ctr-progress"><span style="width:${pct}%;background:${color};"></span></div><span style="font-size:.72rem;font-weight:700;color:${textColor};">${pct}%</span>`;
+    },
+
+    _ctrAnalyticsViolationsEmptyPanel() {
+        return `
+            <div class="ctr-panel">
+                <div class="ctr-panel-header" style="background:linear-gradient(135deg,#166534 0%,#22c55e 100%);">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div class="ctr-panel-header-icon"><i class="fas fa-check-circle"></i></div>
+                        <div>
+                            <div style="font-size:1rem;font-weight:800;margin:0;">تحليل مخالفات المقاولين</div>
+                            <div style="font-size:.74rem;opacity:.88;margin-top:2px;">لا توجد مخالفات في الفترة المحددة</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ctr-empty-state">
+                    <i class="fas fa-check-circle" style="color:#22c55e;"></i>
+                    <p style="font-size:.95rem;font-weight:700;color:#374151;margin:0;">لا توجد مخالفات مسجلة للمقاولين</p>
+                    <p style="font-size:.78rem;color:#64748b;margin-top:6px;">جميع المقاولين يلتزمون بالمعايير ضمن الفلاتر الحالية</p>
+                </div>
+            </div>`;
+    },
+
     renderContractorViolationsAnalysis(contractors, violations) {
+        const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(String(v ?? '')) : String(v ?? '');
         const contractorList = (Array.isArray(contractors) && contractors.length > 0)
             ? contractors
             : this.getContractorsForAnalyticsList();
 
         if (!violations || violations.length === 0) {
-            return `
-                <div class="content-card mb-6 border-2 border-gray-200 rounded-xl shadow-lg">
-                    <div class="card-header bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
-                        <h3 class="card-title text-lg font-bold text-gray-800">
-                            <i class="fas fa-exclamation-triangle ml-2 text-yellow-500"></i>
-                            تحليل مخالفات المقاولين
-                        </h3>
-                    </div>
-                    <div class="card-body p-8">
-                        <div class="text-center">
-                            <i class="fas fa-check-circle text-5xl text-green-400 mb-4"></i>
-                            <p class="text-gray-600 text-lg font-medium">لا توجد مخالفات مسجلة للمقاولين</p>
-                            <p class="text-gray-500 text-sm mt-2">جميع المقاولين يلتزمون بالمعايير</p>
-                        </div>
-                    </div>
-                </div>
-            `;
+            return this._ctrAnalyticsViolationsEmptyPanel();
         }
 
-        // توحيد المطابقة مع "التحليل المفصل لكل مقاول" لضمان نفس الأرقام عبر الموديول
         const contractorsWithStats = (contractorList || []).map((contractor) => {
             const analyticsContractor = this.prepareContractorForAnalytics(contractor);
             const lookupKey = this.getPreferredContractorAnalyticsKey(
@@ -12557,141 +12609,106 @@ const Contractors = {
                 name: analyticsContractor.name || analyticsContractor.companyName || contractor.name || contractor.companyName || 'غير محدد',
                 stats
             };
-        }).filter(item => item.stats.total > 0); // عرض من لديهم مخالفات فقط
+        }).filter((item) => item.stats.total > 0);
 
-        // ترتيب تنازلي حسب عدد المخالفات
         const contractorsList = contractorsWithStats
             .sort((a, b) => b.stats.total - a.stats.total)
-            .slice(0, 10); // أعلى 10
+            .slice(0, 10);
 
         if (contractorsList.length === 0) {
-            return `
-                <div class="content-card mb-6 border-2 border-gray-200 rounded-xl shadow-lg">
-                    <div class="card-header bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
-                        <h3 class="card-title text-lg font-bold text-gray-800">
-                            <i class="fas fa-exclamation-triangle ml-2 text-yellow-500"></i>
-                            تحليل مخالفات المقاولين
-                        </h3>
-                    </div>
-                    <div class="card-body p-8">
-                        <div class="text-center">
-                            <i class="fas fa-check-circle text-5xl text-green-400 mb-4"></i>
-                            <p class="text-gray-600 text-lg font-medium">لا توجد مخالفات مسجلة للمقاولين</p>
-                            <p class="text-gray-500 text-sm mt-2">جميع المقاولين يلتزمون بالمعايير</p>
-                        </div>
-                    </div>
-                </div>
-            `;
+            return this._ctrAnalyticsViolationsEmptyPanel();
         }
 
-        // حساب النسب المئوية
-        const getResolutionRate = (stats) => {
-            return stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0;
-        };
+        const getResolutionRate = (stats) => (stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0);
 
-        const getSeverityRate = (stats, type) => {
-            return stats.total > 0 ? Math.round((stats[type] / stats.total) * 100) : 0;
-        };
+        const summary = contractorsList.reduce((acc, item) => {
+            acc.total += item.stats.total;
+            acc.high += item.stats.high;
+            acc.resolved += item.stats.resolved;
+            acc.pending += item.stats.pending;
+            return acc;
+        }, { total: 0, high: 0, resolved: 0, pending: 0 });
+        const overallResolution = summary.total > 0 ? Math.round((summary.resolved / summary.total) * 100) : 0;
+
+        const rowsHtml = contractorsList.map((item, index) => {
+            const { name, stats } = item;
+            const resolutionRate = getResolutionRate(stats);
+            const rankBg = index === 0 ? '#fee2e2' : index === 1 ? '#ffedd5' : index === 2 ? '#fef9c3' : '#f1f5f9';
+            const rankColor = index === 0 ? '#b91c1c' : index === 1 ? '#c2410c' : index === 2 ? '#a16207' : '#64748b';
+            return `
+                <tr>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <span class="ctr-rank" style="background:${rankBg};color:${rankColor};">${index + 1}</span>
+                            <strong style="color:#1e293b;font-size:.84rem;">${esc(name)}</strong>
+                        </div>
+                    </td>
+                    <td style="text-align:center;"><span style="font-size:1rem;font-weight:800;color:#1d4ed8;">${stats.total}</span></td>
+                    <td style="text-align:center;"><span class="ctr-sev-pill ctr-sev-high">${stats.high}</span></td>
+                    <td style="text-align:center;"><span class="ctr-sev-pill ctr-sev-med">${stats.medium}</span></td>
+                    <td style="text-align:center;"><span class="ctr-sev-pill ctr-sev-low">${stats.low}</span></td>
+                    <td style="text-align:center;"><span class="ctr-sev-pill ctr-sev-low">${stats.resolved}</span></td>
+                    <td style="text-align:center;"><span class="ctr-sev-pill ctr-sev-med" style="background:#ffedd5;color:#c2410c;border-color:#fed7aa;">${stats.pending}</span></td>
+                    <td style="text-align:center;">${this._ctrAnalyticsResolutionBar(resolutionRate)}</td>
+                </tr>`;
+        }).join('');
 
         return `
-            <div class="content-card mb-6 border-2 border-red-200 rounded-xl shadow-lg overflow-hidden">
-                <div class="card-header bg-gradient-to-r from-red-50 via-red-100 to-red-50 border-b-2 border-red-200">
-                    <div class="flex items-center justify-between p-4">
-                        <h3 class="card-title text-lg font-bold text-red-800">
-                            <i class="fas fa-exclamation-triangle ml-2"></i>
-                            تحليل مخالفات المقاولين
-                        </h3>
-                        <span class="badge badge-danger text-sm px-3 py-1">
-                            ${contractorsList.length} مقاول
-                        </span>
+            <div class="ctr-panel">
+                <div class="ctr-panel-header" style="background:linear-gradient(135deg,#7f1d1d 0%,#dc2626 55%,#ef4444 100%);">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div class="ctr-panel-header-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div>
+                            <div style="font-size:1rem;font-weight:800;margin:0;">تحليل مخالفات المقاولين</div>
+                            <div style="font-size:.74rem;opacity:.88;margin-top:2px;">أعلى ${contractorsList.length} مقاولين — مطابق للتحليل المفصل</div>
+                        </div>
+                    </div>
+                    <span class="ctr-panel-badge">${summary.total} مخالفة</span>
+                </div>
+                <div class="ctr-panel-summary" style="background:linear-gradient(180deg,#fef2f2 0%,#fff 100%);">
+                    <div class="ctr-panel-summary-item" style="background:#fff;border:1px solid #fecaca;">
+                        <div class="val" style="color:#dc2626;">${contractorsList.length}</div>
+                        <div class="lbl">مقاول مخالِف</div>
+                    </div>
+                    <div class="ctr-panel-summary-item" style="background:#fff;border:1px solid #fecaca;">
+                        <div class="val" style="color:#1d4ed8;">${summary.total}</div>
+                        <div class="lbl">إجمالي المخالفات</div>
+                    </div>
+                    <div class="ctr-panel-summary-item" style="background:#fff;border:1px solid #fecaca;">
+                        <div class="val" style="color:#b91c1c;">${summary.high}</div>
+                        <div class="lbl">شدة عالية</div>
+                    </div>
+                    <div class="ctr-panel-summary-item" style="background:#fff;border:1px solid #fecaca;">
+                        <div class="val" style="color:#15803d;">${summary.resolved}</div>
+                        <div class="lbl">محلولة</div>
+                    </div>
+                    <div class="ctr-panel-summary-item" style="background:#fff;border:1px solid #fecaca;">
+                        <div class="val" style="color:#c2410c;">${summary.pending}</div>
+                        <div class="lbl">قيد المعالجة</div>
+                    </div>
+                    <div class="ctr-panel-summary-item" style="background:#fff;border:1px solid #fecaca;">
+                        <div class="val" style="color:#7c3aed;">${overallResolution}%</div>
+                        <div class="lbl">معدل الحل</div>
                     </div>
                 </div>
-                <div class="card-body p-0">
-                    <div class="overflow-x-auto">
-                        <table class="data-table w-full">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-4 text-right font-bold text-gray-700 border-b border-gray-200">اسم المقاول</th>
-                                    <th class="px-6 py-4 text-center font-bold text-gray-700 border-b border-gray-200">إجمالي المخالفات</th>
-                                    <th class="px-6 py-4 text-center font-bold text-gray-700 border-b border-gray-200">
-                                        <span class="text-red-600">عالية</span>
-                                    </th>
-                                    <th class="px-6 py-4 text-center font-bold text-gray-700 border-b border-gray-200">
-                                        <span class="text-yellow-600">متوسطة</span>
-                                    </th>
-                                    <th class="px-6 py-4 text-center font-bold text-gray-700 border-b border-gray-200">
-                                        <span class="text-green-600">منخفضة</span>
-                                    </th>
-                                    <th class="px-6 py-4 text-center font-bold text-gray-700 border-b border-gray-200">
-                                        <span class="text-green-600">محلولة</span>
-                                    </th>
-                                    <th class="px-6 py-4 text-center font-bold text-gray-700 border-b border-gray-200">
-                                        <span class="text-orange-600">قيد المعالجة</span>
-                                    </th>
-                                    <th class="px-6 py-4 text-center font-bold text-gray-700 border-b border-gray-200">معدل الحل</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100">
-                                ${contractorsList.map((item, index) => {
-                                    const { name, stats } = item;
-                                    const resolutionRate = getResolutionRate(stats);
-                                    const highRate = getSeverityRate(stats, 'high');
-                                    return `
-                                    <tr class="hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-center">
-                                                <div class="flex-shrink-0 w-8 h-8 bg-red-100 rounded-md flex items-center justify-center ml-3">
-                                                    <span class="text-red-600 font-bold text-sm">${index + 1}</span>
-                                                </div>
-                                                <strong class="text-gray-800 font-semibold">${Utils.escapeHTML(name)}</strong>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 text-center">
-                                            <span class="font-bold text-blue-700" style="font-size: 16px;">
-                                                ${stats.total}
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4 text-center">
-                                            <div class="flex flex-col items-center">
-                                                <span class="badge badge-danger text-sm font-bold px-3 py-1 mb-1">${stats.high}</span>
-                                                ${highRate > 0 ? `<span class="text-xs text-gray-500">${highRate}%</span>` : ''}
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 text-center">
-                                            <span class="badge badge-warning text-sm font-bold px-3 py-1">${stats.medium}</span>
-                                        </td>
-                                        <td class="px-6 py-4 text-center">
-                                            <span class="badge badge-success text-sm font-bold px-3 py-1">${stats.low}</span>
-                                        </td>
-                                        <td class="px-6 py-4 text-center">
-                                            <span class="badge badge-success text-sm font-bold px-3 py-1 bg-green-500">
-                                                ${stats.resolved}
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4 text-center">
-                                            <span class="badge badge-warning text-sm font-bold px-3 py-1 bg-orange-400">
-                                                ${stats.pending}
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4 text-center">
-                                            <div class="flex flex-col items-center">
-                                                <div class="w-20 bg-gray-200 rounded-full h-2 mb-1">
-                                                    <div class="bg-green-500 h-2 rounded-full transition-all" style="width: ${resolutionRate}%"></div>
-                                                </div>
-                                                <span class="text-xs font-semibold ${resolutionRate >= 80 ? 'text-green-600' : resolutionRate >= 50 ? 'text-yellow-600' : 'text-red-600'}">
-                                                    ${resolutionRate}%
-                                                </span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                `;
-                                }).join('')}
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="ctr-data-table-wrap">
+                    <table class="ctr-data-table">
+                        <thead>
+                            <tr style="background:#fef2f2;">
+                                <th style="text-align:right;color:#991b1b;border-color:#fecaca;">اسم المقاول</th>
+                                <th style="text-align:center;color:#991b1b;border-color:#fecaca;">الإجمالي</th>
+                                <th style="text-align:center;color:#991b1b;border-color:#fecaca;">عالية</th>
+                                <th style="text-align:center;color:#991b1b;border-color:#fecaca;">متوسطة</th>
+                                <th style="text-align:center;color:#991b1b;border-color:#fecaca;">منخفضة</th>
+                                <th style="text-align:center;color:#991b1b;border-color:#fecaca;">محلولة</th>
+                                <th style="text-align:center;color:#991b1b;border-color:#fecaca;">قيد المعالجة</th>
+                                <th style="text-align:center;color:#991b1b;border-color:#fecaca;">معدل الحل</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
                 </div>
-            </div>
-        `;
+            </div>`;
     },
 
     getExpiringContracts(contractors, approvedContractors) {
@@ -13053,189 +13070,158 @@ const Contractors = {
     },
 
     renderDetailedContractorAnalysis(contractors, approvedContractors, evaluations, violations) {
-        // التحقق من وجود مقاولين
+        const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(String(v ?? '')) : String(v ?? '');
+
         if (!contractors || !Array.isArray(contractors) || contractors.length === 0) {
             return `
-                <div class="content-card border-2 border-gray-200 rounded-xl shadow-lg overflow-hidden">
-                    <div class="card-header bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 border-b-2 border-indigo-200">
-                        <div class="flex items-center justify-between p-4">
-                            <div class="flex items-center">
-                                <div class="w-12 h-12 bg-indigo-500 rounded-full flex items-center justify-center ml-3">
-                                    <i class="fas fa-list-alt text-white text-xl"></i>
-                                </div>
-                                <div>
-                                    <h3 class="card-title text-lg font-bold text-indigo-900">
-                                        تحليل مفصل لكل مقاول
-                                    </h3>
-                                    <p class="text-sm text-indigo-700 mt-1">0 مقاول في النظام</p>
-                                </div>
+                <div class="ctr-panel">
+                    <div class="ctr-panel-header" style="background:linear-gradient(135deg,#312e81 0%,#6366f1 100%);">
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <div class="ctr-panel-header-icon"><i class="fas fa-list-alt"></i></div>
+                            <div>
+                                <div style="font-size:1rem;font-weight:800;margin:0;">تحليل مفصل لكل مقاول</div>
+                                <div style="font-size:.74rem;opacity:.88;margin-top:2px;">0 مقاول في النظام</div>
                             </div>
                         </div>
                     </div>
-                    <div class="card-body p-8">
-                        <div class="text-center py-8">
-                            <i class="fas fa-inbox text-gray-400 text-5xl mb-4"></i>
-                            <p class="text-gray-500 text-lg">لا توجد مقاولين في النظام</p>
-                            <p class="text-gray-400 text-sm mt-2">يرجى إضافة مقاولين لعرض التحليل المفصل</p>
-                        </div>
+                    <div class="ctr-empty-state">
+                        <i class="fas fa-inbox" style="color:#94a3b8;"></i>
+                        <p style="font-size:.95rem;font-weight:700;color:#374151;margin:0;">لا توجد مقاولين في النظام</p>
+                        <p style="font-size:.78rem;color:#64748b;margin-top:6px;">يرجى إضافة مقاولين لعرض التحليل المفصل</p>
                     </div>
-                </div>
-            `;
+                </div>`;
         }
 
         const contractorsWithStats = this.buildContractorDetailedStatsList(contractors, evaluations, violations);
 
+        const summary = {
+            total: contractorsWithStats.length,
+            active: contractorsWithStats.filter((c) => this.isEntityEnabled(c)).length,
+            inactive: contractorsWithStats.filter((c) => !this.isEntityEnabled(c)).length,
+            withViolations: contractorsWithStats.filter((c) => c.violationsCount > 0).length,
+            withEvaluations: contractorsWithStats.filter((c) => c.evaluationsCount > 0).length
+        };
+
         const getScoreColor = (score) => {
-            if (score >= 80) return 'text-green-600';
-            if (score >= 60) return 'text-yellow-600';
-            return 'text-red-600';
+            if (score >= 80) return '#15803d';
+            if (score >= 60) return '#b45309';
+            return '#b91c1c';
         };
 
-        const getScoreBg = (score) => {
-            if (score >= 80) return 'bg-green-100 text-green-700';
-            if (score >= 60) return 'bg-yellow-100 text-yellow-700';
-            return 'bg-red-100 text-red-700';
-        };
-
-        const getContractStatusBadge = (status, days) => {
+        const getContractStatusPill = (status, days) => {
             if (status === 'expired') {
-                return '<span class="badge badge-danger"><i class="fas fa-times-circle ml-1"></i>منتهي</span>';
-            } else if (status === 'expiring') {
-                return `<span class="badge badge-warning"><i class="fas fa-hourglass-half ml-1"></i>${days} يوم</span>`;
-            } else if (status === 'active') {
-                return '<span class="badge badge-success"><i class="fas fa-check-circle ml-1"></i>نشط</span>';
+                return '<span class="ctr-sev-pill ctr-sev-high"><i class="fas fa-times-circle" style="font-size:9px;margin-left:3px;"></i>منتهي</span>';
             }
-            return '<span class="badge badge-secondary">غير محدد</span>';
+            if (status === 'expiring') {
+                return `<span class="ctr-sev-pill ctr-sev-med"><i class="fas fa-hourglass-half" style="font-size:9px;margin-left:3px;"></i>${days} يوم</span>`;
+            }
+            if (status === 'active') {
+                return '<span class="ctr-sev-pill ctr-sev-low"><i class="fas fa-check-circle" style="font-size:9px;margin-left:3px;"></i>نشط</span>';
+            }
+            return '<span class="ctr-sev-pill" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;">غير محدد</span>';
         };
+
+        const rowsHtml = contractorsWithStats.map((contractor, index) => {
+            const actionLookupKey = encodeURIComponent(contractor.analyticsLookupKey || contractor.id || contractor.contractorId || '');
+            const actionDisplayName = encodeURIComponent(contractor.analyticsDisplayName || contractor.name || contractor.companyName || '');
+            const scoreColor = getScoreColor(contractor.avgScore);
+            const rowBorder = contractor.violationsCount > 0 ? '#fecaca' : contractor.evaluationsCount > 0 ? '#bbf7d0' : '#e2e8f0';
+            return `
+                <tr style="border-right:3px solid ${rowBorder};">
+                    <td style="text-align:center;"><span class="ctr-rank" style="background:#eef2ff;color:#4338ca;">${index + 1}</span></td>
+                    <td>
+                        <div style="min-width:0;">
+                            <strong style="color:#1e293b;font-size:.84rem;display:block;margin-bottom:4px;">${esc(contractor.name || contractor.companyName || '')}</strong>
+                            ${this._ctrAnalyticsActivationBadge(contractor)}
+                        </div>
+                    </td>
+                    <td style="text-align:center;color:#475569;font-size:.78rem;">${esc((contractor.serviceType || contractor.entityType || '-').toString())}</td>
+                    <td style="text-align:center;">${getContractStatusPill(contractor.contractStatus, contractor.daysRemaining)}</td>
+                    <td style="text-align:center;">
+                        <span style="font-weight:700;font-size:.9rem;color:${contractor.evaluationsCount > 0 ? '#b45309' : '#94a3b8'};">${contractor.evaluationsCount}</span>
+                    </td>
+                    <td style="text-align:center;">
+                        <div style="font-weight:800;font-size:.9rem;color:${scoreColor};">${contractor.avgScore}%</div>
+                        <div class="ctr-progress" style="width:56px;margin-top:4px;"><span style="width:${Math.min(contractor.avgScore, 100)}%;background:${scoreColor};"></span></div>
+                    </td>
+                    <td style="text-align:center;">
+                        <span style="font-weight:700;font-size:.9rem;color:${contractor.violationsCount > 0 ? '#b91c1c' : '#15803d'};">${contractor.violationsCount}</span>
+                    </td>
+                    <td style="text-align:center;">
+                        ${contractor.highViolations > 0
+                            ? `<span class="ctr-sev-pill ctr-sev-high">${contractor.highViolations}</span>`
+                            : '<span style="color:#cbd5e1;">—</span>'}
+                    </td>
+                    <td style="text-align:center;">${this._ctrAnalyticsResolutionBar(contractor.resolutionRate)}</td>
+                    <td style="text-align:center;">
+                        <button onclick="Contractors.viewContractorAnalytics(decodeURIComponent('${actionLookupKey}'), decodeURIComponent('${actionDisplayName}'))"
+                                class="contractor-analytics-view-btn"
+                                style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:#eef2ff;color:#4338ca;font-size:.74rem;font-weight:700;"
+                                title="عرض التفاصيل">
+                            <i class="fas fa-eye"></i><span>عرض</span>
+                        </button>
+                    </td>
+                </tr>`;
+        }).join('');
 
         return `
             <style>
-                .contractor-analytics-view-btn { color: #111; }
-                [data-theme="dark"] .contractor-analytics-view-btn { background: #4b5563 !important; color: #f3f4f6 !important; }
-                [data-theme="dark"] .contractor-analytics-view-btn:hover { background: #6b7280 !important; }
+                .contractor-analytics-view-btn:hover { background:#c7d2fe !important; }
+                [data-theme="dark"] .contractor-analytics-view-btn { background:#4b5563 !important; color:#f3f4f6 !important; }
             </style>
-            <div class="content-card border-2 border-gray-200 rounded-xl shadow-lg overflow-hidden">
-                <div class="card-header bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 border-b-2 border-indigo-200">
-                    <div class="flex items-center justify-between p-4">
-                        <div class="flex items-center">
-                            <div class="w-12 h-12 bg-indigo-500 rounded-full flex items-center justify-center ml-3">
-                                <i class="fas fa-list-alt text-white text-xl"></i>
-                            </div>
-                            <div>
-                                <h3 class="card-title text-lg font-bold text-indigo-900">
-                                    تحليل مفصل لكل مقاول
-                                </h3>
-                                <p class="text-sm text-indigo-700 mt-1">${contractorsWithStats.length} مقاول في النظام</p>
-                            </div>
+            <div class="ctr-panel">
+                <div class="ctr-panel-header" style="background:linear-gradient(135deg,#312e81 0%,#6366f1 55%,#818cf8 100%);">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div class="ctr-panel-header-icon"><i class="fas fa-list-alt"></i></div>
+                        <div>
+                            <div style="font-size:1rem;font-weight:800;margin:0;">تحليل مفصل لكل مقاول</div>
+                            <div style="font-size:.74rem;opacity:.88;margin-top:2px;">${summary.total} مقاول — ترتيب حسب الأداء والمخالفات</div>
                         </div>
                     </div>
+                    <span class="ctr-panel-badge">${summary.withViolations} بمخالفات</span>
                 </div>
-                <div class="card-body p-0">
-                    <div class="overflow-x-auto" style="max-height: 70vh; overflow-y: auto; min-width: 100%;">
-                        <table class="data-table w-full" style="border-collapse: collapse; table-layout: fixed; min-width: 900px;">
-                            <colgroup>
-                                <col style="width: 4%;">
-                                <col style="width: 16%;">
-                                <col style="width: 14%;">
-                                <col style="width: 10%;">
-                                <col style="width: 8%;">
-                                <col style="width: 10%;">
-                                <col style="width: 8%;">
-                                <col style="width: 6%;">
-                                <col style="width: 10%;">
-                                <col style="width: 14%;">
-                            </colgroup>
-                            <thead style="position: sticky; top: 0; z-index: 10; background: #e0e7ff; box-shadow: 0 2px 0 0 #c7d2fe;">
-                                <tr>
-                                    <th class="px-2 py-3 text-center font-bold text-indigo-900 border-b-2 border-indigo-200" style="background: #e0e7ff; white-space: nowrap;" scope="col">#</th>
-                                    <th id="header-اسم-المقاول" class="px-4 py-3 text-right font-bold text-indigo-900 border-b-2 border-indigo-200" style="background: #e0e7ff; white-space: nowrap;" scope="col">اسم المقاول</th>
-                                    <th class="px-4 py-3 text-center font-bold text-indigo-900 border-b-2 border-indigo-200" style="background: #e0e7ff; white-space: nowrap;">نوع الخدمة</th>
-                                    <th class="px-4 py-3 text-center font-bold text-indigo-900 border-b-2 border-indigo-200" style="background: #e0e7ff; white-space: nowrap;">حالة العقد</th>
-                                    <th class="px-4 py-3 text-center font-bold text-indigo-900 border-b-2 border-indigo-200" style="background: #e0e7ff; white-space: nowrap;">التقييمات</th>
-                                    <th class="px-4 py-3 text-center font-bold text-indigo-900 border-b-2 border-indigo-200" style="background: #e0e7ff; white-space: nowrap;">متوسط التقييم</th>
-                                    <th class="px-4 py-3 text-center font-bold text-indigo-900 border-b-2 border-indigo-200" style="background: #e0e7ff; white-space: nowrap;">المخالفات</th>
-                                    <th class="px-4 py-3 text-center font-bold text-indigo-900 border-b-2 border-indigo-200" style="background: #e0e7ff; white-space: nowrap;">عالية</th>
-                                    <th class="px-4 py-3 text-center font-bold text-indigo-900 border-b-2 border-indigo-200" style="background: #e0e7ff; white-space: nowrap;">معدل الحل</th>
-                                    <th class="px-4 py-3 text-center font-bold text-indigo-900 border-b-2 border-indigo-200" style="background: #e0e7ff; white-space: nowrap;">الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100">
-                                ${contractorsWithStats.map((contractor, index) => {
-                                    const actionLookupKey = encodeURIComponent(contractor.analyticsLookupKey || contractor.id || contractor.contractorId || '');
-                                    const actionDisplayName = encodeURIComponent(contractor.analyticsDisplayName || contractor.name || contractor.companyName || '');
-                                    return `
-                                    <tr class="hover:bg-indigo-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
-                                        <td class="px-2 py-3 text-center align-middle">
-                                            <span class="inline-flex w-8 h-8 items-center justify-center rounded-full bg-gray-200 text-gray-700 font-bold text-sm">${index + 1}</span>
-                                        </td>
-                                        <td class="px-4 py-3 text-right align-middle" style="overflow: hidden; text-overflow: ellipsis;" headers="header-اسم-المقاول">
-                                            <div style="min-width: 0;">
-                                                <strong class="text-gray-800 font-semibold block truncate text-right">${Utils.escapeHTML(contractor.name || contractor.companyName || '')}</strong>
-                                                <span class="text-xs text-gray-500 mt-1 block text-right">
-                                                    <span class="badge badge-${['نشط', 'approved', 'معتمد', 'active'].includes((contractor.status || '').toString().trim().toLowerCase()) ? 'success' : 'danger'} text-xs">
-                                                        ${contractor.status || '-'}
-                                                    </span>
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-3 text-center align-middle" style="overflow: hidden; text-overflow: ellipsis;">
-                                            <span class="text-gray-800 text-sm">${Utils.escapeHTML((contractor.serviceType || contractor.entityType || '-').toString())}</span>
-                                        </td>
-                                        <td class="px-4 py-3 text-center align-middle">
-                                            ${getContractStatusBadge(contractor.contractStatus, contractor.daysRemaining)}
-                                        </td>
-                                        <td class="px-4 py-3 text-center align-middle">
-                                            <span class="font-semibold ${contractor.evaluationsCount > 0 ? 'text-yellow-700' : 'text-gray-500'}" style="font-size: 15px;">
-                                                ${contractor.evaluationsCount}
-                                            </span>
-                                        </td>
-                                        <td class="px-4 py-3 text-center align-middle">
-                                            <div class="flex flex-col items-center">
-                                                <span class="font-bold ${getScoreColor(contractor.avgScore)} mb-1" style="font-size: 16px;">
-                                                    ${contractor.avgScore}%
-                                                </span>
-                                                <div class="w-16 bg-gray-200 rounded-full h-1.5">
-                                                    <div class="bg-${contractor.avgScore >= 80 ? 'green' : contractor.avgScore >= 60 ? 'yellow' : 'red'}-500 h-1.5 rounded-full" style="width: ${Math.min(contractor.avgScore, 100)}%"></div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-3 text-center align-middle">
-                                            <span class="font-semibold ${contractor.violationsCount > 0 ? 'text-red-700' : 'text-green-700'}" style="font-size: 15px;">
-                                                ${contractor.violationsCount}
-                                            </span>
-                                        </td>
-                                        <td class="px-4 py-3 text-center align-middle">
-                                            ${contractor.highViolations > 0 
-                                                ? `<span class="badge badge-danger text-sm font-bold px-3 py-1">${contractor.highViolations}</span>` 
-                                                : '<span class="text-gray-400">-</span>'}
-                                        </td>
-                                        <td class="px-4 py-3 text-center align-middle">
-                                            <div class="flex flex-col items-center">
-                                                <div class="w-20 bg-gray-200 rounded-full h-2 mb-1">
-                                                    <div class="bg-${contractor.resolutionRate >= 80 ? 'green' : contractor.resolutionRate >= 50 ? 'yellow' : 'red'}-500 h-2 rounded-full transition-all" style="width: ${contractor.resolutionRate}%"></div>
-                                                </div>
-                                                <span class="text-xs font-semibold ${contractor.resolutionRate >= 80 ? 'text-green-600' : contractor.resolutionRate >= 50 ? 'text-yellow-600' : 'text-red-600'}">
-                                                    ${contractor.resolutionRate}%
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-3 text-center align-middle">
-                                            <button onclick="Contractors.viewContractorAnalytics(decodeURIComponent('${actionLookupKey}'), decodeURIComponent('${actionDisplayName}'))" 
-                                                    class="contractor-analytics-view-btn inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-colors font-medium text-sm bg-gray-200 hover:bg-gray-300 text-gray-900 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-100" 
-                                                    title="عرض التفاصيل">
-                                                <i class="fas fa-eye"></i>
-                                                <span>عرض</span>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                `;
-                                }).join('')}
-                            </tbody>
-                        </table>
+                <div class="ctr-panel-summary" style="background:linear-gradient(180deg,#eef2ff 0%,#fff 100%);">
+                    <div class="ctr-panel-summary-item" style="background:#fff;border:1px solid #c7d2fe;">
+                        <div class="val" style="color:#4338ca;">${summary.total}</div>
+                        <div class="lbl">إجمالي</div>
+                    </div>
+                    <div class="ctr-panel-summary-item" style="background:#fff;border:1px solid #c7d2fe;">
+                        <div class="val" style="color:#15803d;">${summary.active}</div>
+                        <div class="lbl">نشط</div>
+                    </div>
+                    <div class="ctr-panel-summary-item" style="background:#fff;border:1px solid #c7d2fe;">
+                        <div class="val" style="color:#dc2626;">${summary.inactive}</div>
+                        <div class="lbl">غير نشط</div>
+                    </div>
+                    <div class="ctr-panel-summary-item" style="background:#fff;border:1px solid #c7d2fe;">
+                        <div class="val" style="color:#b45309;">${summary.withEvaluations}</div>
+                        <div class="lbl">لديهم تقييم</div>
+                    </div>
+                    <div class="ctr-panel-summary-item" style="background:#fff;border:1px solid #c7d2fe;">
+                        <div class="val" style="color:#b91c1c;">${summary.withViolations}</div>
+                        <div class="lbl">لديهم مخالفات</div>
                     </div>
                 </div>
-            </div>
-        `;
+                <div class="ctr-data-table-wrap">
+                    <table class="ctr-data-table" style="min-width:960px;">
+                        <thead>
+                            <tr style="background:#eef2ff;">
+                                <th style="text-align:center;color:#3730a3;border-color:#c7d2fe;width:44px;">#</th>
+                                <th style="text-align:right;color:#3730a3;border-color:#c7d2fe;">اسم المقاول</th>
+                                <th style="text-align:center;color:#3730a3;border-color:#c7d2fe;">نوع الخدمة</th>
+                                <th style="text-align:center;color:#3730a3;border-color:#c7d2fe;">حالة العقد</th>
+                                <th style="text-align:center;color:#3730a3;border-color:#c7d2fe;">التقييمات</th>
+                                <th style="text-align:center;color:#3730a3;border-color:#c7d2fe;">متوسط التقييم</th>
+                                <th style="text-align:center;color:#3730a3;border-color:#c7d2fe;">المخالفات</th>
+                                <th style="text-align:center;color:#3730a3;border-color:#c7d2fe;">عالية</th>
+                                <th style="text-align:center;color:#3730a3;border-color:#c7d2fe;">معدل الحل</th>
+                                <th style="text-align:center;color:#3730a3;border-color:#c7d2fe;">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                </div>
+            </div>`;
     },
 
     async viewContractorAnalytics(contractorId, contractorName = '') {
