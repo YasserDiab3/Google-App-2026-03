@@ -1574,6 +1574,19 @@ function migrateEvaluationRequestsFromApprovalSheet_(spreadsheetId) {
     }
 }
 
+function ensureContractorEvaluationApprovalRequestsSheet_(spreadsheetId) {
+    try {
+        var sheetName = 'ContractorEvaluationApprovalRequests';
+        var sid = spreadsheetId || getSpreadsheetId();
+        var ss = SpreadsheetApp.openById(sid);
+        createSheetWithHeaders(ss, sheetName, { id: '', status: 'pending', evaluationData: '{}' });
+        return { success: true, sheetName: sheetName, spreadsheetId: sid };
+    } catch (error) {
+        Logger.log('ensureContractorEvaluationApprovalRequestsSheet_ error: ' + error.toString());
+        return { success: false, message: error.toString() };
+    }
+}
+
 function addContractorEvaluationApprovalRequest(requestData, spreadsheetIdOverride) {
     try {
         if (!requestData) {
@@ -1581,6 +1594,7 @@ function addContractorEvaluationApprovalRequest(requestData, spreadsheetIdOverri
         }
         var sheetName = 'ContractorEvaluationApprovalRequests';
         var spreadsheetId = spreadsheetIdOverride || resolveContractorSpreadsheetId_(requestData, null);
+        ensureContractorEvaluationApprovalRequestsSheet_(spreadsheetId);
         var hasValidId = requestData.id &&
             typeof requestData.id === 'string' &&
             (requestData.id.startsWith('CEAR_') || requestData.id.startsWith('CAR_')) &&
@@ -1595,6 +1609,13 @@ function addContractorEvaluationApprovalRequest(requestData, spreadsheetIdOverri
         }
         if (!requestData.evaluationData) {
             return { success: false, message: 'بيانات التقييم مطلوبة' };
+        }
+        if (requestData.evaluationData && typeof requestData.evaluationData === 'object') {
+            try {
+                requestData.evaluationData = JSON.stringify(requestData.evaluationData);
+            } catch (stringifyErr) {
+                return { success: false, message: 'تعذر تجهيز بيانات التقييم للحفظ' };
+            }
         }
         invalidateHseSheetCaches(sheetName);
         var appendResult = appendToSheet(sheetName, requestData, spreadsheetId);
@@ -1633,6 +1654,7 @@ function getAllContractorEvaluationApprovalRequests(filters, spreadsheetIdOverri
         filters = filters || {};
         var sheetName = 'ContractorEvaluationApprovalRequests';
         var finalSpreadsheetId = spreadsheetIdOverride || resolveContractorSpreadsheetId_(filters, null);
+        ensureContractorEvaluationApprovalRequestsSheet_(finalSpreadsheetId);
         migrateEvaluationRequestsFromApprovalSheet_(finalSpreadsheetId);
         invalidateHseSheetCaches(sheetName);
         var data = (readFromSheet(sheetName, finalSpreadsheetId) || []).map(normalizeContractorEvaluationApprovalRecord_);

@@ -9610,16 +9610,20 @@ window.UI = {
                             message,
                             time: request.createdAt || new Date(),
                             icon: 'fa-clipboard-check',
-                            onClick: () => {
+                            onClick: async () => {
                                 if (typeof Contractors !== 'undefined') {
                                     const contractorsLink = document.querySelector('a[data-section="contractors"]');
                                     if (contractorsLink) contractorsLink.click();
+                                    const snapshotId = request.id;
+                                    try {
+                                        if (typeof Contractors.fetchEvaluationApprovalRequestsFromBackend === 'function') {
+                                            await Contractors.fetchEvaluationApprovalRequestsFromBackend();
+                                        }
+                                    } catch (_fetchErr) { /* ignore */ }
                                     setTimeout(() => {
                                         if (Contractors.switchTab) Contractors.switchTab('evaluations');
                                         if (Contractors.viewApprovalRequest) {
-                                            setTimeout(() => {
-                                                Contractors.viewApprovalRequest(request.id, 'evaluation_approval');
-                                            }, 500);
+                                            Contractors.viewApprovalRequest(snapshotId, 'evaluation_approval');
                                         }
                                     }, 300);
                                 }

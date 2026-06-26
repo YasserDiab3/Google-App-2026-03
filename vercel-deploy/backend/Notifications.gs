@@ -306,6 +306,9 @@ function getUserNotifications(userId) {
             if (typeof migrateEvaluationRequestsFromApprovalSheet_ === 'function') {
                 migrateEvaluationRequestsFromApprovalSheet_(getSpreadsheetId());
             }
+            if (typeof ensureContractorEvaluationApprovalRequestsSheet_ === 'function') {
+                ensureContractorEvaluationApprovalRequestsSheet_(getSpreadsheetId());
+            }
             const evaluationApprovalRequests = readFromSheet('ContractorEvaluationApprovalRequests', getSpreadsheetId());
             if (evaluationApprovalRequests && evaluationApprovalRequests.length > 0) {
                 let isAdminEval = false;

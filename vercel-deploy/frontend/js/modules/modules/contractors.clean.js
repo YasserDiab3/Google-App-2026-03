@@ -8216,7 +8216,24 @@ const Contractors = {
 
     findEvaluationApprovalRequest(requestId) {
         this.ensureEvaluationApprovalRequestsSetup();
-        return (AppState.appData.contractorEvaluationApprovalRequests || []).find((r) => r && r.id === requestId) || null;
+        const rid = String(requestId || '').trim();
+        if (!rid) return null;
+        return (AppState.appData.contractorEvaluationApprovalRequests || []).find(
+            (r) => r && String(r.id || '').trim() === rid
+        ) || null;
+    },
+
+    mergeEvaluationApprovalRequestsWithLocalOnly(serverRows, localRows) {
+        const server = Array.isArray(serverRows) ? serverRows : [];
+        const local = Array.isArray(localRows) ? localRows : [];
+        const serverIds = new Set(server.map((r) => r && String(r.id || '').trim()).filter(Boolean));
+        const localOnly = local.filter((r) => {
+            if (!r) return false;
+            const id = String(r.id || '').trim();
+            if (!id) return false;
+            return !serverIds.has(id);
+        });
+        return [...server, ...localOnly];
     },
 
     async fetchEvaluationApprovalRequestsFromBackend() {
@@ -8231,17 +8248,15 @@ const Contractors = {
                 data: { forceRefresh: true, skipCache: true }
             });
             if (res?.success && Array.isArray(res.data)) {
-                const serverIds = new Set(res.data.map((r) => r && r.id).filter(Boolean));
-                const localOnly = local.filter((r) => {
-                    if (!r) return false;
-                    const id = String(r.id || '');
-                    return (id.startsWith('TEMP_') || r._isPendingSync) && !serverIds.has(id);
-                });
-                AppState.appData.contractorEvaluationApprovalRequests = [...res.data, ...localOnly];
+                AppState.appData.contractorEvaluationApprovalRequests =
+                    this.mergeEvaluationApprovalRequestsWithLocalOnly(res.data, local);
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                     window.DataManager.save();
                 }
                 return true;
+            }
+            if (local.length > 0 && typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ جلب طلبات اعتماد التقييم من الخادم فشل أو فارغ — الاحتفاظ بـ ' + local.length + ' طلب محلي');
             }
         } catch (err) {
             if (typeof Utils !== 'undefined' && Utils.safeWarn) {
@@ -8249,6 +8264,23 @@ const Contractors = {
             }
         }
         return false;
+    },
+
+    prefetchApprovalRequestsForNotifications() {
+        const tasks = [];
+        if (typeof this.fetchEvaluationApprovalRequestsFromBackend === 'function') {
+            tasks.push(this.fetchEvaluationApprovalRequestsFromBackend());
+        }
+        if (typeof this.fetchContractorApprovalRequestsFromBackend === 'function') {
+            tasks.push(this.fetchContractorApprovalRequestsFromBackend());
+        }
+        if (!tasks.length) return Promise.resolve(false);
+        return Promise.allSettled(tasks).then(() => {
+            if (typeof AppUI !== 'undefined' && typeof AppUI.updateNotificationsBadge === 'function') {
+                AppUI.updateNotificationsBadge();
+            }
+            return true;
+        });
     },
 
     getMyEvaluationApprovalRequests() {
@@ -9345,6 +9377,9 @@ const Contractors = {
             delete payload._syncError;
             delete payload._syncErrorMessage;
             payload.requestType = 'evaluation';
+            if (payload.evaluationData && typeof payload.evaluationData === 'object') {
+                payload.evaluationData = JSON.stringify(payload.evaluationData);
+            }
 
             const backendResult = await GoogleIntegration.sendRequest({
                 action: 'addContractorEvaluationApprovalRequest',
@@ -9540,18 +9575,27 @@ const Contractors = {
     /**
      * عرض تفاصيل طلب الاعتماد أو الحذف
      */
-    viewApprovalRequest(requestId, requestCategory = 'approval') {
+    async viewApprovalRequest(requestId, requestCategory = 'approval') {
         this.ensureApprovalRequestsSetup();
         this.ensureDeletionRequestsSetup();
         this.ensureEvaluationApprovalRequestsSetup();
 
+        const rid = String(requestId || '').trim();
         let request;
         if (requestCategory === 'deletion') {
-            request = (AppState.appData.contractorDeletionRequests || []).find(r => r.id === requestId);
+            request = (AppState.appData.contractorDeletionRequests || []).find(
+                (r) => r && String(r.id || '').trim() === rid
+            );
         } else if (requestCategory === 'evaluation_approval') {
-            request = this.findEvaluationApprovalRequest(requestId);
+            request = this.findEvaluationApprovalRequest(rid);
+            if (!request) {
+                await this.fetchEvaluationApprovalRequestsFromBackend();
+                request = this.findEvaluationApprovalRequest(rid);
+            }
         } else {
-            request = (AppState.appData.contractorApprovalRequests || []).find(r => r.id === requestId);
+            request = (AppState.appData.contractorApprovalRequests || []).find(
+                (r) => r && String(r.id || '').trim() === rid
+            );
         }
 
         if (!request) {

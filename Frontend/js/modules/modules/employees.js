@@ -24,6 +24,9 @@ const Employees = {
     _externalWorkforceLoaded: false,
     _externalWorkforceLoadPromise: null,
     _externalWorkforceCache: new Map(),
+    _empAnalyticsCharts: {},
+    _empAnalyticsDetailTab: 'department',
+    _empAnalyticsEventsBound: false,
     _getI18nCore() {
         return (window.AppI18n && typeof window.AppI18n.t === 'function')
             ? window.AppI18n
@@ -177,6 +180,17 @@ const Employees = {
         const detailed = this.getEmployeesDetailedPermissionsState();
         if (!detailed) return true;
         return detailed['external-workforce'] === true;
+    },
+
+    canViewEmployeesAnalysisTab() {
+        if (this.canAddOrImport()) return true;
+        if (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function' && !Permissions.hasAccess('employees')) {
+            return false;
+        }
+
+        const detailed = this.getEmployeesDetailedPermissionsState();
+        if (!detailed) return true;
+        return detailed['data-analysis'] !== false;
     },
 
     canManageExternalWorkforceTab() {
@@ -1834,8 +1848,1031 @@ const Employees = {
         }));
     },
 
+    // ═══════════════════════════════════════════════════════════════════
+    // تحليل بيانات الموظفين — لوحة تفاعلية (أقسام / وظائف / رسوم)
+    // ═══════════════════════════════════════════════════════════════════
+
+    _empChartPalette() {
+        return ['#1d4ed8', '#3b82f6', '#6366f1', '#8b5cf6', '#0ea5e9', '#2563eb', '#4f46e5', '#7c3aed', '#0284c7', '#1e40af', '#4338ca', '#5b21b6'];
+    },
+
+    _empAnalyticsLabel(value) {
+        const s = String(value || '').trim();
+        return s || this.t('module.employees.analytics.unknown', 'غير محدد');
+    },
+
+    _empNormalizeGenderForAnalytics(genderValue) {
+        if (!genderValue) return 'unknown';
+        let normalized = String(genderValue).trim().replace(/\s+/g, ' ').replace(/[\u200B-\u200D\uFEFF]/g, '');
+        const lower = normalized.toLowerCase();
+        if (normalized === 'ذكر' || lower === 'male' || lower === 'm') return 'male';
+        if (normalized === 'أنثى' || lower === 'female' || lower === 'f') return 'female';
+        return 'unknown';
+    },
+
+    _empGetExperienceYears(emp) {
+        if (!emp?.hireDate) return null;
+        try {
+            const hireDate = this.parseLocalDate(emp.hireDate);
+            if (!hireDate) return null;
+            const today = new Date();
+            let years = today.getFullYear() - hireDate.getFullYear();
+            const monthDiff = today.getMonth() - hireDate.getMonth();
+            const dayDiff = today.getDate() - hireDate.getDate();
+            if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) years--;
+            return years >= 0 ? years : null;
+        } catch (e) {
+            return null;
+        }
+    },
+
+    async _empEnsureChartJs() {
+        if (typeof Chart !== 'undefined') return true;
+        const existing = document.querySelector('script[src*="chart.js"],script[src*="chartjs"]');
+        if (existing) {
+            return new Promise(resolve => {
+                let tries = 0;
+                const t = setInterval(() => {
+                    if (typeof Chart !== 'undefined') { clearInterval(t); resolve(true); }
+                    else if (++tries > 50) { clearInterval(t); resolve(false); }
+                }, 100);
+            });
+        }
+        return new Promise(resolve => {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+            s.onload = () => resolve(true);
+            s.onerror = () => {
+                const s2 = document.createElement('script');
+                s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
+                s2.onload = () => resolve(true);
+                s2.onerror = () => resolve(false);
+                document.head.appendChild(s2);
+            };
+            document.head.appendChild(s);
+        });
+    },
+
+    _empDestroyAnalyticsCharts() {
+        const charts = this._empAnalyticsCharts || {};
+        Object.keys(charts).forEach(key => {
+            try { charts[key]?.destroy?.(); } catch (e) { /* ignore */ }
+        });
+        this._empAnalyticsCharts = {};
+    },
+
+    _empGetAnalyticsFiltersFromDom() {
+        const get = (id) => {
+            const el = document.getElementById(id);
+            return el ? String(el.value || '').trim() : '';
+        };
+        return {
+            department: get('emp-af-department'),
+            job: get('emp-af-job'),
+            branch: get('emp-af-branch'),
+            location: get('emp-af-location'),
+            position: get('emp-af-position'),
+            gender: get('emp-af-gender'),
+            status: get('emp-af-status')
+        };
+    },
+
+    _empFilterIdMap() {
+        return {
+            department: 'emp-af-department',
+            job: 'emp-af-job',
+            branch: 'emp-af-branch',
+            location: 'emp-af-location',
+            position: 'emp-af-position',
+            gender: 'emp-af-gender',
+            status: 'emp-af-status'
+        };
+    },
+
+    _empApplyAnalyticsFilter(key, value, options = {}) {
+        const map = this._empFilterIdMap();
+        const elId = map[key];
+        if (elId) {
+            const el = document.getElementById(elId);
+            if (el) el.value = value || '';
+        }
+        this._empUpdateAnalyticsFilterBadge();
+        if (!options.skipUpdate) this.updateEmployeesAnalyticsDashboard();
+    },
+
+    _empClearAnalyticsFilters() {
+        Object.values(this._empFilterIdMap()).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        this._empUpdateAnalyticsFilterBadge();
+        this.updateEmployeesAnalyticsDashboard();
+    },
+
+    _empUpdateAnalyticsFilterBadge() {
+        const filters = this._empGetAnalyticsFiltersFromDom();
+        const active = Object.values(filters).filter(Boolean).length;
+        const badge = document.getElementById('emp-filter-active-badge');
+        if (badge) {
+            badge.style.display = active > 0 ? 'inline' : 'none';
+            badge.textContent = active > 0 ? String(active) : '';
+        }
+        const countEl = document.getElementById('emp-filter-results-count');
+        if (countEl && countEl.dataset.baseCount) {
+            countEl.textContent = countEl.dataset.baseCount;
+        }
+    },
+
+    _empFilterEmployeesForAnalytics(employees, filters) {
+        const list = Array.isArray(employees) ? employees : [];
+        return list.filter(emp => {
+            if (!emp) return false;
+            if (filters.status === 'active' && this.isEmployeeInactive(emp)) return false;
+            if (filters.status === 'inactive' && !this.isEmployeeInactive(emp)) return false;
+            if (filters.department && this._empAnalyticsLabel(emp.department) !== filters.department) return false;
+            if (filters.job && this._empAnalyticsLabel(emp.job) !== filters.job) return false;
+            if (filters.branch && this._empAnalyticsLabel(emp.branch) !== filters.branch) return false;
+            if (filters.location && this._empAnalyticsLabel(emp.location) !== filters.location) return false;
+            if (filters.position && this._empAnalyticsLabel(emp.position) !== filters.position) return false;
+            if (filters.gender) {
+                const g = this._empNormalizeGenderForAnalytics(emp.gender);
+                if (filters.gender === 'male' && g !== 'male') return false;
+                if (filters.gender === 'female' && g !== 'female') return false;
+            }
+            return true;
+        });
+    },
+
+    _empAggregateGroupStats(employees, fieldKey) {
+        const buckets = {};
+        (employees || []).forEach(emp => {
+            const label = this._empAnalyticsLabel(emp[fieldKey]);
+            if (!buckets[label]) {
+                buckets[label] = { label, count: 0, male: 0, female: 0, ageSum: 0, ageCount: 0, expSum: 0, expCount: 0 };
+            }
+            const b = buckets[label];
+            b.count++;
+            const g = this._empNormalizeGenderForAnalytics(emp.gender);
+            if (g === 'male') b.male++;
+            else if (g === 'female') b.female++;
+            const age = Number(this.calculateAge(emp.birthDate));
+            if (age > 0) { b.ageSum += age; b.ageCount++; }
+            const exp = this._empGetExperienceYears(emp);
+            if (exp !== null) { b.expSum += exp; b.expCount++; }
+        });
+        const total = (employees || []).length || 1;
+        return Object.values(buckets)
+            .map(b => ({
+                ...b,
+                percent: Math.round((b.count / total) * 100),
+                avgAge: b.ageCount > 0 ? Math.round(b.ageSum / b.ageCount) : 0,
+                avgExperience: b.expCount > 0 ? (b.expSum / b.expCount).toFixed(1) : 0
+            }))
+            .sort((a, b) => b.count - a.count);
+    },
+
+    buildEmployeeAnalyticsDataset(employees, filters = {}) {
+        const filtered = this._empFilterEmployeesForAnalytics(employees, filters);
+        const activeList = filtered.filter(e => !this.isEmployeeInactive(e));
+        const inactiveList = filtered.filter(e => this.isEmployeeInactive(e));
+        const total = filtered.length;
+        const activeCount = activeList.length;
+        const inactiveCount = inactiveList.length;
+
+        const byDepartment = this._empAggregateGroupStats(filtered, 'department');
+        const byJob = this._empAggregateGroupStats(filtered, 'job');
+        const byBranch = this._empAggregateGroupStats(filtered, 'branch');
+        const byLocation = this._empAggregateGroupStats(filtered, 'location');
+        const byPosition = this._empAggregateGroupStats(filtered, 'position');
+
+        const departmentJobMatrix = {};
+        filtered.forEach(emp => {
+            const dept = this._empAnalyticsLabel(emp.department);
+            const job = this._empAnalyticsLabel(emp.job);
+            const key = dept + '|||' + job;
+            departmentJobMatrix[key] = (departmentJobMatrix[key] || 0) + 1;
+        });
+
+        const ageBuckets = { '18-25': 0, '26-35': 0, '36-45': 0, '46-55': 0, '55+': 0, unknown: 0 };
+        const tenureBuckets = { '0-2': 0, '3-5': 0, '6-10': 0, '11-15': 0, '15+': 0, unknown: 0 };
+        const hireByYear = {};
+        let ageSum = 0, ageCount = 0, expSum = 0, expCount = 0;
+        let male = 0, female = 0;
+        const completenessFields = ['employeeNumber', 'name', 'department', 'job', 'nationalId', 'birthDate', 'hireDate', 'gender', 'phone', 'email', 'branch', 'location', 'position'];
+        const completeness = completenessFields.map(field => ({ field, filled: 0, missing: 0 }));
+
+        filtered.forEach(emp => {
+            const g = this._empNormalizeGenderForAnalytics(emp.gender);
+            if (g === 'male') male++;
+            else if (g === 'female') female++;
+
+            const age = Number(this.calculateAge(emp.birthDate));
+            if (age > 0) {
+                ageSum += age; ageCount++;
+                if (age <= 25) ageBuckets['18-25']++;
+                else if (age <= 35) ageBuckets['26-35']++;
+                else if (age <= 45) ageBuckets['36-45']++;
+                else if (age <= 55) ageBuckets['46-55']++;
+                else ageBuckets['55+']++;
+            } else ageBuckets.unknown++;
+
+            const exp = this._empGetExperienceYears(emp);
+            if (exp !== null) {
+                expSum += exp; expCount++;
+                if (exp <= 2) tenureBuckets['0-2']++;
+                else if (exp <= 5) tenureBuckets['3-5']++;
+                else if (exp <= 10) tenureBuckets['6-10']++;
+                else if (exp <= 15) tenureBuckets['11-15']++;
+                else tenureBuckets['15+']++;
+            } else tenureBuckets.unknown++;
+
+            if (emp.hireDate) {
+                const hd = this.parseLocalDate(emp.hireDate);
+                if (hd) {
+                    const y = hd.getFullYear();
+                    hireByYear[y] = (hireByYear[y] || 0) + 1;
+                }
+            }
+
+            completeness.forEach(c => {
+                const val = emp[c.field];
+                if (val !== undefined && val !== null && String(val).trim() !== '') c.filled++;
+                else c.missing++;
+            });
+        });
+
+        const hireYears = Object.keys(hireByYear).map(Number).sort((a, b) => a - b);
+        const totalFieldSlots = total * completenessFields.length;
+        const filledSlots = completeness.reduce((s, c) => s + c.filled, 0);
+        const dataCompletenessPct = totalFieldSlots > 0 ? Math.round((filledSlots / totalFieldSlots) * 100) : 0;
+
+        const genderByDept = byDepartment.slice(0, 8).map(d => ({ label: d.label, male: d.male, female: d.female }));
+
+        return {
+            filtered,
+            total,
+            activeCount,
+            inactiveCount,
+            uniqueDepartments: byDepartment.filter(d => d.label !== this.t('module.employees.analytics.unknown', 'غير محدد')).length,
+            uniqueJobs: byJob.filter(j => j.label !== this.t('module.employees.analytics.unknown', 'غير محدد')).length,
+            averageAge: ageCount > 0 ? Math.round(ageSum / ageCount) : 0,
+            averageExperience: expCount > 0 ? (expSum / expCount).toFixed(1) : 0,
+            male,
+            female,
+            dataCompletenessPct,
+            byDepartment,
+            byJob,
+            byBranch,
+            byLocation,
+            byPosition,
+            departmentJobMatrix,
+            ageBuckets,
+            tenureBuckets,
+            hireByYear,
+            hireYears,
+            genderByDept,
+            completeness: completeness.map(c => ({
+                ...c,
+                percent: total > 0 ? Math.round((c.filled / total) * 100) : 0
+            }))
+        };
+    },
+
+    _empChartBaseOptions() {
+        return {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 600, easing: 'easeOutQuart' },
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { family: 'inherit', size: 11 }, padding: 12 } },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => {
+                            const val = ctx.parsed?.y ?? ctx.parsed ?? ctx.raw ?? 0;
+                            const total = ctx.dataset?.data?.reduce((a, b) => a + b, 0) || 1;
+                            const pct = Math.round((val / total) * 100);
+                            return `${ctx.label}: ${val} (${pct}%) — ${this.t('module.employees.analytics.clickToFilter', 'انقر للتصفية')}`;
+                        }
+                    }
+                }
+            }
+        };
+    },
+
+    _empCreateAnalyticsChart(canvasId, config) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || typeof Chart === 'undefined') return null;
+        if (this._empAnalyticsCharts[canvasId]) {
+            try { this._empAnalyticsCharts[canvasId].destroy(); } catch (e) { /* ignore */ }
+        }
+        const chart = new Chart(canvas, config);
+        this._empAnalyticsCharts[canvasId] = chart;
+        return chart;
+    },
+
+    _empMakeBarGradient(ctx, chartArea, colorStart, colorEnd) {
+        if (!chartArea) return colorStart;
+        const g = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+        g.addColorStop(0, colorStart);
+        g.addColorStop(1, colorEnd);
+        return g;
+    },
+
+    _empRenderAnalyticsKpiStrip(dataset) {
+        const strip = document.getElementById('emp-analytics-kpi-strip');
+        if (!strip) return;
+        const kpis = [
+            { label: this.t('module.employees.analytics.kpi.active', 'النشطون'), value: dataset.activeCount, color: '#16a34a', icon: 'fa-user-check' },
+            { label: this.t('module.employees.analytics.kpi.inactive', 'المستقيلون'), value: dataset.inactiveCount, color: '#dc2626', icon: 'fa-user-slash' },
+            { label: this.t('module.employees.analytics.kpi.total', 'الإجمالي'), value: dataset.total, color: '#1d4ed8', icon: 'fa-users' },
+            { label: this.t('module.employees.analytics.kpi.departments', 'الأقسام'), value: dataset.uniqueDepartments, color: '#7c3aed', icon: 'fa-building' },
+            { label: this.t('module.employees.analytics.kpi.jobs', 'الوظائف'), value: dataset.uniqueJobs, color: '#0ea5e9', icon: 'fa-briefcase' },
+            { label: this.t('module.employees.analytics.kpi.avgAge', 'متوسط العمر'), value: dataset.averageAge || this.t('module.common.notAvailable', 'غير متاح'), color: '#ea580c', icon: 'fa-birthday-cake' },
+            { label: this.t('module.employees.analytics.kpi.avgExperience', 'متوسط الخبرة'), value: dataset.averageExperience || this.t('module.common.notAvailable', 'غير متاح'), color: '#0891b2', icon: 'fa-clock' },
+            { label: this.t('module.employees.analytics.kpi.dataCompleteness', 'اكتمال البيانات'), value: dataset.dataCompletenessPct + '%', color: '#059669', icon: 'fa-database' }
+        ];
+        strip.innerHTML = kpis.map(k => `
+            <div class="emp-analytics-kpi" style="--kpi-color:${k.color};">
+                <div class="emp-analytics-kpi__icon"><i class="fas ${k.icon}"></i></div>
+                <div class="emp-analytics-kpi__value">${typeof k.value === 'number' ? k.value.toLocaleString('en-US') : k.value}</div>
+                <div class="emp-analytics-kpi__label">${k.label}</div>
+            </div>
+        `).join('');
+    },
+
+    _empRenderAnalyticsBreadcrumb(filters) {
+        const el = document.getElementById('emp-analytics-breadcrumb');
+        if (!el) return;
+        const parts = [this.t('module.employees.analytics.all', 'الكل')];
+        if (filters.department) parts.push(filters.department);
+        if (filters.job) parts.push(filters.job);
+        el.innerHTML = parts.map((p, i) => {
+            const isLast = i === parts.length - 1;
+            return `<span class="emp-analytics-crumb${isLast ? ' emp-analytics-crumb--active' : ''}">${Utils.escapeHTML(p)}</span>${isLast ? '' : '<span class="emp-analytics-crumb-sep">›</span>'}`;
+        }).join('');
+    },
+
+    _empPopulateAnalyticsFilterOptions(employees) {
+        const list = Array.isArray(employees) ? employees : [];
+        const uniq = (field) => [...new Set(list.map(e => this._empAnalyticsLabel(e[field])).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ar'));
+        const fill = (id, values, current) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const cur = current || el.value;
+            el.innerHTML = `<option value="">${this.t('module.employees.analytics.all', 'الكل')}</option>` +
+                values.map(v => `<option value="${Utils.escapeHTML(v)}"${v === cur ? ' selected' : ''}>${Utils.escapeHTML(v)}</option>`).join('');
+        };
+        const filters = this._empGetAnalyticsFiltersFromDom();
+        fill('emp-af-department', uniq('department'), filters.department);
+        fill('emp-af-job', uniq('job'), filters.job);
+        fill('emp-af-branch', uniq('branch'), filters.branch);
+        fill('emp-af-location', uniq('location'), filters.location);
+        fill('emp-af-position', uniq('position'), filters.position);
+    },
+
+    _empRenderAnalyticsHeatmap(dataset) {
+        const container = document.getElementById('emp-analytics-heatmap');
+        if (!container) return;
+        const matrix = dataset.departmentJobMatrix || {};
+        const entries = Object.entries(matrix).map(([key, count]) => {
+            const [dept, job] = key.split('|||');
+            return { dept, job, count };
+        }).sort((a, b) => b.count - a.count);
+        if (!entries.length) {
+            container.innerHTML = `<div class="emp-analytics-empty">${this.t('module.employees.analytics.noData', 'لا توجد بيانات')}</div>`;
+            return;
+        }
+        const topDepts = [...new Set(entries.slice(0, 12).map(e => e.dept))];
+        const topJobs = [...new Set(entries.slice(0, 12).map(e => e.job))];
+        const maxCount = Math.max(...entries.map(e => e.count), 1);
+        const lookup = {};
+        entries.forEach(e => { lookup[e.dept + '|||' + e.job] = e.count; });
+
+        let html = '<table class="emp-analytics-heatmap-table"><thead><tr><th></th>';
+        topJobs.forEach(j => { html += `<th title="${Utils.escapeHTML(j)}">${Utils.escapeHTML(j.length > 14 ? j.slice(0, 14) + '…' : j)}</th>`; });
+        html += '</tr></thead><tbody>';
+        topDepts.forEach(dept => {
+            html += `<tr><th title="${Utils.escapeHTML(dept)}">${Utils.escapeHTML(dept.length > 16 ? dept.slice(0, 16) + '…' : dept)}</th>`;
+            topJobs.forEach(job => {
+                const count = lookup[dept + '|||' + job] || 0;
+                const intensity = count > 0 ? 0.15 + (count / maxCount) * 0.85 : 0;
+                const bg = count > 0 ? `rgba(29, 78, 216, ${intensity})` : '#f8fafc';
+                const color = intensity > 0.5 ? '#fff' : '#334155';
+                html += `<td class="emp-analytics-heatmap-cell" data-dept="${Utils.escapeHTML(dept)}" data-job="${Utils.escapeHTML(job)}" style="background:${bg};color:${color};" title="${Utils.escapeHTML(dept)} / ${Utils.escapeHTML(job)}: ${count}">${count || ''}</td>`;
+            });
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+
+        container.querySelectorAll('.emp-analytics-heatmap-cell').forEach(cell => {
+            cell.addEventListener('click', () => {
+                const dept = cell.getAttribute('data-dept') || '';
+                const job = cell.getAttribute('data-job') || '';
+                if (!dept && !job) return;
+                this._empApplyAnalyticsFilter('department', dept, { skipUpdate: true });
+                this._empApplyAnalyticsFilter('job', job);
+            });
+        });
+    },
+
+    _empRenderAnalyticsDetailTable(dataset) {
+        const container = document.getElementById('emp-analytics-detail-table');
+        if (!container) return;
+        const tab = this._empAnalyticsDetailTab || 'department';
+        const rows = tab === 'job' ? dataset.byJob : dataset.byDepartment;
+        const colLabel = tab === 'job'
+            ? this.t('module.employees.job', 'الوظيفة')
+            : this.t('module.employees.department', 'القسم');
+        const filterKey = tab === 'job' ? 'job' : 'department';
+
+        if (!rows.length) {
+            container.innerHTML = `<div class="emp-analytics-empty">${this.t('module.employees.analytics.noData', 'لا توجد بيانات')}</div>`;
+            return;
+        }
+
+        const filters = this._empGetAnalyticsFiltersFromDom();
+        const selectedVal = filters[filterKey];
+
+        container.innerHTML = `
+            <table class="emp-analytics-detail-table">
+                <thead>
+                    <tr>
+                        <th>${colLabel}</th>
+                        <th>${this.t('module.employees.analytics.table.count', 'العدد')}</th>
+                        <th>${this.t('module.employees.analytics.table.percent', 'النسبة')}</th>
+                        <th>${this.t('module.employees.analytics.table.male', 'ذكر')}</th>
+                        <th>${this.t('module.employees.analytics.table.female', 'أنثى')}</th>
+                        <th>${this.t('module.employees.analytics.table.avgAge', 'متوسط العمر')}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows.map(r => `
+                        <tr class="emp-analytics-detail-row${selectedVal === r.label ? ' emp-analytics-detail-row--selected' : ''}" data-filter-key="${filterKey}" data-filter-value="${Utils.escapeHTML(r.label)}">
+                            <td>${Utils.escapeHTML(r.label)}</td>
+                            <td>${r.count}</td>
+                            <td>${r.percent}%</td>
+                            <td>${r.male}</td>
+                            <td>${r.female}</td>
+                            <td>${r.avgAge || '—'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+
+        container.querySelectorAll('.emp-analytics-detail-row').forEach(row => {
+            row.addEventListener('click', () => {
+                const key = row.getAttribute('data-filter-key');
+                const val = row.getAttribute('data-filter-value');
+                if (key) this._empApplyAnalyticsFilter(key, val);
+            });
+        });
+    },
+
+    _empRenderCompletenessTable(dataset) {
+        const container = document.getElementById('emp-analytics-completeness-table');
+        if (!container) return;
+        const fieldLabels = {
+            employeeNumber: this.t('module.employees.employeeNumber', 'الرقم الوظيفي'),
+            name: this.t('module.employees.fullName', 'الاسم الكامل'),
+            department: this.t('module.employees.department', 'القسم'),
+            job: this.t('module.employees.job', 'الوظيفة'),
+            nationalId: this.t('module.employees.table.nationalId', 'رقم البطاقة'),
+            birthDate: this.t('module.employees.table.birthDate', 'تاريخ الميلاد'),
+            hireDate: this.t('module.employees.table.hireDate', 'تاريخ التعيين'),
+            gender: this.t('module.employees.gender', 'النوع'),
+            phone: this.t('module.employees.table.phone', 'الهاتف'),
+            email: this.t('module.employees.email', 'البريد الإلكتروني'),
+            branch: this.t('module.employees.branch', 'الفرع'),
+            location: this.t('module.employees.location', 'الموقع'),
+            position: this.t('module.employees.position', 'المنصب')
+        };
+        container.innerHTML = `
+            <table class="emp-analytics-detail-table">
+                <thead>
+                    <tr>
+                        <th>الحقل</th>
+                        <th>${this.t('module.employees.analytics.filled', 'مملوء')}</th>
+                        <th>${this.t('module.employees.analytics.missing', 'ناقص')}</th>
+                        <th>${this.t('module.employees.analytics.table.percent', 'النسبة')}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${(dataset.completeness || []).map(c => `
+                        <tr>
+                            <td>${Utils.escapeHTML(fieldLabels[c.field] || c.field)}</td>
+                            <td>${c.filled}</td>
+                            <td>${c.missing}</td>
+                            <td>
+                                <div class="emp-analytics-progress">
+                                    <div class="emp-analytics-progress__bar" style="width:${c.percent}%"></div>
+                                    <span>${c.percent}%</span>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    },
+
+    _empBindChartClick(canvasId, items, filterKey) {
+        const chart = this._empAnalyticsCharts[canvasId];
+        if (!chart || !items?.length) return;
+        chart.options.onClick = (_evt, elements) => {
+            if (!elements?.length) return;
+            const idx = elements[0].index;
+            const item = items[idx];
+            if (item?.label) this._empApplyAnalyticsFilter(filterKey, item.label);
+        };
+        chart.update('none');
+    },
+
+    _empRenderAnalyticsCharts(dataset) {
+        const palette = this._empChartPalette();
+        const noData = this.t('module.employees.analytics.noData', 'لا توجد بيانات');
+        const toggleEmpty = (canvasId, hasData) => {
+            const empty = document.getElementById(canvasId + '-empty');
+            const canvas = document.getElementById(canvasId);
+            if (empty) empty.style.display = hasData ? 'none' : 'flex';
+            if (canvas) canvas.style.display = hasData ? 'block' : 'none';
+        };
+
+        const topDept = dataset.byDepartment.slice(0, 12);
+        toggleEmpty('emp-chart-departments', topDept.length > 0);
+        if (topDept.length) {
+            this._empCreateAnalyticsChart('emp-chart-departments', {
+                type: 'bar',
+                data: {
+                    labels: topDept.map(d => d.label),
+                    datasets: [{
+                        data: topDept.map(d => d.count),
+                        backgroundColor: (ctx) => this._empMakeBarGradient(ctx.chart.ctx, ctx.chart.chartArea, '#1d4ed8', '#6366f1'),
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    ...this._empChartBaseOptions(),
+                    indexAxis: 'y',
+                    plugins: { ...this._empChartBaseOptions().plugins, legend: { display: false } },
+                    scales: { x: { beginAtZero: true, grid: { color: '#f1f5f9' } }, y: { grid: { display: false } } }
+                }
+            });
+            this._empBindChartClick('emp-chart-departments', topDept, 'department');
+        }
+
+        const topJobs = dataset.byJob.slice(0, 12);
+        toggleEmpty('emp-chart-jobs', topJobs.length > 0);
+        if (topJobs.length) {
+            this._empCreateAnalyticsChart('emp-chart-jobs', {
+                type: 'bar',
+                data: {
+                    labels: topJobs.map(j => j.label),
+                    datasets: [{
+                        data: topJobs.map(j => j.count),
+                        backgroundColor: palette.map((c, i) => palette[i % palette.length]),
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    ...this._empChartBaseOptions(),
+                    indexAxis: 'y',
+                    plugins: { ...this._empChartBaseOptions().plugins, legend: { display: false } },
+                    scales: { x: { beginAtZero: true }, y: { grid: { display: false } } }
+                }
+            });
+            this._empBindChartClick('emp-chart-jobs', topJobs, 'job');
+        }
+
+        const genderData = [dataset.male, dataset.female];
+        toggleEmpty('emp-chart-gender', genderData.some(v => v > 0));
+        if (genderData.some(v => v > 0)) {
+            this._empCreateAnalyticsChart('emp-chart-gender', {
+                type: 'doughnut',
+                data: {
+                    labels: [this.t('module.employees.genderMale', 'ذكر'), this.t('module.employees.genderFemale', 'أنثى')],
+                    datasets: [{ data: genderData, backgroundColor: ['#3b82f6', '#ec4899'], borderWidth: 0 }]
+                },
+                options: {
+                    ...this._empChartBaseOptions(),
+                    cutout: '65%',
+                    plugins: { ...this._empChartBaseOptions().plugins, legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        const statusData = [dataset.activeCount, dataset.inactiveCount];
+        toggleEmpty('emp-chart-status', dataset.total > 0);
+        if (dataset.total > 0) {
+            this._empCreateAnalyticsChart('emp-chart-status', {
+                type: 'doughnut',
+                data: {
+                    labels: [this.t('module.employees.analytics.active', 'نشط'), this.t('module.employees.analytics.inactive', 'غير نشط')],
+                    datasets: [{ data: statusData, backgroundColor: ['#16a34a', '#ef4444'], borderWidth: 0 }]
+                },
+                options: { ...this._empChartBaseOptions(), cutout: '65%' }
+            });
+        }
+
+        const renderSimpleBar = (canvasId, rows, filterKey) => {
+            const top = rows.slice(0, 10);
+            toggleEmpty(canvasId, top.length > 0);
+            if (!top.length) return;
+            this._empCreateAnalyticsChart(canvasId, {
+                type: 'bar',
+                data: {
+                    labels: top.map(r => r.label),
+                    datasets: [{ data: top.map(r => r.count), backgroundColor: palette, borderRadius: 6 }]
+                },
+                options: {
+                    ...this._empChartBaseOptions(),
+                    plugins: { ...this._empChartBaseOptions().plugins, legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+            if (filterKey) this._empBindChartClick(canvasId, top, filterKey);
+        };
+
+        renderSimpleBar('emp-chart-branches', dataset.byBranch, 'branch');
+        renderSimpleBar('emp-chart-locations', dataset.byLocation, 'location');
+        renderSimpleBar('emp-chart-positions', dataset.byPosition, 'position');
+
+        const ageLabels = Object.keys(dataset.ageBuckets);
+        const ageValues = ageLabels.map(k => dataset.ageBuckets[k]);
+        toggleEmpty('emp-chart-age', ageValues.some(v => v > 0));
+        if (ageValues.some(v => v > 0)) {
+            this._empCreateAnalyticsChart('emp-chart-age', {
+                type: 'bar',
+                data: { labels: ageLabels, datasets: [{ data: ageValues, backgroundColor: '#6366f1', borderRadius: 8 }] },
+                options: { ...this._empChartBaseOptions(), plugins: { ...this._empChartBaseOptions().plugins, legend: { display: false } } }
+            });
+        }
+
+        const tenureLabels = Object.keys(dataset.tenureBuckets);
+        const tenureValues = tenureLabels.map(k => dataset.tenureBuckets[k]);
+        toggleEmpty('emp-chart-tenure', tenureValues.some(v => v > 0));
+        if (tenureValues.some(v => v > 0)) {
+            this._empCreateAnalyticsChart('emp-chart-tenure', {
+                type: 'bar',
+                data: { labels: tenureLabels, datasets: [{ data: tenureValues, backgroundColor: '#0ea5e9', borderRadius: 8 }] },
+                options: { ...this._empChartBaseOptions(), plugins: { ...this._empChartBaseOptions().plugins, legend: { display: false } } }
+            });
+        }
+
+        const years = dataset.hireYears || [];
+        const hireValues = years.map(y => dataset.hireByYear[y] || 0);
+        toggleEmpty('emp-chart-hire', years.length > 0);
+        if (years.length) {
+            this._empCreateAnalyticsChart('emp-chart-hire', {
+                type: 'line',
+                data: {
+                    labels: years.map(String),
+                    datasets: [{
+                        data: hireValues,
+                        borderColor: '#1d4ed8',
+                        backgroundColor: 'rgba(29,78,216,0.12)',
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#1d4ed8'
+                    }]
+                },
+                options: {
+                    ...this._empChartBaseOptions(),
+                    plugins: { ...this._empChartBaseOptions().plugins, legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        const gbd = dataset.genderByDept || [];
+        toggleEmpty('emp-chart-gender-dept', gbd.length > 0);
+        if (gbd.length) {
+            this._empCreateAnalyticsChart('emp-chart-gender-dept', {
+                type: 'bar',
+                data: {
+                    labels: gbd.map(d => d.label),
+                    datasets: [
+                        { label: this.t('module.employees.genderMale', 'ذكر'), data: gbd.map(d => d.male), backgroundColor: '#3b82f6', borderRadius: 4 },
+                        { label: this.t('module.employees.genderFemale', 'أنثى'), data: gbd.map(d => d.female), backgroundColor: '#ec4899', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    ...this._empChartBaseOptions(),
+                    scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+                }
+            });
+            this._empBindChartClick('emp-chart-gender-dept', gbd, 'department');
+        }
+    },
+
+    renderEmployeesAnalysisShellHTML() {
+        const filterFields = [
+            { id: 'emp-af-department', icon: 'fa-building', label: this.t('module.employees.department', 'القسم') },
+            { id: 'emp-af-job', icon: 'fa-briefcase', label: this.t('module.employees.job', 'الوظيفة') },
+            { id: 'emp-af-branch', icon: 'fa-sitemap', label: this.t('module.employees.branch', 'الفرع') },
+            { id: 'emp-af-location', icon: 'fa-map-marker-alt', label: this.t('module.employees.location', 'الموقع') },
+            { id: 'emp-af-position', icon: 'fa-user-tie', label: this.t('module.employees.position', 'المنصب') },
+            { id: 'emp-af-gender', icon: 'fa-venus-mars', label: this.t('module.employees.gender', 'النوع'), options: [
+                { value: '', label: this.t('module.employees.analytics.all', 'الكل') },
+                { value: 'male', label: this.t('module.employees.genderMale', 'ذكر') },
+                { value: 'female', label: this.t('module.employees.genderFemale', 'أنثى') }
+            ]},
+            { id: 'emp-af-status', icon: 'fa-toggle-on', label: 'الحالة', options: [
+                { value: '', label: this.t('module.employees.analytics.all', 'الكل') },
+                { value: 'active', label: this.t('module.employees.analytics.active', 'نشط') },
+                { value: 'inactive', label: this.t('module.employees.analytics.inactive', 'غير نشط') }
+            ]}
+        ];
+
+        const chartCard = (id, title, icon) => `
+            <div class="emp-analytics-chart-card content-card">
+                <div class="emp-analytics-chart-card__head">
+                    <i class="fas ${icon}"></i><span>${title}</span>
+                </div>
+                <div class="emp-analytics-chart-card__body">
+                    <canvas id="${id}"></canvas>
+                    <div id="${id}-empty" class="emp-analytics-empty" style="display:none;">${this.t('module.employees.analytics.noData', 'لا توجد بيانات')}</div>
+                </div>
+            </div>
+        `;
+
+        return `
+            <style>
+                #emp-analytics-root { font-family: inherit; }
+                #emp-analytics-root .emp-analytics-toolbar {
+                    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+                    margin-bottom: 14px; padding: 16px 20px;
+                    background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);
+                    border-radius: 14px; color: #fff; box-shadow: 0 4px 20px rgba(29, 78, 216, 0.35);
+                }
+                #emp-analytics-kpi-strip {
+                    display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 18px;
+                }
+                .emp-analytics-kpi {
+                    background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px;
+                    box-shadow: 0 2px 8px rgba(15,23,42,0.04); transition: transform .2s, box-shadow .2s;
+                }
+                .emp-analytics-kpi:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(15,23,42,0.08); }
+                .emp-analytics-kpi__icon { color: var(--kpi-color); font-size: 1.1rem; margin-bottom: 6px; }
+                .emp-analytics-kpi__value { font-size: 1.35rem; font-weight: 800; color: var(--kpi-color); }
+                .emp-analytics-kpi__label { font-size: 0.72rem; color: #64748b; font-weight: 600; margin-top: 4px; }
+                #emp-filter-panel { display: none; background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+                .emp-analytics-chart-card { padding: 0; overflow: hidden; margin-bottom: 0; }
+                .emp-analytics-chart-card__head { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; font-weight: 700; font-size: 0.88rem; display: flex; align-items: center; gap: 8px; }
+                .emp-analytics-chart-card__head i { color: #1d4ed8; }
+                .emp-analytics-chart-card__body { position: relative; height: 240px; padding: 12px; }
+                .emp-analytics-charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 16px; }
+                .emp-analytics-dept-job-panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; margin-bottom: 16px; box-shadow: 0 4px 16px rgba(15,23,42,0.05); }
+                .emp-analytics-dept-job-panel h3 { margin: 0 0 12px; font-size: 1rem; font-weight: 800; color: #0f172a; }
+                #emp-analytics-breadcrumb { margin-bottom: 12px; font-size: 0.82rem; color: #64748b; }
+                .emp-analytics-crumb--active { color: #1d4ed8; font-weight: 700; }
+                .emp-analytics-crumb-sep { margin: 0 6px; opacity: 0.5; }
+                .emp-analytics-heatmap-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+                .emp-analytics-heatmap-table th, .emp-analytics-heatmap-table td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: center; }
+                .emp-analytics-heatmap-cell { cursor: pointer; transition: transform .15s; min-width: 36px; }
+                .emp-analytics-heatmap-cell:hover { transform: scale(1.08); outline: 2px solid #1d4ed8; }
+                .emp-analytics-detail-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+                .emp-analytics-detail-table th, .emp-analytics-detail-table td { border-bottom: 1px solid #e2e8f0; padding: 10px 12px; text-align: right; }
+                .emp-analytics-detail-table th { background: #f8fafc; font-weight: 700; color: #475569; }
+                .emp-analytics-detail-row { cursor: pointer; transition: background .15s; }
+                .emp-analytics-detail-row:hover { background: #eff6ff; }
+                .emp-analytics-detail-row--selected { background: #dbeafe; font-weight: 700; }
+                .emp-analytics-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: #94a3b8; font-size: 0.85rem; }
+                .emp-analytics-subtabs { display: flex; gap: 8px; margin-bottom: 12px; }
+                .emp-analytics-subtab { padding: 6px 14px; border-radius: 8px; border: 1px solid #bfdbfe; background: #fff; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: #1d4ed8; }
+                .emp-analytics-subtab.active { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+                .emp-analytics-progress { display: flex; align-items: center; gap: 8px; }
+                .emp-analytics-progress__bar { height: 6px; background: linear-gradient(90deg, #1d4ed8, #6366f1); border-radius: 999px; min-width: 4px; flex: 1; max-width: 120px; }
+            </style>
+            <div id="emp-analytics-root">
+                <div class="emp-analytics-toolbar">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:44px;height:44px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-chart-bar" style="font-size:20px;"></i>
+                        </div>
+                        <div>
+                            <h2 style="margin:0;font-size:1.15rem;font-weight:700;">${this.t('module.employees.analytics.title', 'لوحة تحليل بيانات الموظفين')}</h2>
+                            <p style="margin:0;font-size:0.75rem;opacity:0.85;">${this.t('module.employees.analytics.subtitle', 'تحليل شامل • الأقسام والوظائف • فلاتر تفاعلية • تصدير PDF')}</p>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                        <button type="button" id="emp-toggle-filters-btn" class="btn-secondary" style="background:rgba(255,255,255,0.12);color:#fff;border-color:rgba(255,255,255,0.35);">
+                            <i class="fas fa-sliders-h ml-2"></i>${this.t('module.employees.analytics.filters', 'الفلاتر التفاعلية')}
+                            <span id="emp-filter-active-badge" style="display:none;background:#ef4444;color:#fff;font-size:0.65rem;padding:1px 6px;border-radius:10px;margin-right:4px;"></span>
+                        </button>
+                        <button type="button" id="emp-export-pdf-btn" class="btn-secondary" style="background:rgba(239,68,68,0.85);color:#fff;border:none;">
+                            <i class="fas fa-file-pdf ml-2"></i>${this.t('module.employees.analytics.exportPdf', 'تصدير PDF')}
+                        </button>
+                        <button type="button" id="emp-analytics-refresh" class="btn-secondary" style="background:rgba(255,255,255,0.15);color:#fff;border:none;" title="${this.t('module.employees.analytics.refresh', 'تحديث')}">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="emp-filter-panel">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-sliders-h" style="color:#1d4ed8;"></i>
+                            <span style="font-weight:700;font-size:0.9rem;color:#0f172a;">${this.t('module.employees.analytics.filters', 'الفلاتر التفاعلية')}</span>
+                            <span id="emp-filter-results-count" data-base-count="" style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
+                        </div>
+                        <button type="button" id="emp-filter-reset-btn" class="btn-secondary" style="font-size:0.75rem;">
+                            <i class="fas fa-times ml-1"></i>${this.t('module.employees.analytics.clearFilters', 'مسح الكل')}
+                        </button>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
+                        ${filterFields.map(f => `
+                            <div>
+                                <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                                    <i class="fas ${f.icon} ml-1" style="color:#1d4ed8;"></i>${f.label}
+                                </label>
+                                ${f.options ? `
+                                    <select id="${f.id}" class="form-input" style="width:100%;font-size:0.82rem;">
+                                        ${f.options.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
+                                    </select>
+                                ` : `<select id="${f.id}" class="form-input" style="width:100%;font-size:0.82rem;"><option value="">${this.t('module.employees.analytics.all', 'الكل')}</option></select>`}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div id="emp-analytics-kpi-strip"><div style="text-align:center;padding:16px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div></div>
+
+                <div id="emp-dept-job-panel" class="emp-analytics-dept-job-panel">
+                    <h3><i class="fas fa-building ml-2" style="color:#1d4ed8;"></i>${this.t('module.employees.analytics.deptJobTitle', 'تحليل الأقسام والوظائف')}</h3>
+                    <div id="emp-analytics-breadcrumb"></div>
+                    <div class="emp-analytics-charts-grid" style="margin-bottom:16px;">
+                        ${chartCard('emp-chart-departments', this.t('module.employees.analytics.chart.departments', 'أعلى الأقسام'), 'fa-building')}
+                        ${chartCard('emp-chart-jobs', this.t('module.employees.analytics.chart.jobs', 'أعلى الوظائف'), 'fa-briefcase')}
+                    </div>
+                    <h4 style="margin:0 0 10px;font-size:0.88rem;font-weight:700;color:#475569;">
+                        <i class="fas fa-th ml-1"></i>${this.t('module.employees.analytics.heatmap', 'خريطة حرارية: قسم × وظيفة')}
+                    </h4>
+                    <div id="emp-analytics-heatmap" style="overflow-x:auto;"></div>
+                </div>
+
+                <div class="emp-analytics-charts-grid">
+                    ${chartCard('emp-chart-gender', this.t('module.employees.analytics.chart.gender', 'التوزيع حسب النوع'), 'fa-venus-mars')}
+                    ${chartCard('emp-chart-status', this.t('module.employees.analytics.chart.status', 'الحالة'), 'fa-toggle-on')}
+                    ${chartCard('emp-chart-gender-dept', this.t('module.employees.analytics.chart.genderByDept', 'الجنس داخل الأقسام'), 'fa-chart-bar')}
+                    ${chartCard('emp-chart-branches', this.t('module.employees.analytics.chart.branches', 'الفروع'), 'fa-sitemap')}
+                    ${chartCard('emp-chart-locations', this.t('module.employees.analytics.chart.locations', 'المواقع'), 'fa-map-marker-alt')}
+                    ${chartCard('emp-chart-positions', this.t('module.employees.analytics.chart.positions', 'المناصب'), 'fa-user-tie')}
+                    ${chartCard('emp-chart-age', this.t('module.employees.analytics.chart.ageBuckets', 'شرائح العمر'), 'fa-birthday-cake')}
+                    ${chartCard('emp-chart-tenure', this.t('module.employees.analytics.chart.tenureBuckets', 'شرائح الخبرة'), 'fa-clock')}
+                    ${chartCard('emp-chart-hire', this.t('module.employees.analytics.chart.hireTrend', 'اتجاه التعيين'), 'fa-chart-line')}
+                </div>
+
+                <div class="content-card" style="margin-top:16px;padding:16px;">
+                    <div class="emp-analytics-subtabs">
+                        <button type="button" class="emp-analytics-subtab ${this._empAnalyticsDetailTab === 'department' ? 'active' : ''}" data-emp-detail-tab="department">${this.t('module.employees.analytics.table.byDepartment', 'حسب القسم')}</button>
+                        <button type="button" class="emp-analytics-subtab ${this._empAnalyticsDetailTab === 'job' ? 'active' : ''}" data-emp-detail-tab="job">${this.t('module.employees.analytics.table.byJob', 'حسب الوظيفة')}</button>
+                    </div>
+                    <div id="emp-analytics-detail-table"></div>
+                </div>
+
+                <div class="content-card" style="margin-top:16px;padding:16px;">
+                    <h3 style="margin:0 0 12px;font-size:0.95rem;font-weight:700;">
+                        <i class="fas fa-database ml-2" style="color:#1d4ed8;"></i>${this.t('module.employees.analytics.table.completeness', 'اكتمال البيانات')}
+                    </h3>
+                    <div id="emp-analytics-completeness-table"></div>
+                </div>
+            </div>
+        `;
+    },
+
+    async loadEmployeesAnalysis(forceReload = false) {
+        if (this.activeTab !== 'data-analysis') return;
+        const panel = document.getElementById('employees-analysis-panel');
+        if (!panel) return;
+
+        if (!panel.querySelector('#emp-analytics-root')) {
+            panel.innerHTML = this.renderEmployeesAnalysisShellHTML();
+            this._empAnalyticsEventsBound = false;
+        }
+
+        try {
+            await this.ensureEmployeesLoaded(forceReload);
+        } catch (e) { /* ignore */ }
+
+        await this._empEnsureChartJs();
+        if (!this._empAnalyticsEventsBound) {
+            this._empBindAnalyticsEvents();
+            this._empAnalyticsEventsBound = true;
+        }
+        await this.updateEmployeesAnalyticsDashboard();
+    },
+
+    async updateEmployeesAnalyticsDashboard() {
+        const root = document.getElementById('emp-analytics-root');
+        if (!root) return;
+
+        const employees = AppState.appData?.employees || [];
+        const filters = this._empGetAnalyticsFiltersFromDom();
+        this._empPopulateAnalyticsFilterOptions(employees);
+        Object.entries(filters).forEach(([key, val]) => {
+            const map = this._empFilterIdMap();
+            const el = document.getElementById(map[key]);
+            if (el && val) el.value = val;
+        });
+
+        const dataset = this.buildEmployeeAnalyticsDataset(employees, filters);
+        const countEl = document.getElementById('emp-filter-results-count');
+        if (countEl) {
+            countEl.dataset.baseCount = `${dataset.total} موظف`;
+            countEl.textContent = countEl.dataset.baseCount;
+        }
+
+        this._empRenderAnalyticsBreadcrumb(filters);
+        this._empRenderAnalyticsKpiStrip(dataset);
+        this._empDestroyAnalyticsCharts();
+        this._empRenderAnalyticsCharts(dataset);
+        this._empRenderAnalyticsHeatmap(dataset);
+        this._empRenderAnalyticsDetailTable(dataset);
+        this._empRenderCompletenessTable(dataset);
+        this._empUpdateAnalyticsFilterBadge();
+    },
+
+    _empBindAnalyticsEvents() {
+        document.getElementById('emp-toggle-filters-btn')?.addEventListener('click', () => {
+            const panel = document.getElementById('emp-filter-panel');
+            if (panel) panel.style.display = panel.style.display === 'none' || !panel.style.display ? 'block' : 'none';
+        });
+        document.getElementById('emp-filter-reset-btn')?.addEventListener('click', () => this._empClearAnalyticsFilters());
+        document.getElementById('emp-analytics-refresh')?.addEventListener('click', () => this.loadEmployeesAnalysis(true));
+        document.getElementById('emp-export-pdf-btn')?.addEventListener('click', () => this._empExportAnalyticsPdf());
+
+        Object.values(this._empFilterIdMap()).forEach(id => {
+            document.getElementById(id)?.addEventListener('change', () => this.updateEmployeesAnalyticsDashboard());
+        });
+
+        document.querySelectorAll('[data-emp-detail-tab]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this._empAnalyticsDetailTab = btn.getAttribute('data-emp-detail-tab') || 'department';
+                document.querySelectorAll('[data-emp-detail-tab]').forEach(b => b.classList.toggle('active', b === btn));
+                const employees = AppState.appData?.employees || [];
+                const dataset = this.buildEmployeeAnalyticsDataset(employees, this._empGetAnalyticsFiltersFromDom());
+                this._empRenderAnalyticsDetailTable(dataset);
+            });
+        });
+    },
+
+    async _empExportAnalyticsPdf() {
+        const employees = AppState.appData?.employees || [];
+        const filters = this._empGetAnalyticsFiltersFromDom();
+        const dataset = this.buildEmployeeAnalyticsDataset(employees, filters);
+        const deptRows = dataset.byDepartment.slice(0, 20).map(r =>
+            `<tr><td>${Utils.escapeHTML(r.label)}</td><td>${r.count}</td><td>${r.percent}%</td><td>${r.male}</td><td>${r.female}</td></tr>`
+        ).join('');
+        const jobRows = dataset.byJob.slice(0, 20).map(r =>
+            `<tr><td>${Utils.escapeHTML(r.label)}</td><td>${r.count}</td><td>${r.percent}%</td><td>${r.male}</td><td>${r.female}</td></tr>`
+        ).join('');
+
+        const html = `
+            <div dir="rtl" style="font-family:Arial,sans-serif;padding:24px;">
+                <h1 style="color:#0f172a;margin-bottom:8px;">${this.t('module.employees.analytics.title', 'لوحة تحليل بيانات الموظفين')}</h1>
+                <p style="color:#64748b;margin-bottom:20px;">${new Date().toLocaleDateString('ar-SA')}</p>
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;">
+                    <div style="background:#eff6ff;padding:12px;border-radius:8px;"><strong>النشطون</strong><br>${dataset.activeCount}</div>
+                    <div style="background:#fef2f2;padding:12px;border-radius:8px;"><strong>المستقيلون</strong><br>${dataset.inactiveCount}</div>
+                    <div style="background:#f0fdf4;padding:12px;border-radius:8px;"><strong>الأقسام</strong><br>${dataset.uniqueDepartments}</div>
+                    <div style="background:#f5f3ff;padding:12px;border-radius:8px;"><strong>الوظائف</strong><br>${dataset.uniqueJobs}</div>
+                </div>
+                <h2>أعلى الأقسام</h2>
+                <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+                    <thead><tr style="background:#f1f5f9;"><th>القسم</th><th>العدد</th><th>%</th><th>ذكر</th><th>أنثى</th></tr></thead>
+                    <tbody>${deptRows}</tbody>
+                </table>
+                <h2>أعلى الوظائف</h2>
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead><tr style="background:#f1f5f9;"><th>الوظيفة</th><th>العدد</th><th>%</th><th>ذكر</th><th>أنثى</th></tr></thead>
+                    <tbody>${jobRows}</tbody>
+                </table>
+            </div>
+        `;
+
+        try {
+            Loading.show('جاري إنشاء التقرير...');
+            if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {
+                await FormHeader.generatePDF(html, `تحليل-الموظفين-${new Date().toISOString().slice(0, 10)}.pdf`);
+            } else {
+                const w = window.open('', '_blank');
+                if (w) { w.document.write(html); w.document.close(); w.print(); }
+            }
+            Notification.success('تم إنشاء التقرير');
+        } catch (e) {
+            Notification.error('فشل تصدير التقرير');
+        } finally {
+            Loading.hide();
+        }
+    },
+
     switchTab(tabName) {
-        const nextTab = tabName === 'external-workforce' ? 'external-workforce' : 'employees-list';
+        const allowed = ['employees-list', 'external-workforce', 'data-analysis'];
+        const nextTab = allowed.includes(tabName) ? tabName : 'employees-list';
         this.activeTab = nextTab;
 
         document.querySelectorAll('[data-employees-tab]').forEach(button => {
@@ -1848,12 +2885,16 @@ const Employees = {
 
         const employeesPanel = document.getElementById('employees-list-panel');
         const externalPanel = document.getElementById('employees-external-panel');
+        const analysisPanel = document.getElementById('employees-analysis-panel');
         if (employeesPanel) employeesPanel.classList.toggle('hidden', nextTab !== 'employees-list');
         if (externalPanel) externalPanel.classList.toggle('hidden', nextTab !== 'external-workforce');
+        if (analysisPanel) analysisPanel.classList.toggle('hidden', nextTab !== 'data-analysis');
 
         if (nextTab === 'external-workforce') {
             this.populateExternalWorkforceYearSelector();
             this.ensureExternalWorkforceDataLoaded().then(() => this.renderExternalWorkforceTable()).catch(() => {});
+        } else if (nextTab === 'data-analysis') {
+            this.loadEmployeesAnalysis().catch(() => {});
         } else if (this.canViewEmployeesRegistryTab()) {
             this.loadEmployeesList();
             this.scrollToSearchField();
@@ -1864,8 +2905,11 @@ const Employees = {
         const canAdmin = this.canAddOrImport();
         const canViewRegistry = this.canViewEmployeesRegistryTab();
         const canViewExternal = this.canViewExternalWorkforceTab();
-        const preferredTab = canViewRegistry ? 'employees-list' : (canViewExternal ? 'external-workforce' : 'employees-list');
-        if ((this.activeTab === 'employees-list' && !canViewRegistry) || (this.activeTab === 'external-workforce' && !canViewExternal)) {
+        const canViewAnalysis = this.canViewEmployeesAnalysisTab();
+        const preferredTab = canViewRegistry ? 'employees-list' : (canViewAnalysis ? 'data-analysis' : (canViewExternal ? 'external-workforce' : 'employees-list'));
+        if ((this.activeTab === 'employees-list' && !canViewRegistry) ||
+            (this.activeTab === 'external-workforce' && !canViewExternal) ||
+            (this.activeTab === 'data-analysis' && !canViewAnalysis)) {
             this.activeTab = preferredTab;
         }
         return `
@@ -1901,6 +2945,7 @@ const Employees = {
             </style>
             <div class="employees-tab-bar">
                 ${canViewRegistry ? `<button type="button" class="employees-tab-btn ${this.activeTab === 'employees-list' ? 'active' : ''}" data-employees-tab="employees-list"><i class="fas fa-id-card ml-2"></i>${this.getExternalWorkforceViewState().labels.employeesTab}</button>` : ''}
+                ${canViewAnalysis ? `<button type="button" class="employees-tab-btn ${this.activeTab === 'data-analysis' ? 'active' : ''}" data-employees-tab="data-analysis"><i class="fas fa-chart-bar ml-2"></i>${this.t('module.employees.tabs.dataAnalysis', 'تحليل البيانات')}</button>` : ''}
                 ${canViewExternal ? `<button type="button" class="employees-tab-btn ${this.activeTab === 'external-workforce' ? 'active' : ''}" data-employees-tab="external-workforce"><i class="fas fa-helmet-safety ml-2"></i>${this.getExternalWorkforceViewState().labels.externalTab}</button>` : ''}
             </div>
             <div id="employees-list-panel" class="${this.activeTab !== 'employees-list' || !canViewRegistry ? 'hidden' : ''}">

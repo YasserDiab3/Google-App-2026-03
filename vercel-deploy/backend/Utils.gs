@@ -1420,6 +1420,27 @@ function toSheetCellValue_(header, value, sheetName) {
         return formatAttachmentsText_(value);
     }
 
+    // evaluationData: JSON كامل لطلبات اعتماد التقييم (CAR / CEAR)
+    if (h === 'evaluationData') {
+        if (value === null || value === undefined) return '';
+        if (typeof value === 'string') {
+            var evalStr = value.trim();
+            if (!evalStr) return '';
+            if ((evalStr.startsWith('{') && evalStr.endsWith('}')) || (evalStr.startsWith('[') && evalStr.endsWith(']'))) {
+                return evalStr;
+            }
+            return evalStr;
+        }
+        if (typeof value === 'object') {
+            try {
+                return JSON.stringify(value);
+            } catch (evalErr) {
+                return '';
+            }
+        }
+        return String(value);
+    }
+
     // Investigation: JSON كامل للحفاظ على RCA وخطوات التحليل (مع ملخص نصي عند الفشل)
     if (h === 'investigation') {
         if (value === null || value === undefined) return '';
