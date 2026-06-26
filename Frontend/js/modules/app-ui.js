@@ -9492,6 +9492,7 @@ window.UI = {
                 normalizedCarRequests
                     .filter(req => {
                         if (!req) return false;
+                        if (String(req.requestType || '').trim() === 'evaluation') return false;
                         if (isContractorApprovalAdmin) {
                             if (typeof Contractors !== 'undefined' && typeof Contractors.isApprovalRequestPendingForReview === 'function') {
                                 return Contractors.isApprovalRequestPendingForReview(req);
@@ -9562,6 +9563,68 @@ window.UI = {
                                 }
                             });
                         }
+                    });
+            }
+
+            if (Array.isArray(AppState.appData.contractorEvaluationApprovalRequests)) {
+                const cuEval = AppState.currentUser || {};
+                const currentUserIdEval = String(cuEval.id || '').trim();
+                const isEvalAdmin = (typeof Contractors !== 'undefined' && typeof Contractors.isContractorApprovalAdminUser === 'function')
+                    ? Contractors.isContractorApprovalAdminUser()
+                    : (cuEval.role === 'admin' || cuEval.role === 'مدير النظام');
+                AppState.appData.contractorEvaluationApprovalRequests
+                    .filter((req) => {
+                        if (!req) return false;
+                        const st = String(req.status || '').trim().toLowerCase();
+                        if (isEvalAdmin) return st === 'pending' || st === 'under_review';
+                        return req.createdBy === currentUserIdEval &&
+                            (st === 'pending' || st === 'under_review' || st === 'approved' || st === 'rejected');
+                    })
+                    .forEach((request) => {
+                        const notificationId = 'contractor-eval-approval-' + (request.id || Date.now());
+                        if (readNotifications.includes(notificationId)) return;
+                        const label = request.contractorName || request.companyName || 'غير محدد';
+                        const st = String(request.status || '').trim().toLowerCase();
+                        let title, message, type;
+                        if (isEvalAdmin) {
+                            title = 'طلب اعتماد تقييم يحتاج مراجعة';
+                            message = 'طلب اعتماد تقييم: ' + label;
+                            type = 'warning';
+                        } else if (st === 'approved') {
+                            title = 'تم اعتماد طلب التقييم';
+                            message = 'تم اعتماد طلب التقييم: ' + label;
+                            type = 'success';
+                        } else if (st === 'rejected') {
+                            title = 'تم رفض طلب التقييم';
+                            message = 'تم رفض طلب التقييم: ' + label;
+                            type = 'error';
+                        } else {
+                            title = 'طلب تقييم قيد المراجعة';
+                            message = 'طلب تقييم: ' + label + ' قيد المراجعة';
+                            type = 'info';
+                        }
+                        notifications.push({
+                            id: notificationId,
+                            type,
+                            title,
+                            message,
+                            time: request.createdAt || new Date(),
+                            icon: 'fa-clipboard-check',
+                            onClick: () => {
+                                if (typeof Contractors !== 'undefined') {
+                                    const contractorsLink = document.querySelector('a[data-section="contractors"]');
+                                    if (contractorsLink) contractorsLink.click();
+                                    setTimeout(() => {
+                                        if (Contractors.switchTab) Contractors.switchTab('evaluations');
+                                        if (Contractors.viewApprovalRequest) {
+                                            setTimeout(() => {
+                                                Contractors.viewApprovalRequest(request.id, 'evaluation_approval');
+                                            }, 500);
+                                        }
+                                    }, 300);
+                                }
+                            }
+                        });
                     });
             }
 

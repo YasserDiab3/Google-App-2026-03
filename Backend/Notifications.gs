@@ -249,6 +249,7 @@ function getUserNotifications(userId) {
                 }
                 
                 approvalRequests.forEach(request => {
+                    if (String(request.requestType || '').trim() === 'evaluation') return;
                     // للمدير: جميع الطلبات قيد المراجعة
                     // للمستخدم: طلباته الخاصة فقط
                     const shouldNotify = isAdmin 
@@ -298,6 +299,74 @@ function getUserNotifications(userId) {
             }
         } catch (error) {
             Logger.log('Error getting contractor approval notifications: ' + error.toString());
+        }
+
+        // 6b. إشعارات طلبات اعتماد تقييمات المقاولين
+        try {
+            if (typeof migrateEvaluationRequestsFromApprovalSheet_ === 'function') {
+                migrateEvaluationRequestsFromApprovalSheet_(getSpreadsheetId());
+            }
+            const evaluationApprovalRequests = readFromSheet('ContractorEvaluationApprovalRequests', getSpreadsheetId());
+            if (evaluationApprovalRequests && evaluationApprovalRequests.length > 0) {
+                let isAdminEval = false;
+                try {
+                    if (typeof getUserById === 'function') {
+                        const userDataEval = getUserById(userId);
+                        if (userDataEval && typeof checkAdminPermissions === 'function') {
+                            isAdminEval = checkAdminPermissions(userDataEval);
+                        } else if (userDataEval && (userDataEval.role === 'admin' || userDataEval.role === 'مدير النظام')) {
+                            isAdminEval = true;
+                        }
+                    }
+                } catch (error) {
+                    Logger.log('Error checking admin permissions for evaluation approvals: ' + error.toString());
+                }
+
+                evaluationApprovalRequests.forEach(function(request) {
+                    const shouldNotify = isAdminEval
+                        ? (request.status === 'pending' || request.status === 'under_review')
+                        : (request.createdBy === userId &&
+                           (request.status === 'pending' || request.status === 'under_review' ||
+                            request.status === 'approved' || request.status === 'rejected'));
+
+                    if (!shouldNotify) return;
+
+                    let title, message, priority;
+                    const label = request.contractorName || request.companyName || 'غير محدد';
+
+                    if (isAdminEval) {
+                        title = 'طلب اعتماد تقييم يحتاج مراجعة';
+                        message = 'طلب اعتماد تقييم: ' + label;
+                        priority = 'high';
+                    } else if (request.status === 'approved') {
+                        title = 'تم اعتماد طلب التقييم';
+                        message = 'تم اعتماد طلب التقييم: ' + label;
+                        priority = 'medium';
+                    } else if (request.status === 'rejected') {
+                        title = 'تم رفض طلب التقييم';
+                        message = 'تم رفض طلب التقييم: ' + label;
+                        priority = 'medium';
+                    } else {
+                        title = 'طلب تقييم قيد المراجعة';
+                        message = 'طلب تقييم: ' + label + ' قيد المراجعة';
+                        priority = 'low';
+                    }
+
+                    notifications.push({
+                        id: 'CONTRACTOR-EVAL-APPROVAL-' + request.id,
+                        type: 'contractor_evaluation_approval',
+                        priority: priority,
+                        title: title,
+                        message: message,
+                        requestId: request.id,
+                        requestType: 'evaluation',
+                        status: request.status,
+                        createdAt: request.createdAt || new Date()
+                    });
+                });
+            }
+        } catch (error) {
+            Logger.log('Error getting contractor evaluation approval notifications: ' + error.toString());
         }
         
         // 7. إشعارات انتهاء عقود المقاولين

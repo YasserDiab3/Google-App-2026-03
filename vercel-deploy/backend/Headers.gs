@@ -212,6 +212,13 @@ function getDefaultHeaders(sheetName) {
             'rejectedAt', 'rejectedBy', 'rejectedByName', 'rejectionReason',
             'contractorData'
         ],
+        'ContractorEvaluationApprovalRequests': [
+            'id', 'contractorId', 'contractorName', 'evaluationData',
+            'status', 'createdBy', 'createdByName', 'createdAt',
+            'approvedAt', 'approvedBy', 'approvedByName',
+            'rejectedAt', 'rejectedBy', 'rejectedByName', 'rejectionReason',
+            'updatedAt', 'updatedBy', 'updatedByName', 'legacySource'
+        ],
         'ContractorDeletionRequests': ['id', 'requestType', 'entityId', 'reason', 'status', 'createdBy', 'createdAt', 'updatedAt', 'approvedAt', 'approvedBy', 'approvedByName', 'rejectedAt', 'rejectedBy', 'rejectedByName', 'rejectionReason'],
         // ✅ دائرة اعتماد المخالفات (Violation Approval Workflow)
         // requestType: 'add' (إضافة) / 'update' (تعديل)

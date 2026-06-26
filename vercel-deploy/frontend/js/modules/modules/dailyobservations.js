@@ -94,6 +94,31 @@ const DailyObservations = {
         return localStorage.getItem('language') || AppState?.currentLanguage || 'ar';
     },
 
+    _t(key, fallback) {
+        const fullKey = String(key || '').startsWith('module.') ? key : `module.dailyobs.${key}`;
+        if (window.AppI18n && typeof window.AppI18n.t === 'function') {
+            const v = window.AppI18n.t(fullKey, fallback);
+            if (v && v !== fullKey) return v;
+        }
+        if (window.I18n && typeof window.I18n.t === 'function') {
+            const v = window.I18n.t(fullKey, fallback);
+            if (v && v !== fullKey) return v;
+        }
+        const { t } = this.getTranslations();
+        const short = fullKey.replace('module.dailyobs.', '');
+        const local = t(short);
+        return (local && local !== short) ? local : (fallback != null ? fallback : short);
+    },
+
+    applyModuleI18n(root) {
+        const el = root && root.nodeType ? root : document.getElementById('daily-observations-section');
+        if (!el) return;
+        const i18n = (window.AppI18n && typeof window.AppI18n.applyModuleI18n === 'function')
+            ? window.AppI18n
+            : ((window.I18n && typeof window.I18n.applyModuleI18n === 'function') ? window.I18n : null);
+        if (i18n) i18n.applyModuleI18n(el);
+    },
+
     /**
      * الحصول على الترجمات حسب اللغة الحالية
      */
@@ -101,7 +126,7 @@ const DailyObservations = {
         const lang = this.getCurrentLanguage();
         const isRTL = lang === 'ar';
 
-        const translations = {
+        const local = {
             ar: {
                 'title.observationsRegistry': 'سجل الملاحظات',
                 'btn.registerNew': 'تسجيل ملاحظة جديدة',
@@ -117,6 +142,8 @@ const DailyObservations = {
                 'filter.responsible': 'المسؤول',
                 'filter.all': 'الكل',
                 'filter.searchPlaceholder': 'ابحث...',
+                'filter.dateFrom': 'من تاريخ',
+                'filter.dateTo': 'إلى تاريخ',
                 'empty.noObservations': 'لا توجد ملاحظات مسجلة',
                 'empty.noMatching': 'لا توجد ملاحظات مطابقة لعوامل التصفية الحالية'
             },
@@ -135,16 +162,24 @@ const DailyObservations = {
                 'filter.responsible': 'Responsible',
                 'filter.all': 'All',
                 'filter.searchPlaceholder': 'Search...',
+                'filter.dateFrom': 'From date',
+                'filter.dateTo': 'To date',
                 'empty.noObservations': 'No observations recorded',
                 'empty.noMatching': 'No observations match the current filter criteria'
             }
         };
 
-        return {
-            t: (key) => translations[lang]?.[key] || key,
-            isRTL,
-            lang
+        const t = (key) => {
+            const fullKey = String(key || '').startsWith('module.') ? key : `module.dailyobs.${key}`;
+            if (window.AppI18n && typeof window.AppI18n.t === 'function') {
+                const v = window.AppI18n.t(fullKey);
+                if (v && v !== fullKey) return v;
+            }
+            const short = fullKey.replace('module.dailyobs.', '');
+            return local[lang]?.[short] || local[lang]?.[key] || short;
         };
+
+        return { t, isRTL, lang };
     },
 
     /**
@@ -1816,20 +1851,20 @@ const DailyObservations = {
             const listErrorHtml = `
                 <div class="content-card"><div class="card-body"><div class="empty-state">
                     <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                    <p class="text-gray-500">حدث خطأ في تحميل البيانات أو انتهت المهلة</p>
-                    <button onclick="DailyObservations.load()" class="btn-primary mt-4"><i class="fas fa-redo ml-2"></i>إعادة المحاولة</button>
+                    <p class="text-gray-500">${Utils.escapeHTML(this._t('module.dailyobs.error.timeout', 'حدث خطأ في تحميل البيانات أو انتهت المهلة'))}</p>
+                    <button onclick="DailyObservations.load()" class="btn-primary mt-4"><i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t('module.dailyobs.error.retry', 'إعادة المحاولة'))}</button>
                 </div></div></div>`;
             const analysisErrorHtml = `
                 <div class="content-card"><div class="card-body"><div class="empty-state">
                     <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                    <p class="text-gray-500">حدث خطأ في تحميل تحليل البيانات</p>
-                    <button onclick="DailyObservations.load()" class="btn-primary mt-4"><i class="fas fa-redo ml-2"></i>إعادة المحاولة</button>
+                    <p class="text-gray-500">${Utils.escapeHTML(this._t('module.dailyobs.error.analysis', 'حدث خطأ في تحميل تحليل البيانات'))}</p>
+                    <button onclick="DailyObservations.load()" class="btn-primary mt-4"><i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t('module.dailyobs.error.retry', 'إعادة المحاولة'))}</button>
                 </div></div></div>`;
             const top10ErrorHtml = `
                 <div class="content-card"><div class="card-body"><div class="empty-state">
                     <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                    <p class="text-gray-500">حدث خطأ في تحميل أعلى 10 مخاطر</p>
-                    <button onclick="DailyObservations.load()" class="btn-primary mt-4"><i class="fas fa-redo ml-2"></i>إعادة المحاولة</button>
+                    <p class="text-gray-500">${Utils.escapeHTML(this._t('module.dailyobs.error.top10', 'حدث خطأ في تحميل Top 10'))}</p>
+                    <button onclick="DailyObservations.load()" class="btn-primary mt-4"><i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t('module.dailyobs.error.retry', 'إعادة المحاولة'))}</button>
                 </div></div></div>`;
 
             const [listResult, analysisResult, top10Result] = await Promise.all([
@@ -1847,72 +1882,71 @@ const DailyObservations = {
                         <div>
                             <h1 class="section-title">
                                 <i class="fas fa-clipboard-check ml-3"></i>
-                                الملاحظات اليومية
+                                <span data-i18n="module.dailyobs.title">الملاحظات اليومية</span>
                             </h1>
-                            <p class="section-subtitle">تسجيل الملاحظات اليومية ومتابعة الإجراءات التصحيحية</p>
+                            <p class="section-subtitle" data-i18n="module.dailyobs.subtitle">تسجيل الملاحظات اليومية ومتابعة الإجراءات التصحيحية</p>
                         </div>
                         <div class="flex items-center gap-2 flex-wrap">
                             ${this.canDailyObservationsFullAdminUi() ? `
                             <button id="import-observations-excel-btn" class="btn-secondary">
                                 <i class="fas fa-file-import ml-2"></i>
-                                استيراد من Excel
+                                <span data-i18n="module.dailyobs.btn.importExcel">استيراد من Excel</span>
                             </button>
                             ` : ''}
                             <button id="export-observations-excel-btn" class="btn-success">
                                 <i class="fas fa-file-excel ml-2"></i>
-                                تصدير Excel
+                                <span data-i18n="module.dailyobs.btn.exportExcel">تصدير Excel</span>
                             </button>
                             ${this.canDailyObservationsFullAdminUi() ? `
                             <button id="export-observations-ppt-btn" class="btn-secondary">
                                 <i class="fas fa-file-powerpoint ml-2"></i>
-                                تصدير PPT
+                                <span data-i18n="module.dailyobs.btn.exportPpt">تصدير PPT</span>
                             </button>
                             ` : ''}
                             <button id="add-observation-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
-                                إضافة ملاحظة جديدة
+                                <span data-i18n="module.dailyobs.btn.addObservation">إضافة ملاحظة جديدة</span>
                             </button>
                             ${this.canDailyObservationsFullAdminUi() ? `
                             <button id="delete-all-observations-btn" class="btn-secondary" style="background-color: #dc3545; color: white; border-color: #dc3545;">
                                 <i class="fas fa-trash-alt ml-2"></i>
-                                حذف جميع الملاحظات
+                                <span data-i18n="module.dailyobs.btn.deleteAll">حذف جميع الملاحظات</span>
                             </button>
                             ` : ''}
                         </div>
                     </div>
                 </div>
                 
-                <!-- Tabs Navigation: سجل الملاحظات | أعلى 10 مخاطر | تحليل البيانات | تحديث -->
+                <!-- Tabs Navigation -->
                 <div class="tabs-container mt-6" style="border-bottom: 2px solid var(--border-color);">
                     <div class="tabs-nav" style="display: flex; gap: 8px; flex-wrap: wrap;">
                         ${canRegistry ? `
                         <button class="tab-btn ${this.state.activeTab === 'observations-registry' ? 'active' : ''}" data-tab="observations-registry" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid ${this.state.activeTab === 'observations-registry' ? 'var(--primary-color)' : 'transparent'}; color: ${this.state.activeTab === 'observations-registry' ? 'var(--primary-color)' : 'var(--text-secondary)'}; font-weight: 600; cursor: pointer; transition: all 0.3s;">
                             <i class="fas fa-list ml-2"></i>
-                            سجل الملاحظات
+                            <span data-i18n="module.dailyobs.tab.registry">سجل الملاحظات</span>
                         </button>
                         ` : ''}
                         ${canTop10 ? `
                         <button class="tab-btn ${this.state.activeTab === 'top-10-observations' ? 'active' : ''}" data-tab="top-10-observations" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid ${this.state.activeTab === 'top-10-observations' ? 'var(--primary-color)' : 'transparent'}; color: ${this.state.activeTab === 'top-10-observations' ? 'var(--primary-color)' : 'var(--text-secondary)'}; font-weight: 600; cursor: pointer; transition: all 0.3s;">
-                            <i class="fas fa-trophy ml-2"></i>
-                            <i class="fas fa-shield-halved ml-2"></i>
-                            أعلى 10 مخاطر
+                            <i class="fas fa-ranking-star ml-2"></i>
+                            <span data-i18n="module.dailyobs.tab.top10">Top 10</span>
                         </button>
                         ` : ''}
                         ${canAnalysis ? `
                         <button class="tab-btn ${this.state.activeTab === 'data-analysis' ? 'active' : ''}" data-tab="data-analysis" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid ${this.state.activeTab === 'data-analysis' ? 'var(--primary-color)' : 'transparent'}; color: ${this.state.activeTab === 'data-analysis' ? 'var(--primary-color)' : 'var(--text-secondary)'}; font-weight: 600; cursor: pointer; transition: all 0.3s;">
                             <i class="fas fa-chart-line ml-2"></i>
-                            تحليل البيانات
+                            <span data-i18n="module.dailyobs.tab.analysis">تحليل البيانات</span>
                         </button>
                         ` : ''}
                         ${canExec ? `
                         <button class="tab-btn ${this.state.activeTab === 'executive-dashboard' ? 'active' : ''}" data-tab="executive-dashboard" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid ${this.state.activeTab === 'executive-dashboard' ? 'var(--primary-color)' : 'transparent'}; color: ${this.state.activeTab === 'executive-dashboard' ? 'var(--primary-color)' : 'var(--text-secondary)'}; font-weight: 600; cursor: pointer; transition: all 0.3s;">
                             <i class="fas fa-gauge-high ml-2"></i>
-                            المؤشرات التنفيذية
+                            <span data-i18n="module.dailyobs.tab.executive">المؤشرات التنفيذية</span>
                         </button>
                         ` : ''}
-                        <button type="button" id="daily-observations-refresh-btn" class="tab-btn" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid transparent; color: var(--text-secondary); font-weight: 600; cursor: pointer; transition: all 0.3s;" title="تحديث المديول">
+                        <button type="button" id="daily-observations-refresh-btn" class="tab-btn" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid transparent; color: var(--text-secondary); font-weight: 600; cursor: pointer; transition: all 0.3s;" data-i18n-title="module.dailyobs.btn.refreshTitle" title="تحديث المديول">
                             <i class="fas fa-sync-alt ml-2"></i>
-                            تحديث
+                            <span data-i18n="module.dailyobs.btn.refresh">تحديث</span>
                         </button>
                     </div>
                 </div>
@@ -1942,6 +1976,7 @@ const DailyObservations = {
                 </div>
             `;
             
+            this.applyModuleI18n(section);
             this.setupEventListeners();
             
             // تهيئة الفلتر الحالي
@@ -1966,6 +2001,8 @@ const DailyObservations = {
                                 } catch (remErr) {
                                     Utils.safeWarn('⚠️ تنبيهات مواعيد الملاحظات:', remErr);
                                 }
+                            } else if (this.state && this.state.activeTab === 'top-10-observations') {
+                                void this.loadTop10Observations();
                             }
                         } catch (err) {
                             Utils.safeWarn('⚠️ خطأ في تحميل قائمة الملاحظات الأولي:', err);
@@ -1991,7 +2028,7 @@ const DailyObservations = {
                     <div>
                         <h1 class="section-title">
                             <i class="fas fa-clipboard-check ml-3"></i>
-                            الملاحظات اليومية
+                            <span data-i18n="module.dailyobs.title">الملاحظات اليومية</span>
                         </h1>
                     </div>
                 </div>
@@ -2000,11 +2037,11 @@ const DailyObservations = {
                         <div class="card-body">
                             <div class="empty-state">
                                 <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-2">حدث خطأ أثناء تحميل البيانات</p>
-                                <p class="text-sm text-gray-400 mb-4">${error && error.message ? Utils.escapeHTML(error.message) : 'خطأ غير معروف'}</p>
+                                <p class="text-gray-500 mb-2">${Utils.escapeHTML(this._t('module.dailyobs.error.load', 'حدث خطأ أثناء تحميل البيانات'))}</p>
+                                <p class="text-sm text-gray-400 mb-4">${error && error.message ? Utils.escapeHTML(error.message) : Utils.escapeHTML(this._t('module.dailyobs.error.unknown', 'خطأ غير معروف'))}</p>
                                 <button onclick="DailyObservations.load()" class="btn-primary">
                                     <i class="fas fa-redo ml-2"></i>
-                                    إعادة المحاولة
+                                    ${Utils.escapeHTML(this._t('module.dailyobs.error.retry', 'إعادة المحاولة'))}
                                 </button>
                             </div>
                         </div>
@@ -2056,14 +2093,14 @@ const DailyObservations = {
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <label style="font-size: 12px; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 6px; white-space: nowrap;">
                                         <i class="fas fa-calendar-alt" style="color: #6366f1;"></i>
-                                        من تاريخ
+                                        ${t('filter.dateFrom')}
                                     </label>
                                     <input type="date" id="observation-date-from" class="date-range-input" style="padding: 6px 10px; border: 1px solid #c7d2fe; border-radius: 6px; background: white; font-size: 12px; color: #1e293b; min-width: 120px; direction: ${isRTL ? 'rtl' : 'ltr'};">
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <label style="font-size: 12px; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 6px; white-space: nowrap;">
                                         <i class="fas fa-calendar-check" style="color: #10b981;"></i>
-                                        إلى تاريخ
+                                        ${t('filter.dateTo')}
                                     </label>
                                     <input type="date" id="observation-date-to" class="date-range-input" style="padding: 6px 10px; border: 1px solid #c7d2fe; border-radius: 6px; background: white; font-size: 12px; color: #1e293b; min-width: 120px; direction: ${isRTL ? 'rtl' : 'ltr'};">
                                 </div>
@@ -5139,13 +5176,13 @@ const DailyObservations = {
     renderAnalysisCharts() { /* محوَّل — الرسوم تُرسم داخل updateAnalysisResults */ },
 
     /**
-     * تعريف فئات المخاطر الست في تبويب أعلى 10 مخاطر
+     * تعريف فئات المخاطر الست في تبويب Top 10
      */
     getTopRiskCategoryDefs() {
-        return [
+        const raw = [
             {
                 id: 'electricity',
-                label: 'كهرباء',
+                labelKey: 'module.dailyobs.top10.category.electricity',
                 icon: 'fa-bolt',
                 color: '#d97706',
                 bg: '#fffbeb',
@@ -5154,7 +5191,7 @@ const DailyObservations = {
             },
             {
                 id: 'mechanical',
-                label: 'ميكانيكة',
+                labelKey: 'module.dailyobs.top10.category.mechanical',
                 icon: 'fa-cogs',
                 color: '#4f46e5',
                 bg: '#eef2ff',
@@ -5163,7 +5200,7 @@ const DailyObservations = {
             },
             {
                 id: 'smoking',
-                label: 'تدخين',
+                labelKey: 'module.dailyobs.top10.category.smoking',
                 icon: 'fa-smoking-ban',
                 color: '#dc2626',
                 bg: '#fef2f2',
@@ -5172,7 +5209,7 @@ const DailyObservations = {
             },
             {
                 id: 'ppe',
-                label: 'مهمات وقاية',
+                labelKey: 'module.dailyobs.top10.category.ppe',
                 icon: 'fa-hard-hat',
                 color: '#0891b2',
                 bg: '#ecfeff',
@@ -5181,7 +5218,7 @@ const DailyObservations = {
             },
             {
                 id: 'storage',
-                label: 'تخزين',
+                labelKey: 'module.dailyobs.top10.category.storage',
                 icon: 'fa-warehouse',
                 color: '#059669',
                 bg: '#ecfdf5',
@@ -5190,7 +5227,7 @@ const DailyObservations = {
             },
             {
                 id: 'fire',
-                label: 'أجهزة حريق',
+                labelKey: 'module.dailyobs.top10.category.fire',
                 icon: 'fa-fire-extinguisher',
                 color: '#b91c1c',
                 bg: '#fff1f2',
@@ -5198,6 +5235,29 @@ const DailyObservations = {
                 keywords: ['حريق', 'طفاية', 'طفايات', 'إنذار', 'انذار', 'خرطوم', 'رشاش', 'sprinkler', 'إطفاء', 'fire', 'extinguisher', 'alarm', 'hose', 'smoke detector', 'fm200', 'طوارئ حريق']
             }
         ];
+        return raw.map((def) => ({
+            ...def,
+            label: this._t(def.labelKey, def.id)
+        }));
+    },
+
+    _normalizeTopRiskCategoryFilter(val) {
+        const v = String(val || '').trim();
+        if (!v) return '';
+        const defs = this.getTopRiskCategoryDefs();
+        if (defs.some((d) => d.id === v)) return v;
+        const byLabel = defs.find((d) => d.label === v);
+        if (byLabel) return byLabel.id;
+        const legacy = {
+            عام: 'general', كهرباء: 'electricity', ميكانيكة: 'mechanical', تدخين: 'smoking',
+            'مهمات وقاية': 'ppe', تخزين: 'storage', 'أجهزة حريق': 'fire'
+        };
+        return legacy[v] || v;
+    },
+
+    _getTopRiskCategoryLabel(id) {
+        const meta = this._getTopRiskCategoryMeta(id);
+        return meta.label;
     },
 
     _normalizeTopRiskHaystack(text) {
@@ -5221,8 +5281,8 @@ const DailyObservations = {
 
     _topRiskCategoryOf(obs) {
         const hay = this._topRiskHaystackOf(obs);
-        if (!hay.trim()) return 'عام';
-        let bestLabel = 'عام';
+        if (!hay.trim()) return 'general';
+        let bestId = 'general';
         let bestScore = 0;
         this.getTopRiskCategoryDefs().forEach((def) => {
             let score = 0;
@@ -5232,16 +5292,30 @@ const DailyObservations = {
             });
             if (score > bestScore) {
                 bestScore = score;
-                bestLabel = def.label;
+                bestId = def.id;
             }
         });
-        return bestLabel;
+        return bestId;
     },
 
-    _getTopRiskCategoryMeta(label) {
+    _getTopRiskCategoryMeta(idOrLabel) {
+        const id = this._normalizeTopRiskCategoryFilter(idOrLabel) || String(idOrLabel || '').trim();
         const defs = this.getTopRiskCategoryDefs();
-        return defs.find((d) => d.label === label) || {
-            label: label || 'عام',
+        const found = defs.find((d) => d.id === id);
+        if (found) return found;
+        if (id === 'general') {
+            return {
+                id: 'general',
+                label: this._t('module.dailyobs.top10.category.general', 'عام'),
+                icon: 'fa-exclamation-circle',
+                color: '#64748b',
+                bg: '#f8fafc',
+                border: '#cbd5e1'
+            };
+        }
+        return {
+            id: idOrLabel,
+            label: idOrLabel || this._t('module.dailyobs.top10.category.general', 'عام'),
             icon: 'fa-exclamation-circle',
             color: '#64748b',
             bg: '#f8fafc',
@@ -5282,18 +5356,18 @@ const DailyObservations = {
     _buildTopRiskCategoryStats(observations) {
         const stats = {};
         this.getTopRiskCategoryDefs().forEach((def) => {
-            stats[def.label] = { count: 0, openHigh: 0, maxScore: 0 };
+            stats[def.id] = { count: 0, openHigh: 0, maxScore: 0 };
         });
-        stats['عام'] = { count: 0, openHigh: 0, maxScore: 0 };
+        stats.general = { count: 0, openHigh: 0, maxScore: 0 };
 
         (observations || []).forEach((obs) => {
-            const cat = obs.riskCategory || this._topRiskCategoryOf(obs);
-            if (!stats[cat]) stats[cat] = { count: 0, openHigh: 0, maxScore: 0 };
-            stats[cat].count += 1;
+            const catId = obs.riskCategoryId || this._topRiskCategoryOf(obs);
+            if (!stats[catId]) stats[catId] = { count: 0, openHigh: 0, maxScore: 0 };
+            stats[catId].count += 1;
             const score = obs.riskScore != null ? obs.riskScore : this._computeObservationRiskScore(obs);
-            if (score > stats[cat].maxScore) stats[cat].maxScore = score;
+            if (score > stats[catId].maxScore) stats[catId].maxScore = score;
             if (!this._execIsClosed(obs) && (this._execIsHighRisk(obs) || this._execIsCritical(obs))) {
-                stats[cat].openHigh += 1;
+                stats[catId].openHigh += 1;
             }
         });
         return stats;
@@ -5305,7 +5379,7 @@ const DailyObservations = {
             if (btn.dataset.bound === '1') return;
             btn.dataset.bound = '1';
             btn.addEventListener('click', () => {
-                const cat = btn.getAttribute('data-cat') || '';
+                const cat = btn.getAttribute('data-cat-id') || '';
                 this._topRiskCategoryFilter = (this._topRiskCategoryFilter === cat) ? '' : cat;
                 this.loadTop10Observations();
             });
@@ -5320,88 +5394,294 @@ const DailyObservations = {
         }
     },
 
+    _injectTop10Styles() {
+        if (document.getElementById('top10-module-styles-v1')) return;
+        const style = document.createElement('style');
+        style.id = 'top10-module-styles-v1';
+        style.textContent = `
+        .top10-wrap{direction:rtl;width:100%;max-width:100%;box-sizing:border-box;}
+        .top10-hero{position:relative;overflow:hidden;border-radius:18px;padding:22px 24px;margin-bottom:18px;
+            background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 45%,#7f1d1d 100%);color:#fff;box-shadow:0 12px 40px rgba(15,23,42,.22);}
+        .top10-hero__badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;
+            background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);font-size:11px;font-weight:800;letter-spacing:.12em;}
+        .top10-hero__title{font-size:clamp(1.5rem,3vw,2.1rem);font-weight:900;margin:12px 0 8px;line-height:1.15;}
+        .top10-hero__sub{font-size:clamp(.85rem,1.8vw,.95rem);opacity:.88;max-width:720px;line-height:1.55;}
+        .top10-hero__actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
+        .top10-kpi-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px;}
+        @media(min-width:768px){.top10-kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr));}}
+        .top10-kpi{background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow-sm);min-width:0;}
+        .top10-kpi__label{font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:6px;}
+        .top10-kpi__value{font-size:clamp(1.2rem,2.2vw,1.65rem);font-weight:800;color:var(--text-primary);}
+        .top10-kpi__value--danger{color:#dc2626;}
+        .top10-kpi__value--warn{color:#ea580c;}
+        .top10-charts-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin-bottom:20px;}
+        @media(min-width:768px){.top10-charts-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+        .top10-chart-card{background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow-sm);min-width:0;}
+        .top10-chart-card__title{font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+        .top10-chart-card__hint{font-size:10px;color:var(--text-tertiary);margin-bottom:10px;}
+        .top10-chart-box{position:relative;height:clamp(200px,28vw,260px);width:100%;}
+        .top10-cat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+        @media(min-width:768px){.top10-cat-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
+        @media(min-width:1200px){.top10-cat-grid{grid-template-columns:repeat(6,minmax(0,1fr));}}
+        .top-risk-cat-card{text-align:right;padding:12px 14px;border-radius:12px;cursor:pointer;transition:all .2s;border:2px solid transparent;background:#fff;}
+        .top-risk-cat-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.08);}
+        .top10-table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+        .top10-mobile-cards{display:none;flex-direction:column;gap:12px;}
+        @media(max-width:767px){
+            .top10-table-wrap{display:none;}
+            .top10-mobile-cards{display:flex;}
+        }
+        .top10-mobile-card{border:1px solid var(--border-color);border-radius:14px;padding:14px;background:var(--card-bg);box-shadow:var(--shadow-sm);}
+        .top10-mobile-card__head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+        .top10-mobile-card__rank{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;background:#f1f5f9;color:#0f172a;}
+        .top10-score-pill{font-weight:800;font-size:1.1rem;}
+        .top10-section-title{font-size:1rem;font-weight:800;color:var(--text-primary);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+        #tab-top-10-observations{width:100%;max-width:100%;box-sizing:border-box;}
+        `;
+        document.head.appendChild(style);
+    },
+
+    _destroyTop10BuiltInCharts() {
+        if (!this.top10BuiltInCharts) return;
+        Object.values(this.top10BuiltInCharts).forEach((ch) => {
+            try { if (ch && typeof ch.destroy === 'function') ch.destroy(); } catch (_e) {}
+        });
+        this.top10BuiltInCharts = {};
+    },
+
+    async _drawTop10BuiltInCharts(observations, top10) {
+        const chartLoaded = await this.ensureChartJSLoaded();
+        if (!chartLoaded || typeof Chart === 'undefined') return;
+
+        this._destroyTop10BuiltInCharts();
+        if (!this.top10BuiltInCharts) this.top10BuiltInCharts = {};
+        const isRTL = this.getTranslations().isRTL;
+        const defs = this.getTopRiskCategoryDefs();
+        const categoryIds = [...defs.map((d) => d.id), 'general'];
+        const categoryLabels = categoryIds.map((id) => this._getTopRiskCategoryLabel(id));
+        const categoryColors = [...defs.map((d) => d.color), '#64748b'];
+        const catCounts = categoryIds.map((id) =>
+            (observations || []).filter((o) => (o.riskCategoryId || this._topRiskCategoryOf(o)) === id).length
+        );
+
+        const catCanvas = document.getElementById('top10-builtin-chart-categories');
+        if (catCanvas) {
+            const self = this;
+            this.top10BuiltInCharts.categories = new Chart(catCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: categoryLabels,
+                    datasets: [{
+                        data: catCounts,
+                        backgroundColor: categoryColors.map((c) => c + 'cc'),
+                        borderColor: '#fff',
+                        borderWidth: 2,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    onClick(evt, elements) {
+                        if (!elements.length) return;
+                        const catId = categoryIds[elements[0].index];
+                        self._topRiskCategoryFilter = (self._topRiskCategoryFilter === catId) ? '' : catId;
+                        self.loadTop10Observations();
+                    },
+                    plugins: {
+                        legend: { position: 'bottom', rtl: isRTL, labels: { boxWidth: 12, font: { size: 11 } } },
+                        tooltip: { rtl: isRTL }
+                    }
+                }
+            });
+        }
+
+        const scoresCanvas = document.getElementById('top10-builtin-chart-scores');
+        if (scoresCanvas && top10.length) {
+            const labels = top10.map((o) => o.isoCode || this._t('module.dailyobs.common.notSpecified', 'غير محدد'));
+            const scores = top10.map((o) => o.riskScore);
+            const barColors = scores.map((s) => (s >= 55 ? '#dc2626' : s >= 35 ? '#ea580c' : '#2563eb'));
+            this.top10BuiltInCharts.scores = new Chart(scoresCanvas, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: this._t('module.dailyobs.top10.table.score', 'درجة المخاطر'),
+                        data: scores,
+                        backgroundColor: barColors,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { rtl: isRTL } },
+                    scales: { x: { beginAtZero: true, max: 100 } }
+                }
+            });
+        }
+
+        const riskCanvas = document.getElementById('top10-builtin-chart-risklevel');
+        if (riskCanvas && top10.length) {
+            const counts = {};
+            top10.forEach((o) => {
+                const k = o.riskLevel || this._t('module.dailyobs.common.notSpecified', 'غير محدد');
+                counts[k] = (counts[k] || 0) + 1;
+            });
+            this.top10BuiltInCharts.riskLevel = new Chart(riskCanvas, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(counts),
+                    datasets: [{
+                        data: Object.values(counts),
+                        backgroundColor: ['#dc2626', '#ea580c', '#eab308', '#22c55e', '#64748b'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', rtl: isRTL }, tooltip: { rtl: isRTL } }
+                }
+            });
+        }
+
+        const statusCanvas = document.getElementById('top10-builtin-chart-status');
+        if (statusCanvas && top10.length) {
+            const open = top10.filter((o) => !this._execIsClosed(o)).length;
+            const closed = top10.length - open;
+            this.top10BuiltInCharts.status = new Chart(statusCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: [
+                        this._t('module.dailyobs.top10.chart.statusOpen', 'مفتوحة'),
+                        this._t('module.dailyobs.top10.chart.statusClosed', 'مغلقة')
+                    ],
+                    datasets: [{
+                        data: [open, closed],
+                        backgroundColor: ['#f59e0b', '#10b981'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', rtl: isRTL }, tooltip: { rtl: isRTL } }
+                }
+            });
+        }
+    },
+
     /**
-     * عرض أعلى 10 مخاطر
+     * عرض تبويب Top 10
      */
     async renderTop10Observations() {
+        this._injectTop10Styles();
         this.ensureChartJSLoaded().catch(() => {
             Utils.safeWarn('Chart.js غير متاح - سيتم عرض البيانات بدون رسوم بيانية');
         });
 
         return `
-            <div class="content-card">
-                <div class="card-header">
-                    <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
-                        <div>
-                            <h2 class="card-title">
-                                <i class="fas fa-shield-halved ml-2 text-red-600"></i>
-                                أعلى 10 مخاطر
-                            </h2>
-                            <p class="text-sm text-gray-500 mt-2">
-                                ترتيب الملاحظات حسب درجة المخاطر في ست فئات: كهرباء، ميكانيكة، تدخين، مهمات وقاية، تخزين، وأجهزة حريق
-                            </p>
-                        </div>
-                        <button id="add-top10-chart-btn" class="btn-primary">
+            <div class="top10-wrap" id="top10-module-root">
+                <div class="top10-hero">
+                    <div class="top10-hero__badge">
+                        <i class="fas fa-ranking-star"></i>
+                        <span data-i18n="module.dailyobs.top10.brand">TOP 10</span>
+                    </div>
+                    <div class="top10-hero__title" data-i18n="module.dailyobs.top10.title">Top 10</div>
+                    <p class="top10-hero__sub" data-i18n="module.dailyobs.top10.subtitle">ترتيب أعلى المخاطر في ست فئات رئيسية مع تحليل بصري تفاعلي</p>
+                    <div class="top10-hero__actions">
+                        <button id="add-top10-chart-btn" class="btn-primary" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);">
                             <i class="fas fa-plus ml-2"></i>
-                            إضافة رسم بياني
+                            <span data-i18n="module.dailyobs.top10.btn.addChart">إضافة رسم بياني</span>
                         </button>
                     </div>
                 </div>
-                <div class="card-body">
-                    <div id="top10-observations-list" class="mb-6">
-                        <div class="flex items-center justify-center py-8">
-                            <div class="text-center">
-                                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-                                <p class="text-gray-500">جاري تحميل بيانات المخاطر...</p>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="border-t pt-6 mt-6">
-                        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-                            <h3 class="text-lg font-semibold">
-                                <i class="fas fa-chart-bar ml-2 text-blue-600"></i>
-                                تحليل بصري للمخاطر
-                            </h3>
-                            <button id="manage-top10-charts-btn" class="btn-secondary">
-                                <i class="fas fa-cog ml-2"></i>
-                                إدارة الرسوم البيانية
-                            </button>
-                        </div>
-                        <div id="top10-charts-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6"></div>
+                <div id="top10-kpi-row" class="top10-kpi-grid"></div>
+
+                <div class="top10-charts-grid" id="top10-builtin-charts">
+                    <div class="top10-chart-card">
+                        <div class="top10-chart-card__title"><i class="fas fa-chart-pie text-amber-600"></i><span data-i18n="module.dailyobs.top10.chart.categories">توزيع فئات المخاطر</span></div>
+                        <div class="top10-chart-card__hint" data-i18n="module.dailyobs.top10.chart.clickHint">انقر على القطعة للتصفية حسب الفئة</div>
+                        <div class="top10-chart-box"><canvas id="top10-builtin-chart-categories"></canvas></div>
                     </div>
+                    <div class="top10-chart-card">
+                        <div class="top10-chart-card__title"><i class="fas fa-chart-bar text-blue-600"></i><span data-i18n="module.dailyobs.top10.chart.scores">درجات المخاطر — Top 10</span></div>
+                        <div class="top10-chart-box"><canvas id="top10-builtin-chart-scores"></canvas></div>
+                    </div>
+                    <div class="top10-chart-card">
+                        <div class="top10-chart-card__title"><i class="fas fa-triangle-exclamation text-red-600"></i><span data-i18n="module.dailyobs.top10.chart.riskLevel">مستوى الخطورة (Top 10)</span></div>
+                        <div class="top10-chart-box"><canvas id="top10-builtin-chart-risklevel"></canvas></div>
+                    </div>
+                    <div class="top10-chart-card">
+                        <div class="top10-chart-card__title"><i class="fas fa-circle-half-stroke text-emerald-600"></i><span data-i18n="module.dailyobs.top10.chart.status">حالة الملاحظات (Top 10)</span></div>
+                        <div class="top10-chart-box"><canvas id="top10-builtin-chart-status"></canvas></div>
+                    </div>
+                </div>
+
+                <div id="top10-observations-list" class="mb-6">
+                    <div class="flex items-center justify-center py-8">
+                        <div class="text-center">
+                            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+                            <p class="text-gray-500" data-i18n="module.dailyobs.top10.loading">جاري تحميل بيانات المخاطر...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t pt-6 mt-2">
+                    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                        <h3 class="top10-section-title">
+                            <i class="fas fa-chart-line text-blue-600"></i>
+                            <span data-i18n="module.dailyobs.top10.charts.custom">تحليل بصري إضافي</span>
+                        </h3>
+                        <button id="manage-top10-charts-btn" class="btn-secondary">
+                            <i class="fas fa-cog ml-2"></i>
+                            <span data-i18n="module.dailyobs.top10.btn.manageCharts">إدارة الرسوم البيانية</span>
+                        </button>
+                    </div>
+                    <div id="top10-charts-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6"></div>
                 </div>
             </div>
         `;
     },
 
     /**
-     * تحميل وعرض أعلى 10 مخاطر
+     * تحميل وعرض Top 10
      */
     async loadTop10Observations() {
         const container = document.getElementById('top10-observations-list');
+        const kpiRow = document.getElementById('top10-kpi-row');
         if (!container) return;
+
+        this._topRiskCategoryFilter = this._normalizeTopRiskCategoryFilter(this._topRiskCategoryFilter);
 
         const observationsRaw = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
             ? this.getDailyObservationsVisibleToCurrentUser()
             : (Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : []);
 
         if (observationsRaw.length === 0) {
+            if (kpiRow) kpiRow.innerHTML = '';
             container.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-inbox text-gray-300 text-6xl mb-4"></i>
-                    <p class="text-gray-500 text-lg mb-2">لا توجد ملاحظات مسجلة</p>
-                    <p class="text-sm text-gray-400">ابدأ بإضافة ملاحظات جديدة لعرض أعلى المخاطر</p>
+                    <p class="text-gray-500 text-lg mb-2">${Utils.escapeHTML(this._t('module.dailyobs.top10.empty.none', 'لا توجد ملاحظات مسجلة'))}</p>
+                    <p class="text-sm text-gray-400">${Utils.escapeHTML(this._t('module.dailyobs.top10.empty.noneHint', 'ابدأ بإضافة ملاحظات جديدة لعرض أعلى المخاطر'))}</p>
                 </div>
             `;
+            this._destroyTop10BuiltInCharts();
             return;
         }
 
         const observations = observationsRaw.map((item) => {
             const obs = this.normalizeRecord(item);
-            const riskCategory = this._topRiskCategoryOf(obs);
+            const riskCategoryId = this._topRiskCategoryOf(obs);
+            const riskCategory = this._getTopRiskCategoryLabel(riskCategoryId);
             const riskScore = this._computeObservationRiskScore(obs);
-            return { ...obs, riskCategory, riskScore };
+            return { ...obs, riskCategoryId, riskCategory, riskScore };
         });
 
         const categoryStats = this._buildTopRiskCategoryStats(observations);
@@ -5409,92 +5689,130 @@ const DailyObservations = {
 
         let pool = observations.slice();
         if (activeFilter) {
-            pool = pool.filter((obs) => obs.riskCategory === activeFilter);
+            pool = pool.filter((obs) => obs.riskCategoryId === activeFilter);
         }
 
         pool.sort((a, b) => b.riskScore - a.riskScore);
         const top10 = pool.slice(0, 10);
 
+        const criticalOpen = observations.filter((o) =>
+            !this._execIsClosed(o) && (this._execIsCritical(o) || this._execIsHighRisk(o))
+        ).length;
+        const avgScore = top10.length
+            ? Math.round(top10.reduce((s, o) => s + o.riskScore, 0) / top10.length)
+            : 0;
+
+        if (kpiRow) {
+            kpiRow.innerHTML = `
+                <div class="top10-kpi">
+                    <div class="top10-kpi__label">${Utils.escapeHTML(this._t('module.dailyobs.top10.kpi.total', 'إجمالي الملاحظات'))}</div>
+                    <div class="top10-kpi__value">${observations.length}</div>
+                </div>
+                <div class="top10-kpi">
+                    <div class="top10-kpi__label">${Utils.escapeHTML(this._t('module.dailyobs.top10.kpi.criticalOpen', 'حرجة/عالية مفتوحة'))}</div>
+                    <div class="top10-kpi__value top10-kpi__value--danger">${criticalOpen}</div>
+                </div>
+                <div class="top10-kpi">
+                    <div class="top10-kpi__label">${Utils.escapeHTML(this._t('module.dailyobs.top10.kpi.avgScore', 'متوسط درجة المخاطر'))}</div>
+                    <div class="top10-kpi__value top10-kpi__value--warn">${avgScore}</div>
+                </div>
+                <div class="top10-kpi">
+                    <div class="top10-kpi__label">${Utils.escapeHTML(this._t('module.dailyobs.top10.kpi.inRanking', 'في الترتيب الحالي'))}</div>
+                    <div class="top10-kpi__value">${top10.length}</div>
+                </div>
+            `;
+        }
+
+        const openHighTpl = this._t('module.dailyobs.top10.categories.openHigh', '{n} عالية مفتوحة');
         const categoryCardsHtml = this.getTopRiskCategoryDefs().map((def) => {
-            const st = categoryStats[def.label] || { count: 0, openHigh: 0 };
-            const active = activeFilter === def.label;
+            const st = categoryStats[def.id] || { count: 0, openHigh: 0 };
+            const active = activeFilter === def.id;
+            const openHighLabel = openHighTpl.replace('{n}', String(st.openHigh));
             return `
-                <button type="button" class="top-risk-cat-card" data-cat="${Utils.escapeHTML(def.label)}"
-                    style="text-align:right;padding:12px 14px;border-radius:12px;border:2px solid ${active ? def.color : def.border};
-                    background:${active ? def.bg : '#fff'};cursor:pointer;transition:all .2s;box-shadow:${active ? '0 4px 14px rgba(0,0,0,.08)' : 'none'};">
+                <button type="button" class="top-risk-cat-card" data-cat-id="${Utils.escapeHTML(def.id)}"
+                    style="border-color:${active ? def.color : def.border};background:${active ? def.bg : '#fff'};
+                    box-shadow:${active ? '0 4px 14px rgba(0,0,0,.08)' : 'none'};">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
-                        <span style="font-size:11px;font-weight:700;color:${def.color};background:${def.bg};padding:3px 8px;border-radius:999px;">${st.openHigh} عالية مفتوحة</span>
+                        <span style="font-size:11px;font-weight:700;color:${def.color};background:${def.bg};padding:3px 8px;border-radius:999px;">${Utils.escapeHTML(openHighLabel)}</span>
                         <i class="fas ${def.icon}" style="color:${def.color};font-size:1.1rem;"></i>
                     </div>
                     <div style="font-weight:800;font-size:1rem;color:#0f172a;margin-bottom:4px;">${Utils.escapeHTML(def.label)}</div>
                     <div style="font-size:1.35rem;font-weight:800;color:${def.color};">${st.count}</div>
-                    <div style="font-size:11px;color:#64748b;margin-top:2px;">إجمالي الملاحظات</div>
+                    <div style="font-size:11px;color:#64748b;margin-top:2px;">${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.total', 'إجمالي الملاحظات'))}</div>
                 </button>
             `;
         }).join('');
 
+        const filterLabel = activeFilter ? this._getTopRiskCategoryLabel(activeFilter) : '';
         const filterHint = activeFilter
             ? `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;padding:10px 12px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;">
-                    <span style="font-size:0.88rem;color:#1e40af;"><i class="fas fa-filter ml-2"></i>عرض مخاطر فئة: <strong>${Utils.escapeHTML(activeFilter)}</strong></span>
-                    <button type="button" id="top-risk-clear-filter-btn" class="btn-secondary" style="padding:4px 10px;font-size:0.8rem;">إلغاء الفلتر</button>
+                    <span style="font-size:0.88rem;color:#1e40af;"><i class="fas fa-filter ml-2"></i>${Utils.escapeHTML(this._t('module.dailyobs.top10.filter.active', 'عرض مخاطر فئة: {category}').replace('{category}', filterLabel))}</span>
+                    <button type="button" id="top-risk-clear-filter-btn" class="btn-secondary" style="padding:4px 10px;font-size:0.8rem;">${Utils.escapeHTML(this._t('module.dailyobs.top10.filter.clear', 'إلغاء الفلتر'))}</button>
                </div>`
             : '';
 
+        const notSpec = this._t('module.dailyobs.common.notSpecified', 'غير محدد');
+        const viewTitle = this._t('module.dailyobs.common.viewDetails', 'عرض التفاصيل');
+
+        const rankingTitle = activeFilter
+            ? `${this._t('module.dailyobs.top10.ranking.title', 'قائمة Top 10')} — ${filterLabel}`
+            : this._t('module.dailyobs.top10.ranking.title', 'قائمة Top 10');
+
         container.innerHTML = `
             <div class="mb-5">
-                <h3 class="text-lg font-semibold mb-3">
-                    <i class="fas fa-layer-group ml-2 text-slate-600"></i>
-                    فئات المخاطر الرئيسية
+                <h3 class="top10-section-title">
+                    <i class="fas fa-layer-group text-slate-600"></i>
+                    ${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.title', 'فئات المخاطر الرئيسية'))}
                 </h3>
-                <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-2" id="top-risk-category-cards">
+                <div class="top10-cat-grid mb-2" id="top-risk-category-cards">
                     ${categoryCardsHtml}
                 </div>
-                <p class="text-xs text-gray-500">اضغط على أي فئة لتصفية القائمة — اضغط مرة أخرى لإلغاء التصفية</p>
+                <p class="text-xs text-gray-500">${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.hint', 'اضغط على أي فئة لتصفية القائمة'))}</p>
             </div>
             ${filterHint}
             <div class="mb-4">
-                <h3 class="text-lg font-semibold mb-2">
-                    <i class="fas fa-ranking-star ml-2 text-red-500"></i>
-                    قائمة أعلى 10 مخاطر${activeFilter ? ` — ${Utils.escapeHTML(activeFilter)}` : ''}
+                <h3 class="top10-section-title">
+                    <i class="fas fa-ranking-star text-red-500"></i>
+                    ${Utils.escapeHTML(rankingTitle)}
                 </h3>
-                <p class="text-sm text-gray-500 mb-4">الترتيب حسب درجة المخاطر (الخطورة + الحالة + التأخير + الحداثة)</p>
+                <p class="text-sm text-gray-500 mb-4">${Utils.escapeHTML(this._t('module.dailyobs.top10.ranking.subtitle', 'الترتيب حسب درجة المخاطر'))}</p>
             </div>
             ${top10.length === 0 ? `
                 <div class="empty-state">
                     <i class="fas fa-check-circle text-green-400 text-4xl mb-3"></i>
-                    <p class="text-gray-500">لا توجد ملاحظات مطابقة للفلتر الحالي</p>
+                    <p class="text-gray-500">${Utils.escapeHTML(this._t('module.dailyobs.top10.empty.noMatch', 'لا توجد ملاحظات مطابقة للفلتر الحالي'))}</p>
                 </div>
             ` : `
-            <div class="overflow-x-auto">
+            <div class="top10-table-wrap">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>#</th>
-                            <th>فئة المخاطر</th>
-                            <th>رقم الملاحظة</th>
-                            <th>الموقع / المكان</th>
-                            <th>نوع الملاحظة</th>
-                            <th>معدل الخطورة</th>
-                            <th>الحالة</th>
-                            <th>درجة المخاطر</th>
-                            <th>الإجراءات</th>
+                            <th>${Utils.escapeHTML(this._t('module.dailyobs.top10.table.rank', '#'))}</th>
+                            <th>${Utils.escapeHTML(this._t('module.dailyobs.top10.table.category', 'فئة المخاطر'))}</th>
+                            <th>${Utils.escapeHTML(this._t('module.dailyobs.top10.table.code', 'رقم الملاحظة'))}</th>
+                            <th>${Utils.escapeHTML(this._t('module.dailyobs.top10.table.location', 'الموقع / المكان'))}</th>
+                            <th>${Utils.escapeHTML(this._t('module.dailyobs.top10.table.type', 'نوع الملاحظة'))}</th>
+                            <th>${Utils.escapeHTML(this._t('module.dailyobs.top10.table.riskLevel', 'معدل الخطورة'))}</th>
+                            <th>${Utils.escapeHTML(this._t('module.dailyobs.top10.table.status', 'الحالة'))}</th>
+                            <th>${Utils.escapeHTML(this._t('module.dailyobs.top10.table.score', 'درجة المخاطر'))}</th>
+                            <th>${Utils.escapeHTML(this._t('module.dailyobs.top10.table.actions', 'الإجراءات'))}</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${top10.map((obs, index) => {
-                            const catMeta = this._getTopRiskCategoryMeta(obs.riskCategory);
+                            const catMeta = this._getTopRiskCategoryMeta(obs.riskCategoryId);
                             const scoreColor = obs.riskScore >= 55 ? '#dc2626' : obs.riskScore >= 35 ? '#ea580c' : '#2563eb';
                             return `
                             <tr class="hover:bg-gray-50 transition-colors">
                                 <td><span class="font-bold text-gray-700">${index + 1}</span></td>
                                 <td>
                                     <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;color:${catMeta.color};background:${catMeta.bg};border:1px solid ${catMeta.border};">
-                                        <i class="fas ${catMeta.icon}"></i>${Utils.escapeHTML(obs.riskCategory || 'عام')}
+                                        <i class="fas ${catMeta.icon}"></i>${Utils.escapeHTML(obs.riskCategory || notSpec)}
                                     </span>
                                 </td>
                                 <td>
                                     <span class="font-medium text-blue-600 cursor-pointer hover:underline" onclick="DailyObservations.viewObservation('${obs.id}')">
-                                        ${Utils.escapeHTML(obs.isoCode || 'غير محدد')}
+                                        ${Utils.escapeHTML(obs.isoCode || notSpec)}
                                     </span>
                                 </td>
                                 <td>
@@ -5522,7 +5840,7 @@ const DailyObservations = {
                                 </td>
                                 <td>
                                     <button onclick="DailyObservations.viewObservation('${obs.id}')"
-                                            class="btn-icon btn-icon-primary" title="عرض التفاصيل">
+                                            class="btn-icon btn-icon-primary" title="${Utils.escapeHTML(viewTitle)}">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                 </td>
@@ -5530,11 +5848,44 @@ const DailyObservations = {
                         }).join('')}
                     </tbody>
                 </table>
+            </div>
+            <div class="top10-mobile-cards">
+                ${top10.map((obs, index) => {
+                    const catMeta = this._getTopRiskCategoryMeta(obs.riskCategoryId);
+                    const scoreColor = obs.riskScore >= 55 ? '#dc2626' : obs.riskScore >= 35 ? '#ea580c' : '#2563eb';
+                    return `
+                    <div class="top10-mobile-card">
+                        <div class="top10-mobile-card__head">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <div class="top10-mobile-card__rank">${index + 1}</div>
+                                <div>
+                                    <div class="font-bold text-blue-600" onclick="DailyObservations.viewObservation('${obs.id}')" style="cursor:pointer;">${Utils.escapeHTML(obs.isoCode || notSpec)}</div>
+                                    <div class="text-xs text-gray-500">${Utils.escapeHTML(obs.siteName || '-')}</div>
+                                </div>
+                            </div>
+                            <div class="top10-score-pill" style="color:${scoreColor};">${obs.riskScore}</div>
+                        </div>
+                        <div style="margin-bottom:8px;">
+                            <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;color:${catMeta.color};background:${catMeta.bg};border:1px solid ${catMeta.border};">
+                                <i class="fas ${catMeta.icon}"></i>${Utils.escapeHTML(obs.riskCategory)}
+                            </span>
+                        </div>
+                        <div class="text-sm text-gray-700 mb-2">${Utils.escapeHTML(obs.observationType || '-')}</div>
+                        <div class="flex gap-2 flex-wrap">
+                            <span class="badge badge-${this.getRiskBadgeClass(obs.riskLevel)}">${Utils.escapeHTML(obs.riskLevel || '-')}</span>
+                            <span class="badge badge-${this.getStatusBadgeClass(obs.status)}">${Utils.escapeHTML(obs.status || '-')}</span>
+                        </div>
+                    </div>`;
+                }).join('')}
             </div>`}
         `;
 
+        void this._drawTop10BuiltInCharts(observations, top10);
         this.loadTop10Charts(observations, top10);
         this._bindTopRiskCategoryCards();
+
+        const top10Root = document.getElementById('top10-module-root');
+        if (top10Root) this.applyModuleI18n(top10Root);
 
         setTimeout(() => {
             const addChartBtn = document.getElementById('add-top10-chart-btn');
@@ -5576,7 +5927,7 @@ const DailyObservations = {
                 {
                     id: 'chart_risk_category_distribution',
                     type: 'doughnut',
-                    title: 'توزيع فئات المخاطر',
+                    title: this._t('module.dailyobs.top10.chart.categories', 'توزيع فئات المخاطر'),
                     field: 'riskCategory',
                     enabled: true,
                     useAllData: true
@@ -5584,14 +5935,14 @@ const DailyObservations = {
                 {
                     id: 'chart_risk_level_top10',
                     type: 'bar',
-                    title: 'مستوى الخطورة (أعلى 10)',
+                    title: this._t('module.dailyobs.top10.chart.riskLevel', 'مستوى الخطورة (Top 10)'),
                     field: 'riskLevel',
                     enabled: true
                 },
                 {
                     id: 'chart_status_top10',
                     type: 'pie',
-                    title: 'حالة الملاحظات (أعلى 10)',
+                    title: this._t('module.dailyobs.top10.chart.status', 'حالة الملاحظات (Top 10)'),
                     field: 'status',
                     enabled: true
                 },
@@ -5794,11 +6145,12 @@ const DailyObservations = {
 
         const counts = {};
         observations.forEach(obs => {
-            let value = 'غير محدد';
+            let value = this._t('module.dailyobs.common.notSpecified', 'غير محدد');
             if (field === 'riskCategory') {
-                value = obs.riskCategory || this._topRiskCategoryOf(obs);
+                const id = obs.riskCategoryId || this._topRiskCategoryOf(obs);
+                value = this._getTopRiskCategoryLabel(id);
             } else {
-                value = obs[field] || 'غير محدد';
+                value = obs[field] || value;
             }
             counts[value] = (counts[value] || 0) + 1;
         });

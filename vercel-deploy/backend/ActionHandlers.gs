@@ -246,6 +246,7 @@ var ActionHandlers = {
                                         // طلبات الاعتماد/الحذف تتغير باستمرار — لا نعتمد على كاش batch قديم
                                         const skipCache = !!(payload && payload.skipCache) ||
                                             sheetName === 'ContractorApprovalRequests' ||
+                                            sheetName === 'ContractorEvaluationApprovalRequests' ||
                                             sheetName === 'ContractorDeletionRequests' ||
                                             sheetName === 'ApprovedContractors';
                                         const cache = CacheService.getScriptCache();
@@ -2263,6 +2264,56 @@ var ActionHandlers = {
                     result = reconcileMissingApprovedContractorsFromRequests(payload || {}, actorUserData || payload.userData || {});
                     return;
 
+        })();
+        return result;
+    },
+    'addContractorEvaluationApprovalRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    var addSid = (typeof resolveContractorSpreadsheetId_ === 'function')
+                        ? resolveContractorSpreadsheetId_(payload, postData)
+                        : (spreadsheetId || getSpreadsheetId());
+                    result = addContractorEvaluationApprovalRequest(payload, addSid);
+                    return;
+        })();
+        return result;
+    },
+    'updateContractorEvaluationApprovalRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = updateContractorEvaluationApprovalRequest(payload.requestId || payload.id, payload.updateData || payload);
+                    return;
+        })();
+        return result;
+    },
+    'getAllContractorEvaluationApprovalRequests': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    var filters = (payload && payload.filters) ? payload.filters : {};
+                    if (payload && payload.forceRefresh === true) {
+                        filters.forceRefresh = true;
+                    }
+                    var sid = (typeof resolveContractorSpreadsheetId_ === 'function')
+                        ? resolveContractorSpreadsheetId_(payload, postData)
+                        : (spreadsheetId || getSpreadsheetId());
+                    result = getAllContractorEvaluationApprovalRequests(filters, sid);
+                    return;
+        })();
+        return result;
+    },
+    'approveContractorEvaluationApprovalRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = approveContractorEvaluationApprovalRequest(payload.requestId || payload.id, payload.userData || payload);
+                    return;
+        })();
+        return result;
+    },
+    'rejectContractorEvaluationApprovalRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = rejectContractorEvaluationApprovalRequest(payload.requestId || payload.id, payload.rejectionReason || '', payload.userData || payload);
+                    return;
         })();
         return result;
     },

@@ -82,7 +82,7 @@ function getRequiredSheets() {
         'PeriodicInspectionChecklists', 'PeriodicInspectionSchedules', 'PeriodicInspectionRecords', 'SafetyBudget', 
         'SafetyBudgets', 'SafetyBudgetTransactions', 'SafetyBudgetPurchaseOrders', 'SafetyPerformanceKPIs', 'ActionTrackingRegister', 'Budget', 'KPIs', 
         'EmergencyAlerts', 'EmergencyPlans', 'EmergencyPlansUpdates', 'AppEmergencyNumbers', 'EmployeeTrainingMatrix', 'ContractorTrainings', 'ExternalWorkforceMonthly', 'FireEquipmentAssets', 
-        'FireEquipmentInspections', 'ViolationTypes', 'ViolationApprovalRequests', 'ViolationApprovalSettings', 'PPEMatrix', 'PPE_Stock', 'PPE_Transactions', 'ApprovedContractors', 'ContractorEvaluations', 'ContractorApprovalRequests', 'ContractorDeletionRequests',
+        'FireEquipmentInspections', 'ViolationTypes', 'ViolationApprovalRequests', 'ViolationApprovalSettings', 'PPEMatrix', 'PPE_Stock', 'PPE_Transactions', 'ApprovedContractors', 'ContractorEvaluations', 'ContractorApprovalRequests', 'ContractorEvaluationApprovalRequests', 'ContractorDeletionRequests',
         'AuditLog', 'UserActivityLog', 'AIAssistantSettings', 'UserAILog', 'ObservationSites', 'AnnualTrainingPlans',
         'SafetyTeamMembers', 'SafetyOrganizationalStructure', 'SafetyJobDescriptions', 'SafetyTeamKPIs', 
         'SafetyTeamPerformanceReports', 'SafetyTeamAttendance', 'SafetyTeamLeaves', 'SafetyHealthManagementSettings',

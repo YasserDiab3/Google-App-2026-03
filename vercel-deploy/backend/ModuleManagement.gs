@@ -137,7 +137,7 @@ function getSystemModules() {
             name: 'المقاولين',
             description: 'إدارة المقاولين',
             file: 'Contractors.gs',
-            sheets: ['ApprovedContractors', 'ContractorEvaluations', 'ContractorApprovalRequests', 'ContractorDeletionRequests'], // ✅ تم إزالة 'Contractors'
+            sheets: ['ApprovedContractors', 'ContractorEvaluations', 'ContractorApprovalRequests', 'ContractorEvaluationApprovalRequests', 'ContractorDeletionRequests'], // ✅ تم إزالة 'Contractors'
             version: '1.0.0',
             enabled: true,
             critical: false

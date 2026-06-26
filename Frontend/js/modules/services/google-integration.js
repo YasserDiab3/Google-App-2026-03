@@ -1429,13 +1429,14 @@ const GoogleIntegration = {
             const sheets = Array.isArray(data.sheetNames) ? data.sheetNames.map((s) => String(s || '').trim()) : [];
             const volatileSheets = new Set([
                 'ContractorApprovalRequests',
+                'ContractorEvaluationApprovalRequests',
                 'ContractorDeletionRequests',
                 'ApprovedContractors'
             ]);
             if (volatileSheets.has(sheet)) return true;
             if (sheets.some((s) => volatileSheets.has(s))) return true;
         }
-        if (action === 'getAllContractorApprovalRequests' || action === 'getAllContractorDeletionRequests') {
+        if (action === 'getAllContractorApprovalRequests' || action === 'getAllContractorEvaluationApprovalRequests' || action === 'getAllContractorDeletionRequests') {
             return true;
         }
         return false;
@@ -1755,6 +1756,7 @@ const GoogleIntegration = {
             };
 
             if (sheetName === 'ContractorApprovalRequests' ||
+                sheetName === 'ContractorEvaluationApprovalRequests' ||
                 sheetName === 'ContractorDeletionRequests' ||
                 sheetName === 'ApprovedContractors') {
                 payload.data.skipCache = true;
@@ -3073,7 +3075,7 @@ const GoogleIntegration = {
                 const hasData = key && AppState.appData && AppState.appData[key];
                 const isLoaded = Array.isArray(hasData) && hasData.length > 0;
 
-                const isApprovalSheet = sheetName === 'ContractorApprovalRequests' || sheetName === 'ContractorDeletionRequests';
+                const isApprovalSheet = sheetName === 'ContractorApprovalRequests' || sheetName === 'ContractorEvaluationApprovalRequests' || sheetName === 'ContractorDeletionRequests';
                 const isApprovedSheet = sheetName === 'ApprovedContractors';
                 const isAdminUser = !!(AppState.currentUser && typeof Permissions !== 'undefined'
                     && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
@@ -3204,6 +3206,7 @@ const GoogleIntegration = {
                 'Blacklist_Register',
                 'ContractorEvaluations',
                 'ContractorApprovalRequests', // ✅ إضافة طلبات اعتماد المقاولين
+                'ContractorEvaluationApprovalRequests', // ✅ طلبات اعتماد التقييمات
                 'ContractorDeletionRequests', // ✅ إضافة طلبات حذف المقاولين
                 'BehaviorMonitoring',
                 'ContractorBehaviorMonitoring',
@@ -3290,6 +3293,7 @@ const GoogleIntegration = {
                 'ApprovedContractors': 'approvedContractors',
                 'ContractorEvaluations': 'contractorEvaluations',
                 'ContractorApprovalRequests': 'contractorApprovalRequests', // ✅ إضافة طلبات اعتماد المقاولين
+                'ContractorEvaluationApprovalRequests': 'contractorEvaluationApprovalRequests',
                 'ContractorDeletionRequests': 'contractorDeletionRequests', // ✅ إضافة طلبات حذف المقاولين
                 'Employees': 'employees',
                 'ExternalWorkforceMonthly': 'externalWorkforceMonthly',
@@ -3349,7 +3353,7 @@ const GoogleIntegration = {
                 'periodic-inspections': ['PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists', 'DailySafetyCheckList'],
                 'ppe': ['PPE'],
                 'violations': ['Violations', 'ViolationTypes', 'Blacklist_Register'],
-                'contractors': ['Contractors', 'ApprovedContractors', 'ContractorEvaluations', 'ContractorApprovalRequests', 'ContractorDeletionRequests'], // ✅ إضافة طلبات المقاولين
+                'contractors': ['Contractors', 'ApprovedContractors', 'ContractorEvaluations', 'ContractorApprovalRequests', 'ContractorEvaluationApprovalRequests', 'ContractorDeletionRequests'], // ✅ إضافة طلبات المقاولين
                 'employees': ['Employees', 'ExternalWorkforceMonthly'],
                 'behavior-monitoring': ['BehaviorMonitoring', 'ContractorBehaviorMonitoring'],
                 'chemical-safety': ['ChemicalSafety', 'Chemical_Register'],
@@ -3419,6 +3423,7 @@ const GoogleIntegration = {
                 // ✅ إضافة أوراق طلبات الاعتماد لمن لديه صلاحية موديول المقاولين
                 if (Permissions.hasAccess('contractors')) {
                     allowedSheets.add('ContractorApprovalRequests');
+                    allowedSheets.add('ContractorEvaluationApprovalRequests');
                     allowedSheets.add('ContractorDeletionRequests');
                 }
 

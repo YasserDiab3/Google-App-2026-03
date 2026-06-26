@@ -622,6 +622,10 @@ function addContractorApprovalRequest(requestData, spreadsheetIdOverride) {
         if (!requestData) {
             return { success: false, message: 'بيانات الطلب غير موجودة' };
         }
+
+        if (String(requestData.requestType || '').trim() === 'evaluation') {
+            return addContractorEvaluationApprovalRequest(requestData, spreadsheetIdOverride);
+        }
         
         const sheetName = 'ContractorApprovalRequests';
         const spreadsheetId = spreadsheetIdOverride || resolveContractorSpreadsheetId_(requestData, null);
@@ -803,8 +807,8 @@ function getAllContractorApprovalRequests(filters, spreadsheetIdOverride) {
         filters = filters || {};
         const sheetName = 'ContractorApprovalRequests';
         const finalSpreadsheetId = spreadsheetIdOverride || resolveContractorSpreadsheetId_(filters, null);
-        // طلبات الاعتماد تتغير باستمرار — لا نعتمد على كاش قديم
         invalidateHseSheetCaches(sheetName);
+        migrateEvaluationRequestsFromApprovalSheet_(finalSpreadsheetId);
         let data = readFromSheet(sheetName, finalSpreadsheetId);
         
         // ✅ معالجة evaluationData للتأكد من تحليلها بشكل صحيح
@@ -852,6 +856,10 @@ function getAllContractorApprovalRequests(filters, spreadsheetIdOverride) {
                 }
             }
             return record;
+        });
+
+        data = data.filter(function(record) {
+            return record && String(record.requestType || '').trim() !== 'evaluation';
         });
         
         // تطبيق الفلاتر
@@ -1213,10 +1221,16 @@ function approveContractorApprovalRequest(requestId, userData) {
         const requestIndex = data.findIndex(r => r.id === requestId);
         
         if (requestIndex === -1) {
-            return { success: false, message: 'طلب الاعتماد غير موجود' };
+            try { approvalLock.releaseLock(); } catch (_e) {}
+            return approveContractorEvaluationApprovalRequest(requestId, userData);
         }
         
         const request = data[requestIndex];
+
+        if (String(request.requestType || '').trim() === 'evaluation') {
+            try { approvalLock.releaseLock(); } catch (_e) {}
+            return approveContractorEvaluationApprovalRequest(requestId, userData);
+        }
         
         // تحديث حالة الطلب
         request.status = 'approved';
@@ -1287,29 +1301,6 @@ function approveContractorApprovalRequest(requestId, userData) {
             // ✅ الآن نعتمد فقط على ApprovedContractors
             // ✅ approvedEntity يحتوي على جميع البيانات المطلوبة
             finalContractor = approvedEntity;
-        }
-        
-        // إذا كان الطلب لتقييم، إضافة التقييم إلى القائمة
-        if (request.requestType === 'evaluation' && request.evaluationData) {
-            const evaluationData = parseContractorEvaluationData(request.evaluationData);
-            if (!evaluationData) {
-                return { success: false, message: 'بيانات التقييم غير صالحة أو تالفة' };
-            }
-            if (!evaluationData.contractorId && request.contractorId) {
-                evaluationData.contractorId = request.contractorId;
-            }
-            if (!evaluationData.contractorName && request.contractorName) {
-                evaluationData.contractorName = request.contractorName;
-            }
-            evaluationData.status = 'approved';
-            evaluationData.approvedAt = new Date();
-            evaluationData.approvedBy = userData.id || '';
-            
-            const addEvaluationResult = addContractorEvaluationToSheet(evaluationData);
-            if (!addEvaluationResult.success) {
-                Logger.log('Error: Failed to add evaluation: ' + addEvaluationResult.message);
-                return { success: false, message: 'فشل حفظ التقييم في قاعدة البيانات: ' + (addEvaluationResult.message || '') };
-            }
         }
         
         // ✅ حفظ تحديث الطلب في ContractorApprovalRequests فقط
@@ -1473,6 +1464,10 @@ function rejectContractorApprovalRequest(requestId, rejectionReason, userData) {
         
         const result = updateSingleRowInSheet(sheetName, requestId, updateData, spreadsheetId);
         
+        if (!result.success) {
+            return rejectContractorEvaluationApprovalRequest(requestId, rejectionReason, userData);
+        }
+        
         if (result.success) {
             Logger.log('✅ Successfully rejected contractor approval request: ' + requestId);
         } else {
@@ -1483,6 +1478,279 @@ function rejectContractorApprovalRequest(requestId, rejectionReason, userData) {
     } catch (error) {
         Logger.log('Error rejecting contractor approval request: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء رفض الطلب: ' + error.toString() };
+    }
+}
+
+/**
+ * ============================================
+ * طلبات اعتماد تقييمات المقاولين (Contractor Evaluation Approval Requests)
+ * ============================================
+ */
+
+function normalizeContractorEvaluationApprovalRecord_(record) {
+    if (!record || typeof record !== 'object') return record;
+    if ((!record.status || String(record.status).trim() === '') && record.Status) {
+        record.status = String(record.Status).trim();
+    }
+    if ((!record.createdBy || String(record.createdBy).trim() === '') && record.CreatedBy) {
+        record.createdBy = String(record.CreatedBy).trim();
+    }
+    if ((!record.createdAt || String(record.createdAt).trim() === '') && record.CreatedAt) {
+        record.createdAt = record.CreatedAt;
+    }
+    if ((!record.id || String(record.id).trim() === '') && record.ID) {
+        record.id = String(record.ID).trim();
+    }
+    record.status = normalizeContractorRequestStatus_(record.status);
+    if (record.evaluationData) {
+        record.evaluationData = parseContractorEvaluationData(record.evaluationData);
+    }
+    return record;
+}
+
+function migrateEvaluationRequestsFromApprovalSheet_(spreadsheetId) {
+    const lock = LockService.getScriptLock();
+    try {
+        lock.waitLock(30000);
+        spreadsheetId = spreadsheetId || getSpreadsheetId();
+        var carSheet = 'ContractorApprovalRequests';
+        var cearSheet = 'ContractorEvaluationApprovalRequests';
+        invalidateHseSheetCaches(carSheet);
+        invalidateHseSheetCaches(cearSheet);
+        var carData = readFromSheet(carSheet, spreadsheetId) || [];
+        var cearData = readFromSheet(cearSheet, spreadsheetId) || [];
+        var cearIds = {};
+        cearData.forEach(function(r) {
+            if (r && r.id) cearIds[String(r.id)] = true;
+        });
+        var toMigrate = carData.filter(function(r) {
+            return r && String(r.requestType || '').trim() === 'evaluation';
+        });
+        if (!toMigrate.length) {
+            return { success: true, migrated: 0 };
+        }
+        var migrated = 0;
+        toMigrate.forEach(function(row) {
+            if (!row || !row.id || cearIds[String(row.id)]) return;
+            var newRow = {
+                id: row.id,
+                contractorId: row.contractorId || '',
+                contractorName: row.contractorName || row.companyName || '',
+                evaluationData: row.evaluationData,
+                status: row.status || 'pending',
+                createdBy: row.createdBy || '',
+                createdByName: row.createdByName || '',
+                createdAt: row.createdAt || new Date(),
+                approvedAt: row.approvedAt || '',
+                approvedBy: row.approvedBy || '',
+                approvedByName: row.approvedByName || '',
+                rejectedAt: row.rejectedAt || '',
+                rejectedBy: row.rejectedBy || '',
+                rejectedByName: row.rejectedByName || '',
+                rejectionReason: row.rejectionReason || '',
+                updatedAt: row.updatedAt || '',
+                legacySource: 'ContractorApprovalRequests'
+            };
+            var appendResult = appendToSheet(cearSheet, newRow, spreadsheetId);
+            if (appendResult && appendResult.success) {
+                cearIds[String(newRow.id)] = true;
+                migrated++;
+            }
+        });
+        if (migrated > 0) {
+            var kept = carData.filter(function(r) {
+                return !r || String(r.requestType || '').trim() !== 'evaluation';
+            });
+            saveToSheet(carSheet, kept, spreadsheetId);
+            invalidateHseSheetCaches(carSheet);
+            invalidateHseSheetCaches(cearSheet);
+        }
+        return { success: true, migrated: migrated };
+    } catch (error) {
+        Logger.log('migrateEvaluationRequestsFromApprovalSheet_ error: ' + error.toString());
+        return { success: false, message: error.toString(), migrated: 0 };
+    } finally {
+        try { lock.releaseLock(); } catch (_e) {}
+    }
+}
+
+function addContractorEvaluationApprovalRequest(requestData, spreadsheetIdOverride) {
+    try {
+        if (!requestData) {
+            return { success: false, message: 'بيانات طلب التقييم غير موجودة' };
+        }
+        var sheetName = 'ContractorEvaluationApprovalRequests';
+        var spreadsheetId = spreadsheetIdOverride || resolveContractorSpreadsheetId_(requestData, null);
+        var hasValidId = requestData.id &&
+            typeof requestData.id === 'string' &&
+            (requestData.id.startsWith('CEAR_') || requestData.id.startsWith('CAR_')) &&
+            !requestData.id.startsWith('TEMP_');
+        if (!hasValidId) {
+            requestData.id = generateSequentialId('CEAR', sheetName, spreadsheetId);
+        }
+        if (!requestData.createdAt) requestData.createdAt = new Date();
+        if (!requestData.status) requestData.status = 'pending';
+        if (!requestData.contractorName && requestData.companyName) {
+            requestData.contractorName = requestData.companyName;
+        }
+        if (!requestData.evaluationData) {
+            return { success: false, message: 'بيانات التقييم مطلوبة' };
+        }
+        invalidateHseSheetCaches(sheetName);
+        var appendResult = appendToSheet(sheetName, requestData, spreadsheetId);
+        if (appendResult.success) {
+            return {
+                success: true,
+                message: appendResult.message || 'تم إضافة طلب اعتماد التقييم بنجاح',
+                data: requestData,
+                rowNumber: appendResult.rowNumber
+            };
+        }
+        return appendResult;
+    } catch (error) {
+        Logger.log('Error in addContractorEvaluationApprovalRequest: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء إضافة طلب اعتماد التقييم: ' + error.toString() };
+    }
+}
+
+function updateContractorEvaluationApprovalRequest(requestId, updateData) {
+    try {
+        if (!requestId) {
+            return { success: false, message: 'معرف طلب التقييم غير محدد' };
+        }
+        var sheetName = 'ContractorEvaluationApprovalRequests';
+        var spreadsheetId = getSpreadsheetId();
+        invalidateHseSheetCaches(sheetName);
+        return updateSingleRowInSheet(sheetName, requestId, updateData, spreadsheetId);
+    } catch (error) {
+        Logger.log('Error updating contractor evaluation approval request: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء تحديث طلب اعتماد التقييم: ' + error.toString() };
+    }
+}
+
+function getAllContractorEvaluationApprovalRequests(filters, spreadsheetIdOverride) {
+    try {
+        filters = filters || {};
+        var sheetName = 'ContractorEvaluationApprovalRequests';
+        var finalSpreadsheetId = spreadsheetIdOverride || resolveContractorSpreadsheetId_(filters, null);
+        migrateEvaluationRequestsFromApprovalSheet_(finalSpreadsheetId);
+        invalidateHseSheetCaches(sheetName);
+        var data = (readFromSheet(sheetName, finalSpreadsheetId) || []).map(normalizeContractorEvaluationApprovalRecord_);
+        if (filters.status) {
+            data = data.filter(function(r) { return r.status === filters.status; });
+        }
+        if (filters.createdBy) {
+            data = data.filter(function(r) { return r.createdBy === filters.createdBy; });
+        }
+        if (filters.pendingOnly) {
+            data = data.filter(function(r) {
+                var st = normalizeContractorRequestStatus_(r && r.status);
+                return st === 'pending' || st === 'under_review';
+            });
+        }
+        data.sort(function(a, b) {
+            return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        });
+        return { success: true, data: data, count: data.length };
+    } catch (error) {
+        Logger.log('Error getting contractor evaluation approval requests: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء قراءة طلبات اعتماد التقييم: ' + error.toString(), data: [] };
+    }
+}
+
+function approveContractorEvaluationApprovalRequest(requestId, userData) {
+    var approvalLock = LockService.getScriptLock();
+    try {
+        approvalLock.waitLock(30000);
+        if (!requestId) {
+            return { success: false, message: 'معرف طلب التقييم غير محدد' };
+        }
+        if (!checkAdminPermissions(userData)) {
+            return { success: false, message: 'ليس لديك صلاحية لاعتماد طلبات التقييم' };
+        }
+        var sheetName = 'ContractorEvaluationApprovalRequests';
+        var spreadsheetId = getSpreadsheetId();
+        invalidateHseSheetCaches(sheetName);
+        var data = readFromSheet(sheetName, spreadsheetId) || [];
+        var requestIndex = data.findIndex(function(r) { return r && r.id === requestId; });
+        if (requestIndex === -1) {
+            return { success: false, message: 'طلب اعتماد التقييم غير موجود' };
+        }
+        var request = normalizeContractorEvaluationApprovalRecord_(data[requestIndex]);
+        var st = normalizeContractorRequestStatus_(request.status);
+        if (st === 'approved') {
+            return { success: false, message: 'طلب التقييم معتمد مسبقاً' };
+        }
+        if (st === 'rejected') {
+            return { success: false, message: 'طلب التقييم مرفوض مسبقاً' };
+        }
+        if (!request.evaluationData) {
+            return { success: false, message: 'بيانات التقييم غير موجودة في الطلب' };
+        }
+        var evaluationData = parseContractorEvaluationData(request.evaluationData);
+        if (!evaluationData) {
+            return { success: false, message: 'بيانات التقييم غير صالحة أو تالفة' };
+        }
+        if (!evaluationData.contractorId && request.contractorId) {
+            evaluationData.contractorId = request.contractorId;
+        }
+        if (!evaluationData.contractorName && request.contractorName) {
+            evaluationData.contractorName = request.contractorName;
+        }
+        evaluationData.status = 'approved';
+        evaluationData.approvedAt = new Date();
+        evaluationData.approvedBy = userData.id || '';
+        var addEvaluationResult = addContractorEvaluationToSheet(evaluationData);
+        if (!addEvaluationResult.success) {
+            return { success: false, message: 'فشل حفظ التقييم في قاعدة البيانات: ' + (addEvaluationResult.message || '') };
+        }
+        var updateData = {
+            status: 'approved',
+            approvedAt: new Date(),
+            approvedBy: userData.id || '',
+            approvedByName: userData.name || '',
+            updatedAt: new Date()
+        };
+        var updateResult = updateSingleRowInSheet(sheetName, requestId, updateData, spreadsheetId);
+        if (!updateResult.success) {
+            return updateResult;
+        }
+        return {
+            success: true,
+            message: 'تم اعتماد طلب التقييم بنجاح',
+            evaluation: evaluationData
+        };
+    } catch (error) {
+        Logger.log('Error approving contractor evaluation approval request: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء اعتماد طلب التقييم: ' + error.toString() };
+    } finally {
+        try { approvalLock.releaseLock(); } catch (_e) {}
+    }
+}
+
+function rejectContractorEvaluationApprovalRequest(requestId, rejectionReason, userData) {
+    try {
+        if (!requestId) {
+            return { success: false, message: 'معرف طلب التقييم غير محدد' };
+        }
+        if (!checkAdminPermissions(userData)) {
+            return { success: false, message: 'ليس لديك صلاحية لرفض طلبات التقييم' };
+        }
+        var sheetName = 'ContractorEvaluationApprovalRequests';
+        var spreadsheetId = getSpreadsheetId();
+        invalidateHseSheetCaches(sheetName);
+        var updateData = {
+            status: 'rejected',
+            rejectedAt: new Date(),
+            rejectedBy: userData.id || '',
+            rejectedByName: userData.name || '',
+            rejectionReason: rejectionReason || '',
+            updatedAt: new Date()
+        };
+        return updateSingleRowInSheet(sheetName, requestId, updateData, spreadsheetId);
+    } catch (error) {
+        Logger.log('Error rejecting contractor evaluation approval request: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء رفض طلب التقييم: ' + error.toString() };
     }
 }
 

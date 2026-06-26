@@ -1028,6 +1028,7 @@ function getHeaders(sheetName, data) {
     // ✅ أوراق المقاولين: نستخدم الرؤوس الافتراضية دائماً لتثبيت ترتيب الأعمدة
     // هذا يمنع انزلاق الأعمدة خصوصاً عند التحديث/الاعتماد (updateSingleRowInSheet).
     if (sheetName === 'ContractorApprovalRequests' ||
+        sheetName === 'ContractorEvaluationApprovalRequests' ||
         sheetName === 'ContractorDeletionRequests' ||
         sheetName === 'ApprovedContractors' ||
         sheetName === 'ContractorEvaluations' ||
@@ -1583,6 +1584,10 @@ function repairContractorSheets_(sheetName, spreadsheetId = null) {
 
 function repairContractorApprovalRequestsSheet(spreadsheetId = null) {
     return repairContractorSheets_('ContractorApprovalRequests', spreadsheetId);
+}
+
+function repairContractorEvaluationApprovalRequestsSheet(spreadsheetId = null) {
+    return repairContractorSheets_('ContractorEvaluationApprovalRequests', spreadsheetId);
 }
 
 function repairApprovedContractorsSheet(spreadsheetId = null) {
@@ -3026,7 +3031,9 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
  * بدون ذلك يبقى عمود الحالة القديم pending رغم تعيين request.status في الكود.
  */
 function syncContractorRequestRowForSheetHeaders_(record, headers, sheetName) {
-    if (sheetName !== 'ContractorApprovalRequests' && sheetName !== 'ContractorDeletionRequests') return;
+    if (sheetName !== 'ContractorApprovalRequests' &&
+        sheetName !== 'ContractorEvaluationApprovalRequests' &&
+        sheetName !== 'ContractorDeletionRequests') return;
     if (!record || !headers || !headers.length) return;
     var fields = ['status', 'approvedAt', 'approvedBy', 'approvedByName', 'rejectedAt', 'rejectedBy', 'rejectedByName', 'rejectionReason', 'updatedAt'];
     fields.forEach(function (fl) {

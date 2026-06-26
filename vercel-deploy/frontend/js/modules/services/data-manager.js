@@ -156,7 +156,7 @@ const DataManager = {
             'training', 'trainingSessions', 'trainingCertificates', 'trainingAttendance',
             'contractorTrainings', 'violations', 'blacklistRegister', 'incidents',
             'dailyObservations', 'dailySafetyCheckList', 'ptwRegistry', 'trainingAnalysisData',
-            'contractorEvaluations', 'contractorApprovalRequests', 'contractorDeletionRequests',
+            'contractorEvaluations', 'contractorApprovalRequests', 'contractorEvaluationApprovalRequests', 'contractorDeletionRequests',
             'annualTrainingPlans', 'nearmiss', 'inspections', 'chemicalInventory',
             'clinicVisits', 'clinicMedications', 'clinicInventory', 'clinicInjuries', 'clinicSickLeave', 'clinicStaff', 'clinicStaffAttendance', 'clinicStaffTimeOffRequests'
         ];
@@ -766,6 +766,7 @@ const DataManager = {
             'ptwRegistry': 'PTW',
             'contractorEvaluations': 'ContractorEvaluations',
             'contractorApprovalRequests': 'ContractorApprovalRequests',
+            'contractorEvaluationApprovalRequests': 'ContractorEvaluationApprovalRequests',
             'contractorDeletionRequests': 'ContractorDeletionRequests',
             'blacklistRegister': 'Blacklist_Register',
             'annualTrainingPlans': 'AnnualTrainingPlans',
