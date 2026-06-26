@@ -324,6 +324,7 @@
                             'ClinicVisits', 'Medications', 'SickLeave', 'Injuries', 'ClinicInventory', 'ClinicStaff', 'ClinicStaffAttendance', 'ClinicStaffTimeOffRequests',
                             'FireEquipment', 'FireEquipmentAssets', 'FireEquipmentInspections',
                             'PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists',
+                            'PeriodicEquipmentTypes', 'PeriodicEquipmentAssets', 'PeriodicEquipmentInspections',
                             'PPE', 'ViolationTypes', 'Violations',
                             'Contractors', 'ApprovedContractors', 'ContractorEvaluations',
                             'ContractorApprovalRequests', 'ContractorEvaluationApprovalRequests', 'ContractorDeletionRequests',
@@ -362,6 +363,9 @@
                             'PeriodicInspectionRecords': 'periodicInspectionRecords',
                             'PeriodicInspectionSchedules': 'periodicInspectionSchedules',
                             'PeriodicInspectionChecklists': 'periodicInspectionChecklists',
+                            'PeriodicEquipmentTypes': 'periodicEquipmentTypes',
+                            'PeriodicEquipmentAssets': 'periodicEquipmentAssets',
+                            'PeriodicEquipmentInspections': 'periodicEquipmentInspections',
                             'PPE': 'ppe', 'ViolationTypes': 'violationTypes', 'Violations': 'violations',
                             'Contractors': 'contractors', 'ApprovedContractors': 'approvedContractors',
                             'ContractorEvaluations': 'contractorEvaluations',
@@ -405,7 +409,7 @@
                                 'ptw': ['PTW'], 'training': ['Training'],
                                 'clinic': ['ClinicVisits', 'Medications', 'SickLeave', 'Injuries', 'ClinicInventory', 'ClinicStaff', 'ClinicStaffAttendance', 'ClinicStaffTimeOffRequests'],
                                 'fire-equipment': ['FireEquipment', 'FireEquipmentAssets', 'FireEquipmentInspections'],
-                                'periodic-inspections': ['PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists'],
+                                'periodic-inspections': ['PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists', 'PeriodicEquipmentTypes', 'PeriodicEquipmentAssets', 'PeriodicEquipmentInspections'],
                                 'ppe': ['PPE'], 'violations': ['Violations', 'ViolationTypes'],
                                 'contractors': ['Contractors', 'ApprovedContractors', 'ContractorEvaluations', 'ContractorApprovalRequests', 'ContractorEvaluationApprovalRequests', 'ContractorDeletionRequests'],
                                 'employees': ['Employees', 'ExternalWorkforceMonthly'], 'behavior-monitoring': ['BehaviorMonitoring', 'ContractorBehaviorMonitoring'],
@@ -563,6 +567,9 @@
                         }
                         if (typeof PeriodicInspectionStore !== 'undefined') {
                             PeriodicInspectionStore.ensureInitialized();
+                        }
+                        if (typeof PeriodicEquipmentStore !== 'undefined') {
+                            PeriodicEquipmentStore.ensureInitialized();
                         }
                         
                         // حفظ نهائي مع انتظار اكتمال الحفظ

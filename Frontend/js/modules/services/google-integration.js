@@ -2849,6 +2849,9 @@ const GoogleIntegration = {
                 'PeriodicInspectionRecords': AppState.appData.periodicInspectionRecords || [],
                 'PeriodicInspectionSchedules': AppState.appData.periodicInspectionSchedules || [],
                 'PeriodicInspectionChecklists': AppState.appData.periodicInspectionChecklists || [],
+                'PeriodicEquipmentTypes': AppState.appData.periodicEquipmentTypes || [],
+                'PeriodicEquipmentAssets': AppState.appData.periodicEquipmentAssets || [],
+                'PeriodicEquipmentInspections': AppState.appData.periodicEquipmentInspections || [],
                 'PPE': AppState.appData.ppe || [],
                 'ViolationTypes': AppState.appData.violationTypes || [],
                 'Violations': AppState.appData.violations || [],
@@ -3226,6 +3229,9 @@ const GoogleIntegration = {
                 'PeriodicInspectionRecords',
                 'PeriodicInspectionSchedules',
                 'PeriodicInspectionChecklists',
+                'PeriodicEquipmentTypes',
+                'PeriodicEquipmentAssets',
+                'PeriodicEquipmentInspections',
                 'PPE',
                 'ViolationTypes',
                 'Violations',
@@ -3311,6 +3317,9 @@ const GoogleIntegration = {
                 'PeriodicInspectionRecords': 'periodicInspectionRecords',
                 'PeriodicInspectionSchedules': 'periodicInspectionSchedules',
                 'PeriodicInspectionChecklists': 'periodicInspectionChecklists',
+                'PeriodicEquipmentTypes': 'periodicEquipmentTypes',
+                'PeriodicEquipmentAssets': 'periodicEquipmentAssets',
+                'PeriodicEquipmentInspections': 'periodicEquipmentInspections',
                 'PPE': 'ppe',
                 'ViolationTypes': 'violationTypes',
                 'Violations': 'violations',
@@ -3376,7 +3385,7 @@ const GoogleIntegration = {
                 'training': ['Training'],
                 'clinic': ['ClinicVisits', 'ClinicContractorVisits', 'Medications', 'SickLeave', 'Injuries', 'ClinicContractorInjuries', 'ClinicInventory'],
                 'fire-equipment': ['FireEquipment', 'FireEquipmentAssets', 'FireEquipmentInspections'],
-                'periodic-inspections': ['PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists', 'DailySafetyCheckList'],
+                'periodic-inspections': ['PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists', 'DailySafetyCheckList', 'PeriodicEquipmentTypes', 'PeriodicEquipmentAssets', 'PeriodicEquipmentInspections'],
                 'ppe': ['PPE'],
                 'violations': ['Violations', 'ViolationTypes', 'Blacklist_Register'],
                 'contractors': ['Contractors', 'ApprovedContractors', 'ContractorEvaluations', 'ContractorApprovalRequests', 'ContractorEvaluationApprovalRequests', 'ContractorDeletionRequests'], // ✅ إضافة طلبات المقاولين
@@ -3857,6 +3866,9 @@ const GoogleIntegration = {
 
             ViolationTypesManager.ensureInitialized();
             PeriodicInspectionStore.ensureInitialized();
+            if (typeof PeriodicEquipmentStore !== 'undefined') {
+                PeriodicEquipmentStore.ensureInitialized();
+            }
 
             DataManager.save();
 

@@ -117,7 +117,7 @@ function getSystemModules() {
             name: 'الفحوصات الدورية',
             description: 'إدارة الفحوصات الدورية',
             file: 'PeriodicInspection.gs',
-            sheets: ['PeriodicInspections', 'PeriodicInspectionCategories', 'PeriodicInspectionChecklists', 'PeriodicInspectionSchedules', 'PeriodicInspectionRecords'],
+            sheets: ['PeriodicInspections', 'PeriodicInspectionCategories', 'PeriodicInspectionChecklists', 'PeriodicInspectionSchedules', 'PeriodicInspectionRecords', 'PeriodicEquipmentTypes', 'PeriodicEquipmentAssets', 'PeriodicEquipmentInspections'],
             version: '1.0.0',
             enabled: true,
             critical: false

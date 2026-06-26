@@ -3466,6 +3466,70 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'getAllPeriodicEquipmentTypes': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = getAllPeriodicEquipmentTypes();
+                    return;
+        })();
+        return result;
+    },
+    'savePeriodicEquipmentType': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = savePeriodicEquipmentType(payload);
+                    return;
+        })();
+        return result;
+    },
+    'deletePeriodicEquipmentType': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = deletePeriodicEquipmentType(payload.typeId || payload.id);
+                    return;
+        })();
+        return result;
+    },
+    'getAllPeriodicEquipmentAssets': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = getAllPeriodicEquipmentAssets(payload.filters || {});
+                    return;
+        })();
+        return result;
+    },
+    'saveOrUpdatePeriodicEquipmentAsset': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = saveOrUpdatePeriodicEquipmentAsset(payload);
+                    return;
+        })();
+        return result;
+    },
+    'deletePeriodicEquipmentAsset': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = deletePeriodicEquipmentAsset(payload.assetId || payload.id);
+                    return;
+        })();
+        return result;
+    },
+    'getAllPeriodicEquipmentInspections': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = getAllPeriodicEquipmentInspections(payload.filters || {});
+                    return;
+        })();
+        return result;
+    },
+    'addPeriodicEquipmentInspection': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = addPeriodicEquipmentInspection(payload);
+                    return;
+        })();
+        return result;
+    },
     'addPPE': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

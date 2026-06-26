@@ -13096,6 +13096,10 @@
             src="js/modules/services/periodic-inspection-store.js"
             defer
         ></script>
+        <script
+            src="js/modules/services/periodic-equipment-store.js"
+            defer
+        ></script>
         <script src="js/modules/services/approval-circuits.js" defer></script>
         <script src="js/modules/services/audit-log.js" defer></script>
         <script src="js/modules/services/user-activity-log.js" defer></script>
@@ -13151,7 +13155,8 @@
         <script src="js/modules/modules/clinic.js?v=20260524-med-unified" defer></script>
         <script src="js/modules/modules/fireequipment.js" defer></script>
         <script src="js/modules/modules/ppe.js" defer></script>
-        <script src="js/modules/modules/periodicinspections.js?v=20260430-15" defer></script>
+        <script src="js/modules/modules/periodic-equipment.js?v=20260626-1" defer></script>
+        <script src="js/modules/modules/periodicinspections.js?v=20260626-1" defer></script>
         <script src="js/modules/modules/contractors.js?v=20260626-analytics-kpi" defer></script>
         <script src="js/modules/modules/violations.js?v=20260525-approval-circuit" defer></script>
         <script src="js/modules/modules/employees.js" defer></script>
@@ -13270,7 +13275,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.347-20260626";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.348-20260626";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

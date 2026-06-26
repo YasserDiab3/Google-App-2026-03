@@ -4628,6 +4628,9 @@ function getModulePrefix(moduleName) {
         'PeriodicInspectionSchedules': 'PIS',
         'periodicinspectionrecords': 'PIR',
         'PeriodicInspectionRecords': 'PIR',
+        'PeriodicEquipmentTypes': 'PET',
+        'PeriodicEquipmentAssets': 'PEA',
+        'PeriodicEquipmentInspections': 'PEI',
         
         // المقاولين والعيادة
         // ✅ تم إزالة 'contractors' و 'Contractors' - نعتمد فقط على ApprovedContractors

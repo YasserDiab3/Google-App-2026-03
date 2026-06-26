@@ -57,6 +57,19 @@ const PeriodicInspections = {
                 { id: 'fl12', label: 'فحص رخصة السائق (سارية)', required: true }
             ]
         },
+        'ladders': {
+            id: 'ladders',
+            name: 'فحص السلالم الثابتة والمتحركة',
+            icon: 'fa-stairs',
+            checklist: [
+                { id: 'ld1', label: 'ثبات السلم وعدم وجود اهتزاز', required: true },
+                { id: 'ld2', label: 'سلامة الدرجات وعدم وجود كسر أو تشققات', required: true },
+                { id: 'ld3', label: 'نظافة السلم وخلوه من الزيوت أو الشحوم', required: false },
+                { id: 'ld4', label: 'سلامة الدرابزين والحواجز', required: true },
+                { id: 'ld5', label: 'التثبيت والربط بشكل آمن', required: true },
+                { id: 'ld6', label: 'لافتة التعريف أو بطاقة الفحص واضحة', required: false }
+            ]
+        },
         'emergency-doors': {
             id: 'emergency-doors',
             name: 'فحص أبواب الطوارئ',
@@ -227,7 +240,7 @@ const PeriodicInspections = {
     },
 
     state: {
-        currentTab: 'inspections-list', // inspections-list, inspection-records, daily-safety-checklist
+        currentTab: 'inspections-list', // inspections-list, inspection-records, daily-safety-checklist, equipment-database
         filters: {
             category: '',
             result: '',
@@ -375,6 +388,28 @@ const PeriodicInspections = {
         });
     },
 
+    _computeDailySafetyEntityCompliance(records, getKeyFn) {
+        const map = {};
+        (Array.isArray(records) ? records : []).forEach((r) => {
+            const key = String(getKeyFn(r) || '-').trim() || '-';
+            if (!map[key]) map[key] = { name: key, count: 0, compliant: 0, nonCompliant: 0, totalAnswers: 0 };
+            map[key].count += 1;
+            this.DAILY_SAFETY_CHECKLIST_QUESTIONS.forEach((q) => {
+                const val = r[this._getDailySafetyQuestionRecordKey(q.key)];
+                const kind = this._getDailySafetyStatusKind(val);
+                if (kind === 'empty') return;
+                map[key].totalAnswers += 1;
+                if (kind === 'compliant') map[key].compliant += 1;
+                else if (kind === 'nonCompliant') map[key].nonCompliant += 1;
+            });
+        });
+        return Object.values(map).map((e) => ({
+            ...e,
+            complianceRate: e.totalAnswers > 0 ? Math.round((e.compliant / e.totalAnswers) * 100) : 0,
+            nonCompliantRate: e.totalAnswers > 0 ? Math.round((e.nonCompliant / e.totalAnswers) * 100) : 0
+        }));
+    },
+
     getDailySafetyAnalytics(records) {
         const list = Array.isArray(records) ? records : [];
         const siteCount = {};
@@ -389,15 +424,25 @@ const PeriodicInspections = {
             other: 0
         }));
         const pointByKey = points.reduce((acc, p) => { acc[p.key] = p; return acc; }, {});
+        let recordsWithIssues = 0;
+        let totalRecordNonCompliant = 0;
+        const uniqueDays = new Set();
+        const uniqueSites = new Set();
+        const uniqueInspectors = new Set();
 
         list.forEach((r) => {
             const siteName = String(r.siteName || '-').trim();
             const inspectorName = String(r.inspectorName || '-').trim();
             const shift = String(r.shift || '-').trim();
+            const dayKey = this._normalizeDateOnly(r.date || r.createdAt);
+            if (dayKey) uniqueDays.add(dayKey);
+            uniqueSites.add(siteName);
+            uniqueInspectors.add(inspectorName);
             siteCount[siteName] = (siteCount[siteName] || 0) + 1;
             inspectorCount[inspectorName] = (inspectorCount[inspectorName] || 0) + 1;
             shiftCount[shift] = (shiftCount[shift] || 0) + 1;
 
+            let recNonCompliant = 0;
             this.DAILY_SAFETY_CHECKLIST_QUESTIONS.forEach((q) => {
                 const point = pointByKey[q.key];
                 if (!point) return;
@@ -406,9 +451,13 @@ const PeriodicInspections = {
                 if (kind === 'empty') return;
                 point.total += 1;
                 if (kind === 'compliant') point.compliant += 1;
-                else if (kind === 'nonCompliant') point.nonCompliant += 1;
-                else point.other += 1;
+                else if (kind === 'nonCompliant') {
+                    point.nonCompliant += 1;
+                    recNonCompliant += 1;
+                } else point.other += 1;
             });
+            if (recNonCompliant > 0) recordsWithIssues += 1;
+            totalRecordNonCompliant += recNonCompliant;
         });
 
         const toSortedList = (obj) => Object.entries(obj)
@@ -416,9 +465,10 @@ const PeriodicInspections = {
             .sort((a, b) => b.count - a.count);
 
         const overallPointsTotal = points.reduce((sum, p) => sum + p.total, 0);
+        const overallCompliant = points.reduce((sum, p) => sum + p.compliant, 0);
         const overallNonCompliant = points.reduce((sum, p) => sum + p.nonCompliant, 0);
         const complianceRate = overallPointsTotal > 0
-            ? Math.round((points.reduce((sum, p) => sum + p.compliant, 0) / overallPointsTotal) * 100)
+            ? Math.round((overallCompliant / overallPointsTotal) * 100)
             : 0;
 
         points.forEach((p) => {
@@ -426,16 +476,151 @@ const PeriodicInspections = {
             p.complianceRate = p.total > 0 ? Math.round((p.compliant / p.total) * 100) : 0;
         });
 
+        const siteStats = this._computeDailySafetyEntityCompliance(list, (r) => r.siteName || '-')
+            .sort((a, b) => b.nonCompliantRate - a.nonCompliantRate || b.count - a.count);
+        const inspectorStats = this._computeDailySafetyEntityCompliance(list, (r) => r.inspectorName || '-')
+            .sort((a, b) => b.count - a.count);
+        const shiftStats = this._computeDailySafetyEntityCompliance(list, (r) => r.shift || '-')
+            .filter((s) => ['الأولى', 'الثانية', 'الثالثة'].includes(s.name))
+            .sort((a, b) => {
+                const order = { 'الأولى': 1, 'الثانية': 2, 'الثالثة': 3 };
+                return (order[a.name] || 9) - (order[b.name] || 9);
+            });
+
+        const sortedPoints = [...points].sort((a, b) => b.nonCompliantRate - a.nonCompliantRate);
+        const topRiskPoint = sortedPoints.find((p) => p.total > 0 && p.nonCompliant > 0) || null;
+        const worstSite = siteStats.find((s) => s.totalAnswers > 0 && s.nonCompliant > 0) || null;
+        const bestSite = [...siteStats].filter((s) => s.totalAnswers > 0).sort((a, b) => b.complianceRate - a.complianceRate)[0] || null;
+
         return {
             totalRecords: list.length,
             siteList: toSortedList(siteCount),
             inspectorList: toSortedList(inspectorCount),
             shiftList: toSortedList(shiftCount),
-            points: points.sort((a, b) => b.nonCompliantRate - a.nonCompliantRate),
+            siteStats,
+            inspectorStats,
+            shiftStats,
+            points: sortedPoints,
+            overallCompliant,
             overallNonCompliant,
             overallPointsTotal,
-            complianceRate
+            complianceRate,
+            recordsWithIssues,
+            recordsCleanRate: list.length > 0 ? Math.round(((list.length - recordsWithIssues) / list.length) * 100) : 0,
+            avgNonCompliantPerRecord: list.length > 0 ? Math.round((totalRecordNonCompliant / list.length) * 10) / 10 : 0,
+            uniqueDays: uniqueDays.size,
+            uniqueSites: uniqueSites.size,
+            uniqueInspectors: uniqueInspectors.size,
+            highRiskPoints: sortedPoints.filter((p) => p.nonCompliantRate >= 40 && p.total > 0).length,
+            mediumRiskPoints: sortedPoints.filter((p) => p.nonCompliantRate >= 20 && p.nonCompliantRate < 40 && p.total > 0).length,
+            lowRiskPoints: sortedPoints.filter((p) => p.nonCompliantRate < 20 && p.total > 0).length,
+            topRiskPoint,
+            worstSite,
+            bestSite
         };
+    },
+
+    getDailySafetyWeeklyTrend(records) {
+        const list = Array.isArray(records) ? records : [];
+        const now = new Date();
+        const weeks = [];
+        for (let i = 7; i >= 0; i--) {
+            const end = new Date(now);
+            end.setDate(end.getDate() - i * 7);
+            const start = new Date(end);
+            start.setDate(start.getDate() - 6);
+            weeks.push({ start, end, label: `${start.getDate()}/${start.getMonth() + 1}` });
+        }
+        return weeks.map((w) => {
+            const weekRec = list.filter((r) => {
+                const d = new Date(r.date || r.createdAt || '');
+                if (Number.isNaN(d.getTime())) return false;
+                const t = d.getTime();
+                return t >= w.start.getTime() && t <= w.end.getTime() + 86400000;
+            });
+            const sub = this.getDailySafetyAnalytics(weekRec);
+            return {
+                label: w.label,
+                records: weekRec.length,
+                complianceRate: sub.complianceRate,
+                nonCompliant: sub.overallNonCompliant
+            };
+        });
+    },
+
+    buildDailySafetyInsights(analytics, records) {
+        const t = (key, fallback) => this._t(key, fallback);
+        const insights = [];
+        if (!analytics.totalRecords) return insights;
+
+        insights.push({
+            type: 'info',
+            icon: 'fa-clipboard-check',
+            text: t('module.periodic.analytics.insight.records', '{n} سجل مرور على {sites} موقع و{days} يوم عمل')
+                .replace('{n}', analytics.totalRecords)
+                .replace('{sites}', analytics.uniqueSites)
+                .replace('{days}', analytics.uniqueDays)
+        });
+
+        if (analytics.recordsWithIssues > 0) {
+            insights.push({
+                type: 'warning',
+                icon: 'fa-exclamation-triangle',
+                text: t('module.periodic.analytics.insight.issues', '{n} سجل ({pct}%) يحتوي ملاحظات غير مطابقة — متوسط {avg} ملاحظة/سجل')
+                    .replace('{n}', analytics.recordsWithIssues)
+                    .replace('{pct}', 100 - analytics.recordsCleanRate)
+                    .replace('{avg}', analytics.avgNonCompliantPerRecord)
+            });
+        } else {
+            insights.push({
+                type: 'success',
+                icon: 'fa-check-circle',
+                text: t('module.periodic.analytics.insight.allClean', 'جميع السجلات خالية من الملاحظات غير المطابقة')
+            });
+        }
+
+        if (analytics.topRiskPoint) {
+            insights.push({
+                type: 'danger',
+                icon: 'fa-fire',
+                text: t('module.periodic.analytics.insight.topRisk', 'أعلى بند خطورة: «{label}» — {rate}% غير مطابق ({count}/{total})')
+                    .replace('{label}', analytics.topRiskPoint.label.length > 45 ? analytics.topRiskPoint.label.slice(0, 43) + '…' : analytics.topRiskPoint.label)
+                    .replace('{rate}', analytics.topRiskPoint.nonCompliantRate)
+                    .replace('{count}', analytics.topRiskPoint.nonCompliant)
+                    .replace('{total}', analytics.topRiskPoint.total)
+            });
+        }
+
+        if (analytics.worstSite) {
+            insights.push({
+                type: 'warning',
+                icon: 'fa-industry',
+                text: t('module.periodic.analytics.insight.worstSite', 'أضعف موقع: {name} — امتثال {rate}% ({non} غير مطابق)')
+                    .replace('{name}', analytics.worstSite.name)
+                    .replace('{rate}', analytics.worstSite.complianceRate)
+                    .replace('{non}', analytics.worstSite.nonCompliant)
+            });
+        }
+
+        const trend = this.getDailySafetyTrend(records);
+        if (trend.length >= 2) {
+            const last = trend[trend.length - 1];
+            const prev = trend[trend.length - 2];
+            const diff = last.complianceRate - prev.complianceRate;
+            if (diff !== 0) {
+                insights.push({
+                    type: diff > 0 ? 'success' : 'danger',
+                    icon: diff > 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down',
+                    text: diff > 0
+                        ? t('module.periodic.analytics.insight.trendUp', 'تحسّن الامتثال {diff}% مقارنة بالشهر السابق ({prev}% → {last}%)')
+                            .replace('{diff}', diff).replace('{prev}', prev.complianceRate).replace('{last}', last.complianceRate)
+                        : t('module.periodic.analytics.insight.trendDown', 'تراجع الامتثال {diff}% مقارنة بالشهر السابق ({prev}% → {last}%)')
+                            .replace('{diff}', Math.abs(diff)).replace('{prev}', prev.complianceRate).replace('{last}', last.complianceRate)
+                });
+            }
+        }
+
+        return insights;
     },
 
     getDailySafetyTrend(records) {
@@ -654,6 +839,10 @@ const PeriodicInspections = {
                         <i class="fas fa-chart-line ml-2"></i>
                         ${this._t('module.periodic.tab.dailySafetyAnalytics', 'تحليل البيانات')}
                     </button>
+                    <button class="tab-btn ${this.state.currentTab === 'equipment-database' ? 'active' : ''}" data-tab="equipment-database">
+                        <i class="fas fa-database ml-2"></i>
+                        ${this._t('module.periodic.tab.equipmentDatabase', 'قاعدة بيانات المعدات')}
+                    </button>
                 </div>
             </div>
             ` : ''}
@@ -858,6 +1047,12 @@ const PeriodicInspections = {
                 }
                 if (this.state.currentTab === 'inspection-records') {
                     return await this.renderInspectionRecords();
+                }
+                if (this.state.currentTab === 'equipment-database') {
+                    if (typeof PeriodicEquipment !== 'undefined' && typeof PeriodicEquipment.renderTab === 'function') {
+                        return await PeriodicEquipment.renderTab();
+                    }
+                    return '<div class="content-card"><div class="card-body"><p class="text-gray-500">جاري تحميل قاعدة المعدات...</p></div></div>';
                 }
                 return await this.renderList();
         }
@@ -1483,6 +1678,11 @@ const PeriodicInspections = {
             // ✅ ربط الأحداث لكلا تبويبي المرور اليومي (قائمة السجلات + تحليل البيانات)
             if (this.state.currentTab === 'daily-safety-checklist' || this.state.currentTab === 'daily-safety-analytics') {
                 this.bindDailySafetyCheckListTableEvents();
+            }
+
+            if (this.state.currentTab === 'equipment-database' && typeof PeriodicEquipment !== 'undefined') {
+                PeriodicEquipment.bindTabEvents();
+                this.loadPeriodicEquipmentData(false).catch(() => {});
             }
 
             const addBtn = document.getElementById('add-periodic-inspection-btn');
@@ -3988,6 +4188,8 @@ const PeriodicInspections = {
         const controls = this.state.dailySafetyAnalyticsControls || { topN: 18, rankingMetric: 'nonCompliantRate', cardStyle: 'gradient', barStyle: 'rounded' };
         const topN = Math.max(3, Math.min(20, Number(controls.topN || 10)));
         const trend = this.getDailySafetyTrend(filteredRecords);
+        const weeklyTrend = this.getDailySafetyWeeklyTrend(filteredRecords);
+        const insights = this.buildDailySafetyInsights(analytics, filteredRecords);
         const isAdmin = this.isCurrentUserAdmin();
         const topInspectors = analytics.inspectorList.slice(0, topN);
         const topSites = analytics.siteList.slice(0, topN);
@@ -4018,6 +4220,19 @@ const PeriodicInspections = {
             { label: t('module.periodic.dsc.stats.shift1','الوردية الأولى'),      value: shift1count,                      icon:'fas fa-sun',             color:'#ca8a04', bg:'#fefce8', border:'#fde68a' },
             { label: t('module.periodic.dsc.stats.shift23','الوردية 2/3'),        value: shift2count + shift3count,        icon:'fas fa-moon',            color:'#7c3aed', bg:'#f5f3ff', border:'#ddd6fe' },
         ];
+        const kpisExtended = [
+            { label: t('module.periodic.analytics.recordsWithIssues','سجلات بملاحظات'), value: analytics.recordsWithIssues, icon:'fas fa-exclamation-circle', color:'#ea580c', bg:'#fff7ed', border:'#fed7aa' },
+            { label: t('module.periodic.analytics.avgIssuesPerRecord','متوسط ملاحظات/سجل'), value: analytics.avgNonCompliantPerRecord, icon:'fas fa-calculator', color:'#0891b2', bg:'#ecfeff', border:'#a5f3fc' },
+            { label: t('module.periodic.analytics.activeSites','مواقع نشطة'), value: analytics.uniqueSites, icon:'fas fa-map-marker-alt', color:'#0d9488', bg:'#f0fdfa', border:'#99f6e4' },
+            { label: t('module.periodic.analytics.workDays','أيام تغطية'), value: analytics.uniqueDays, icon:'fas fa-calendar-day', color:'#4f46e5', bg:'#eef2ff', border:'#c7d2fe' },
+            { label: t('module.periodic.analytics.inspectorsCount','قائمون بالمرور'), value: analytics.uniqueInspectors, icon:'fas fa-users', color:'#16a34a', bg:'#f0fdf4', border:'#bbf7d0' },
+            { label: t('module.periodic.analytics.cleanRecordsRate','سجلات خالية'), value: analytics.recordsCleanRate + '%', icon:'fas fa-shield-alt', color:'#15803d', bg:'#dcfce7', border:'#86efac' },
+        ];
+        const insightColors = { info:'#2563eb', success:'#15803d', warning:'#d97706', danger:'#dc2626' };
+        const insightBgs = { info:'#eff6ff', success:'#f0fdf4', warning:'#fffbeb', danger:'#fef2f2' };
+        const topSiteStats = analytics.siteStats.slice(0, topN);
+        const topInspectorStats = analytics.inspectorStats.slice(0, topN);
+        const activePoints = worstPoints.filter(p => p.total > 0);
 
         return `
         <div id="dsc-analytics-root" style="font-family:inherit;">
@@ -4175,6 +4390,36 @@ const PeriodicInspections = {
                 </div>`).join('')}
             </div>
 
+            <!-- ══ رؤى تحليلية تلقائية ══ -->
+            ${insights.length ? `
+            <div style="background:linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%);border:1.5px solid #e2e8f0;border-radius:12px;padding:14px 18px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                    <i class="fas fa-lightbulb" style="color:#f59e0b;font-size:15px;"></i>
+                    <span style="font-weight:700;font-size:0.9rem;color:#1e3a8a;">${t('module.periodic.analytics.insightsTitle','رؤى تحليلية')}</span>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px;">
+                    ${insights.map(ins => `
+                    <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:${insightBgs[ins.type]||'#f8fafc'};border:1px solid ${insightColors[ins.type]||'#e2e8f0'}33;border-right:3px solid ${insightColors[ins.type]||'#64748b'};border-radius:8px;">
+                        <i class="fas ${ins.icon}" style="color:${insightColors[ins.type]||'#64748b'};margin-top:2px;flex-shrink:0;"></i>
+                        <span style="font-size:0.78rem;color:#334155;line-height:1.5;">${Utils.escapeHTML(ins.text)}</span>
+                    </div>`).join('')}
+                </div>
+            </div>` : ''}
+
+            <!-- ══ KPI تفصيلية إضافية ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:20px;">
+                ${kpisExtended.map(k=>`
+                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="width:38px;height:38px;background:${k.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="${k.icon}" style="color:#fff;font-size:15px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:1.3rem;font-weight:800;color:${k.color};line-height:1;">${k.value}</div>
+                        <div style="font-size:0.68rem;color:#64748b;margin-top:2px;white-space:nowrap;">${k.label}</div>
+                    </div>
+                </div>`).join('')}
+            </div>
+
             <!-- ══ Row 1: توزيع الورديات + الاتجاه الزمني ══ -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
@@ -4223,6 +4468,54 @@ const PeriodicInspections = {
                 </div>
             </div>
 
+            <!-- ══ Row 2b: امتثال الورديات + الاتجاه الأسبوعي ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-percentage" style="color:#16a34a;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">${t('module.periodic.analytics.shiftCompliance','نسبة الامتثال حسب الوردية')}</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:220px;">
+                        <canvas id="dsc-chart-shift-compliance"></canvas>
+                        <div id="dsc-chart-shift-compliance-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-calendar-week" style="color:#7c3aed;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">${t('module.periodic.analytics.weeklyTrend','الاتجاه الأسبوعي (آخر 8 أسابيع)')}</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:220px;">
+                        <canvas id="dsc-chart-weekly"></canvas>
+                        <div id="dsc-chart-weekly-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ Row 2c: امتثال المواقع + غير المطابق شهرياً ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-building" style="color:#0ea5e9;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">${t('module.periodic.analytics.siteCompliance','امتثال المواقع (أعلى خطورة)')}</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:${Math.max(200, topSiteStats.length * 32 + 40)}px;">
+                        <canvas id="dsc-chart-site-compliance"></canvas>
+                        <div id="dsc-chart-site-compliance-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-chart-line" style="color:#dc2626;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">${t('module.periodic.analytics.nonCompliantTrend','اتجاه الملاحظات غير المطابقة')}</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:220px;">
+                        <canvas id="dsc-chart-noncompliant-trend"></canvas>
+                        <div id="dsc-chart-noncompliant-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- ══ Row 3: نقاط الفحص – امتثال كامل (عرض كامل) ══ -->
             <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
                 <div style="padding:13px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
@@ -4239,6 +4532,129 @@ const PeriodicInspections = {
                 <div style="padding:12px;position:relative;height:${Math.max(300, worstPoints.filter(p=>p.total>0).length * 32 + 60)}px;">
                     <canvas id="dsc-chart-compliance"></canvas>
                     <div id="dsc-chart-compliance-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                </div>
+            </div>
+
+            <!-- ══ Row 4: جداول تفصيلية ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:16px;margin-bottom:16px;">
+                <!-- جدول أداء القائمين بالمرور -->
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-user-check" style="color:#16a34a;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">${t('module.periodic.analytics.inspectorPerformance','أداء القائمين بالمرور — تفصيلي')}</span>
+                    </div>
+                    <div style="overflow-x:auto;max-height:380px;overflow-y:auto;">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+                            <thead style="position:sticky;top:0;z-index:1;">
+                                <tr style="background:#f1f5f9;">
+                                    <th style="padding:8px 10px;text-align:right;font-weight:700;color:#475569;border-bottom:2px solid #e2e8f0;">#</th>
+                                    <th style="padding:8px 10px;text-align:right;font-weight:700;color:#475569;border-bottom:2px solid #e2e8f0;">${t('module.periodic.dsc.table.inspector','القائم بالمرور')}</th>
+                                    <th style="padding:8px 10px;text-align:center;font-weight:700;color:#475569;border-bottom:2px solid #e2e8f0;">${t('module.periodic.dsc.stats.total','السجلات')}</th>
+                                    <th style="padding:8px 10px;text-align:center;font-weight:700;color:#475569;border-bottom:2px solid #e2e8f0;">${t('module.periodic.complianceRate','الامتثال')}</th>
+                                    <th style="padding:8px 10px;text-align:center;font-weight:700;color:#475569;border-bottom:2px solid #e2e8f0;">${t('module.periodic.nonCompliantPoints','غير مطابق')}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${topInspectorStats.length ? topInspectorStats.map((insp, i) => {
+                                    const cc = insp.complianceRate >= 90 ? '#15803d' : insp.complianceRate >= 75 ? '#2563eb' : insp.complianceRate >= 60 ? '#d97706' : '#dc2626';
+                                    return `<tr style="background:${i%2===0?'#fff':'#f8fafc'};border-bottom:1px solid #f1f5f9;">
+                                        <td style="padding:7px 10px;color:#94a3b8;text-align:center;">${i+1}</td>
+                                        <td style="padding:7px 10px;font-weight:600;color:#1e293b;">${Utils.escapeHTML(insp.name)}</td>
+                                        <td style="padding:7px 10px;text-align:center;font-weight:700;color:#2563eb;">${insp.count}</td>
+                                        <td style="padding:7px 10px;text-align:center;">
+                                            <span style="color:${cc};font-weight:700;">${insp.complianceRate}%</span>
+                                            <div style="height:4px;background:#e2e8f0;border-radius:2px;margin-top:3px;overflow:hidden;"><div style="width:${insp.complianceRate}%;height:100%;background:${cc};border-radius:2px;"></div></div>
+                                        </td>
+                                        <td style="padding:7px 10px;text-align:center;color:#dc2626;font-weight:700;">${insp.nonCompliant}</td>
+                                    </tr>`;
+                                }).join('') : `<tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;">لا توجد بيانات</td></tr>`}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- جدول امتثال المواقع -->
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-map-marked-alt" style="color:#0ea5e9;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">${t('module.periodic.analytics.sitePerformance','تحليل المواقع — تفصيلي')}</span>
+                    </div>
+                    <div style="overflow-x:auto;max-height:380px;overflow-y:auto;">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+                            <thead style="position:sticky;top:0;z-index:1;">
+                                <tr style="background:#f1f5f9;">
+                                    <th style="padding:8px 10px;text-align:right;font-weight:700;color:#475569;border-bottom:2px solid #e2e8f0;">#</th>
+                                    <th style="padding:8px 10px;text-align:right;font-weight:700;color:#475569;border-bottom:2px solid #e2e8f0;">${t('module.periodic.dsc.table.site','الموقع')}</th>
+                                    <th style="padding:8px 10px;text-align:center;font-weight:700;color:#475569;border-bottom:2px solid #e2e8f0;">${t('module.periodic.dsc.stats.total','السجلات')}</th>
+                                    <th style="padding:8px 10px;text-align:center;font-weight:700;color:#475569;border-bottom:2px solid #e2e8f0;">${t('module.periodic.complianceRate','الامتثال')}</th>
+                                    <th style="padding:8px 10px;text-align:center;font-weight:700;color:#475569;border-bottom:2px solid #e2e8f0;">${t('module.periodic.analytics.riskRate','الخطورة')}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${topSiteStats.length ? topSiteStats.map((site, i) => {
+                                    const rc = site.nonCompliantRate >= 40 ? '#dc2626' : site.nonCompliantRate >= 20 ? '#d97706' : '#15803d';
+                                    const rl = site.nonCompliantRate >= 40 ? 'عالي' : site.nonCompliantRate >= 20 ? 'متوسط' : 'منخفض';
+                                    return `<tr style="background:${i%2===0?'#fff':'#f8fafc'};border-bottom:1px solid #f1f5f9;">
+                                        <td style="padding:7px 10px;color:#94a3b8;text-align:center;">${i+1}</td>
+                                        <td style="padding:7px 10px;font-weight:600;color:#1e293b;">${Utils.escapeHTML(site.name)}</td>
+                                        <td style="padding:7px 10px;text-align:center;font-weight:700;color:#2563eb;">${site.count}</td>
+                                        <td style="padding:7px 10px;text-align:center;font-weight:700;color:#15803d;">${site.complianceRate}%</td>
+                                        <td style="padding:7px 10px;text-align:center;"><span style="background:${rc}18;color:${rc};padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:700;">${site.nonCompliantRate}% ${rl}</span></td>
+                                    </tr>`;
+                                }).join('') : `<tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;">لا توجد بيانات</td></tr>`}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ Row 5: جدول بنود الفحص التفصيلي ══ -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-table" style="color:#6366f1;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">${t('module.periodic.analytics.checkpointTable','جدول بنود الفحص التفصيلي')} (${activePoints.length})</span>
+                    </div>
+                    <div style="display:flex;gap:6px;font-size:0.72rem;font-weight:700;">
+                        <span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:12px;">${analytics.highRiskPoints} ${t('module.periodic.analytics.highRisk','عالي')}</span>
+                        <span style="background:#fef3c7;color:#d97706;padding:2px 8px;border-radius:12px;">${analytics.mediumRiskPoints} ${t('module.periodic.analytics.mediumRisk','متوسط')}</span>
+                        <span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:12px;">${analytics.lowRiskPoints} ${t('module.periodic.analytics.lowRisk','سليم')}</span>
+                    </div>
+                </div>
+                <div style="overflow-x:auto;max-height:420px;overflow-y:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+                        <thead style="position:sticky;top:0;z-index:1;">
+                            <tr style="background:#1e3a8a;color:#fff;">
+                                <th style="padding:8px 10px;text-align:center;font-weight:700;width:36px;">#</th>
+                                <th style="padding:8px 10px;text-align:right;font-weight:700;">${t('module.periodic.point','البند')}</th>
+                                <th style="padding:8px 10px;text-align:center;font-weight:700;width:70px;">${t('module.periodic.checked','الفحوصات')}</th>
+                                <th style="padding:8px 10px;text-align:center;font-weight:700;width:65px;">${t('module.periodic.compliant','مطابق')}</th>
+                                <th style="padding:8px 10px;text-align:center;font-weight:700;width:75px;">${t('module.periodic.nonCompliant','غير مطابق')}</th>
+                                <th style="padding:8px 10px;text-align:center;font-weight:700;width:90px;">${t('module.periodic.complianceRate','الامتثال')}</th>
+                                <th style="padding:8px 10px;text-align:center;font-weight:700;width:80px;">${t('module.periodic.analytics.riskLevel','المستوى')}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${activePoints.length ? activePoints.map((p, i) => {
+                                const rc = p.nonCompliantRate >= 40 ? '#dc2626' : p.nonCompliantRate >= 20 ? '#d97706' : '#15803d';
+                                const rl = p.nonCompliantRate >= 40 ? 'عالي' : p.nonCompliantRate >= 20 ? 'متوسط' : 'منخفض';
+                                const cc = p.complianceRate >= 90 ? '#15803d' : p.complianceRate >= 75 ? '#2563eb' : p.complianceRate >= 60 ? '#d97706' : '#dc2626';
+                                return `<tr style="background:${i%2===0?'#fff':'#f8fafc'};border-bottom:1px solid #f1f5f9;">
+                                    <td style="padding:7px 8px;text-align:center;color:#94a3b8;">${String(i+1).padStart(2,'0')}</td>
+                                    <td style="padding:7px 10px;color:#1e293b;line-height:1.4;">${Utils.escapeHTML(p.label)}</td>
+                                    <td style="padding:7px 8px;text-align:center;font-weight:700;">${p.total}</td>
+                                    <td style="padding:7px 8px;text-align:center;color:#15803d;font-weight:700;">${p.compliant}</td>
+                                    <td style="padding:7px 8px;text-align:center;color:#dc2626;font-weight:700;">${p.nonCompliant}</td>
+                                    <td style="padding:7px 8px;text-align:center;">
+                                        <div style="display:flex;align-items:center;gap:6px;justify-content:center;">
+                                            <div style="flex:1;max-width:60px;height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden;"><div style="width:${p.complianceRate}%;height:100%;background:${cc};"></div></div>
+                                            <span style="color:${cc};font-weight:700;min-width:32px;">${p.complianceRate}%</span>
+                                        </div>
+                                    </td>
+                                    <td style="padding:7px 8px;text-align:center;"><span style="background:${rc}18;color:${rc};padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:700;">${rl}</span></td>
+                                </tr>`;
+                            }).join('') : `<tr><td colspan="7" style="padding:24px;text-align:center;color:#94a3b8;">لا توجد بيانات</td></tr>`}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -4276,6 +4692,7 @@ const PeriodicInspections = {
         const filteredRecords = this._getDailySafetyAnalyticsRecordsByScope('__all__');
         const analytics = this.getDailySafetyAnalytics(filteredRecords);
         const trend = this.getDailySafetyTrend(filteredRecords);
+        const weeklyTrend = this.getDailySafetyWeeklyTrend(filteredRecords);
         const controls = this.state.dailySafetyAnalyticsControls || { topN: 18, rankingMetric: 'nonCompliantRate' };
         const topN = Math.max(3, Math.min(20, Number(controls.topN || 10)));
         const topInspectors = analytics.inspectorList.slice(0, topN);
@@ -4387,6 +4804,66 @@ const PeriodicInspections = {
                 }
             });
         } else _empty('dsc-chart-compliance');
+
+        // 6) Shift compliance — grouped bar
+        const shiftStats = analytics.shiftStats || [];
+        if (shiftStats.length > 0) {
+            const shiftLabels = shiftStats.map(s => this._formatDailyShiftLabel(s.name));
+            _chart('dsc-chart-shift-compliance', {
+                type: 'bar',
+                data: { labels: shiftLabels, datasets: [
+                    { label: 'نسبة الامتثال%', data: shiftStats.map(s => s.complianceRate), backgroundColor: 'rgba(22,163,74,0.75)', borderRadius: 5, borderSkipped: false },
+                    { label: 'معدل الخطر%', data: shiftStats.map(s => s.nonCompliantRate), backgroundColor: 'rgba(220,38,38,0.65)', borderRadius: 5, borderSkipped: false }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } } },
+                    scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%', font: { size: 10 } }, grid: { color: '#f1f5f9' } } } }
+            });
+        } else _empty('dsc-chart-shift-compliance');
+
+        // 7) Weekly trend — bar + line
+        const weekHasData = weeklyTrend.some(w => w.records > 0);
+        if (weekHasData) {
+            _chart('dsc-chart-weekly', {
+                type: 'bar',
+                data: { labels: weeklyTrend.map(w => w.label), datasets: [
+                    { label: 'السجلات', data: weeklyTrend.map(w => w.records), backgroundColor: 'rgba(99,102,241,0.65)', borderRadius: 4, borderSkipped: false, order: 1 },
+                    { label: 'الامتثال%', data: weeklyTrend.map(w => w.complianceRate), type: 'line', borderColor: 'rgba(22,163,74,0.9)', backgroundColor: 'rgba(22,163,74,0.08)', borderWidth: 2.5, pointRadius: 4, tension: 0.35, fill: true, yAxisID: 'y2', order: 0 }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } } },
+                    scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { beginAtZero: true, position: 'right', ticks: { precision: 0, font: { size: 10 } }, grid: { color: '#f8fafc' } }, y2: { beginAtZero: true, max: 100, position: 'left', ticks: { callback: v => v + '%', font: { size: 10 } }, grid: { display: false } } } }
+            });
+        } else _empty('dsc-chart-weekly');
+
+        // 8) Site compliance ranking — horizontal bar (by non-compliance rate)
+        const siteStatsTop = (analytics.siteStats || []).slice(0, topN).filter(s => s.totalAnswers > 0);
+        if (siteStatsTop.length > 0) {
+            const siteColors = siteStatsTop.map(s => s.nonCompliantRate >= 40 ? 'rgba(220,38,38,0.78)' : s.nonCompliantRate >= 20 ? 'rgba(217,119,6,0.78)' : 'rgba(22,163,74,0.78)');
+            _chart('dsc-chart-site-compliance', {
+                type: 'bar',
+                data: { labels: siteStatsTop.map(s => s.name), datasets: [{ label: 'معدل الخطر%', data: siteStatsTop.map(s => s.nonCompliantRate), backgroundColor: siteColors, borderRadius: 5, borderSkipped: false }] },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => { const s = siteStatsTop[ctx.dataIndex]; return ` خطورة: ${s.nonCompliantRate}% | امتثال: ${s.complianceRate}% | ${s.count} سجل`; } } } },
+                    scales: { x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%', font: { size: 10 } }, grid: { color: '#f1f5f9' } }, y: { ticks: { font: { size: 11 }, callback: v => { const lbl = siteStatsTop[v]?.name || ''; return lbl.length > 20 ? lbl.slice(0, 19) + '…' : lbl; } } } } }
+            });
+        } else _empty('dsc-chart-site-compliance');
+
+        // 9) Non-compliant monthly trend — line chart
+        const trendNonComp = months12.map((mo) => {
+            const monthRec = filteredRecords.filter(r => {
+                const d = new Date(r.date || r.createdAt || '');
+                return !isNaN(d.getTime()) && d.getFullYear() === mo.y && d.getMonth() === mo.m;
+            });
+            return this.getDailySafetyAnalytics(monthRec).overallNonCompliant;
+        });
+        if (trendNonComp.reduce((a, b) => a + b, 0) > 0) {
+            _chart('dsc-chart-noncompliant-trend', {
+                type: 'line',
+                data: { labels: months12.map(m => m.label), datasets: [
+                    { label: 'غير مطابق', data: trendNonComp, borderColor: 'rgba(220,38,38,0.9)', backgroundColor: 'rgba(220,38,38,0.1)', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#dc2626', tension: 0.35, fill: true }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} ملاحظة غير مطابقة` } } },
+                    scales: { x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 40 } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 10 } }, grid: { color: '#f1f5f9' } } } }
+            });
+        } else _empty('dsc-chart-noncompliant-trend');
     },
 
     async exportDailySafetyAnalyticsPDF(scopeInspector = '__all__') {
@@ -5785,6 +6262,7 @@ const PeriodicInspections = {
             // وعن سلسلة getAllPeriodicInspections). نعرض الواجهة فوراً بالبيانات المتاحة،
             // ثم نُعيد الرسم تلقائياً بعد وصول البيانات من الخادم.
             let needsBackgroundDscFetch = false;
+            let needsBackgroundPeFetch = false;
             if (isDscTab) {
                 const dscArr = AppState.appData.dailySafetyCheckList;
                 const hasData = Array.isArray(dscArr) && dscArr.length > 0;
@@ -5809,6 +6287,22 @@ const PeriodicInspections = {
                 }
             }
 
+            if (this.state.currentTab === 'equipment-database') {
+                const peArr = AppState.appData.periodicEquipmentAssets;
+                const hasPeData = Array.isArray(peArr) && peArr.length > 0;
+                if (!this._peDataLoadedOnce && !this._peDataLoadPromise) {
+                    needsBackgroundPeFetch = true;
+                    if (!hasPeData) {
+                        contentContainer.innerHTML = `
+                            <div class="content-card"><div class="card-body">
+                                <div class="empty-state" style="padding:2.5rem 1rem;text-align:center;">
+                                    <p class="text-gray-500">جاري تحميل قاعدة بيانات المعدات...</p>
+                                </div>
+                            </div></div>`;
+                    }
+                }
+            }
+
             let html = '';
             if (this.state.currentTab === 'daily-safety-checklist') {
                 html = await this.renderDailySafetyCheckListContent();
@@ -5816,6 +6310,10 @@ const PeriodicInspections = {
                 html = await this.renderDailySafetyAnalyticsContent();
             } else if (this.state.currentTab === 'inspection-records') {
                 html = await this.renderInspectionRecords();
+            } else if (this.state.currentTab === 'equipment-database') {
+                if (typeof PeriodicEquipment !== 'undefined') {
+                    html = await PeriodicEquipment.renderTab();
+                }
             } else {
                 html = await this.renderList();
             }
@@ -5829,9 +6327,25 @@ const PeriodicInspections = {
                 if (this.state.currentTab === 'daily-safety-analytics') {
                     requestAnimationFrame(() => { this._dscDrawCharts().catch(() => {}); });
                 }
+                if (this.state.currentTab === 'equipment-database' && typeof PeriodicEquipment !== 'undefined') {
+                    PeriodicEquipment.bindTabEvents();
+                }
             }
 
             // ✅ الجلب في الخلفية ثم إعادة الرسم عند وصول البيانات
+            if (needsBackgroundPeFetch) {
+                this.loadPeriodicEquipmentData(false).then(() => {
+                    this._peDataLoadedOnce = true;
+                    if (this.state.currentTab === 'equipment-database') {
+                        this.refreshCurrentTabContent().catch(() => {});
+                    }
+                }).catch(() => {
+                    this._peDataLoadedOnce = true;
+                    if (this.state.currentTab === 'equipment-database') {
+                        this.refreshCurrentTabContent().catch(() => {});
+                    }
+                });
+            }
             if (needsBackgroundDscFetch) {
                 this.ensureDailySafetyDataLoaded().then(() => {
                     // ✅ منع أي حلقة إعادة جلب: نعتبر المحاولة منتهية (نجحت أو فشلت)
@@ -5850,6 +6364,22 @@ const PeriodicInspections = {
         } catch (e) {
             Utils.safeWarn('⚠️ خطأ في refreshCurrentTabContent:', e);
         }
+    },
+
+    /**
+     * تحميل بيانات قاعدة المعدات — مستقل عن loadInspectionDataAsync (تبويب equipment-database فقط)
+     */
+    async loadPeriodicEquipmentData(force) {
+        if (this.state?.currentTab !== 'equipment-database') return;
+        if (this._peDataLoadPromise && !force) {
+            try { await this._peDataLoadPromise; } catch (_e) {}
+            return;
+        }
+        if (typeof PeriodicEquipment === 'undefined' || typeof PeriodicEquipment.loadDataFromBackend !== 'function') return;
+        this._peDataLoadPromise = PeriodicEquipment.loadDataFromBackend(!!force).finally(() => {
+            this._peDataLoadPromise = null;
+        });
+        await this._peDataLoadPromise;
     },
 
     setupTabsNavigation() {
