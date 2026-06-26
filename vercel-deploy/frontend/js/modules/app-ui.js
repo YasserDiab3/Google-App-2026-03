@@ -9616,6 +9616,9 @@ window.UI = {
                                     if (contractorsLink) contractorsLink.click();
                                     const snapshotId = request.id;
                                     try {
+                                        if (typeof Contractors.syncPendingEvaluationApprovalRequests === 'function') {
+                                            await Contractors.syncPendingEvaluationApprovalRequests(snapshotId);
+                                        }
                                         if (typeof Contractors.fetchEvaluationApprovalRequestsFromBackend === 'function') {
                                             await Contractors.fetchEvaluationApprovalRequestsFromBackend();
                                         }
