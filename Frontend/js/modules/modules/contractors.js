@@ -9207,7 +9207,13 @@ const Contractors = {
         this.ensureEvaluationApprovalRequestsSetup();
         if (!this.isContractorApprovalAdminUser()) return [];
         return (AppState.appData.contractorEvaluationApprovalRequests || [])
-            .filter((req) => req && this.isApprovalRequestPendingForReview(req))
+            .filter((req) => {
+                if (!req || !this.isApprovalRequestPendingForReview(req)) return false;
+                if (this.isCurrentUserApprovalRequestOwner(req)) return false;
+                const id = String(req.id || '').trim();
+                if (req._isPendingSync || id.startsWith('TEMP_')) return false;
+                return true;
+            })
             .map((req) => ({ ...req, requestType: 'evaluation', requestCategory: 'evaluation_approval' }));
     },
 
@@ -9478,7 +9484,10 @@ const Contractors = {
             
             const statusBadge = this.getApprovalRequestStatusBadge(request.status);
             const isDeletionRequest = request.requestCategory === 'deletion';
-            const isEvaluationRequest = !isDeletionRequest && request.requestType === 'evaluation';
+            const isEvaluationRequest = request.requestCategory === 'evaluation_approval' ||
+                (!isDeletionRequest && request.requestType === 'evaluation');
+            const requestCategory = isDeletionRequest ? 'deletion' :
+                (isEvaluationRequest ? 'evaluation_approval' : 'approval');
             let requestType;
             if (isDeletionRequest) {
                 requestType = request.requestType === 'contractor' ? 'حذف مقاول' :
@@ -9511,20 +9520,20 @@ const Contractors = {
                                     <td>
                                         ${isAdminView ? `
                                             <div class="flex items-center gap-2">
-                                                <button class="btn-icon btn-icon-info" title="عرض التفاصيل" onclick="Contractors.viewApprovalRequest('${request.id}', '${isDeletionRequest ? 'deletion' : 'approval'}')">
+                                                <button class="btn-icon btn-icon-info" title="عرض التفاصيل" onclick="Contractors.viewApprovalRequest('${request.id}', '${requestCategory}')">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
                                                 ${this.isApprovalRequestPendingForReview(request) ? `
-                                                    <button class="btn-icon btn-icon-success" title="اعتماد" onclick="Contractors.approveRequest('${request.id}', '${isDeletionRequest ? 'deletion' : 'approval'}')">
+                                                    <button class="btn-icon btn-icon-success" title="اعتماد" onclick="Contractors.approveRequest('${request.id}', '${requestCategory}')">
                                                         <i class="fas fa-check"></i>
                                                     </button>
-                                                    <button class="btn-icon btn-icon-danger" title="رفض" onclick="Contractors.rejectRequest('${request.id}', '${isDeletionRequest ? 'deletion' : 'approval'}')">
+                                                    <button class="btn-icon btn-icon-danger" title="رفض" onclick="Contractors.rejectRequest('${request.id}', '${requestCategory}')">
                                                         <i class="fas fa-times"></i>
                                                     </button>
                                                 ` : ''}
                                             </div>
                                         ` : `
-                                            <button class="btn-icon btn-icon-info" title="عرض التفاصيل" onclick="Contractors.viewApprovalRequest('${request.id}', '${isDeletionRequest ? 'deletion' : 'approval'}')">
+                                            <button class="btn-icon btn-icon-info" title="عرض التفاصيل" onclick="Contractors.viewApprovalRequest('${request.id}', '${requestCategory}')">
                                                 <i class="fas fa-eye"></i>
                                             </button>
                                         `}
@@ -9618,9 +9627,11 @@ const Contractors = {
             .map((req) => this.normalizeApprovalRequestRecord(req))
             .filter(req => req && this.isApprovalRequestPendingForReview(req))
             .map(req => ({ ...req, requestCategory: 'deletion' }));
+
+        const evaluationRequests = this.getPendingEvaluationApprovalRequests();
         
         // ✅ تحسين: دمج وترتيب في خطوة واحدة
-        const allRequests = [...approvalRequests, ...deletionRequests];
+        const allRequests = [...approvalRequests, ...deletionRequests, ...evaluationRequests];
         return allRequests.sort((a, b) => {
             const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
             const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -10534,6 +10545,11 @@ const Contractors = {
         }
 
         if (!request) {
+            request = this.findEvaluationApprovalRequest(rid);
+            if (request) requestCategory = 'evaluation_approval';
+        }
+
+        if (!request) {
             Notification.error('الطلب غير موجود');
             return;
         }
@@ -10541,7 +10557,8 @@ const Contractors = {
         const isAdmin = this.isContractorApprovalAdminUser();
         const statusBadge = this.getApprovalRequestStatusBadge(request.status);
         const isDeletionRequest = requestCategory === 'deletion';
-        const isEvaluationRequest = !isDeletionRequest && request.requestType === 'evaluation';
+        const isEvaluationRequest = requestCategory === 'evaluation_approval' ||
+            (!isDeletionRequest && request.requestType === 'evaluation');
         const canEdit = isAdmin && !isDeletionRequest && this.isApprovalRequestPendingForReview(request);
 
         // ✅ إصلاح: البحث عن بيانات التقييم في عدة أماكن
@@ -11098,6 +11115,7 @@ const Contractors = {
 
         this.ensureApprovalRequestsSetup();
         this.ensureDeletionRequestsSetup();
+        this.ensureEvaluationApprovalRequestsSetup();
 
         let request;
         if (requestCategory === 'deletion') {
@@ -11188,7 +11206,82 @@ const Contractors = {
             return;
         }
 
+        if (requestCategory === 'evaluation_approval') {
+            await this.syncPendingEvaluationApprovalRequests(requestId);
+            request = this.findEvaluationApprovalRequest(requestId);
+            if (!request) {
+                await this.fetchEvaluationApprovalRequestsFromBackend();
+                request = this.findEvaluationApprovalRequest(requestId);
+            }
+            if (!request) {
+                Notification.error('طلب اعتماد التقييم غير موجود');
+                return;
+            }
+            const evalId = String(request.id || '').trim();
+            if (request._isPendingSync || evalId.startsWith('TEMP_') || request._syncError) {
+                Notification.error(
+                    request._syncErrorMessage ||
+                    'تعذر مزامنة الطلب مع قاعدة البيانات. تحقق من الاتصال ثم أعد المحاولة.'
+                );
+                return;
+            }
+            if (!confirm('هل أنت متأكد من اعتماد طلب التقييم؟ سيُضاف إلى قائمة تقييم وتأهيل المقاولين.')) {
+                return;
+            }
+            try {
+                Loading.show();
+                const backendResult = await GoogleIntegration.callBackend('approveContractorEvaluationApprovalRequest', {
+                    requestId: request.id || requestId,
+                    userData: AppState.currentUser
+                });
+                if (!backendResult?.success) {
+                    Loading.hide();
+                    Notification.error('فشل اعتماد طلب التقييم: ' + (backendResult?.message || 'خطأ غير معروف'));
+                    return;
+                }
+                request.status = 'approved';
+                request.approvedAt = new Date().toISOString();
+                request.approvedBy = AppState.currentUser?.id || '';
+                request.approvedByName = AppState.currentUser?.name || '';
+                const evaluationRecord = this.parseEvaluationDataFromRequest(request);
+                if (evaluationRecord) {
+                    evaluationRecord.status = 'approved';
+                    evaluationRecord.approvedAt = new Date().toISOString();
+                    evaluationRecord.approvedBy = AppState.currentUser?.id || '';
+                    this.persistEvaluation(evaluationRecord, null, { skipAutoSave: true, replaceExisting: true });
+                }
+                if (window.DataManager?.save) window.DataManager.save();
+                try {
+                    await GoogleIntegration.syncData({
+                        silent: true,
+                        showLoader: false,
+                        notifyOnSuccess: false,
+                        notifyOnError: true,
+                        sheets: ['ContractorEvaluationApprovalRequests', 'ContractorEvaluations']
+                    });
+                } catch (_syncErr) { /* ignore */ }
+                Loading.hide();
+                Notification.success('تم اعتماد طلب التقييم بنجاح.');
+                this.refreshEvaluationApprovalRequestsSection();
+                this.refreshApprovalRequestsSection();
+                this.refreshEvaluationsList(this.currentEvaluationFilter || '');
+                if (typeof AppUI !== 'undefined' && AppUI.updateNotificationsBadge) AppUI.updateNotificationsBadge();
+            } catch (error) {
+                Loading.hide();
+                Utils.safeError('خطأ في اعتماد طلب التقييم:', error);
+                Notification.error('تعذر اعتماد طلب التقييم: ' + error.message);
+            }
+            return;
+        }
+
         request = (AppState.appData.contractorApprovalRequests || []).find(r => r.id === requestId);
+
+        if (!request) {
+            const evalRequest = this.findEvaluationApprovalRequest(requestId);
+            if (evalRequest) {
+                return this.approveRequest(requestId, 'evaluation_approval');
+            }
+        }
 
         if (!request && requestId.startsWith('TEMP_')) {
             Notification.warning('الطلب لا يزال قيد المزامنة. يرجى الانتظار قليلاً ثم إعادة المحاولة.');
@@ -11200,6 +11293,10 @@ const Contractors = {
             Notification.error('طلب الاعتماد غير موجود');
             Utils.safeError('❌ خطأ: لم يتم العثور على الطلب. requestId=' + requestId);
             return;
+        }
+
+        if (String(request.requestType || '').trim() === 'evaluation') {
+            return this.approveRequest(requestId, 'evaluation_approval');
         }
 
         if (request.id && String(request.id).startsWith('TEMP_')) {
@@ -11457,6 +11554,7 @@ const Contractors = {
 
         this.ensureApprovalRequestsSetup();
         this.ensureDeletionRequestsSetup();
+        this.ensureEvaluationApprovalRequestsSetup();
 
         let request;
         if (requestCategory === 'deletion') {
@@ -11506,6 +11604,44 @@ const Contractors = {
             return;
         }
 
+        if (requestCategory === 'evaluation_approval') {
+            const evalRequest = this.findEvaluationApprovalRequest(requestId);
+            if (!evalRequest) {
+                Notification.error('طلب اعتماد التقييم غير موجود');
+                return;
+            }
+            const reason = prompt('يرجى إدخال سبب الرفض (اختياري):');
+            if (reason === null) return;
+            try {
+                Loading.show();
+                const backendResult = await GoogleIntegration.sendRequest({
+                    action: 'rejectContractorEvaluationApprovalRequest',
+                    data: {
+                        requestId: requestId,
+                        rejectionReason: reason || '',
+                        userData: AppState.currentUser
+                    }
+                });
+                if (backendResult?.success) {
+                    evalRequest.status = 'rejected';
+                    evalRequest.rejectedAt = new Date().toISOString();
+                    evalRequest.rejectedBy = AppState.currentUser?.id || '';
+                    evalRequest.rejectedByName = AppState.currentUser?.name || '';
+                    evalRequest.rejectionReason = reason || '';
+                    if (window.DataManager?.save) window.DataManager.save();
+                }
+                Loading.hide();
+                Notification.success('تم رفض طلب التقييم بنجاح.');
+                this.refreshEvaluationApprovalRequestsSection();
+                this.refreshApprovalRequestsSection();
+                if (typeof AppUI !== 'undefined' && AppUI.updateNotificationsBadge) AppUI.updateNotificationsBadge();
+            } catch (error) {
+                Loading.hide();
+                Notification.error('تعذر رفض طلب التقييم: ' + error.message);
+            }
+            return;
+        }
+
         const reason = prompt('يرجى إدخال سبب الرفض (اختياري):');
         if (reason === null) return; // المستخدم ألغى
 
@@ -11513,6 +11649,11 @@ const Contractors = {
             Loading.show();
             const request = (AppState.appData.contractorApprovalRequests || []).find(r => r.id === requestId);
             if (!request) {
+                const evalRequest = this.findEvaluationApprovalRequest(requestId);
+                if (evalRequest) {
+                    Loading.hide();
+                    return this.rejectRequest(requestId, 'evaluation_approval');
+                }
                 Loading.hide();
                 Notification.error('طلب الاعتماد غير موجود');
                 return;

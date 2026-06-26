@@ -8893,9 +8893,11 @@ const Contractors = {
                 (req.status === 'pending' || req.status === 'under_review') &&
                 req.createdBy !== currentUserId) // ✅ استثناء طلبات المستخدم نفسه
             .map(req => ({ ...req, requestCategory: 'deletion' }));
+
+        const evaluationRequests = this.getPendingEvaluationApprovalRequests();
         
         // ✅ تحسين: دمج وترتيب في خطوة واحدة
-        const allRequests = [...approvalRequests, ...deletionRequests];
+        const allRequests = [...approvalRequests, ...deletionRequests, ...evaluationRequests];
         return allRequests.sort((a, b) => {
             const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
             const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
