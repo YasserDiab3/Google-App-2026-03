@@ -16,6 +16,38 @@ const SafetyCalendar = {
         return i18n ? i18n.t(key, null, fallback || key) : (fallback || key);
     },
 
+    _getLang() {
+        return (typeof AppState !== 'undefined' && AppState.currentLanguage)
+            || (typeof localStorage !== 'undefined' && localStorage.getItem('language'))
+            || 'ar';
+    },
+
+    _getFcLocale() {
+        return this._getLang() === 'en' ? 'en' : 'ar';
+    },
+
+    _getFcDirection() {
+        return this._getLang() === 'en' ? 'ltr' : 'rtl';
+    },
+
+    _tParam(key, params, fallback) {
+        let text = this.t(key, fallback);
+        if (params && typeof params === 'object') {
+            Object.keys(params).forEach((k) => {
+                text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(params[k]));
+            });
+        }
+        return text;
+    },
+
+    _getCategoryLabel(key) {
+        if (window.SafetyCalendarEvents && typeof SafetyCalendarEvents.getCategoryLabel === 'function') {
+            return SafetyCalendarEvents.getCategoryLabel(key);
+        }
+        const c = SafetyCalendarEvents?.SAFETY_CALENDAR_CATEGORIES?.[key];
+        return c?.label || key;
+    },
+
     esc(str) {
         if (window.SafetyCalendarEvents && SafetyCalendarEvents.esc) {
             return SafetyCalendarEvents.esc(str);
@@ -54,8 +86,8 @@ const SafetyCalendar = {
         // أزرار التنقّل الأساسية — تبقى موحّدة في التقويم الكامل والمصغّر
         const baseCustomButtons = {
             scPrev: {
-                text: 'السابق',
-                hint: 'الفترة السابقة',
+                text: self.t('module.sc.fc.prev', 'السابق'),
+                hint: self.t('module.sc.fc.prevHint', 'الفترة السابقة'),
                 click() {
                     if (calRef.api && typeof calRef.api.prev === 'function') {
                         calRef.api.prev();
@@ -63,8 +95,8 @@ const SafetyCalendar = {
                 }
             },
             scNext: {
-                text: 'التالي',
-                hint: 'الفترة التالية',
+                text: self.t('module.sc.fc.next', 'التالي'),
+                hint: self.t('module.sc.fc.nextHint', 'الفترة التالية'),
                 click() {
                     if (calRef.api && typeof calRef.api.next === 'function') {
                         calRef.api.next();
@@ -72,8 +104,8 @@ const SafetyCalendar = {
                 }
             },
             scToday: {
-                text: 'اليوم',
-                hint: 'العودة إلى اليوم',
+                text: self.t('module.sc.fc.today', 'اليوم'),
+                hint: self.t('module.sc.fc.todayHint', 'العودة إلى اليوم'),
                 click() {
                     if (calRef.api && typeof calRef.api.today === 'function') {
                         calRef.api.today();
@@ -82,8 +114,8 @@ const SafetyCalendar = {
             }
         };
         const options = Object.assign({
-            locale: 'ar',
-            direction: 'rtl',
+            locale: self._getFcLocale(),
+            direction: self._getFcDirection(),
             buttonText: self._fcButtonText()
         }, overrides || {});
         // دمج الأزرار الأساسية مع المخصّصة (لا استبدال) حتى لا تُفقد scPrev/scNext/scToday
@@ -106,11 +138,11 @@ const SafetyCalendar = {
 
     _fcButtonText() {
         return {
-            today: 'اليوم',
-            month: 'شهر',
-            week: 'أسبوع',
-            day: 'يوم',
-            list: 'قائمة'
+            today: this.t('module.sc.fc.today', 'اليوم'),
+            month: this.t('module.sc.fc.month', 'شهر'),
+            week: this.t('module.sc.fc.week', 'أسبوع'),
+            day: this.t('module.sc.fc.day', 'يوم'),
+            list: this.t('module.sc.fc.list', 'قائمة')
         };
     },
 
@@ -327,11 +359,11 @@ const SafetyCalendar = {
 
     async saveCustomEvent(payload, existingId) {
         if (!this.canManageCustomEvents()) {
-            Notification?.warning?.('ليس لديك صلاحية إدارة الأحداث');
+            Notification?.warning?.(this.t('module.sc.noManageEvents', 'ليس لديك صلاحية إدارة الأحداث'));
             return { success: false };
         }
         if (typeof GoogleIntegration === 'undefined') {
-            Notification?.error?.('الاتصال بالخادم غير متاح');
+            Notification?.error?.(this.t('module.sc.serverUnavailable', 'الاتصال بالخادم غير متاح'));
             return { success: false };
         }
         const user = AppState?.currentUser || {};
@@ -348,19 +380,21 @@ const SafetyCalendar = {
             const res = await GoogleIntegration.sendToAppsScript(action, req);
             Loading?.hide?.();
             if (!res || !res.success) {
-                Notification?.error?.(res?.message || 'فشل حفظ الحدث');
+                Notification?.error?.(res?.message || this.t('module.sc.saveEventFailed', 'فشل حفظ الحدث'));
                 return res || { success: false };
             }
             const saved = res.data || Object.assign({ id: existingId || body.id }, body);
             if (!saved.id && res.id) saved.id = res.id;
             this._upsertLocalCustomEvent(saved);
-            Notification?.success?.(existingId ? 'تم تحديث الحدث' : 'تمت إضافة الحدث');
+            Notification?.success?.(existingId
+                ? this.t('module.sc.eventUpdated', 'تم تحديث الحدث')
+                : this.t('module.sc.eventAdded', 'تمت إضافة الحدث'));
             this.refreshCalendarEvents();
             this.refreshDashboardWidgetIfVisible();
             return res;
         } catch (err) {
             Loading?.hide?.();
-            Notification?.error?.('خطأ: ' + (err.message || err));
+            Notification?.error?.(`${this.t('module.sc.errorPrefix', 'خطأ:')} ${err.message || err}`);
             return { success: false };
         }
     },
@@ -373,17 +407,17 @@ const SafetyCalendar = {
             const res = await GoogleIntegration.sendToAppsScript('deleteSafetyCalendarCustomEvent', { eventId });
             Loading?.hide?.();
             if (!res || !res.success) {
-                Notification?.error?.(res?.message || 'فشل حذف الحدث');
+                Notification?.error?.(res?.message || this.t('module.sc.deleteEventFailed', 'فشل حذف الحدث'));
                 return res || { success: false };
             }
             this._removeLocalCustomEvent(eventId);
-            Notification?.success?.('تم حذف الحدث');
+            Notification?.success?.(this.t('module.sc.eventDeleted', 'تم حذف الحدث'));
             this.refreshCalendarEvents();
             this.refreshDashboardWidgetIfVisible();
             return res;
         } catch (err) {
             Loading?.hide?.();
-            Notification?.error?.('خطأ: ' + (err.message || err));
+            Notification?.error?.(`${this.t('module.sc.errorPrefix', 'خطأ:')} ${err.message || err}`);
             return { success: false };
         }
     },
@@ -407,13 +441,13 @@ const SafetyCalendar = {
     openAddTaskForm(dueDate) {
         if (!this.canAddTasksFromCalendar()) {
             if (typeof Notification !== 'undefined' && Notification.warning) {
-                Notification.warning('ليس لديك صلاحية إضافة مهام');
+                Notification.warning(this.t('module.sc.noAddTasks', 'ليس لديك صلاحية إضافة مهام'));
             }
             return;
         }
         if (typeof UserTasks === 'undefined' || typeof UserTasks.showTaskForm !== 'function') {
             if (typeof Notification !== 'undefined' && Notification.error) {
-                Notification.error('موديول المهام غير متاح');
+                Notification.error(this.t('module.sc.tasksModuleUnavailable', 'موديول المهام غير متاح'));
             }
             return;
         }
@@ -430,21 +464,22 @@ const SafetyCalendar = {
     },
 
     showDateClickMenu(dueDate) {
+        const dateLabel = dueDate || this.t('module.sc.dateFallback', 'التاريخ');
         const html = `
         <div class="modal-overlay sc-modal-overlay" id="sc-date-click-menu">
             <div class="modal-content sc-modal-content sc-date-menu" role="dialog" aria-modal="true">
                 <div class="sc-modal-header">
-                    <h3 class="sc-modal-title">إضافة في ${this.esc(dueDate || 'التاريخ')}</h3>
-                    <button type="button" class="sc-modal-close" id="sc-date-menu-close" aria-label="إغلاق">
+                    <h3 class="sc-modal-title">${this.esc(this._tParam('module.sc.addOnDate', { date: dateLabel }, `إضافة في ${dateLabel}`))}</h3>
+                    <button type="button" class="sc-modal-close" id="sc-date-menu-close" aria-label="${this.esc(this.t('module.sc.close', 'إغلاق'))}">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="sc-modal-body sc-date-menu-actions">
                     ${this.canAddTasksFromCalendar() ? `<button type="button" class="btn-primary btn-sm sc-date-action" data-action="task">
-                        <i class="fas fa-tasks ml-1"></i>مهمة مستخدم
+                        <i class="fas fa-tasks ml-1"></i>${this.esc(this.t('module.sc.userTask', 'مهمة مستخدم'))}
                     </button>` : ''}
                     ${this.canManageCustomEvents() ? `<button type="button" class="btn-secondary btn-sm sc-date-action" data-action="event">
-                        <i class="fas fa-calendar-plus ml-1"></i>حدث مخصص
+                        <i class="fas fa-calendar-plus ml-1"></i>${this.esc(this.t('module.sc.customEvent', 'حدث مخصص'))}
                     </button>` : ''}
                 </div>
             </div>
@@ -468,7 +503,7 @@ const SafetyCalendar = {
 
     openCustomEventForm(record, defaults) {
         if (!this.canManageCustomEvents()) {
-            Notification?.warning?.('ليس لديك صلاحية إدارة الأحداث');
+            Notification?.warning?.(this.t('module.sc.noManageEvents', 'ليس لديك صلاحية إدارة الأحداث'));
             return;
         }
         const rec = record || {};
@@ -485,38 +520,40 @@ const SafetyCalendar = {
         <div class="modal-overlay sc-modal-overlay" id="sc-custom-event-form">
             <div class="modal-content sc-modal-content sc-form-modal" role="dialog" aria-modal="true">
                 <div class="sc-modal-header">
-                    <h3 class="sc-modal-title">${isEdit ? 'تعديل حدث' : 'إضافة حدث'}</h3>
-                    <button type="button" class="sc-modal-close" id="sc-custom-form-close" aria-label="إغلاق">
+                    <h3 class="sc-modal-title">${isEdit
+                        ? this.esc(this.t('module.sc.editEventTitle', 'تعديل حدث'))
+                        : this.esc(this.t('module.sc.addEventTitle', 'إضافة حدث'))}</h3>
+                    <button type="button" class="sc-modal-close" id="sc-custom-form-close" aria-label="${this.esc(this.t('module.sc.close', 'إغلاق'))}">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <form class="sc-custom-form" id="sc-custom-event-form-el">
-                    <label class="sc-form-field"><span>العنوان *</span>
+                    <label class="sc-form-field"><span>${this.esc(this.t('module.sc.form.title', 'العنوان *'))}</span>
                         <input type="text" name="title" required value="${this.esc(title)}" class="form-input"></label>
-                    <label class="sc-form-field"><span>الوصف</span>
+                    <label class="sc-form-field"><span>${this.esc(this.t('module.sc.form.description', 'الوصف'))}</span>
                         <textarea name="description" rows="2" class="form-input">${this.esc(description)}</textarea></label>
                     <div class="sc-form-row">
-                        <label class="sc-form-field"><span>تاريخ البداية *</span>
+                        <label class="sc-form-field"><span>${this.esc(this.t('module.sc.form.startDate', 'تاريخ البداية *'))}</span>
                             <input type="date" name="startDate" required value="${this.esc(startDate)}" class="form-input"></label>
-                        <label class="sc-form-field"><span>تاريخ النهاية</span>
+                        <label class="sc-form-field"><span>${this.esc(this.t('module.sc.form.endDate', 'تاريخ النهاية'))}</span>
                             <input type="date" name="endDate" value="${this.esc(endDate)}" class="form-input"></label>
                     </div>
                     <div class="sc-form-row">
-                        <label class="sc-form-field"><span>التكرار</span>
+                        <label class="sc-form-field"><span>${this.esc(this.t('module.sc.form.recurring', 'التكرار'))}</span>
                             <select name="recurring" class="form-input">
-                                <option value="once" ${recurring === 'once' ? 'selected' : ''}>مرة واحدة</option>
-                                <option value="yearly" ${recurring === 'yearly' || recurring === 'سنوي' ? 'selected' : ''}>سنوي</option>
+                                <option value="once" ${recurring === 'once' ? 'selected' : ''}>${this.esc(this.t('module.sc.recurring.onceFull', 'مرة واحدة'))}</option>
+                                <option value="yearly" ${recurring === 'yearly' || recurring === 'سنوي' ? 'selected' : ''}>${this.esc(this.t('module.sc.recurring.yearly', 'سنوي'))}</option>
                             </select></label>
-                        <label class="sc-form-field"><span>اللون</span>
+                        <label class="sc-form-field"><span>${this.esc(this.t('module.sc.form.color', 'اللون'))}</span>
                             <input type="color" name="color" value="${this.esc(color)}" class="sc-color-input"></label>
                     </div>
                     <label class="sc-form-check"><input type="checkbox" name="enabled" ${enabled ? 'checked' : ''}>
-                        <span>مفعّل</span></label>
+                        <span>${this.esc(this.t('module.sc.form.enabled', 'مفعّل'))}</span></label>
                     <div class="sc-modal-footer sc-form-footer">
                         ${isEdit ? `<button type="button" class="btn-danger btn-sm" id="sc-custom-delete">
-                            <i class="fas fa-trash ml-1"></i>حذف</button>` : ''}
-                        <button type="button" class="btn-secondary btn-sm" id="sc-custom-cancel">إلغاء</button>
-                        <button type="submit" class="btn-primary btn-sm">حفظ</button>
+                            <i class="fas fa-trash ml-1"></i>${this.esc(this.t('module.sc.delete', 'حذف'))}</button>` : ''}
+                        <button type="button" class="btn-secondary btn-sm" id="sc-custom-cancel">${this.esc(this.t('module.sc.cancel', 'إلغاء'))}</button>
+                        <button type="submit" class="btn-primary btn-sm">${this.esc(this.t('module.sc.save', 'حفظ'))}</button>
                     </div>
                 </form>
             </div>
@@ -530,7 +567,7 @@ const SafetyCalendar = {
         modal.querySelector('#sc-custom-cancel')?.addEventListener('click', close);
         modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
         modal.querySelector('#sc-custom-delete')?.addEventListener('click', async () => {
-            if (!confirm('حذف هذا الحدث؟')) return;
+            if (!confirm(this.t('module.sc.confirmDelete', 'حذف هذا الحدث؟'))) return;
             await this.deleteCustomEvent(rec.id);
             close();
             if (this._managerModalRefresh) this._managerModalRefresh();
@@ -548,7 +585,7 @@ const SafetyCalendar = {
                 enabled: fd.get('enabled') === 'on'
             };
             if (!payload.title || !payload.startDate) {
-                Notification?.warning?.('العنوان وتاريخ البداية مطلوبان');
+                Notification?.warning?.(this.t('module.sc.titleStartRequired', 'العنوان وتاريخ البداية مطلوبان'));
                 return;
             }
             const res = await this.saveCustomEvent(payload, isEdit ? rec.id : null);
@@ -572,33 +609,41 @@ const SafetyCalendar = {
                     <td>${this.esc(ev.title || '')}</td>
                     <td>${this.esc(ev.startDate || ev.date || '')}</td>
                     <td>${this.esc(ev.endDate || '—')}</td>
-                    <td>${ev.recurring === 'yearly' ? 'سنوي' : 'مرة'}</td>
+                    <td>${ev.recurring === 'yearly'
+                        ? this.esc(this.t('module.sc.recurring.yearly', 'سنوي'))
+                        : this.esc(this.t('module.sc.recurring.once', 'مرة'))}</td>
                     <td class="sc-ev-actions">
-                        <button type="button" class="btn-secondary btn-sm sc-ev-edit" data-id="${this.esc(ev.id)}">تعديل</button>
+                        <button type="button" class="btn-secondary btn-sm sc-ev-edit" data-id="${this.esc(ev.id)}">${this.esc(this.t('module.sc.edit', 'تعديل'))}</button>
                     </td>
                 </tr>`;
             }).join('')
-            : '<tr><td colspan="5" class="text-gray-500">لا توجد أحداث مخصصة بعد.</td></tr>';
+            : `<tr><td colspan="5" class="text-gray-500">${this.esc(this.t('module.sc.noCustomEvents', 'لا توجد أحداث مخصصة بعد.'))}</td></tr>`;
         const html = `
         <div class="modal-overlay sc-modal-overlay" id="sc-event-manager">
             <div class="modal-content sc-modal-content sc-manager-modal" role="dialog" aria-modal="true">
                 <div class="sc-modal-header">
                     <div>
-                        <h3 class="sc-modal-title">إدارة أحداث التقويم</h3>
-                        <p class="sc-manager-sub">أحداث مخصصة — أعياد مصر والأيام العالمية من المرجع الثابت</p>
+                        <h3 class="sc-modal-title">${this.esc(this.t('module.sc.managerTitle', 'إدارة أحداث التقويم'))}</h3>
+                        <p class="sc-manager-sub">${this.esc(this.t('module.sc.managerSub', 'أحداث مخصصة — أعياد مصر والأيام العالمية من المرجع الثابت'))}</p>
                     </div>
-                    <button type="button" class="sc-modal-close" id="sc-manager-close" aria-label="إغلاق">
+                    <button type="button" class="sc-modal-close" id="sc-manager-close" aria-label="${this.esc(this.t('module.sc.close', 'إغلاق'))}">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="sc-manager-toolbar">
                     <button type="button" class="btn-primary btn-sm" id="sc-manager-add">
-                        <i class="fas fa-plus ml-1"></i>إضافة حدث
+                        <i class="fas fa-plus ml-1"></i>${this.esc(this.t('module.sc.addEventTitle', 'إضافة حدث'))}
                     </button>
                 </div>
                 <div class="sc-modal-body sc-manager-body">
                     <table class="sc-manager-table">
-                        <thead><tr><th>العنوان</th><th>البداية</th><th>النهاية</th><th>التكرار</th><th></th></tr></thead>
+                        <thead><tr>
+                            <th>${this.esc(this.t('module.sc.managerColTitle', 'العنوان'))}</th>
+                            <th>${this.esc(this.t('module.sc.managerColStart', 'البداية'))}</th>
+                            <th>${this.esc(this.t('module.sc.managerColEnd', 'النهاية'))}</th>
+                            <th>${this.esc(this.t('module.sc.managerColRecurring', 'التكرار'))}</th>
+                            <th></th>
+                        </tr></thead>
                         <tbody>${rows}</tbody>
                     </table>
                 </div>
@@ -652,16 +697,16 @@ const SafetyCalendar = {
         const egChecked = this.getShowEgyptHolidays() ? 'checked' : '';
         const intlChecked = this.getShowIntlDays() ? 'checked' : '';
         const customChecked = this.getShowCustomEvents() ? 'checked' : '';
-        return `<div class="sc-ref-toggles" role="group" aria-label="طبقات التقويم">
-            <span class="sc-ref-label"><i class="fas fa-layer-group ml-1"></i>طبقات:</span>
+        return `<div class="sc-ref-toggles" role="group" aria-label="${this.esc(this.t('module.sc.layersAria', 'طبقات التقويم'))}">
+            <span class="sc-ref-label"><i class="fas fa-layer-group ml-1"></i>${this.esc(this.t('module.sc.layers', 'طبقات:'))}</span>
             <label class="sc-ref-toggle"><input type="checkbox" class="sc-ref-pref" data-pref="showEgyptHolidays" ${egChecked}>
-                <span>أعياد مصر</span></label>
+                <span>${this.esc(this.t('module.sc.egyptHolidays', 'أعياد مصر'))}</span></label>
             <label class="sc-ref-toggle"><input type="checkbox" class="sc-ref-pref" data-pref="showIntlDays" ${intlChecked}>
-                <span>أيام عالمية</span></label>
+                <span>${this.esc(this.t('module.sc.intlDays', 'أيام عالمية'))}</span></label>
             <label class="sc-ref-toggle"><input type="checkbox" class="sc-ref-pref" data-pref="showCustomEvents" ${customChecked}>
-                <span>أحداث مخصصة</span></label>
+                <span>${this.esc(this.t('module.sc.customEvents', 'أحداث مخصصة'))}</span></label>
             ${this.canManageCustomEvents() ? `<button type="button" class="btn-secondary btn-sm sc-manage-events-btn" id="sc-manage-events-btn">
-                <i class="fas fa-calendar-plus ml-1"></i>إدارة الأحداث
+                <i class="fas fa-calendar-plus ml-1"></i>${this.esc(this.t('module.sc.manageEvents', 'إدارة الأحداث'))}
             </button>` : ''}
         </div>`;
     },
@@ -671,14 +716,14 @@ const SafetyCalendar = {
         if (this.isEffectiveAdmin()) {
             const allActive = mode === 'all' ? 'is-active' : '';
             const mineActive = mode === 'mine' ? 'is-active' : '';
-            return `<div class="sc-assignee-filter" role="group" aria-label="فلتر المكلف">
-                <span class="sc-assignee-label"><i class="fas fa-user-check ml-1"></i>العرض:</span>
-                <button type="button" class="sc-assignee-btn ${allActive}" data-assignee-mode="all">عرض الكل</button>
-                <button type="button" class="sc-assignee-btn ${mineActive}" data-assignee-mode="mine">مهامي فقط</button>
+            return `<div class="sc-assignee-filter" role="group" aria-label="${this.esc(this.t('module.sc.assigneeAria', 'فلتر المكلف'))}">
+                <span class="sc-assignee-label"><i class="fas fa-user-check ml-1"></i>${this.esc(this.t('module.sc.viewLabel', 'العرض:'))}</span>
+                <button type="button" class="sc-assignee-btn ${allActive}" data-assignee-mode="all">${this.esc(this.t('module.sc.viewAll', 'عرض الكل'))}</button>
+                <button type="button" class="sc-assignee-btn ${mineActive}" data-assignee-mode="mine">${this.esc(this.t('module.sc.viewMine', 'مهامي فقط'))}</button>
             </div>`;
         }
         return `<div class="sc-assignee-filter sc-assignee-filter-readonly">
-            <span class="sc-assignee-badge"><i class="fas fa-user ml-1"></i>مهامك + أحداث السلامة</span>
+            <span class="sc-assignee-badge"><i class="fas fa-user ml-1"></i>${this.esc(this.t('module.sc.viewReadonlyBadge', 'مهامك + أحداث السلامة'))}</span>
         </div>`;
     },
 
@@ -693,24 +738,24 @@ const SafetyCalendar = {
             return `<label class="sc-filter-chip" style="--sc-color:${this.esc(c.color)}">
                 <input type="checkbox" class="sc-cat-filter" data-cat="${this.esc(key)}" ${checked}>
                 <span class="sc-filter-dot"></span>
-                <span>${this.esc(c.label)}</span>
+                <span>${this.esc(this._getCategoryLabel(key))}</span>
             </label>`;
         }).join('');
         return `<div class="sc-filter-bar">
             ${this.renderAssigneeFilter()}
             ${this.renderReferenceToggles()}
-            <span class="sc-filter-label"><i class="fas fa-filter ml-1"></i>فلترة الأنواع:</span>
-            <div class="sc-cat-bulk" role="group" aria-label="تحديد الأنواع">
+            <span class="sc-filter-label"><i class="fas fa-filter ml-1"></i>${this.esc(this.t('module.sc.filterTypes', 'فلترة الأنواع:'))}</span>
+            <div class="sc-cat-bulk" role="group" aria-label="${this.esc(this.t('module.sc.typesAria', 'تحديد الأنواع'))}">
                 <button type="button" class="sc-cat-bulk-btn" id="sc-select-all">
-                    <i class="fas fa-check-double ml-1"></i>تحديد الكل
+                    <i class="fas fa-check-double ml-1"></i>${this.esc(this.t('module.sc.selectAll', 'تحديد الكل'))}
                 </button>
                 <button type="button" class="sc-cat-bulk-btn" id="sc-clear-all">
-                    <i class="fas fa-eraser ml-1"></i>إلغاء الكل
+                    <i class="fas fa-eraser ml-1"></i>${this.esc(this.t('module.sc.clearAll', 'إلغاء الكل'))}
                 </button>
             </div>
             <div class="sc-filter-chips">${items}</div>
             <button type="button" class="btn-secondary btn-sm sc-refresh-btn" id="sc-refresh-btn">
-                <i class="fas fa-sync-alt ml-1"></i>تحديث
+                <i class="fas fa-sync-alt ml-1"></i>${this.esc(this.t('module.sc.refresh', 'تحديث'))}
             </button>
         </div>`;
     },
@@ -724,15 +769,15 @@ const SafetyCalendar = {
                         <i class="fas fa-calendar-days ml-2"></i>
                         ${this.t('nav.safetyCalendar', 'تقويم السلامة')}
                     </h2>
-                    <p class="section-subtitle sc-subtitle">عرض موحّد لأحداث السلامة من جميع الموديولات</p>
+                    <p class="section-subtitle sc-subtitle">${this.esc(this.t('module.sc.subtitle', 'عرض موحّد لأحداث السلامة من جميع الموديولات'))}</p>
                 </div>
             </div>
             ${this.renderFilterBar()}
             <div id="sc-truncated-warn" class="sc-truncated-warn" hidden></div>
             <div id="sc-fc-error" class="sc-error-card" hidden>
                 <i class="fas fa-exclamation-triangle"></i>
-                <p>تعذر تحميل مكتبة التقويم. تحقق من الاتصال ثم أعد المحاولة.</p>
-                <button type="button" class="btn-primary btn-sm" id="sc-retry-fc">إعادة المحاولة</button>
+                <p>${this.esc(this.t('module.sc.fcLoadError', 'تعذر تحميل مكتبة التقويم. تحقق من الاتصال ثم أعد المحاولة.'))}</p>
+                <button type="button" class="btn-primary btn-sm" id="sc-retry-fc">${this.esc(this.t('module.sc.retry', 'إعادة المحاولة'))}</button>
             </div>
             <div id="safety-calendar-root" class="sc-calendar-root"></div>
         </div>`;
@@ -747,6 +792,7 @@ const SafetyCalendar = {
         const record = SafetyCalendarEvents.getRecordForEvent(category, sourceId);
         const fields = record ? SafetyCalendarEvents.buildDetailFields(record) : [];
         const catInfo = SafetyCalendarEvents.SAFETY_CALENDAR_CATEGORIES[category] || {};
+        const catLabel = props.categoryLabel || this._getCategoryLabel(category);
         const moduleKey = props.moduleKey || catInfo.moduleKey;
 
         const rows = fields.map((f) => `
@@ -759,7 +805,7 @@ const SafetyCalendar = {
         const canEditCustom = category === 'custom-event' && record && this.canManageCustomEvents();
         const isReference = props.isReference === true;
         const assigneeHint = props.assigneeHint ? `
-            <p class="sc-modal-assignee"><i class="fas fa-user ml-1"></i>المكلف: ${this.esc(props.assigneeHint)}</p>` : '';
+            <p class="sc-modal-assignee"><i class="fas fa-user ml-1"></i>${this.esc(this.t('module.sc.assignee', 'المكلف:'))} ${this.esc(props.assigneeHint)}</p>` : '';
 
         const html = `
         <div class="modal-overlay sc-modal-overlay" id="sc-event-modal">
@@ -767,33 +813,33 @@ const SafetyCalendar = {
                 <div class="sc-modal-header" style="border-color:${this.esc(catInfo.color || '#2563eb')}">
                     <div>
                         <span class="sc-modal-badge" style="background:${this.esc(catInfo.color || '#2563eb')}">
-                            ${this.esc(props.categoryLabel || catInfo.label || '')}
+                            ${this.esc(catLabel)}
                         </span>
                         <h3 class="sc-modal-title">${this.esc(eventLike.title || '')}</h3>
                         ${assigneeHint}
                     </div>
-                    <button type="button" class="sc-modal-close" id="sc-modal-close" aria-label="إغلاق">
+                    <button type="button" class="sc-modal-close" id="sc-modal-close" aria-label="${this.esc(this.t('module.sc.close', 'إغلاق'))}">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="sc-modal-body">
                     ${rows ? `<table class="sc-detail-table"><tbody>${rows}</tbody></table>`
                         : (isReference
-                            ? '<p class="text-gray-500">حدث مرجعي (عطلة أو يوم عالمي) — للعرض فقط.</p>'
-                            : '<p class="text-gray-500">لا تتوفر تفاصيل إضافية لهذا الحدث.</p>')}
+                            ? `<p class="text-gray-500">${this.esc(this.t('module.sc.refEventHint', 'حدث مرجعي (عطلة أو يوم عالمي) — للعرض فقط.'))}</p>`
+                            : `<p class="text-gray-500">${this.esc(this.t('module.sc.noDetails', 'لا تتوفر تفاصيل إضافية لهذا الحدث.'))}</p>`)}
                 </div>
                 <div class="sc-modal-footer">
                     <button type="button" class="btn-secondary btn-sm" id="sc-copy-id" data-id="${this.esc(sourceId)}">
-                        <i class="fas fa-copy ml-1"></i>نسخ المعرف
+                        <i class="fas fa-copy ml-1"></i>${this.esc(this.t('module.sc.copyId', 'نسخ المعرف'))}
                     </button>
                     ${canEditCustom ? `<button type="button" class="btn-secondary btn-sm" id="sc-edit-custom">
-                        <i class="fas fa-pen ml-1"></i>تعديل الحدث
+                        <i class="fas fa-pen ml-1"></i>${this.esc(this.t('module.sc.editEvent', 'تعديل الحدث'))}
                     </button>` : ''}
                     ${canEdit ? `<button type="button" class="btn-secondary btn-sm" id="sc-edit-task">
-                        <i class="fas fa-pen ml-1"></i>تعديل المهمة
+                        <i class="fas fa-pen ml-1"></i>${this.esc(this.t('module.sc.editTask', 'تعديل المهمة'))}
                     </button>` : ''}
                     ${moduleKey && !isReference ? `<button type="button" class="btn-primary btn-sm" id="sc-open-module" data-module="${this.esc(moduleKey)}">
-                        <i class="fas fa-external-link-alt ml-1"></i>فتح في الموديول
+                        <i class="fas fa-external-link-alt ml-1"></i>${this.esc(this.t('module.sc.openModule', 'فتح في الموديول'))}
                     </button>` : ''}
                 </div>
             </div>
@@ -824,7 +870,7 @@ const SafetyCalendar = {
                 navigator.clipboard.writeText(id).catch(() => {});
             }
             if (typeof Notification !== 'undefined' && Notification.success) {
-                Notification.success('تم نسخ المعرف');
+                Notification.success(this.t('module.sc.idCopied', 'تم نسخ المعرف'));
             }
         });
         this._modalEl.querySelector('#sc-open-module')?.addEventListener('click', () => {
@@ -832,7 +878,7 @@ const SafetyCalendar = {
             if (typeof UI !== 'undefined' && UI.showSection && moduleKey) {
                 if (typeof Permissions !== 'undefined' && Permissions.hasAccess && !Permissions.hasAccess(moduleKey)) {
                     if (typeof Notification !== 'undefined' && Notification.error) {
-                        Notification.error('ليس لديك صلاحية لهذا الموديول');
+                        Notification.error(this.t('module.sc.noModuleAccess', 'ليس لديك صلاحية لهذا الموديول'));
                     }
                     return;
                 }
@@ -870,7 +916,8 @@ const SafetyCalendar = {
         if (warn) {
             if (result.truncated) {
                 warn.hidden = false;
-                warn.textContent = `تم عرض ${result.maxEvents} حدث كحد أقصى. قلّل النطاق بالفلاتر إن لزم.`;
+                warn.textContent = this._tParam('module.sc.truncatedWarn', { max: result.maxEvents },
+                    `تم عرض ${result.maxEvents} حدث كحد أقصى. قلّل النطاق بالفلاتر إن لزم.`);
             } else {
                 warn.hidden = true;
             }
@@ -1012,22 +1059,22 @@ const SafetyCalendar = {
         if (this.canAddTasksFromCalendar() || this.canManageCustomEvents()) {
             fcOverrides.customButtons = Object.assign({}, fcOverrides.customButtons, {
                 addTask: this.canAddTasksFromCalendar() ? {
-                    text: 'إضافة مهمة',
-                    hint: 'إضافة مهمة في التقويم',
+                    text: self.t('module.sc.addTask', 'إضافة مهمة'),
+                    hint: self.t('module.sc.addTaskHint', 'إضافة مهمة في التقويم'),
                     click() {
                         self.openAddTaskForm('');
                     }
                 } : undefined,
                 addCustomEvent: this.canManageCustomEvents() ? {
-                    text: 'إضافة حدث',
-                    hint: 'إضافة حدث مخصص',
+                    text: self.t('module.sc.addEvent', 'إضافة حدث'),
+                    hint: self.t('module.sc.addEventHint', 'إضافة حدث مخصص'),
                     click() {
                         self.openCustomEventForm(null, {});
                     }
                 } : undefined,
                 manageEvents: this.canManageCustomEvents() ? {
-                    text: 'إدارة',
-                    hint: 'إدارة الأحداث المخصصة',
+                    text: self.t('module.sc.manage', 'إدارة'),
+                    hint: self.t('module.sc.manageHint', 'إدارة الأحداث المخصصة'),
                     click() {
                         self.showCustomEventManager();
                     }
@@ -1045,7 +1092,8 @@ const SafetyCalendar = {
         const warn = section.querySelector('#sc-truncated-warn');
         if (warn && result.truncated) {
             warn.hidden = false;
-            warn.textContent = `تم عرض ${result.maxEvents} حدث كحد أقصى.`;
+            warn.textContent = this._tParam('module.sc.truncatedWarnShort', { max: result.maxEvents },
+                `تم عرض ${result.maxEvents} حدث كحد أقصى.`);
         }
     },
 
@@ -1055,7 +1103,7 @@ const SafetyCalendar = {
 
         if (typeof Permissions !== 'undefined' && Permissions.hasAccess
             && !Permissions.hasAccess('safety-calendar')) {
-            section.innerHTML = '<div class="empty-state"><p>ليس لديك صلاحية لعرض تقويم السلامة.</p></div>';
+            section.innerHTML = `<div class="empty-state"><p>${this.esc(this.t('module.sc.noAccess', 'ليس لديك صلاحية لعرض تقويم السلامة.'))}</p></div>`;
             return;
         }
 
@@ -1111,7 +1159,7 @@ const SafetyCalendar = {
             .sort((a, b) => a.start.localeCompare(b.start))
             .slice(0, 12);
         if (!upcoming.length) {
-            return '<p class="sc-dash-empty">لا توجد أحداث قادمة في البيانات المتزامنة.</p>';
+            return `<p class="sc-dash-empty">${this.esc(this.t('module.sc.dash.noUpcoming', 'لا توجد أحداث قادمة في البيانات المتزامنة.'))}</p>`;
         }
         return upcoming.map((ev) => {
             const cat = ev.extendedProps?.category;
@@ -1138,31 +1186,32 @@ const SafetyCalendar = {
         const cats = SafetyCalendarEvents?.SAFETY_CALENDAR_CATEGORIES || {};
         const legend = Object.keys(cats).slice(0, 8).map((k) => {
             const c = cats[k];
-            return `<span class="sc-dash-legend-item"><i style="background:${c.color}"></i>${this.esc(c.label)}</span>`;
+            return `<span class="sc-dash-legend-item"><i style="background:${c.color}"></i>${this.esc(this._getCategoryLabel(k))}</span>`;
         }).join('');
+        const dashArrow = this._getLang() === 'en' ? 'fa-arrow-right' : 'fa-arrow-left';
 
         return `
         <div class="card-header sc-dash-header">
-            <h2 class="card-title"><i class="fas fa-calendar-days ml-2"></i>تقويم السلامة</h2>
+            <h2 class="card-title"><i class="fas fa-calendar-days ml-2"></i>${this.esc(this.t('nav.safetyCalendar', 'تقويم السلامة'))}</h2>
             <div class="sc-dash-header-actions">
-                ${syncing ? '<span class="sc-dash-sync-hint" id="sc-dash-sync-hint"><i class="fas fa-sync-alt fa-spin ml-1"></i>تحديث بالخلفية</span>' : ''}
+                ${syncing ? `<span class="sc-dash-sync-hint" id="sc-dash-sync-hint"><i class="fas fa-sync-alt fa-spin ml-1"></i>${this.esc(this.t('module.sc.dash.syncing', 'تحديث بالخلفية'))}</span>` : ''}
                 <button type="button" class="btn-secondary btn-sm sc-dash-full" id="sc-dash-open-full">
-                    عرض التقويم الكامل <i class="fas fa-arrow-left mr-1"></i>
+                    ${this.esc(this.t('module.sc.dash.openFull', 'عرض التقويم الكامل'))} <i class="fas ${dashArrow} mr-1"></i>
                 </button>
             </div>
         </div>
         <div class="card-body sc-dash-body">
             <div class="sc-dash-kpi-row">
-                <div class="sc-dash-kpi"><span class="sc-dash-kpi-val" data-sc-kpi="today">${summary.todayCount}</span><span class="sc-dash-kpi-lbl">اليوم</span></div>
-                <div class="sc-dash-kpi"><span class="sc-dash-kpi-val" data-sc-kpi="week">${summary.weekCount}</span><span class="sc-dash-kpi-lbl">7 أيام</span></div>
-                <div class="sc-dash-kpi sc-dash-kpi-warn"><span class="sc-dash-kpi-val" data-sc-kpi="overdue">${summary.overdueCount}</span><span class="sc-dash-kpi-lbl">متأخرة</span></div>
+                <div class="sc-dash-kpi"><span class="sc-dash-kpi-val" data-sc-kpi="today">${summary.todayCount}</span><span class="sc-dash-kpi-lbl">${this.esc(this.t('module.sc.dash.today', 'اليوم'))}</span></div>
+                <div class="sc-dash-kpi"><span class="sc-dash-kpi-val" data-sc-kpi="week">${summary.weekCount}</span><span class="sc-dash-kpi-lbl">${this.esc(this.t('module.sc.dash.week7', '7 أيام'))}</span></div>
+                <div class="sc-dash-kpi sc-dash-kpi-warn"><span class="sc-dash-kpi-val" data-sc-kpi="overdue">${summary.overdueCount}</span><span class="sc-dash-kpi-lbl">${this.esc(this.t('module.sc.dash.overdue', 'متأخرة'))}</span></div>
             </div>
             <div class="sc-dash-grid">
                 <div class="sc-dash-mini-wrap">
-                    <div id="sc-dash-calendar-root" class="sc-dash-calendar-root">${syncing ? '<p class="sc-dash-mini-loading">جاري تحميل التقويم...</p>' : ''}</div>
+                    <div id="sc-dash-calendar-root" class="sc-dash-calendar-root">${syncing ? `<p class="sc-dash-mini-loading">${this.esc(this.t('module.sc.dash.loading', 'جاري تحميل التقويم...'))}</p>` : ''}</div>
                 </div>
                 <div class="sc-dash-list-wrap">
-                    <h4 class="sc-dash-list-title">القادمة</h4>
+                    <h4 class="sc-dash-list-title">${this.esc(this.t('module.sc.dash.upcoming', 'القادمة'))}</h4>
                     <div class="sc-dash-list">${listHtml}</div>
                 </div>
             </div>
@@ -1216,7 +1265,7 @@ const SafetyCalendar = {
         if (!miniRoot) return;
         const ok = await this.ensureFullCalendarLoaded();
         if (!ok) {
-            miniRoot.innerHTML = '<p class="sc-dash-empty">التقويم المصغّر غير متاح — استخدم «عرض التقويم الكامل».</p>';
+            miniRoot.innerHTML = `<p class="sc-dash-empty">${this.esc(this.t('module.sc.dash.miniUnavailable', 'التقويم المصغّر غير متاح — استخدم «عرض التقويم الكامل».'))}</p>`;
             return;
         }
         const result = prefetchedResult || this.buildEvents();
@@ -1297,10 +1346,10 @@ const SafetyCalendar = {
             }
             wrap.innerHTML = `
                 <div class="card-header sc-dash-header">
-                    <h2 class="card-title"><i class="fas fa-calendar-days ml-2"></i>تقويم السلامة</h2>
+                    <h2 class="card-title"><i class="fas fa-calendar-days ml-2"></i>${this.esc(this.t('nav.safetyCalendar', 'تقويم السلامة'))}</h2>
                 </div>
                 <div class="card-body sc-dash-body">
-                    <p class="sc-dash-empty">تعذر تحميل التقويم. <button type="button" class="btn-secondary btn-sm" id="sc-dash-retry">إعادة المحاولة</button></p>
+                    <p class="sc-dash-empty">${this.esc(this.t('module.sc.dash.loadFailed', 'تعذر تحميل التقويم.'))} <button type="button" class="btn-secondary btn-sm" id="sc-dash-retry">${this.esc(this.t('module.sc.retry', 'إعادة المحاولة'))}</button></p>
                 </div>`;
             wrap.querySelector('#sc-dash-retry')?.addEventListener('click', () => this.loadDashboardWidget());
         }

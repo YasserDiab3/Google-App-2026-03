@@ -13,30 +13,56 @@
     }
 
     const SAFETY_CALENDAR_CATEGORIES = {
-        'periodic-schedule': { label: 'جدولة فحوصات', color: '#2563eb', moduleKey: 'periodic-inspections' },
-        'periodic-record': { label: 'سجل فحص', color: '#1d4ed8', moduleKey: 'periodic-inspections' },
-        'daily-safety-check': { label: 'قائمة مرور يومي', color: '#3b82f6', moduleKey: 'periodic-inspections' },
-        training: { label: 'تدريب', color: '#7c3aed', moduleKey: 'training' },
-        'legal-training': { label: 'تدريب قانوني', color: '#6d28d9', moduleKey: 'training' },
-        ptw: { label: 'تصريح عمل', color: '#d97706', moduleKey: 'ptw' },
-        incidents: { label: 'حادث', color: '#dc2626', moduleKey: 'incidents' },
-        nearmiss: { label: 'حادث وشيك', color: '#ea580c', moduleKey: 'nearmiss' },
-        observations: { label: 'ملاحظة يومية', color: '#0891b2', moduleKey: 'daily-observations' },
-        'user-tasks': { label: 'مهمة مستخدم', color: '#6366f1', moduleKey: 'user-tasks' },
-        'safety-team-task': { label: 'مهمة فريق السلامة', color: '#4f46e5', moduleKey: 'safety-health-management' },
-        'hse-audit': { label: 'تدقيق HSE', color: '#0d9488', moduleKey: 'iso' },
-        'fire-inspection': { label: 'فحص إطفاء', color: '#b91c1c', moduleKey: 'fire-equipment' },
-        emergency: { label: 'تنبيه طوارئ', color: '#be123c', moduleKey: 'emergency' },
-        'action-tracking': { label: 'متابعة إجراء', color: '#059669', moduleKey: 'action-tracking' },
-        violations: { label: 'مخالفة', color: '#991b1b', moduleKey: 'violations' },
-        behavior: { label: 'مراقبة سلوك', color: '#ca8a04', moduleKey: 'behavior-monitoring' },
-        'clinic-visit': { label: 'زيارة عيادة', color: '#db2777', moduleKey: 'clinic' },
-        'clinic-injury': { label: 'إصابة عيادة', color: '#c2410c', moduleKey: 'clinic' },
-        'clinic-sick-leave': { label: 'إجازة مرضية', color: '#2563eb', moduleKey: 'clinic' },
-        'egypt-holiday': { label: 'عطلة رسمية (مصر)', color: '#b91c1c', moduleKey: 'safety-calendar' },
-        'intl-hse-env': { label: 'يوم عالمي (سلامة/بيئة)', color: '#047857', moduleKey: 'safety-calendar' },
-        'custom-event': { label: 'حدث مخصص', color: '#7c3aed', moduleKey: 'safety-calendar' }
+        'periodic-schedule': { labelKey: 'module.sc.cat.periodicSchedule', label: 'جدولة فحوصات', color: '#2563eb', moduleKey: 'periodic-inspections' },
+        'periodic-record': { labelKey: 'module.sc.cat.periodicRecord', label: 'سجل فحص', color: '#1d4ed8', moduleKey: 'periodic-inspections' },
+        'daily-safety-check': { labelKey: 'module.sc.cat.dailySafetyCheck', label: 'قائمة مرور يومي', color: '#3b82f6', moduleKey: 'periodic-inspections' },
+        training: { labelKey: 'module.sc.cat.training', label: 'تدريب', color: '#7c3aed', moduleKey: 'training' },
+        'legal-training': { labelKey: 'module.sc.cat.legalTraining', label: 'تدريب قانوني', color: '#6d28d9', moduleKey: 'training' },
+        ptw: { labelKey: 'module.sc.cat.ptw', label: 'تصريح عمل', color: '#d97706', moduleKey: 'ptw' },
+        incidents: { labelKey: 'module.sc.cat.incidents', label: 'حادث', color: '#dc2626', moduleKey: 'incidents' },
+        nearmiss: { labelKey: 'module.sc.cat.nearmiss', label: 'حادث وشيك', color: '#ea580c', moduleKey: 'nearmiss' },
+        observations: { labelKey: 'module.sc.cat.observations', label: 'ملاحظة يومية', color: '#0891b2', moduleKey: 'daily-observations' },
+        'user-tasks': { labelKey: 'module.sc.cat.userTasks', label: 'مهمة مستخدم', color: '#6366f1', moduleKey: 'user-tasks' },
+        'safety-team-task': { labelKey: 'module.sc.cat.safetyTeamTask', label: 'مهمة فريق السلامة', color: '#4f46e5', moduleKey: 'safety-health-management' },
+        'hse-audit': { labelKey: 'module.sc.cat.hseAudit', label: 'تدقيق HSE', color: '#0d9488', moduleKey: 'iso' },
+        'fire-inspection': { labelKey: 'module.sc.cat.fireInspection', label: 'فحص إطفاء', color: '#b91c1c', moduleKey: 'fire-equipment' },
+        emergency: { labelKey: 'module.sc.cat.emergency', label: 'تنبيه طوارئ', color: '#be123c', moduleKey: 'emergency' },
+        'action-tracking': { labelKey: 'module.sc.cat.actionTracking', label: 'متابعة إجراء', color: '#059669', moduleKey: 'action-tracking' },
+        violations: { labelKey: 'module.sc.cat.violations', label: 'مخالفة', color: '#991b1b', moduleKey: 'violations' },
+        behavior: { labelKey: 'module.sc.cat.behavior', label: 'مراقبة سلوك', color: '#ca8a04', moduleKey: 'behavior-monitoring' },
+        'clinic-visit': { labelKey: 'module.sc.cat.clinicVisit', label: 'زيارة عيادة', color: '#db2777', moduleKey: 'clinic' },
+        'clinic-injury': { labelKey: 'module.sc.cat.clinicInjury', label: 'إصابة عيادة', color: '#c2410c', moduleKey: 'clinic' },
+        'clinic-sick-leave': { labelKey: 'module.sc.cat.clinicSickLeave', label: 'إجازة مرضية', color: '#2563eb', moduleKey: 'clinic' },
+        'egypt-holiday': { labelKey: 'module.sc.cat.egyptHoliday', label: 'عطلة رسمية (مصر)', color: '#b91c1c', moduleKey: 'safety-calendar' },
+        'intl-hse-env': { labelKey: 'module.sc.cat.intlHseEnv', label: 'يوم عالمي (سلامة/بيئة)', color: '#047857', moduleKey: 'safety-calendar' },
+        'custom-event': { labelKey: 'module.sc.cat.customEvent', label: 'حدث مخصص', color: '#7c3aed', moduleKey: 'safety-calendar' }
     };
+
+    function scTranslate(key, fallback) {
+        if (typeof window !== 'undefined' && window.AppI18n && typeof window.AppI18n.t === 'function') {
+            return window.AppI18n.t(key, null, fallback || key);
+        }
+        if (typeof window !== 'undefined' && window.I18n && typeof window.I18n.t === 'function') {
+            return window.I18n.t(key, null, fallback || key);
+        }
+        return fallback || key;
+    }
+
+    function getCategoryLabel(catKey) {
+        const cat = SAFETY_CALENDAR_CATEGORIES[catKey];
+        if (!cat) return catKey;
+        if (cat.labelKey) return scTranslate(cat.labelKey, cat.label);
+        return cat.label || catKey;
+    }
+
+    function resolveDateKindLabel(kindKey) {
+        if (!kindKey) return '';
+        return scTranslate(`module.sc.dateKind.${kindKey}`, kindKey);
+    }
+
+    function translateFieldLabel(key) {
+        return scTranslate(`module.sc.field.${key}`, FIELD_LABELS[key] || key);
+    }
 
     const FIELD_LABELS = {
         id: 'المعرف', title: 'العنوان', name: 'الاسم', description: 'الوصف', location: 'الموقع',
@@ -242,7 +268,7 @@
             if (val == null || val === '') return;
             if (typeof val === 'object' && !Array.isArray(val)) return;
             fields.push({
-                label: FIELD_LABELS[key] || key,
+                label: translateFieldLabel(key),
                 value: formatFieldValue(key, val)
             });
         });
@@ -335,7 +361,9 @@
             title: hit.title,
             startDate: hit.start,
             endDate: hit.end || '',
-            type: category === 'egypt-holiday' ? 'عطلة رسمية — مصر' : 'يوم عالمي — سلامة/بيئة',
+            type: category === 'egypt-holiday'
+                ? scTranslate('module.sc.refType.egyptHoliday', 'عطلة رسمية — مصر')
+                : scTranslate('module.sc.refType.intlDay', 'يوم عالمي — سلامة/بيئة'),
             recurring: hit.recurring || 'yearly'
         };
     }
@@ -347,11 +375,12 @@
         const start = meta.start;
         if (!start) return true;
         const sourceId = meta.sourceId != null ? String(meta.sourceId) : '';
-        const titleBase = meta.title || cat.label;
+        const catLabel = getCategoryLabel(meta.category);
+        const titleBase = meta.title || catLabel;
         const suffix = meta.dateKind ? ` (${meta.dateKind})` : '';
         const displayTitle = meta.skipCategoryPrefix
             ? `${titleBase}${suffix}`
-            : `${cat.label} — ${titleBase}${suffix}`;
+            : `${catLabel} — ${titleBase}${suffix}`;
         const ev = {
             id: meta.eventId || `${meta.category}:${sourceId}:${meta.dateKind || 'main'}:${start}`,
             title: displayTitle,
@@ -361,7 +390,7 @@
             borderColor: meta.color || cat.color,
             extendedProps: {
                 category: meta.category,
-                categoryLabel: cat.label,
+                categoryLabel: catLabel,
                 moduleKey: cat.moduleKey,
                 sourceId,
                 dateKind: meta.dateKind || 'main',
@@ -492,7 +521,7 @@
                         sourceId,
                         start,
                         title: pickTitle(rec, titleFields),
-                        dateKind: dk.label,
+                        dateKind: resolveDateKindLabel(dk.kindKey || dk.label),
                         assigneeHint: hint
                     });
                 });
@@ -550,10 +579,10 @@
                     null,
                     ['title', 'legalReference', 'id'],
                     [
-                        { field: 'scheduledDate', label: 'مجدول' },
-                        { field: 'nextDueDate', label: 'استحقاق' },
-                        { field: 'expiryDate', label: 'انتهاء' },
-                        { field: 'actualDate', label: 'فعلي' }
+                        { field: 'scheduledDate', kindKey: 'scheduled' },
+                        { field: 'nextDueDate', kindKey: 'due' },
+                        { field: 'expiryDate', kindKey: 'expiry' },
+                        { field: 'actualDate', kindKey: 'actual' }
                     ], ctx);
             }
             if (allow('ptw')) {
@@ -561,8 +590,8 @@
                     null,
                     ['workDescription', 'workType', 'location', 'id'],
                     [
-                        { field: 'startDate', label: 'بداية' },
-                        { field: 'endDate', label: 'نهاية' }
+                        { field: 'startDate', kindKey: 'start' },
+                        { field: 'endDate', kindKey: 'end' }
                     ], ctx);
             }
             if (allow('incidents')) {
@@ -580,8 +609,8 @@
                     null,
                     ['details', 'locationName', 'observerName', 'id'],
                     [
-                        { field: 'date', label: 'الملاحظة' },
-                        { field: 'expectedCompletionDate', label: 'إنجاز متوقع' }
+                        { field: 'date', kindKey: 'observation' },
+                        { field: 'expectedCompletionDate', kindKey: 'expectedCompletion' }
                     ], ctx);
             }
             if (allow('user-tasks')) {
@@ -609,8 +638,8 @@
                     null,
                     ['title', 'message', 'id'],
                     [
-                        { field: 'scheduledDate', label: 'مجدول' },
-                        { field: 'sentDate', label: 'إرسال' }
+                        { field: 'scheduledDate', kindKey: 'scheduled' },
+                        { field: 'sentDate', kindKey: 'send' }
                     ], ctx);
             }
             if (allow('action-tracking')) {
@@ -618,8 +647,8 @@
                     null,
                     ['typeOfIssue', 'observationIssueHazard', 'id'],
                     [
-                        { field: 'originalTargetDate', label: 'مستهدف' },
-                        { field: 'issueDate', label: 'إصدار' }
+                        { field: 'originalTargetDate', kindKey: 'target' },
+                        { field: 'issueDate', kindKey: 'issue' }
                     ], ctx);
             }
             if (allow('violations')) {
@@ -647,8 +676,8 @@
                     null,
                     ['employeeName', 'personName', 'reason', 'id'],
                     [
-                        { field: 'startDate', label: 'بداية' },
-                        { field: 'endDate', label: 'نهاية' }
+                        { field: 'startDate', kindKey: 'start' },
+                        { field: 'endDate', kindKey: 'end' }
                     ], ctx);
             }
         } catch (err) {
@@ -714,6 +743,8 @@
         getRecordForEvent,
         buildDetailFields,
         summarizeEvents,
+        getCategoryLabel,
+        scTranslate,
         esc,
         hasAccess,
         isEffectiveAdmin,
