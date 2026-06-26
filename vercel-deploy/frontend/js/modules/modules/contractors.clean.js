@@ -315,8 +315,7 @@ const Contractors = {
         search: '',
         status: '',
         type: '',
-        startDate: '',
-        endDate: ''
+        validity: ''
     },
 
     async load(preserveCurrentTab = false) {
@@ -1531,24 +1530,24 @@ const Contractors = {
             }
         });
 
-        if (allRecords.length === 0) return [];
-
-        const { search, status, type, startDate, endDate } = this.approvedFilters;
-        const normalizedSearch = (search || '').trim().toLowerCase();
-        const hasSearch = normalizedSearch.length > 0;
-        const fromDate = startDate ? new Date(startDate) : null;
-        const toDate = endDate ? new Date(endDate) : null;
-        if (toDate) {
-            toDate.setHours(23, 59, 59, 999);
+        if (allRecords.length === 0) {
+            this._approvedFilterCounts = { total: 0, filtered: 0 };
+            return [];
         }
 
-        return allRecords.filter((record) => {
+        const { search, status, type, validity } = this.approvedFilters;
+        const normalizedSearch = (search || '').trim().toLowerCase();
+        const hasSearch = normalizedSearch.length > 0;
+
+        const filtered = allRecords.filter((record) => {
             if (status && record.status !== status) return false;
             if (type && record.entityType !== type) return false;
 
-            const approvalDate = record.approvalDate ? new Date(record.approvalDate) : null;
-            if (fromDate && approvalDate && approvalDate < fromDate) return false;
-            if (toDate && approvalDate && approvalDate > toDate) return false;
+            if (validity === 'valid' && this.isApprovalExpired(record)) return false;
+            if (validity === 'expired') {
+                if (!record.expiryDate) return false;
+                if (!this.isApprovalExpired(record)) return false;
+            }
 
             if (hasSearch) {
                 const haystack = [
@@ -1560,13 +1559,17 @@ const Contractors = {
                     this.getApprovedStatusLabel(record.status),
                     this.getApprovedTypeLabel(record.entityType),
                     record.code || '',
+                    record.isoCode || '',
                     record.contractNumber || ''
                 ].join(' ').toLowerCase();
                 if (!haystack.includes(normalizedSearch)) return false;
             }
             return true;
-        }).sort((a, b) => {
-            // ✅ الترتيب حسب كود المقاول (CON-001, CON-002, ...)
+        });
+
+        this._approvedFilterCounts = { total: allRecords.length, filtered: filtered.length };
+
+        return filtered.sort((a, b) => {
             return Contractors.sortByContractorCode(a, b);
         });
     },
@@ -1746,15 +1749,124 @@ const Contractors = {
         `;
     },
 
-    renderApprovedEntitiesSection() {
-        const isAdmin = Permissions.isAdmin();
-        const tableHtml = this.renderApprovedEntitiesTable(this.getFilteredApprovedEntities(), isAdmin);
+    countActiveApprovedFilters() {
+        const f = this.approvedFilters || {};
+        let count = 0;
+        if (String(f.search || '').trim()) count++;
+        if (f.status) count++;
+        if (f.type) count++;
+        if (f.validity) count++;
+        return count;
+    },
+
+    updateApprovedFiltersMeta() {
+        const counts = this._approvedFilterCounts || { total: 0, filtered: 0 };
+        const meta = document.getElementById('approved-contractors-filter-meta');
+        const badge = document.getElementById('approved-contractors-filter-badge');
+        const resetBtn = document.getElementById('approved-contractors-reset');
+        const clearBtn = document.getElementById('approved-contractors-search-clear');
+        const active = this.countActiveApprovedFilters();
+        const total = counts.total || 0;
+        const filtered = counts.filtered ?? total;
+
+        if (meta) {
+            meta.textContent = active
+                ? `عرض ${filtered} من ${total} جهة`
+                : `إجمالي ${total} جهة`;
+        }
+        if (badge) {
+            badge.textContent = String(active);
+            badge.style.display = active > 0 ? 'inline-flex' : 'none';
+        }
+        if (resetBtn) {
+            resetBtn.disabled = active === 0;
+            resetBtn.setAttribute('aria-disabled', active === 0 ? 'true' : 'false');
+        }
+        if (clearBtn) {
+            clearBtn.style.display = String(this.approvedFilters.search || '').trim() ? 'inline-flex' : 'none';
+        }
+    },
+
+    renderApprovedFiltersBar() {
+        const f = this.approvedFilters || {};
+        const active = this.countActiveApprovedFilters();
+        const counts = this._approvedFilterCounts || { total: 0, filtered: 0 };
+        const total = counts.total || 0;
+        const filtered = counts.filtered ?? total;
+        const metaText = active ? `عرض ${filtered} من ${total} جهة` : `إجمالي ${total} جهة`;
+        const hasSearch = String(f.search || '').trim().length > 0;
+
         const statusOptions = Object.entries(APPROVED_ENTITY_STATUS_OPTIONS).map(([value, label]) => `
-            <option value="${value}" ${this.approvedFilters.status === value ? 'selected' : ''}>${label}</option>
+            <option value="${value}" ${f.status === value ? 'selected' : ''}>${label}</option>
         `).join('');
         const typeOptions = Object.entries(APPROVED_ENTITY_TYPE_OPTIONS).map(([value, label]) => `
-            <option value="${value}" ${this.approvedFilters.type === value ? 'selected' : ''}>${label}</option>
+            <option value="${value}" ${f.type === value ? 'selected' : ''}>${label}</option>
         `).join('');
+
+        return `
+            <div class="approved-filters-bar" role="search" aria-label="تصفية قائمة المعتمدين">
+                <div class="approved-filters-bar__header">
+                    <div class="approved-filters-bar__title">
+                        <i class="fas fa-sliders-h" aria-hidden="true"></i>
+                        <span>تصفية القائمة</span>
+                        <span id="approved-contractors-filter-badge" class="approved-filters-bar__badge" style="display:${active ? 'inline-flex' : 'none'}">${active}</span>
+                    </div>
+                    <span id="approved-contractors-filter-meta" class="approved-filters-bar__meta">${metaText}</span>
+                </div>
+                <div class="approved-filters-bar__row">
+                    <div class="approved-filters-bar__search-wrap">
+                        <i class="fas fa-search approved-filters-bar__search-icon" aria-hidden="true"></i>
+                        <input
+                            type="search"
+                            id="approved-contractors-search"
+                            class="approved-filters-bar__search-input"
+                            placeholder="ابحث بالاسم، الكود، الخدمة، الترخيص..."
+                            value="${Utils.escapeHTML(f.search || '')}"
+                            autocomplete="off"
+                            enterkeyhint="search"
+                        >
+                        <button
+                            type="button"
+                            id="approved-contractors-search-clear"
+                            class="approved-filters-bar__search-clear"
+                            title="مسح البحث"
+                            aria-label="مسح البحث"
+                            style="display:${hasSearch ? 'inline-flex' : 'none'}"
+                        >
+                            <i class="fas fa-times" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <select id="approved-contractors-status" class="approved-filters-bar__select" aria-label="فلتر الحالة">
+                        <option value="">جميع الحالات</option>
+                        ${statusOptions}
+                    </select>
+                    <select id="approved-contractors-type" class="approved-filters-bar__select" aria-label="فلتر نوع الجهة">
+                        <option value="">جميع الأنواع</option>
+                        ${typeOptions}
+                    </select>
+                    <select id="approved-contractors-validity" class="approved-filters-bar__select" aria-label="فلتر صلاحية الاعتماد">
+                        <option value="" ${!f.validity ? 'selected' : ''}>صلاحية الاعتماد</option>
+                        <option value="valid" ${f.validity === 'valid' ? 'selected' : ''}>ساري</option>
+                        <option value="expired" ${f.validity === 'expired' ? 'selected' : ''}>منتهي</option>
+                    </select>
+                    <button
+                        type="button"
+                        id="approved-contractors-reset"
+                        class="approved-filters-bar__reset btn-secondary btn-sm"
+                        ${active === 0 ? 'disabled aria-disabled="true"' : ''}
+                    >
+                        <i class="fas fa-undo-alt ml-1" aria-hidden="true"></i>
+                        مسح الفلاتر
+                    </button>
+                </div>
+            </div>
+        `;
+    },
+
+    renderApprovedEntitiesSection() {
+        const isAdmin = Permissions.isAdmin();
+        const filteredRecords = this.getFilteredApprovedEntities();
+        const tableHtml = this.renderApprovedEntitiesTable(filteredRecords, isAdmin);
 
         return `
             <div class="content-card" id="approved-contractors-card">
@@ -1787,42 +1899,7 @@ const Contractors = {
                     <div id="approved-contractors-stats-container">
                         ${this.renderApprovedEntitiesStats()}
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">بحث عام</label>
-                            <input type="text" id="approved-contractors-search" class="form-input" placeholder="بحث بالاسم، الخدمة، الترخيص..." value="${Utils.escapeHTML(this.approvedFilters.search)}">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الحالة</label>
-                            <select id="approved-contractors-status" class="form-input">
-                                <option value="">جميع الحالات</option>
-                                ${statusOptions}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">نوع الجهة</label>
-                            <select id="approved-contractors-type" class="form-input">
-                                <option value="">جميع الأنواع</option>
-                                ${typeOptions}
-                            </select>
-                        </div>
-                        <div class="flex flex-col md:flex-row gap-3 md:col-span-2 xl:col-span-1">
-                            <div class="flex-1">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الاعتماد من</label>
-                                <input type="date" id="approved-contractors-start" class="form-input" value="${this.approvedFilters.startDate || ''}">
-                            </div>
-                            <div class="flex-1">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">إلى</label>
-                                <input type="date" id="approved-contractors-end" class="form-input" value="${this.approvedFilters.endDate || ''}">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex justify-end">
-                        <button id="approved-contractors-reset" class="btn-secondary btn-sm">
-                            <i class="fas fa-undo-alt ml-2"></i>
-                            إعادة تعيين الفلاتر
-                        </button>
-                    </div>
+                    ${this.renderApprovedFiltersBar()}
                     <div id="approved-contractors-container">
                         ${tableHtml}
                     </div>
@@ -2087,11 +2164,13 @@ const Contractors = {
         const statsContainer = document.getElementById('approved-contractors-stats-container');
         if (!container) return;
         const isAdmin = Permissions.isAdmin();
+        const filteredRecords = this.getFilteredApprovedEntities();
         if (statsContainer) {
             this.safeSetInnerHTML(statsContainer, this.renderApprovedEntitiesStats());
         }
-        const approvedHTML = this.renderApprovedEntitiesTable(this.getFilteredApprovedEntities(), isAdmin);
+        const approvedHTML = this.renderApprovedEntitiesTable(filteredRecords, isAdmin);
         this.safeSetInnerHTML(container, approvedHTML);
+        this.updateApprovedFiltersMeta();
     },
 
     ensureApprovedTabContentLoaded(force = false) {
@@ -2115,21 +2194,18 @@ const Contractors = {
             search: '',
             status: '',
             type: '',
-            startDate: '',
-            endDate: ''
+            validity: ''
         };
 
         const searchInput = document.getElementById('approved-contractors-search');
         const statusSelect = document.getElementById('approved-contractors-status');
         const typeSelect = document.getElementById('approved-contractors-type');
-        const startInput = document.getElementById('approved-contractors-start');
-        const endInput = document.getElementById('approved-contractors-end');
+        const validitySelect = document.getElementById('approved-contractors-validity');
 
         if (searchInput) searchInput.value = '';
         if (statusSelect) statusSelect.value = '';
         if (typeSelect) typeSelect.value = '';
-        if (startInput) startInput.value = '';
-        if (endInput) endInput.value = '';
+        if (validitySelect) validitySelect.value = '';
 
         this.refreshApprovedEntitiesList();
     },
@@ -4131,6 +4207,15 @@ const Contractors = {
             approvedSearchInput.addEventListener('input', (event) => this.handleApprovedFilterChange('search', event.target.value || ''), { signal: activeSignal });
         }
 
+        const approvedSearchClearBtn = document.getElementById('approved-contractors-search-clear');
+        if (approvedSearchClearBtn) {
+            approvedSearchClearBtn.addEventListener('click', () => {
+                const searchInput = document.getElementById('approved-contractors-search');
+                if (searchInput) searchInput.value = '';
+                this.handleApprovedFilterChange('search', '');
+            }, { signal: activeSignal });
+        }
+
         const approvedStatusSelect = document.getElementById('approved-contractors-status');
         if (approvedStatusSelect) {
             approvedStatusSelect.addEventListener('change', (event) => this.handleApprovedFilterChange('status', event.target.value || ''), { signal: activeSignal });
@@ -4141,14 +4226,9 @@ const Contractors = {
             approvedTypeSelect.addEventListener('change', (event) => this.handleApprovedFilterChange('type', event.target.value || ''), { signal: activeSignal });
         }
 
-        const approvedStartInput = document.getElementById('approved-contractors-start');
-        if (approvedStartInput) {
-            approvedStartInput.addEventListener('change', (event) => this.handleApprovedFilterChange('startDate', event.target.value || ''), { signal: activeSignal });
-        }
-
-        const approvedEndInput = document.getElementById('approved-contractors-end');
-        if (approvedEndInput) {
-            approvedEndInput.addEventListener('change', (event) => this.handleApprovedFilterChange('endDate', event.target.value || ''), { signal: activeSignal });
+        const approvedValiditySelect = document.getElementById('approved-contractors-validity');
+        if (approvedValiditySelect) {
+            approvedValiditySelect.addEventListener('change', (event) => this.handleApprovedFilterChange('validity', event.target.value || ''), { signal: activeSignal });
         }
 
         const approvedResetBtn = document.getElementById('approved-contractors-reset');
@@ -12856,11 +12936,10 @@ const Contractors = {
      */
     injectAntiShakeStyles() {
         const styleId = 'contractors-anti-shake-styles';
-        if (document.getElementById(styleId)) return;
-
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.textContent = `
+        if (!document.getElementById(styleId)) {
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.textContent = `
             .contractors-tab-content {
                 display: none;
             }
@@ -12868,7 +12947,147 @@ const Contractors = {
                 display: block;
             }
         `;
-        document.head.appendChild(style);
+            document.head.appendChild(style);
+        }
+
+        const filterStyleId = 'approved-filters-bar-styles';
+        if (document.getElementById(filterStyleId)) return;
+
+        const filterStyle = document.createElement('style');
+        filterStyle.id = filterStyleId;
+        filterStyle.textContent = `
+                background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+                border: 1px solid #e2e8f0;
+                border-radius: 14px;
+                padding: 14px 16px;
+                box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+            }
+            .approved-filters-bar__header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                flex-wrap: wrap;
+                margin-bottom: 12px;
+            }
+            .approved-filters-bar__title {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 0.92rem;
+                font-weight: 700;
+                color: #1e293b;
+            }
+            .approved-filters-bar__title i {
+                color: #2563eb;
+            }
+            .approved-filters-bar__badge {
+                min-width: 22px;
+                height: 22px;
+                padding: 0 7px;
+                border-radius: 999px;
+                background: #2563eb;
+                color: #fff;
+                font-size: 0.72rem;
+                font-weight: 700;
+                align-items: center;
+                justify-content: center;
+            }
+            .approved-filters-bar__meta {
+                font-size: 0.82rem;
+                font-weight: 600;
+                color: #64748b;
+            }
+            .approved-filters-bar__row {
+                display: grid;
+                grid-template-columns: minmax(220px, 1.6fr) repeat(3, minmax(140px, 1fr)) auto;
+                gap: 10px;
+                align-items: center;
+            }
+            .approved-filters-bar__search-wrap {
+                position: relative;
+                display: flex;
+                align-items: center;
+            }
+            .approved-filters-bar__search-icon {
+                position: absolute;
+                right: 12px;
+                color: #94a3b8;
+                pointer-events: none;
+                font-size: 0.9rem;
+            }
+            .approved-filters-bar__search-input {
+                width: 100%;
+                min-height: 42px;
+                padding: 0 38px 0 36px;
+                border: 1px solid #cbd5e1;
+                border-radius: 10px;
+                background: #fff;
+                font-size: 0.9rem;
+                transition: border-color 0.15s ease, box-shadow 0.15s ease;
+            }
+            .approved-filters-bar__search-input:focus {
+                outline: none;
+                border-color: #3b82f6;
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+            }
+            .approved-filters-bar__search-clear {
+                position: absolute;
+                left: 8px;
+                width: 28px;
+                height: 28px;
+                border: none;
+                border-radius: 8px;
+                background: #e2e8f0;
+                color: #475569;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+            }
+            .approved-filters-bar__search-clear:hover {
+                background: #cbd5e1;
+            }
+            .approved-filters-bar__select {
+                min-height: 42px;
+                border: 1px solid #cbd5e1;
+                border-radius: 10px;
+                background: #fff;
+                padding: 0 12px;
+                font-size: 0.88rem;
+                color: #334155;
+            }
+            .approved-filters-bar__select:focus {
+                outline: none;
+                border-color: #3b82f6;
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+            }
+            .approved-filters-bar__reset {
+                white-space: nowrap;
+                min-height: 42px;
+            }
+            .approved-filters-bar__reset:disabled {
+                opacity: 0.55;
+                cursor: not-allowed;
+            }
+            @media (max-width: 1100px) {
+                .approved-filters-bar__row {
+                    grid-template-columns: 1fr 1fr;
+                }
+                .approved-filters-bar__search-wrap {
+                    grid-column: 1 / -1;
+                }
+                .approved-filters-bar__reset {
+                    grid-column: 1 / -1;
+                    justify-self: start;
+                }
+            }
+            @media (max-width: 640px) {
+                .approved-filters-bar__row {
+                    grid-template-columns: 1fr;
+                }
+            }
+        `;
+        document.head.appendChild(filterStyle);
     },
 
     async exportContractorViolationsReport(contractorLookupEncoded = '', contractorNameEncoded = '') {
