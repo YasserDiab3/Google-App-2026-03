@@ -244,6 +244,8 @@
     padding-inline-start: 2px;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 transparent;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 12rem;
 }
 
 .form-settings-panel__footer {

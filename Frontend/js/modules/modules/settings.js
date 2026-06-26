@@ -445,8 +445,8 @@ const Settings = {
             const isAdmin = this.isCurrentUserAdmin();
 
             if (typeof Permissions !== 'undefined') {
-                // إعادة ربط أحداث إعدادات النماذج فقط — لا نُصفّر المواقع قبل اكتمال إعادة التحميل (تجنّب فراغ مؤقت)
                 Permissions.formSettingsEventsBound = false;
+                Permissions._formSettingsBindDone = false;
             }
             // ✅ لا ننتظر تهيئة إعدادات النماذج — الواجهة تُرسم فوراً
             // (المواقع/الإعدادات تُحمَّل في الخلفية ويُعاد رسم كارت إعدادات النماذج عند الجاهزية)
@@ -1638,19 +1638,12 @@ const Settings = {
             Promise.resolve().then(async () => {
                 try {
                     await Permissions.initFormSettingsState();
-                    // بعد تحميل المواقع/الإعدادات، نُعيد رسم كارت إعدادات النماذج فقط
-                    if (isAdmin && typeof Permissions.renderFormSettingsCard === 'function') {
-                        const oldCard = document.getElementById('form-settings-card');
-                        if (oldCard) {
-                            const wrapper = document.createElement('div');
-                            wrapper.innerHTML = Permissions.renderFormSettingsCard();
-                            const newCard = wrapper.firstElementChild;
-                            if (newCard) {
-                                oldCard.replaceWith(newCard);
-                                if (typeof Permissions.bindFormSettingsEvents === 'function') {
-                                    Permissions.bindFormSettingsEvents();
-                                }
-                            }
+                    if (isAdmin && document.getElementById('form-settings-card')) {
+                        if (typeof Permissions.refreshFormSettingsUI === 'function') {
+                            Permissions.refreshFormSettingsUI();
+                        }
+                        if (typeof Permissions.bindFormSettingsEvents === 'function') {
+                            await Permissions.bindFormSettingsEvents();
                         }
                     }
                 } catch (e) {
@@ -1663,43 +1656,28 @@ const Settings = {
 
         // تهيئة إعدادات النماذج بعد تحميل الإعدادات
         if (isAdmin && typeof Permissions !== 'undefined') {
-            // محاولة متعددة لضمان تحميل الكارد
             let attempts = 0;
-            const maxAttempts = 15; // زيادة عدد المحاولات
+            const maxAttempts = 15;
             const checkInterval = setInterval(() => {
                 attempts++;
                 const card = document.getElementById('form-settings-card');
                 if (card || attempts >= maxAttempts) {
                     clearInterval(checkInterval);
-                    if (card) {
+                    if (card && !Permissions._formSettingsBindDone) {
+                        Permissions._formSettingsBindDone = true;
                         try {
                             if (typeof Permissions.bindFormSettingsEvents === 'function') {
                                 Permissions.bindFormSettingsEvents();
                                 Utils.safeLog('✅ تم تهيئة أحداث إعدادات النماذج');
-                            } else {
-                                Utils.safeWarn('⚠️ bindFormSettingsEvents غير موجودة');
                             }
                         } catch (error) {
                             Utils.safeError('❌ خطأ في تهيئة أحداث إعدادات النماذج:', error);
                         }
-                    } else {
+                    } else if (!card && attempts >= maxAttempts) {
                         Utils.safeWarn('⚠️ لم يتم العثور على form-settings-card بعد ' + maxAttempts + ' محاولة');
                     }
                 }
             }, 100);
-            
-            // محاولة إضافية بعد تأخير أطول للتأكد
-            setTimeout(() => {
-                const card = document.getElementById('form-settings-card');
-                if (card && typeof Permissions !== 'undefined' && typeof Permissions.bindFormSettingsEvents === 'function') {
-                    try {
-                        Permissions.bindFormSettingsEvents();
-                        Utils.safeLog('✅ تم إعادة تهيئة أحداث إعدادات النماذج (محاولة إضافية)');
-                    } catch (error) {
-                        Utils.safeWarn('⚠️ خطأ في إعادة تهيئة أحداث إعدادات النماذج:', error);
-                    }
-                }
-            }, 2000);
         }
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {

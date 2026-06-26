@@ -429,10 +429,15 @@ const Permissions = {
     },
 
     async ensureFormSettingsState(forceReload = false) {
-        // ✅ إصلاح: إعادة تحميل البيانات من Google Sheets عند forceReload لضمان الحصول على أحدث البيانات
-        if (forceReload || !this.formSettingsState) {
-            await this.initFormSettingsState();
+        if (forceReload) {
+            this._formSettingsInitPromise = null;
+            this.formSettingsState = null;
+            this._formSettingsPlacesHtmlCache = null;
         }
+        if (!forceReload && this.formSettingsState) {
+            return this.formSettingsState;
+        }
+        await this.initFormSettingsState();
         return this.formSettingsState;
     },
 
@@ -451,6 +456,17 @@ const Permissions = {
     },
 
     async initFormSettingsState() {
+        if (this._formSettingsInitPromise) {
+            return this._formSettingsInitPromise;
+        }
+        this._formSettingsInitPromise = this._initFormSettingsStateCore()
+            .finally(() => {
+                this._formSettingsInitPromise = null;
+            });
+        return this._formSettingsInitPromise;
+    },
+
+    async _initFormSettingsStateCore() {
         // ✅ ضمان وجود AppState.appData لتفادي أخطاء عند التعيين لاحقاً
         if (typeof AppState === 'undefined') return this.getFormSettingsState();
         if (!AppState.appData) AppState.appData = {};
@@ -717,25 +733,36 @@ const Permissions = {
             departments: this.getInitialFormDepartments(),
             safetyTeam: this.getInitialSafetyTeam()
         };
+        this.invalidateFormSettingsPlacesCache();
 
-        // ✅ إطلاق حدث وتحديث القوائم فوراً لأي عناصر موجودة في الـ DOM
-        try {
-            if (typeof window !== 'undefined' && window.dispatchEvent) {
-                window.dispatchEvent(new CustomEvent('formSettingsUpdated', {
-                    detail: { sites: clonedSites, observationSites: AppState.appData.observationSites }
-                }));
-                var names = ['Training', 'Clinic', 'PTW', 'Incidents', 'Violations', 'FireEquipment', 'PeriodicInspections', 'BehaviorMonitoring', 'Sustainability', 'Emergency'];
-                for (var i = 0; i < names.length; i++) {
-                    try {
-                        var M = window[names[i]];
-                        if (M && typeof M.refreshSiteDropdowns === 'function') M.refreshSiteDropdowns();
-                    } catch (e2) { /* ignore */ }
-                }
-                if (clonedSites.length > 0 && typeof Utils !== 'undefined' && Utils.safeLog) {
-                    Utils.safeLog('✅ تم إطلاق حدث formSettingsUpdated وتحديث قوائم المصنع/الموقع');
-                }
+        // ✅ إطلاق حدث وتحديث القوائم بعد اكتمال الرسم — لا تحجب تفاعل إعدادات النماذج
+        const scheduleFormSettingsGlobalRefresh = () => {
+            const run = () => {
+                try {
+                    if (typeof window !== 'undefined' && window.dispatchEvent) {
+                        window.dispatchEvent(new CustomEvent('formSettingsUpdated', {
+                            detail: { sites: clonedSites, observationSites: AppState.appData.observationSites }
+                        }));
+                        const names = ['Training', 'Clinic', 'PTW', 'Incidents', 'Violations', 'FireEquipment', 'PeriodicInspections', 'BehaviorMonitoring', 'Sustainability', 'Emergency'];
+                        for (let i = 0; i < names.length; i++) {
+                            try {
+                                const M = window[names[i]];
+                                if (M && typeof M.refreshSiteDropdowns === 'function') M.refreshSiteDropdowns();
+                            } catch (e2) { /* ignore */ }
+                        }
+                        if (clonedSites.length > 0 && typeof Utils !== 'undefined' && Utils.safeLog) {
+                            Utils.safeLog('✅ تم إطلاق حدث formSettingsUpdated وتحديث قوائم المصنع/الموقع');
+                        }
+                    }
+                } catch (e) { /* ignore */ }
+            };
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(run, { timeout: 1500 });
+            } else {
+                setTimeout(run, 0);
             }
-        } catch (e) { /* ignore */ }
+        };
+        scheduleFormSettingsGlobalRefresh();
 
         return this.formSettingsState;
     },
@@ -991,7 +1018,7 @@ const Permissions = {
         }).join('');
     },
 
-    renderFormPlacesList() {
+    renderFormPlacesList(site = null) {
         const state = this.getFormSettingsState();
         const emptyBox = (icon, body) => `
             <div class="form-settings-empty" role="listitem">
@@ -1004,16 +1031,16 @@ const Permissions = {
         if (!state.selectedSiteId) {
             return emptyBox('fa-hand-pointer', 'اختر موقعاً من قائمة المواقع لعرض وتعديل الأماكن التابعة له.');
         }
-        const site = state.sites.find((item) => item.id === state.selectedSiteId);
-        if (!site) {
+        const resolvedSite = site || this.getFormSettingsSiteById(state.selectedSiteId, state);
+        if (!resolvedSite) {
             return emptyBox('fa-exclamation-circle', 'الموقع المحدد غير موجود. اختر موقعاً صالحاً من القائمة.');
         }
-        if (!Array.isArray(site.places) || site.places.length === 0) {
-            const label = (site.name || '').trim() || 'هذا الموقع';
+        if (!Array.isArray(resolvedSite.places) || resolvedSite.places.length === 0) {
+            const label = (resolvedSite.name || '').trim() || 'هذا الموقع';
             return emptyBox('fa-location-dot', `لا توجد أماكن مسجلة لـ <strong>${Utils.escapeHTML(label)}</strong>. استخدم زر <strong>إضافة مكان</strong> أدناه.`);
         }
         const padIndex = (n) => String(n).padStart(2, '0');
-        return site.places.map((place, index) => `
+        return resolvedSite.places.map((place, index) => `
             <div class="form-settings-item-row" role="listitem" data-place-id="${Utils.escapeHTML(place.id)}">
                 <span class="form-settings-item-row__index" title="الترتيب">${padIndex(index + 1)}</span>
                 <input type="text" class="form-settings-item-row__input" data-field="place-name" data-place-id="${Utils.escapeHTML(place.id)}"
@@ -1023,6 +1050,45 @@ const Permissions = {
                 </button>
             </div>
         `).join('');
+    },
+
+    getFormSettingsSiteById(siteId, state = null) {
+        const currentState = state || this.getFormSettingsState();
+        if (!siteId || !currentState || !Array.isArray(currentState.sites)) return null;
+        if (!currentState._siteById || currentState._siteByIdVersion !== currentState.sites) {
+            currentState._siteById = new Map(currentState.sites.map((s) => [s.id, s]));
+            currentState._siteByIdVersion = currentState.sites;
+        }
+        return currentState._siteById.get(siteId) || null;
+    },
+
+    getFormSettingsPlacesListFingerprint(site) {
+        if (!site || !Array.isArray(site.places)) return '0';
+        return `${site.places.length}:${site.places.map((p) => `${p.id}\u0000${p.name || ''}`).join('\u0001')}`;
+    },
+
+    invalidateFormSettingsPlacesCache(siteId = null) {
+        if (!this._formSettingsPlacesHtmlCache) return;
+        if (!siteId) {
+            this._formSettingsPlacesHtmlCache.clear();
+            return;
+        }
+        this._formSettingsPlacesHtmlCache.delete(siteId);
+    },
+
+    getFormSettingsPlacesListHtml(site) {
+        if (!site) return this.renderFormPlacesList();
+        if (!this._formSettingsPlacesHtmlCache) {
+            this._formSettingsPlacesHtmlCache = new Map();
+        }
+        const fingerprint = this.getFormSettingsPlacesListFingerprint(site);
+        const cached = this._formSettingsPlacesHtmlCache.get(site.id);
+        if (cached && cached.fingerprint === fingerprint) {
+            return cached.html;
+        }
+        const html = this.renderFormPlacesList(site);
+        this._formSettingsPlacesHtmlCache.set(site.id, { fingerprint, html });
+        return html;
     },
 
     renderDepartmentsList() {
@@ -1099,12 +1165,14 @@ const Permissions = {
         }
     },
 
-    updateFormSettingsSiteSelection(selectedSiteId) {
+    updateFormSettingsSiteSelection(previousSiteId, selectedSiteId) {
         const sitesList = document.getElementById('form-settings-sites-list');
         if (!sitesList) return;
-        sitesList.querySelectorAll('.form-settings-item-row--site').forEach((row) => {
-            const siteId = row.getAttribute('data-site-id');
-            const isSelected = siteId === selectedSiteId;
+
+        const applyRowState = (siteId, isSelected) => {
+            if (!siteId) return;
+            const row = sitesList.querySelector(`.form-settings-item-row--site[data-site-id="${siteId}"]`);
+            if (!row) return;
             row.classList.toggle('is-selected', isSelected);
             row.title = isSelected ? 'الموقع النشط' : 'انقر لتحديد هذا الموقع';
             const selectBtn = row.querySelector('.form-settings-item-row__select-btn');
@@ -1112,14 +1180,42 @@ const Permissions = {
                 selectBtn.classList.toggle('is-active', isSelected);
                 selectBtn.innerHTML = isSelected ? '<i class="fas fa-check ml-1"></i>محدد' : 'اختيار';
             }
-        });
+        };
+
+        if (previousSiteId && previousSiteId !== selectedSiteId) {
+            applyRowState(previousSiteId, false);
+        }
+        applyRowState(selectedSiteId, true);
     },
 
-    refreshFormSettingsPlacesPanel(state = null) {
+    updateFormSettingsPlacesContextForSite(site) {
+        const placesCtx = document.getElementById('form-settings-places-context');
+        if (!placesCtx) return;
+        if (!site) {
+            placesCtx.className = 'form-settings-places-context is-empty';
+            placesCtx.innerHTML = '<i class="fas fa-hand-pointer ml-1"></i> لم يُحدد موقع بعد — اختر موقعاً من قائمة «المواقع» لعرض الأماكن التابعة له.';
+            return;
+        }
+        const name = String(site.name || '').trim() || site.id;
+        const n = Array.isArray(site.places) ? site.places.length : 0;
+        placesCtx.className = 'form-settings-places-context';
+        placesCtx.innerHTML = `
+            <span class="form-settings-places-context__badge"><i class="fas fa-map-marker-alt"></i> ${Utils.escapeHTML(name)}</span>
+            <span>الموقع النشط</span>
+            <span class="form-settings-places-context__count"><i class="fas fa-layer-group"></i> ${n} مكان</span>
+        `;
+    },
+
+    refreshFormSettingsPlacesPanel(state = null, site = null) {
         const currentState = state || this.getFormSettingsState();
+        const resolvedSite = site || (currentState?.selectedSiteId
+            ? this.getFormSettingsSiteById(currentState.selectedSiteId, currentState)
+            : null);
         const placesList = document.getElementById('form-settings-places-list');
         if (placesList) {
-            placesList.innerHTML = this.renderFormPlacesList();
+            placesList.innerHTML = resolvedSite
+                ? this.getFormSettingsPlacesListHtml(resolvedSite)
+                : this.renderFormPlacesList();
         }
         const addPlaceBtn = document.getElementById('form-settings-add-place-btn');
         const placesPanel = document.getElementById('form-settings-places-panel');
@@ -1130,28 +1226,19 @@ const Permissions = {
         if (placesPanel) {
             placesPanel.classList.toggle('is-disabled', !hasSelectedSite);
         }
-        const placesCtx = document.getElementById('form-settings-places-context');
-        if (placesCtx) {
-            if (!currentState || !currentState.selectedSiteId || !Array.isArray(currentState.sites)) {
-                placesCtx.className = 'form-settings-places-context is-empty';
-                placesCtx.innerHTML = '<i class="fas fa-hand-pointer ml-1"></i> لم يُحدد موقع بعد — اختر موقعاً من قائمة «المواقع» لعرض الأماكن التابعة له.';
-            } else {
-                const sel = currentState.sites.find((s) => s.id === currentState.selectedSiteId);
-                if (!sel) {
-                    placesCtx.className = 'form-settings-places-context is-empty';
-                    placesCtx.innerHTML = '<i class="fas fa-exclamation-circle ml-1"></i> الموقع المحدد غير متوفر. اختر موقعاً آخر.';
-                } else {
-                    const name = String(sel.name || '').trim() || sel.id;
-                    const n = Array.isArray(sel.places) ? sel.places.length : 0;
-                    placesCtx.className = 'form-settings-places-context';
-                    placesCtx.innerHTML = `
-                        <span class="form-settings-places-context__badge"><i class="fas fa-map-marker-alt"></i> ${Utils.escapeHTML(name)}</span>
-                        <span>الموقع النشط</span>
-                        <span class="form-settings-places-context__count"><i class="fas fa-layer-group"></i> ${n} مكان</span>
-                    `;
-                }
-            }
+        if (!currentState || !currentState.selectedSiteId || !Array.isArray(currentState.sites)) {
+            this.updateFormSettingsPlacesContextForSite(null);
+            return;
         }
+        if (!resolvedSite) {
+            const placesCtx = document.getElementById('form-settings-places-context');
+            if (placesCtx) {
+                placesCtx.className = 'form-settings-places-context is-empty';
+                placesCtx.innerHTML = '<i class="fas fa-exclamation-circle ml-1"></i> الموقع المحدد غير متوفر. اختر موقعاً آخر.';
+            }
+            return;
+        }
+        this.updateFormSettingsPlacesContextForSite(resolvedSite);
     },
 
     async bindFormSettingsEvents(forceReload = false) {
@@ -1161,24 +1248,29 @@ const Permissions = {
         const needsRemoteLoad = forceReload || !this.formSettingsState;
         if (needsRemoteLoad) {
             await this.ensureFormSettingsState(forceReload);
-        } else if (!this.getFormSettingsState()) {
-            await this.ensureFormSettingsState(false);
+            this.refreshFormSettingsUI();
+        } else if (!card.dataset.formSettingsUiReady) {
+            this.refreshFormSettingsUI();
         }
+        card.dataset.formSettingsUiReady = '1';
 
-        this.refreshFormSettingsUI();
-        
-        // ✅ إصلاح: إضافة رسالة تحميل للمستخدم (حتى في وضع الإنتاج)
         const sitesCount = this.formSettingsState?.sites?.length || 0;
         if (sitesCount > 0) {
             Utils.safeLog(`✅ تم تحميل ${sitesCount} موقع في تبويب إعدادات النماذج`);
-        } else {
-            Utils.safeWarn('⚠️ لم يتم تحميل أي مواقع - تحقق من قاعدة البيانات');
         }
 
+        this.ensureFormSettingsDelegatedEvents();
+    },
+
+    ensureFormSettingsDelegatedEvents() {
         if (this.formSettingsEventsBound) return;
+        const root = document.getElementById('tab-form-settings');
+        if (!root) return;
+
         this.formSettingsEventsBound = true;
 
-        card.addEventListener('click', (event) => {
+        root.addEventListener('click', (event) => {
+            if (!event.target.closest('#form-settings-card')) return;
             const actionElement = event.target.closest('[data-action]');
             if (!actionElement) return;
             const action = actionElement.getAttribute('data-action');
@@ -1248,7 +1340,8 @@ const Permissions = {
             }
         });
 
-        card.addEventListener('input', (event) => {
+        root.addEventListener('input', (event) => {
+            if (!event.target.closest('#form-settings-card')) return;
             const target = event.target;
             if (!target) return;
             const field = target.getAttribute('data-field');
@@ -1270,17 +1363,14 @@ const Permissions = {
             }
         });
 
-        // ربط حدث اختيار الملف
-        const fileInput = document.getElementById('form-settings-file-input');
-        if (fileInput) {
-            fileInput.addEventListener('change', (event) => {
-                const file = event.target.files?.[0];
-                if (file) {
-                    this.handleImportFormSettingsFileContent(file);
-                }
-                event.target.value = '';
-            });
-        }
+        root.addEventListener('change', (event) => {
+            if (event.target?.id !== 'form-settings-file-input') return;
+            const file = event.target.files?.[0];
+            if (file) {
+                this.handleImportFormSettingsFileContent(file);
+            }
+            event.target.value = '';
+        });
     },
 
     async handleAddSite() {
@@ -1299,8 +1389,12 @@ const Permissions = {
         };
         state.sites.push(newSite);
         state.selectedSiteId = newSite.id;
+        this.invalidateFormSettingsPlacesCache();
+        if (state._siteById) {
+            state._siteById.set(newSite.id, newSite);
+        }
         this.refreshFormSettingsUI('sites');
-        this.refreshFormSettingsPlacesPanel();
+        this.refreshFormSettingsPlacesPanel(state, newSite);
         setTimeout(() => {
             const input = document.querySelector(`[data-field="site-name"][data-site-id="${newSite.id}"]`);
             if (input) input.focus();
@@ -1312,9 +1406,11 @@ const Permissions = {
         if (!siteId || !state || !Array.isArray(state.sites)) return;
         if (!state.sites.some((site) => site.id === siteId)) return;
         if (state.selectedSiteId === siteId) return;
+        const previousSiteId = state.selectedSiteId;
         state.selectedSiteId = siteId;
-        this.updateFormSettingsSiteSelection(siteId);
-        this.refreshFormSettingsPlacesPanel(state);
+        const site = this.getFormSettingsSiteById(siteId, state);
+        this.updateFormSettingsSiteSelection(previousSiteId, siteId);
+        this.refreshFormSettingsPlacesPanel(state, site);
     },
 
     handleRemoveSite(siteId) {
@@ -1327,6 +1423,8 @@ const Permissions = {
             return;
         }
         state.sites.splice(index, 1);
+        this.invalidateFormSettingsPlacesCache(siteId);
+        delete state._siteById;
         if (state.selectedSiteId === siteId) {
             state.selectedSiteId = state.sites[0]?.id || '';
         }
@@ -1340,6 +1438,7 @@ const Permissions = {
         const site = state.sites.find((item) => item.id === siteId);
         if (site) {
             site.name = value;
+            this.invalidateFormSettingsPlacesCache(siteId);
             if (state.selectedSiteId === siteId) {
                 const badge = document.querySelector('#form-settings-places-context .form-settings-places-context__badge');
                 if (badge) {
@@ -1368,6 +1467,7 @@ const Permissions = {
             name: ''
         };
         site.places.push(newPlace);
+        this.invalidateFormSettingsPlacesCache(siteId);
         this.refreshFormSettingsUI('places');
         setTimeout(() => {
             const input = document.querySelector(`[data-field="place-name"][data-place-id="${newPlace.id}"]`);
@@ -1383,6 +1483,7 @@ const Permissions = {
         const place = site.places.find((item) => item.id === placeId);
         if (place) {
             place.name = value;
+            this.invalidateFormSettingsPlacesCache(state.selectedSiteId);
         }
     },
 
@@ -1398,6 +1499,7 @@ const Permissions = {
             return;
         }
         site.places.splice(index, 1);
+        this.invalidateFormSettingsPlacesCache(state.selectedSiteId);
         this.refreshFormSettingsUI('places');
     },
 
@@ -1955,6 +2057,8 @@ const Permissions = {
 
         if (!dryRun && state) {
             state.sites = workingSites;
+            delete state._siteById;
+            this.invalidateFormSettingsPlacesCache();
         }
 
         return stats;
@@ -3471,7 +3575,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.338',
+    appVersion: '1.0.339',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
