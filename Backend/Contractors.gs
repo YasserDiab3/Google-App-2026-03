@@ -145,24 +145,31 @@ function deleteApprovedContractor(approvedContractorId, userData) {
         }
         
         const spreadsheetId = getSpreadsheetId();
-        
-        // 1. حذف من ApprovedContractors
         const sheetName = 'ApprovedContractors';
+
+        if (typeof deleteRowById === 'function') {
+            const deleteResult = deleteRowById(sheetName, approvedContractorId, spreadsheetId);
+            if (deleteResult && deleteResult.success) {
+                return { success: true, message: 'تم حذف المقاول المعتمد بنجاح' };
+            }
+            if (deleteResult && deleteResult.message && deleteResult.message.indexOf('غير موجود') === -1) {
+                return deleteResult;
+            }
+        }
+
+        // احتياط: المسار القديم إذا فشل deleteRowById
         const data = readFromSheet(sheetName, spreadsheetId);
-        const recordToDelete = data.find(c => c.id === approvedContractorId);
-        const filteredData = data.filter(c => c.id !== approvedContractorId);
-        
+        const filteredData = data.filter(function(c) { return c.id !== approvedContractorId; });
+
         if (filteredData.length === data.length) {
             return { success: false, message: 'المقاول المعتمد غير موجود' };
         }
-        
+
         const saveResult = saveToSheet(sheetName, filteredData, spreadsheetId);
         if (!saveResult.success) {
             return saveResult;
         }
-        
-        // ✅ تم إزالة حذف من Contractors - نعتمد فقط على ApprovedContractors
-        
+
         return { success: true, message: 'تم حذف المقاول المعتمد بنجاح' };
     } catch (error) {
         Logger.log('Error deleting approved contractor: ' + error.toString());

@@ -3999,7 +3999,10 @@ const Contractors = {
         try {
             Loading.show();
             // Call Backend
-            const result = await GoogleIntegration.sendToAppsScript('deleteApprovedContractor', { approvedContractorId: id });
+            const result = await GoogleIntegration.sendToAppsScript('deleteApprovedContractor', {
+                approvedContractorId: id,
+                __timeoutMs: 45000
+            });
 
             if (result.success) {
                 Notification.success('تم حذف الجهة المعتمدة بنجاح');

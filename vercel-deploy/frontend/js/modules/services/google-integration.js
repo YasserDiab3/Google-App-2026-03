@@ -903,6 +903,7 @@ const GoogleIntegration = {
             const mediumOperations = [
                 'getData', 'readData', 'loadData', 'fetchData', 'add', 'update'
             ];
+            const isDeleteOperation = typeof action === 'string' && action.indexOf('delete') === 0;
             // تجنب مطابقة السلسلة الفرعية «getAll» لأي إجراء يحتويها (مثل getAllTrainings → كان يُصنَّف ثقيلاً بمهلة 40s + إعادة محاولة)
             const isHeavyOperation = heavyOperations.some((op) => {
                 if (action === op) return true;
@@ -911,12 +912,12 @@ const GoogleIntegration = {
                 }
                 return action.includes(op);
             });
-            const isMediumOperation = mediumOperations.some(op => action.includes(op) || action === op);
+            const isMediumOperation = mediumOperations.some(op => action.includes(op) || action === op) || isDeleteOperation;
 
             // تقليل المهلات لتفعيل fail-fast ومنع تكدس الطابور لعدة دقائق
             const timeoutDuration = Number(data?.__timeoutMs) > 0
                 ? Number(data.__timeoutMs)
-                : (isHeavyOperation ? 40000 : (isMediumOperation ? 20000 : 12000));
+                : (isHeavyOperation ? 40000 : (isMediumOperation ? 30000 : 12000));
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => {
@@ -1009,7 +1010,8 @@ const GoogleIntegration = {
 
                 if (isAbortOrTimeoutError) {
                     const isWriteOperation = action === 'saveToSheet' || action === 'appendToSheet' ||
-                        action.startsWith('save') || action.startsWith('update') || action.startsWith('add');
+                        action.startsWith('save') || action.startsWith('update') || action.startsWith('add') ||
+                        isDeleteOperation;
                     let maxRetries = isWriteOperation ? 2 : 1;
                     if (isHeavyOperation && isWriteOperation) {
                         maxRetries = 3;
@@ -1094,7 +1096,8 @@ const GoogleIntegration = {
 
                     // إعادة محاولات محدودة لتقليل التأخير التراكمي
                     const isWriteOperation = action === 'saveToSheet' || action === 'appendToSheet' ||
-                        action.startsWith('save') || action.startsWith('update') || action.startsWith('add');
+                        action.startsWith('save') || action.startsWith('update') || action.startsWith('add') ||
+                        isDeleteOperation;
                     let maxRetries = isWriteOperation ? 2 : 1;
                     if (isHeavyOperation && isWriteOperation) {
                         maxRetries = 3;
