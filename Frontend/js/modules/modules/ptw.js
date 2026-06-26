@@ -10,6 +10,7 @@ const PTW = {
     formCircuitName: '',
     _loadPTWListTimeout: null, // للتحكم في التحميل الزائد
     _ptwBackendLoadPromise: null, // منع تكرار جلب الخادم
+    _mapMarkersToken: 0,
     _isSubmitting: false, // منع الحفظ المتكرر
     _i18nSectionObserver: null,
     _i18nBodyObserver: null,
@@ -2744,6 +2745,15 @@ const PTW = {
                 this._scheduleMapCoordinatesBackgroundSync();
                 this._startPtwBackendSync();
                 this._mountPermitsListContent(t);
+                const prewarmMap = () => {
+                    this._prewarmLeafletLibrary();
+                    this._prewarmMapTab();
+                };
+                if (typeof requestIdleCallback === 'function') {
+                    requestIdleCallback(prewarmMap, { timeout: 2500 });
+                } else {
+                    setTimeout(prewarmMap, 400);
+                }
             });
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
@@ -2977,19 +2987,19 @@ const PTW = {
                         mapDiv.style.visibility = 'visible';
                     }
 
-                // تهيئة أو استئناف الخريطة بعد جاهزية DOM
+                // تهيئة أو استئناف الخريطة فور جاهزية DOM
                 if (this.mapInitTimeout) clearTimeout(this.mapInitTimeout);
-                this.mapInitTimeout = setTimeout(() => {
-                    if (this.currentTab === 'map' && mapContent && mapContent.style.display !== 'none') {
-                        if (this.isMapInstanceAlive()) {
-                            this.resumeMap();
-                        } else {
-                            this.initMap().catch(error => {
-                                Utils.safeWarn('⚠️ فشل تهيئة الخريطة (سيظهر للمستخدم في التبويب):', error?.message || error);
-                            });
-                        }
+                this.mapInitTimeout = null;
+                requestAnimationFrame(() => {
+                    if (this.currentTab !== 'map' || !mapContent || mapContent.style.display === 'none') return;
+                    if (this.isMapInstanceAlive()) {
+                        this.resumeMap();
+                    } else {
+                        this.initMap().catch(error => {
+                            Utils.safeWarn('⚠️ فشل تهيئة الخريطة (سيظهر للمستخدم في التبويب):', error?.message || error);
+                        });
                     }
-                }, 50);
+                });
                 } catch (mapTabError) {
                     Utils.safeWarn('⚠️ خطأ عند فتح تبويب الخرائط:', mapTabError?.message || mapTabError);
                     if (mapContent) {
@@ -3694,6 +3704,54 @@ const PTW = {
         return AppState.googleConfig?.maps?.ptwEngine === 'google' && this.hasGoogleMapsApiKey;
     },
 
+    _prewarmLeafletLibrary() {
+        if (typeof L !== 'undefined' && typeof L.map === 'function') return Promise.resolve();
+        return this.ensureLeafletReady().catch(() => {});
+    },
+
+    /** تجهيز DOM تبويب الخريطة بالخلفية — فتح أسرع عند النقر */
+    _prewarmMapTab() {
+        const mapContent = document.getElementById('ptw-map-content');
+        if (!mapContent || mapContent.getAttribute('data-tab-lazy') !== 'map') return;
+        try {
+            mapContent.innerHTML = this.renderMapContent();
+            mapContent.removeAttribute('data-tab-lazy');
+            this.applyModuleI18n(mapContent);
+        } catch (err) {
+            Utils.safeWarn('⚠️ تعذر تجهيز واجهة الخريطة مسبقاً:', err);
+        }
+    },
+
+    /** طبقة فضائية — تُنشأ عند الطلب فقط (تخفيف التهيئة الأولية) */
+    _ensureLeafletSatelliteLayer() {
+        if (this.leafletLayers.satellite) return this.leafletLayers.satellite;
+        if (typeof L === 'undefined') return null;
+        this.leafletLayers.satellite = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap | © CARTO',
+            maxZoom: 19,
+            subdomains: ['a', 'b', 'c', 'd'],
+            updateWhenIdle: true,
+            updateWhenZooming: false,
+            keepBuffer: 2
+        });
+        return this.leafletLayers.satellite;
+    },
+
+    /** طبقة طبوغرافية خفيفة — عند الطلب فقط */
+    _ensureLeafletTerrainLayer() {
+        if (this.leafletLayers.terrain) return this.leafletLayers.terrain;
+        if (typeof L === 'undefined') return null;
+        this.leafletLayers.terrain = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap | © CARTO',
+            maxZoom: 19,
+            subdomains: ['a', 'b', 'c', 'd'],
+            updateWhenIdle: true,
+            updateWhenZooming: false,
+            keepBuffer: 2
+        });
+        return this.leafletLayers.terrain;
+    },
+
     async ensureLeafletReady() {
         if (typeof L !== 'undefined' && typeof L.map === 'function') return;
 
@@ -4061,24 +4119,7 @@ const PTW = {
             // إخفاء التحميل
             if (loadingDiv) loadingDiv.style.display = 'none';
 
-            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-
-            if (mapContainer) {
-                const containerRect = mapContainer.getBoundingClientRect();
-                if (containerRect.width === 0 || containerRect.height === 0) {
-                    mapContainer.style.width = '100%';
-                    mapContainer.style.height = '600px';
-                    mapContainer.style.minHeight = '400px';
-                }
-            }
-
             this.refreshMapLayout();
-
-            try {
-                this.updateMapMarkers();
-            } catch (markerError) {
-                Utils.safeWarn('⚠️ خطأ في تحديث العلامات (سيتم تجاهله):', markerError);
-            }
 
             try {
                 this.setupMapEventListeners();
@@ -4105,6 +4146,19 @@ const PTW = {
                 }
             } catch (listenerError) {
                 Utils.safeWarn('⚠️ خطأ في إعداد مستمعي التحديثات (سيتم تجاهله):', listenerError);
+            }
+
+            const runMarkers = () => {
+                try {
+                    this.updateMapMarkers();
+                } catch (markerError) {
+                    Utils.safeWarn('⚠️ خطأ في تحديث العلامات (سيتم تجاهله):', markerError);
+                }
+            };
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(runMarkers, { timeout: 600 });
+            } else {
+                requestAnimationFrame(runMarkers);
             }
 
             Utils.safeLog('✅ تم تهيئة الخريطة بنجاح - الخريطة جاهزة للاستخدام');
@@ -4572,224 +4626,8 @@ const PTW = {
                 Utils.safeWarn('⚠️ خطأ في تحميل tile للخريطة العادية:', error);
             });
 
-            // طبقة الخريطة الفضائية (Satellite) - حل نهائي مع مصادر احتياطية متعددة
-            // استخدام نظام fallback متعدد المستويات للتعامل مع أخطاء 503
-            const self = this; // للاستخدام داخل معالج الأخطاء (سياق الاستدعاء من Leaflet يختلف)
-            const isOnline = typeof navigator !== 'undefined' && navigator.onLine !== false;
-            
-            // قائمة مصادر الخريطة الفضائية: Carto فقط — استقرار كامل وتجنب 503 من ArcGIS
-            // ✅ تم إزالة Esri World_Imagery (arcgisonline.com) لأنه يعيد 503 (Service Unavailable) باستمرار
-            const satelliteSources = [
-                {
-                    name: 'carto-voyager',
-                    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | © <a href="https://carto.com/attributions">CARTO</a>',
-                    subdomains: ['a', 'b', 'c', 'd']
-                },
-                {
-                    name: 'carto-positron',
-                    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | © <a href="https://carto.com/attributions">CARTO</a>',
-                    subdomains: ['a', 'b', 'c', 'd']
-                },
-                {
-                    name: 'carto-dark',
-                    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | © <a href="https://carto.com/attributions">CARTO</a>',
-                    subdomains: ['a', 'b', 'c', 'd']
-                }
-            ];
+            // الطبقات الفضائية/الطبوغرافية تُنشأ عند الطلب فقط (_ensureLeafletSatelliteLayer / _ensureLeafletTerrainLayer)
 
-            // متغيرات تتبع حالة المصادر
-            let currentSatelliteSourceIndex = 0;
-            let satelliteSourceErrors = new Map(); // تتبع الأخطاء لكل مصدر
-            let satelliteSourceSuccessCount = new Map(); // تتبع النجاح لكل مصدر
-            
-            // دالة لإنشاء طبقة فضائية من مصدر معين
-            const createSatelliteLayer = (sourceIndex) => {
-                if (sourceIndex >= satelliteSources.length) {
-                    // إذا فشلت جميع المصادر، نعود إلى المصدر الأول
-                    sourceIndex = 0;
-                }
-                
-                const source = satelliteSources[sourceIndex];
-                const layerOptions = {
-                    attribution: source.attribution,
-                maxZoom: 19,
-                errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
-                tileSize: 256,
-                zoomOffset: 0,
-                keepBuffer: 2,
-                updateWhenIdle: false,
-                updateWhenZooming: true,
-                    crossOrigin: false,
-                    retry: isOnline ? 2 : 0,
-                    retryDelay: 500
-                };
-                
-                if (source.subdomains) {
-                    layerOptions.subdomains = source.subdomains;
-                }
-                
-                const layer = L.tileLayer(source.url, layerOptions);
-                
-                // إعادة تعيين عداد الأخطاء للمصدر الجديد
-                satelliteSourceErrors.set(sourceIndex, 0);
-                satelliteSourceSuccessCount.set(sourceIndex, 0);
-                
-                return layer;
-            };
-
-            // دالة معالجة الأخطاء للطبقة الفضائية (يمكن إعادة استخدامها)
-            const handleSatelliteTileError = (error, tile) => {
-                // في وضع ستالايت (offline)، نتجاهل الأخطاء تماماً
-                if (!isOnline) {
-                    if (tile && tile.el) {
-                        tile.el.style.opacity = '0.1';
-                        tile.el.style.display = 'none';
-                    }
-                    return;
-                }
-                
-                // كتم أخطاء 503 في console تماماً - تحسين شامل
-                try {
-                    if (error) {
-                        const errorMsg = String(error.message || error.toString() || '').toLowerCase();
-                        const errorUrl = tile && tile.url ? String(tile.url).toLowerCase() : '';
-                        const combinedError = errorMsg + ' ' + errorUrl;
-                        
-                        if (combinedError.includes('503') || 
-                            combinedError.includes('service unavailable') || 
-                            combinedError.includes('failed to fetch') || 
-                            combinedError.includes('networkerror') ||
-                            combinedError.includes('err_') ||
-                            combinedError.includes('arcgisonline.com')) {
-                            // منع عرض الخطأ في console - محاولة شاملة
-                            if (typeof error.preventDefault === 'function') {
-                                try { error.preventDefault(); } catch(e) {}
-                            }
-                            if (typeof error.stopPropagation === 'function') {
-                                try { error.stopPropagation(); } catch(e) {}
-                            }
-                            if (typeof error.stopImmediatePropagation === 'function') {
-                                try { error.stopImmediatePropagation(); } catch(e) {}
-                            }
-                            // إعادة تعيين الخطأ لمنع عرضه
-                            try {
-                                if (tile && tile.el && tile.el.onerror) {
-                                    tile.el.onerror = null;
-                                }
-                            } catch(e) {}
-                        }
-                    }
-                } catch(e) {
-                    // تجاهل أي أخطاء في معالجة الأخطاء نفسها
-                }
-                
-                // تتبع الأخطاء للمصدر الحالي
-                const currentErrors = (satelliteSourceErrors.get(currentSatelliteSourceIndex) || 0) + 1;
-                satelliteSourceErrors.set(currentSatelliteSourceIndex, currentErrors);
-                
-                // إخفاء البلاطة الفاشلة بصمت
-                if (tile && tile.el) {
-                    tile.el.style.opacity = '0.2';
-                    try {
-                        tile.el.onerror = function() { return false; };
-                    } catch(e) {}
-                }
-                
-                // حد التبديل: مصدر ArcGIS (503 متكرر) نبدّل بعد خطأ واحد؛ غيره بعد 3
-                const currentSource = satelliteSources[currentSatelliteSourceIndex];
-                const isArcGIS = currentSource && (currentSource.url || '').indexOf('arcgisonline.com') !== -1;
-                const errorThreshold = isArcGIS ? 1 : 3;
-                
-                if (currentErrors >= errorThreshold && self.mapInstance && self.leafletLayers.satellite) {
-                    const nextSourceIndex = (currentSatelliteSourceIndex + 1) % satelliteSources.length;
-                    const nextSourceSuccess = satelliteSourceSuccessCount.get(nextSourceIndex) || 0;
-                    const nextSourceErrors = satelliteSourceErrors.get(nextSourceIndex) || 0;
-                    
-                    if (nextSourceIndex !== currentSatelliteSourceIndex && 
-                        (currentErrors > (isArcGIS ? 2 : 5) || nextSourceSuccess > nextSourceErrors || nextSourceErrors < 2)) {
-                        
-                        try {
-                            const isActive = self.mapInstance.hasLayer(self.leafletLayers.satellite);
-                            const wasVisible = isActive;
-                            
-                            // إزالة الطبقة القديمة
-                            if (isActive) {
-                                self.mapInstance.removeLayer(self.leafletLayers.satellite);
-                            }
-                            
-                            // إنشاء طبقة جديدة من المصدر البديل
-                            currentSatelliteSourceIndex = nextSourceIndex;
-                            self.leafletLayers.satellite = createSatelliteLayer(currentSatelliteSourceIndex);
-                            
-                            // إعادة إضافة الطبقة إذا كانت مرئية
-                            if (wasVisible && self.mapInstance) {
-                                self.leafletLayers.satellite.addTo(self.mapInstance);
-                            }
-                            
-                            // إعادة ربط معالج الأخطاء للطبقة الجديدة
-                            self.leafletLayers.satellite.on('tileerror', handleSatelliteTileError);
-                            
-                            if (typeof Utils !== 'undefined' && Utils.safeLog) {
-                                Utils.safeLog(`🔄 تم التبديل التلقائي إلى مصدر خرائط فضائية بديل (${satelliteSources[currentSatelliteSourceIndex].name})`);
-                                }
-                            } catch (e) {
-                            // تجاهل الأخطاء في التبديل
-                        }
-                    }
-                }
-            };
-            
-            // إنشاء الطبقة الفضائية الأولية
-            this.leafletLayers.satellite = createSatelliteLayer(0);
-            
-            // ربط معالج الأخطاء
-            this.leafletLayers.satellite.on('tileerror', handleSatelliteTileError);
-            
-            // تتبع النجاحات لتحسين اختيار المصدر
-            this.leafletLayers.satellite.on('tileload', () => {
-                const currentSuccess = (satelliteSourceSuccessCount.get(currentSatelliteSourceIndex) || 0) + 1;
-                satelliteSourceSuccessCount.set(currentSatelliteSourceIndex, currentSuccess);
-                
-                // إعادة تعيين عداد الأخطاء عند النجاح
-                satelliteSourceErrors.set(currentSatelliteSourceIndex, 0);
-            });
-
-            // طبقة الخريطة الطبوغرافية (Terrain) - استخدام CartoDB Positron (أكثر استقراراً)
-            // OpenTopoMap و OpenStreetMap HOT قد يواجهان مشاكل 503
-            this.leafletLayers.terrain = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | © <a href="https://carto.com/attributions">CARTO</a>',
-                maxZoom: 19,
-                subdomains: ['a', 'b', 'c', 'd'],
-                errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
-                tileSize: 256,
-                zoomOffset: 0,
-                keepBuffer: 2,
-                updateWhenIdle: false,
-                updateWhenZooming: true
-            });
-
-            // معالجة الأخطاء بصمت - Leaflet سيعيد المحاولة تلقائياً
-            // أخطاء 503 هي أخطاء مؤقتة من الخادم وستحل تلقائياً
-            this.leafletLayers.terrain.on('tileerror', (error, tile) => {
-                // إخفاء أخطاء 503 من console - هذه أخطاء مؤقتة من الخادم
-                if (tile && tile.el) {
-                    tile.el.style.opacity = '0.3';
-                    try {
-                        setTimeout(() => {
-                            if (tile && tile.el && this.leafletLayers.terrain && typeof this.leafletLayers.terrain._tileShouldReload === 'function') {
-                                this.leafletLayers.terrain._tileShouldReload(tile);
-                            }
-                        }, 2000);
-                    } catch (e) {
-                        // تجاهل إذا _tileShouldReload غير متوفر في إصدار Leaflet
-                    }
-                }
-            });
-
-            // إضافة الطبقة الافتراضية (العادية)
             this.leafletLayers.normal.addTo(this.mapInstance);
             this.currentMapType = 'normal';
             Utils.safeLog('✅ تم إضافة طبقة OpenStreetMap');
@@ -5678,6 +5516,74 @@ const PTW = {
         Notification.success(this._t('module.ptw.mapSettings.warnings.defaultSaved', 'تم حفظ الإحداثيات الافتراضية بنجاح'));
     },
 
+    _fitMapMarkersBounds() {
+        if (this.mapMarkers.length === 0) {
+            this.applyEgyptDefaultView();
+            return;
+        }
+        try {
+            if (this.mapType === 'google' && typeof google !== 'undefined' && google.maps && this.mapInstance) {
+                const bounds = new google.maps.LatLngBounds();
+                this.mapMarkers.forEach(marker => {
+                    try {
+                        if (marker.getPosition) bounds.extend(marker.getPosition());
+                    } catch (e) { /* ignore */ }
+                });
+                if (this.mapInstance.fitBounds) this.mapInstance.fitBounds(bounds);
+                if (this.mapMarkers.length === 1 && this.mapInstance.setZoom) this.mapInstance.setZoom(16);
+            } else if (this.mapType === 'leaflet' && this.mapInstance) {
+                const container = this.mapInstance.getContainer();
+                if (container && container.offsetWidth > 0 && container.offsetHeight > 0) {
+                    const group = new L.featureGroup(this.mapMarkers);
+                    const bounds = group.getBounds();
+                    if (bounds && bounds.isValid && bounds.isValid()) {
+                        this.mapInstance.fitBounds(bounds.pad(0.1), { animate: false, maxZoom: 18 });
+                        if (this.mapMarkers.length === 1) this.mapInstance.setZoom(16);
+                    }
+                }
+            }
+            Utils.safeLog(`✅ تم تحديث ${this.mapMarkers.length} علامة على الخريطة`);
+        } catch (boundsError) {
+            Utils.safeWarn('⚠️ خطأ في ضبط حدود الخريطة:', boundsError);
+        }
+    },
+
+    _addSingleMapMarker(permit) {
+        const coords = this.getSiteCoordinates(permit.siteId, permit.location || permit.siteName);
+        if (!coords || typeof coords.lat !== 'number' || typeof coords.lng !== 'number') return;
+
+        if (this.mapType === 'google' && typeof google !== 'undefined' && google.maps && this.mapInstance) {
+            const marker = new google.maps.Marker({
+                position: { lat: coords.lat, lng: coords.lng },
+                map: this.mapInstance,
+                title: `${permit.id || 'تصريح'} - ${permit.workType || 'نوع غير محدد'}`,
+                icon: {
+                    url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                    scaledSize: new google.maps.Size(32, 32)
+                }
+            });
+            const infoWindow = new google.maps.InfoWindow({
+                content: this.createPermitInfoWindowContent(permit)
+            });
+            marker.addListener('click', () => {
+                this.mapMarkers.forEach(m => { if (m.infoWindow) m.infoWindow.close(); });
+                infoWindow.open(this.mapInstance, marker);
+            });
+            marker.infoWindow = infoWindow;
+            this.mapMarkers.push(marker);
+        } else if (this.mapType === 'leaflet' && this.mapInstance && this.mapInstance.getContainer) {
+            const container = this.mapInstance.getContainer();
+            if (!container || container.offsetWidth === 0 || container.offsetHeight === 0) return;
+            const marker = L.marker([coords.lat, coords.lng], {
+                title: `${permit.id || 'تصريح'} - ${permit.workType || 'نوع غير محدد'}`
+            }).addTo(this.mapInstance);
+            marker.bindPopup(L.popup({ maxWidth: 400, className: 'ptw-permit-popup' })
+                .setContent(this.createPermitInfoWindowContent(permit, 'leaflet')));
+            marker.permitId = permit.id;
+            this.mapMarkers.push(marker);
+        }
+    },
+
     /**
      * تحديث العلامات على الخريطة
      */
@@ -5738,144 +5644,29 @@ const PTW = {
             return;
         }
 
-        // استخدام القائمة المصفاة بدلاً من openPermits
         const openPermits = filteredPermits;
+        this._mapMarkersToken = (this._mapMarkersToken || 0) + 1;
+        const token = this._mapMarkersToken;
+        const CHUNK_SIZE = 35;
 
-
-        // إضافة علامة لكل تصريح مفتوح
-        openPermits.forEach(permit => {
-            try {
-                const coords = this.getSiteCoordinates(permit.siteId, permit.location || permit.siteName);
-                if (!coords || typeof coords.lat !== 'number' || typeof coords.lng !== 'number') return;
-
-                if (this.mapType === 'google' && typeof google !== 'undefined' && google.maps && this.mapInstance) {
-                    // استخدام Google Maps
-                    const marker = new google.maps.Marker({
-                        position: { lat: coords.lat, lng: coords.lng },
-                        map: this.mapInstance,
-                        title: `${permit.id || 'تصريح'} - ${permit.workType || 'نوع غير محدد'}`,
-                        icon: {
-                            url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-                            scaledSize: new google.maps.Size(32, 32)
-                        },
-                        animation: google.maps.Animation.DROP
-                    });
-
-                    const infoWindow = new google.maps.InfoWindow({
-                        content: this.createPermitInfoWindowContent(permit)
-                    });
-
-                    marker.addListener('click', () => {
-                        this.mapMarkers.forEach(m => {
-                            if (m.infoWindow) {
-                                m.infoWindow.close();
-                            }
-                        });
-                        infoWindow.open(this.mapInstance, marker);
-                    });
-
-                    marker.infoWindow = infoWindow;
-                    this.mapMarkers.push(marker);
-                } else if (this.mapType === 'leaflet') {
-                    // استخدام Leaflet
-                    // التأكد من أن الخريطة جاهزة قبل إضافة العلامات
-                    if (!this.mapInstance || !this.mapInstance.getContainer) {
-                        Utils.safeWarn('⚠️ الخريطة غير جاهزة - سيتم تخطي هذه العلامة');
-                        return;
-                    }
-                    const container = this.mapInstance.getContainer();
-                    if (!container || container.offsetWidth === 0 || container.offsetHeight === 0) {
-                        Utils.safeWarn('⚠️ حاوية الخريطة غير مرئية - سيتم تخطي هذه العلامة');
-                        return;
-                    }
-                    const marker = L.marker([coords.lat, coords.lng], {
-                        title: `${permit.id || 'تصريح'} - ${permit.workType || 'نوع غير محدد'}`
-                    }).addTo(this.mapInstance);
-
-                    const popup = L.popup({
-                        maxWidth: 400,
-                        className: 'ptw-permit-popup'
-                    }).setContent(this.createPermitInfoWindowContent(permit, 'leaflet'));
-
-                    marker.bindPopup(popup);
-                    marker.permitId = permit.id;
-                    this.mapMarkers.push(marker);
+        const processChunk = (fromIndex) => {
+            if (token !== this._mapMarkersToken || this.currentTab !== 'map' || !this.mapInstance) return;
+            const slice = openPermits.slice(fromIndex, fromIndex + CHUNK_SIZE);
+            slice.forEach((permit) => {
+                try {
+                    this._addSingleMapMarker(permit);
+                } catch (error) {
+                    Utils.safeWarn(`⚠️ خطأ في إضافة علامة للتصريح ${permit.id}:`, error);
                 }
-            } catch (error) {
-                Utils.safeWarn(`⚠️ خطأ في إضافة علامة للتصريح ${permit.id}:`, error);
+            });
+            if (fromIndex + CHUNK_SIZE < openPermits.length) {
+                requestAnimationFrame(() => processChunk(fromIndex + CHUNK_SIZE));
+            } else {
+                this._fitMapMarkersBounds();
             }
-        });
+        };
 
-        // ضبط عرض الخريطة ليشمل جميع العلامات
-        if (this.mapMarkers.length > 0) {
-            try {
-                if (this.mapType === 'google' && typeof google !== 'undefined' && google.maps && this.mapInstance) {
-                    const bounds = new google.maps.LatLngBounds();
-                    this.mapMarkers.forEach(marker => {
-                        try {
-                            if (marker.getPosition) bounds.extend(marker.getPosition());
-                        } catch (e) {}
-                    });
-                    if (this.mapInstance.fitBounds) this.mapInstance.fitBounds(bounds);
-                    if (this.mapMarkers.length === 1 && this.mapInstance.setZoom) this.mapInstance.setZoom(16);
-                } else if (this.mapType === 'leaflet') {
-                    // التأكد من أن الخريطة جاهزة وأن هناك علامات
-                    if (this.mapMarkers && this.mapMarkers.length > 0 && this.mapInstance) {
-                        try {
-                            // التأكد من أن الخريطة مرئية ولها أبعاد
-                            const container = this.mapInstance.getContainer();
-                            if (container && container.offsetWidth > 0 && container.offsetHeight > 0) {
-                    const group = new L.featureGroup(this.mapMarkers);
-                                const bounds = group.getBounds();
-                                
-                                // التحقق من أن الحدود صالحة
-                                if (bounds && bounds.isValid && bounds.isValid()) {
-                                    this.mapInstance.fitBounds(bounds.pad(0.1), {
-                                        animate: false,
-                                        maxZoom: 18
-                                    });
-
-                    if (this.mapMarkers.length === 1) {
-                        this.mapInstance.setZoom(16);
-                                    }
-                                } else {
-                                    Utils.safeWarn('⚠️ حدود الخريطة غير صالحة');
-                                }
-                            } else {
-                                Utils.safeWarn('⚠️ حاوية الخريطة غير مرئية - سيتم إعادة المحاولة');
-                                // إعادة المحاولة بعد تأخير
-                                setTimeout(() => {
-                                    if (this.mapInstance && this.mapMarkers && this.mapMarkers.length > 0) {
-                                        try {
-                                            this.mapInstance.invalidateSize();
-                                            const group = new L.featureGroup(this.mapMarkers);
-                                            const bounds = group.getBounds();
-                                            if (bounds && bounds.isValid && bounds.isValid()) {
-                                                this.mapInstance.fitBounds(bounds.pad(0.1), {
-                                                    animate: false,
-                                                    maxZoom: 18
-                                                });
-                                            }
-                                        } catch (retryError) {
-                                            Utils.safeWarn('⚠️ فشلت إعادة المحاولة:', retryError);
-                                        }
-                                    }
-                                }, 1000);
-                            }
-                        } catch (leafletError) {
-                            Utils.safeWarn('⚠️ خطأ في Leaflet fitBounds:', leafletError);
-                        }
-                    }
-                }
-                Utils.safeLog(`✅ تم تحديث ${this.mapMarkers.length} علامة على الخريطة`);
-            } catch (boundsError) {
-                Utils.safeWarn('⚠️ خطأ في ضبط حدود الخريطة:', boundsError);
-                Utils.safeLog(`✅ تم إضافة ${this.mapMarkers.length} علامة على الخريطة (بدون ضبط الحدود)`);
-            }
-        } else {
-            Utils.safeLog('ℹ️ لا توجد علامات على الخريطة — عرض مصر الافتراضي');
-            this.applyEgyptDefaultView();
-        }
+        processChunk(0);
     },
 
     /**
@@ -16797,40 +16588,36 @@ const PTW = {
 
                     // إضافة الطبقة المختارة
                     switch (type) {
-                        case 'satellite':
-                            if (this.leafletLayers.satellite) {
+                        case 'satellite': {
+                            const satLayer = this._ensureLeafletSatelliteLayer();
+                            if (satLayer) {
                                 try {
-                                    this.leafletLayers.satellite.addTo(this.mapInstance);
+                                    satLayer.addTo(this.mapInstance);
                                     if (satelliteBtn) {
                                         try {
                                             satelliteBtn.classList.add('bg-blue-500', 'text-white', 'shadow-sm');
                                             satelliteBtn.classList.remove('text-gray-700', 'hover:bg-gray-100');
-                                        } catch (e) {
-                                            // تجاهل أخطاء المتصفح extensions
-                                        }
+                                        } catch (e) { /* ignore */ }
                                     }
-                                } catch (e) {
-                                    // تجاهل أخطاء المتصفح extensions
-                                }
+                                } catch (e) { /* ignore */ }
                             }
                             break;
-                        case 'terrain':
-                            if (this.leafletLayers.terrain) {
+                        }
+                        case 'terrain': {
+                            const terrainLayer = this._ensureLeafletTerrainLayer();
+                            if (terrainLayer) {
                                 try {
-                                    this.leafletLayers.terrain.addTo(this.mapInstance);
+                                    terrainLayer.addTo(this.mapInstance);
                                     if (terrainBtn) {
                                         try {
                                             terrainBtn.classList.add('bg-blue-500', 'text-white', 'shadow-sm');
                                             terrainBtn.classList.remove('text-gray-700', 'hover:bg-gray-100');
-                                        } catch (e) {
-                                            // تجاهل أخطاء المتصفح extensions
-                                        }
+                                        } catch (e) { /* ignore */ }
                                     }
-                                } catch (e) {
-                                    // تجاهل أخطاء المتصفح extensions
-                                }
+                                } catch (e) { /* ignore */ }
                             }
                             break;
+                        }
                         default:
                             if (this.leafletLayers.normal) {
                                 try {
