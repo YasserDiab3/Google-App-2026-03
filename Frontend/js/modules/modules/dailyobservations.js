@@ -1565,6 +1565,7 @@ const DailyObservations = {
         activeTab: 'observations-registry' // حفظ التبويب النشط
     },
     currentFilter: null, // الفلتر النشط الحالي من الكروت
+    _topRiskCategoryFilter: '', // فلتر فئة المخاطر في تبويب أعلى 10 مخاطر
     sheetJsPromise: null,
     _dailyObsLoadPromise: null,
     _dailyObsBackendFetchOk: false,
@@ -1827,7 +1828,7 @@ const DailyObservations = {
             const top10ErrorHtml = `
                 <div class="content-card"><div class="card-body"><div class="empty-state">
                     <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                    <p class="text-gray-500">حدث خطأ في تحميل أفضل 10 ملاحظات</p>
+                    <p class="text-gray-500">حدث خطأ في تحميل أعلى 10 مخاطر</p>
                     <button onclick="DailyObservations.load()" class="btn-primary mt-4"><i class="fas fa-redo ml-2"></i>إعادة المحاولة</button>
                 </div></div></div>`;
 
@@ -1881,7 +1882,7 @@ const DailyObservations = {
                     </div>
                 </div>
                 
-                <!-- Tabs Navigation: سجل الملاحظات | أفضل 10 ملاحظات | تحليل البيانات | تحديث -->
+                <!-- Tabs Navigation: سجل الملاحظات | أعلى 10 مخاطر | تحليل البيانات | تحديث -->
                 <div class="tabs-container mt-6" style="border-bottom: 2px solid var(--border-color);">
                     <div class="tabs-nav" style="display: flex; gap: 8px; flex-wrap: wrap;">
                         ${canRegistry ? `
@@ -1893,7 +1894,8 @@ const DailyObservations = {
                         ${canTop10 ? `
                         <button class="tab-btn ${this.state.activeTab === 'top-10-observations' ? 'active' : ''}" data-tab="top-10-observations" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid ${this.state.activeTab === 'top-10-observations' ? 'var(--primary-color)' : 'transparent'}; color: ${this.state.activeTab === 'top-10-observations' ? 'var(--primary-color)' : 'var(--text-secondary)'}; font-weight: 600; cursor: pointer; transition: all 0.3s;">
                             <i class="fas fa-trophy ml-2"></i>
-                            أفضل 10 ملاحظات
+                            <i class="fas fa-shield-halved ml-2"></i>
+                            أعلى 10 مخاطر
                         </button>
                         ` : ''}
                         ${canAnalysis ? `
@@ -3029,7 +3031,7 @@ const DailyObservations = {
                             this.loadDataAnalysis();
                         }
                         
-                        // تحميل بيانات أفضل 10 ملاحظات عند فتح التبويب
+                        // تحميل أعلى 10 مخاطر عند فتح التبويب
                         if (tabName === 'top-10-observations') {
                             this.loadTop10Observations();
                         }
@@ -5014,10 +5016,191 @@ const DailyObservations = {
     renderAnalysisCharts() { /* محوَّل — الرسوم تُرسم داخل updateAnalysisResults */ },
 
     /**
-     * عرض أفضل 10 ملاحظات
+     * تعريف فئات المخاطر الست في تبويب أعلى 10 مخاطر
+     */
+    getTopRiskCategoryDefs() {
+        return [
+            {
+                id: 'electricity',
+                label: 'كهرباء',
+                icon: 'fa-bolt',
+                color: '#d97706',
+                bg: '#fffbeb',
+                border: '#fcd34d',
+                keywords: ['كهرباء', 'كهربائي', 'كابلات', 'كابل', 'أسلاك', 'سلك', 'لوحة كهرب', 'قاطع', 'جهد', 'تمديدات', 'مفاتيح', 'قصور عزل', 'ارتجاج', 'electric', 'electrical', 'cable', 'wiring', 'voltage', 'panel', 'breaker']
+            },
+            {
+                id: 'mechanical',
+                label: 'ميكانيكة',
+                icon: 'fa-cogs',
+                color: '#4f46e5',
+                bg: '#eef2ff',
+                border: '#a5b4fc',
+                keywords: ['ميكانيك', 'ميكانيكة', 'آلة', 'الآلات', 'معدات', 'معدة', 'ترس', 'سوفتي', 'حماية ماكينة', 'guarding', 'صيانة', 'تشحيم', 'اهتزاز', 'ضوضاء', 'mechanical', 'machine', 'equipment', 'conveyor', 'guard', 'loto', 'pinch']
+            },
+            {
+                id: 'smoking',
+                label: 'تدخين',
+                icon: 'fa-smoking-ban',
+                color: '#dc2626',
+                bg: '#fef2f2',
+                border: '#fca5a5',
+                keywords: ['تدخين', 'سيجارة', 'سجائر', 'دخان', 'منطقة التدخين', 'تدخين', 'smoking', 'cigarette', 'tobacco', 'vape', 'no smoking']
+            },
+            {
+                id: 'ppe',
+                label: 'مهمات وقاية',
+                icon: 'fa-hard-hat',
+                color: '#0891b2',
+                bg: '#ecfeff',
+                border: '#67e8f9',
+                keywords: ['مهمات', 'وقاية', 'خوذة', 'قفاز', 'نظارات', 'حذاء', 'سترة', 'حزام', 'حماية شخصية', 'ppe', 'helmet', 'gloves', 'goggles', 'harness', 'respirator', 'ear plug', 'واقي']
+            },
+            {
+                id: 'storage',
+                label: 'تخزين',
+                icon: 'fa-warehouse',
+                color: '#059669',
+                bg: '#ecfdf5',
+                border: '#6ee7b7',
+                keywords: ['تخزين', 'مستودع', 'رف', 'أرفف', 'تحميل', 'تكدس', 'ممر', 'عائق', 'مواد', 'بالة', 'storage', 'warehouse', 'stacking', 'aisle', 'blocking', 'material handling', 'رافعة']
+            },
+            {
+                id: 'fire',
+                label: 'أجهزة حريق',
+                icon: 'fa-fire-extinguisher',
+                color: '#b91c1c',
+                bg: '#fff1f2',
+                border: '#fda4af',
+                keywords: ['حريق', 'طفاية', 'طفايات', 'إنذار', 'انذار', 'خرطوم', 'رشاش', 'sprinkler', 'إطفاء', 'fire', 'extinguisher', 'alarm', 'hose', 'smoke detector', 'fm200', 'طوارئ حريق']
+            }
+        ];
+    },
+
+    _normalizeTopRiskHaystack(text) {
+        return String(text || '')
+            .toLowerCase()
+            .replace(/[أإآ]/g, 'ا')
+            .replace(/ى/g, 'ي')
+            .replace(/ة/g, 'ه');
+    },
+
+    _topRiskHaystackOf(obs) {
+        return this._normalizeTopRiskHaystack([
+            obs?.observationType,
+            obs?.details,
+            obs?.correctiveAction,
+            obs?.remarks,
+            obs?.locationName,
+            obs?.siteName
+        ].filter(Boolean).join(' '));
+    },
+
+    _topRiskCategoryOf(obs) {
+        const hay = this._topRiskHaystackOf(obs);
+        if (!hay.trim()) return 'عام';
+        let bestLabel = 'عام';
+        let bestScore = 0;
+        this.getTopRiskCategoryDefs().forEach((def) => {
+            let score = 0;
+            (def.keywords || []).forEach((kw) => {
+                const k = this._normalizeTopRiskHaystack(kw);
+                if (k && hay.includes(k)) score += Math.max(1, Math.round(k.length / 4));
+            });
+            if (score > bestScore) {
+                bestScore = score;
+                bestLabel = def.label;
+            }
+        });
+        return bestLabel;
+    },
+
+    _getTopRiskCategoryMeta(label) {
+        const defs = this.getTopRiskCategoryDefs();
+        return defs.find((d) => d.label === label) || {
+            label: label || 'عام',
+            icon: 'fa-exclamation-circle',
+            color: '#64748b',
+            bg: '#f8fafc',
+            border: '#cbd5e1'
+        };
+    },
+
+    _computeObservationRiskScore(obs) {
+        let score = 0;
+        if (this._execIsCritical(obs)) score += 45;
+        else if (this._execIsHighRisk(obs)) score += 35;
+        else if (String(obs.riskLevel || '').includes('متوسط')) score += 18;
+        else if (String(obs.riskLevel || '').includes('منخفض') || String(obs.riskLevel || '').includes('بسيط')) score += 6;
+
+        const status = String(obs.status || '');
+        if (status.includes('مفتوح') || status.includes('جديد')) score += 22;
+        else if (status.includes('جاري')) score += 12;
+        else if (status.includes('مغلق')) score -= 18;
+
+        if (this._execIsOverdue(obs)) {
+            const od = Number(obs.overdays) || 0;
+            score += Math.min(od > 0 ? od * 2 : 12, 30);
+        }
+
+        if (obs.attachments && obs.attachments.length > 0) score += Math.min(obs.attachments.length * 2, 8);
+
+        if (obs.date) {
+            const obsDate = new Date(obs.date);
+            const daysDiff = Math.floor((Date.now() - obsDate.getTime()) / (1000 * 60 * 60 * 24));
+            if (daysDiff <= 7) score += 8;
+            else if (daysDiff <= 30) score += 4;
+        }
+
+        if (this._execIsClosed(obs)) score = Math.round(score * 0.25);
+        return Math.max(0, Math.round(score));
+    },
+
+    _buildTopRiskCategoryStats(observations) {
+        const stats = {};
+        this.getTopRiskCategoryDefs().forEach((def) => {
+            stats[def.label] = { count: 0, openHigh: 0, maxScore: 0 };
+        });
+        stats['عام'] = { count: 0, openHigh: 0, maxScore: 0 };
+
+        (observations || []).forEach((obs) => {
+            const cat = obs.riskCategory || this._topRiskCategoryOf(obs);
+            if (!stats[cat]) stats[cat] = { count: 0, openHigh: 0, maxScore: 0 };
+            stats[cat].count += 1;
+            const score = obs.riskScore != null ? obs.riskScore : this._computeObservationRiskScore(obs);
+            if (score > stats[cat].maxScore) stats[cat].maxScore = score;
+            if (!this._execIsClosed(obs) && (this._execIsHighRisk(obs) || this._execIsCritical(obs))) {
+                stats[cat].openHigh += 1;
+            }
+        });
+        return stats;
+    },
+
+    _bindTopRiskCategoryCards() {
+        const cards = document.querySelectorAll('.top-risk-cat-card');
+        cards.forEach((btn) => {
+            if (btn.dataset.bound === '1') return;
+            btn.dataset.bound = '1';
+            btn.addEventListener('click', () => {
+                const cat = btn.getAttribute('data-cat') || '';
+                this._topRiskCategoryFilter = (this._topRiskCategoryFilter === cat) ? '' : cat;
+                this.loadTop10Observations();
+            });
+        });
+        const resetBtn = document.getElementById('top-risk-clear-filter-btn');
+        if (resetBtn && resetBtn.dataset.bound !== '1') {
+            resetBtn.dataset.bound = '1';
+            resetBtn.addEventListener('click', () => {
+                this._topRiskCategoryFilter = '';
+                this.loadTop10Observations();
+            });
+        }
+    },
+
+    /**
+     * عرض أعلى 10 مخاطر
      */
     async renderTop10Observations() {
-        // محاولة تحميل Chart.js
         this.ensureChartJSLoaded().catch(() => {
             Utils.safeWarn('Chart.js غير متاح - سيتم عرض البيانات بدون رسوم بيانية');
         });
@@ -5025,13 +5208,15 @@ const DailyObservations = {
         return `
             <div class="content-card">
                 <div class="card-header">
-                    <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
                         <div>
                             <h2 class="card-title">
-                                <i class="fas fa-trophy ml-2 text-yellow-500"></i>
-                                أفضل 10 ملاحظات
+                                <i class="fas fa-shield-halved ml-2 text-red-600"></i>
+                                أعلى 10 مخاطر
                             </h2>
-                            <p class="text-sm text-gray-500 mt-2">عرض وتحليل أفضل 10 ملاحظات مع رسوم بيانية قابلة للتعديل والإضافة</p>
+                            <p class="text-sm text-gray-500 mt-2">
+                                ترتيب الملاحظات حسب درجة المخاطر في ست فئات: كهرباء، ميكانيكة، تدخين، مهمات وقاية، تخزين، وأجهزة حريق
+                            </p>
                         </div>
                         <button id="add-top10-chart-btn" class="btn-primary">
                             <i class="fas fa-plus ml-2"></i>
@@ -5040,31 +5225,27 @@ const DailyObservations = {
                     </div>
                 </div>
                 <div class="card-body">
-                    <!-- قائمة أفضل 10 ملاحظات -->
                     <div id="top10-observations-list" class="mb-6">
                         <div class="flex items-center justify-center py-8">
                             <div class="text-center">
                                 <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-                                <p class="text-gray-500">جاري تحميل البيانات...</p>
+                                <p class="text-gray-500">جاري تحميل بيانات المخاطر...</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- الرسوم البيانية -->
                     <div class="border-t pt-6 mt-6">
-                        <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
                             <h3 class="text-lg font-semibold">
                                 <i class="fas fa-chart-bar ml-2 text-blue-600"></i>
-                                الرسوم البيانية
+                                تحليل بصري للمخاطر
                             </h3>
                             <button id="manage-top10-charts-btn" class="btn-secondary">
                                 <i class="fas fa-cog ml-2"></i>
                                 إدارة الرسوم البيانية
                             </button>
                         </div>
-                        <div id="top10-charts-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <!-- سيتم ملؤها ديناميكياً -->
-                        </div>
+                        <div id="top10-charts-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6"></div>
                     </div>
                 </div>
             </div>
@@ -5072,7 +5253,7 @@ const DailyObservations = {
     },
 
     /**
-     * تحميل وعرض أفضل 10 ملاحظات
+     * تحميل وعرض أعلى 10 مخاطر
      */
     async loadTop10Observations() {
         const container = document.getElementById('top10-observations-list');
@@ -5087,89 +5268,106 @@ const DailyObservations = {
                 <div class="empty-state">
                     <i class="fas fa-inbox text-gray-300 text-6xl mb-4"></i>
                     <p class="text-gray-500 text-lg mb-2">لا توجد ملاحظات مسجلة</p>
-                    <p class="text-sm text-gray-400">ابدأ بإضافة ملاحظات جديدة لعرض أفضل 10 ملاحظات</p>
+                    <p class="text-sm text-gray-400">ابدأ بإضافة ملاحظات جديدة لعرض أعلى المخاطر</p>
                 </div>
             `;
             return;
         }
 
-        // تحويل وتصنيف الملاحظات
-        const observations = observationsRaw.map(item => this.normalizeRecord(item));
-
-        // حساب نقاط لكل ملاحظة بناءً على معايير متعددة
-        const scoredObservations = observations.map(obs => {
-            let score = 0;
-            
-            // نقاط حسب الخطورة
-            if (obs.riskLevel === 'عالي' || obs.riskLevel === 'عالية') score += 30;
-            else if (obs.riskLevel === 'متوسط' || obs.riskLevel === 'متوسطة') score += 15;
-            else if (obs.riskLevel === 'منخفض' || obs.riskLevel === 'بسيطة' || obs.riskLevel === 'بسيط') score += 5;
-
-            // نقاط حسب الحالة
-            if (obs.status === 'مفتوح' || obs.status === 'جديد') score += 20;
-            else if (obs.status === 'جاري') score += 10;
-            else if (obs.status === 'مغلق') score += 5;
-
-            // نقاط حسب الأيام المتأخرة
-            if (obs.overdays && obs.overdays > 0) {
-                score += Math.min(obs.overdays * 2, 30); // حد أقصى 30 نقطة
-            }
-
-            // نقاط حسب وجود مرفقات
-            if (obs.attachments && obs.attachments.length > 0) {
-                score += obs.attachments.length * 2;
-            }
-
-            // نقاط حسب التاريخ (الأحدث يحصل على نقاط أكثر)
-            if (obs.date) {
-                const obsDate = new Date(obs.date);
-                const now = new Date();
-                const daysDiff = Math.floor((now - obsDate) / (1000 * 60 * 60 * 24));
-                if (daysDiff <= 7) score += 10; // ملاحظات الأسبوع الماضي
-                else if (daysDiff <= 30) score += 5; // ملاحظات الشهر الماضي
-            }
-
-            return { ...obs, score };
+        const observations = observationsRaw.map((item) => {
+            const obs = this.normalizeRecord(item);
+            const riskCategory = this._topRiskCategoryOf(obs);
+            const riskScore = this._computeObservationRiskScore(obs);
+            return { ...obs, riskCategory, riskScore };
         });
 
-        // ترتيب حسب النقاط (من الأعلى للأقل)
-        scoredObservations.sort((a, b) => b.score - a.score);
+        const categoryStats = this._buildTopRiskCategoryStats(observations);
+        const activeFilter = String(this._topRiskCategoryFilter || '').trim();
 
-        // أخذ أفضل 10
-        const top10 = scoredObservations.slice(0, 10);
+        let pool = observations.slice();
+        if (activeFilter) {
+            pool = pool.filter((obs) => obs.riskCategory === activeFilter);
+        }
 
-        // عرض القائمة
+        pool.sort((a, b) => b.riskScore - a.riskScore);
+        const top10 = pool.slice(0, 10);
+
+        const categoryCardsHtml = this.getTopRiskCategoryDefs().map((def) => {
+            const st = categoryStats[def.label] || { count: 0, openHigh: 0 };
+            const active = activeFilter === def.label;
+            return `
+                <button type="button" class="top-risk-cat-card" data-cat="${Utils.escapeHTML(def.label)}"
+                    style="text-align:right;padding:12px 14px;border-radius:12px;border:2px solid ${active ? def.color : def.border};
+                    background:${active ? def.bg : '#fff'};cursor:pointer;transition:all .2s;box-shadow:${active ? '0 4px 14px rgba(0,0,0,.08)' : 'none'};">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+                        <span style="font-size:11px;font-weight:700;color:${def.color};background:${def.bg};padding:3px 8px;border-radius:999px;">${st.openHigh} عالية مفتوحة</span>
+                        <i class="fas ${def.icon}" style="color:${def.color};font-size:1.1rem;"></i>
+                    </div>
+                    <div style="font-weight:800;font-size:1rem;color:#0f172a;margin-bottom:4px;">${Utils.escapeHTML(def.label)}</div>
+                    <div style="font-size:1.35rem;font-weight:800;color:${def.color};">${st.count}</div>
+                    <div style="font-size:11px;color:#64748b;margin-top:2px;">إجمالي الملاحظات</div>
+                </button>
+            `;
+        }).join('');
+
+        const filterHint = activeFilter
+            ? `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;padding:10px 12px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;">
+                    <span style="font-size:0.88rem;color:#1e40af;"><i class="fas fa-filter ml-2"></i>عرض مخاطر فئة: <strong>${Utils.escapeHTML(activeFilter)}</strong></span>
+                    <button type="button" id="top-risk-clear-filter-btn" class="btn-secondary" style="padding:4px 10px;font-size:0.8rem;">إلغاء الفلتر</button>
+               </div>`
+            : '';
+
         container.innerHTML = `
-            <div class="mb-4">
-                <h3 class="text-lg font-semibold mb-4">
-                    <i class="fas fa-list-ol ml-2"></i>
-                    قائمة أفضل 10 ملاحظات
+            <div class="mb-5">
+                <h3 class="text-lg font-semibold mb-3">
+                    <i class="fas fa-layer-group ml-2 text-slate-600"></i>
+                    فئات المخاطر الرئيسية
                 </h3>
+                <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-2" id="top-risk-category-cards">
+                    ${categoryCardsHtml}
+                </div>
+                <p class="text-xs text-gray-500">اضغط على أي فئة لتصفية القائمة — اضغط مرة أخرى لإلغاء التصفية</p>
             </div>
+            ${filterHint}
+            <div class="mb-4">
+                <h3 class="text-lg font-semibold mb-2">
+                    <i class="fas fa-ranking-star ml-2 text-red-500"></i>
+                    قائمة أعلى 10 مخاطر${activeFilter ? ` — ${Utils.escapeHTML(activeFilter)}` : ''}
+                </h3>
+                <p class="text-sm text-gray-500 mb-4">الترتيب حسب درجة المخاطر (الخطورة + الحالة + التأخير + الحداثة)</p>
+            </div>
+            ${top10.length === 0 ? `
+                <div class="empty-state">
+                    <i class="fas fa-check-circle text-green-400 text-4xl mb-3"></i>
+                    <p class="text-gray-500">لا توجد ملاحظات مطابقة للفلتر الحالي</p>
+                </div>
+            ` : `
             <div class="overflow-x-auto">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>الترتيب</th>
+                            <th>#</th>
+                            <th>فئة المخاطر</th>
                             <th>رقم الملاحظة</th>
                             <th>الموقع / المكان</th>
                             <th>نوع الملاحظة</th>
                             <th>معدل الخطورة</th>
                             <th>الحالة</th>
-                            <th>النقاط</th>
+                            <th>درجة المخاطر</th>
                             <th>الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${top10.map((obs, index) => `
+                        ${top10.map((obs, index) => {
+                            const catMeta = this._getTopRiskCategoryMeta(obs.riskCategory);
+                            const scoreColor = obs.riskScore >= 55 ? '#dc2626' : obs.riskScore >= 35 ? '#ea580c' : '#2563eb';
+                            return `
                             <tr class="hover:bg-gray-50 transition-colors">
+                                <td><span class="font-bold text-gray-700">${index + 1}</span></td>
                                 <td>
-                                    <div class="flex items-center justify-center">
-                                        ${index === 0 ? '<span class="text-2xl">🥇</span>' : ''}
-                                        ${index === 1 ? '<span class="text-2xl">🥈</span>' : ''}
-                                        ${index === 2 ? '<span class="text-2xl">🥉</span>' : ''}
-                                        ${index > 2 ? `<span class="font-bold text-lg text-gray-600">${index + 1}</span>` : ''}
-                                    </div>
+                                    <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;color:${catMeta.color};background:${catMeta.bg};border:1px solid ${catMeta.border};">
+                                        <i class="fas ${catMeta.icon}"></i>${Utils.escapeHTML(obs.riskCategory || 'عام')}
+                                    </span>
                                 </td>
                                 <td>
                                     <span class="font-medium text-blue-600 cursor-pointer hover:underline" onclick="DailyObservations.viewObservation('${obs.id}')">
@@ -5193,88 +5391,97 @@ const DailyObservations = {
                                 </td>
                                 <td>
                                     <div class="flex items-center gap-2">
-                                        <span class="font-bold text-lg ${obs.score >= 50 ? 'text-red-600' : obs.score >= 30 ? 'text-orange-600' : 'text-blue-600'}">
-                                            ${obs.score}
-                                        </span>
-                                        <div class="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                            <div class="h-full ${obs.score >= 50 ? 'bg-red-500' : obs.score >= 30 ? 'bg-orange-500' : 'bg-blue-500'}" 
-                                                 style="width: ${Math.min((obs.score / 100) * 100, 100)}%"></div>
+                                        <span class="font-bold text-lg" style="color:${scoreColor};">${obs.riskScore}</span>
+                                        <div class="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                            <div class="h-full" style="width:${Math.min(obs.riskScore, 100)}%;background:${scoreColor};"></div>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
-                                    <button onclick="DailyObservations.viewObservation('${obs.id}')" 
+                                    <button onclick="DailyObservations.viewObservation('${obs.id}')"
                                             class="btn-icon btn-icon-primary" title="عرض التفاصيل">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                 </td>
-                            </tr>
-                        `).join('')}
+                            </tr>`;
+                        }).join('')}
                     </tbody>
                 </table>
-            </div>
+            </div>`}
         `;
 
-        // تحميل الرسوم البيانية
         this.loadTop10Charts(observations, top10);
+        this._bindTopRiskCategoryCards();
 
-        // ربط الأزرار
         setTimeout(() => {
             const addChartBtn = document.getElementById('add-top10-chart-btn');
-            if (addChartBtn) {
+            if (addChartBtn && addChartBtn.dataset.bound !== '1') {
+                addChartBtn.dataset.bound = '1';
                 addChartBtn.addEventListener('click', () => this.showAddTop10ChartModal());
             }
-
             const manageChartsBtn = document.getElementById('manage-top10-charts-btn');
-            if (manageChartsBtn) {
+            if (manageChartsBtn && manageChartsBtn.dataset.bound !== '1') {
+                manageChartsBtn.dataset.bound = '1';
                 manageChartsBtn.addEventListener('click', () => this.showManageTop10ChartsModal());
             }
         }, 100);
     },
 
     /**
-     * تحميل الرسوم البيانية لأفضل 10 ملاحظات
+     * تحميل الرسوم البيانية لأعلى 10 مخاطر
      */
     async loadTop10Charts(allObservations, top10Observations) {
         const container = document.getElementById('top10-charts-container');
         if (!container) return;
 
-        // الحصول على الرسوم البيانية المحفوظة
-        let savedCharts = JSON.parse(localStorage.getItem('dailyObservations_top10Charts') || '[]');
+        const storageKey = 'dailyObservations_top10RiskCharts';
+        let savedCharts = [];
+        try {
+            savedCharts = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            if (!Array.isArray(savedCharts) || savedCharts.length === 0) {
+                const legacy = JSON.parse(localStorage.getItem('dailyObservations_top10Charts') || '[]');
+                if (Array.isArray(legacy) && legacy.length > 0 && legacy.some((c) => String(c.title || '').includes('أفضل 10'))) {
+                    savedCharts = [];
+                }
+            }
+        } catch (_e) {
+            savedCharts = [];
+        }
 
-        // إذا لم تكن هناك رسوم محفوظة، إنشاء رسوم افتراضية
         if (savedCharts.length === 0) {
             savedCharts = [
                 {
-                    id: 'chart_risk_distribution',
+                    id: 'chart_risk_category_distribution',
                     type: 'doughnut',
-                    title: 'توزيع الخطورة (أفضل 10)',
+                    title: 'توزيع فئات المخاطر',
+                    field: 'riskCategory',
+                    enabled: true,
+                    useAllData: true
+                },
+                {
+                    id: 'chart_risk_level_top10',
+                    type: 'bar',
+                    title: 'مستوى الخطورة (أعلى 10)',
                     field: 'riskLevel',
                     enabled: true
                 },
                 {
-                    id: 'chart_status_distribution',
+                    id: 'chart_status_top10',
                     type: 'pie',
-                    title: 'توزيع الحالة (أفضل 10)',
+                    title: 'حالة الملاحظات (أعلى 10)',
                     field: 'status',
                     enabled: true
                 },
                 {
-                    id: 'chart_type_distribution',
+                    id: 'chart_site_risk',
                     type: 'bar',
-                    title: 'توزيع الأنواع (أفضل 10)',
-                    field: 'observationType',
-                    enabled: true
-                },
-                {
-                    id: 'chart_site_distribution',
-                    type: 'bar',
-                    title: 'توزيع المواقع (أفضل 10)',
+                    title: 'المخاطر حسب الموقع',
                     field: 'siteName',
-                    enabled: false
+                    enabled: false,
+                    useAllData: true
                 }
             ];
-            localStorage.setItem('dailyObservations_top10Charts', JSON.stringify(savedCharts));
+            localStorage.setItem(storageKey, JSON.stringify(savedCharts));
         }
 
         const enabledCharts = savedCharts.filter(chart => chart.enabled);
@@ -5342,7 +5549,7 @@ const DailyObservations = {
     },
 
     /**
-     * رسم الرسوم البيانية لأفضل 10 ملاحظات
+     * رسم الرسوم البيانية لأعلى 10 مخاطر
      */
     renderTop10Charts(chartConfigs, top10Observations, allObservations) {
         if (typeof Chart === 'undefined') return;
@@ -5460,11 +5667,16 @@ const DailyObservations = {
     analyzeTop10ChartData(chartConfig, top10Observations, allObservations) {
         const field = chartConfig.field;
         const useAllData = chartConfig.useAllData === true;
-        const observations = useAllData ? allObservations : top10Observations;
+        const observations = (useAllData ? allObservations : top10Observations) || [];
 
         const counts = {};
         observations.forEach(obs => {
-            const value = obs[field] || 'غير محدد';
+            let value = 'غير محدد';
+            if (field === 'riskCategory') {
+                value = obs.riskCategory || this._topRiskCategoryOf(obs);
+            } else {
+                value = obs[field] || 'غير محدد';
+            }
             counts[value] = (counts[value] || 0) + 1;
         });
 
@@ -5520,6 +5732,7 @@ const DailyObservations = {
                                 الحقل المراد تحليله
                             </label>
                             <select id="top10-chart-field" class="form-input">
+                                <option value="riskCategory">فئة المخاطر</option>
                                 <option value="riskLevel">معدل الخطورة</option>
                                 <option value="status">الحالة</option>
                                 <option value="observationType">نوع الملاحظة</option>
@@ -5533,7 +5746,7 @@ const DailyObservations = {
                         <div>
                             <label class="flex items-center gap-2 cursor-pointer">
                                 <input type="checkbox" id="top10-chart-use-all-data" class="form-checkbox">
-                                <span class="text-sm text-gray-700">استخدام جميع البيانات (وليس فقط أفضل 10)</span>
+                                <span class="text-sm text-gray-700">استخدام جميع البيانات (وليس فقط أعلى 10)</span>
                             </label>
                         </div>
                     </div>
@@ -5564,7 +5777,7 @@ const DailyObservations = {
                 return;
             }
 
-            const savedCharts = JSON.parse(localStorage.getItem('dailyObservations_top10Charts') || '[]');
+            const savedCharts = JSON.parse(localStorage.getItem('dailyObservations_top10RiskCharts') || '[]');
             const newChart = {
                 id: `chart_${Date.now()}`,
                 type: type,
@@ -5575,7 +5788,7 @@ const DailyObservations = {
             };
 
             savedCharts.push(newChart);
-            localStorage.setItem('dailyObservations_top10Charts', JSON.stringify(savedCharts));
+            localStorage.setItem('dailyObservations_top10RiskCharts', JSON.stringify(savedCharts));
 
             modal.remove();
             Notification.success('تم إضافة الرسم البياني بنجاح');
@@ -5587,7 +5800,7 @@ const DailyObservations = {
      * عرض نافذة إدارة الرسوم البيانية
      */
     showManageTop10ChartsModal() {
-        const savedCharts = JSON.parse(localStorage.getItem('dailyObservations_top10Charts') || '[]');
+        const savedCharts = JSON.parse(localStorage.getItem('dailyObservations_top10RiskCharts') || '[]');
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -5650,11 +5863,11 @@ const DailyObservations = {
         modal.querySelectorAll('.top10-chart-enable').forEach(checkbox => {
             checkbox.addEventListener('change', (e) => {
                 const chartId = e.target.getAttribute('data-chart-id');
-                const savedCharts = JSON.parse(localStorage.getItem('dailyObservations_top10Charts') || '[]');
+                const savedCharts = JSON.parse(localStorage.getItem('dailyObservations_top10RiskCharts') || '[]');
                 const chart = savedCharts.find(c => c.id === chartId);
                 if (chart) {
                     chart.enabled = e.target.checked;
-                    localStorage.setItem('dailyObservations_top10Charts', JSON.stringify(savedCharts));
+                    localStorage.setItem('dailyObservations_top10RiskCharts', JSON.stringify(savedCharts));
                     this.loadTop10Observations();
                 }
             });
@@ -5665,7 +5878,7 @@ const DailyObservations = {
      * تعديل رسم بياني
      */
     editTop10Chart(chartId) {
-        const savedCharts = JSON.parse(localStorage.getItem('dailyObservations_top10Charts') || '[]');
+        const savedCharts = JSON.parse(localStorage.getItem('dailyObservations_top10RiskCharts') || '[]');
         const chart = savedCharts.find(c => c.id === chartId);
         if (!chart) return;
 
@@ -5707,6 +5920,7 @@ const DailyObservations = {
                                 الحقل المراد تحليله
                             </label>
                             <select id="edit-top10-chart-field" class="form-input">
+                                <option value="riskCategory" ${chart.field === 'riskCategory' ? 'selected' : ''}>فئة المخاطر</option>
                                 <option value="riskLevel" ${chart.field === 'riskLevel' ? 'selected' : ''}>معدل الخطورة</option>
                                 <option value="status" ${chart.field === 'status' ? 'selected' : ''}>الحالة</option>
                                 <option value="observationType" ${chart.field === 'observationType' ? 'selected' : ''}>نوع الملاحظة</option>
@@ -5721,7 +5935,7 @@ const DailyObservations = {
                             <label class="flex items-center gap-2 cursor-pointer">
                                 <input type="checkbox" id="edit-top10-chart-use-all-data" class="form-checkbox" 
                                        ${chart.useAllData ? 'checked' : ''}>
-                                <span class="text-sm text-gray-700">استخدام جميع البيانات (وليس فقط أفضل 10)</span>
+                                <span class="text-sm text-gray-700">استخدام جميع البيانات (وليس فقط أعلى 10)</span>
                             </label>
                         </div>
                     </div>
@@ -5752,7 +5966,7 @@ const DailyObservations = {
                 return;
             }
 
-            const savedCharts = JSON.parse(localStorage.getItem('dailyObservations_top10Charts') || '[]');
+            const savedCharts = JSON.parse(localStorage.getItem('dailyObservations_top10RiskCharts') || '[]');
             const chartIndex = savedCharts.findIndex(c => c.id === chartId);
             if (chartIndex !== -1) {
                 savedCharts[chartIndex] = {
@@ -5762,7 +5976,7 @@ const DailyObservations = {
                     field: field,
                     useAllData: useAllData
                 };
-                localStorage.setItem('dailyObservations_top10Charts', JSON.stringify(savedCharts));
+                localStorage.setItem('dailyObservations_top10RiskCharts', JSON.stringify(savedCharts));
                 modal.remove();
                 Notification.success('تم تحديث الرسم البياني بنجاح');
                 this.loadTop10Observations();
@@ -5778,9 +5992,9 @@ const DailyObservations = {
             return;
         }
 
-        const savedCharts = JSON.parse(localStorage.getItem('dailyObservations_top10Charts') || '[]');
+        const savedCharts = JSON.parse(localStorage.getItem('dailyObservations_top10RiskCharts') || '[]');
         const filtered = savedCharts.filter(c => c.id !== chartId);
-        localStorage.setItem('dailyObservations_top10Charts', JSON.stringify(filtered));
+        localStorage.setItem('dailyObservations_top10RiskCharts', JSON.stringify(filtered));
         Notification.success('تم حذف الرسم البياني بنجاح');
         this.loadTop10Observations();
     },
