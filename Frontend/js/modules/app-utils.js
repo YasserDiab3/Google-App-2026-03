@@ -1829,6 +1829,137 @@ const Permissions = {
         return Array.from(siteMap.values());
     },
 
+    normalizeFormSettingsImportKey(value) {
+        return String(value || '').trim().toLowerCase();
+    },
+
+    findExistingFormSettingsSite(sites, importedSite) {
+        if (!Array.isArray(sites) || !importedSite) return null;
+        const siteId = String(importedSite.id || '').trim();
+        if (siteId) {
+            const byId = sites.find((s) => String(s.id || '').trim() === siteId);
+            if (byId) return byId;
+        }
+        const siteNameKey = this.normalizeFormSettingsImportKey(importedSite.name);
+        if (siteNameKey) {
+            return sites.find((s) => this.normalizeFormSettingsImportKey(s.name) === siteNameKey) || null;
+        }
+        return null;
+    },
+
+    formSettingsPlaceAlreadyExists(site, importedPlace) {
+        if (!site || !importedPlace) return false;
+        const places = Array.isArray(site.places) ? site.places : [];
+        const placeId = String(importedPlace.id || '').trim();
+        if (placeId && places.some((p) => String(p.id || '').trim() === placeId)) {
+            return true;
+        }
+        const placeNameKey = this.normalizeFormSettingsImportKey(importedPlace.name);
+        if (!placeNameKey) return false;
+        return places.some((p) => this.normalizeFormSettingsImportKey(p.name) === placeNameKey);
+    },
+
+    /**
+     * دمج مواقع مستوردة: يُضاف الجديد فقط — المواقع/الأماكن الموجودة مسبقاً تُتجاهَل.
+     * @param {Array} incomingSites مواقع من Excel
+     * @param {{ dryRun?: boolean }} options dryRun=true للمعاينة دون تعديل الحالة
+     */
+    applyFormSettingsSitesImport(incomingSites, options = {}) {
+        const dryRun = !!options.dryRun;
+        const state = dryRun ? null : this.getFormSettingsState();
+        if (!dryRun && !state) {
+            Utils.safeError('❌ فشل تهيئة حالة إعدادات النماذج');
+            return null;
+        }
+
+        const workingSites = dryRun
+            ? JSON.parse(JSON.stringify((this.getFormSettingsState()?.sites) || []))
+            : (Array.isArray(state.sites) ? state.sites : (state.sites = []));
+
+        const stats = {
+            newSites: 0,
+            newPlaces: 0,
+            skippedSites: 0,
+            skippedPlaces: 0,
+            previewSites: []
+        };
+
+        (incomingSites || []).forEach((imported) => {
+            const importedPlaces = Array.isArray(imported?.places) ? imported.places : [];
+            const existingSite = this.findExistingFormSettingsSite(workingSites, imported);
+
+            if (!existingSite) {
+                const siteName = String(imported?.name || '').trim();
+                const siteId = String(imported?.id || '').trim();
+                if (!siteName && !siteId) return;
+
+                const newSite = {
+                    id: siteId || Utils.generateId('SITE'),
+                    name: siteName || siteId,
+                    places: []
+                };
+
+                importedPlaces.forEach((importedPlace) => {
+                    const placeName = String(importedPlace?.name || '').trim();
+                    const placeId = String(importedPlace?.id || '').trim();
+                    if (!placeName && !placeId) return;
+                    if (this.formSettingsPlaceAlreadyExists(newSite, importedPlace)) {
+                        stats.skippedPlaces += 1;
+                        return;
+                    }
+                    newSite.places.push({
+                        id: placeId || Utils.generateId('PLACE'),
+                        name: placeName || placeId
+                    });
+                    stats.newPlaces += 1;
+                });
+
+                workingSites.push(newSite);
+                stats.newSites += 1;
+                stats.previewSites.push(newSite);
+                return;
+            }
+
+            stats.skippedSites += 1;
+            if (!Array.isArray(existingSite.places)) {
+                existingSite.places = [];
+            }
+
+            const addedPlaces = [];
+            importedPlaces.forEach((importedPlace) => {
+                const placeName = String(importedPlace?.name || '').trim();
+                const placeId = String(importedPlace?.id || '').trim();
+                if (!placeName && !placeId) return;
+                if (this.formSettingsPlaceAlreadyExists(existingSite, importedPlace)) {
+                    stats.skippedPlaces += 1;
+                    return;
+                }
+                const newPlace = {
+                    id: placeId || Utils.generateId('PLACE'),
+                    name: placeName || placeId
+                };
+                existingSite.places.push(newPlace);
+                addedPlaces.push(newPlace);
+                stats.newPlaces += 1;
+            });
+
+            if (addedPlaces.length > 0) {
+                stats.previewSites.push({
+                    id: existingSite.id,
+                    name: existingSite.name,
+                    places: addedPlaces,
+                    _existingSite: true
+                });
+            }
+        });
+
+        if (!dryRun && state) {
+            state.sites = workingSites;
+        }
+
+        return stats;
+    },
+
     writeFormSettingsSitesExcelWorkbook(rows, sheetName) {
         if (typeof XLSX === 'undefined') {
             Notification.error('مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة.');
@@ -1931,7 +2062,7 @@ const Permissions = {
                         <ul class="text-sm text-blue-800 list-disc mr-6 space-y-1">${colsList}</ul>
                         <p class="text-xs text-blue-700 mt-3">
                             <i class="fas fa-exclamation-triangle ml-1"></i>
-                            الاستيراد يستبدل قائمة المواقع الحالية بالكامل. راجع المعاينة ثم احفظ الإعدادات من أسفل الصفحة.
+                            يُستورد الجديد فقط: المواقع والأماكن الموجودة مسبقاً (بالاسم أو المعرف) تُتجاهَل. راجع المعاينة ثم احفظ الإعدادات من أسفل الصفحة.
                         </p>
                     </div>
                     <div>
@@ -1968,6 +2099,31 @@ const Permissions = {
         const previewCount = modal.querySelector('#form-settings-sites-preview-count');
         const confirmBtn = modal.querySelector('#form-settings-sites-import-confirm');
         let parsedSites = null;
+        let importPlan = null;
+
+        const renderImportPlanPreview = (plan) => {
+            if (!plan || (plan.newSites === 0 && plan.newPlaces === 0)) {
+                previewWrap.classList.add('hidden');
+                confirmBtn.disabled = true;
+                return false;
+            }
+            const previewRows = this.flattenFormSettingsSitesForExcel(plan.previewSites).slice(0, 5);
+            const headers = ['الترتيب', 'اسم الموقع', 'معرف الموقع', 'اسم المكان', 'معرف المكان'];
+            previewHead.innerHTML = `<tr>${headers.map((h) => `<th>${Utils.escapeHTML(h)}</th>`).join('')}</tr>`;
+            previewBody.innerHTML = previewRows.length
+                ? previewRows.map((row) => `
+                    <tr>${headers.map((h) => `<td>${Utils.escapeHTML(String(row[h] ?? ''))}</td>`).join('')}</tr>
+                `).join('')
+                : `<tr><td colspan="${headers.length}" class="text-center text-gray-500">لا توجد صفوف جديدة للمعاينة</td></tr>`;
+            const skippedParts = [];
+            if (plan.skippedSites > 0) skippedParts.push(`${plan.skippedSites} موقع موجود`);
+            if (plan.skippedPlaces > 0) skippedParts.push(`${plan.skippedPlaces} مكان موجود`);
+            const skippedText = skippedParts.length ? ` — تم تجاهل: ${skippedParts.join('، ')}` : '';
+            previewCount.textContent = `سيتم إضافة ${plan.newSites} موقعاً جديداً و${plan.newPlaces} مكاناً جديداً${skippedText}.`;
+            previewWrap.classList.remove('hidden');
+            confirmBtn.disabled = false;
+            return true;
+        };
 
         if (dlTpl) {
             dlTpl.onclick = () => this.handleDownloadFormSettingsSitesTemplate();
@@ -1976,6 +2132,7 @@ const Permissions = {
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files && e.target.files[0];
             parsedSites = null;
+            importPlan = null;
             confirmBtn.disabled = true;
             if (!file) {
                 previewWrap.classList.add('hidden');
@@ -1989,16 +2146,14 @@ const Permissions = {
                     return;
                 }
                 parsedSites = sites;
-                const previewRows = this.flattenFormSettingsSitesForExcel(sites).slice(0, 5);
-                const headers = ['الترتيب', 'اسم الموقع', 'معرف الموقع', 'اسم المكان', 'معرف المكان'];
-                previewHead.innerHTML = `<tr>${headers.map((h) => `<th>${Utils.escapeHTML(h)}</th>`).join('')}</tr>`;
-                previewBody.innerHTML = previewRows.map((row) => `
-                    <tr>${headers.map((h) => `<td>${Utils.escapeHTML(String(row[h] ?? ''))}</td>`).join('')}</tr>
-                `).join('');
-                const placesCount = sites.reduce((sum, s) => sum + (Array.isArray(s.places) ? s.places.length : 0), 0);
-                previewCount.textContent = `سيتم استيراد ${sites.length} موقعاً و${placesCount} مكاناً.`;
-                previewWrap.classList.remove('hidden');
-                confirmBtn.disabled = false;
+                importPlan = this.applyFormSettingsSitesImport(sites, { dryRun: true });
+                if (!importPlan || (importPlan.newSites === 0 && importPlan.newPlaces === 0)) {
+                    previewWrap.classList.add('hidden');
+                    confirmBtn.disabled = true;
+                    Notification.warning('جميع المواقع والأماكن في الملف موجودة مسبقاً — لا يوجد جديد للاستيراد.');
+                    return;
+                }
+                renderImportPlanPreview(importPlan);
             } catch (error) {
                 previewWrap.classList.add('hidden');
                 Notification.error('فشل قراءة الملف: ' + (error?.message || error));
@@ -2042,25 +2197,22 @@ const Permissions = {
             Notification.warning('لا توجد مواقع للاستيراد.');
             return;
         }
-        const state = this.getFormSettingsState();
-        if (!state) {
-            Utils.safeError('❌ فشل تهيئة حالة إعدادات النماذج');
+        const stats = this.applyFormSettingsSitesImport(sites);
+        if (!stats) return;
+        if (stats.newSites === 0 && stats.newPlaces === 0) {
+            Notification.warning('جميع المواقع والأماكن في الملف موجودة مسبقاً — لم يُضف شيء.');
             return;
         }
-        state.sites = sites.map((site) => ({
-            id: site.id || Utils.generateId('SITE'),
-            name: String(site.name || '').trim(),
-            places: Array.isArray(site.places)
-                ? site.places.map((place) => ({
-                    id: place.id || Utils.generateId('PLACE'),
-                    name: String(place.name || '').trim()
-                }))
-                : []
-        }));
-        state.selectedSiteId = state.sites[0]?.id || '';
+        const state = this.getFormSettingsState();
+        if (!state.selectedSiteId && state.sites?.[0]?.id) {
+            state.selectedSiteId = state.sites[0].id;
+        }
         this.refreshFormSettingsUI();
-        const placesCount = state.sites.reduce((sum, s) => sum + (s.places?.length || 0), 0);
-        Notification.success(`تم استيراد ${state.sites.length} موقعاً و${placesCount} مكاناً. راجع القائمة ثم احفظ الإعدادات.`);
+        const skippedParts = [];
+        if (stats.skippedSites > 0) skippedParts.push(`${stats.skippedSites} موقع`);
+        if (stats.skippedPlaces > 0) skippedParts.push(`${stats.skippedPlaces} مكان`);
+        const skippedMsg = skippedParts.length ? ` (تم تجاهل ${skippedParts.join(' و')} موجود مسبقاً)` : '';
+        Notification.success(`تم إضافة ${stats.newSites} موقعاً و${stats.newPlaces} مكاناً جديداً${skippedMsg}. راجع القائمة ثم احفظ الإعدادات.`);
     },
 
     handlePasteFormSettings() {
