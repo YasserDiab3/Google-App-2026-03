@@ -221,7 +221,7 @@ const SafetyCalendar = {
             && Permissions.hasAccess('safety-calendar');
     },
 
-    async ensureDailySafetyCheckListLoaded(force) {
+    async ensureDailySafetyCheckListLoaded(force, options) {
         if (!AppState?.appData) return;
         const existing = AppState.appData.dailySafetyCheckList;
         if (!force && Array.isArray(existing) && existing.length) return;
@@ -233,8 +233,9 @@ const SafetyCalendar = {
             if (!Array.isArray(existing)) AppState.appData.dailySafetyCheckList = [];
             return;
         }
+        const timeoutMs = (options && options.timeoutMs) || 20000;
         try {
-            const data = await GoogleIntegration.readFromSheets('DailySafetyCheckList', 20000);
+            const data = await GoogleIntegration.readFromSheets('DailySafetyCheckList', timeoutMs);
             if (Array.isArray(data)) {
                 AppState.appData.dailySafetyCheckList = data;
             } else if (!Array.isArray(existing)) {
@@ -245,7 +246,7 @@ const SafetyCalendar = {
         }
     },
 
-    async ensureClinicCalendarDataLoaded(force) {
+    async ensureClinicCalendarDataLoaded(force, options) {
         if (!AppState?.appData) return;
         if (typeof Permissions !== 'undefined' && Permissions.hasAccess && !Permissions.hasAccess('clinic')) {
             return;
@@ -253,18 +254,21 @@ const SafetyCalendar = {
         if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.readFromSheets) {
             return;
         }
+        const timeoutMs = (options && options.timeoutMs) || 20000;
+        const skipVisitSheets = !!(options && options.skipClinicVisitSheets);
         const sheets = [
-            { sheet: 'ClinicVisits', key: 'clinicVisits' },
-            { sheet: 'ClinicContractorVisits', key: 'clinicContractorVisits' },
-            { sheet: 'Injuries', key: 'injuries' },
-            { sheet: 'ClinicContractorInjuries', key: 'clinicContractorInjuries' },
-            { sheet: 'SickLeave', key: 'sickLeave' }
+            { sheet: 'ClinicVisits', key: 'clinicVisits', heavy: true },
+            { sheet: 'ClinicContractorVisits', key: 'clinicContractorVisits', heavy: true },
+            { sheet: 'Injuries', key: 'injuries', heavy: false },
+            { sheet: 'ClinicContractorInjuries', key: 'clinicContractorInjuries', heavy: false },
+            { sheet: 'SickLeave', key: 'sickLeave', heavy: false }
         ];
-        await Promise.allSettled(sheets.map(async ({ sheet, key }) => {
+        await Promise.allSettled(sheets.map(async ({ sheet, key, heavy }) => {
+            if (skipVisitSheets && heavy) return;
             const existing = AppState.appData[key];
             if (!force && Array.isArray(existing) && existing.length) return;
             try {
-                const data = await GoogleIntegration.readFromSheets(sheet, 20000);
+                const data = await GoogleIntegration.readFromSheets(sheet, timeoutMs);
                 if (Array.isArray(data)) {
                     AppState.appData[key] = data;
                 } else if (!Array.isArray(existing)) {
@@ -276,10 +280,10 @@ const SafetyCalendar = {
         }));
     },
 
-    async ensureCalendarSourceDataLoaded(force) {
+    async ensureCalendarSourceDataLoaded(force, options) {
         await Promise.all([
-            this.ensureDailySafetyCheckListLoaded(force),
-            this.ensureClinicCalendarDataLoaded(force),
+            this.ensureDailySafetyCheckListLoaded(force, options),
+            this.ensureClinicCalendarDataLoaded(force, options),
             this.ensureCustomEventsLoaded(force)
         ]);
     },
@@ -1066,25 +1070,30 @@ const SafetyCalendar = {
     },
 
     /** Dashboard widget — mini view */
-    renderDashboardWidgetHtml(result, summary) {
-        const events = result.events || [];
-        const today = summary.today;
-        const upcoming = events
+    _buildUpcomingEventsListHtml(events, today) {
+        const upcoming = (events || [])
             .filter((e) => e.start >= today)
             .sort((a, b) => a.start.localeCompare(b.start))
             .slice(0, 12);
+        if (!upcoming.length) {
+            return '<p class="sc-dash-empty">لا توجد أحداث قادمة في البيانات المتزامنة.</p>';
+        }
+        return upcoming.map((ev) => {
+            const cat = ev.extendedProps?.category;
+            const color = SafetyCalendarEvents?.SAFETY_CALENDAR_CATEGORIES?.[cat]?.color || '#64748b';
+            return `<button type="button" class="sc-dash-event" data-event-id="${this.esc(ev.id)}"
+                style="--sc-ev-color:${this.esc(color)}">
+                <span class="sc-dash-event-date">${this.esc(ev.start)}</span>
+                <span class="sc-dash-event-title">${this.esc(ev.title)}</span>
+            </button>`;
+        }).join('');
+    },
 
-        const listHtml = upcoming.length
-            ? upcoming.map((ev) => {
-                const cat = ev.extendedProps?.category;
-                const color = SafetyCalendarEvents?.SAFETY_CALENDAR_CATEGORIES?.[cat]?.color || '#64748b';
-                return `<button type="button" class="sc-dash-event" data-event-id="${this.esc(ev.id)}"
-                    style="--sc-ev-color:${this.esc(color)}">
-                    <span class="sc-dash-event-date">${this.esc(ev.start)}</span>
-                    <span class="sc-dash-event-title">${this.esc(ev.title)}</span>
-                </button>`;
-            }).join('')
-            : '<p class="sc-dash-empty">لا توجد أحداث قادمة في البيانات المتزامنة.</p>';
+    renderDashboardWidgetHtml(result, summary, meta) {
+        const events = result.events || [];
+        const today = summary.today;
+        const listHtml = this._buildUpcomingEventsListHtml(events, today);
+        const syncing = !!(meta && meta.syncing);
 
         const cats = SafetyCalendarEvents?.SAFETY_CALENDAR_CATEGORIES || {};
         const legend = Object.keys(cats).slice(0, 8).map((k) => {
@@ -1095,19 +1104,22 @@ const SafetyCalendar = {
         return `
         <div class="card-header sc-dash-header">
             <h2 class="card-title"><i class="fas fa-calendar-days ml-2"></i>تقويم السلامة</h2>
-            <button type="button" class="btn-secondary btn-sm sc-dash-full" id="sc-dash-open-full">
-                عرض التقويم الكامل <i class="fas fa-arrow-left mr-1"></i>
-            </button>
+            <div class="sc-dash-header-actions">
+                ${syncing ? '<span class="sc-dash-sync-hint" id="sc-dash-sync-hint"><i class="fas fa-sync-alt fa-spin ml-1"></i>تحديث بالخلفية</span>' : ''}
+                <button type="button" class="btn-secondary btn-sm sc-dash-full" id="sc-dash-open-full">
+                    عرض التقويم الكامل <i class="fas fa-arrow-left mr-1"></i>
+                </button>
+            </div>
         </div>
         <div class="card-body sc-dash-body">
             <div class="sc-dash-kpi-row">
-                <div class="sc-dash-kpi"><span class="sc-dash-kpi-val">${summary.todayCount}</span><span class="sc-dash-kpi-lbl">اليوم</span></div>
-                <div class="sc-dash-kpi"><span class="sc-dash-kpi-val">${summary.weekCount}</span><span class="sc-dash-kpi-lbl">7 أيام</span></div>
-                <div class="sc-dash-kpi sc-dash-kpi-warn"><span class="sc-dash-kpi-val">${summary.overdueCount}</span><span class="sc-dash-kpi-lbl">متأخرة</span></div>
+                <div class="sc-dash-kpi"><span class="sc-dash-kpi-val" data-sc-kpi="today">${summary.todayCount}</span><span class="sc-dash-kpi-lbl">اليوم</span></div>
+                <div class="sc-dash-kpi"><span class="sc-dash-kpi-val" data-sc-kpi="week">${summary.weekCount}</span><span class="sc-dash-kpi-lbl">7 أيام</span></div>
+                <div class="sc-dash-kpi sc-dash-kpi-warn"><span class="sc-dash-kpi-val" data-sc-kpi="overdue">${summary.overdueCount}</span><span class="sc-dash-kpi-lbl">متأخرة</span></div>
             </div>
             <div class="sc-dash-grid">
                 <div class="sc-dash-mini-wrap">
-                    <div id="sc-dash-calendar-root" class="sc-dash-calendar-root"></div>
+                    <div id="sc-dash-calendar-root" class="sc-dash-calendar-root">${syncing ? '<p class="sc-dash-mini-loading">جاري تحميل التقويم...</p>' : ''}</div>
                 </div>
                 <div class="sc-dash-list-wrap">
                     <h4 class="sc-dash-list-title">القادمة</h4>
@@ -1118,7 +1130,48 @@ const SafetyCalendar = {
         </div>`;
     },
 
-    async mountDashboardMiniCalendar(container) {
+    _bindDashboardWidgetEvents(wrap, events) {
+        if (!wrap) return;
+        wrap.querySelector('#sc-dash-open-full')?.addEventListener('click', () => {
+            if (typeof UI !== 'undefined' && UI.showSection) {
+                UI.showSection('safety-calendar');
+            }
+        });
+        this._bindDashboardListEvents(wrap, events);
+    },
+
+    _bindDashboardListEvents(wrap, events) {
+        if (!wrap) return;
+        wrap.querySelectorAll('.sc-dash-event').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-event-id');
+                const ev = (events || []).find((e) => e.id === id);
+                if (ev) this.showEventModal(ev);
+            });
+        });
+    },
+
+    _patchDashboardWidget(wrap, result, summary) {
+        if (!wrap) return;
+        const body = wrap.querySelector('.sc-dash-body');
+        if (!body) return;
+        const setKpi = (key, val) => {
+            const el = body.querySelector(`[data-sc-kpi="${key}"]`);
+            if (el) el.textContent = String(val);
+        };
+        setKpi('today', summary.todayCount);
+        setKpi('week', summary.weekCount);
+        setKpi('overdue', summary.overdueCount);
+        const list = body.querySelector('.sc-dash-list');
+        if (list) {
+            list.innerHTML = this._buildUpcomingEventsListHtml(result.events || [], summary.today);
+            this._bindDashboardListEvents(wrap, result.events || []);
+        }
+        wrap.querySelector('#sc-dash-sync-hint')?.remove();
+        this.refreshCalendarEvents();
+    },
+
+    async mountDashboardMiniCalendar(container, prefetchedResult) {
         const miniRoot = container.querySelector('#sc-dash-calendar-root');
         if (!miniRoot) return;
         const ok = await this.ensureFullCalendarLoaded();
@@ -1126,10 +1179,12 @@ const SafetyCalendar = {
             miniRoot.innerHTML = '<p class="sc-dash-empty">التقويم المصغّر غير متاح — استخدم «عرض التقويم الكامل».</p>';
             return;
         }
-        const result = this.buildEvents();
+        const result = prefetchedResult || this.buildEvents();
         if (this._dashCalendar) {
             try { this._dashCalendar.destroy(); } catch (_e) { /* ignore */ }
+            this._dashCalendar = null;
         }
+        miniRoot.innerHTML = '';
         const builder = this._buildCalendarOptions({
             initialView: 'dayGridMonth',
             height: 'auto',
@@ -1149,6 +1204,23 @@ const SafetyCalendar = {
         this._dashCalendar = builder.render(miniRoot);
     },
 
+    _syncDashboardWidgetInBackground(token) {
+        this.ensureCalendarSourceDataLoaded(false, {
+            timeoutMs: 8000,
+            skipClinicVisitSheets: true
+        }).then(() => {
+            if (token !== this._dashWidgetLoadToken) return;
+            const wrap = document.getElementById('dash-safety-calendar-wrap');
+            if (!wrap || !wrap.querySelector('.sc-dash-body')) return;
+            const result = this.buildEvents();
+            const summary = SafetyCalendarEvents.summarizeEvents(result.events);
+            this._patchDashboardWidget(wrap, result, summary);
+        }).catch(() => {
+            const wrap = document.getElementById('dash-safety-calendar-wrap');
+            wrap?.querySelector('#sc-dash-sync-hint')?.remove();
+        });
+    },
+
     async loadDashboardWidget() {
         const wrap = document.getElementById('dash-safety-calendar-wrap');
         if (!wrap) return;
@@ -1162,27 +1234,23 @@ const SafetyCalendar = {
             return;
         }
 
+        const token = (this._dashWidgetLoadToken || 0) + 1;
+        this._dashWidgetLoadToken = token;
+        const fcPromise = this.ensureFullCalendarLoaded();
+
         try {
-            await this.ensureCalendarSourceDataLoaded(false);
             const result = this.buildEvents();
             const summary = SafetyCalendarEvents.summarizeEvents(result.events);
-            wrap.innerHTML = this.renderDashboardWidgetHtml(result, summary);
+            wrap.innerHTML = this.renderDashboardWidgetHtml(result, summary, { syncing: true });
+            this._bindDashboardWidgetEvents(wrap, result.events);
 
-            wrap.querySelector('#sc-dash-open-full')?.addEventListener('click', () => {
-                if (typeof UI !== 'undefined' && UI.showSection) {
-                    UI.showSection('safety-calendar');
-                }
-            });
+            await fcPromise;
+            if (token !== this._dashWidgetLoadToken) return;
+            await this.mountDashboardMiniCalendar(wrap, result);
 
-            wrap.querySelectorAll('.sc-dash-event').forEach((btn) => {
-                btn.addEventListener('click', () => {
-                    const id = btn.getAttribute('data-event-id');
-                    const ev = (result.events || []).find((e) => e.id === id);
-                    if (ev) this.showEventModal(ev);
-                });
-            });
-
-            await this.mountDashboardMiniCalendar(wrap);
+            if (token === this._dashWidgetLoadToken) {
+                this._syncDashboardWidgetInBackground(token);
+            }
         } catch (err) {
             if (typeof Utils !== 'undefined' && Utils.safeWarn) {
                 Utils.safeWarn('Safety calendar dashboard widget:', err);

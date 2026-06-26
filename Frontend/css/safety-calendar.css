@@ -422,6 +422,30 @@
     gap: 0.5rem;
 }
 
+.sc-dash-header-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.sc-dash-sync-hint {
+    font-size: 0.75rem;
+    color: #64748b;
+    padding: 0.2rem 0.55rem;
+    background: #f1f5f9;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.sc-dash-mini-loading {
+    margin: 0;
+    padding: 2rem 0.5rem;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
 .sc-dash-body {
     padding: 1rem 1.25rem !important;
 }
