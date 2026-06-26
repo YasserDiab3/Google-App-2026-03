@@ -1420,6 +1420,38 @@ const GoogleIntegration = {
     },
 
     /**
+     * تجاوز SmartCache/localStorage لقراءات يجب أن تكون حديثة (طلبات اعتماد المقاولين…)
+     */
+    _shouldBypassReadCache_(action, data = {}) {
+        if (data.skipCache === true || data.forceRefresh === true) return true;
+        if (action === 'readFromSheet' || action === 'batchReadSheets') {
+            const sheet = String(data.sheetName || '').trim();
+            const sheets = Array.isArray(data.sheetNames) ? data.sheetNames.map((s) => String(s || '').trim()) : [];
+            const volatileSheets = new Set([
+                'ContractorApprovalRequests',
+                'ContractorDeletionRequests',
+                'ApprovedContractors'
+            ]);
+            if (volatileSheets.has(sheet)) return true;
+            if (sheets.some((s) => volatileSheets.has(s))) return true;
+        }
+        if (action === 'getAllContractorApprovalRequests' || action === 'getAllContractorDeletionRequests') {
+            return true;
+        }
+        return false;
+    },
+
+    _invalidateSmartCacheForRead_(action, data = {}) {
+        if (typeof SmartCache === 'undefined' || typeof SmartCache.getCacheKey !== 'function') return;
+        try {
+            const userPermissions = this._getCurrentUserPermissions();
+            const dataType = this._getDataTypeForAction(action);
+            const cacheKey = SmartCache.getCacheKey(action, data, AppState?.currentUser?.id, userPermissions);
+            localStorage.removeItem(`hse_smart_cache_${cacheKey}`);
+        } catch (_e) { /* ignore */ }
+    },
+
+    /**
      * دوال ربط ومعالجة Google Apps Script (wrapper حول sendToAppsScript)
      * التعامل مع البيانات والعمليات المرتبطة بالنماذج، قواعد البيانات،
      * والتكامل مع Google Sheets بشكل آمن ومستقر.
@@ -1443,7 +1475,18 @@ const GoogleIntegration = {
             'getAllActionTracking', 'getActionTracking',
             'getAllApprovedContractors', 'getAllContractors', 'getAllEmployees', 'getAllAppEmergencyNumbers'];
 
-        const isCacheable = cacheableActions.includes(action);
+        const bypassReadCache = this._shouldBypassReadCache_(action, data || {});
+        const isCacheable = cacheableActions.includes(action) && !bypassReadCache;
+
+        if (bypassReadCache) {
+            this._invalidateSmartCacheForRead_(action, data || {});
+            try {
+                const legacyKey = `${action}_${JSON.stringify(data || {})}`;
+                this._cache?.data?.delete(legacyKey);
+                this._cache?.timestamps?.delete(legacyKey);
+                localStorage.removeItem(this._buildLocalDataStorageKey(action, data || {}));
+            } catch (_purgeErr) { /* ignore */ }
+        }
 
         // محاولة الحصول من Smart Cache أولاً
         if (isCacheable && typeof SmartCache !== 'undefined') {
@@ -1511,7 +1554,9 @@ const GoogleIntegration = {
             }
 
             // Save successful data to local storage as cache
-            this.saveLocalData(action, result, data);
+            if (!bypassReadCache) {
+                this.saveLocalData(action, result, data);
+            }
 
             return result;
         } catch (error) {

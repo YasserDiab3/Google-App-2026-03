@@ -367,13 +367,13 @@ const Contractors = {
 
         try {
             if (tab === 'approval-request') {
+                if (options.fetchData !== false) {
+                    await this.ensureApprovalRequestsDataLoaded({
+                        force: options.forceData === true || this.isContractorApprovalAdminUser()
+                    }).catch(() => {});
+                }
                 this.safeSetInnerHTML(container, this.renderApprovalRequestSection());
                 this._attachSendApprovalRequestBtn();
-                if (options.fetchData !== false) {
-                    this.ensureApprovalRequestsDataLoaded({ force: options.forceData === true })
-                        .then(() => this.refreshApprovalRequestsSection())
-                        .catch(() => {});
-                }
                 return;
             }
 
@@ -435,7 +435,9 @@ const Contractors = {
     _scheduleContractorsBackgroundPrefetch(activeTab) {
         const jobs = [];
         if (this.shouldLoadContractorApprovalRequests()) {
-            jobs.push(this.ensureApprovalRequestsDataLoaded({ force: false }));
+            jobs.push(this.ensureApprovalRequestsDataLoaded({
+                force: this.isContractorApprovalAdminUser()
+            }));
         }
         if (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function' &&
             Permissions.hasAccess('contractors')) {
@@ -631,7 +633,7 @@ const Contractors = {
 
             await this.loadContractorsTabContent(tc, {
                 fetchData: true,
-                forceData: false,
+                forceData: tc === 'approval-request' || this.isContractorApprovalAdminUser(),
                 reconcile: tc === 'approved'
             });
             this._tabsLoaded[tc] = true;
@@ -754,32 +756,42 @@ const Contractors = {
 
     _approvalRequestApiPayload() {
         const sheetId = AppState?.googleConfig?.sheets?.spreadsheetId;
-        const data = { forceRefresh: true };
+        const data = { forceRefresh: true, skipCache: true };
         if (sheetId && String(sheetId).trim() && sheetId !== 'YOUR_SPREADSHEET_ID_HERE') {
             data.spreadsheetId = String(sheetId).trim();
         }
         return data;
     },
 
+    _clearApprovalRequestReadCaches() {
+        if (typeof GoogleIntegration === 'undefined') return;
+        const purgePairs = [
+            ['getAllContractorApprovalRequests', { forceRefresh: true, skipCache: true }],
+            ['getAllContractorDeletionRequests', { forceRefresh: true, skipCache: true }],
+            ['readFromSheet', { sheetName: 'ContractorApprovalRequests', skipCache: true }],
+            ['readFromSheet', { sheetName: 'ContractorDeletionRequests', skipCache: true }]
+        ];
+        purgePairs.forEach(([action, payload]) => {
+            try {
+                if (typeof GoogleIntegration._invalidateSmartCacheForRead_ === 'function') {
+                    GoogleIntegration._invalidateSmartCacheForRead_(action, payload);
+                }
+                if (typeof GoogleIntegration._buildLocalDataStorageKey === 'function') {
+                    localStorage.removeItem(GoogleIntegration._buildLocalDataStorageKey(action, payload));
+                }
+                const legacyKey = `${action}_${JSON.stringify(payload)}`;
+                GoogleIntegration._cache?.data?.delete(legacyKey);
+                GoogleIntegration._cache?.timestamps?.delete(legacyKey);
+            } catch (_e) { /* ignore */ }
+        });
+    },
+
     async _fetchApprovalRequestRowsFromBackend() {
         if (typeof GoogleIntegration === 'undefined') return null;
 
-        // 1) نفس مسار المزامنة الناجح — readFromSheet مباشرة
-        if (typeof GoogleIntegration.readFromSheets === 'function') {
-            try {
-                const sheetRows = await GoogleIntegration.readFromSheets('ContractorApprovalRequests', 45000);
-                if (Array.isArray(sheetRows) && sheetRows.length > 0) {
-                    return sheetRows;
-                }
-            } catch (err) {
-                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                    Utils.safeWarn('⚠️ readFromSheets(ContractorApprovalRequests) فشل:', err?.message || err);
-                }
-            }
-        }
-
-        // 2) API مخصص
         const apiData = this._approvalRequestApiPayload();
+
+        // 1) API مخصص — يُبطل كاش الخادم ويطبّع الحقول
         try {
             const res = await GoogleIntegration.sendRequest({
                 action: 'getAllContractorApprovalRequests',
@@ -795,6 +807,20 @@ const Contractors = {
             }
         }
 
+        // 2) قراءة مباشرة من الورقة
+        if (typeof GoogleIntegration.readFromSheets === 'function') {
+            try {
+                const sheetRows = await GoogleIntegration.readFromSheets('ContractorApprovalRequests', 45000);
+                if (Array.isArray(sheetRows) && sheetRows.length > 0) {
+                    return sheetRows;
+                }
+            } catch (err) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ readFromSheets(ContractorApprovalRequests) فشل:', err?.message || err);
+                }
+            }
+        }
+
         // 3) إن وُجدت بيانات من المزامنة العامة استخدمها
         const synced = AppState?.appData?.contractorApprovalRequests;
         if (Array.isArray(synced) && synced.length > 0) {
@@ -807,15 +833,6 @@ const Contractors = {
     async _fetchDeletionRequestRowsFromBackend() {
         if (typeof GoogleIntegration === 'undefined') return null;
 
-        if (typeof GoogleIntegration.readFromSheets === 'function') {
-            try {
-                const sheetRows = await GoogleIntegration.readFromSheets('ContractorDeletionRequests', 45000);
-                if (Array.isArray(sheetRows) && sheetRows.length > 0) {
-                    return sheetRows;
-                }
-            } catch (_e) { /* ignore */ }
-        }
-
         const apiData = this._approvalRequestApiPayload();
         try {
             const res = await GoogleIntegration.sendRequest({
@@ -827,6 +844,15 @@ const Contractors = {
                 return rows;
             }
         } catch (_e) { /* ignore */ }
+
+        if (typeof GoogleIntegration.readFromSheets === 'function') {
+            try {
+                const sheetRows = await GoogleIntegration.readFromSheets('ContractorDeletionRequests', 45000);
+                if (Array.isArray(sheetRows) && sheetRows.length > 0) {
+                    return sheetRows;
+                }
+            } catch (_e) { /* ignore */ }
+        }
 
         const synced = AppState?.appData?.contractorDeletionRequests;
         if (Array.isArray(synced) && synced.length > 0) {
@@ -863,7 +889,7 @@ const Contractors = {
 
     prefetchApprovalRequestsForNotifications() {
         if (!this.shouldLoadContractorApprovalRequests()) return Promise.resolve(false);
-        return this.ensureApprovalRequestsDataLoaded({ force: false })
+        return this.ensureApprovalRequestsDataLoaded({ force: true })
             .then((loaded) => {
                 if (typeof AppUI !== 'undefined' && typeof AppUI.updateNotificationsBadge === 'function') {
                     AppUI.updateNotificationsBadge();
@@ -1399,10 +1425,7 @@ const Contractors = {
         }
 
         if (force && typeof GoogleIntegration._buildLocalDataStorageKey === 'function') {
-            try {
-                localStorage.removeItem(GoogleIntegration._buildLocalDataStorageKey('getAllContractorApprovalRequests', {}));
-                localStorage.removeItem(GoogleIntegration._buildLocalDataStorageKey('getAllContractorDeletionRequests', {}));
-            } catch (_clearErr) { /* ignore */ }
+            this._clearApprovalRequestReadCaches();
         }
 
         this._approvalRequestsSyncInFlight = this.fetchContractorApprovalRequestsFromBackend()

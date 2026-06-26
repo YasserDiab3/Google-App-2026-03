@@ -9479,7 +9479,17 @@ window.UI = {
                         (currentUserEmail && creatorLower === currentUserEmail);
                 };
 
-                AppState.appData.contractorApprovalRequests
+                const normalizedCarRequests = AppState.appData.contractorApprovalRequests
+                    .map((req) => {
+                        if (typeof Contractors !== 'undefined' &&
+                            typeof Contractors.normalizeApprovalRequestRecord === 'function') {
+                            return Contractors.normalizeApprovalRequestRecord(req);
+                        }
+                        return req;
+                    })
+                    .filter(Boolean);
+
+                normalizedCarRequests
                     .filter(req => {
                         if (!req) return false;
                         if (isContractorApprovalAdmin) {
