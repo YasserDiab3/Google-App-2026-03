@@ -526,6 +526,7 @@ const Contractors = {
             };
             if (tc === 'approved') {
                 this.ensureApprovedTabContentLoaded(true);
+                this.ensureApprovedTabEventListeners();
             }
             patchTabBody('contractors-approved-content', approvedSectionHTML);
             patchTabBody('contractors-evaluations-content', evaluationsSectionHTML);
@@ -665,7 +666,9 @@ const Contractors = {
         }
 
         if (tab === 'approved') {
-            this.ensureApprovedTabContentLoaded();
+            this.ensureApprovedTabContentLoaded(true);
+            this.ensureApprovedTabEventListeners();
+            this.refreshApprovedEntitiesList();
         }
 
         if (tab === 'approval-request' || tab === 'evaluations') {
@@ -981,6 +984,100 @@ const Contractors = {
 
     getApprovedTypeLabel(entityType) {
         return APPROVED_ENTITY_TYPE_OPTIONS[entityType] || APPROVED_ENTITY_TYPE_OPTIONS.contractor;
+    },
+
+    normalizeApprovedSearchText(value) {
+        let text = String(value || '').trim().toLowerCase();
+        text = text.replace(/[٠١٢٣٤٥٦٧٨٩]/g, (ch) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(ch)));
+        text = text.replace(/[۰۱۲۳۴۵۶۷۸۹]/g, (ch) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(ch)));
+        return text.replace(/\s+/g, ' ').trim();
+    },
+
+    extractSearchDigitsOnly(value) {
+        return String(value || '')
+            .replace(/[٠١٢٣٤٥٦٧٨٩]/g, (ch) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(ch)))
+            .replace(/[۰۱۲۳۴۵۶۷۸۹]/g, (ch) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(ch)))
+            .replace(/\D/g, '');
+    },
+
+    buildApprovedEntitySearchBlob(record) {
+        if (!record) return '';
+        let contractorCode = record.code || record.isoCode || record.contractorCode ||
+            record['كود المقاول'] || record['كود'] || record.codeNumber || '';
+        if (!contractorCode && record.contractorId) {
+            const contractor = (AppState.appData.contractors || []).find((c) => c.id === record.contractorId);
+            if (contractor) {
+                contractorCode = contractor.code || contractor.isoCode || contractor.contractorCode || '';
+            }
+        }
+        const normalizedStatus = this.normalizeApprovedStatus(record.status);
+        const normalizedType = this.normalizeApprovedEntityType(record.entityType || record.type);
+        const parts = [
+            record.companyName,
+            record.name,
+            record.serviceType,
+            record.licenseNumber,
+            record.safetyReviewer,
+            record.notes,
+            record.contractNumber,
+            contractorCode,
+            record.isoCode,
+            record.code,
+            record.phone,
+            record.mobile,
+            record.email,
+            record.contactPerson,
+            record.contactName,
+            this.getApprovedStatusLabel(normalizedStatus),
+            this.getApprovedTypeLabel(normalizedType),
+            normalizedStatus,
+            normalizedType,
+            record.approvalDate ? Utils.formatDate(record.approvalDate) : '',
+            record.expiryDate ? Utils.formatDate(record.expiryDate) : '',
+            record.id,
+            record.contractorId
+        ];
+        return this.normalizeApprovedSearchText(parts.filter((p) => p != null && String(p).trim() !== '').join(' '));
+    },
+
+    matchesApprovedEntitySearch(record, normalizedQuery) {
+        const query = this.normalizeApprovedSearchText(normalizedQuery);
+        if (!query) return true;
+
+        const blob = this.buildApprovedEntitySearchBlob(record);
+        const tokens = query.split(' ').filter(Boolean);
+        if (tokens.length > 0 && tokens.every((token) => blob.includes(token))) {
+            return true;
+        }
+
+        const queryDigits = this.extractSearchDigitsOnly(query);
+        if (queryDigits.length >= 1) {
+            const digitFields = [
+                record.licenseNumber,
+                record.contractNumber,
+                record.code,
+                record.isoCode,
+                record.contractorCode,
+                record.phone,
+                record.mobile,
+                record.companyName,
+                record.id,
+                record.contractorId
+            ];
+            if (record.contractorId) {
+                const contractor = (AppState.appData.contractors || []).find((c) => c.id === record.contractorId);
+                if (contractor) {
+                    digitFields.push(contractor.code, contractor.licenseNumber, contractor.contractNumber, contractor.phone);
+                }
+            }
+            const digitBlob = digitFields
+                .map((field) => this.extractSearchDigitsOnly(field))
+                .filter(Boolean)
+                .join('');
+            if (digitBlob.includes(queryDigits)) return true;
+        }
+
+        return false;
     },
 
     getApprovedStatusBadgeClass(status) {
@@ -1536,12 +1633,12 @@ const Contractors = {
         }
 
         const { search, status, type, validity } = this.approvedFilters;
-        const normalizedSearch = (search || '').trim().toLowerCase();
+        const normalizedSearch = this.normalizeApprovedSearchText(search || '');
         const hasSearch = normalizedSearch.length > 0;
 
         const filtered = allRecords.filter((record) => {
-            if (status && record.status !== status) return false;
-            if (type && record.entityType !== type) return false;
+            if (status && this.normalizeApprovedStatus(record.status) !== status) return false;
+            if (type && this.normalizeApprovedEntityType(record.entityType || record.type) !== type) return false;
 
             if (validity === 'valid' && this.isApprovalExpired(record)) return false;
             if (validity === 'expired') {
@@ -1549,21 +1646,7 @@ const Contractors = {
                 if (!this.isApprovalExpired(record)) return false;
             }
 
-            if (hasSearch) {
-                const haystack = [
-                    record.companyName,
-                    record.serviceType,
-                    record.licenseNumber,
-                    record.safetyReviewer,
-                    record.notes,
-                    this.getApprovedStatusLabel(record.status),
-                    this.getApprovedTypeLabel(record.entityType),
-                    record.code || '',
-                    record.isoCode || '',
-                    record.contractNumber || ''
-                ].join(' ').toLowerCase();
-                if (!haystack.includes(normalizedSearch)) return false;
-            }
+            if (hasSearch && !this.matchesApprovedEntitySearch(record, normalizedSearch)) return false;
             return true;
         });
 
@@ -1820,7 +1903,7 @@ const Contractors = {
                             type="search"
                             id="approved-contractors-search"
                             class="approved-filters-bar__search-input"
-                            placeholder="ابحث بالاسم، الكود، الخدمة، الترخيص..."
+                            placeholder="ابحث بالاسم، الكود، الرقم، الترخيص، الخدمة..."
                             value="${Utils.escapeHTML(f.search || '')}"
                             autocomplete="off"
                             enterkeyhint="search"
@@ -2181,6 +2264,7 @@ const Contractors = {
         if (!force && isRendered) return;
 
         this.safeSetInnerHTML(container, this.renderApprovedEntitiesSection());
+        this.ensureApprovedTabEventListeners();
     },
 
     handleApprovedFilterChange(field, value) {
@@ -4179,6 +4263,96 @@ const Contractors = {
         `;
     },
 
+    /**
+     * ✅ ربط مستمعي تبويب المعتمدين (فلاتر + تصدير) — يُستدعى بعد التحميل الكسول للتبويب
+     */
+    ensureApprovedTabEventListeners() {
+        const bindClick = (id, handler) => {
+            const el = document.getElementById(id);
+            if (!el || el.hasAttribute('data-listener-attached')) return;
+            el.setAttribute('data-listener-attached', 'true');
+            el.addEventListener('click', handler);
+        };
+
+        bindClick('export-approved-contractors-excel-btn', () => this.exportApprovedEntitiesExcel());
+        bindClick('export-approved-contractors-pdf-btn', () => this.exportApprovedEntitiesPDF());
+
+        const importApprovedBtn = document.getElementById('import-approved-contractors-excel-btn');
+        const importApprovedInput = document.getElementById('import-approved-contractors-input');
+        if (importApprovedBtn && importApprovedInput && !importApprovedBtn.hasAttribute('data-listener-attached')) {
+            importApprovedBtn.setAttribute('data-listener-attached', 'true');
+            importApprovedBtn.addEventListener('click', () => {
+                try {
+                    importApprovedInput.value = '';
+                    importApprovedInput.click();
+                } catch (_e) { /* ignore */ }
+            });
+            if (!importApprovedInput.hasAttribute('data-listener-attached')) {
+                importApprovedInput.setAttribute('data-listener-attached', 'true');
+                importApprovedInput.addEventListener('change', (ev) => {
+                    const f = ev.target?.files?.[0];
+                    if (f) {
+                        this.importApprovedEntitiesFromExcelFile(f).finally(() => {
+                            try { ev.target.value = ''; } catch (_e2) { /* ignore */ }
+                        });
+                    }
+                });
+            }
+        }
+
+        const approvedSearchInput = document.getElementById('approved-contractors-search');
+        if (approvedSearchInput && !approvedSearchInput.hasAttribute('data-listener-attached')) {
+            approvedSearchInput.setAttribute('data-listener-attached', 'true');
+            if (this.approvedFilters?.search) {
+                approvedSearchInput.value = this.approvedFilters.search;
+            }
+            approvedSearchInput.addEventListener('input', (event) => {
+                const value = event.target.value || '';
+                this.approvedFilters.search = value;
+                this.updateApprovedFiltersMeta();
+                clearTimeout(this._approvedSearchFilterTimer);
+                this._approvedSearchFilterTimer = setTimeout(() => {
+                    if (this.currentTab === 'approved') {
+                        this.refreshApprovedEntitiesList();
+                    }
+                }, 180);
+            });
+        }
+
+        bindClick('approved-contractors-search-clear', () => {
+            const searchInput = document.getElementById('approved-contractors-search');
+            if (searchInput) searchInput.value = '';
+            clearTimeout(this._approvedSearchFilterTimer);
+            this.handleApprovedFilterChange('search', '');
+        });
+
+        const approvedStatusSelect = document.getElementById('approved-contractors-status');
+        if (approvedStatusSelect && !approvedStatusSelect.hasAttribute('data-listener-attached')) {
+            approvedStatusSelect.setAttribute('data-listener-attached', 'true');
+            approvedStatusSelect.addEventListener('change', (event) => {
+                this.handleApprovedFilterChange('status', event.target.value || '');
+            });
+        }
+
+        const approvedTypeSelect = document.getElementById('approved-contractors-type');
+        if (approvedTypeSelect && !approvedTypeSelect.hasAttribute('data-listener-attached')) {
+            approvedTypeSelect.setAttribute('data-listener-attached', 'true');
+            approvedTypeSelect.addEventListener('change', (event) => {
+                this.handleApprovedFilterChange('type', event.target.value || '');
+            });
+        }
+
+        const approvedValiditySelect = document.getElementById('approved-contractors-validity');
+        if (approvedValiditySelect && !approvedValiditySelect.hasAttribute('data-listener-attached')) {
+            approvedValiditySelect.setAttribute('data-listener-attached', 'true');
+            approvedValiditySelect.addEventListener('change', (event) => {
+                this.handleApprovedFilterChange('validity', event.target.value || '');
+            });
+        }
+
+        bindClick('approved-contractors-reset', () => this.resetApprovedFilters());
+    },
+
     setupEventListeners() {
         const activeSignal = this._abortController?.signal;
         if (!activeSignal) {
@@ -4186,62 +4360,7 @@ const Contractors = {
         }
         this._eventListenersAttached = true;
 
-        const exportApprovedExcelBtn = document.getElementById('export-approved-contractors-excel-btn');
-        if (exportApprovedExcelBtn) exportApprovedExcelBtn.addEventListener('click', () => this.exportApprovedEntitiesExcel(), { signal: activeSignal });
-
-        const exportApprovedPdfBtn = document.getElementById('export-approved-contractors-pdf-btn');
-        if (exportApprovedPdfBtn) exportApprovedPdfBtn.addEventListener('click', () => this.exportApprovedEntitiesPDF(), { signal: activeSignal });
-
-        const importApprovedBtn = document.getElementById('import-approved-contractors-excel-btn');
-        const importApprovedInput = document.getElementById('import-approved-contractors-input');
-        if (importApprovedBtn && importApprovedInput) {
-            importApprovedBtn.addEventListener('click', () => {
-                try {
-                    importApprovedInput.value = '';
-                    importApprovedInput.click();
-                } catch (e) { /* ignore */ }
-            }, { signal: activeSignal });
-            importApprovedInput.addEventListener('change', (ev) => {
-                const f = ev.target?.files?.[0];
-                if (f) {
-                    this.importApprovedEntitiesFromExcelFile(f).finally(() => {
-                        try { ev.target.value = ''; } catch (e2) { /* ignore */ }
-                    });
-                }
-            }, { signal: activeSignal });
-        }
-
-        const approvedSearchInput = document.getElementById('approved-contractors-search');
-        if (approvedSearchInput) {
-            approvedSearchInput.addEventListener('input', (event) => this.handleApprovedFilterChange('search', event.target.value || ''), { signal: activeSignal });
-        }
-
-        const approvedSearchClearBtn = document.getElementById('approved-contractors-search-clear');
-        if (approvedSearchClearBtn) {
-            approvedSearchClearBtn.addEventListener('click', () => {
-                const searchInput = document.getElementById('approved-contractors-search');
-                if (searchInput) searchInput.value = '';
-                this.handleApprovedFilterChange('search', '');
-            }, { signal: activeSignal });
-        }
-
-        const approvedStatusSelect = document.getElementById('approved-contractors-status');
-        if (approvedStatusSelect) {
-            approvedStatusSelect.addEventListener('change', (event) => this.handleApprovedFilterChange('status', event.target.value || ''), { signal: activeSignal });
-        }
-
-        const approvedTypeSelect = document.getElementById('approved-contractors-type');
-        if (approvedTypeSelect) {
-            approvedTypeSelect.addEventListener('change', (event) => this.handleApprovedFilterChange('type', event.target.value || ''), { signal: activeSignal });
-        }
-
-        const approvedValiditySelect = document.getElementById('approved-contractors-validity');
-        if (approvedValiditySelect) {
-            approvedValiditySelect.addEventListener('change', (event) => this.handleApprovedFilterChange('validity', event.target.value || ''), { signal: activeSignal });
-        }
-
-        const approvedResetBtn = document.getElementById('approved-contractors-reset');
-        if (approvedResetBtn) approvedResetBtn.addEventListener('click', () => this.resetApprovedFilters(), { signal: activeSignal });
+        this.ensureApprovedTabEventListeners();
 
         const addEvaluationBtn = document.getElementById('add-contractor-evaluation-btn');
         if (addEvaluationBtn) addEvaluationBtn.addEventListener('click', () => this.handleAddEvaluationClick(), { signal: activeSignal });
