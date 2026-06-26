@@ -245,6 +245,45 @@ const SafetyCalendar = {
         }
     },
 
+    async ensureClinicCalendarDataLoaded(force) {
+        if (!AppState?.appData) return;
+        if (typeof Permissions !== 'undefined' && Permissions.hasAccess && !Permissions.hasAccess('clinic')) {
+            return;
+        }
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.readFromSheets) {
+            return;
+        }
+        const sheets = [
+            { sheet: 'ClinicVisits', key: 'clinicVisits' },
+            { sheet: 'ClinicContractorVisits', key: 'clinicContractorVisits' },
+            { sheet: 'Injuries', key: 'injuries' },
+            { sheet: 'ClinicContractorInjuries', key: 'clinicContractorInjuries' },
+            { sheet: 'SickLeave', key: 'sickLeave' }
+        ];
+        await Promise.allSettled(sheets.map(async ({ sheet, key }) => {
+            const existing = AppState.appData[key];
+            if (!force && Array.isArray(existing) && existing.length) return;
+            try {
+                const data = await GoogleIntegration.readFromSheets(sheet, 20000);
+                if (Array.isArray(data)) {
+                    AppState.appData[key] = data;
+                } else if (!Array.isArray(existing)) {
+                    AppState.appData[key] = [];
+                }
+            } catch (_e) {
+                if (!Array.isArray(existing)) AppState.appData[key] = [];
+            }
+        }));
+    },
+
+    async ensureCalendarSourceDataLoaded(force) {
+        await Promise.all([
+            this.ensureDailySafetyCheckListLoaded(force),
+            this.ensureClinicCalendarDataLoaded(force),
+            this.ensureCustomEventsLoaded(force)
+        ]);
+    },
+
     async ensureCustomEventsLoaded(force) {
         if (!AppState || !AppState.appData) return;
         const existing = AppState.appData.safetyCalendarCustomEvents;
@@ -1022,8 +1061,7 @@ const SafetyCalendar = {
 
         section.innerHTML = this.renderShell();
         this.bindFilterEvents(section);
-        await this.ensureDailySafetyCheckListLoaded(false);
-        await this.ensureCustomEventsLoaded(false);
+        await this.ensureCalendarSourceDataLoaded(false);
         await this.initFullCalendar(section);
     },
 
@@ -1125,8 +1163,7 @@ const SafetyCalendar = {
         }
 
         try {
-            await this.ensureDailySafetyCheckListLoaded(false);
-            await this.ensureCustomEventsLoaded(false);
+            await this.ensureCalendarSourceDataLoaded(false);
             const result = this.buildEvents();
             const summary = SafetyCalendarEvents.summarizeEvents(result.events);
             wrap.innerHTML = this.renderDashboardWidgetHtml(result, summary);

@@ -30,6 +30,9 @@
         'action-tracking': { label: 'متابعة إجراء', color: '#059669', moduleKey: 'action-tracking' },
         violations: { label: 'مخالفة', color: '#991b1b', moduleKey: 'violations' },
         behavior: { label: 'مراقبة سلوك', color: '#ca8a04', moduleKey: 'behavior-monitoring' },
+        'clinic-visit': { label: 'زيارة عيادة', color: '#db2777', moduleKey: 'clinic' },
+        'clinic-injury': { label: 'إصابة عيادة', color: '#c2410c', moduleKey: 'clinic' },
+        'clinic-sick-leave': { label: 'إجازة مرضية', color: '#2563eb', moduleKey: 'clinic' },
         'egypt-holiday': { label: 'عطلة رسمية (مصر)', color: '#b91c1c', moduleKey: 'safety-calendar' },
         'intl-hse-env': { label: 'يوم عالمي (سلامة/بيئة)', color: '#047857', moduleKey: 'safety-calendar' },
         'custom-event': { label: 'حدث مخصص', color: '#7c3aed', moduleKey: 'safety-calendar' }
@@ -47,7 +50,10 @@
         frequency: 'التكرار', result: 'النتيجة', observerName: 'المراقب', reportedBy: 'المُبلّغ',
         incidentType: 'نوع الحادث', violationType: 'نوع المخالفة', taskTitle: 'عنوان المهمة',
         type: 'النوع', message: 'الرسالة', inspectorName: 'المفتش', siteName: 'الموقع',
-        department: 'الإدارة', expiryDate: 'تاريخ الانتهاء', sentDate: 'تاريخ الإرسال'
+        department: 'الإدارة', expiryDate: 'تاريخ الانتهاء', sentDate: 'تاريخ الإرسال',
+        visitDate: 'تاريخ الزيارة', injuryDate: 'تاريخ الإصابة', employeeName: 'اسم الموظف',
+        personName: 'الاسم', diagnosis: 'التشخيص', injuryType: 'نوع الإصابة', reason: 'السبب',
+        employeeDepartment: 'الإدارة', contractorName: 'المقاول', externalName: 'اسم خارجي'
     };
 
     function esc(str) {
@@ -245,6 +251,40 @@
         return Array.isArray(arr) ? arr : [];
     }
 
+    function mergeRecordsById(arrays) {
+        const seen = new Set();
+        const merged = [];
+        (arrays || []).forEach((arr) => {
+            (Array.isArray(arr) ? arr : []).forEach((rec) => {
+                if (!rec) return;
+                const rid = rec.id != null ? String(rec.id) : '';
+                if (rid && seen.has(rid)) return;
+                if (rid) seen.add(rid);
+                merged.push(rec);
+            });
+        });
+        return merged;
+    }
+
+    function getClinicVisitRecords() {
+        return mergeRecordsById([
+            getAppArray('clinicVisits'),
+            getAppArray('clinicContractorVisits')
+        ]);
+    }
+
+    function getClinicInjuryRecords() {
+        return mergeRecordsById([
+            getAppArray('injuries'),
+            getAppArray('clinicContractorInjuries')
+        ]);
+    }
+
+    function findClinicRecordById(arrays, sourceId) {
+        const id = String(sourceId);
+        return mergeRecordsById(arrays).find((r) => String(r.id) === id) || null;
+    }
+
     function getRecordForEvent(category, sourceId) {
         if (!sourceId) return null;
         const id = String(sourceId);
@@ -268,6 +308,11 @@
             case 'action-tracking': return findById(getAppArray('actionTrackingRegister'));
             case 'violations': return findById(getAppArray('violations'));
             case 'behavior': return findById(getAppArray('behaviorMonitoring'));
+            case 'clinic-visit':
+                return findClinicRecordById([getAppArray('clinicVisits'), getAppArray('clinicContractorVisits')], id);
+            case 'clinic-injury':
+                return findClinicRecordById([getAppArray('injuries'), getAppArray('clinicContractorInjuries')], id);
+            case 'clinic-sick-leave': return findById(getAppArray('sickLeave'));
             case 'custom-event': return findById(getAppArray('safetyCalendarCustomEvents'));
             case 'egypt-holiday':
             case 'intl-hse-env':
@@ -582,6 +627,25 @@
                 addFromList(events, 'behavior', getAppArray('behaviorMonitoring'),
                     ['date'],
                     ['employeeName', 'behaviorType', 'description', 'id'], null, ctx);
+            }
+            if (allow('clinic-visit')) {
+                addFromList(events, 'clinic-visit', getClinicVisitRecords(),
+                    ['visitDate', 'createdAt'],
+                    ['employeeName', 'contractorName', 'externalName', 'contractorWorkerName', 'diagnosis', 'id'], null, ctx);
+            }
+            if (allow('clinic-injury')) {
+                addFromList(events, 'clinic-injury', getClinicInjuryRecords(),
+                    ['injuryDate', 'createdAt'],
+                    ['employeeName', 'personName', 'injuryType', 'id'], null, ctx);
+            }
+            if (allow('clinic-sick-leave')) {
+                addFromList(events, 'clinic-sick-leave', getAppArray('sickLeave'),
+                    null,
+                    ['employeeName', 'personName', 'reason', 'id'],
+                    [
+                        { field: 'startDate', label: 'بداية' },
+                        { field: 'endDate', label: 'نهاية' }
+                    ], ctx);
             }
         } catch (err) {
             if (typeof Utils !== 'undefined' && Utils.safeWarn) {
