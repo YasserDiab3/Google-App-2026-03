@@ -1801,7 +1801,7 @@ window.Auth = {
                 'legal-documents': ['LegalDocuments'],
                 'safety-health-management': ['SafetyTeamMembers', 'SafetyOrganizationalStructure', 'SafetyJobDescriptions', 'SafetyTeamKPIs', 'SafetyTeamAttendance', 'SafetyTeamLeaves', 'SafetyTeamTasks'],
                 'sop-jha': ['SOPJHA'],
-                'periodic-inspections': ['PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists', 'PeriodicEquipmentTypes', 'PeriodicEquipmentAssets', 'PeriodicEquipmentInspections'],
+                'periodic-inspections': ['PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists', 'DailySafetyCheckList', 'PeriodicEquipmentTypes', 'PeriodicEquipmentAssets', 'PeriodicEquipmentInspections'],
                 'safety-calendar': ['SafetyCalendarCustomEvents']
             };
 
@@ -1878,6 +1878,7 @@ window.Auth = {
                 'PeriodicInspectionRecords': 'periodicInspectionRecords',
                 'PeriodicInspectionSchedules': 'periodicInspectionSchedules',
                 'PeriodicInspectionChecklists': 'periodicInspectionChecklists',
+                'DailySafetyCheckList': 'dailySafetyCheckList',
                 'PeriodicEquipmentTypes': 'periodicEquipmentTypes',
                 'PeriodicEquipmentAssets': 'periodicEquipmentAssets',
                 'PeriodicEquipmentInspections': 'periodicEquipmentInspections',

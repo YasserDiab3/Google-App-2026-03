@@ -221,6 +221,30 @@ const SafetyCalendar = {
             && Permissions.hasAccess('safety-calendar');
     },
 
+    async ensureDailySafetyCheckListLoaded(force) {
+        if (!AppState?.appData) return;
+        const existing = AppState.appData.dailySafetyCheckList;
+        if (!force && Array.isArray(existing) && existing.length) return;
+        if (typeof Permissions !== 'undefined' && Permissions.hasAccess && !Permissions.hasAccess('periodic-inspections')) {
+            if (!Array.isArray(existing)) AppState.appData.dailySafetyCheckList = [];
+            return;
+        }
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.readFromSheets) {
+            if (!Array.isArray(existing)) AppState.appData.dailySafetyCheckList = [];
+            return;
+        }
+        try {
+            const data = await GoogleIntegration.readFromSheets('DailySafetyCheckList', 20000);
+            if (Array.isArray(data)) {
+                AppState.appData.dailySafetyCheckList = data;
+            } else if (!Array.isArray(existing)) {
+                AppState.appData.dailySafetyCheckList = [];
+            }
+        } catch (_e) {
+            if (!Array.isArray(existing)) AppState.appData.dailySafetyCheckList = [];
+        }
+    },
+
     async ensureCustomEventsLoaded(force) {
         if (!AppState || !AppState.appData) return;
         const existing = AppState.appData.safetyCalendarCustomEvents;
@@ -998,6 +1022,7 @@ const SafetyCalendar = {
 
         section.innerHTML = this.renderShell();
         this.bindFilterEvents(section);
+        await this.ensureDailySafetyCheckListLoaded(false);
         await this.ensureCustomEventsLoaded(false);
         await this.initFullCalendar(section);
     },
@@ -1100,6 +1125,7 @@ const SafetyCalendar = {
         }
 
         try {
+            await this.ensureDailySafetyCheckListLoaded(false);
             await this.ensureCustomEventsLoaded(false);
             const result = this.buildEvents();
             const summary = SafetyCalendarEvents.summarizeEvents(result.events);
