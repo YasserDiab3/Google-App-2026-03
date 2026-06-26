@@ -11,6 +11,8 @@ const PTW = {
     _loadPTWListTimeout: null, // للتحكم في التحميل الزائد
     _ptwBackendLoadPromise: null, // منع تكرار جلب الخادم
     _mapMarkersToken: 0,
+    _registrySanitizedCache: null,
+    _registryTableMountToken: 0,
     _isSubmitting: false, // منع الحفظ المتكرر
     _i18nSectionObserver: null,
     _i18nBodyObserver: null,
@@ -1344,9 +1346,7 @@ const PTW = {
         try {
             const registryContent = document.getElementById('ptw-registry-content');
             if (registryContent && registryContent.style.display !== 'none') {
-                // السجل مرئي - تحديثه
-                registryContent.innerHTML = this.renderRegistryContent();
-                this.setupRegistryEventListeners();
+                this._refreshRegistryViewLight(true);
                 Utils.safeLog('✅ تم تحديث عرض سجل حصر التصاريح');
             }
         } catch (error) {
@@ -1634,6 +1634,7 @@ const PTW = {
     setPtwRegistryState(dataset, source = 'unknown') {
         const sanitized = this.sanitizePtwRegistryDataset(dataset, source);
         this.registryData = sanitized;
+        this._registrySanitizedCache = null;
         if (!AppState.appData) AppState.appData = {};
         AppState.appData.ptwRegistry = [...sanitized];
         try { localStorage.setItem('hse_ptw_registry', Utils.safeStringify(sanitized)); } catch (_) {}
@@ -1740,7 +1741,234 @@ const PTW = {
             if (!AppState.appData) AppState.appData = {};
             AppState.appData.ptwRegistry = [...localReg];
         }
+        this._registrySanitizedCache = best;
         return best;
+    },
+
+    _getRegistryRowsCached(force = false) {
+        if (!force && Array.isArray(this._registrySanitizedCache)) {
+            return this._registrySanitizedCache;
+        }
+        return this.getRegistrySanitizedDataset();
+    },
+
+    _computeRegistryKpis(rows) {
+        const registryRows = Array.isArray(rows) ? rows : [];
+        const registryRowCount = registryRows.length;
+        const openCount = registryRows.filter(r => this.isPermitOpenStatus(r?.status)).length;
+        const closedCount = registryRows.filter(r => this.isPermitClosedStatus(r?.status)).length;
+        const closedRecords = registryRows.filter(r => this.isPermitClosedStatus(r?.status) && (r.closureDate || r.timeTo));
+        let avgTime = this._t('module.ptw.registry.avgNotAvailable', 'غير متاح');
+        if (closedRecords.length > 0) {
+            let totalMs = 0;
+            closedRecords.forEach(r => {
+                const start = this.parseDateTimeValue(r.timeFrom);
+                const end = this.parseDateTimeValue(r.closureDate || r.timeTo);
+                if (start && end && start < end) totalMs += (end - start);
+            });
+            if (totalMs > 0) {
+                const avgHours = Math.round(totalMs / closedRecords.length / (1000 * 60 * 60));
+                avgTime = this._t('module.ptw.registry.avgHours', '{n} ساعة').replace(/\{n\}/g, String(avgHours));
+            }
+        }
+        return { registryRowCount, openCount, closedCount, avgTime };
+    },
+
+    _updateRegistryKpiCards(rows) {
+        const { registryRowCount, openCount, closedCount, avgTime } = this._computeRegistryKpis(rows);
+        const set = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = String(val);
+        };
+        set('ptw-registry-kpi-total', registryRowCount);
+        set('ptw-registry-kpi-open', openCount);
+        set('ptw-registry-kpi-closed', closedCount);
+        set('ptw-registry-kpi-avg', avgTime);
+        const titleEl = document.getElementById('ptw-registry-table-title');
+        if (titleEl) {
+            const word = this._t('module.ptw.registry.recordWord', 'سجل');
+            titleEl.textContent = `${this._t('module.ptw.registry.tableTitle', 'جدول سجل حصر التصاريح')} (${registryRowCount} ${word})`;
+        }
+    },
+
+    /** هيكل جدول السجل بدون صفوف — للعرض الفوري */
+    renderRegistryTableShell() {
+        const t = (key, fallback) => this._t(key, fallback);
+        return `
+            <div class="ptw-table-wrapper">
+                <table class="data-table" id="ptw-registry-data-table">
+                    <thead>
+                        <tr>
+                            <th>${t('module.ptw.registry.col.seq', 'مسلسل')}</th>
+                            <th>${t('module.ptw.registry.col.date', 'التاريخ')}</th>
+                            <th>${t('module.ptw.registry.col.permitType', 'نوع التصريح')}</th>
+                            <th>${t('module.ptw.registry.col.requestingParty', 'الجهة الطالبة')}</th>
+                            <th>${t('module.ptw.registry.col.location', 'الموقع')}</th>
+                            <th>${t('module.ptw.registry.col.timeFrom', 'الوقت من')}</th>
+                            <th>${t('module.ptw.registry.col.timeTo', 'الوقت إلى')}</th>
+                            <th>${t('module.ptw.registry.col.totalTime', 'إجمالي الوقت')}</th>
+                            <th>${t('module.ptw.registry.col.authorizedParty', 'الجهة المصرح لها')}</th>
+                            <th>${t('module.ptw.registry.col.workDesc', 'وصف العمل')}</th>
+                            <th>${t('module.ptw.registry.col.followUp1', 'مسئول المتابعة 01')}</th>
+                            <th>${t('module.ptw.registry.col.followUp2', 'مسئول المتابعة 02')}</th>
+                            <th>${t('module.ptw.registry.col.permitStatus', 'حالة التصريح')}</th>
+                            <th>${t('module.ptw.registry.col.actions', 'الإجراءات')}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ptw-registry-table-body">
+                        <tr data-registry-loading="1">
+                            <td colspan="14" class="text-center text-gray-500 py-8">${t('module.ptw.loading.permits', 'جاري تحميل قائمة التصاريح...')}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>`;
+    },
+
+    _renderRegistryTableRow(entry) {
+        const t = (key, fallback) => this._t(key, fallback);
+        let statusClass, statusIcon;
+        if (entry.status === 'مفتوح' || entry.status === 'لم يكتمل العمل') {
+            statusClass = 'bg-blue-100 text-blue-800';
+            statusIcon = 'fa-folder-open';
+        } else if (entry.status === 'اكتمل العمل بشكل آمن') {
+            statusClass = 'bg-green-100 text-green-800';
+            statusIcon = 'fa-check-circle';
+        } else if (entry.status === 'إغلاق جبري') {
+            statusClass = 'bg-red-100 text-red-800';
+            statusIcon = 'fa-lock';
+        } else if (entry.status === 'مغلق') {
+            statusClass = 'bg-gray-100 text-gray-800';
+            statusIcon = 'fa-check-circle';
+        } else {
+            statusClass = 'bg-yellow-100 text-yellow-800';
+            statusIcon = 'fa-clock';
+        }
+
+        const workStartSource = entry.timeFrom || entry.openDate;
+        const registryDateStr = workStartSource && Utils.formatDate
+            ? Utils.formatDate(workStartSource)
+            : t('module.ptw.common.notSpecified', 'غير محدد');
+        const registryDateDisplay = !workStartSource || registryDateStr === '-' ? t('module.ptw.common.notSpecified', 'غير محدد') : registryDateStr;
+
+        const formatRegistryTime = (dateStr) => {
+            if (!dateStr || dateStr === t('module.ptw.common.notSpecified', 'غير محدد')) return t('module.ptw.common.notSpecified', 'غير محدد');
+            try {
+                const date = this.parseDateTimeValue(dateStr);
+                if (!date || isNaN(date.getTime())) return t('module.ptw.common.notSpecified', 'غير محدد');
+                return date.toLocaleTimeString('en-GB-u-nu-latn', { hour: '2-digit', minute: '2-digit', hour12: false });
+            } catch {
+                return t('module.ptw.common.notSpecified', 'غير محدد');
+            }
+        };
+
+        const timeFromDisplay = formatRegistryTime(workStartSource);
+        const timeToDisplay = formatRegistryTime(entry.timeTo);
+        const permitTypeDisplay = this.getPermitTypeDisplay(entry);
+        const permitTypeShort = permitTypeDisplay.length > 50 ? permitTypeDisplay.substring(0, 50) + '...' : permitTypeDisplay;
+        const totalDisp = (entry.timeFrom && entry.timeTo)
+            ? this.calculateTotalTime(entry.timeFrom, entry.timeTo)
+            : (this.isUsableDurationText(entry.totalTime) ? entry.totalTime : t('module.ptw.common.notSpecified', 'غير محدد'));
+        const statusText = this.statusLabel(entry.status);
+        const seqDisplay = this.getPermitDisplayNumber(entry);
+        const workDesc = String(entry.workDescription || '');
+        const workDescShort = workDesc.length > 30 ? workDesc.substring(0, 30) + '...' : workDesc;
+
+        return `
+                <tr data-registry-id="${entry.id}">
+                    <td class="font-bold text-blue-600">${Utils.escapeHTML(seqDisplay)}</td>
+                    <td>${Utils.escapeHTML(registryDateDisplay)}</td>
+                    <td title="${Utils.escapeHTML(permitTypeDisplay)}">${Utils.escapeHTML(permitTypeShort)}</td>
+                    <td>${Utils.escapeHTML(entry.requestingParty)}</td>
+                    <td>${Utils.escapeHTML(entry.location)}</td>
+                    <td>${Utils.escapeHTML(timeFromDisplay)}</td>
+                    <td>${Utils.escapeHTML(timeToDisplay)}</td>
+                    <td class="font-semibold">${Utils.escapeHTML(String(totalDisp))}</td>
+                    <td>${Utils.escapeHTML(entry.authorizedParty)}</td>
+                    <td class="max-w-xs truncate" title="${Utils.escapeHTML(workDesc)}">${Utils.escapeHTML(workDescShort)}</td>
+                    <td>${Utils.escapeHTML(entry.supervisor1)}</td>
+                    <td>${Utils.escapeHTML(entry.supervisor2)}</td>
+                    <td>
+                        <span class="badge ${statusClass}">
+                            <i class="fas ${statusIcon} ml-1"></i>
+                            ${Utils.escapeHTML(String(statusText))}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="flex items-center gap-1 flex-wrap">
+                            ${entry.isManualEntry ? `
+                                <button class="btn btn-primary btn-sm" onclick="PTW.viewManualPermitDetails('${entry.id}')" title="${t('module.ptw.registry.viewDetails', 'عرض التفاصيل')}">
+                                    <i class="fas fa-eye ml-1"></i> ${t('module.ptw.registry.viewDetails', 'عرض التفاصيل')}
+                                </button>
+                            ` : `
+                                <button class="btn btn-primary btn-sm" onclick="PTW.viewRegistryDetails('${entry.permitId}')" title="${t('module.ptw.registry.viewDetails', 'عرض التفاصيل')}">
+                                    <i class="fas fa-eye ml-1"></i> ${t('module.ptw.registry.viewDetails', 'عرض التفاصيل')}
+                                </button>
+                            `}
+                        </div>
+                    </td>
+                </tr>`;
+    },
+
+    /** تركيب صفوف السجل على دفعات — بدون تهنيج */
+    _mountRegistryTableRows(force = false) {
+        const mount = document.getElementById('ptw-registry-table-mount');
+        if (!mount) return;
+
+        const rows = this._getRegistryRowsCached(force);
+        this._updateRegistryKpiCards(rows);
+
+        if (!rows.length) {
+            mount.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-clipboard-list text-4xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500">${this._t('module.ptw.registry.empty', 'لا توجد سجلات حتى الآن')}</p>
+                </div>`;
+            mount.removeAttribute('data-registry-table-pending');
+            return;
+        }
+
+        if (!mount.querySelector('#ptw-registry-data-table')) {
+            mount.innerHTML = this.renderRegistryTableShell();
+        }
+
+        const tbody = document.getElementById('ptw-registry-table-body');
+        if (!tbody) return;
+
+        const sorted = this.sortPermitRecordsNewestFirst(rows);
+        this._registryTableMountToken = (this._registryTableMountToken || 0) + 1;
+        const token = this._registryTableMountToken;
+        const CHUNK_SIZE = 45;
+
+        tbody.innerHTML = '';
+
+        const renderChunk = (fromIndex) => {
+            if (token !== this._registryTableMountToken) return;
+            const slice = sorted.slice(fromIndex, fromIndex + CHUNK_SIZE);
+            if (!slice.length) {
+                mount.removeAttribute('data-registry-table-pending');
+                if (this.currentTab === 'registry') {
+                    try { this.applyRegistryFilters(); } catch (_) { /* ignore */ }
+                }
+                return;
+            }
+            tbody.insertAdjacentHTML('beforeend', slice.map((entry) => this._renderRegistryTableRow(entry)).join(''));
+            if (fromIndex + CHUNK_SIZE < sorted.length) {
+                requestAnimationFrame(() => renderChunk(fromIndex + CHUNK_SIZE));
+            } else {
+                mount.removeAttribute('data-registry-table-pending');
+                if (this.currentTab === 'registry') {
+                    try { this.applyRegistryFilters(); } catch (_) { /* ignore */ }
+                }
+            }
+        };
+
+        renderChunk(0);
+    },
+
+    _warmRegistryView() {
+        const registryContent = document.getElementById('ptw-registry-content');
+        if (!registryContent || !registryContent.innerHTML.trim()) return;
+        this._mountRegistryTableRows(false);
     },
 
     formatPtwMetricCount(value) {
@@ -2271,12 +2499,32 @@ const PTW = {
         return ptwCount > 0 || registryCount > 0 || appRegistryCount > 0;
     },
 
-    /** تحديث DOM سجل التصاريح من البيانات المحلية (ظاهر أو مخفي) */
+    /** تحديث DOM سجل التصاريح من البيانات المحلية — بدون إعادة بناء كامل */
     _refreshRegistryDomFromCache() {
         const registryContent = document.getElementById('ptw-registry-content');
         if (!registryContent) return;
-        registryContent.innerHTML = this.renderRegistryContent();
+        const mount = document.getElementById('ptw-registry-table-mount');
+        if (!mount) {
+            registryContent.innerHTML = this.renderRegistryContent({ tableMode: 'shell' });
+            if (this.currentTab === 'registry') this.setupRegistryEventListeners();
+        }
+        this._registrySanitizedCache = null;
+        this._mountRegistryTableRows(true);
         registryContent.removeAttribute('data-registry-lazy');
+    },
+
+    /** تحديث خفيف للسجل المرئي — يحافظ على الفلاتر */
+    _refreshRegistryViewLight(force = false, rebuildShell = false) {
+        const registryContent = document.getElementById('ptw-registry-content');
+        if (!registryContent) return;
+        const mount = document.getElementById('ptw-registry-table-mount');
+        if (!mount || rebuildShell) {
+            registryContent.innerHTML = this.renderRegistryContent({ tableMode: 'shell' });
+            this.setupRegistryEventListeners();
+        } else {
+            this._registrySanitizedCache = null;
+        }
+        this._mountRegistryTableRows(force);
     },
 
     /** تحديث التبويب النشط بعد مزامنة الخادم — دون حجب العرض الأولي */
@@ -2722,7 +2970,7 @@ const PTW = {
                     ${this._renderPermitsLoadingShell(t)}
                 </div>
                 <div id="ptw-registry-content" style="display: none;" class="fade-in">
-                    ${this.renderRegistryContent()}
+                    ${this.renderRegistryContent({ tableMode: 'shell' })}
                 </div>
                 <div id="ptw-map-content" style="display: none; flex-direction: column; height: calc(100vh - 280px); min-height: 600px; width: 100%;" class="fade-in" data-tab-lazy="map">
                 </div>
@@ -2745,6 +2993,12 @@ const PTW = {
                 this._scheduleMapCoordinatesBackgroundSync();
                 this._startPtwBackendSync();
                 this._mountPermitsListContent(t);
+                const warmRegistry = () => this._warmRegistryView();
+                if (typeof requestIdleCallback === 'function') {
+                    requestIdleCallback(warmRegistry, { timeout: 800 });
+                } else {
+                    setTimeout(warmRegistry, 0);
+                }
                 const prewarmMap = () => {
                     this._prewarmLeafletLibrary();
                     this._prewarmMapTab();
@@ -2910,6 +3164,11 @@ const PTW = {
                 registryContent.style.visibility = 'visible';
                 if (!registryContent.innerHTML.trim()) {
                     this._refreshRegistryDomFromCache();
+                } else {
+                    const mount = document.getElementById('ptw-registry-table-mount');
+                    if (mount && mount.getAttribute('data-registry-table-pending') === '1') {
+                        this._mountRegistryTableRows(false);
+                    }
                 }
                 this.setupRegistryEventListeners();
             }
@@ -3118,8 +3377,7 @@ const PTW = {
                 this._startPtwBackendSync();
                 done();
             } else if (tab === 'registry' && registryContent) {
-                registryContent.innerHTML = this.renderRegistryContent();
-                this.setupRegistryEventListeners();
+                this._refreshRegistryViewLight(true);
                 this._startPtwBackendSync();
                 done();
             } else if (tab === 'map' && mapContent) {
@@ -3149,8 +3407,10 @@ const PTW = {
 
     /**
      * عرض محتوى سجل حصر التصاريح
+     * @param {{ tableMode?: 'shell'|'full' }} options — shell: هيكل فوري + تركيب صفوف لاحقاً
      */
-    renderRegistryContent() {
+    renderRegistryContent(options = {}) {
+        const tableMode = options.tableMode === 'full' ? 'full' : 'shell';
         const t = (key, fallback) => this._t(key, fallback);
         // التأكد من إخفاء الخريطة في تبويب السجل
         const mapContent = document.getElementById('ptw-map-content');
@@ -3166,42 +3426,13 @@ const PTW = {
             mapContent.style.pointerEvents = 'none';
             mapContent.style.zIndex = '-1';
         }
-        
-        // دمج بيانات التصاريح من كلا المصدرين للتأكد من المطابقة
-        const permitsFromList = AppState.appData.ptw || [];
-        const permitsFromRegistry = (this.registryData || []).map(registryEntry => {
-            return {
-                id: registryEntry.permitId || registryEntry.id,
-                workType: Array.isArray(registryEntry.permitType)
-                    ? registryEntry.permitTypeDisplay || registryEntry.permitType.join('، ')
-                    : registryEntry.permitType || registryEntry.permitTypeDisplay,
-                status: registryEntry.status,
-                isFromRegistry: true
-            };
-        });
 
-        const allItems = this.mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry);
-        const registryRows = this.getRegistrySanitizedDataset();
-        const registryRowCount = registryRows.length;
-        const totalCount = registryRowCount;
-        const openCount = registryRows.filter(r => this.isPermitOpenStatus(r?.status)).length;
-        const closedCount = registryRows.filter(r => this.isPermitClosedStatus(r?.status)).length;
+        const registryRows = this._getRegistryRowsCached();
+        const { registryRowCount, openCount, closedCount, avgTime } = this._computeRegistryKpis(registryRows);
 
-        // حساب متوسط الوقت للحالات المغلقة (من السجل فقط)
-        const closedRecords = registryRows.filter(r => this.isPermitClosedStatus(r?.status) && (r.closureDate || r.timeTo));
-        let avgTime = t('module.ptw.registry.avgNotAvailable', 'غير متاح');
-        if (closedRecords.length > 0) {
-            let totalMs = 0;
-            closedRecords.forEach(r => {
-                const start = this.parseDateTimeValue(r.timeFrom);
-                const end = this.parseDateTimeValue(r.closureDate || r.timeTo);
-                if (start && end && start < end) totalMs += (end - start);
-            });
-            if (totalMs > 0) {
-                const avgHours = Math.round(totalMs / closedRecords.length / (1000 * 60 * 60));
-                avgTime = t('module.ptw.registry.avgHours', '{n} ساعة').replace(/\{n\}/g, String(avgHours));
-            }
-        }
+        const tableBlock = tableMode === 'full'
+            ? `<div class="table-responsive">${this.renderRegistryTable()}</div>`
+            : `<div class="table-responsive" id="ptw-registry-table-mount" data-registry-table-pending="1">${this.renderRegistryTableShell()}</div>`;
 
         return `
             <!-- أزرار التصدير والإدخال -->
@@ -3232,29 +3463,29 @@ const PTW = {
                     <div class="kpi-icon"><i class="fas fa-list-ol"></i></div>
                     <div class="kpi-content">
                         <h3 class="kpi-label">${t('module.ptw.registry.totalRecords', 'إجمالي السجلات')}</h3>
-                        <p class="kpi-value">${registryRowCount}</p>
-                        <p class="text-xs text-gray-500 mt-1" title="${t('module.ptw.registry.mergedCountHint', 'تصاريح فريدة (قائمة PTW + سجل) حسب معرف التصريح؛ قد يختلف إن وُجد تصريح في القائمة بلا صف سجل')}">${totalCount !== registryRowCount ? `${t('module.ptw.registry.withPtwListUnique', 'مع قائمة PTW (فريد)')}: ${totalCount}` : t('module.ptw.registry.sameAsTable', 'يطابق صفوف الجدول')}</p>
+                        <p class="kpi-value" id="ptw-registry-kpi-total">${registryRowCount}</p>
+                        <p class="text-xs text-gray-500 mt-1">${t('module.ptw.registry.sameAsTable', 'يطابق صفوف الجدول')}</p>
                     </div>
                 </div>
                 <div class="kpi-card kpi-primary">
                     <div class="kpi-icon"><i class="fas fa-folder-open"></i></div>
                     <div class="kpi-content">
                         <h3 class="kpi-label">${t('module.ptw.registry.openPermits', 'تصاريح مفتوحة')}</h3>
-                        <p class="kpi-value">${openCount}</p>
+                        <p class="kpi-value" id="ptw-registry-kpi-open">${openCount}</p>
                     </div>
                 </div>
                 <div class="kpi-card kpi-success">
                     <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
                     <div class="kpi-content">
                         <h3 class="kpi-label">${t('module.ptw.registry.closedPermits', 'تصاريح مغلقة')}</h3>
-                        <p class="kpi-value">${closedCount}</p>
+                        <p class="kpi-value" id="ptw-registry-kpi-closed">${closedCount}</p>
                     </div>
                 </div>
                 <div class="kpi-card kpi-warning">
                     <div class="kpi-icon"><i class="fas fa-clock"></i></div>
                     <div class="kpi-content">
                         <h3 class="kpi-label">${t('module.ptw.registry.avgTime', 'متوسط الوقت')}</h3>
-                        <p class="kpi-value" style="font-size: 1.2rem;">${avgTime}</p>
+                        <p class="kpi-value" id="ptw-registry-kpi-avg" style="font-size: 1.2rem;">${avgTime}</p>
                     </div>
                 </div>
             </div>
@@ -3304,15 +3535,13 @@ const PTW = {
             <!-- جدول السجل -->
             <div class="content-card">
                 <div class="card-header">
-                    <h2 class="card-title">
+                    <h2 class="card-title" id="ptw-registry-table-title">
                         <i class="fas fa-table ml-2"></i>
                         ${t('module.ptw.registry.tableTitle', 'جدول سجل حصر التصاريح')} (${registryRowCount} ${t('module.ptw.registry.recordWord', 'سجل')})
                     </h2>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        ${this.renderRegistryTable()}
-                    </div>
+                    ${tableBlock}
                 </div>
             </div>
         `;
@@ -3360,96 +3589,7 @@ const PTW = {
                 <tbody>
         `;
 
-        sortedData.forEach(entry => {
-            // تحديد لون وأيقونة الحالة
-            let statusClass, statusIcon;
-            if (entry.status === 'مفتوح' || entry.status === 'لم يكتمل العمل') {
-                statusClass = 'bg-blue-100 text-blue-800';
-                statusIcon = 'fa-folder-open';
-            } else if (entry.status === 'اكتمل العمل بشكل آمن') {
-                statusClass = 'bg-green-100 text-green-800';
-                statusIcon = 'fa-check-circle';
-            } else if (entry.status === 'إغلاق جبري') {
-                statusClass = 'bg-red-100 text-red-800';
-                statusIcon = 'fa-lock';
-            } else if (entry.status === 'مغلق') {
-                statusClass = 'bg-gray-100 text-gray-800';
-                statusIcon = 'fa-check-circle';
-            } else {
-                statusClass = 'bg-yellow-100 text-yellow-800';
-                statusIcon = 'fa-clock';
-            }
-
-            /** تاريخ العمل: نفس مصدر تفاصيل التصريح (startDate المخزن في timeFrom) */
-            const workStartSource = entry.timeFrom || entry.openDate;
-            const registryDateStr = workStartSource && Utils.formatDate
-                ? Utils.formatDate(workStartSource)
-                : t('module.ptw.common.notSpecified', 'غير محدد');
-            const registryDateDisplay = !workStartSource || registryDateStr === '-' ? t('module.ptw.common.notSpecified', 'غير محدد') : registryDateStr;
-
-            /** وقت فقط — نفس أسلوب طباعة التصريح (من الساعة / إلى الساعة) */
-            const formatRegistryTime = (dateStr) => {
-                if (!dateStr || dateStr === t('module.ptw.common.notSpecified', 'غير محدد')) return t('module.ptw.common.notSpecified', 'غير محدد');
-                try {
-                    const date = this.parseDateTimeValue(dateStr);
-                    if (!date || isNaN(date.getTime())) return t('module.ptw.common.notSpecified', 'غير محدد');
-                    return date.toLocaleTimeString('en-GB-u-nu-latn', { hour: '2-digit', minute: '2-digit', hour12: false });
-                } catch {
-                    return t('module.ptw.common.notSpecified', 'غير محدد');
-                }
-            };
-
-            // «الوقت إلى» = نهاية مدة العمل المجدولة (endDate) كما في نموذج التصريح؛ وقت الإغلاق يُحسب في إجمالي الوقت فقط
-            const timeFromDisplay = formatRegistryTime(workStartSource);
-            const timeToDisplay = formatRegistryTime(entry.timeTo);
-
-            // عرض أنواع التصريح (يمكن أن تكون مصفوفة أو نص)
-            const permitTypeDisplay = this.getPermitTypeDisplay(entry);
-            const permitTypeShort = permitTypeDisplay.length > 50 ? permitTypeDisplay.substring(0, 50) + '...' : permitTypeDisplay;
-            const totalDisp = (entry.timeFrom && entry.timeTo)
-                ? this.calculateTotalTime(entry.timeFrom, entry.timeTo)
-                : (this.isUsableDurationText(entry.totalTime) ? entry.totalTime : t('module.ptw.common.notSpecified', 'غير محدد'));
-            const statusText = this.statusLabel(entry.status);
-
-            const seqDisplay = this.getPermitDisplayNumber(entry);
-
-            tableHTML += `
-                <tr data-registry-id="${entry.id}">
-                    <td class="font-bold text-blue-600">${Utils.escapeHTML(seqDisplay)}</td>
-                    <td>${Utils.escapeHTML(registryDateDisplay)}</td>
-                    <td title="${Utils.escapeHTML(permitTypeDisplay)}">${Utils.escapeHTML(permitTypeShort)}</td>
-                    <td>${Utils.escapeHTML(entry.requestingParty)}</td>
-                    <td>${Utils.escapeHTML(entry.location)}</td>
-                    <td>${Utils.escapeHTML(timeFromDisplay)}</td>
-                    <td>${Utils.escapeHTML(timeToDisplay)}</td>
-                    <td class="font-semibold">${Utils.escapeHTML(String(totalDisp))}</td>
-                    <td>${Utils.escapeHTML(entry.authorizedParty)}</td>
-                    <td class="max-w-xs truncate" title="${Utils.escapeHTML(entry.workDescription)}">${Utils.escapeHTML(entry.workDescription).substring(0, 30)}...</td>
-                    <td>${Utils.escapeHTML(entry.supervisor1)}</td>
-                    <td>${Utils.escapeHTML(entry.supervisor2)}</td>
-                    <td>
-                        <span class="badge ${statusClass}">
-                            <i class="fas ${statusIcon} ml-1"></i>
-                            ${Utils.escapeHTML(String(statusText))}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="flex items-center gap-1 flex-wrap">
-                            ${entry.isManualEntry ? `
-                                <button class="btn btn-primary btn-sm" onclick="PTW.viewManualPermitDetails('${entry.id}')" title="${t('module.ptw.registry.viewDetails', 'عرض التفاصيل')}">
-                                    <i class="fas fa-eye ml-1"></i> ${t('module.ptw.registry.viewDetails', 'عرض التفاصيل')}
-                                </button>
-                            ` : `
-                                <button class="btn btn-primary btn-sm" onclick="PTW.viewRegistryDetails('${entry.permitId}')" title="${t('module.ptw.registry.viewDetails', 'عرض التفاصيل')}">
-                                    <i class="fas fa-eye ml-1"></i> ${t('module.ptw.registry.viewDetails', 'عرض التفاصيل')}
-                                </button>
-                            `}
-                        </div>
-                    </td>
-                </tr>
-            `;
-        });
-
+        tableHTML += sortedData.map((entry) => this._renderRegistryTableRow(entry)).join('');
         tableHTML += '</tbody></table>';
         return `<div class="ptw-table-wrapper">${tableHTML}</div>`;
     },
@@ -8576,8 +8716,7 @@ const PTW = {
             this.loadPTWList(true);
             const registryContent = document.getElementById('ptw-registry-content');
             if (registryContent && registryContent.style.display !== 'none') {
-                registryContent.innerHTML = this.renderRegistryContent();
-                this.setupRegistryEventListeners();
+                this._refreshRegistryViewLight(true);
             }
 
             Notification.success(this._t('module.ptw.notify.deleted', 'تم حذف التصريح بنجاح'));
@@ -11810,8 +11949,7 @@ const PTW = {
             // تحديث جميع التبويبات بشكل متسق
             const registryContent = document.getElementById('ptw-registry-content');
             if (registryContent && (this.currentTab === 'registry' || registryContent.style.display !== 'none')) {
-                registryContent.innerHTML = this.renderRegistryContent();
-                this.setupRegistryEventListeners();
+                this._refreshRegistryViewLight(true);
             }
             const permitsContent = document.getElementById('ptw-permits-content');
             if (permitsContent && (this.currentTab === 'permits' || permitsContent.style.display !== 'none')) {
@@ -11915,8 +12053,7 @@ const PTW = {
             if (this.currentTab === 'registry') {
                 const registryContent = document.getElementById('ptw-registry-content');
                 if (registryContent) {
-                    registryContent.innerHTML = this.renderRegistryContent();
-                    this.setupRegistryEventListeners();
+                    this._refreshRegistryViewLight(true);
                 }
             }
 
@@ -11960,8 +12097,7 @@ const PTW = {
         if (this.currentTab === 'registry') {
             const registryContent = document.getElementById('ptw-registry-content');
             if (registryContent) {
-                registryContent.innerHTML = this.renderRegistryContent();
-                this.setupRegistryEventListeners();
+                this._refreshRegistryViewLight(true);
             }
         }
 
@@ -12434,8 +12570,7 @@ const PTW = {
             // تحديث الواجهة
             const registryContent = document.getElementById('ptw-registry-content');
             if (registryContent && this.currentTab === 'registry') {
-                registryContent.innerHTML = this.renderRegistryContent();
-                this.setupRegistryEventListeners();
+                this._refreshRegistryViewLight(true);
             }
 
             Loading.hide();
