@@ -9,6 +9,7 @@ const PTW = {
     formCircuitOwnerId: '__default__',
     formCircuitName: '',
     _loadPTWListTimeout: null, // للتحكم في التحميل الزائد
+    _ptwBackendLoadPromise: null, // منع تكرار جلب الخادم
     _isSubmitting: false, // منع الحفظ المتكرر
     _i18nSectionObserver: null,
     _i18nBodyObserver: null,
@@ -1955,7 +1956,8 @@ const PTW = {
     /**
      * إضافة تصريح للسجل (يُستدعى تلقائياً)
      */
-    async addToRegistry(permit) {
+    async addToRegistry(permit, options = {}) {
+        const { skipSave = false } = options;
         try {
             if (!permit || !permit.id) {
                 Utils.safeWarn('⚠️ لا يمكن إضافة تصريح للسجل: بيانات التصريح غير صالحة');
@@ -1979,13 +1981,13 @@ const PTW = {
             );
             if (existingEntry) {
                 Utils.safeLog('🔄 السجل موجود بالفعل - سيتم تحديثه');
-                return await this.updateRegistryEntry(permit);
+                return await this.updateRegistryEntry(permit, options);
             }
 
             const entry = this.createRegistryEntry(permit);
             if (entry) {
                 this.registryData.push(entry);
-                await this.saveRegistryData();
+                if (!skipSave) await this.saveRegistryData();
                 Utils.safeLog(`✅ تم تسجيل التصريح #${entry.sequentialNumber} في السجل (ID: ${entry.id})`);
             } else {
                 Utils.safeError('❌ فشل إنشاء سجل التصريح');
@@ -1998,10 +2000,11 @@ const PTW = {
     /**
      * تحديث سجل تصريح
      */
-    async updateRegistryEntry(permit) {
+    async updateRegistryEntry(permit, options = {}) {
+        const { skipSave = false } = options;
         const entryIndex = this.registryData.findIndex(r => r.permitId === permit.id);
         if (entryIndex === -1) {
-            return this.addToRegistry(permit);
+            return this.addToRegistry(permit, options);
         }
 
         const entry = this.registryData[entryIndex];
@@ -2092,7 +2095,7 @@ const PTW = {
         }
 
         this.registryData[entryIndex] = entry;
-        await this.saveRegistryData();
+        if (!skipSave) await this.saveRegistryData();
     },
 
     /**
@@ -2242,14 +2245,89 @@ const PTW = {
      */
     async syncRegistryWithPermits() {
         const permits = AppState.appData.ptw || [];
+        if (!permits.length) return;
+        if (!Array.isArray(this.registryData)) this.initRegistry();
+        let dirty = false;
         for (const permit of permits) {
+            if (!permit?.id) continue;
             const existingEntry = this.registryData.find(r => r.permitId === permit.id);
             if (!existingEntry) {
-                await this.addToRegistry(permit);
+                await this.addToRegistry(permit, { skipSave: true });
+                dirty = true;
             } else {
-                await this.updateRegistryEntry(permit);
+                await this.updateRegistryEntry(permit, { skipSave: true });
+                dirty = true;
             }
         }
+        if (dirty) await this.saveRegistryData();
+    },
+
+    /** هل توجد بيانات محلية لعرض فوري دون انتظار الخادم؟ */
+    _hasLocalPtwCache() {
+        const ptwCount = Array.isArray(AppState?.appData?.ptw) ? AppState.appData.ptw.length : 0;
+        const registryCount = Array.isArray(this.registryData) ? this.registryData.length : 0;
+        const appRegistryCount = Array.isArray(AppState?.appData?.ptwRegistry) ? AppState.appData.ptwRegistry.length : 0;
+        return ptwCount > 0 || registryCount > 0 || appRegistryCount > 0;
+    },
+
+    /** تحديث التبويب النشط بعد مزامنة الخادم — دون حجب العرض الأولي */
+    _refreshActiveTabAfterBackendSync() {
+        const tab = this.currentTab || 'permits';
+        try {
+            if (tab === 'permits') {
+                const permitsContent = document.getElementById('ptw-permits-content');
+                if (permitsContent && permitsContent.style.display !== 'none') {
+                    this.loadPTWList(true);
+                }
+            } else if (tab === 'registry') {
+                const registryContent = document.getElementById('ptw-registry-content');
+                if (registryContent && registryContent.style.display !== 'none') {
+                    registryContent.innerHTML = this.renderRegistryContent();
+                    this.setupRegistryEventListeners();
+                }
+            }
+        } catch (error) {
+            Utils.safeWarn('⚠️ تعذر تحديث عرض PTW بعد المزامنة:', error);
+        }
+    },
+
+    /** بدء جلب PTW + السجل من الخادم (طلب واحد مشترك) */
+    _startPtwBackendSync() {
+        if (this._ptwBackendLoadPromise) return this._ptwBackendLoadPromise;
+
+        const loadDataPromises = [
+            this.loadPTWFromBackend().catch(error => {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ تعذر تحميل تصاريح العمل من Backend:', error);
+                }
+            }),
+            this.loadRegistryFromBackend().catch(error => {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ تعذر تحميل السجل من Backend:', error);
+                }
+                return false;
+            }).then((loadedFromBackend) => {
+                if (!loadedFromBackend) {
+                    return this.syncRegistryWithPermits().catch(error => {
+                        if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                            Utils.safeWarn('⚠️ تعذر مزامنة السجل مع التصاريح:', error);
+                        }
+                    });
+                }
+            })
+        ];
+
+        this._ptwBackendLoadPromise = Promise.all(loadDataPromises)
+            .then(() => this._refreshActiveTabAfterBackendSync())
+            .catch(error => {
+                Utils.safeWarn('⚠️ تعذر تحميل بعض بيانات PTW:', error);
+                this._refreshActiveTabAfterBackendSync();
+            })
+            .finally(() => {
+                this._ptwBackendLoadPromise = null;
+            });
+
+        return this._ptwBackendLoadPromise;
     },
 
     async load() {
@@ -2316,56 +2394,12 @@ const PTW = {
             this._hydrateMapCoordinatesFromLocal();
             this._scheduleMapCoordinatesBackgroundSync();
 
-            // تحميل البيانات من Backend بشكل غير متزامن
-            const loadDataPromises = [];
-
-            // تحميل تصاريح العمل من Backend
-            loadDataPromises.push(
-                this.loadPTWFromBackend().catch(error => {
-                    if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                        Utils.safeWarn('⚠️ تعذر تحميل تصاريح العمل من Backend:', error);
-                    }
-                })
-            );
-
-            // تهيئة بيانات السجل (بدون مزامنة - ننتظر تحميل Backend)
+            // تهيئة بيانات السجل من الكاش المحلي فوراً
             this.initRegistry(true);
+            const hasLocalCache = this._hasLocalPtwCache();
 
-            // تحميل سجل التصاريح من Backend
-            loadDataPromises.push(
-                this.loadRegistryFromBackend().catch(error => {
-                    if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                        Utils.safeWarn('⚠️ تعذر تحميل السجل من Backend:', error);
-                    }
-                }).then((loadedFromBackend) => {
-                    // بعد تحميل السجل من Backend، قم بمزامنة مع التصاريح
-                    // فقط إذا لم يتم تحميل البيانات من Backend (لأن Backend هو المصدر الأساسي)
-                    if (!loadedFromBackend) {
-                        return this.syncRegistryWithPermits().catch(error => {
-                            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                                Utils.safeWarn('⚠️ تعذر مزامنة السجل مع التصاريح:', error);
-                            }
-                        });
-                    }
-                })
-            );
-
-            // تحميل البيانات فوراً بدون تأخير - تحسين المزامنة
-            // استخدام requestAnimationFrame لتسريع البدء
-            requestAnimationFrame(() => {
-                Promise.all(loadDataPromises).then(() => {
-                    // تحديث العرض بعد تحميل البيانات
-                    if (this.currentTab === 'permits') {
-                        this.loadPTWList(true);
-                    }
-                }).catch(error => {
-                    Utils.safeWarn('⚠️ تعذر تحميل بعض بيانات PTW:', error);
-                    // تحديث العرض حتى في حالة الخطأ
-                    if (this.currentTab === 'permits') {
-                        this.loadPTWList(true);
-                    }
-                });
-            });
+            // مزامنة الخادم بالخلفية — لا تحجب الواجهة
+            this._startPtwBackendSync();
 
             section.innerHTML = `
             <div class="section-header">
@@ -2449,6 +2483,7 @@ const PTW = {
             <!-- محتوى التبويبات -->
             <div id="ptw-tab-content" class="min-h-[500px]">
                 <div id="ptw-permits-content" class="fade-in">
+                    ${hasLocalCache ? '<div id="ptw-permits-mount"></div>' : `
                     <div class="content-card">
                         <div class="card-body">
                             <div class="empty-state">
@@ -2460,10 +2495,9 @@ const PTW = {
                                 <p class="text-gray-500">${t('module.ptw.loading.permits', 'جاري تحميل قائمة التصاريح...')}</p>
                             </div>
                         </div>
-                    </div>
+                    </div>`}
                 </div>
-                <div id="ptw-registry-content" style="display: none;" class="fade-in">
-                    ${this.renderRegistryContent()}
+                <div id="ptw-registry-content" style="display: none;" class="fade-in" data-registry-lazy="1">
                 </div>
                 <div id="ptw-map-content" style="display: none; flex-direction: column; height: calc(100vh - 280px); min-height: 600px; width: 100%;" class="fade-in">
                     ${this.renderMapContent()}
@@ -2483,15 +2517,16 @@ const PTW = {
             this.setupEventListeners();
             this.setupRegistryEventListeners();
             
-            // ✅ تحميل القائمة فوراً بعد عرض الواجهة
-            setTimeout(async () => {
-                try {
-                    const permitsContent = document.getElementById('ptw-permits-content');
-                    if (!permitsContent) return;
-                    
-                    const listContent = await this.renderList().catch(error => {
-                        Utils.safeWarn('⚠️ خطأ في تحميل القائمة:', error);
-                        return `
+            // ✅ عرض القائمة فوراً من الكاش المحلي — ثم تحديث صامت بعد الخادم
+            requestAnimationFrame(() => {
+                setTimeout(async () => {
+                    try {
+                        const permitsContent = document.getElementById('ptw-permits-content');
+                        if (!permitsContent) return;
+
+                        const listContent = await this.renderList().catch(error => {
+                            Utils.safeWarn('⚠️ خطأ في تحميل القائمة:', error);
+                            return `
                             <div class="content-card">
                                 <div class="card-body">
                                     <div class="empty-state">
@@ -2505,16 +2540,17 @@ const PTW = {
                                 </div>
                             </div>
                         `;
-                    });
-                    
-                    permitsContent.innerHTML = listContent;
-                    this.applyModuleI18n(permitsContent);
-                    // استخدام immediate = true في التحميل الأولي
-                    this.loadPTWList(true);
-                } catch (error) {
-                    Utils.safeWarn('⚠️ خطأ في تحميل القائمة:', error);
-                }
-            }, 0);
+                        });
+
+                        permitsContent.innerHTML = listContent;
+                        this.applyModuleI18n(permitsContent);
+                        this.setupEventListeners();
+                        this.loadPTWList(true);
+                    } catch (error) {
+                        Utils.safeWarn('⚠️ خطأ في تحميل القائمة:', error);
+                    }
+                }, 0);
+            });
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
                 Utils.safeError('❌ خطأ في تحميل مديول PTW:', error);
@@ -2668,7 +2704,10 @@ const PTW = {
             if (registryContent) {
                 registryContent.style.display = 'block';
                 registryContent.style.visibility = 'visible';
-                registryContent.innerHTML = this.renderRegistryContent();
+                if (registryContent.getAttribute('data-registry-lazy') === '1' || !registryContent.innerHTML.trim()) {
+                    registryContent.innerHTML = this.renderRegistryContent();
+                    registryContent.removeAttribute('data-registry-lazy');
+                }
                 this.setupRegistryEventListeners();
             }
         } else if (tab === 'map') {
@@ -2866,10 +2905,12 @@ const PTW = {
         try {
             if (tab === 'permits') {
                 this.loadPTWList(true);
+                this._startPtwBackendSync();
                 done();
             } else if (tab === 'registry' && registryContent) {
                 registryContent.innerHTML = this.renderRegistryContent();
                 this.setupRegistryEventListeners();
+                this._startPtwBackendSync();
                 done();
             } else if (tab === 'map' && mapContent) {
                 if (this.isMapInstanceAlive()) {
@@ -12425,6 +12466,7 @@ const PTW = {
 
     async renderList() {
         const { source: sourceItems, merged: allItems, permitsFromList, permitsFromRegistry } = this.getPermitMetricsDataset();
+        const hasLocalRows = sourceItems.length > 0;
         const totalCount = sourceItems.length;
         const openCount = sourceItems.filter(p => p && this.isPermitOpenStatus(p.status)).length;
         const closedCount = sourceItems.filter(p => p && this.isPermitClosedStatus(p.status)).length;
@@ -12709,7 +12751,8 @@ const PTW = {
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
+                                ${hasLocalRows ? '' : `
+                                <tr data-ptw-loading="1">
                                     <td colspan="8" class="text-center text-gray-500 py-8">
                                         <div style="width: 300px; margin: 0 auto 16px;">
                                             <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
@@ -12718,7 +12761,7 @@ const PTW = {
                                         </div>
                                         <p class="text-gray-500">جاري التحميل...</p>
                                     </td>
-                                </tr>
+                                </tr>`}
                             </tbody>
                         </table>
                     </div>
@@ -18732,12 +18775,16 @@ const PTW = {
 
         const executeLoad = () => {
             try {
-                this.updateKPIs();
                 const container = document.querySelector('#ptw-table-container');
                 if (!container) return;
 
                 // التأكد من وجود الجدول
                 let table = container.querySelector('table');
+                const tbodyBefore = table?.querySelector('tbody');
+                const hasPopulatedRows = tbodyBefore
+                    && tbodyBefore.querySelectorAll('tr').length > 0
+                    && !tbodyBefore.querySelector('tr[data-ptw-loading="1"]');
+
                 if (!table) {
                     // إنشاء الجدول إذا لم يكن موجوداً
                     table = document.createElement('table');
@@ -18777,7 +18824,7 @@ const PTW = {
                             Utils.safeError('❌ خطأ في appendChild للجدول:', error);
                         }
                     }
-                } else {
+                } else if (!hasPopulatedRows) {
                     // ✅ التحقق من أن table متصل بالـ DOM قبل التعديل
                     if (table.parentNode && document.body.contains(table)) {
                         // التأكد من وجود thead و tbody
