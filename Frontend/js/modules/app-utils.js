@@ -1382,6 +1382,20 @@ const Permissions = {
         if (!Array.isArray(state.sites)) {
             state.sites = [];
         }
+        const emptySite = this.findEmptyFormSettingsSite(state.sites);
+        if (emptySite) {
+            Notification.warning('يوجد موقع بدون اسم. أكمله قبل إضافة موقع جديد.');
+            const previousSiteId = state.selectedSiteId;
+            state.selectedSiteId = emptySite.id;
+            this.updateFormSettingsSiteSelection(previousSiteId, emptySite.id);
+            this.refreshFormSettingsUI('sites');
+            this.refreshFormSettingsPlacesPanel(state, emptySite);
+            setTimeout(() => {
+                const input = document.querySelector(`[data-field="site-name"][data-site-id="${emptySite.id}"]`);
+                if (input) input.focus();
+            }, 0);
+            return;
+        }
         const newSite = {
             id: Utils.generateId('SITE'),
             name: '',
@@ -1437,6 +1451,11 @@ const Permissions = {
         if (!state || !Array.isArray(state.sites)) return;
         const site = state.sites.find((item) => item.id === siteId);
         if (site) {
+            const trimmed = String(value || '').trim();
+            if (trimmed && this.isDuplicateFormSettingsSiteName(state.sites, trimmed, siteId)) {
+                Notification.warning(`الموقع «${trimmed}» موجود مسبقاً. لا يمكن تكرار اسم الموقع.`);
+                return;
+            }
             site.name = value;
             this.invalidateFormSettingsPlacesCache(siteId);
             if (state.selectedSiteId === siteId) {
@@ -1462,6 +1481,17 @@ const Permissions = {
         if (!Array.isArray(site.places)) {
             site.places = [];
         }
+        const emptyPlace = this.findEmptyFormSettingsPlace(site);
+        if (emptyPlace) {
+            Notification.warning('يوجد مكان بدون اسم في هذا الموقع. أكمله قبل إضافة مكان جديد.');
+            this.invalidateFormSettingsPlacesCache(siteId);
+            this.refreshFormSettingsUI('places');
+            setTimeout(() => {
+                const input = document.querySelector(`[data-field="place-name"][data-place-id="${emptyPlace.id}"]`);
+                if (input) input.focus();
+            }, 0);
+            return;
+        }
         const newPlace = {
             id: Utils.generateId('PLACE'),
             name: ''
@@ -1482,6 +1512,11 @@ const Permissions = {
         if (!site || !Array.isArray(site.places)) return;
         const place = site.places.find((item) => item.id === placeId);
         if (place) {
+            const trimmed = String(value || '').trim();
+            if (trimmed && this.isDuplicateFormSettingsPlaceName(site, trimmed, placeId)) {
+                Notification.warning(`المكان «${trimmed}» موجود مسبقاً داخل هذا الموقع.`);
+                return;
+            }
             place.name = value;
             this.invalidateFormSettingsPlacesCache(state.selectedSiteId);
         }
@@ -1582,6 +1617,7 @@ const Permissions = {
 
     sanitizeSites(rawSites = []) {
         const sites = [];
+        const siteNameKeys = new Set();
         for (const site of rawSites) {
             const id = site.id || Utils.generateId('SITE');
             const name = (site.name || '').trim();
@@ -1591,8 +1627,17 @@ const Permissions = {
                     focusSelector: `[data-field="site-name"][data-site-id="${id}"]`
                 };
             }
+            const siteKey = this.normalizeFormSettingsImportKey(name);
+            if (siteNameKeys.has(siteKey)) {
+                return {
+                    error: `اسم الموقع «${name}» مكرر. لا يمكن حفظ موقعين بنفس الاسم.`,
+                    focusSelector: `[data-field="site-name"][data-site-id="${id}"]`
+                };
+            }
+            siteNameKeys.add(siteKey);
             const placesRaw = Array.isArray(site.places) ? site.places : [];
             const places = [];
+            const placeNameKeys = new Set();
             for (const place of placesRaw) {
                 const placeId = place.id || Utils.generateId('PLACE');
                 const placeName = (place.name || '').trim();
@@ -1602,6 +1647,14 @@ const Permissions = {
                         focusSelector: `[data-field="place-name"][data-place-id="${placeId}"]`
                     };
                 }
+                const placeKey = this.normalizeFormSettingsImportKey(placeName);
+                if (placeNameKeys.has(placeKey)) {
+                    return {
+                        error: `اسم المكان «${placeName}» مكرر داخل الموقع «${name}».`,
+                        focusSelector: `[data-field="place-name"][data-place-id="${placeId}"]`
+                    };
+                }
+                placeNameKeys.add(placeKey);
                 places.push({ id: placeId, name: placeName });
             }
             sites.push({ id, name, places });
@@ -1680,7 +1733,12 @@ const Permissions = {
                 if (result && result.success) {
                     Utils.safeLog('✅ تم حفظ إعدادات النماذج في Google Sheets بنجاح');
                 } else {
-                    Utils.safeWarn('⚠️ فشل حفظ إعدادات النماذج في Google Sheets:', result?.message);
+                    const msg = result?.message || 'فشل حفظ إعدادات النماذج في Google Sheets';
+                    Utils.safeWarn('⚠️ فشل حفظ إعدادات النماذج في Google Sheets:', msg);
+                    if (result?.errorCode === 'DUPLICATE_ENTRY') {
+                        Notification.error(msg);
+                        return;
+                    }
                 }
             } catch (error) {
                 Utils.safeWarn('⚠️ خطأ أثناء مزامنة إعدادات النماذج مع Google Sheets:', error);
@@ -1933,6 +1991,34 @@ const Permissions = {
 
     normalizeFormSettingsImportKey(value) {
         return String(value || '').trim().toLowerCase();
+    },
+
+    isDuplicateFormSettingsSiteName(sites, name, excludeSiteId = null) {
+        const key = this.normalizeFormSettingsImportKey(name);
+        if (!key) return false;
+        return (sites || []).some((site) => {
+            if (excludeSiteId && site.id === excludeSiteId) return false;
+            return this.normalizeFormSettingsImportKey(site.name) === key;
+        });
+    },
+
+    isDuplicateFormSettingsPlaceName(site, name, excludePlaceId = null) {
+        const key = this.normalizeFormSettingsImportKey(name);
+        if (!key) return false;
+        const places = Array.isArray(site?.places) ? site.places : [];
+        return places.some((place) => {
+            if (excludePlaceId && place.id === excludePlaceId) return false;
+            return this.normalizeFormSettingsImportKey(place.name) === key;
+        });
+    },
+
+    findEmptyFormSettingsSite(sites) {
+        return (sites || []).find((site) => !String(site?.name || '').trim()) || null;
+    },
+
+    findEmptyFormSettingsPlace(site) {
+        if (!site || !Array.isArray(site.places)) return null;
+        return site.places.find((place) => !String(place?.name || '').trim()) || null;
     },
 
     findExistingFormSettingsSite(sites, importedSite) {

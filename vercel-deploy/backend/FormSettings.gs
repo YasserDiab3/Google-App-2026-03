@@ -701,6 +701,50 @@ function getAllSafetyMembersFromSheet() {
 // ============================================
 
 /**
+ * تطبيع اسم للمقارنة (منع التكرار بدون حساسية لحالة الأحرف)
+ */
+function normalizeFormSettingsNameKey_(name) {
+    return String(name || '').trim().toLowerCase();
+}
+
+/**
+ * التحقق من عدم تكرار أسماء المواقع أو الأماكن داخل نفس الموقع
+ */
+function validateFormSettingsSitesNoDuplicates_(sites) {
+    if (!Array.isArray(sites)) {
+        return { valid: false, message: 'صيغة المواقع غير صحيحة.' };
+    }
+    const siteKeys = {};
+    for (var i = 0; i < sites.length; i++) {
+        var site = sites[i] || {};
+        var siteName = String(site.name || '').trim();
+        if (!siteName) {
+            return { valid: false, message: 'يرجى إدخال اسم لكل موقع.' };
+        }
+        var siteKey = normalizeFormSettingsNameKey_(siteName);
+        if (siteKeys[siteKey]) {
+            return { valid: false, message: 'اسم الموقع «' + siteName + '» مكرر. لا يمكن حفظ موقعين بنفس الاسم.' };
+        }
+        siteKeys[siteKey] = true;
+        var places = Array.isArray(site.places) ? site.places : [];
+        var placeKeys = {};
+        for (var j = 0; j < places.length; j++) {
+            var place = places[j] || {};
+            var placeName = String(place.name || '').trim();
+            if (!placeName) {
+                return { valid: false, message: 'يرجى إدخال اسم لجميع الأماكن داخل الموقع «' + siteName + '».' };
+            }
+            var placeKey = normalizeFormSettingsNameKey_(placeName);
+            if (placeKeys[placeKey]) {
+                return { valid: false, message: 'اسم المكان «' + placeName + '» مكرر داخل الموقع «' + siteName + '».' };
+            }
+            placeKeys[placeKey] = true;
+        }
+    }
+    return { valid: true };
+}
+
+/**
  * حفظ إعدادات النماذج (للتوافق مع النظام القديم)
  * هذه الدالة تحول البيانات القديمة إلى الجداول الجديدة
  */
@@ -739,6 +783,15 @@ function saveFormSettingsToSheet(settingsData) {
         }
         if (typeof safetyTeam === 'string') {
             try { safetyTeam = JSON.parse(safetyTeam); } catch (e) { safetyTeam = []; }
+        }
+
+        const duplicateCheck = validateFormSettingsSitesNoDuplicates_(sites);
+        if (!duplicateCheck.valid) {
+            return {
+                success: false,
+                message: duplicateCheck.message || 'لا يمكن حفظ مواقع أو أماكن مكررة.',
+                errorCode: 'DUPLICATE_ENTRY'
+            };
         }
         
         // قراءة البيانات الحالية للدمج
