@@ -1971,6 +1971,124 @@ const PTW = {
         this._mountRegistryTableRows(false);
     },
 
+    /** placeholder خفيف لتبويب السجل — لا يحجب فتح المديول */
+    _renderRegistryPlaceholderShell(t) {
+        const label = typeof t === 'function'
+            ? t('module.ptw.loading.registry', 'جاري تحميل سجل حصر التصاريح...')
+            : 'جاري تحميل سجل حصر التصاريح...';
+        return `
+            <div class="content-card">
+                <div class="card-body">
+                    <div class="empty-state">
+                        <div style="width: 300px; margin: 0 auto 16px;">
+                            <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
+                                <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
+                            </div>
+                        </div>
+                        <p class="text-gray-500">${label}</p>
+                    </div>
+                </div>
+            </div>`;
+    },
+
+    /** بناء واجهة السجل بعد أول رسم — خارج مسار innerHTML الثقيل */
+    _mountRegistryShell() {
+        const registryContent = document.getElementById('ptw-registry-content');
+        if (!registryContent || registryContent.getAttribute('data-registry-pending') !== '1') return;
+        try {
+            registryContent.innerHTML = this.renderRegistryContent({ tableMode: 'shell' });
+            registryContent.removeAttribute('data-registry-pending');
+            this.setupRegistryEventListeners();
+            const warm = () => this._warmRegistryView();
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(warm, { timeout: 900 });
+            } else {
+                setTimeout(warm, 0);
+            }
+        } catch (err) {
+            Utils.safeWarn('⚠️ تعذر بناء واجهة السجل:', err);
+        }
+    },
+
+    /** placeholder خفيف لتبويب الخريطة */
+    _renderMapPlaceholderShell(t) {
+        const label = typeof t === 'function'
+            ? t('module.ptw.map.loadingMap', 'جاري تحميل الخريطة...')
+            : 'جاري تحميل الخريطة...';
+        return `
+            <div class="content-card" style="height:100%;min-height:600px;">
+                <div class="card-body flex items-center justify-center" style="min-height:560px;">
+                    <div class="empty-state">
+                        <i class="fas fa-circle-notch fa-spin text-4xl text-blue-500 mb-4"></i>
+                        <p class="text-gray-500">${label}</p>
+                    </div>
+                </div>
+            </div>`;
+    },
+
+    _mountMapShell() {
+        const mapContent = document.getElementById('ptw-map-content');
+        if (!mapContent || mapContent.getAttribute('data-map-pending') !== '1') return;
+        try {
+            mapContent.innerHTML = this.renderMapContent();
+            mapContent.removeAttribute('data-map-pending');
+            this.applyModuleI18n(mapContent);
+        } catch (err) {
+            Utils.safeWarn('⚠️ تعذر بناء واجهة الخريطة:', err);
+        }
+    },
+
+    /** إظهار تبويب الخريطة بأبعاد صحيحة بعد إخفاء سابق */
+    _resetMapTabVisibility(mapContent) {
+        if (!mapContent) return;
+        mapContent.style.display = 'flex';
+        mapContent.style.flexDirection = 'column';
+        mapContent.style.height = 'calc(100vh - 280px)';
+        mapContent.style.minHeight = '600px';
+        mapContent.style.width = '100%';
+        mapContent.style.visibility = 'visible';
+        mapContent.style.opacity = '1';
+        mapContent.style.position = 'relative';
+        mapContent.style.left = 'auto';
+        mapContent.style.overflow = 'visible';
+        mapContent.style.pointerEvents = 'auto';
+        mapContent.style.zIndex = 'auto';
+    },
+
+    /** التأكد من DOM الخريطة قبل التهيئة */
+    _ensureMapTabDom(mapContent) {
+        if (!mapContent) return false;
+        if (mapContent.getAttribute('data-map-pending') === '1') {
+            this._mountMapShell();
+        }
+        if (!document.getElementById('ptw-map')) {
+            mapContent.innerHTML = this.renderMapContent();
+            mapContent.removeAttribute('data-map-pending');
+            this.applyModuleI18n(mapContent);
+        }
+        mapContent.removeAttribute('data-tab-lazy');
+        const mapContainer = document.getElementById('ptw-map-container');
+        const mapDiv = document.getElementById('ptw-map');
+        if (mapContainer) {
+            mapContainer.style.height = '100%';
+            mapContainer.style.minHeight = '600px';
+            mapContainer.style.width = '100%';
+            mapContainer.style.display = 'block';
+            mapContainer.style.visibility = 'visible';
+            mapContainer.style.position = 'relative';
+        }
+        if (mapDiv) {
+            mapDiv.style.height = '100%';
+            mapDiv.style.width = '100%';
+            mapDiv.style.minHeight = '600px';
+            mapDiv.style.display = 'block';
+            mapDiv.style.visibility = 'visible';
+        }
+        const loadingDiv = document.getElementById('ptw-map-loading');
+        if (loadingDiv) loadingDiv.style.display = 'flex';
+        return !!(mapContainer && mapDiv);
+    },
+
     formatPtwMetricCount(value) {
         const num = Number(value);
         if (!Number.isFinite(num)) return '0';
@@ -2503,6 +2621,10 @@ const PTW = {
     _refreshRegistryDomFromCache() {
         const registryContent = document.getElementById('ptw-registry-content');
         if (!registryContent) return;
+        if (registryContent.getAttribute('data-registry-pending') === '1') {
+            this._mountRegistryShell();
+            return;
+        }
         const mount = document.getElementById('ptw-registry-table-mount');
         if (!mount) {
             registryContent.innerHTML = this.renderRegistryContent({ tableMode: 'shell' });
@@ -2882,9 +3004,6 @@ const PTW = {
         };
 
         try {
-            // تهيئة السجل من الكاش قبل بناء الواجهة — كما كان سابقاً
-            this.initRegistry(true);
-
             section.innerHTML = `
             <div class="section-header">
                 <div class="flex items-center justify-between flex-wrap gap-4">
@@ -2969,10 +3088,11 @@ const PTW = {
                 <div id="ptw-permits-content" class="fade-in">
                     ${this._renderPermitsLoadingShell(t)}
                 </div>
-                <div id="ptw-registry-content" style="display: none;" class="fade-in">
-                    ${this.renderRegistryContent({ tableMode: 'shell' })}
+                <div id="ptw-registry-content" style="display: none;" class="fade-in" data-registry-pending="1">
+                    ${this._renderRegistryPlaceholderShell(t)}
                 </div>
-                <div id="ptw-map-content" style="display: none; flex-direction: column; height: calc(100vh - 280px); min-height: 600px; width: 100%;" class="fade-in" data-tab-lazy="map">
+                <div id="ptw-map-content" style="display: none; flex-direction: column; height: calc(100vh - 280px); min-height: 600px; width: 100%;" class="fade-in" data-map-pending="1">
+                    ${this._renderMapPlaceholderShell(t)}
                 </div>
                 <div id="ptw-analysis-content" style="display: none;" class="fade-in" data-tab-lazy="analysis">
                 </div>
@@ -2985,28 +3105,21 @@ const PTW = {
             this.formSettingsState = null;
             this.formSettingsEventsBound = false;
             this.setupEventListeners();
-            this.setupRegistryEventListeners();
             
-            // رسم قائمة التصاريح بالخلفية — السجل جاهز مسبقاً في DOM
+            // عرض فوري ثم تحميل ثانوي — بدون حجب الواجهة
             requestAnimationFrame(() => {
+                try { this.initRegistry(true); } catch (_) { /* ignore */ }
+                this._prewarmLeafletLibrary();
                 this._hydrateMapCoordinatesFromLocal();
                 this._scheduleMapCoordinatesBackgroundSync();
                 this._startPtwBackendSync();
                 this._mountPermitsListContent(t);
-                const warmRegistry = () => this._warmRegistryView();
+                this._mountRegistryShell();
+                const mountMap = () => this._mountMapShell();
                 if (typeof requestIdleCallback === 'function') {
-                    requestIdleCallback(warmRegistry, { timeout: 800 });
+                    requestIdleCallback(mountMap, { timeout: 1200 });
                 } else {
-                    setTimeout(warmRegistry, 0);
-                }
-                const prewarmMap = () => {
-                    this._prewarmLeafletLibrary();
-                    this._prewarmMapTab();
-                };
-                if (typeof requestIdleCallback === 'function') {
-                    requestIdleCallback(prewarmMap, { timeout: 2500 });
-                } else {
-                    setTimeout(prewarmMap, 400);
+                    setTimeout(mountMap, 50);
                 }
             });
         } catch (error) {
@@ -3162,7 +3275,9 @@ const PTW = {
             if (registryContent) {
                 registryContent.style.display = 'block';
                 registryContent.style.visibility = 'visible';
-                if (!registryContent.innerHTML.trim()) {
+                if (registryContent.getAttribute('data-registry-pending') === '1') {
+                    this._mountRegistryShell();
+                } else if (!registryContent.innerHTML.trim()) {
                     this._refreshRegistryDomFromCache();
                 } else {
                     const mount = document.getElementById('ptw-registry-table-mount');
@@ -3176,7 +3291,6 @@ const PTW = {
             if (mapContent) {
                 try {
                     Utils.safeLog('🗺️ Switching to Map Tab');
-                    // التأكد من إخفاء جميع التبويبات الأخرى أولاً بشكل كامل
                     if (permitsContent) {
                         permitsContent.style.display = 'none';
                         permitsContent.style.visibility = 'hidden';
@@ -3193,72 +3307,24 @@ const PTW = {
                         approvalsContent.style.display = 'none';
                         approvalsContent.style.visibility = 'hidden';
                     }
-                    
-                    // إظهار تبويب الخريطة فقط
-                    mapContent.style.display = 'flex';
-                    mapContent.style.flexDirection = 'column';
-                    mapContent.style.height = 'calc(100vh - 280px)';
-                    mapContent.style.minHeight = '600px';
-                    mapContent.style.width = '100%';
-                    mapContent.style.visibility = 'visible';
-                    mapContent.style.opacity = '1';
-                    mapContent.style.position = 'relative';
-                    mapContent.style.left = 'auto';
 
-                    // Check and render map content if missing
-                    const mapContainerCheck = document.getElementById('ptw-map');
-                    if (!mapContainerCheck || mapContent.getAttribute('data-tab-lazy') === 'map') {
-                        mapContent.innerHTML = this.renderMapContent();
-                        mapContent.removeAttribute('data-tab-lazy');
-                    }
+                    this._resetMapTabVisibility(mapContent);
+                    this._ensureMapTabDom(mapContent);
+                    this._prewarmLeafletLibrary();
 
-                    // التأكد من أن الحاوية لها الأبعاد الصحيحة
-                    const mapContainer = document.getElementById('ptw-map-container');
-                    const mapDiv = document.getElementById('ptw-map');
-                    
-                    if (mapContainer) {
-                        // إجبار الأبعاد بشكل صريح
-                        mapContainer.style.height = '100%';
-                        mapContainer.style.minHeight = '600px';
-                        mapContainer.style.width = '100%';
-                        mapContainer.style.display = 'block';
-                        mapContainer.style.visibility = 'visible';
-                        
-                        // استخدام requestAnimationFrame لتجنب FOUC warning
-                        if (document.readyState === 'complete') {
-                            requestAnimationFrame(() => {
-                                const containerStyle = window.getComputedStyle(mapContainer);
-                                if (containerStyle.height === '0px' || containerStyle.height === 'auto') {
-                                    mapContainer.style.height = '600px';
-                                }
-                            });
+                    if (this.mapInitTimeout) clearTimeout(this.mapInitTimeout);
+                    this.mapInitTimeout = null;
+
+                    requestAnimationFrame(() => {
+                        if (this.currentTab !== 'map' || !mapContent || mapContent.style.display === 'none') return;
+                        if (this.isMapInstanceAlive()) {
+                            this.resumeMap();
                         } else {
-                            // تعيين الأبعاد مباشرة إذا لم تكن الصفحة محملة
-                            mapContainer.style.height = '600px';
+                            this.initMap().catch(error => {
+                                Utils.safeWarn('⚠️ فشل تهيئة الخريطة (سيظهر للمستخدم في التبويب):', error?.message || error);
+                            });
                         }
-                    }
-                    
-                    if (mapDiv) {
-                        mapDiv.style.height = '100%';
-                        mapDiv.style.width = '100%';
-                        mapDiv.style.minHeight = '600px';
-                        mapDiv.style.display = 'block';
-                        mapDiv.style.visibility = 'visible';
-                    }
-
-                // تهيئة أو استئناف الخريطة فور جاهزية DOM
-                if (this.mapInitTimeout) clearTimeout(this.mapInitTimeout);
-                this.mapInitTimeout = null;
-                requestAnimationFrame(() => {
-                    if (this.currentTab !== 'map' || !mapContent || mapContent.style.display === 'none') return;
-                    if (this.isMapInstanceAlive()) {
-                        this.resumeMap();
-                    } else {
-                        this.initMap().catch(error => {
-                            Utils.safeWarn('⚠️ فشل تهيئة الخريطة (سيظهر للمستخدم في التبويب):', error?.message || error);
-                        });
-                    }
-                });
+                    });
                 } catch (mapTabError) {
                     Utils.safeWarn('⚠️ خطأ عند فتح تبويب الخرائط:', mapTabError?.message || mapTabError);
                     if (mapContent) {
@@ -3601,48 +3667,23 @@ const PTW = {
         const t = (k, f) => this._t(k, f);
         return `
             <style>
-                #ptw-map-content {
-                    display: flex !important;
-                    flex-direction: column !important;
-                    height: calc(100vh - 280px) !important;
-                    min-height: 600px !important;
-                    width: 100% !important;
-                }
-                /* إخفاء الخريطة في التبويبات الأخرى بشكل كامل */
-                #ptw-permits-content #ptw-map-content,
-                #ptw-registry-content #ptw-map-content,
-                #ptw-analysis-content #ptw-map-content,
-                #ptw-approvals-content #ptw-map-content,
-                #ptw-tab-content:not(:has(#ptw-map-content[style*="display: flex"])) #ptw-map-content {
-                    display: none !important;
-                    visibility: hidden !important;
-                    opacity: 0 !important;
-                    position: absolute !important;
-                    left: -9999px !important;
-                    width: 0 !important;
-                    height: 0 !important;
-                    overflow: hidden !important;
-                    pointer-events: none !important;
-                }
                 #ptw-map-container {
                     flex: 1;
                     width: 100%;
                     position: relative;
                     background: #f3f4f6;
                     overflow: hidden;
-                    display: block !important;
+                    display: block;
                     min-height: 600px;
                     height: 100%;
                 }
                 #ptw-map { 
                     z-index: 1;
-                    width: 100% !important;
-                    height: 100% !important;
+                    width: 100%;
+                    height: 100%;
                     min-height: 600px;
                     position: relative;
-                    display: block !important;
-                    visibility: visible !important;
-                    opacity: 1 !important;
+                    display: block;
                 }
                 .ptw-permit-popup .leaflet-popup-content-wrapper { border-radius: 8px; padding: 0; }
                 .ptw-permit-popup .leaflet-popup-content { margin: 0; min-width: 300px; }
@@ -3849,17 +3890,8 @@ const PTW = {
         return this.ensureLeafletReady().catch(() => {});
     },
 
-    /** تجهيز DOM تبويب الخريطة بالخلفية — فتح أسرع عند النقر */
     _prewarmMapTab() {
-        const mapContent = document.getElementById('ptw-map-content');
-        if (!mapContent || mapContent.getAttribute('data-tab-lazy') !== 'map') return;
-        try {
-            mapContent.innerHTML = this.renderMapContent();
-            mapContent.removeAttribute('data-tab-lazy');
-            this.applyModuleI18n(mapContent);
-        } catch (err) {
-            Utils.safeWarn('⚠️ تعذر تجهيز واجهة الخريطة مسبقاً:', err);
-        }
+        this._mountMapShell();
     },
 
     /** طبقة فضائية — تُنشأ عند الطلب فقط (تخفيف التهيئة الأولية) */
@@ -3902,7 +3934,7 @@ const PTW = {
 
         await new Promise((resolve, reject) => {
             let attempts = 0;
-            const maxAttempts = 50;
+            const maxAttempts = 40;
             const checkInterval = setInterval(() => {
                 attempts++;
                 if (typeof L !== 'undefined' && typeof L.map === 'function') {
@@ -3912,7 +3944,7 @@ const PTW = {
                     clearInterval(checkInterval);
                     reject(new Error('انتهت مهلة تحميل Leaflet'));
                 }
-            }, 100);
+            }, 50);
         });
     },
 
