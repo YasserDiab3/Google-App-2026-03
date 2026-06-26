@@ -2270,21 +2270,27 @@ const PTW = {
         return ptwCount > 0 || registryCount > 0 || appRegistryCount > 0;
     },
 
+    /** تحديث DOM سجل التصاريح من البيانات المحلية (ظاهر أو مخفي) */
+    _refreshRegistryDomFromCache() {
+        const registryContent = document.getElementById('ptw-registry-content');
+        if (!registryContent) return;
+        registryContent.innerHTML = this.renderRegistryContent();
+        registryContent.removeAttribute('data-registry-lazy');
+    },
+
     /** تحديث التبويب النشط بعد مزامنة الخادم — دون حجب العرض الأولي */
     _refreshActiveTabAfterBackendSync() {
         const tab = this.currentTab || 'permits';
         try {
+            // السجل يُحدَّث دائماً في الخلفية ليظهر فوراً عند التبديل
+            this._refreshRegistryDomFromCache();
             if (tab === 'permits') {
                 const permitsContent = document.getElementById('ptw-permits-content');
                 if (permitsContent && permitsContent.style.display !== 'none') {
                     this.loadPTWList(true);
                 }
             } else if (tab === 'registry') {
-                const registryContent = document.getElementById('ptw-registry-content');
-                if (registryContent && registryContent.style.display !== 'none') {
-                    registryContent.innerHTML = this.renderRegistryContent();
-                    this.setupRegistryEventListeners();
-                }
+                this.setupRegistryEventListeners();
             }
         } catch (error) {
             Utils.safeWarn('⚠️ تعذر تحديث عرض PTW بعد المزامنة:', error);
@@ -2627,6 +2633,9 @@ const PTW = {
         };
 
         try {
+            // تهيئة السجل من الكاش قبل بناء الواجهة — كما كان سابقاً
+            this.initRegistry(true);
+
             section.innerHTML = `
             <div class="section-header">
                 <div class="flex items-center justify-between flex-wrap gap-4">
@@ -2711,7 +2720,8 @@ const PTW = {
                 <div id="ptw-permits-content" class="fade-in">
                     ${this._renderPermitsLoadingShell(t)}
                 </div>
-                <div id="ptw-registry-content" style="display: none;" class="fade-in" data-registry-lazy="1">
+                <div id="ptw-registry-content" style="display: none;" class="fade-in">
+                    ${this.renderRegistryContent()}
                 </div>
                 <div id="ptw-map-content" style="display: none; flex-direction: column; height: calc(100vh - 280px); min-height: 600px; width: 100%;" class="fade-in" data-tab-lazy="map">
                 </div>
@@ -2726,13 +2736,12 @@ const PTW = {
             this.formSettingsState = null;
             this.formSettingsEventsBound = false;
             this.setupEventListeners();
-            this.setupEventListeners();
+            this.setupRegistryEventListeners();
             
-            // رسم الهيكل أولاً ثم تحميل البيانات — يمنع الصفحة البيضاء
+            // رسم قائمة التصاريح بالخلفية — السجل جاهز مسبقاً في DOM
             requestAnimationFrame(() => {
                 this._hydrateMapCoordinatesFromLocal();
                 this._scheduleMapCoordinatesBackgroundSync();
-                this.initRegistry(true);
                 this._startPtwBackendSync();
                 this._mountPermitsListContent(t);
             });
@@ -2889,9 +2898,8 @@ const PTW = {
             if (registryContent) {
                 registryContent.style.display = 'block';
                 registryContent.style.visibility = 'visible';
-                if (registryContent.getAttribute('data-registry-lazy') === '1' || !registryContent.innerHTML.trim()) {
-                    registryContent.innerHTML = this.renderRegistryContent();
-                    registryContent.removeAttribute('data-registry-lazy');
+                if (!registryContent.innerHTML.trim()) {
+                    this._refreshRegistryDomFromCache();
                 }
                 this.setupRegistryEventListeners();
             }
