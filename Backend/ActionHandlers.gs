@@ -2301,6 +2301,12 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'ensureContractorEvaluationApprovalRequestsSheet': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var sid = (typeof resolveContractorSpreadsheetId_ === 'function')
+            ? resolveContractorSpreadsheetId_(payload, postData)
+            : (spreadsheetId || getSpreadsheetId());
+        return ensureContractorEvaluationApprovalRequestsSheet_(sid);
+    },
     'approveContractorEvaluationApprovalRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

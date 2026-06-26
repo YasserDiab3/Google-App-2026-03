@@ -9611,24 +9611,17 @@ window.UI = {
                             time: request.createdAt || new Date(),
                             icon: 'fa-clipboard-check',
                             onClick: async () => {
-                                if (typeof Contractors !== 'undefined') {
-                                    const contractorsLink = document.querySelector('a[data-section="contractors"]');
-                                    if (contractorsLink) contractorsLink.click();
-                                    const snapshotId = request.id;
-                                    try {
-                                        if (typeof Contractors.syncPendingEvaluationApprovalRequests === 'function') {
-                                            await Contractors.syncPendingEvaluationApprovalRequests(snapshotId);
-                                        }
-                                        if (typeof Contractors.fetchEvaluationApprovalRequestsFromBackend === 'function') {
-                                            await Contractors.fetchEvaluationApprovalRequestsFromBackend();
-                                        }
-                                    } catch (_fetchErr) { /* ignore */ }
-                                    setTimeout(() => {
-                                        if (Contractors.switchTab) Contractors.switchTab('evaluations');
-                                        if (Contractors.viewApprovalRequest) {
-                                            Contractors.viewApprovalRequest(snapshotId, 'evaluation_approval');
-                                        }
-                                    }, 300);
+                                if (typeof Contractors === 'undefined') return;
+                                const contractorsLink = document.querySelector('a[data-section="contractors"]');
+                                if (contractorsLink) contractorsLink.click();
+                                const snapshotId = request.id;
+                                try {
+                                    if (Contractors.switchTab) Contractors.switchTab('approval-request');
+                                    if (Contractors.viewApprovalRequest) {
+                                        await Contractors.viewApprovalRequest(snapshotId, 'evaluation_approval');
+                                    }
+                                } catch (_openErr) {
+                                    Notification.error('تعذر فتح طلب التقييم');
                                 }
                             }
                         });

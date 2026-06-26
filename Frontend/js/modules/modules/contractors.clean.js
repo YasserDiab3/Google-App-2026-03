@@ -557,6 +557,7 @@ const Contractors = {
             this._isLoading = false;
 
             this.syncPendingEvaluationApprovalRequests()
+                .then(() => this.bootstrapEvaluationApprovalSheet_())
                 .then(() => this.fetchEvaluationApprovalRequestsFromBackend())
                 .then(() => {
                     this.refreshEvaluationApprovalRequestsSection();
@@ -670,6 +671,7 @@ const Contractors = {
 
         if (tab === 'approval-request' || tab === 'evaluations') {
             this.syncPendingEvaluationApprovalRequests()
+                .then(() => this.bootstrapEvaluationApprovalSheet_())
                 .then(() => this.fetchEvaluationApprovalRequestsFromBackend())
                 .then(() => {
                     this.refreshEvaluationApprovalRequestsSection();
@@ -8317,6 +8319,12 @@ const Contractors = {
             if (typeof AppUI !== 'undefined' && AppUI.updateNotificationsBadge) {
                 AppUI.updateNotificationsBadge();
             }
+            if (failed && !synced && tid) {
+                const failedReq = this.findEvaluationApprovalRequest(tid);
+                if (failedReq?._syncErrorMessage) {
+                    Notification.error('فشل مزامنة طلب التقييم: ' + failedReq._syncErrorMessage);
+                }
+            }
         }
         return { synced, failed };
     },
@@ -9419,103 +9427,157 @@ const Contractors = {
         }
     },
 
+    async postEvaluationApprovalToBackend_(payload) {
+        const normalized = { ...(payload || {}) };
+        normalized.requestType = 'evaluation';
+        if (normalized.evaluationData && typeof normalized.evaluationData === 'object') {
+            try {
+                normalized.evaluationData = JSON.stringify(normalized.evaluationData);
+            } catch (_stringifyErr) {
+                return { success: false, message: 'تعذر تجهيز بيانات التقييم للإرسال' };
+            }
+        }
+        const actions = ['addContractorEvaluationApprovalRequest', 'addContractorApprovalRequest'];
+        let lastMessage = '';
+        for (const action of actions) {
+            try {
+                const result = await GoogleIntegration.sendRequest({ action, data: normalized });
+                if (result?.success) return result;
+                lastMessage = result?.message || lastMessage;
+                Utils.safeWarn(`⚠️ فشل ${action}:`, lastMessage);
+            } catch (err) {
+                lastMessage = err?.message || String(err);
+                Utils.safeWarn(`⚠️ خطأ ${action}:`, lastMessage);
+            }
+        }
+        return {
+            success: false,
+            message: lastMessage || 'فشل حفظ طلب التقييم في قاعدة البيانات'
+        };
+    },
+
+    _findEvaluationApprovalRequestIndex_(matchId) {
+        const mid = String(matchId || '').trim();
+        if (!mid) return -1;
+        return (AppState.appData.contractorEvaluationApprovalRequests || []).findIndex((r) => {
+            if (!r) return false;
+            const id = String(r.id || '').trim();
+            const legacy = String(r.legacyTempId || r._tempId || '').trim();
+            return id === mid || legacy === mid;
+        });
+    },
+
+    _markEvaluationApprovalSyncError_(matchId, message) {
+        const tempIndex = this._findEvaluationApprovalRequestIndex_(matchId);
+        if (tempIndex === -1) return;
+        const row = AppState.appData.contractorEvaluationApprovalRequests[tempIndex];
+        row._isPendingSync = false;
+        row._syncError = true;
+        row._syncErrorMessage = message || 'فشل المزامنة';
+    },
+
+    async bootstrapEvaluationApprovalSheet_() {
+        if (typeof GoogleIntegration === 'undefined') return false;
+        try {
+            const res = await GoogleIntegration.sendRequest({
+                action: 'getAllContractorEvaluationApprovalRequests',
+                data: { forceRefresh: true, skipCache: true }
+            });
+            return !!(res?.success);
+        } catch (_err) {
+            return false;
+        }
+    },
+
     async syncEvaluationApprovalRequestToBackend(requestData, tempId) {
         const sourceRequest = requestData;
         const syncKey = `sync_eval_${tempId || sourceRequest?.id || Date.now()}`;
-        if (this._activeSyncs && this._activeSyncs[syncKey]) return;
         if (!this._activeSyncs) this._activeSyncs = {};
-        this._activeSyncs[syncKey] = true;
+        if (this._activeSyncs[syncKey]) {
+            return this._activeSyncs[syncKey];
+        }
 
+        const syncPromise = (async () => {
+            try {
+                this.ensureEvaluationApprovalRequestsSetup();
+                const payload = { ...sourceRequest };
+                const actualTempId = tempId || payload.id;
+                const isTempId = actualTempId && String(actualTempId).startsWith('TEMP_');
+                if (isTempId) {
+                    delete payload.id;
+                } else if (actualTempId) {
+                    payload.id = actualTempId;
+                }
+                delete payload._isPendingSync;
+                delete payload._syncError;
+                delete payload._syncErrorMessage;
+                delete payload.legacyTempId;
+                delete payload._tempId;
+                payload.requestType = 'evaluation';
+
+                const backendResult = await this.postEvaluationApprovalToBackend_(payload);
+
+                if (backendResult?.success) {
+                    const savedRequest = backendResult.data || payload;
+                    if (!savedRequest.id || savedRequest.id.startsWith('TEMP_')) {
+                        savedRequest.id = 'CEAR_' + Date.now();
+                    }
+                    if (savedRequest.evaluationData && typeof savedRequest.evaluationData === 'string') {
+                        try {
+                            savedRequest.evaluationData = JSON.parse(savedRequest.evaluationData);
+                        } catch (_parseErr) { /* keep string */ }
+                    }
+                    const tempIndex = this._findEvaluationApprovalRequestIndex_(actualTempId);
+                    if (tempIndex !== -1) {
+                        const preservedEvaluationData =
+                            AppState.appData.contractorEvaluationApprovalRequests[tempIndex].evaluationData;
+                        const legacyTempId = isTempId
+                            ? String(actualTempId).trim()
+                            : (AppState.appData.contractorEvaluationApprovalRequests[tempIndex].legacyTempId || '');
+                        AppState.appData.contractorEvaluationApprovalRequests[tempIndex] = {
+                            ...AppState.appData.contractorEvaluationApprovalRequests[tempIndex],
+                            ...savedRequest,
+                            id: savedRequest.id,
+                            evaluationData: savedRequest.evaluationData || preservedEvaluationData,
+                            requestType: 'evaluation',
+                            legacyTempId: legacyTempId || undefined,
+                            _isPendingSync: false
+                        };
+                        delete AppState.appData.contractorEvaluationApprovalRequests[tempIndex]._syncError;
+                        delete AppState.appData.contractorEvaluationApprovalRequests[tempIndex]._syncErrorMessage;
+                    } else {
+                        savedRequest.requestType = 'evaluation';
+                        savedRequest._isPendingSync = false;
+                        AppState.appData.contractorEvaluationApprovalRequests.push(savedRequest);
+                    }
+                    if (window.DataManager?.save) window.DataManager.save();
+                    if (typeof RealtimeSyncManager !== 'undefined' && RealtimeSyncManager.notifyChange) {
+                        RealtimeSyncManager.notifyChange('contractorEvaluationApprovalRequests', 'add', savedRequest.id);
+                    }
+                    Notification.success('تم حفظ طلب التقييم في قاعدة البيانات بنجاح.');
+                    return backendResult;
+                }
+
+                const failMsg = backendResult?.message || 'فشل المزامنة';
+                this._markEvaluationApprovalSyncError_(actualTempId, failMsg);
+                if (window.DataManager?.save) window.DataManager.save();
+                Notification.error('فشل مزامنة طلب التقييم: ' + failMsg);
+                throw new Error(failMsg);
+            } catch (error) {
+                Utils.safeError('❌ خطأ في مزامنة طلب اعتماد التقييم:', error);
+                this._markEvaluationApprovalSyncError_(tempId || sourceRequest?.id, error.message || 'خطأ في المزامنة');
+                if (window.DataManager?.save) window.DataManager.save();
+                throw error;
+            }
+        })();
+
+        this._activeSyncs[syncKey] = syncPromise;
         try {
-            this.ensureEvaluationApprovalRequestsSetup();
-            const payload = { ...sourceRequest };
-            const actualTempId = tempId || payload.id;
-            const isTempId = actualTempId && String(actualTempId).startsWith('TEMP_');
-            if (isTempId) {
-                delete payload.id;
-            } else if (actualTempId) {
-                payload.id = actualTempId;
-            }
-            delete payload._isPendingSync;
-            delete payload._syncError;
-            delete payload._syncErrorMessage;
-            delete payload.legacyTempId;
-            delete payload._tempId;
-            payload.requestType = 'evaluation';
-            if (payload.evaluationData && typeof payload.evaluationData === 'object') {
-                payload.evaluationData = JSON.stringify(payload.evaluationData);
-            }
-
-            const backendResult = await GoogleIntegration.sendRequest({
-                action: 'addContractorEvaluationApprovalRequest',
-                data: payload
-            });
-
-            if (backendResult?.success) {
-                const savedRequest = backendResult.data || payload;
-                if (!savedRequest.id || savedRequest.id.startsWith('TEMP_')) {
-                    savedRequest.id = 'CEAR_' + Date.now();
-                }
-                if (savedRequest.evaluationData && typeof savedRequest.evaluationData === 'string') {
-                    try {
-                        savedRequest.evaluationData = JSON.parse(savedRequest.evaluationData);
-                    } catch (_parseErr) { /* keep string */ }
-                }
-                let tempIndex = (AppState.appData.contractorEvaluationApprovalRequests || [])
-                    .findIndex((r) => {
-                        if (!r) return false;
-                        const id = String(r.id || '').trim();
-                        const legacy = String(r.legacyTempId || r._tempId || '').trim();
-                        const matchId = String(actualTempId || '').trim();
-                        return id === matchId || legacy === matchId;
-                    });
-                if (tempIndex !== -1) {
-                    const preservedEvaluationData = AppState.appData.contractorEvaluationApprovalRequests[tempIndex].evaluationData;
-                    const legacyTempId = isTempId
-                        ? String(actualTempId).trim()
-                        : (AppState.appData.contractorEvaluationApprovalRequests[tempIndex].legacyTempId || '');
-                    AppState.appData.contractorEvaluationApprovalRequests[tempIndex] = {
-                        ...AppState.appData.contractorEvaluationApprovalRequests[tempIndex],
-                        ...savedRequest,
-                        id: savedRequest.id,
-                        evaluationData: savedRequest.evaluationData || preservedEvaluationData,
-                        requestType: 'evaluation',
-                        legacyTempId: legacyTempId || undefined,
-                        _isPendingSync: false
-                    };
-                    delete AppState.appData.contractorEvaluationApprovalRequests[tempIndex]._syncError;
-                } else {
-                    savedRequest.requestType = 'evaluation';
-                    AppState.appData.contractorEvaluationApprovalRequests.push(savedRequest);
-                }
-                if (window.DataManager?.save) window.DataManager.save();
-                if (typeof RealtimeSyncManager !== 'undefined' && RealtimeSyncManager.notifyChange) {
-                    RealtimeSyncManager.notifyChange('contractorEvaluationApprovalRequests', 'add', savedRequest.id);
-                }
-                Notification.success('تم حفظ طلب التقييم في قاعدة البيانات بنجاح.');
-            } else {
-                const tempIndex = (AppState.appData.contractorEvaluationApprovalRequests || [])
-                    .findIndex((r) => r.id === actualTempId);
-                if (tempIndex !== -1) {
-                    AppState.appData.contractorEvaluationApprovalRequests[tempIndex]._syncError = true;
-                    AppState.appData.contractorEvaluationApprovalRequests[tempIndex]._syncErrorMessage =
-                        backendResult?.message || 'فشل المزامنة';
-                }
-                if (window.DataManager?.save) window.DataManager.save();
-                Notification.warning('تم حفظ طلب التقييم محلياً. سيتم المزامنة لاحقاً.');
-            }
-        } catch (error) {
-            Utils.safeError('❌ خطأ في مزامنة طلب اعتماد التقييم:', error);
-            const tempIndex = (AppState.appData.contractorEvaluationApprovalRequests || [])
-                .findIndex((r) => r.id === tempId);
-            if (tempIndex !== -1) {
-                AppState.appData.contractorEvaluationApprovalRequests[tempIndex]._syncError = true;
-                AppState.appData.contractorEvaluationApprovalRequests[tempIndex]._syncErrorMessage =
-                    error.message || 'خطأ في المزامنة';
-            }
-            throw error;
+            return await syncPromise;
         } finally {
-            if (this._activeSyncs?.[syncKey]) delete this._activeSyncs[syncKey];
+            if (this._activeSyncs?.[syncKey] === syncPromise) {
+                delete this._activeSyncs[syncKey];
+            }
         }
     },
 
@@ -9673,6 +9735,11 @@ const Contractors = {
             request = (AppState.appData.contractorApprovalRequests || []).find(
                 (r) => r && String(r.id || '').trim() === rid
             );
+        }
+
+        if (!request) {
+            request = this.findEvaluationApprovalRequest(rid);
+            if (request) requestCategory = 'evaluation_approval';
         }
 
         if (!request) {
@@ -10049,8 +10116,14 @@ const Contractors = {
                             <i class="fas fa-times ml-2"></i>رفض
                         </button>
                     ` : ''}
-                    ${isAdmin && (request._isPendingSync || (request.id && String(request.id).startsWith('TEMP_'))) ? `
-                        <span class="text-sm text-blue-600"><i class="fas fa-sync fa-spin ml-1"></i> الطلب قيد المزامنة مع الخادم — انتظر ثوانٍ ثم أعد فتح التفاصيل</span>
+                    ${isAdmin && (request._isPendingSync || (request.id && String(request.id).startsWith('TEMP_')) || request._syncError) ? `
+                        <div class="flex flex-col gap-2">
+                            <span class="text-sm text-blue-600"><i class="fas fa-sync fa-spin ml-1"></i> الطلب قيد المزامنة مع الخادم — انتظر ثوانٍ أو أعد المحاولة</span>
+                            ${request._syncErrorMessage ? `<span class="text-sm text-red-600">${Utils.escapeHTML(request._syncErrorMessage)}</span>` : ''}
+                            <button type="button" class="btn-secondary btn-sm" id="retry-eval-sync-btn">
+                                <i class="fas fa-redo ml-1"></i>إعادة المزامنة
+                            </button>
+                        </div>
                     ` : ''}
                 </div>
             </div>
@@ -10063,6 +10136,25 @@ const Contractors = {
         if (saveChangesBtn) {
             saveChangesBtn.addEventListener('click', async () => {
                 await this.saveRequestChanges(requestId, requestCategory);
+            });
+        }
+
+        const retrySyncBtn = modal.querySelector('#retry-eval-sync-btn');
+        if (retrySyncBtn) {
+            retrySyncBtn.addEventListener('click', async () => {
+                try {
+                    retrySyncBtn.disabled = true;
+                    const current = this.findEvaluationApprovalRequest(requestId);
+                    if (current) {
+                        current._isPendingSync = true;
+                        current._syncError = false;
+                    }
+                    await this.syncPendingEvaluationApprovalRequests(requestId);
+                    modal.remove();
+                    await this.viewApprovalRequest(requestId, requestCategory);
+                } catch (_retryErr) {
+                    retrySyncBtn.disabled = false;
+                }
             });
         }
         
@@ -10354,7 +10446,11 @@ const Contractors = {
                 request = this.findEvaluationApprovalRequest(requestId) || this.findEvaluationApprovalRequest(request.id);
             }
             if (!request || request._isPendingSync || String(request.id || '').startsWith('TEMP_')) {
-                Notification.warning('الطلب لا يزال قيد المزامنة. يرجى الانتظار قليلاً ثم إعادة المحاولة.');
+                if (request?._syncError && request._syncErrorMessage) {
+                    Notification.error('فشل مزامنة الطلب: ' + request._syncErrorMessage);
+                } else {
+                    Notification.warning('الطلب لا يزال قيد المزامنة. يرجى الانتظار قليلاً ثم إعادة المحاولة.');
+                }
                 return;
             }
             if (!confirm('هل أنت متأكد من اعتماد طلب التقييم؟ سيُضاف إلى قائمة تقييم وتأهيل المقاولين.')) {
@@ -10408,17 +10504,20 @@ const Contractors = {
 
         request = (AppState.appData.contractorApprovalRequests || []).find(r => r.id === requestId);
 
-        if (!request && requestId.startsWith('TEMP_')) {
+        if (!request) {
+            const evalRequest = this.findEvaluationApprovalRequest(requestId);
+            if (evalRequest) {
+                return this.approveRequest(requestId, 'evaluation_approval');
+            }
+        }
+
+        if (!request && String(requestId).startsWith('TEMP_')) {
             Notification.warning('الطلب لا يزال قيد المزامنة. يرجى الانتظار قليلاً ثم إعادة المحاولة.');
             Utils.safeWarn('⚠️ محاولة اعتماد طلب بمُعرف مؤقت (tempId=' + requestId + ') - يجب الانتظار حتى اكتمال المزامنة');
             return;
         }
 
         if (!request) {
-            request = this.findEvaluationApprovalRequest(requestId);
-            if (request) {
-                return this.approveRequest(requestId, 'evaluation_approval');
-            }
             Notification.error('طلب الاعتماد غير موجود');
             Utils.safeError('❌ خطأ: لم يتم العثور على الطلب. requestId=' + requestId);
             return;
