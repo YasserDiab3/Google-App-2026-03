@@ -2330,6 +2330,243 @@ const PTW = {
         return this._ptwBackendLoadPromise;
     },
 
+    /** هيكل تحميل خفيف لتبويب قائمة التصاريح */
+    _renderPermitsLoadingShell(t) {
+        const label = typeof t === 'function'
+            ? t('module.ptw.loading.permits', 'جاري تحميل قائمة التصاريح...')
+            : 'جاري تحميل قائمة التصاريح...';
+        return `
+            <div class="content-card">
+                <div class="card-body">
+                    <div class="empty-state">
+                        <div style="width: 300px; margin: 0 auto 16px;">
+                            <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
+                                <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
+                            </div>
+                        </div>
+                        <p class="text-gray-500">${label}</p>
+                    </div>
+                </div>
+            </div>`;
+    },
+
+    /** تركيب قائمة التصاريح على دفعتين: جدول فوري ثم بطاقات الإحصائيات */
+    _mountPermitsListContent(t) {
+        const permitsContent = document.getElementById('ptw-permits-content');
+        if (!permitsContent) return;
+
+        try {
+            permitsContent.innerHTML = this.renderList({ includeStats: false });
+            this.applyModuleI18n(permitsContent);
+            this.setupEventListeners();
+            this.loadPTWList(true);
+
+            const hydrateStats = () => {
+                if (!document.getElementById('ptw-permits-content')) return;
+                const statsSection = document.getElementById('ptw-stats-section');
+                if (!statsSection || statsSection.getAttribute('data-stats-pending') !== '1') return;
+                try {
+                    const statsHtml = this.renderListStatsSection();
+                    if (statsHtml) statsSection.outerHTML = statsHtml;
+                    this.applyModuleI18n(permitsContent);
+                    this.updateKPIs();
+                } catch (err) {
+                    Utils.safeWarn('⚠️ تعذر تحميل بطاقات إحصائيات PTW:', err);
+                }
+            };
+
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(hydrateStats, { timeout: 1200 });
+            } else {
+                requestAnimationFrame(() => setTimeout(hydrateStats, 0));
+            }
+        } catch (error) {
+            Utils.safeWarn('⚠️ خطأ في تحميل القائمة:', error);
+            permitsContent.innerHTML = `
+                <div class="content-card">
+                    <div class="card-body">
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
+                            <p class="text-gray-500 mb-4">${t('module.common.loadDataError', 'حدث خطأ في تحميل البيانات')}</p>
+                            <button onclick="PTW.load()" class="btn-primary">
+                                <i class="fas fa-redo ml-2"></i>
+                                ${t('module.common.retry', 'إعادة المحاولة')}
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            this.applyModuleI18n(permitsContent);
+        }
+    },
+
+    /** بطاقات الإحصائيات الكاملة (تُحمَّل بعد الجدول) */
+    renderListStatsSection() {
+        const { source: sourceItems, merged: allItems, permitsFromList, permitsFromRegistry } = this.getPermitMetricsDataset();
+        const totalCount = sourceItems.length;
+        const openCount = sourceItems.filter(p => p && this.isPermitOpenStatus(p.status)).length;
+        const closedCount = sourceItems.filter(p => p && this.isPermitClosedStatus(p.status)).length;
+
+        const workTypeStats = {};
+        allItems.forEach(item => {
+            const workType = item.workType || 'غير محدد';
+            if (!workTypeStats[workType]) {
+                workTypeStats[workType] = { total: 0, open: 0, closed: 0 };
+            }
+            workTypeStats[workType].total++;
+            const st = (item.status || '').trim();
+            if (st === 'مغلق' || st === 'مرفوض' || st === 'اكتمل العمل بشكل آمن' || st === 'إغلاق جبري') {
+                workTypeStats[workType].closed++;
+            } else {
+                workTypeStats[workType].open++;
+            }
+        });
+
+        const sortedWorkTypes = Object.entries(workTypeStats).sort((a, b) => b[1].total - a[1].total);
+        const topWorkType = sortedWorkTypes.length > 0 ? sortedWorkTypes[0] : null;
+        const workTypesCount = Object.keys(workTypeStats).length;
+        const workTypeCardHTML = `
+            <div class="relative ptw-work-type-card rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1 overflow-hidden group">
+                <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                <div class="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-14 h-14 bg-white/25 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 border border-white/30">
+                                <i class="fas fa-tags text-white text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-white mb-1 drop-shadow-md">أنواع التصاريح</h3>
+                                <p class="text-xs text-purple-100 font-medium">${workTypesCount} نوع مختلف</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ptw-card-inner rounded-xl p-4 shadow-lg backdrop-blur-sm">
+                        ${topWorkType ? `
+                            <div class="ptw-card-text font-bold text-base mb-4 line-clamp-2" title="${Utils.escapeHTML(topWorkType[0])}">
+                                ${Utils.escapeHTML(topWorkType[0].length > 50 ? topWorkType[0].substring(0, 50) + '...' : topWorkType[0])}
+                            </div>
+                            <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <div class="ptw-stat-badge ptw-stat-open flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm">
+                                <div class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                                <span class="text-orange-700 font-bold text-sm">مفتوح: ${topWorkType[1].open}</span>
+                            </div>
+                                <div class="ptw-stat-badge ptw-stat-closed flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm">
+                                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    <span class="text-green-700 font-bold text-sm">مغلق: ${topWorkType[1].closed}</span>
+                                </div>
+                                <div class="ptw-stat-badge ptw-stat-total flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm">
+                                    <div class="w-2 h-2 bg-gray-600 rounded-full"></div>
+                                    <span class="text-gray-800 font-bold text-sm">إجمالي: ${topWorkType[1].total}</span>
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="ptw-card-text text-center py-4 text-gray-500">
+                                <i class="fas fa-info-circle text-2xl mb-2"></i>
+                                <p class="text-sm">لا توجد أنواع تصاريح حالياً</p>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        return `
+            <div class="content-card mb-6" id="ptw-stats-section">
+                <div class="card-header">
+                    <h2 class="card-title"><i class="fas fa-chart-bar ml-2"></i>عدادات الحالة</h2>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                        <div class="relative ptw-stat-card ptw-stat-card-open rounded-2xl p-6 text-center shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 overflow-hidden group">
+                            <div class="relative z-10">
+                                <div class="w-16 h-16 bg-white/25 backdrop-blur-sm rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg border border-white/30">
+                                    <i class="fas fa-unlock-alt text-white text-2xl"></i>
+                                </div>
+                                <div class="text-5xl font-extrabold text-white mb-3 drop-shadow-lg" id="ptw-open-count">${openCount}</div>
+                                <div class="text-base font-bold text-orange-50">عدد التصاريح المفتوحة</div>
+                            </div>
+                        </div>
+                        <div class="relative ptw-stat-card ptw-stat-card-closed rounded-2xl p-6 text-center shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 overflow-hidden group">
+                            <div class="relative z-10">
+                                <div class="w-16 h-16 bg-white/25 backdrop-blur-sm rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg border border-white/30">
+                                    <i class="fas fa-lock text-white text-2xl"></i>
+                                </div>
+                                <div class="text-5xl font-extrabold text-white mb-3 drop-shadow-lg" id="ptw-closed-count">${closedCount}</div>
+                                <div class="text-base font-bold text-green-50">عدد التصاريح المغلقة</div>
+                            </div>
+                        </div>
+                        <div class="relative ptw-stat-card ptw-stat-card-total rounded-2xl p-6 text-center shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 overflow-hidden group">
+                            <div class="relative z-10">
+                                <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg border border-white/25">
+                                    <i class="fas fa-clipboard-list text-white text-2xl"></i>
+                                </div>
+                                <div class="text-5xl font-extrabold text-white mb-3 drop-shadow-lg" id="ptw-total-count">${totalCount}</div>
+                                <div class="text-base font-bold text-gray-100">إجمالي التصاريح</div>
+                                <div class="mt-3 bg-white/15 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-white/25">
+                                    <div class="text-xs text-gray-100 font-medium">
+                                        <i class="fas fa-database text-xs ml-1"></i>
+                                        ${permitsFromList.length} قائمة + ${permitsFromRegistry.length} سجل
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        ${workTypeCardHTML}
+                    </div>
+                    ${sortedWorkTypes.length > 0 ? `
+                    <div class="relative ptw-work-types-container rounded-2xl p-8 shadow-2xl overflow-hidden">
+                        <div class="relative z-10">
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-12 h-12 bg-white/25 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg border border-white/30">
+                                        <i class="fas fa-tags text-white text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-2xl font-bold text-white mb-1 drop-shadow-md">جميع أنواع التصاريح</h3>
+                                        <p class="text-sm text-purple-100">تفاصيل شاملة لجميع الأنواع</p>
+                                    </div>
+                                </div>
+                                <div class="bg-white/25 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30 shadow-lg">
+                                    <span class="text-lg font-bold text-white">${Object.keys(workTypeStats).length}</span>
+                                    <span class="text-sm text-purple-100 font-medium mr-1">نوع</span>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="ptw-work-types-stats">
+                                ${sortedWorkTypes.map(([type, stats]) => `
+                                    <div class="group relative ptw-work-type-item backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
+                                        <div class="relative z-10">
+                                            <div class="flex items-start justify-between mb-3">
+                                                <div class="flex-1 min-w-0">
+                                                    <div class="ptw-work-type-name font-bold text-sm mb-2 line-clamp-2 leading-tight" title="${Utils.escapeHTML(type)}">
+                                                        ${Utils.escapeHTML(type)}
+                                                    </div>
+                                                </div>
+                                                <div class="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white text-xl font-extrabold rounded-lg px-3 py-1.5 shadow-md ml-3 min-w-[3rem] text-center">
+                                                    ${stats.total}
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <div class="ptw-stat-badge ptw-stat-open flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shadow-sm">
+                                                    <div class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                                                    <span class="text-orange-700 font-bold text-xs">مفتوح: ${stats.open}</span>
+                                                </div>
+                                                <div class="ptw-stat-badge ptw-stat-closed flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shadow-sm">
+                                                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                                    <span class="text-green-700 font-bold text-xs">مغلق: ${stats.closed}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    },
+
     async load() {
         // منع إعادة تحميل متداخلة (مثلاً بسبب language-changed أو إعادة دخول القسم بسرعة)
         if (this._isLoading) {
@@ -2390,17 +2627,6 @@ const PTW = {
         };
 
         try {
-            // إحداثيات الخريطة: تعبئة فورية من الذاكرة المحلية ثم مزامنة Sheets بالخلفية
-            this._hydrateMapCoordinatesFromLocal();
-            this._scheduleMapCoordinatesBackgroundSync();
-
-            // تهيئة بيانات السجل من الكاش المحلي فوراً
-            this.initRegistry(true);
-            const hasLocalCache = this._hasLocalPtwCache();
-
-            // مزامنة الخادم بالخلفية — لا تحجب الواجهة
-            this._startPtwBackendSync();
-
             section.innerHTML = `
             <div class="section-header">
                 <div class="flex items-center justify-between flex-wrap gap-4">
@@ -2483,30 +2709,15 @@ const PTW = {
             <!-- محتوى التبويبات -->
             <div id="ptw-tab-content" class="min-h-[500px]">
                 <div id="ptw-permits-content" class="fade-in">
-                    ${hasLocalCache ? '<div id="ptw-permits-mount"></div>' : `
-                    <div class="content-card">
-                        <div class="card-body">
-                            <div class="empty-state">
-                                <div style="width: 300px; margin: 0 auto 16px;">
-                                    <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
-                                        <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
-                                    </div>
-                                </div>
-                                <p class="text-gray-500">${t('module.ptw.loading.permits', 'جاري تحميل قائمة التصاريح...')}</p>
-                            </div>
-                        </div>
-                    </div>`}
+                    ${this._renderPermitsLoadingShell(t)}
                 </div>
                 <div id="ptw-registry-content" style="display: none;" class="fade-in" data-registry-lazy="1">
                 </div>
-                <div id="ptw-map-content" style="display: none; flex-direction: column; height: calc(100vh - 280px); min-height: 600px; width: 100%;" class="fade-in">
-                    ${this.renderMapContent()}
+                <div id="ptw-map-content" style="display: none; flex-direction: column; height: calc(100vh - 280px); min-height: 600px; width: 100%;" class="fade-in" data-tab-lazy="map">
                 </div>
-                <div id="ptw-analysis-content" style="display: none;" class="fade-in">
-                    ${this.renderAnalysisContent()}
+                <div id="ptw-analysis-content" style="display: none;" class="fade-in" data-tab-lazy="analysis">
                 </div>
-                <div id="ptw-approvals-content" style="display: none;" class="fade-in">
-                    ${this.renderApprovalsContent()}
+                <div id="ptw-approvals-content" style="display: none;" class="fade-in" data-tab-lazy="approvals">
                 </div>
             </div>
         `;
@@ -2515,41 +2726,15 @@ const PTW = {
             this.formSettingsState = null;
             this.formSettingsEventsBound = false;
             this.setupEventListeners();
-            this.setupRegistryEventListeners();
+            this.setupEventListeners();
             
-            // ✅ عرض القائمة فوراً من الكاش المحلي — ثم تحديث صامت بعد الخادم
+            // رسم الهيكل أولاً ثم تحميل البيانات — يمنع الصفحة البيضاء
             requestAnimationFrame(() => {
-                setTimeout(async () => {
-                    try {
-                        const permitsContent = document.getElementById('ptw-permits-content');
-                        if (!permitsContent) return;
-
-                        const listContent = await this.renderList().catch(error => {
-                            Utils.safeWarn('⚠️ خطأ في تحميل القائمة:', error);
-                            return `
-                            <div class="content-card">
-                                <div class="card-body">
-                                    <div class="empty-state">
-                                        <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                        <p class="text-gray-500 mb-4">${t('module.common.loadDataError', 'حدث خطأ في تحميل البيانات')}</p>
-                                        <button onclick="PTW.load()" class="btn-primary">
-                                            <i class="fas fa-redo ml-2"></i>
-                                            ${t('module.common.retry', 'إعادة المحاولة')}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                        });
-
-                        permitsContent.innerHTML = listContent;
-                        this.applyModuleI18n(permitsContent);
-                        this.setupEventListeners();
-                        this.loadPTWList(true);
-                    } catch (error) {
-                        Utils.safeWarn('⚠️ خطأ في تحميل القائمة:', error);
-                    }
-                }, 0);
+                this._hydrateMapCoordinatesFromLocal();
+                this._scheduleMapCoordinatesBackgroundSync();
+                this.initRegistry(true);
+                this._startPtwBackendSync();
+                this._mountPermitsListContent(t);
             });
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
@@ -2745,8 +2930,9 @@ const PTW = {
 
                     // Check and render map content if missing
                     const mapContainerCheck = document.getElementById('ptw-map');
-                    if (!mapContainerCheck) {
+                    if (!mapContainerCheck || mapContent.getAttribute('data-tab-lazy') === 'map') {
                         mapContent.innerHTML = this.renderMapContent();
+                        mapContent.removeAttribute('data-tab-lazy');
                     }
 
                     // التأكد من أن الحاوية لها الأبعاد الصحيحة
@@ -2829,7 +3015,10 @@ const PTW = {
             if (analysisContent) {
                 analysisContent.style.display = 'block';
                 analysisContent.style.visibility = 'visible';
-                analysisContent.innerHTML = this.renderAnalysisContent();
+                if (analysisContent.getAttribute('data-tab-lazy') === 'analysis' || !analysisContent.innerHTML.trim()) {
+                    analysisContent.innerHTML = this.renderAnalysisContent();
+                    analysisContent.removeAttribute('data-tab-lazy');
+                }
                 this.setupAnalysisEventListeners();
             }
         } else if (tab === 'approvals') {
@@ -2849,7 +3038,10 @@ const PTW = {
             if (approvalsContent) {
                 approvalsContent.style.display = 'block';
                 approvalsContent.style.visibility = 'visible';
-                approvalsContent.innerHTML = this.renderApprovalsContent();
+                if (approvalsContent.getAttribute('data-tab-lazy') === 'approvals' || !approvalsContent.innerHTML.trim()) {
+                    approvalsContent.innerHTML = this.renderApprovalsContent();
+                    approvalsContent.removeAttribute('data-tab-lazy');
+                }
                 this.setupApprovalsEventListeners();
                 Utils.safeLog('✅ Approvals Tab Displayed');
             }
@@ -12464,7 +12656,8 @@ const PTW = {
         }
     },
 
-    async renderList() {
+    renderList(options = {}) {
+        const includeStats = options.includeStats !== false;
         const { source: sourceItems, merged: allItems, permitsFromList, permitsFromRegistry } = this.getPermitMetricsDataset();
         const hasLocalRows = sourceItems.length > 0;
         const totalCount = sourceItems.length;
@@ -12477,206 +12670,38 @@ const PTW = {
         const filterSublocations = [...new Set(allItems.map(p => (p.sublocationName || p.sublocation || '').trim()).filter(Boolean))].sort();
         const filterStatuses = ['مفتوح', 'قيد المراجعة', 'موافق عليه', 'مرفوض', 'مغلق', 'اكتمل العمل بشكل آمن', 'إغلاق جبري', 'لم يكتمل العمل'];
 
-        // حساب إحصائيات أنواع التصاريح
-        const workTypeStats = {};
-        allItems.forEach(item => {
-            const workType = item.workType || 'غير محدد';
-            if (!workTypeStats[workType]) {
-                workTypeStats[workType] = {
-                    total: 0,
-                    open: 0,
-                    closed: 0
-                };
-            }
-            workTypeStats[workType].total++;
-            const st = (item.status || '').trim();
-            if (st === 'مغلق' || st === 'مرفوض' || st === 'اكتمل العمل بشكل آمن' || st === 'إغلاق جبري') {
-                workTypeStats[workType].closed++;
-            } else {
-                workTypeStats[workType].open++;
-            }
-        });
-
-        // ترتيب الأنواع حسب العدد
-        const sortedWorkTypes = Object.entries(workTypeStats)
-            .sort((a, b) => b[1].total - a[1].total);
-
-        // إنشاء HTML لأنواع التصاريح (أول نوع فقط للعرض في الكارت)
-        const topWorkType = sortedWorkTypes.length > 0 ? sortedWorkTypes[0] : null;
-        const workTypesCount = Object.keys(workTypeStats).length;
-        const workTypeCardHTML = `
-            <div class="relative ptw-work-type-card rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1 overflow-hidden group">
-                <!-- خلفية متحركة -->
-                <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-                <div class="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
-                
-                <div class="relative z-10">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-14 h-14 bg-white/25 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 border border-white/30">
-                                <i class="fas fa-tags text-white text-xl"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-lg font-bold text-white mb-1 drop-shadow-md">أنواع التصاريح</h3>
-                                <p class="text-xs text-purple-100 font-medium">${workTypesCount} نوع مختلف</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="ptw-card-inner rounded-xl p-4 shadow-lg backdrop-blur-sm">
-                        ${topWorkType ? `
-                            <div class="ptw-card-text font-bold text-base mb-4 line-clamp-2" title="${Utils.escapeHTML(topWorkType[0])}">
-                                ${Utils.escapeHTML(topWorkType[0].length > 50 ? topWorkType[0].substring(0, 50) + '...' : topWorkType[0])}
-                            </div>
-                            <div class="flex items-center justify-between gap-2 flex-wrap">
-                            <div class="ptw-stat-badge ptw-stat-open flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm">
-                                <div class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                                <span class="text-orange-700 font-bold text-sm">مفتوح: ${topWorkType[1].open}</span>
-                            </div>
-                                <div class="ptw-stat-badge ptw-stat-closed flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm">
-                                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-                                    <span class="text-green-700 font-bold text-sm">مغلق: ${topWorkType[1].closed}</span>
-                                </div>
-                                <div class="ptw-stat-badge ptw-stat-total flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm">
-                                    <div class="w-2 h-2 bg-gray-600 rounded-full"></div>
-                                    <span class="text-gray-800 font-bold text-sm">إجمالي: ${topWorkType[1].total}</span>
-                                </div>
-                            </div>
-                        ` : `
-                            <div class="ptw-card-text text-center py-4 text-gray-500">
-                                <i class="fas fa-info-circle text-2xl mb-2"></i>
-                                <p class="text-sm">لا توجد أنواع تصاريح حالياً</p>
-                            </div>
-                        `}
-                    </div>
-                </div>
-            </div>
-        `;
-
-        return `
-            <div class="content-card mb-6">
+        const statsHtml = includeStats
+            ? this.renderListStatsSection()
+            : `
+            <div class="content-card mb-6" id="ptw-stats-section" data-stats-pending="1">
                 <div class="card-header">
                     <h2 class="card-title"><i class="fas fa-chart-bar ml-2"></i>عدادات الحالة</h2>
                 </div>
                 <div class="card-body">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                        <!-- كرت التصاريح المفتوحة -->
-                        <div class="relative ptw-stat-card ptw-stat-card-open rounded-2xl p-6 text-center shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 overflow-hidden group">
-                            <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                            <div class="absolute top-0 right-0 w-24 h-24 bg-white/15 rounded-full -mr-12 -mt-12"></div>
-                            <div class="absolute bottom-0 left-0 w-20 h-20 bg-white/15 rounded-full -ml-10 -mb-10"></div>
-                            <div class="relative z-10">
-                                <div class="w-16 h-16 bg-white/25 backdrop-blur-sm rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300 border border-white/30">
-                                    <i class="fas fa-unlock-alt text-white text-2xl"></i>
-                                </div>
-                                <div class="text-5xl font-extrabold text-white mb-3 drop-shadow-lg" id="ptw-open-count">${openCount}</div>
-                                <div class="text-base font-bold text-orange-50">عدد التصاريح المفتوحة</div>
-                                <div class="mt-3 flex items-center justify-center gap-2">
-                                    <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                                    <span class="text-xs text-orange-100 font-medium">نشطة حالياً</span>
-                                </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="kpi-card kpi-primary">
+                            <div class="kpi-content">
+                                <p class="kpi-value" id="ptw-open-count">${openCount}</p>
+                                <h3 class="kpi-label">مفتوح</h3>
                             </div>
                         </div>
-                        
-                        <!-- كرت التصاريح المغلقة -->
-                        <div class="relative ptw-stat-card ptw-stat-card-closed rounded-2xl p-6 text-center shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 overflow-hidden group">
-                            <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                            <div class="absolute top-0 right-0 w-24 h-24 bg-white/15 rounded-full -mr-12 -mt-12"></div>
-                            <div class="absolute bottom-0 left-0 w-20 h-20 bg-white/15 rounded-full -ml-10 -mb-10"></div>
-                            <div class="relative z-10">
-                                <div class="w-16 h-16 bg-white/25 backdrop-blur-sm rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300 border border-white/30">
-                                    <i class="fas fa-lock text-white text-2xl"></i>
-                                </div>
-                                <div class="text-5xl font-extrabold text-white mb-3 drop-shadow-lg" id="ptw-closed-count">${closedCount}</div>
-                                <div class="text-base font-bold text-green-50">عدد التصاريح المغلقة</div>
-                                <div class="mt-3 flex items-center justify-center gap-2">
-                                    <i class="fas fa-check-circle text-white text-xs"></i>
-                                    <span class="text-xs text-green-100 font-medium">مكتملة</span>
-                                </div>
+                        <div class="kpi-card kpi-success">
+                            <div class="kpi-content">
+                                <p class="kpi-value" id="ptw-closed-count">${closedCount}</p>
+                                <h3 class="kpi-label">مغلق</h3>
                             </div>
                         </div>
-                        
-                        <!-- كرت إجمالي التصاريح -->
-                        <div class="relative ptw-stat-card ptw-stat-card-total rounded-2xl p-6 text-center shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 overflow-hidden group">
-                            <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                            <div class="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-12 -mt-12"></div>
-                            <div class="absolute bottom-0 left-0 w-20 h-20 bg-white/10 rounded-full -ml-10 -mb-10"></div>
-                            <div class="relative z-10">
-                                <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300 border border-white/25">
-                                    <i class="fas fa-clipboard-list text-white text-2xl"></i>
-                                </div>
-                                <div class="text-5xl font-extrabold text-white mb-3 drop-shadow-lg" id="ptw-total-count">${totalCount}</div>
-                                <div class="text-base font-bold text-gray-100">إجمالي التصاريح</div>
-                                <div class="mt-3 bg-white/15 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-white/25">
-                                    <div class="text-xs text-gray-100 font-medium">
-                                        <i class="fas fa-database text-xs ml-1"></i>
-                                        ${permitsFromList.length} قائمة + ${permitsFromRegistry.length} سجل
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        ${workTypeCardHTML}
-                    </div>
-                    
-                    <!-- كرت أنواع التصاريح الكامل (للتفاصيل) -->
-                    ${sortedWorkTypes.length > 0 ? `
-                    <div class="relative ptw-work-types-container rounded-2xl p-8 shadow-2xl overflow-hidden">
-                        <!-- خلفية متحركة -->
-                        <div class="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
-                        <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
-                        <div class="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -ml-24 -mb-24"></div>
-                        
-                        <div class="relative z-10">
-                            <div class="flex items-center justify-between mb-6">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-12 h-12 bg-white/25 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg border border-white/30">
-                                        <i class="fas fa-tags text-white text-xl"></i>
-                                    </div>
-                                    <div>
-                                        <h3 class="text-2xl font-bold text-white mb-1 drop-shadow-md">جميع أنواع التصاريح</h3>
-                                        <p class="text-sm text-purple-100">تفاصيل شاملة لجميع الأنواع</p>
-                                    </div>
-                                </div>
-                                <div class="bg-white/25 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30 shadow-lg">
-                                    <span class="text-lg font-bold text-white">${Object.keys(workTypeStats).length}</span>
-                                    <span class="text-sm text-purple-100 font-medium mr-1">نوع</span>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="ptw-work-types-stats">
-                                ${sortedWorkTypes.map(([type, stats], index) => `
-                                    <div class="group relative ptw-work-type-item backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
-                                        <div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-400/20 to-indigo-400/20 rounded-full -mr-10 -mt-10"></div>
-                                        <div class="relative z-10">
-                                            <div class="flex items-start justify-between mb-3">
-                                                <div class="flex-1 min-w-0">
-                                                    <div class="ptw-work-type-name font-bold text-sm mb-2 line-clamp-2 leading-tight" title="${Utils.escapeHTML(type)}">
-                                                        ${Utils.escapeHTML(type)}
-                                                    </div>
-                                                </div>
-                                                <div class="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white text-xl font-extrabold rounded-lg px-3 py-1.5 shadow-md ml-3 min-w-[3rem] text-center">
-                                                    ${stats.total}
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-2 flex-wrap">
-                                                <div class="ptw-stat-badge ptw-stat-open flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shadow-sm">
-                                                    <div class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                                                    <span class="text-orange-700 font-bold text-xs">مفتوح: ${stats.open}</span>
-                                                </div>
-                                                <div class="ptw-stat-badge ptw-stat-closed flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shadow-sm">
-                                                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-                                                    <span class="text-green-700 font-bold text-xs">مغلق: ${stats.closed}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `).join('')}
+                        <div class="kpi-card kpi-info">
+                            <div class="kpi-content">
+                                <p class="kpi-value" id="ptw-total-count">${totalCount}</p>
+                                <h3 class="kpi-label">إجمالي</h3>
                             </div>
                         </div>
                     </div>
-                    ` : ''}
                 </div>
-            </div>
+            </div>`;
+
+        return `${statsHtml}
             <div class="content-card">
                 <div class="card-header">
                     <h2 class="card-title"><i class="fas fa-list ml-2"></i>قائمة تصاريح العمل</h2>
