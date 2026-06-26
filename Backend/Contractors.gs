@@ -1578,9 +1578,34 @@ function ensureContractorEvaluationApprovalRequestsSheet_(spreadsheetId) {
     try {
         var sheetName = 'ContractorEvaluationApprovalRequests';
         var sid = spreadsheetId || getSpreadsheetId();
+        if (!sid || String(sid).trim() === '') {
+            return { success: false, message: 'معرف Google Sheets غير محدد' };
+        }
         var ss = SpreadsheetApp.openById(sid);
-        createSheetWithHeaders(ss, sheetName, { id: '', status: 'pending', evaluationData: '{}' });
-        return { success: true, sheetName: sheetName, spreadsheetId: sid };
+        var existedBefore = !!ss.getSheetByName(sheetName);
+        var headers = (typeof getDefaultHeaders === 'function') ? (getDefaultHeaders(sheetName) || []) : [];
+        var seedRow = {};
+        if (headers.length) {
+            for (var hi = 0; hi < headers.length; hi++) {
+                seedRow[headers[hi]] = '';
+            }
+            if (!seedRow.status) seedRow.status = 'pending';
+            if (!seedRow.evaluationData) seedRow.evaluationData = '{}';
+        } else {
+            seedRow = { id: '', contractorId: '', contractorName: '', evaluationData: '{}', status: 'pending', createdAt: '' };
+        }
+        createSheetWithHeaders(ss, sheetName, seedRow);
+        if (typeof ensureSheetHeaders === 'function') {
+            var sheet = ss.getSheetByName(sheetName);
+            if (sheet) ensureSheetHeaders(sheet, sheetName, seedRow);
+        }
+        return {
+            success: true,
+            message: existedBefore ? 'ورقة طلبات اعتماد التقييم موجودة' : 'تم إنشاء ورقة طلبات اعتماد التقييم',
+            sheetName: sheetName,
+            spreadsheetId: sid,
+            created: !existedBefore
+        };
     } catch (error) {
         Logger.log('ensureContractorEvaluationApprovalRequestsSheet_ error: ' + error.toString());
         return { success: false, message: error.toString() };

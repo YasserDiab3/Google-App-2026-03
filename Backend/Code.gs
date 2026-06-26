@@ -27,7 +27,7 @@
  * ============================================
  */
 // بصمة نسخة عامة (global) ليصل إليها ActionHandlers وغيره
-var BUILD_TAG = 'HSE_WEBAPP_BUILD_2026-06-25_mfa_totp_v291';
+var BUILD_TAG = 'HSE_WEBAPP_BUILD_2026-06-26_cear_sheet_v292';
 
 function doPost(e) {
     Logger.log('🚀 [DOPOST] ===== doPost تم استدعاؤها =====');
@@ -282,7 +282,13 @@ function doPost(e) {
             // getDailyUserSessionActivityReport, getAllUserActivityLogs, getUserActivityLogs, getLogStatistics, getAllAuditLogs
             // ✅ مهمات الوقاية — قراءة فقط (تجنب فشل ربط CSRF عند تغيّر المستخدم بعد أول طلب)
             'getAllPPE', 'getPPEMatrix', 'getAllPPEMatrices',
-            'getAllPPEStockItems', 'getAllPPETransactions', 'getPPEItemsList'
+            'getAllPPEStockItems', 'getAllPPETransactions', 'getPPEItemsList',
+            // ✅ طلبات اعتماد المقاولين (قراءة / تهيئة الورقة)
+            'getAllContractorApprovalRequests',
+            'getAllContractorEvaluationApprovalRequests',
+            'getAllContractorDeletionRequests',
+            'ensureContractorEvaluationApprovalRequestsSheet',
+            'repairContractorEvaluationApprovalRequestsSheet'
         ];
 
         // قائمة بالـ actions الحساسة التي تتطلب CSRF token إلزامي

@@ -557,7 +557,7 @@ const Contractors = {
             this._isLoading = false;
 
             this.syncPendingEvaluationApprovalRequests()
-                .then(() => this.bootstrapEvaluationApprovalSheet_())
+                .then(() => this.bootstrapEvaluationApprovalSheet_({ required: false }))
                 .then(() => this.fetchEvaluationApprovalRequestsFromBackend())
                 .then(() => {
                     this.refreshEvaluationApprovalRequestsSection();
@@ -671,7 +671,7 @@ const Contractors = {
 
         if (tab === 'approval-request' || tab === 'evaluations') {
             this.syncPendingEvaluationApprovalRequests()
-                .then(() => this.bootstrapEvaluationApprovalSheet_())
+                .then(() => this.bootstrapEvaluationApprovalSheet_({ required: false }))
                 .then(() => this.fetchEvaluationApprovalRequestsFromBackend())
                 .then(() => {
                     this.refreshEvaluationApprovalRequestsSection();
@@ -5227,7 +5227,7 @@ const Contractors = {
                         Loading.show('جاري حفظ طلب اعتماد التقييم...');
                     }
                     try {
-                        await this.bootstrapEvaluationApprovalSheet_();
+                        await this.bootstrapEvaluationApprovalSheet_({ required: true });
                         await this.syncEvaluationApprovalRequestToBackend(approvalRequest, localId, { silentSuccess: true });
                         finalizeEvaluationSave(() => {
                             Notification.success('تم إرسال طلب اعتماد التقييم بنجاح.');
@@ -8382,7 +8382,7 @@ const Contractors = {
             Loading.show('جاري مزامنة طلب التقييم...');
         }
         try {
-            await this.bootstrapEvaluationApprovalSheet_();
+            await this.bootstrapEvaluationApprovalSheet_({ required: false, maxRetries: options.maxRetries });
             for (let attempt = 0; attempt < maxRetries; attempt++) {
                 await this.syncPendingEvaluationApprovalRequests(requestId);
                 request = this.findEvaluationApprovalRequest(requestId);
@@ -9482,19 +9482,8 @@ const Contractors = {
         if (!row.evaluationData) {
             return { success: false, message: 'بيانات التقييم مطلوبة' };
         }
-        const actions = ['addContractorEvaluationApprovalRequest', 'addContractorApprovalRequest'];
         let lastMessage = '';
-        for (const action of actions) {
-            try {
-                const result = await GoogleIntegration.sendRequest({ action, data: row });
-                if (result?.success) return result;
-                lastMessage = result?.message || lastMessage;
-                Utils.safeWarn(`⚠️ فشل ${action}:`, lastMessage);
-            } catch (err) {
-                lastMessage = err?.message || String(err);
-                Utils.safeWarn(`⚠️ خطأ ${action}:`, lastMessage);
-            }
-        }
+
         if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.appendToSheets === 'function') {
             try {
                 const appendResult = await GoogleIntegration.appendToSheets(
@@ -9505,8 +9494,23 @@ const Contractors = {
                     return { success: true, data: sheetRow, message: appendResult.message };
                 }
                 lastMessage = appendResult?.message || lastMessage;
+                Utils.safeWarn('⚠️ فشل appendToSheet لطلب التقييم:', lastMessage);
             } catch (appendErr) {
                 lastMessage = appendErr?.message || lastMessage;
+                Utils.safeWarn('⚠️ خطأ appendToSheet لطلب التقييم:', lastMessage);
+            }
+        }
+
+        const actions = ['addContractorEvaluationApprovalRequest', 'addContractorApprovalRequest'];
+        for (const action of actions) {
+            try {
+                const result = await GoogleIntegration.sendRequest({ action, data: row });
+                if (result?.success) return result;
+                lastMessage = result?.message || lastMessage;
+                Utils.safeWarn(`⚠️ فشل ${action}:`, lastMessage);
+            } catch (err) {
+                lastMessage = err?.message || String(err);
+                Utils.safeWarn(`⚠️ خطأ ${action}:`, lastMessage);
             }
         }
         return {
@@ -9535,17 +9539,57 @@ const Contractors = {
         row._syncErrorMessage = message || 'فشل المزامنة';
     },
 
-    async bootstrapEvaluationApprovalSheet_() {
-        if (typeof GoogleIntegration === 'undefined') return false;
-        try {
-            const res = await GoogleIntegration.sendRequest({
-                action: 'getAllContractorEvaluationApprovalRequests',
-                data: { forceRefresh: true, skipCache: true }
-            });
-            return !!(res?.success);
-        } catch (_err) {
+    async bootstrapEvaluationApprovalSheet_(options = {}) {
+        if (typeof GoogleIntegration === 'undefined') {
+            if (options.required) throw new Error('الخادم الخلفي غير متاح');
             return false;
         }
+        const baseData = { forceRefresh: true, skipCache: true };
+        if (AppState?.googleConfig?.sheets?.spreadsheetId) {
+            baseData.spreadsheetId = AppState.googleConfig.sheets.spreadsheetId;
+        }
+        const strategies = [
+            {
+                name: 'ensureContractorEvaluationApprovalRequestsSheet',
+                run: () => GoogleIntegration.sendRequest({
+                    action: 'ensureContractorEvaluationApprovalRequestsSheet',
+                    data: baseData
+                })
+            },
+            {
+                name: 'repairContractorEvaluationApprovalRequestsSheet',
+                run: () => GoogleIntegration.sendRequest({
+                    action: 'repairContractorEvaluationApprovalRequestsSheet',
+                    data: baseData
+                })
+            },
+            {
+                name: 'getAllContractorEvaluationApprovalRequests',
+                run: () => GoogleIntegration.sendRequest({
+                    action: 'getAllContractorEvaluationApprovalRequests',
+                    data: baseData
+                })
+            }
+        ];
+        let lastMessage = '';
+        for (const strategy of strategies) {
+            try {
+                const res = await strategy.run();
+                if (res?.success) return true;
+                lastMessage = res?.message || lastMessage;
+                Utils.safeWarn(`⚠️ bootstrap CEAR (${strategy.name}):`, lastMessage);
+            } catch (err) {
+                lastMessage = err?.message || lastMessage;
+                Utils.safeWarn(`⚠️ bootstrap CEAR (${strategy.name}) error:`, lastMessage);
+            }
+        }
+        if (options.required) {
+            throw new Error(
+                lastMessage ||
+                'تعذر إنشاء جدول ContractorEvaluationApprovalRequests في قاعدة البيانات. حدّث نشر Web App في Apps Script.'
+            );
+        }
+        return false;
     },
 
     async syncEvaluationApprovalRequestToBackend(requestData, tempId, options = {}) {
