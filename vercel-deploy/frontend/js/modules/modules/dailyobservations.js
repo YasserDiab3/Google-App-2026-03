@@ -104,10 +104,17 @@ const DailyObservations = {
             const v = window.I18n.t(fullKey, fallback);
             if (v && v !== fullKey) return v;
         }
-        const { t } = this.getTranslations();
-        const short = fullKey.replace('module.dailyobs.', '');
-        const local = t(short);
-        return (local && local !== short) ? local : (fallback != null ? fallback : short);
+        return fallback != null ? fallback : fullKey.replace('module.dailyobs.', '');
+    },
+
+    _tf(key, vars, fallback) {
+        let text = this._t(key, fallback);
+        if (vars && typeof vars === 'object') {
+            Object.keys(vars).forEach((k) => {
+                text = String(text).replace(new RegExp(`\\{${k}\\}`, 'g'), String(vars[k]));
+            });
+        }
+        return text;
     },
 
     applyModuleI18n(root) {
@@ -125,61 +132,81 @@ const DailyObservations = {
     getTranslations() {
         const lang = this.getCurrentLanguage();
         const isRTL = lang === 'ar';
-
-        const local = {
-            ar: {
-                'title.observationsRegistry': 'سجل الملاحظات',
-                'btn.registerNew': 'تسجيل ملاحظة جديدة',
-                'btn.reset': 'إعادة تعيين',
-                'filter.search': 'البحث',
-                'filter.site': 'الموقع',
-                'filter.location': 'المكان',
-                'filter.type': 'النوع',
-                'filter.shift': 'الوردية',
-                'filter.risk': 'الخطورة',
-                'filter.status': 'الحالة',
-                'filter.observer': 'صاحب الملاحظة',
-                'filter.responsible': 'المسؤول',
-                'filter.all': 'الكل',
-                'filter.searchPlaceholder': 'ابحث...',
-                'filter.dateFrom': 'من تاريخ',
-                'filter.dateTo': 'إلى تاريخ',
-                'empty.noObservations': 'لا توجد ملاحظات مسجلة',
-                'empty.noMatching': 'لا توجد ملاحظات مطابقة لعوامل التصفية الحالية'
-            },
-            en: {
-                'title.observationsRegistry': 'Observations Registry',
-                'btn.registerNew': 'Register New Observation',
-                'btn.reset': 'Reset',
-                'filter.search': 'Search',
-                'filter.site': 'Site',
-                'filter.location': 'Location',
-                'filter.type': 'Type',
-                'filter.shift': 'Shift',
-                'filter.risk': 'Risk',
-                'filter.status': 'Status',
-                'filter.observer': 'Observer',
-                'filter.responsible': 'Responsible',
-                'filter.all': 'All',
-                'filter.searchPlaceholder': 'Search...',
-                'filter.dateFrom': 'From date',
-                'filter.dateTo': 'To date',
-                'empty.noObservations': 'No observations recorded',
-                'empty.noMatching': 'No observations match the current filter criteria'
-            }
+        const aliases = {
+            'title.observationsRegistry': 'module.dailyobs.registry.title',
+            'btn.registerNew': 'module.dailyobs.btn.registerNew',
+            'btn.reset': 'module.dailyobs.btn.reset',
+            'btn.refresh': 'module.dailyobs.btn.refresh',
+            'filter.search': 'module.dailyobs.filter.search',
+            'filter.site': 'module.dailyobs.filter.site',
+            'filter.location': 'module.dailyobs.filter.location',
+            'filter.type': 'module.dailyobs.filter.type',
+            'filter.shift': 'module.dailyobs.filter.shift',
+            'filter.risk': 'module.dailyobs.filter.risk',
+            'filter.status': 'module.dailyobs.filter.status',
+            'filter.observer': 'module.dailyobs.filter.observer',
+            'filter.responsible': 'module.dailyobs.filter.responsible',
+            'filter.all': 'module.dailyobs.filter.all',
+            'filter.searchPlaceholder': 'module.dailyobs.filter.searchPlaceholder',
+            'filter.dateFrom': 'module.dailyobs.filter.dateFrom',
+            'filter.dateTo': 'module.dailyobs.filter.dateTo',
+            'empty.noObservations': 'module.dailyobs.empty.noObservations',
+            'empty.noMatching': 'module.dailyobs.empty.noMatching'
         };
-
         const t = (key) => {
-            const fullKey = String(key || '').startsWith('module.') ? key : `module.dailyobs.${key}`;
-            if (window.AppI18n && typeof window.AppI18n.t === 'function') {
-                const v = window.AppI18n.t(fullKey);
-                if (v && v !== fullKey) return v;
-            }
-            const short = fullKey.replace('module.dailyobs.', '');
-            return local[lang]?.[short] || local[lang]?.[key] || short;
+            const fullKey = aliases[key] || (String(key).startsWith('module.') ? key : `module.dailyobs.${key}`);
+            return this._t(fullKey, key);
         };
-
         return { t, isRTL, lang };
+    },
+
+    getObservationTypeLabel(type) {
+        const map = {
+            'ملاحظة سلوكية': 'module.dailyobs.type.behavioral',
+            'ملاحظة شرط عمل': 'module.dailyobs.type.workCondition',
+            'ملاحظة أداة': 'module.dailyobs.type.tool',
+            'ملاحظة معدات': 'module.dailyobs.type.equipment',
+            'ملاحظة بيئة عمل': 'module.dailyobs.type.environment',
+            'ملاحظة أخرى': 'module.dailyobs.type.other'
+        };
+        const key = map[String(type || '').trim()];
+        return key ? this._t(key, type) : (type || this._t('module.dailyobs.common.notSpecified', 'غير محدد'));
+    },
+
+    _getTop10ChartFieldLabel(field) {
+        const map = {
+            riskCategory: 'module.dailyobs.top10.chart.field.riskCategory',
+            riskLevel: 'module.dailyobs.top10.chart.field.riskLevel',
+            status: 'module.dailyobs.top10.chart.field.status',
+            observationType: 'module.dailyobs.top10.chart.field.observationType',
+            siteName: 'module.dailyobs.top10.chart.field.siteName',
+            locationName: 'module.dailyobs.top10.chart.field.locationName',
+            shift: 'module.dailyobs.top10.chart.field.shift',
+            responsibleDepartment: 'module.dailyobs.top10.chart.field.responsibleDepartment',
+            observerName: 'module.dailyobs.top10.chart.field.observerName'
+        };
+        return this._t(map[field] || field, field);
+    },
+
+    _getTop10ChartTypeLabel(type) {
+        const map = {
+            doughnut: 'module.dailyobs.top10.chart.type.doughnut',
+            pie: 'module.dailyobs.top10.chart.type.pie',
+            bar: 'module.dailyobs.top10.chart.type.bar',
+            line: 'module.dailyobs.top10.chart.type.line'
+        };
+        return this._t(map[type] || type, type);
+    },
+
+    _renderTop10ChartFieldOptions(selected) {
+        const fields = ['riskCategory', 'riskLevel', 'status', 'observationType', 'siteName', 'locationName', 'shift', 'responsibleDepartment', 'observerName'];
+        return fields.map((f) => `<option value="${f}" ${selected === f ? 'selected' : ''}>${Utils.escapeHTML(this._getTop10ChartFieldLabel(f))}</option>`).join('');
+    },
+
+    _renderTop10ChartTypeOptions(selected) {
+        return ['doughnut', 'pie', 'bar', 'line'].map((t) =>
+            `<option value="${t}" ${selected === t ? 'selected' : ''}>${Utils.escapeHTML(this._getTop10ChartTypeLabel(t))}</option>`
+        ).join('');
     },
 
     /**
@@ -2217,7 +2244,7 @@ const DailyObservations = {
                         </div>
                         <div class="filter-field">
                             <button id="observation-refresh-btn" class="filter-reset-btn" type="button" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                                <i class="fas fa-sync-alt ${iconMarginClass}"></i>تحديث
+                                <i class="fas fa-sync-alt ${iconMarginClass}"></i>${t('btn.refresh')}
                             </button>
                         </div>
                     </div>
@@ -2279,7 +2306,7 @@ const DailyObservations = {
         
         // عدد الملاحظات في المصنع (أكبر عدد ملاحظات في مصنع واحد)
         const observationsInFactory = maxObservationsCount;
-        const mostCommonFactory = factoryWithMaxObservations || 'لا يوجد';
+        const mostCommonFactory = factoryWithMaxObservations || this._t('module.dailyobs.stats.none', 'لا يوجد');
         
         // التحقق من المواقع الخطرة (مواقع تحتوي على عدد ملاحظات يتجاوز العتبة)
         const highRiskSites = Object.keys(observationsByFactory).filter(factory => 
@@ -2298,14 +2325,14 @@ const DailyObservations = {
             }
         });
         const typeCount = uniqueTypes.size;
-        const mostCommonType = Array.from(uniqueTypes)[0] || 'لا يوجد';
+        const mostCommonType = Array.from(uniqueTypes)[0] ? this.getObservationTypeLabel(Array.from(uniqueTypes)[0]) : this._t('module.dailyobs.stats.none', 'لا يوجد');
 
         const cards = [
             {
                 id: 'notes-status',
-                title: 'عدد الملاحظات',
+                title: this._t('module.dailyobs.stats.total.title', 'عدد الملاحظات'),
                 value: total,
-                subtitle: `مفتوح: ${open} | مغلق: ${closed}`,
+                subtitle: this._tf('module.dailyobs.stats.total.subtitle', { open, closed }, `مفتوح: ${open} | مغلق: ${closed}`),
                 icon: 'fas fa-clipboard-list',
                 color: 'blue',
                 gradient: 'from-blue-500 to-blue-600',
@@ -2314,13 +2341,13 @@ const DailyObservations = {
                 textColor: 'text-blue-700',
                 iconBg: 'bg-blue-100',
                 filter: null,
-                description: 'إجمالي الملاحظات (مفتوح - مغلق)'
+                description: this._t('module.dailyobs.stats.total.desc', 'إجمالي الملاحظات')
             },
             {
                 id: 'risk-levels',
-                title: 'معدل الخطورة',
+                title: this._t('module.dailyobs.stats.risk.title', 'معدل الخطورة'),
                 value: highRisk + mediumRisk + lowRisk,
-                subtitle: `عالي: ${highRisk} | متوسط: ${mediumRisk} | بسيط: ${lowRisk}`,
+                subtitle: this._tf('module.dailyobs.stats.risk.subtitle', { high: highRisk, medium: mediumRisk, low: lowRisk }, `عالي: ${highRisk} | متوسط: ${mediumRisk} | بسيط: ${lowRisk}`),
                 icon: 'fas fa-exclamation-triangle',
                 color: 'red',
                 gradient: 'from-red-500 to-red-600',
@@ -2329,11 +2356,11 @@ const DailyObservations = {
                 textColor: 'text-red-700',
                 iconBg: 'bg-red-100',
                 filter: null,
-                description: 'توزيع معدلات الخطورة'
+                description: this._t('module.dailyobs.stats.risk.desc', 'توزيع معدلات الخطورة')
             },
             {
                 id: 'locations',
-                title: 'الموقع / المكان',
+                title: this._t('module.dailyobs.stats.location.title', 'الموقع / المكان'),
                 value: observationsInFactory,
                 subtitle: mostCommonFactory.length > 30 ? mostCommonFactory.substring(0, 30) + '...' : mostCommonFactory,
                 icon: 'fas fa-map-marker-alt',
@@ -2344,13 +2371,15 @@ const DailyObservations = {
                 textColor: hasHighRiskSite ? 'text-red-700' : 'text-green-700',
                 iconBg: hasHighRiskSite ? 'bg-red-100' : 'bg-green-100',
                 filter: null,
-                description: hasHighRiskSite ? `عدد الملاحظات في المصنع - تنبيه: ${highRiskSites.length} موقع يحتوي على عدد كبير` : 'عدد الملاحظات في المصنع',
+                description: hasHighRiskSite
+                    ? this._tf('module.dailyobs.stats.location.alert', { n: highRiskSites.length }, `تنبيه: ${highRiskSites.length} موقع`)
+                    : this._t('module.dailyobs.stats.location.desc', 'عدد الملاحظات في المصنع'),
                 isHighRisk: hasHighRiskSite,
                 highRiskSites: highRiskSites
             },
             {
                 id: 'note-types',
-                title: 'نوع الملاحظة',
+                title: this._t('module.dailyobs.stats.type.title', 'نوع الملاحظة'),
                 value: typeCount,
                 subtitle: mostCommonType.length > 30 ? mostCommonType.substring(0, 30) + '...' : mostCommonType,
                 icon: 'fas fa-tags',
@@ -2361,7 +2390,7 @@ const DailyObservations = {
                 textColor: 'text-purple-700',
                 iconBg: 'bg-purple-100',
                 filter: null,
-                description: 'عدد أنواع الملاحظات المختلفة'
+                description: this._t('module.dailyobs.stats.type.desc', 'أنواع الملاحظات المسجلة')
             }
         ];
 
@@ -5541,7 +5570,7 @@ const DailyObservations = {
 
         const scoresCanvas = document.getElementById('top10-builtin-chart-scores');
         if (scoresCanvas && top10.length) {
-            const fullLabels = top10.map((o) => String(o.observationType || '').trim() || this._t('module.dailyobs.common.notSpecified', 'غير محدد'));
+            const fullLabels = top10.map((o) => this.getObservationTypeLabel(o.observationType));
             const labels = fullLabels.map((t) => (t.length > 32 ? `${t.slice(0, 30)}…` : t));
             const scores = top10.map((o) => o.riskScore);
             const barColors = scores.map((s) => (s >= 55 ? '#dc2626' : s >= 35 ? '#ea580c' : '#2563eb'));
@@ -5653,7 +5682,7 @@ const DailyObservations = {
                         <span data-i18n="module.dailyobs.top10.brand">TOP 10</span>
                     </div>
                     <div class="top10-hero__title" data-i18n="module.dailyobs.top10.title">Top 10</div>
-                    <p class="top10-hero__sub" data-i18n="module.dailyobs.top10.subtitle">ترتيب أعلى المخاطر في ست فئات رئيسية مع تحليل بصري تفاعلي</p>
+                    <p class="top10-hero__sub" data-i18n="module.dailyobs.top10.subtitle">ترتيب أعلى المخاطر حسب الفئات المعيارية مع تحليل بصري تفاعلي وربط مباشر بسجل الملاحظات</p>
                     <div class="top10-hero__actions">
                         ${this.canDailyObservationsFullAdminUi() ? `
                         <button id="manage-top10-categories-btn" class="btn-primary" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);">
@@ -5813,7 +5842,7 @@ const DailyObservations = {
         const filterLabel = activeFilter ? this._getTopRiskCategoryLabel(activeFilter) : '';
         const filterHint = activeFilter
             ? `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;padding:10px 12px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;">
-                    <span style="font-size:0.88rem;color:#1e40af;"><i class="fas fa-filter ml-2"></i>${Utils.escapeHTML(this._t('module.dailyobs.top10.filter.active', 'عرض مخاطر فئة: {category}').replace('{category}', filterLabel))}</span>
+                    <span style="font-size:0.88rem;color:#1e40af;"><i class="fas fa-filter ml-2"></i>${Utils.escapeHTML(this._tf('module.dailyobs.top10.filter.active', { category: filterLabel }, `عرض مخاطر فئة: ${filterLabel}`))}</span>
                     <button type="button" id="top-risk-clear-filter-btn" class="btn-secondary" style="padding:4px 10px;font-size:0.8rem;">${Utils.escapeHTML(this._t('module.dailyobs.top10.filter.clear', 'إلغاء الفلتر'))}</button>
                </div>`
             : '';
@@ -5886,7 +5915,7 @@ const DailyObservations = {
                                     <div class="text-sm font-medium text-gray-800">${Utils.escapeHTML(obs.siteName || '-')}</div>
                                     <div class="text-xs text-gray-500">${Utils.escapeHTML(obs.locationName || '')}</div>
                                 </td>
-                                <td>${Utils.escapeHTML(obs.observationType || '-')}</td>
+                                <td>${Utils.escapeHTML(this.getObservationTypeLabel(obs.observationType))}</td>
                                 <td>
                                     <span class="badge badge-${this.getRiskBadgeClass(obs.riskLevel)}">
                                         ${Utils.escapeHTML(obs.riskLevel || '-')}
@@ -5937,7 +5966,7 @@ const DailyObservations = {
                                 <i class="fas ${catMeta.icon}"></i>${Utils.escapeHTML(obs.riskCategory)}
                             </span>
                         </div>
-                        <div class="text-sm text-gray-700 mb-2">${Utils.escapeHTML(obs.observationType || '-')}</div>
+                        <div class="text-sm text-gray-700 mb-2">${Utils.escapeHTML(this.getObservationTypeLabel(obs.observationType))}</div>
                         <div class="flex gap-2 flex-wrap">
                             <span class="badge badge-${this.getRiskBadgeClass(obs.riskLevel)}">${Utils.escapeHTML(obs.riskLevel || '-')}</span>
                             <span class="badge badge-${this.getStatusBadgeClass(obs.status)}">${Utils.escapeHTML(obs.status || '-')}</span>
@@ -6021,7 +6050,7 @@ const DailyObservations = {
                 {
                     id: 'chart_site_risk',
                     type: 'bar',
-                    title: 'المخاطر حسب الموقع',
+                    title: this._t('module.dailyobs.top10.chart.siteRisk', 'المخاطر حسب الموقع'),
                     field: 'siteName',
                     enabled: false,
                     useAllData: true
@@ -6037,10 +6066,10 @@ const DailyObservations = {
                 <div class="col-span-2">
                     <div class="empty-state">
                         <i class="fas fa-chart-bar text-gray-300 text-4xl mb-4"></i>
-                        <p class="text-gray-500">لا توجد رسوم بيانية مفعلة</p>
+                        <p class="text-gray-500">${Utils.escapeHTML(this._t('module.dailyobs.top10.chart.emptyEnabled', 'لا توجد رسوم بيانية مفعلة'))}</p>
                         <button onclick="DailyObservations.showAddTop10ChartModal()" class="btn-primary mt-4">
                             <i class="fas fa-plus ml-2"></i>
-                            إضافة رسم بياني
+                            ${Utils.escapeHTML(this._t('module.dailyobs.top10.btn.addChart', 'إضافة رسم بياني'))}
                         </button>
                     </div>
                 </div>
@@ -6064,11 +6093,11 @@ const DailyObservations = {
                             </h4>
                             <div class="flex items-center gap-2">
                                 <button onclick="DailyObservations.editTop10Chart('${chartConfig.id}')" 
-                                        class="btn-icon btn-icon-secondary" title="تعديل">
+                                        class="btn-icon btn-icon-secondary" title="${Utils.escapeHTML(this._t('module.dailyobs.common.edit', 'تعديل'))}">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 <button onclick="DailyObservations.deleteTop10Chart('${chartConfig.id}')" 
-                                        class="btn-icon btn-icon-danger" title="حذف">
+                                        class="btn-icon btn-icon-danger" title="${Utils.escapeHTML(this._t('module.dailyobs.common.delete', 'حذف'))}">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -6221,6 +6250,8 @@ const DailyObservations = {
             if (field === 'riskCategory') {
                 const id = obs.riskCategoryId || this._topRiskCategoryOf(obs);
                 value = this._getTopRiskCategoryLabel(id);
+            } else if (field === 'observationType') {
+                value = this.getObservationTypeLabel(obs.observationType);
             } else {
                 value = obs[field] || value;
             }
@@ -6242,7 +6273,7 @@ const DailyObservations = {
      */
     showManageTop10RiskCategoriesModal() {
         if (!this.canDailyObservationsFullAdminUi()) {
-            Notification.error('غير مصرح');
+            Notification.error(this._t('module.dailyobs.common.unauthorized', 'غير مصرح'));
             return;
         }
 
@@ -6259,10 +6290,10 @@ const DailyObservations = {
             const sel = typeMap[typeName] || '';
             return `
                 <tr>
-                    <td style="padding:8px 10px;font-weight:600;">${Utils.escapeHTML(typeName)}</td>
+                    <td style="padding:8px 10px;font-weight:600;">${Utils.escapeHTML(this.getObservationTypeLabel(typeName))}</td>
                     <td style="padding:8px 10px;">
                         <select class="form-input obs-risk-type-map" data-obs-type="${Utils.escapeHTML(typeName)}" style="min-width:180px;">
-                            <option value="">${Utils.escapeHTML(this._t('module.dailyobs.filter.all', 'الكل'))}</option>
+                            <option value="">${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.unassigned', 'غير مُعيَّن'))}</option>
                             ${categories.map((c) => `<option value="${Utils.escapeHTML(c.id)}" ${sel === c.id ? 'selected' : ''}>${Utils.escapeHTML(c.label)}</option>`).join('')}
                         </select>
                     </td>
@@ -6274,7 +6305,7 @@ const DailyObservations = {
                 <td style="padding:8px 10px;">${Utils.escapeHTML(c.label || c.id)}</td>
                 <td style="padding:8px 10px;font-size:12px;color:#64748b;">${Utils.escapeHTML((c.keywords || []).join('، '))}</td>
                 <td style="padding:8px 10px;">
-                    <button type="button" class="btn-icon btn-icon-danger obs-risk-del-cat" data-idx="${idx}" title="حذف"><i class="fas fa-trash"></i></button>
+                    <button type="button" class="btn-icon btn-icon-danger obs-risk-del-cat" data-idx="${idx}" title="${Utils.escapeHTML(this._t('module.dailyobs.common.delete', 'حذف'))}"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>
         `).join('') || `<tr><td colspan="3" style="padding:12px;text-align:center;color:#94a3b8;">—</td></tr>`;
@@ -6321,7 +6352,7 @@ const DailyObservations = {
                                 <tbody id="obs-risk-custom-cats-tbody">${customRows}</tbody>
                             </table>
                         </div>
-                        <p style="font-size:12px;color:#64748b;margin-top:8px;">${categories.filter((c) => !c.isCustom).length} ${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.builtin', 'افتراضية'))} + ${(cfg.customCategories || []).length} ${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.customList', 'الفئات المخصصة'))}</p>
+                        <p style="font-size:12px;color:#64748b;margin-top:8px;">${Utils.escapeHTML(this._tf('module.dailyobs.top10.categories.builtinSummary', { builtin: categories.filter((c) => !c.isCustom).length, custom: (cfg.customCategories || []).length }, ''))}</p>
                     </section>
                 </div>
                 <div class="modal-footer">
@@ -6418,69 +6449,47 @@ const DailyObservations = {
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-plus ml-2"></i>
-                        إضافة رسم بياني جديد
+                        <span data-i18n="module.dailyobs.top10.chart.modal.addTitle">إضافة رسم بياني جديد</span>
                     </h2>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    <button class="modal-close" type="button"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                عنوان الرسم البياني
-                            </label>
-                            <input type="text" id="top10-chart-title" class="form-input" 
-                                   placeholder="مثال: توزيع الخطورة">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="module.dailyobs.top10.chart.modal.titleLabel">عنوان الرسم البياني</label>
+                            <input type="text" id="top10-chart-title" class="form-input" data-i18n-placeholder="module.dailyobs.top10.chart.modal.titlePlaceholder" placeholder="مثال: توزيع الخطورة">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                نوع الرسم البياني
-                            </label>
-                            <select id="top10-chart-type" class="form-input">
-                                <option value="doughnut">دائري (Doughnut)</option>
-                                <option value="pie">دائري (Pie)</option>
-                                <option value="bar">عمودي (Bar)</option>
-                                <option value="line">خطي (Line)</option>
-                            </select>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="module.dailyobs.top10.chart.modal.typeLabel">نوع الرسم البياني</label>
+                            <select id="top10-chart-type" class="form-input">${this._renderTop10ChartTypeOptions('doughnut')}</select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                الحقل المراد تحليله
-                            </label>
-                            <select id="top10-chart-field" class="form-input">
-                                <option value="riskCategory">فئة المخاطر</option>
-                                <option value="riskLevel">معدل الخطورة</option>
-                                <option value="status">الحالة</option>
-                                <option value="observationType">نوع الملاحظة</option>
-                                <option value="siteName">الموقع</option>
-                                <option value="locationName">المكان</option>
-                                <option value="shift">الوردية</option>
-                                <option value="responsibleDepartment">المسؤول</option>
-                                <option value="observerName">صاحب الملاحظة</option>
-                            </select>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="module.dailyobs.top10.chart.modal.fieldLabel">الحقل المراد تحليله</label>
+                            <select id="top10-chart-field" class="form-input">${this._renderTop10ChartFieldOptions('riskCategory')}</select>
                         </div>
                         <div>
                             <label class="flex items-center gap-2 cursor-pointer">
                                 <input type="checkbox" id="top10-chart-use-all-data" class="form-checkbox">
-                                <span class="text-sm text-gray-700">استخدام جميع البيانات (وليس فقط أعلى 10)</span>
+                                <span class="text-sm text-gray-700" data-i18n="module.dailyobs.top10.chart.modal.useAllData">استخدام جميع البيانات</span>
                             </label>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button onclick="this.closest('.modal-overlay').remove()" class="btn-secondary">
-                        إلغاء
-                    </button>
+                    <button type="button" class="btn-secondary obs-top10-modal-cancel">${Utils.escapeHTML(this._t('module.dailyobs.btn.cancel', 'إلغاء'))}</button>
                     <button id="save-top10-chart-btn" class="btn-primary">
                         <i class="fas fa-save ml-2"></i>
-                        حفظ
+                        ${Utils.escapeHTML(this._t('module.dailyobs.btn.save', 'حفظ'))}
                     </button>
                 </div>
             </div>
         `;
 
         document.body.appendChild(modal);
+        this.applyModuleI18n(modal);
+        const close = () => modal.remove();
+        modal.querySelector('.modal-close')?.addEventListener('click', close);
+        modal.querySelector('.obs-top10-modal-cancel')?.addEventListener('click', close);
 
         const saveBtn = document.getElementById('save-top10-chart-btn');
         saveBtn.addEventListener('click', () => {
@@ -6490,7 +6499,7 @@ const DailyObservations = {
             const useAllData = document.getElementById('top10-chart-use-all-data').checked;
 
             if (!title) {
-                Notification.error('يرجى إدخال عنوان للرسم البياني');
+                Notification.error(this._t('module.dailyobs.notify.chartTitleRequired', 'يرجى إدخال عنوان للرسم البياني'));
                 return;
             }
 
@@ -6508,7 +6517,7 @@ const DailyObservations = {
             localStorage.setItem('dailyObservations_top10RiskCharts', JSON.stringify(savedCharts));
 
             modal.remove();
-            Notification.success('تم إضافة الرسم البياني بنجاح');
+            Notification.success(this._t('module.dailyobs.notify.chartAdded', 'تم إضافة الرسم البياني بنجاح'));
             this.loadTop10Observations();
         });
     },
@@ -6526,19 +6535,17 @@ const DailyObservations = {
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-cog ml-2"></i>
-                        إدارة الرسوم البيانية
+                        <span data-i18n="module.dailyobs.top10.chart.modal.manageTitle">إدارة الرسوم البيانية</span>
                     </h2>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    <button class="modal-close" type="button"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-2 max-h-96 overflow-y-auto">
                         ${savedCharts.length === 0 ? `
                             <div class="empty-state py-8">
-                                <p class="text-gray-500">لا توجد رسوم بيانية محفوظة</p>
+                                <p class="text-gray-500" data-i18n="module.dailyobs.top10.chart.empty">لا توجد رسوم بيانية محفوظة</p>
                             </div>
-                        ` : savedCharts.map((chart, index) => `
+                        ` : savedCharts.map((chart) => `
                             <div class="flex items-center justify-between p-3 border rounded hover:bg-gray-50">
                                 <div class="flex items-center gap-3 flex-1">
                                     <input type="checkbox" 
@@ -6548,17 +6555,17 @@ const DailyObservations = {
                                     <div class="flex-1">
                                         <div class="font-semibold">${Utils.escapeHTML(chart.title)}</div>
                                         <div class="text-sm text-gray-500">
-                                            النوع: ${chart.type} | الحقل: ${chart.field}
+                                            ${Utils.escapeHTML(this._tf('module.dailyobs.top10.chart.meta', { type: this._getTop10ChartTypeLabel(chart.type), field: this._getTop10ChartFieldLabel(chart.field) }, ''))}
                                         </div>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <button onclick="DailyObservations.editTop10Chart('${chart.id}')" 
-                                            class="btn-icon btn-icon-secondary" title="تعديل">
+                                    <button type="button" data-edit-id="${Utils.escapeHTML(chart.id)}" 
+                                            class="btn-icon btn-icon-secondary obs-top10-edit-chart" title="${Utils.escapeHTML(this._t('module.dailyobs.common.edit', 'تعديل'))}">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button onclick="DailyObservations.deleteTop10Chart('${chart.id}')" 
-                                            class="btn-icon btn-icon-danger" title="حذف">
+                                    <button type="button" data-del-id="${Utils.escapeHTML(chart.id)}" 
+                                            class="btn-icon btn-icon-danger obs-top10-del-chart" title="${Utils.escapeHTML(this._t('module.dailyobs.common.delete', 'حذف'))}">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -6567,24 +6574,40 @@ const DailyObservations = {
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button onclick="this.closest('.modal-overlay').remove()" class="btn-secondary">
-                        إغلاق
-                    </button>
+                    <button type="button" class="btn-secondary obs-top10-manage-close">${Utils.escapeHTML(this._t('module.dailyobs.common.close', 'إغلاق'))}</button>
                 </div>
             </div>
         `;
 
         document.body.appendChild(modal);
+        this.applyModuleI18n(modal);
+        const close = () => modal.remove();
+        modal.querySelector('.modal-close')?.addEventListener('click', close);
+        modal.querySelector('.obs-top10-manage-close')?.addEventListener('click', close);
 
-        // ربط أحداث التفعيل/إلغاء التفعيل
+        modal.querySelectorAll('.obs-top10-edit-chart').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-edit-id');
+                close();
+                this.editTop10Chart(id);
+            });
+        });
+        modal.querySelectorAll('.obs-top10-del-chart').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-del-id');
+                this.deleteTop10Chart(id);
+                close();
+            });
+        });
+
         modal.querySelectorAll('.top10-chart-enable').forEach(checkbox => {
             checkbox.addEventListener('change', (e) => {
                 const chartId = e.target.getAttribute('data-chart-id');
-                const savedCharts = JSON.parse(localStorage.getItem('dailyObservations_top10RiskCharts') || '[]');
-                const chart = savedCharts.find(c => c.id === chartId);
+                const charts = JSON.parse(localStorage.getItem('dailyObservations_top10RiskCharts') || '[]');
+                const chart = charts.find(c => c.id === chartId);
                 if (chart) {
                     chart.enabled = e.target.checked;
-                    localStorage.setItem('dailyObservations_top10RiskCharts', JSON.stringify(savedCharts));
+                    localStorage.setItem('dailyObservations_top10RiskCharts', JSON.stringify(charts));
                     this.loadTop10Observations();
                 }
             });
@@ -6606,70 +6629,47 @@ const DailyObservations = {
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-edit ml-2"></i>
-                        تعديل الرسم البياني
+                        <span data-i18n="module.dailyobs.top10.chart.modal.editTitle">تعديل الرسم البياني</span>
                     </h2>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    <button class="modal-close" type="button"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                عنوان الرسم البياني
-                            </label>
-                            <input type="text" id="edit-top10-chart-title" class="form-input" 
-                                   value="${Utils.escapeHTML(chart.title)}">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="module.dailyobs.top10.chart.modal.titleLabel">عنوان الرسم البياني</label>
+                            <input type="text" id="edit-top10-chart-title" class="form-input" value="${Utils.escapeHTML(chart.title)}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                نوع الرسم البياني
-                            </label>
-                            <select id="edit-top10-chart-type" class="form-input">
-                                <option value="doughnut" ${chart.type === 'doughnut' ? 'selected' : ''}>دائري (Doughnut)</option>
-                                <option value="pie" ${chart.type === 'pie' ? 'selected' : ''}>دائري (Pie)</option>
-                                <option value="bar" ${chart.type === 'bar' ? 'selected' : ''}>عمودي (Bar)</option>
-                                <option value="line" ${chart.type === 'line' ? 'selected' : ''}>خطي (Line)</option>
-                            </select>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="module.dailyobs.top10.chart.modal.typeLabel">نوع الرسم البياني</label>
+                            <select id="edit-top10-chart-type" class="form-input">${this._renderTop10ChartTypeOptions(chart.type)}</select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                الحقل المراد تحليله
-                            </label>
-                            <select id="edit-top10-chart-field" class="form-input">
-                                <option value="riskCategory" ${chart.field === 'riskCategory' ? 'selected' : ''}>فئة المخاطر</option>
-                                <option value="riskLevel" ${chart.field === 'riskLevel' ? 'selected' : ''}>معدل الخطورة</option>
-                                <option value="status" ${chart.field === 'status' ? 'selected' : ''}>الحالة</option>
-                                <option value="observationType" ${chart.field === 'observationType' ? 'selected' : ''}>نوع الملاحظة</option>
-                                <option value="siteName" ${chart.field === 'siteName' ? 'selected' : ''}>الموقع</option>
-                                <option value="locationName" ${chart.field === 'locationName' ? 'selected' : ''}>المكان</option>
-                                <option value="shift" ${chart.field === 'shift' ? 'selected' : ''}>الوردية</option>
-                                <option value="responsibleDepartment" ${chart.field === 'responsibleDepartment' ? 'selected' : ''}>المسؤول</option>
-                                <option value="observerName" ${chart.field === 'observerName' ? 'selected' : ''}>صاحب الملاحظة</option>
-                            </select>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="module.dailyobs.top10.chart.modal.fieldLabel">الحقل المراد تحليله</label>
+                            <select id="edit-top10-chart-field" class="form-input">${this._renderTop10ChartFieldOptions(chart.field)}</select>
                         </div>
                         <div>
                             <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" id="edit-top10-chart-use-all-data" class="form-checkbox" 
-                                       ${chart.useAllData ? 'checked' : ''}>
-                                <span class="text-sm text-gray-700">استخدام جميع البيانات (وليس فقط أعلى 10)</span>
+                                <input type="checkbox" id="edit-top10-chart-use-all-data" class="form-checkbox" ${chart.useAllData ? 'checked' : ''}>
+                                <span class="text-sm text-gray-700" data-i18n="module.dailyobs.top10.chart.modal.useAllData">استخدام جميع البيانات</span>
                             </label>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button onclick="this.closest('.modal-overlay').remove()" class="btn-secondary">
-                        إلغاء
-                    </button>
+                    <button type="button" class="btn-secondary obs-top10-edit-cancel">${Utils.escapeHTML(this._t('module.dailyobs.btn.cancel', 'إلغاء'))}</button>
                     <button id="update-top10-chart-btn" class="btn-primary">
                         <i class="fas fa-save ml-2"></i>
-                        حفظ التغييرات
+                        ${Utils.escapeHTML(this._t('module.dailyobs.btn.save', 'حفظ'))}
                     </button>
                 </div>
             </div>
         `;
 
         document.body.appendChild(modal);
+        this.applyModuleI18n(modal);
+        const closeEdit = () => modal.remove();
+        modal.querySelector('.modal-close')?.addEventListener('click', closeEdit);
+        modal.querySelector('.obs-top10-edit-cancel')?.addEventListener('click', closeEdit);
 
         const updateBtn = document.getElementById('update-top10-chart-btn');
         updateBtn.addEventListener('click', () => {
@@ -6679,7 +6679,7 @@ const DailyObservations = {
             const useAllData = document.getElementById('edit-top10-chart-use-all-data').checked;
 
             if (!title) {
-                Notification.error('يرجى إدخال عنوان للرسم البياني');
+                Notification.error(this._t('module.dailyobs.notify.chartTitleRequired', 'يرجى إدخال عنوان للرسم البياني'));
                 return;
             }
 
@@ -6694,8 +6694,8 @@ const DailyObservations = {
                     useAllData: useAllData
                 };
                 localStorage.setItem('dailyObservations_top10RiskCharts', JSON.stringify(savedCharts));
-                modal.remove();
-                Notification.success('تم تحديث الرسم البياني بنجاح');
+                closeEdit();
+                Notification.success(this._t('module.dailyobs.notify.chartUpdated', 'تم تحديث الرسم البياني بنجاح'));
                 this.loadTop10Observations();
             }
         });
@@ -6705,14 +6705,14 @@ const DailyObservations = {
      * حذف رسم بياني
      */
     deleteTop10Chart(chartId) {
-        if (!confirm('هل أنت متأكد من حذف هذا الرسم البياني؟')) {
+        if (!confirm(this._t('module.dailyobs.notify.chartDeleteConfirm', 'هل أنت متأكد من حذف هذا الرسم البياني؟'))) {
             return;
         }
 
         const savedCharts = JSON.parse(localStorage.getItem('dailyObservations_top10RiskCharts') || '[]');
         const filtered = savedCharts.filter(c => c.id !== chartId);
         localStorage.setItem('dailyObservations_top10RiskCharts', JSON.stringify(filtered));
-        Notification.success('تم حذف الرسم البياني بنجاح');
+        Notification.success(this._t('module.dailyobs.notify.chartDeleted', 'تم حذف الرسم البياني'));
         this.loadTop10Observations();
     },
 
@@ -7022,9 +7022,51 @@ const DailyObservations = {
 
         if (observationsRaw.length === 0) {
             const { t, isRTL } = this.getTranslations();
-            container.innerHTML = `<div class="empty-state" style="direction: ${isRTL ? 'rtl' : 'ltr'}; text-align: ${isRTL ? 'right' : 'left'};"><p class="text-gray-500">${t('empty.noObservations')}</p></div>`;
+            container.innerHTML = `<div class="empty-state" style="direction: ${isRTL ? 'rtl' : 'ltr'}; text-align: ${isRTL ? 'right' : 'left'};"><p class="text-gray-500">${Utils.escapeHTML(t('empty.noObservations'))}</p></div>`;
             return;
         }
+
+        const tbl = {
+            code: this._t('module.dailyobs.registry.table.code', 'رقم الملاحظة'),
+            location: this._t('module.dailyobs.registry.table.location', 'الموقع / المكان'),
+            datetime: this._t('module.dailyobs.registry.table.datetime', 'التاريخ والوقت'),
+            type: this._t('module.dailyobs.registry.table.type', 'نوع الملاحظة'),
+            shift: this._t('module.dailyobs.registry.table.shift', 'الوردية'),
+            risk: this._t('module.dailyobs.registry.table.risk', 'معدل الخطورة'),
+            status: this._t('module.dailyobs.registry.table.status', 'الحالة'),
+            observer: this._t('module.dailyobs.registry.table.observer', 'صاحب الملاحظة'),
+            responsible: this._t('module.dailyobs.registry.table.responsible', 'المسؤول'),
+            attachments: this._t('module.dailyobs.registry.table.attachments', 'المرفقات'),
+            actions: this._t('module.dailyobs.registry.table.actions', 'الإجراءات'),
+            emptySearch: this._t('module.dailyobs.registry.emptySearch', 'لا توجد نتائج للبحث'),
+            view: this._t('module.dailyobs.common.view', 'عرض')
+        };
+
+        const renderRow = (obs) => `
+                <tr>
+                    <td>${Utils.escapeHTML(obs.isoCode || '')}</td>
+                    <td>
+                        <div class="text-sm font-medium text-gray-800">${Utils.escapeHTML(obs.siteName || '-')}</div>
+                        <div class="text-xs text-gray-500">${Utils.escapeHTML(obs.locationName || '')}</div>
+                    </td>
+                    <td>${obs.date ? Utils.formatDateTime(obs.date) : '-'}</td>
+                    <td>${Utils.escapeHTML(this.getObservationTypeLabel(obs.observationType))}</td>
+                    <td>${Utils.escapeHTML(obs.shift || '-')}</td>
+                    <td>
+                        <span class="badge badge-${this.getRiskBadgeClass(obs.riskLevel)}">${Utils.escapeHTML(obs.riskLevel || '-')}</span>
+                    </td>
+                    <td>
+                        <span class="badge badge-${this.getStatusBadgeClass(obs.status)}">${Utils.escapeHTML(obs.status || '-')}</span>
+                    </td>
+                    <td>${Utils.escapeHTML(obs.observerName || '-')}</td>
+                    <td>${this.formatResponsibleTableCell(obs)}</td>
+                    <td>${obs.attachments && obs.attachments.length > 0 ? `<i class="fas fa-paperclip text-blue-500" title="${Utils.escapeHTML(this._tf('module.dailyobs.registry.attachments.count', { n: obs.attachments.length }, `${obs.attachments.length} ملف`))}"></i>` : '-'}</td>
+                    <td>
+                        <button onclick="DailyObservations.viewObservation('${obs.id}')" class="btn-icon btn-icon-primary" title="${Utils.escapeHTML(tbl.view)}">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>`;
 
         // دالة مساعدة لاستخراج الرقم من رقم الملاحظة للترتيب
         const extractObservationNumber = (isoCode) => {
@@ -7060,39 +7102,14 @@ const DailyObservations = {
                     <tr>
                         <td colspan="11" style="text-align: center; padding: 40px;">
                             <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
-                            <p class="text-gray-500">لا توجد نتائج للبحث</p>
+                            <p class="text-gray-500">${Utils.escapeHTML(tbl.emptySearch)}</p>
                         </td>
                     </tr>
                 `;
                 return;
             }
 
-            tableBody.innerHTML = filteredObservations.map((obs) => `
-                <tr>
-                    <td>${Utils.escapeHTML(obs.isoCode || '')}</td>
-                    <td>
-                        <div class="text-sm font-medium text-gray-800">${Utils.escapeHTML(obs.siteName || '-')}</div>
-                        <div class="text-xs text-gray-500">${Utils.escapeHTML(obs.locationName || '')}</div>
-                    </td>
-                    <td>${obs.date ? Utils.formatDateTime(obs.date) : '-'}</td>
-                    <td>${Utils.escapeHTML(obs.observationType || '-')}</td>
-                    <td>${Utils.escapeHTML(obs.shift || '-')}</td>
-                    <td>
-                        <span class="badge badge-${this.getRiskBadgeClass(obs.riskLevel)}">${Utils.escapeHTML(obs.riskLevel || '-')}</span>
-                    </td>
-                    <td>
-                        <span class="badge badge-${this.getStatusBadgeClass(obs.status)}">${Utils.escapeHTML(obs.status || '-')}</span>
-                    </td>
-                    <td>${Utils.escapeHTML(obs.observerName || '-')}</td>
-                    <td>${this.formatResponsibleTableCell(obs)}</td>
-                    <td>${obs.attachments && obs.attachments.length > 0 ? `<i class="fas fa-paperclip text-blue-500" title="${obs.attachments.length} ملف"></i>` : '-'}</td>
-                    <td>
-                        <button onclick="DailyObservations.viewObservation('${obs.id}')" class="btn-icon btn-icon-primary" title="عرض">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
+            tableBody.innerHTML = filteredObservations.map((obs) => renderRow(obs)).join('');
             return;
         }
 
@@ -7102,17 +7119,17 @@ const DailyObservations = {
                 <table class="data-table" style="font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
                     <thead>
                         <tr>
-                            <th>رقم الملاحظة</th>
-                            <th>الموقع / المكان</th>
-                            <th>التاريخ والوقت</th>
-                            <th>نوع الملاحظة</th>
-                            <th>الوردية</th>
-                            <th>معدل الخطورة</th>
-                            <th>الحالة</th>
-                            <th>صاحب الملاحظة</th>
-                            <th>المسؤول</th>
-                            <th>المرفقات</th>
-                            <th>الإجراءات</th>
+                            <th>${Utils.escapeHTML(tbl.code)}</th>
+                            <th>${Utils.escapeHTML(tbl.location)}</th>
+                            <th>${Utils.escapeHTML(tbl.datetime)}</th>
+                            <th>${Utils.escapeHTML(tbl.type)}</th>
+                            <th>${Utils.escapeHTML(tbl.shift)}</th>
+                            <th>${Utils.escapeHTML(tbl.risk)}</th>
+                            <th>${Utils.escapeHTML(tbl.status)}</th>
+                            <th>${Utils.escapeHTML(tbl.observer)}</th>
+                            <th>${Utils.escapeHTML(tbl.responsible)}</th>
+                            <th>${Utils.escapeHTML(tbl.attachments)}</th>
+                            <th>${Utils.escapeHTML(tbl.actions)}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -7120,35 +7137,10 @@ const DailyObservations = {
                             <tr>
                                 <td colspan="11" style="text-align: center; padding: 40px;">
                                     <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
-                                    <p class="text-gray-500" style="font-family: 'Cairo', sans-serif;">لا توجد نتائج للبحث</p>
+                                    <p class="text-gray-500" style="font-family: 'Cairo', sans-serif;">${Utils.escapeHTML(tbl.emptySearch)}</p>
                                 </td>
                             </tr>
-                        ` : filteredObservations.map((obs) => `
-                            <tr>
-                                <td style="font-family: 'Cairo', sans-serif;">${Utils.escapeHTML(obs.isoCode || '')}</td>
-                                <td>
-                                    <div class="text-sm font-medium text-gray-800" style="font-family: 'Cairo', sans-serif;">${Utils.escapeHTML(obs.siteName || '-')}</div>
-                                    <div class="text-xs text-gray-500" style="font-family: 'Cairo', sans-serif;">${Utils.escapeHTML(obs.locationName || '')}</div>
-                                </td>
-                                <td style="font-family: 'Cairo', sans-serif;">${obs.date ? Utils.formatDateTime(obs.date) : '-'}</td>
-                                <td style="font-family: 'Cairo', sans-serif;">${Utils.escapeHTML(obs.observationType || '-')}</td>
-                                <td style="font-family: 'Cairo', sans-serif;">${Utils.escapeHTML(obs.shift || '-')}</td>
-                                <td>
-                                    <span class="badge badge-${this.getRiskBadgeClass(obs.riskLevel)}" style="font-family: 'Cairo', sans-serif;">${Utils.escapeHTML(obs.riskLevel || '-')}</span>
-                                </td>
-                                <td>
-                                    <span class="badge badge-${this.getStatusBadgeClass(obs.status)}" style="font-family: 'Cairo', sans-serif;">${Utils.escapeHTML(obs.status || '-')}</span>
-                                </td>
-                                <td style="font-family: 'Cairo', sans-serif;">${Utils.escapeHTML(obs.observerName || '-')}</td>
-                                <td style="font-family: 'Cairo', sans-serif;">${this.formatResponsibleTableCell(obs)}</td>
-                                <td style="font-family: 'Cairo', sans-serif;">${obs.attachments && obs.attachments.length > 0 ? `<i class="fas fa-paperclip text-blue-500" title="${obs.attachments.length} ملف"></i>` : '-'}</td>
-                                <td>
-                                    <button onclick="DailyObservations.viewObservation('${obs.id}')" class="btn-icon btn-icon-primary" title="عرض" style="font-family: 'Cairo', sans-serif;">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        `).join('')}
+                        ` : filteredObservations.map((obs) => renderRow(obs)).join('')}
                     </tbody>
                 </table>
             </div>
