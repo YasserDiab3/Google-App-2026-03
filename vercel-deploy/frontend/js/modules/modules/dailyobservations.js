@@ -3664,50 +3664,69 @@ const DailyObservations = {
 
     // ── حقن الأنماط (مرة واحدة، معزولة) ──
     _injectExecStyles() {
-        if (document.getElementById('obs-exec-dashboard-styles')) return;
+        const styleId = 'obs-exec-dashboard-styles-v2';
+        const old = document.getElementById('obs-exec-dashboard-styles');
+        if (old) old.remove();
+        if (document.getElementById(styleId)) return;
         const style = document.createElement('style');
-        style.id = 'obs-exec-dashboard-styles';
+        style.id = styleId;
         style.textContent = `
-        .obs-exec-wrap{direction:rtl;}
-        .obs-exec-filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:14px 16px;margin-bottom:16px;box-shadow:var(--shadow-sm);}
-        .obs-exec-filter{display:flex;flex-direction:column;gap:4px;min-width:150px;flex:1 1 150px;}
+        .obs-exec-wrap{direction:rtl;width:100%;max-width:100%;box-sizing:border-box;}
+        .obs-exec-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;width:100%;}
+        .obs-exec-filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:14px 16px;margin-bottom:16px;box-shadow:var(--shadow-sm);width:100%;box-sizing:border-box;}
+        .obs-exec-filter{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1 1 140px;}
         .obs-exec-filter label{font-size:11px;font-weight:600;color:var(--text-secondary);}
-        .obs-exec-filter select{padding:8px 10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);color:var(--text-primary);font-size:13px;cursor:pointer;}
-        .obs-exec-kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:18px;}
-        .obs-exec-kpi{position:relative;background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:16px;box-shadow:var(--shadow-sm);overflow:hidden;transition:var(--transition);}
+        .obs-exec-filter select{width:100%;padding:8px 10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);color:var(--text-primary);font-size:13px;cursor:pointer;}
+        .obs-exec-kpi-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px;width:100%;}
+        @media (min-width:640px){.obs-exec-kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}}
+        @media (min-width:960px){.obs-exec-kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr));}}
+        @media (min-width:1280px){.obs-exec-kpi-grid{grid-template-columns:repeat(5,minmax(0,1fr));}}
+        .obs-exec-kpi{position:relative;background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow-sm);overflow:hidden;transition:var(--transition);min-width:0;}
         .obs-exec-kpi:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
         .obs-exec-kpi__accent{position:absolute;inset-inline-start:0;top:0;bottom:0;width:5px;}
-        .obs-exec-kpi__icon{position:absolute;top:14px;inset-inline-end:14px;font-size:20px;opacity:.85;}
-        .obs-exec-kpi__label{font-size:12px;color:var(--text-secondary);font-weight:600;margin-bottom:6px;padding-inline-end:26px;}
-        .obs-exec-kpi__value{font-size:26px;font-weight:800;color:var(--text-primary);line-height:1;}
-        .obs-exec-kpi__sub{font-size:11px;color:var(--text-tertiary);margin-top:6px;}
+        .obs-exec-kpi__icon{position:absolute;top:12px;inset-inline-end:12px;font-size:18px;opacity:.85;}
+        .obs-exec-kpi__label{font-size:clamp(10px,1.7vw,12px);color:var(--text-secondary);font-weight:600;margin-bottom:6px;padding-inline-end:24px;line-height:1.35;}
+        .obs-exec-kpi__value{font-size:clamp(1.15rem,2.4vw,1.65rem);font-weight:800;color:var(--text-primary);line-height:1.1;word-break:break-word;}
+        .obs-exec-kpi__sub{font-size:10px;color:var(--text-tertiary);margin-top:6px;line-height:1.35;}
         .obs-exec-progress{height:6px;background:var(--bg-tertiary);border-radius:99px;margin-top:10px;overflow:hidden;}
         .obs-exec-progress__bar{height:100%;border-radius:99px;transition:width .6s ease;}
-        .obs-exec-insights{display:flex;flex-direction:column;gap:10px;margin-bottom:18px;}
-        .obs-exec-insight{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:12px;border:1px solid;font-weight:600;font-size:13px;}
-        .obs-exec-insight i{font-size:18px;margin-top:1px;}
+        .obs-exec-insights{display:flex;flex-direction:column;gap:10px;margin-bottom:18px;width:100%;}
+        .obs-exec-insight{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:12px;border:1px solid;font-weight:600;font-size:13px;line-height:1.45;}
+        .obs-exec-insight i{font-size:18px;margin-top:1px;flex-shrink:0;}
         .obs-exec-insight--good{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.35);color:#047857;}
         .obs-exec-insight--warn{background:rgba(245,158,11,.10);border-color:rgba(245,158,11,.40);color:#b45309;}
         .obs-exec-insight--danger{background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.40);color:#b91c1c;}
         .obs-exec-insight--info{background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.35);color:#1d4ed8;}
-        .obs-exec-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px;margin-top:6px;}
-        .obs-exec-card{background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:16px;box-shadow:var(--shadow-sm);}
+        .obs-exec-charts{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-top:6px;width:100%;}
+        @media (min-width:768px){.obs-exec-charts{grid-template-columns:repeat(2,minmax(0,1fr));}}
+        @media (min-width:1280px){.obs-exec-charts{grid-template-columns:repeat(3,minmax(0,1fr));}}
+        .obs-exec-card{background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:16px;box-shadow:var(--shadow-sm);min-width:0;box-sizing:border-box;}
         .obs-exec-card--wide{grid-column:1/-1;}
-        .obs-exec-card__title{font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
-        .obs-exec-chart-box{position:relative;height:260px;}
-        .obs-exec-empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:var(--text-tertiary);font-size:13px;}
-        .obs-exec-table{width:100%;border-collapse:collapse;font-size:13px;}
-        .obs-exec-table th,.obs-exec-table td{padding:10px 12px;text-align:right;border-bottom:1px solid var(--border-color);color:var(--text-primary);}
-        .obs-exec-table th{color:var(--text-secondary);font-weight:700;background:var(--bg-secondary);}
+        .obs-exec-card--span-lg{grid-column:1/-1;}
+        @media (min-width:768px){.obs-exec-card--span-lg{grid-column:span 2;}}
+        .obs-exec-card__title{font-size:clamp(12px,1.9vw,14px);font-weight:700;color:var(--text-primary);margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+        .obs-exec-chart-box{position:relative;height:clamp(220px,30vw,300px);min-height:220px;width:100%;}
+        .obs-exec-card--chart-tall .obs-exec-chart-box{height:auto;min-height:260px;}
+        .obs-exec-empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:var(--text-tertiary);font-size:13px;text-align:center;padding:12px;}
+        .obs-exec-table{width:100%;min-width:520px;border-collapse:collapse;font-size:13px;}
+        .obs-exec-table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+        .obs-exec-table th,.obs-exec-table td{padding:10px 12px;text-align:right;border-bottom:1px solid var(--border-color);color:var(--text-primary);vertical-align:top;}
+        .obs-exec-table th{color:var(--text-secondary);font-weight:700;background:var(--bg-secondary);white-space:nowrap;}
         .obs-exec-badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;}
-        .obs-exec-heat-grid{display:grid;gap:4px;overflow-x:auto;}
+        .obs-exec-heat-grid{display:grid;gap:4px;overflow-x:auto;width:100%;min-width:0;}
         .obs-exec-heat-cell{padding:9px 4px;text-align:center;border-radius:6px;font-size:11px;font-weight:700;}
         .obs-exec-heat-head{font-size:11px;font-weight:700;color:var(--text-secondary);text-align:center;padding:6px 2px;white-space:nowrap;}
         .obs-exec-heat-row-label{font-size:12px;color:var(--text-primary);font-weight:600;display:flex;align-items:center;padding-inline-end:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        #tab-executive-dashboard{width:100%;max-width:100%;box-sizing:border-box;}
         [data-theme="dark"] .obs-exec-insight--good{color:#34d399;}
         [data-theme="dark"] .obs-exec-insight--warn{color:#fbbf24;}
         [data-theme="dark"] .obs-exec-insight--danger{color:#f87171;}
         [data-theme="dark"] .obs-exec-insight--info{color:#60a5fa;}
+        @media (max-width:639px){
+            .obs-exec-header .btn-success,.obs-exec-header .btn-secondary{width:100%;justify-content:center;}
+            .obs-exec-kpi{padding:12px 14px;}
+            .obs-exec-card{padding:12px;}
+        }
         `;
         document.head.appendChild(style);
     },
@@ -3751,17 +3770,24 @@ const DailyObservations = {
                     <select id="obs-exec-filter-status"><option value="">كل الحالات</option><option value="open">مفتوحة</option><option value="overdue">متأخرة</option><option value="closed">مغلقة</option></select>
                 </div>
             </div>`;
-        const chartBox = (id, title, icon, wide) => `
-            <div class="obs-exec-card ${wide ? 'obs-exec-card--wide' : ''}">
+        const chartBox = (id, title, icon, opts = {}) => {
+            const extra = [
+                opts.wide ? 'obs-exec-card--wide' : '',
+                opts.spanLg ? 'obs-exec-card--span-lg' : '',
+                opts.tall ? 'obs-exec-card--chart-tall' : ''
+            ].filter(Boolean).join(' ');
+            return `
+            <div class="obs-exec-card ${extra}">
                 <div class="obs-exec-card__title"><i class="fas ${icon}" style="color:var(--primary-color);"></i>${title}</div>
                 <div class="obs-exec-chart-box">
                     <canvas id="${id}"></canvas>
                     <div id="${id}-empty" class="obs-exec-empty"><i class="fas fa-inbox ml-2"></i>لا توجد بيانات كافية</div>
                 </div>
             </div>`;
+        };
         return `
         <div class="obs-exec-wrap" id="obs-exec-root">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+            <div class="obs-exec-header">
                 <div>
                     <h2 style="font-size:18px;font-weight:800;color:var(--text-primary);margin:0;"><i class="fas fa-gauge-high ml-2" style="color:var(--primary-color);"></i>لوحة الذكاء الوقائي التنفيذية</h2>
                     <p style="font-size:13px;color:var(--text-secondary);margin:4px 0 0;">مؤشرات أداء أمنية رائدة — تبليغ الحوادث الوشيكة وأداء إغلاق الإجراءات التصحيحية</p>
@@ -3775,19 +3801,19 @@ const DailyObservations = {
             <div id="obs-exec-insights" class="obs-exec-insights"></div>
             <div id="obs-exec-kpi-strip" class="obs-exec-kpi-grid"></div>
             <div class="obs-exec-charts">
-                ${chartBox('obs-exec-chart-nearmiss', 'اتجاه الحوادث الوشيكة الشهري', 'fa-chart-line')}
-                ${chartBox('obs-exec-chart-closure', 'اتجاه معدل إغلاق الإجراءات', 'fa-chart-area')}
+                ${chartBox('obs-exec-chart-nearmiss', 'اتجاه الحوادث الوشيكة الشهري', 'fa-chart-line', { spanLg: true })}
+                ${chartBox('obs-exec-chart-closure', 'اتجاه معدل إغلاق الإجراءات', 'fa-chart-area', { spanLg: true })}
                 ${chartBox('obs-exec-chart-category', 'توزيع تصنيف الملاحظات', 'fa-shapes')}
                 ${chartBox('obs-exec-chart-risk', 'توزيع مستوى الخطورة', 'fa-gauge')}
-                ${chartBox('obs-exec-chart-dept', 'مقارنة أداء الإدارات (معدل الإغلاق %)', 'fa-building')}
-                ${chartBox('obs-exec-chart-repeat', 'أبرز المشكلات المتكررة', 'fa-rotate')}
+                ${chartBox('obs-exec-chart-dept', 'مقارنة أداء الإدارات (معدل الإغلاق %)', 'fa-building', { tall: true })}
+                ${chartBox('obs-exec-chart-repeat', 'أبرز المشكلات المتكررة', 'fa-rotate', { tall: true })}
                 <div class="obs-exec-card obs-exec-card--wide">
                     <div class="obs-exec-card__title"><i class="fas fa-fire" style="color:var(--danger-color);"></i>خريطة الإجراءات المتأخرة (الإدارة × الشهر)</div>
                     <div id="obs-exec-heatmap"></div>
                 </div>
                 <div class="obs-exec-card obs-exec-card--wide">
                     <div class="obs-exec-card__title"><i class="fas fa-list-ol" style="color:var(--primary-color);"></i>تفاصيل المشكلات المتكررة</div>
-                    <div style="overflow-x:auto;"><table class="obs-exec-table"><thead><tr><th>المشكلة</th><th>الموقع / المكان / النوع</th><th>عدد التكرار</th><th>آخر حدوث</th><th>الاتجاه</th></tr></thead><tbody id="obs-exec-repeat-table"></tbody></table></div>
+                    <div class="obs-exec-table-wrap"><table class="obs-exec-table"><thead><tr><th>المشكلة</th><th>الموقع / المكان / النوع</th><th>عدد التكرار</th><th>آخر حدوث</th><th>الاتجاه</th></tr></thead><tbody id="obs-exec-repeat-table"></tbody></table></div>
                 </div>
             </div>
         </div>`;
@@ -3825,6 +3851,17 @@ const DailyObservations = {
                     sel.addEventListener('change', () => { try { this.loadExecutiveDashboard(); } catch (e) {} });
                 }
             });
+            if (!this._execResizeBound) {
+                this._execResizeBound = true;
+                let resizeTimer = null;
+                window.addEventListener('resize', () => {
+                    if (this.state?.activeTab !== 'executive-dashboard') return;
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(() => {
+                        try { this.loadExecutiveDashboard(); } catch (_e) { /* ignore */ }
+                    }, 350);
+                });
+            }
         } catch (e) {
             Utils?.safeWarn?.('⚠️ loadExecutiveDashboard:', e?.message || e);
         } finally {
@@ -4150,6 +4187,64 @@ const DailyObservations = {
         }
     },
 
+    _execShortLabel(text, maxLen = 34) {
+        const s = String(text || '').trim();
+        if (!s) return '—';
+        return s.length > maxLen ? s.slice(0, maxLen - 1) + '…' : s;
+    },
+
+    _setExecChartBoxHeight(canvasId, rowCount, minHeight = 260) {
+        const canvas = document.getElementById(canvasId);
+        const box = canvas && canvas.closest('.obs-exec-chart-box');
+        if (!box) return;
+        const rows = Math.max(1, Number(rowCount) || 1);
+        box.style.minHeight = Math.max(minHeight, rows * 36 + 72) + 'px';
+        box.style.height = 'auto';
+    },
+
+    _drawExecHBar(canvasId, items, color) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const rows = Array.isArray(items) ? items : [];
+        const labels = rows.map((r) => r.short || r.label || '—');
+        const data = rows.map((r) => r.value);
+        const tooltips = rows.map((r) => r.full || r.short || r.label || '—');
+        if (!this._execToggleEmpty(canvasId, data.length === 0 || data.reduce((a, b) => a + b, 0) === 0)) return;
+        this._setExecChartBoxHeight(canvasId, labels.length, 280);
+        this._execDestroyChart(canvasId);
+        const chart = new Chart(canvas, {
+            type: 'bar',
+            data: { labels, datasets: [{ data, backgroundColor: color || 'rgba(239,68,68,0.7)', borderRadius: 5, borderSkipped: false }] },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { left: 4, right: 8 } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: (ctx) => tooltips[ctx[0]?.dataIndex] || '',
+                            label: (ctx) => ` التكرار: ${ctx.parsed.x}`
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f1f5f9' } },
+                    y: {
+                        ticks: {
+                            autoSkip: false,
+                            font: { size: 10 },
+                            callback: (v) => this._execShortLabel(labels[v], 36)
+                        }
+                    }
+                }
+            }
+        });
+        if (!this.analysisCharts) this.analysisCharts = {};
+        this.analysisCharts[canvasId] = chart;
+    },
+
     // ── رسوم لوحة التنفيذي ──
     _drawExecCharts(obs, k) {
         try { this._drawExecMonthlySeries('obs-exec-chart-nearmiss', obs, o => this._execIsNearMiss(o), 'بلاغات وشيكة', 'rgba(245,158,11,0.75)'); } catch (e) {}
@@ -4167,7 +4262,11 @@ const DailyObservations = {
         try { this._drawExecDeptPerformance('obs-exec-chart-dept', obs); } catch (e) {}
         try {
             const issues = (k.repeatIssues || []).slice(0, 8);
-            this._drawHBar('obs-exec-chart-repeat', issues.map(i => i.sample.slice(0, 24) || i.key), issues.map(i => i.count), 'rgba(239,68,68,0.7)');
+            const rows = issues.map((i) => {
+                const full = String(i.sample || i.key || '—').trim();
+                return { short: this._execShortLabel(full, 40), full, value: i.count };
+            });
+            this._drawExecHBar('obs-exec-chart-repeat', rows, 'rgba(239,68,68,0.7)');
         } catch (e) {}
     },
 
@@ -4240,14 +4339,38 @@ const DailyObservations = {
         obs.forEach(o => { const d = o.responsibleDepartment || 'غير محدد'; (map[d] = map[d] || { c: 0, t: 0 }); map[d].t++; if (this._execIsClosed(o)) map[d].c++; });
         const entries = Object.entries(map).map(e => [e[0], Math.round(e[1].c / e[1].t * 100), e[1].t]).sort((a, b) => b[1] - a[1]).slice(0, 8);
         if (!this._execToggleEmpty(canvasId, entries.length === 0)) return;
+        const rows = entries.map((e) => ({
+            short: this._execShortLabel(e[0], 34),
+            full: e[0],
+            value: e[1]
+        }));
+        const colors = rows.map((r) => r.value >= 90 ? 'rgba(16,185,129,0.8)' : (r.value >= 75 ? 'rgba(245,158,11,0.8)' : 'rgba(239,68,68,0.8)'));
+        this._setExecChartBoxHeight(canvasId, rows.length, 280);
         this._execDestroyChart(canvasId);
-        const labels = entries.map(e => e[0]);
-        const data = entries.map(e => e[1]);
-        const colors = data.map(v => v >= 90 ? 'rgba(16,185,129,0.8)' : (v >= 75 ? 'rgba(245,158,11,0.8)' : 'rgba(239,68,68,0.8)'));
+        const labels = rows.map((r) => r.short);
+        const data = rows.map((r) => r.value);
         const chart = new Chart(canvas, {
             type: 'bar',
             data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 5, borderSkipped: false }] },
-            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` معدل الإغلاق: ${ctx.parsed.x}%` } } }, scales: { x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%', font: { size: 11 } }, grid: { color: '#f1f5f9' } }, y: { ticks: { font: { size: 11 }, callback: v => String(labels[v]).length > 18 ? String(labels[v]).slice(0, 17) + '…' : labels[v] } } } }
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { left: 4, right: 8 } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: (ctx) => rows[ctx[0]?.dataIndex]?.full || '',
+                            label: (ctx) => ` معدل الإغلاق: ${ctx.parsed.x}%`
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%', font: { size: 11 } }, grid: { color: '#f1f5f9' } },
+                    y: { ticks: { autoSkip: false, font: { size: 10 }, callback: v => labels[v] || '' } }
+                }
+            }
         });
         if (!this.analysisCharts) this.analysisCharts = {};
         this.analysisCharts[canvasId] = chart;
