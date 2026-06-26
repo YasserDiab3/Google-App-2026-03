@@ -216,9 +216,7 @@ const SafetyCalendar = {
     },
 
     canManageCustomEvents() {
-        if (this.isEffectiveAdmin()) return true;
-        return typeof Permissions !== 'undefined' && Permissions.hasAccess
-            && Permissions.hasAccess('safety-calendar');
+        return this.isEffectiveAdmin();
     },
 
     async ensureDailySafetyCheckListLoaded(force, options) {
@@ -396,9 +394,7 @@ const SafetyCalendar = {
     },
 
     canAssignTasksToOthers() {
-        if (this.isEffectiveAdmin()) return true;
-        const u = AppState?.currentUser;
-        return u && (u.role === 'admin' || u.role === 'safety_officer');
+        return this.isEffectiveAdmin();
     },
 
     canEditUserTask(record) {

@@ -81,7 +81,11 @@
         }
         const u = (typeof AppState !== 'undefined' && AppState.currentUser) ? AppState.currentUser : null;
         if (!u) return false;
-        return u.role === 'admin' || u.role === 'safety_officer';
+        if (typeof Permissions !== 'undefined' && typeof Permissions.isAdminRole === 'function') {
+            return Permissions.isAdminRole(u.role);
+        }
+        const role = String(u.role || '').trim().toLowerCase();
+        return role === 'admin' || role === 'administrator' || role === 'system_admin';
     }
 
     function getCurrentUserIds() {
