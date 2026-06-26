@@ -907,7 +907,7 @@ const DailyObservations = {
     },
 
     /**
-     * ✅ الحصول على أنواع الملاحظات
+     * ✅ الحصول على أنواع الملاحظات (افتراضية + مخصصة + من السجل)
      */
     getObservationTypes() {
         const types = [
@@ -918,10 +918,12 @@ const DailyObservations = {
             'ملاحظة بيئة عمل',
             'ملاحظة أخرى'
         ];
-        const customTypes = (AppState.appData?.dailyObservations || [])
+        const cfg = this._ensureRiskCategoryConfig();
+        const customTypes = Array.isArray(cfg.customObservationTypes) ? cfg.customObservationTypes : [];
+        const fromRegistry = (AppState.appData?.dailyObservations || [])
             .map(obs => obs.observationType)
             .filter(Boolean);
-        return [...new Set([...types, ...customTypes])].sort();
+        return [...new Set([...types, ...customTypes, ...fromRegistry])].sort();
     },
 
     /**
@@ -5175,69 +5177,101 @@ const DailyObservations = {
 
     renderAnalysisCharts() { /* محوَّل — الرسوم تُرسم داخل updateAnalysisResults */ },
 
+    _getRiskCategoryConfigStorageKey() {
+        return 'dailyObs_riskCategoryConfig';
+    },
+
+    _ensureRiskCategoryConfig() {
+        const defaults = { customCategories: [], observationTypeMap: {}, customObservationTypes: [] };
+        if (this._riskCategoryConfigCache) return this._riskCategoryConfigCache;
+        let cfg = null;
+        try {
+            if (AppState?.appData?.dailyObsRiskConfig && typeof AppState.appData.dailyObsRiskConfig === 'object') {
+                cfg = AppState.appData.dailyObsRiskConfig;
+            }
+        } catch (_e) { /* ignore */ }
+        if (!cfg) {
+            try {
+                cfg = JSON.parse(localStorage.getItem(this._getRiskCategoryConfigStorageKey()) || 'null');
+            } catch (_e2) { cfg = null; }
+        }
+        this._riskCategoryConfigCache = { ...defaults, ...(cfg || {}) };
+        if (!AppState.appData) AppState.appData = {};
+        AppState.appData.dailyObsRiskConfig = this._riskCategoryConfigCache;
+        return this._riskCategoryConfigCache;
+    },
+
+    _saveRiskCategoryConfig(cfg) {
+        this._riskCategoryConfigCache = cfg;
+        if (!AppState.appData) AppState.appData = {};
+        AppState.appData.dailyObsRiskConfig = cfg;
+        try { localStorage.setItem(this._getRiskCategoryConfigStorageKey(), JSON.stringify(cfg)); } catch (_e) { /* ignore */ }
+    },
+
+    _getDefaultObservationTypeRiskMap() {
+        return {
+            'ملاحظة سلوكية': 'behavioral',
+            'ملاحظة شرط عمل': 'housekeeping',
+            'ملاحظة أداة': 'tools_hand',
+            'ملاحظة معدات': 'mechanical',
+            'ملاحظة بيئة عمل': 'environmental',
+            'ملاحظة أخرى': 'general'
+        };
+    },
+
+    _getObservationTypeRiskMap() {
+        const cfg = this._ensureRiskCategoryConfig();
+        return { ...this._getDefaultObservationTypeRiskMap(), ...(cfg.observationTypeMap || {}) };
+    },
+
+    _getBuiltinTopRiskCategoryDefs() {
+        return [
+            { id: 'electricity', labelKey: 'module.dailyobs.top10.category.electricity', icon: 'fa-bolt', color: '#d97706', bg: '#fffbeb', border: '#fcd34d', keywords: ['كهرباء', 'كهربائي', 'كابلات', 'كابل', 'أسلاك', 'سلك', 'لوحة كهرب', 'قاطع', 'جهد', 'تمديدات', 'مفاتيح', 'قصور عزل', 'ارتجاج', 'electric', 'electrical', 'cable', 'wiring', 'voltage', 'panel', 'breaker'] },
+            { id: 'mechanical', labelKey: 'module.dailyobs.top10.category.mechanical', icon: 'fa-cogs', color: '#4f46e5', bg: '#eef2ff', border: '#a5b4fc', keywords: ['ميكانيك', 'ميكانيكة', 'آلة', 'الآلات', 'معدات', 'معدة', 'ترس', 'سوفتي', 'حماية ماكينة', 'guarding', 'صيانة', 'تشحيم', 'اهتزاز', 'mechanical', 'machine', 'equipment', 'conveyor', 'guard', 'loto', 'pinch'] },
+            { id: 'smoking', labelKey: 'module.dailyobs.top10.category.smoking', icon: 'fa-smoking-ban', color: '#dc2626', bg: '#fef2f2', border: '#fca5a5', keywords: ['تدخين', 'سيجارة', 'سجائر', 'دخان', 'smoking', 'cigarette', 'tobacco', 'vape', 'no smoking'] },
+            { id: 'ppe', labelKey: 'module.dailyobs.top10.category.ppe', icon: 'fa-hard-hat', color: '#0891b2', bg: '#ecfeff', border: '#67e8f9', keywords: ['مهمات', 'وقاية', 'خوذة', 'قفاز', 'نظارات', 'حذاء', 'سترة', 'حزام', 'ppe', 'helmet', 'gloves', 'goggles', 'harness', 'respirator', 'ear plug', 'واقي'] },
+            { id: 'storage', labelKey: 'module.dailyobs.top10.category.storage', icon: 'fa-warehouse', color: '#059669', bg: '#ecfdf5', border: '#6ee7b7', keywords: ['تخزين', 'مستودع', 'رف', 'أرفف', 'تحميل', 'تكدس', 'ممر', 'عائق', 'مواد', 'storage', 'warehouse', 'stacking', 'aisle', 'blocking', 'material handling', 'رافعة'] },
+            { id: 'fire', labelKey: 'module.dailyobs.top10.category.fire', icon: 'fa-fire-extinguisher', color: '#b91c1c', bg: '#fff1f2', border: '#fda4af', keywords: ['حريق', 'طفاية', 'طفايات', 'إنذار', 'انذار', 'خرطوم', 'رشاش', 'sprinkler', 'إطفاء', 'fire', 'extinguisher', 'alarm', 'hose', 'smoke detector', 'fm200'] },
+            { id: 'behavioral', labelKey: 'module.dailyobs.top10.category.behavioral', icon: 'fa-user-shield', color: '#7c3aed', bg: '#f5f3ff', border: '#c4b5fd', keywords: ['سلوك', 'سلوكية', 'تصرف', 'unsafe act', 'behavior', 'conduct', 'shortcut', 'bypass'] },
+            { id: 'chemical', labelKey: 'module.dailyobs.top10.category.chemical', icon: 'fa-flask', color: '#9333ea', bg: '#faf5ff', border: '#d8b4fe', keywords: ['كيميائي', 'كيمياء', 'مذيب', 'حمض', 'قلوي', 'سائل', 'msds', 'chemical', 'solvent', 'acid', 'hazmat', 'spill'] },
+            { id: 'height', labelKey: 'module.dailyobs.top10.category.height', icon: 'fa-person-falling', color: '#ea580c', bg: '#fff7ed', border: '#fdba74', keywords: ['ارتفاع', 'سقالة', 'سلم', 'حبل', 'سقوط', 'working at height', 'scaffold', 'ladder', 'fall', 'harness', 'roof'] },
+            { id: 'confined_space', labelKey: 'module.dailyobs.top10.category.confined_space', icon: 'fa-dungeon', color: '#57534e', bg: '#fafaf9', border: '#d6d3d1', keywords: ['محصور', 'خزان', 'بئر', 'confined', 'tank', 'manhole', 'entry permit'] },
+            { id: 'housekeeping', labelKey: 'module.dailyobs.top10.category.housekeeping', icon: 'fa-broom', color: '#0d9488', bg: '#f0fdfa', border: '#5eead4', keywords: ['نظافة', 'ترتيب', 'فوضى', 'ممر', 'housekeeping', 'clutter', 'walkway', 'order', '5s'] },
+            { id: 'ergonomics', labelKey: 'module.dailyobs.top10.category.ergonomics', icon: 'fa-chair', color: '#6366f1', bg: '#eef2ff', border: '#a5b4fc', keywords: ['أرجونومكس', 'وضعية', 'ظهر', 'تكرار', 'ergonomic', 'posture', 'repetitive', 'manual handling'] },
+            { id: 'traffic', labelKey: 'module.dailyobs.top10.category.traffic', icon: 'fa-truck', color: '#ca8a04', bg: '#fefce8', border: '#fde047', keywords: ['مرور', 'مركبة', 'سيارة', 'رافعة شوكية', 'forklift', 'vehicle', 'traffic', 'pedestrian', 'route'] },
+            { id: 'lifting', labelKey: 'module.dailyobs.top10.category.lifting', icon: 'fa-dolly', color: '#b45309', bg: '#fffbeb', border: '#fcd34d', keywords: ['رفع', 'حمل', 'مناولة', 'وزن', 'lifting', 'manual handling', 'load', 'crane', 'rigging'] },
+            { id: 'hot_work', labelKey: 'module.dailyobs.top10.category.hot_work', icon: 'fa-fire', color: '#c2410c', bg: '#fff7ed', border: '#fdba74', keywords: ['لحام', 'قطع', 'شرر', 'عمل ساخن', 'welding', 'hot work', 'grinding', 'spark'] },
+            { id: 'environmental', labelKey: 'module.dailyobs.top10.category.environmental', icon: 'fa-leaf', color: '#16a34a', bg: '#f0fdf4', border: '#86efac', keywords: ['بيئة', 'تلوث', 'نفايات', 'إضاءة', 'تهوية', 'environment', 'waste', 'ventilation', 'lighting', 'temperature'] },
+            { id: 'tools_hand', labelKey: 'module.dailyobs.top10.category.tools_hand', icon: 'fa-screwdriver-wrench', color: '#475569', bg: '#f8fafc', border: '#cbd5e1', keywords: ['أداة', 'أدوات', 'مفتاح', 'مطرقة', 'منشار', 'tool', 'hand tool', 'power tool'] },
+            { id: 'slips_trips', labelKey: 'module.dailyobs.top10.category.slips_trips', icon: 'fa-shoe-prints', color: '#0284c7', bg: '#f0f9ff', border: '#7dd3fc', keywords: ['تزحلق', 'سقوط', 'رطوبة', 'زيت', 'slip', 'trip', 'fall', 'wet floor'] },
+            { id: 'noise', labelKey: 'module.dailyobs.top10.category.noise', icon: 'fa-volume-high', color: '#be185d', bg: '#fdf2f8', border: '#f9a8d4', keywords: ['ضوضاء', 'صوت', 'سمع', 'noise', 'hearing', 'decibel', 'ear protection'] }
+        ];
+    },
+
     /**
-     * تعريف فئات المخاطر الست في تبويب Top 10
+     * تعريف فئات المخاطر في تبويب Top 10 (افتراضية + مخصصة)
      */
     getTopRiskCategoryDefs() {
-        const raw = [
-            {
-                id: 'electricity',
-                labelKey: 'module.dailyobs.top10.category.electricity',
-                icon: 'fa-bolt',
-                color: '#d97706',
-                bg: '#fffbeb',
-                border: '#fcd34d',
-                keywords: ['كهرباء', 'كهربائي', 'كابلات', 'كابل', 'أسلاك', 'سلك', 'لوحة كهرب', 'قاطع', 'جهد', 'تمديدات', 'مفاتيح', 'قصور عزل', 'ارتجاج', 'electric', 'electrical', 'cable', 'wiring', 'voltage', 'panel', 'breaker']
-            },
-            {
-                id: 'mechanical',
-                labelKey: 'module.dailyobs.top10.category.mechanical',
-                icon: 'fa-cogs',
-                color: '#4f46e5',
-                bg: '#eef2ff',
-                border: '#a5b4fc',
-                keywords: ['ميكانيك', 'ميكانيكة', 'آلة', 'الآلات', 'معدات', 'معدة', 'ترس', 'سوفتي', 'حماية ماكينة', 'guarding', 'صيانة', 'تشحيم', 'اهتزاز', 'ضوضاء', 'mechanical', 'machine', 'equipment', 'conveyor', 'guard', 'loto', 'pinch']
-            },
-            {
-                id: 'smoking',
-                labelKey: 'module.dailyobs.top10.category.smoking',
-                icon: 'fa-smoking-ban',
-                color: '#dc2626',
-                bg: '#fef2f2',
-                border: '#fca5a5',
-                keywords: ['تدخين', 'سيجارة', 'سجائر', 'دخان', 'منطقة التدخين', 'تدخين', 'smoking', 'cigarette', 'tobacco', 'vape', 'no smoking']
-            },
-            {
-                id: 'ppe',
-                labelKey: 'module.dailyobs.top10.category.ppe',
-                icon: 'fa-hard-hat',
-                color: '#0891b2',
-                bg: '#ecfeff',
-                border: '#67e8f9',
-                keywords: ['مهمات', 'وقاية', 'خوذة', 'قفاز', 'نظارات', 'حذاء', 'سترة', 'حزام', 'حماية شخصية', 'ppe', 'helmet', 'gloves', 'goggles', 'harness', 'respirator', 'ear plug', 'واقي']
-            },
-            {
-                id: 'storage',
-                labelKey: 'module.dailyobs.top10.category.storage',
-                icon: 'fa-warehouse',
-                color: '#059669',
-                bg: '#ecfdf5',
-                border: '#6ee7b7',
-                keywords: ['تخزين', 'مستودع', 'رف', 'أرفف', 'تحميل', 'تكدس', 'ممر', 'عائق', 'مواد', 'بالة', 'storage', 'warehouse', 'stacking', 'aisle', 'blocking', 'material handling', 'رافعة']
-            },
-            {
-                id: 'fire',
-                labelKey: 'module.dailyobs.top10.category.fire',
-                icon: 'fa-fire-extinguisher',
-                color: '#b91c1c',
-                bg: '#fff1f2',
-                border: '#fda4af',
-                keywords: ['حريق', 'طفاية', 'طفايات', 'إنذار', 'انذار', 'خرطوم', 'رشاش', 'sprinkler', 'إطفاء', 'fire', 'extinguisher', 'alarm', 'hose', 'smoke detector', 'fm200', 'طوارئ حريق']
+        const builtin = this._getBuiltinTopRiskCategoryDefs();
+        const custom = (this._ensureRiskCategoryConfig().customCategories || []).filter((c) => c && c.id);
+        const merged = [...builtin];
+        custom.forEach((c) => {
+            if (!merged.some((d) => d.id === c.id)) {
+                merged.push({
+                    id: c.id,
+                    label: c.label,
+                    icon: c.icon || 'fa-tag',
+                    color: c.color || '#64748b',
+                    bg: c.bg || '#f8fafc',
+                    border: c.border || '#cbd5e1',
+                    keywords: Array.isArray(c.keywords) ? c.keywords : [],
+                    isCustom: true
+                });
             }
-        ];
-        return raw.map((def) => ({
+        });
+        return merged.map((def) => ({
             ...def,
-            label: this._t(def.labelKey, def.id)
+            label: def.isCustom ? (def.label || def.id) : this._t(def.labelKey, def.id)
         }));
     },
 
@@ -5280,6 +5314,15 @@ const DailyObservations = {
     },
 
     _topRiskCategoryOf(obs) {
+        const obsType = String(obs?.observationType || '').trim();
+        if (obsType) {
+            const typeMap = this._getObservationTypeRiskMap();
+            const mappedId = typeMap[obsType];
+            if (mappedId && this.getTopRiskCategoryDefs().some((d) => d.id === mappedId)) {
+                return mappedId;
+            }
+        }
+
         const hay = this._topRiskHaystackOf(obs);
         if (!hay.trim()) return 'general';
         let bestId = 'general';
@@ -5420,9 +5463,9 @@ const DailyObservations = {
         .top10-chart-card__title{font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
         .top10-chart-card__hint{font-size:10px;color:var(--text-tertiary);margin-bottom:10px;}
         .top10-chart-box{position:relative;height:clamp(200px,28vw,260px);width:100%;}
-        .top10-cat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+        .top10-cat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-height:420px;overflow-y:auto;padding-inline-end:4px;}
         @media(min-width:768px){.top10-cat-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
-        @media(min-width:1200px){.top10-cat-grid{grid-template-columns:repeat(6,minmax(0,1fr));}}
+        @media(min-width:1200px){.top10-cat-grid{grid-template-columns:repeat(4,minmax(0,1fr));}}
         .top-risk-cat-card{text-align:right;padding:12px 14px;border-radius:12px;cursor:pointer;transition:all .2s;border:2px solid transparent;background:#fff;}
         .top-risk-cat-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.08);}
         .top10-table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
@@ -5498,15 +5541,17 @@ const DailyObservations = {
 
         const scoresCanvas = document.getElementById('top10-builtin-chart-scores');
         if (scoresCanvas && top10.length) {
-            const labels = top10.map((o) => o.isoCode || this._t('module.dailyobs.common.notSpecified', 'غير محدد'));
+            const fullLabels = top10.map((o) => String(o.observationType || '').trim() || this._t('module.dailyobs.common.notSpecified', 'غير محدد'));
+            const labels = fullLabels.map((t) => (t.length > 32 ? `${t.slice(0, 30)}…` : t));
             const scores = top10.map((o) => o.riskScore);
             const barColors = scores.map((s) => (s >= 55 ? '#dc2626' : s >= 35 ? '#ea580c' : '#2563eb'));
+            const isoCodes = top10.map((o) => o.isoCode || '');
             this.top10BuiltInCharts.scores = new Chart(scoresCanvas, {
                 type: 'bar',
                 data: {
                     labels,
                     datasets: [{
-                        label: this._t('module.dailyobs.top10.table.score', 'درجة المخاطر'),
+                        label: this._t('module.dailyobs.top10.table.type', 'نوع الملاحظة'),
                         data: scores,
                         backgroundColor: barColors,
                         borderRadius: 6
@@ -5516,7 +5561,23 @@ const DailyObservations = {
                     indexAxis: 'y',
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, tooltip: { rtl: isRTL } },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            rtl: isRTL,
+                            callbacks: {
+                                title(items) {
+                                    const i = items[0]?.dataIndex ?? 0;
+                                    return fullLabels[i] || '';
+                                },
+                                label(ctx) {
+                                    const i = ctx.dataIndex;
+                                    const code = isoCodes[i] ? ` (${isoCodes[i]})` : '';
+                                    return `${ctx.parsed.x} — ${fullLabels[i] || ''}${code}`;
+                                }
+                            }
+                        }
+                    },
                     scales: { x: { beginAtZero: true, max: 100 } }
                 }
             });
@@ -5594,6 +5655,12 @@ const DailyObservations = {
                     <div class="top10-hero__title" data-i18n="module.dailyobs.top10.title">Top 10</div>
                     <p class="top10-hero__sub" data-i18n="module.dailyobs.top10.subtitle">ترتيب أعلى المخاطر في ست فئات رئيسية مع تحليل بصري تفاعلي</p>
                     <div class="top10-hero__actions">
+                        ${this.canDailyObservationsFullAdminUi() ? `
+                        <button id="manage-top10-categories-btn" class="btn-primary" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);">
+                            <i class="fas fa-layer-group ml-2"></i>
+                            <span data-i18n="module.dailyobs.top10.btn.manageCategories">إدارة فئات المخاطر</span>
+                        </button>
+                        ` : ''}
                         <button id="add-top10-chart-btn" class="btn-primary" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);">
                             <i class="fas fa-plus ml-2"></i>
                             <span data-i18n="module.dailyobs.top10.btn.addChart">إضافة رسم بياني</span>
@@ -5888,6 +5955,11 @@ const DailyObservations = {
         if (top10Root) this.applyModuleI18n(top10Root);
 
         setTimeout(() => {
+            const manageCatBtn = document.getElementById('manage-top10-categories-btn');
+            if (manageCatBtn && manageCatBtn.dataset.bound !== '1') {
+                manageCatBtn.dataset.bound = '1';
+                manageCatBtn.addEventListener('click', () => this.showManageTop10RiskCategoriesModal());
+            }
             const addChartBtn = document.getElementById('add-top10-chart-btn');
             if (addChartBtn && addChartBtn.dataset.bound !== '1') {
                 addChartBtn.dataset.bound = '1';
@@ -6163,6 +6235,176 @@ const DailyObservations = {
             labels: sorted.map(([label]) => label),
             values: sorted.map(([, count]) => count)
         };
+    },
+
+    /**
+     * إدارة فئات المخاطر وربط أنواع الملاحظات (مدير النظام)
+     */
+    showManageTop10RiskCategoriesModal() {
+        if (!this.canDailyObservationsFullAdminUi()) {
+            Notification.error('غير مصرح');
+            return;
+        }
+
+        const cfg = this._ensureRiskCategoryConfig();
+        const categories = this.getTopRiskCategoryDefs();
+        const obsTypes = this.getObservationTypes();
+        const typeMap = this._getObservationTypeRiskMap();
+
+        const catOptions = categories.map((c) =>
+            `<option value="${Utils.escapeHTML(c.id)}">${Utils.escapeHTML(c.label)}</option>`
+        ).join('');
+
+        const typeRows = obsTypes.map((typeName) => {
+            const sel = typeMap[typeName] || '';
+            return `
+                <tr>
+                    <td style="padding:8px 10px;font-weight:600;">${Utils.escapeHTML(typeName)}</td>
+                    <td style="padding:8px 10px;">
+                        <select class="form-input obs-risk-type-map" data-obs-type="${Utils.escapeHTML(typeName)}" style="min-width:180px;">
+                            <option value="">${Utils.escapeHTML(this._t('module.dailyobs.filter.all', 'الكل'))}</option>
+                            ${categories.map((c) => `<option value="${Utils.escapeHTML(c.id)}" ${sel === c.id ? 'selected' : ''}>${Utils.escapeHTML(c.label)}</option>`).join('')}
+                        </select>
+                    </td>
+                </tr>`;
+        }).join('');
+
+        const customRows = (cfg.customCategories || []).map((c, idx) => `
+            <tr data-custom-idx="${idx}">
+                <td style="padding:8px 10px;">${Utils.escapeHTML(c.label || c.id)}</td>
+                <td style="padding:8px 10px;font-size:12px;color:#64748b;">${Utils.escapeHTML((c.keywords || []).join('، '))}</td>
+                <td style="padding:8px 10px;">
+                    <button type="button" class="btn-icon btn-icon-danger obs-risk-del-cat" data-idx="${idx}" title="حذف"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join('') || `<tr><td colspan="3" style="padding:12px;text-align:center;color:#94a3b8;">—</td></tr>`;
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width:820px;max-height:90vh;overflow:auto;">
+                <div class="modal-header">
+                    <h2 class="modal-title">
+                        <i class="fas fa-layer-group ml-2"></i>
+                        <span data-i18n="module.dailyobs.top10.categories.manageTitle">إدارة فئات المخاطر وربط أنواع الملاحظات</span>
+                    </h2>
+                    <button class="modal-close" type="button"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body" style="display:flex;flex-direction:column;gap:20px;">
+                    <section>
+                        <h3 style="font-weight:700;margin-bottom:8px;">${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.mapHint', 'اربط كل نوع ملاحظة من السجل بفئة المخاطر المناسبة'))}</h3>
+                        <div style="overflow-x:auto;">
+                            <table class="data-table" style="min-width:420px;">
+                                <thead><tr><th>${Utils.escapeHTML(this._t('module.dailyobs.top10.table.type', 'نوع الملاحظة'))}</th><th>${Utils.escapeHTML(this._t('module.dailyobs.top10.table.category', 'فئة المخاطر'))}</th></tr></thead>
+                                <tbody>${typeRows}</tbody>
+                            </table>
+                        </div>
+                    </section>
+                    <section style="border-top:1px solid var(--border-color);padding-top:16px;">
+                        <h3 style="font-weight:700;margin-bottom:10px;">${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.addType', 'إضافة نوع ملاحظة'))}</h3>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <input type="text" id="obs-risk-new-type" class="form-input" placeholder="${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.typeName', 'اسم نوع الملاحظة'))}" style="flex:1;min-width:200px;">
+                            <select id="obs-risk-new-type-cat" class="form-input" style="min-width:180px;">${catOptions}</select>
+                            <button type="button" id="obs-risk-add-type-btn" class="btn-secondary"><i class="fas fa-plus ml-1"></i>${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.addType', 'إضافة نوع ملاحظة'))}</button>
+                        </div>
+                    </section>
+                    <section style="border-top:1px solid var(--border-color);padding-top:16px;">
+                        <h3 style="font-weight:700;margin-bottom:10px;">${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.customList', 'الفئات المخصصة'))}</h3>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+                            <input type="text" id="obs-risk-new-cat-label" class="form-input" placeholder="${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.label', 'اسم الفئة'))}">
+                            <input type="text" id="obs-risk-new-cat-keywords" class="form-input" placeholder="${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.keywords', 'كلمات مفتاحية'))}">
+                        </div>
+                        <button type="button" id="obs-risk-add-cat-btn" class="btn-secondary mb-3"><i class="fas fa-plus ml-1"></i>${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.addCategory', 'إضافة فئة مخصصة'))}</button>
+                        <div style="overflow-x:auto;">
+                            <table class="data-table" style="min-width:360px;">
+                                <thead><tr><th>${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.label', 'اسم الفئة'))}</th><th>${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.keywords', 'كلمات مفتاحية'))}</th><th></th></tr></thead>
+                                <tbody id="obs-risk-custom-cats-tbody">${customRows}</tbody>
+                            </table>
+                        </div>
+                        <p style="font-size:12px;color:#64748b;margin-top:8px;">${categories.filter((c) => !c.isCustom).length} ${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.builtin', 'افتراضية'))} + ${(cfg.customCategories || []).length} ${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.customList', 'الفئات المخصصة'))}</p>
+                    </section>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary obs-risk-modal-cancel">${Utils.escapeHTML(this._t('module.dailyobs.btn.cancel', 'إلغاء'))}</button>
+                    <button type="button" id="obs-risk-save-config-btn" class="btn-primary"><i class="fas fa-save ml-2"></i>${Utils.escapeHTML(this._t('module.dailyobs.btn.save', 'حفظ'))}</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        this.applyModuleI18n(modal);
+
+        const close = () => modal.remove();
+        modal.querySelector('.modal-close')?.addEventListener('click', close);
+        modal.querySelector('.obs-risk-modal-cancel')?.addEventListener('click', close);
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+
+        const workingCfg = JSON.parse(JSON.stringify(cfg));
+
+        modal.querySelector('#obs-risk-add-type-btn')?.addEventListener('click', () => {
+            const name = String(modal.querySelector('#obs-risk-new-type')?.value || '').trim();
+            const catId = String(modal.querySelector('#obs-risk-new-type-cat')?.value || '').trim();
+            if (!name) return;
+            if (!workingCfg.customObservationTypes.includes(name)) {
+                workingCfg.customObservationTypes.push(name);
+            }
+            if (catId) workingCfg.observationTypeMap[name] = catId;
+            this._saveRiskCategoryConfig(workingCfg);
+            close();
+            this.showManageTop10RiskCategoriesModal();
+        });
+
+        modal.querySelector('#obs-risk-add-cat-btn')?.addEventListener('click', () => {
+            const label = String(modal.querySelector('#obs-risk-new-cat-label')?.value || '').trim();
+            const kwRaw = String(modal.querySelector('#obs-risk-new-cat-keywords')?.value || '').trim();
+            if (!label) return;
+            const id = `custom_${Date.now()}`;
+            const keywords = kwRaw ? kwRaw.split(/[,،]/).map((k) => k.trim()).filter(Boolean) : [];
+            const palette = [
+                { color: '#0f766e', bg: '#f0fdfa', border: '#5eead4' },
+                { color: '#be123c', bg: '#fff1f2', border: '#fda4af' },
+                { color: '#4338ca', bg: '#eef2ff', border: '#a5b4fc' }
+            ];
+            const p = palette[(workingCfg.customCategories || []).length % palette.length];
+            workingCfg.customCategories = workingCfg.customCategories || [];
+            workingCfg.customCategories.push({ id, label, icon: 'fa-tag', ...p, keywords });
+            this._saveRiskCategoryConfig(workingCfg);
+            close();
+            this.showManageTop10RiskCategoriesModal();
+        });
+
+        modal.querySelectorAll('.obs-risk-del-cat').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const idx = Number(btn.getAttribute('data-idx'));
+                if (!confirm(this._t('module.dailyobs.top10.categories.deleteConfirm', 'حذف هذه الفئة المخصصة؟'))) return;
+                const removed = workingCfg.customCategories.splice(idx, 1)[0];
+                if (removed?.id) {
+                    Object.keys(workingCfg.observationTypeMap || {}).forEach((k) => {
+                        if (workingCfg.observationTypeMap[k] === removed.id) delete workingCfg.observationTypeMap[k];
+                    });
+                }
+                this._saveRiskCategoryConfig(workingCfg);
+                close();
+                this.showManageTop10RiskCategoriesModal();
+            });
+        });
+
+        modal.querySelector('#obs-risk-save-config-btn')?.addEventListener('click', () => {
+            const newMap = { ...(workingCfg.observationTypeMap || {}) };
+            modal.querySelectorAll('.obs-risk-type-map').forEach((sel) => {
+                const typeName = sel.getAttribute('data-obs-type');
+                const val = String(sel.value || '').trim();
+                if (!typeName) return;
+                if (val) newMap[typeName] = val;
+                else delete newMap[typeName];
+            });
+            workingCfg.observationTypeMap = newMap;
+            this._saveRiskCategoryConfig(workingCfg);
+            this._riskCategoryConfigCache = null;
+            Notification.success(this._t('module.dailyobs.top10.categories.saved', 'تم حفظ إعدادات فئات المخاطر'));
+            close();
+            this.loadTop10Observations();
+        });
     },
 
     /**
