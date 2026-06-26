@@ -1785,9 +1785,7 @@ const Settings = {
                 
                 // ✅ إصلاح: تحميل بيانات إعدادات النماذج فوراً عند فتح التبويب
                 if (targetTab === 'form-settings' && this.isCurrentUserAdmin()) {
-                    // تحميل البيانات فوراً بدون تأخير
                     if (typeof Permissions !== 'undefined' && typeof Permissions.bindFormSettingsEvents === 'function') {
-                        // ✅ إصلاح: استدعاء مباشر بدون setTimeout لضمان التحميل الفوري
                         Permissions.bindFormSettingsEvents().catch(error => {
                             Utils.safeError('❌ خطأ في تحميل إعدادات النماذج:', error);
                         });

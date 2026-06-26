@@ -831,6 +831,17 @@ const Permissions = {
                                     اختر موقعاً من العمود الأول لإدارة الأماكن التابعة له في العمود الثاني. الترتيب المعروض هنا يُستخدم في قوائم النماذج.
                                 </p>
                             </div>
+                            <div class="form-settings-sites-excel-toolbar" role="group" aria-label="تصدير واستيراد المواقع">
+                                <button type="button" class="btn-secondary btn-sm" data-action="export-form-settings-sites-excel" title="تصدير المواقع والأماكن إلى Excel">
+                                    <i class="fas fa-file-excel ml-1"></i>تصدير Excel
+                                </button>
+                                <button type="button" class="btn-secondary btn-sm" data-action="download-form-settings-sites-template" title="تحميل قالب Excel للمواقع والأماكن">
+                                    <i class="fas fa-download ml-1"></i>تحميل القالب
+                                </button>
+                                <button type="button" class="btn-secondary btn-sm" data-action="import-form-settings-sites-excel" title="استيراد المواقع من ملف يطابق القالب">
+                                    <i class="fas fa-file-import ml-1"></i>استيراد من القالب
+                                </button>
+                            </div>
                         </div>
                         <div class="form-settings-panels">
                             <div class="form-settings-panel form-settings-panel--sites">
@@ -1058,27 +1069,61 @@ const Permissions = {
         `).join('');
     },
 
-    refreshFormSettingsUI() {
+    refreshFormSettingsUI(scope = 'all') {
         const state = this.getFormSettingsState();
-        const sitesList = document.getElementById('form-settings-sites-list');
-        if (sitesList) {
-            sitesList.innerHTML = this.renderFormSitesList();
+        const refreshAll = scope === 'all';
+
+        if (refreshAll || scope === 'sites') {
+            const sitesList = document.getElementById('form-settings-sites-list');
+            if (sitesList) {
+                sitesList.innerHTML = this.renderFormSitesList();
+            }
         }
+
+        if (refreshAll || scope === 'places') {
+            this.refreshFormSettingsPlacesPanel(state);
+        }
+
+        if (refreshAll || scope === 'departments') {
+            const departmentsList = document.getElementById('form-settings-departments-list');
+            if (departmentsList) {
+                departmentsList.innerHTML = this.renderDepartmentsList();
+            }
+        }
+
+        if (refreshAll || scope === 'safety') {
+            const safetyList = document.getElementById('form-settings-safety-list');
+            if (safetyList) {
+                safetyList.innerHTML = this.renderSafetyTeamList();
+            }
+        }
+    },
+
+    updateFormSettingsSiteSelection(selectedSiteId) {
+        const sitesList = document.getElementById('form-settings-sites-list');
+        if (!sitesList) return;
+        sitesList.querySelectorAll('.form-settings-item-row--site').forEach((row) => {
+            const siteId = row.getAttribute('data-site-id');
+            const isSelected = siteId === selectedSiteId;
+            row.classList.toggle('is-selected', isSelected);
+            row.title = isSelected ? 'الموقع النشط' : 'انقر لتحديد هذا الموقع';
+            const selectBtn = row.querySelector('.form-settings-item-row__select-btn');
+            if (selectBtn) {
+                selectBtn.classList.toggle('is-active', isSelected);
+                selectBtn.innerHTML = isSelected ? '<i class="fas fa-check ml-1"></i>محدد' : 'اختيار';
+            }
+        });
+    },
+
+    refreshFormSettingsPlacesPanel(state = null) {
+        const currentState = state || this.getFormSettingsState();
         const placesList = document.getElementById('form-settings-places-list');
         if (placesList) {
             placesList.innerHTML = this.renderFormPlacesList();
         }
-        const departmentsList = document.getElementById('form-settings-departments-list');
-        if (departmentsList) {
-            departmentsList.innerHTML = this.renderDepartmentsList();
-        }
-        const safetyList = document.getElementById('form-settings-safety-list');
-        if (safetyList) {
-            safetyList.innerHTML = this.renderSafetyTeamList();
-        }
         const addPlaceBtn = document.getElementById('form-settings-add-place-btn');
         const placesPanel = document.getElementById('form-settings-places-panel');
-        const hasSelectedSite = !!(state && state.selectedSiteId);
+        const hasSelectedSite = !!(currentState && currentState.selectedSiteId);
         if (addPlaceBtn) {
             addPlaceBtn.disabled = !hasSelectedSite;
         }
@@ -1087,11 +1132,11 @@ const Permissions = {
         }
         const placesCtx = document.getElementById('form-settings-places-context');
         if (placesCtx) {
-            if (!state || !state.selectedSiteId || !Array.isArray(state.sites)) {
+            if (!currentState || !currentState.selectedSiteId || !Array.isArray(currentState.sites)) {
                 placesCtx.className = 'form-settings-places-context is-empty';
                 placesCtx.innerHTML = '<i class="fas fa-hand-pointer ml-1"></i> لم يُحدد موقع بعد — اختر موقعاً من قائمة «المواقع» لعرض الأماكن التابعة له.';
             } else {
-                const sel = state.sites.find((s) => s.id === state.selectedSiteId);
+                const sel = currentState.sites.find((s) => s.id === currentState.selectedSiteId);
                 if (!sel) {
                     placesCtx.className = 'form-settings-places-context is-empty';
                     placesCtx.innerHTML = '<i class="fas fa-exclamation-circle ml-1"></i> الموقع المحدد غير متوفر. اختر موقعاً آخر.';
@@ -1109,15 +1154,17 @@ const Permissions = {
         }
     },
 
-    async bindFormSettingsEvents() {
+    async bindFormSettingsEvents(forceReload = false) {
         const card = document.getElementById('form-settings-card');
         if (!card) return;
 
-        // ✅ إصلاح: إعادة تحميل البيانات من Google Sheets عند فتح التبويب لضمان الحصول على أحدث البيانات
-        // forceReload = true لضمان تحميل جميع المواقع (50 موقع) من قاعدة البيانات
-        await this.ensureFormSettingsState(true); // forceReload = true
-        
-        // ✅ إصلاح: التأكد من تحديث الواجهة بعد التحميل
+        const needsRemoteLoad = forceReload || !this.formSettingsState;
+        if (needsRemoteLoad) {
+            await this.ensureFormSettingsState(forceReload);
+        } else if (!this.getFormSettingsState()) {
+            await this.ensureFormSettingsState(false);
+        }
+
         this.refreshFormSettingsUI();
         
         // ✅ إصلاح: إضافة رسالة تحميل للمستخدم (حتى في وضع الإنتاج)
@@ -1187,6 +1234,15 @@ const Permissions = {
                 case 'clear-paste-area':
                     this.handleClearPasteArea();
                     break;
+                case 'export-form-settings-sites-excel':
+                    this.handleExportFormSettingsSitesExcel();
+                    break;
+                case 'download-form-settings-sites-template':
+                    this.handleDownloadFormSettingsSitesTemplate();
+                    break;
+                case 'import-form-settings-sites-excel':
+                    this.showFormSettingsSitesImportModal();
+                    break;
                 default:
                     break;
             }
@@ -1222,7 +1278,6 @@ const Permissions = {
                 if (file) {
                     this.handleImportFormSettingsFileContent(file);
                 }
-                // إعادة تعيين قيمة input ليمكن اختيار نفس الملف مرة أخرى
                 event.target.value = '';
             });
         }
@@ -1244,7 +1299,8 @@ const Permissions = {
         };
         state.sites.push(newSite);
         state.selectedSiteId = newSite.id;
-        this.refreshFormSettingsUI();
+        this.refreshFormSettingsUI('sites');
+        this.refreshFormSettingsPlacesPanel();
         setTimeout(() => {
             const input = document.querySelector(`[data-field="site-name"][data-site-id="${newSite.id}"]`);
             if (input) input.focus();
@@ -1255,8 +1311,10 @@ const Permissions = {
         const state = this.getFormSettingsState();
         if (!siteId || !state || !Array.isArray(state.sites)) return;
         if (!state.sites.some((site) => site.id === siteId)) return;
+        if (state.selectedSiteId === siteId) return;
         state.selectedSiteId = siteId;
-        this.refreshFormSettingsUI();
+        this.updateFormSettingsSiteSelection(siteId);
+        this.refreshFormSettingsPlacesPanel(state);
     },
 
     handleRemoveSite(siteId) {
@@ -1272,7 +1330,8 @@ const Permissions = {
         if (state.selectedSiteId === siteId) {
             state.selectedSiteId = state.sites[0]?.id || '';
         }
-        this.refreshFormSettingsUI();
+        this.refreshFormSettingsUI('sites');
+        this.refreshFormSettingsPlacesPanel();
     },
 
     handleSiteNameChange(siteId, value) {
@@ -1281,6 +1340,13 @@ const Permissions = {
         const site = state.sites.find((item) => item.id === siteId);
         if (site) {
             site.name = value;
+            if (state.selectedSiteId === siteId) {
+                const badge = document.querySelector('#form-settings-places-context .form-settings-places-context__badge');
+                if (badge) {
+                    const label = String(value || '').trim() || siteId;
+                    badge.innerHTML = `<i class="fas fa-map-marker-alt"></i> ${Utils.escapeHTML(label)}`;
+                }
+            }
         }
     },
 
@@ -1302,7 +1368,7 @@ const Permissions = {
             name: ''
         };
         site.places.push(newPlace);
-        this.refreshFormSettingsUI();
+        this.refreshFormSettingsUI('places');
         setTimeout(() => {
             const input = document.querySelector(`[data-field="place-name"][data-place-id="${newPlace.id}"]`);
             if (input) input.focus();
@@ -1332,7 +1398,7 @@ const Permissions = {
             return;
         }
         site.places.splice(index, 1);
-        this.refreshFormSettingsUI();
+        this.refreshFormSettingsUI('places');
     },
 
     handleAddDepartment() {
@@ -1342,7 +1408,7 @@ const Permissions = {
             state.departments = [];
         }
         state.departments.push('');
-        this.refreshFormSettingsUI();
+        this.refreshFormSettingsUI('departments');
         setTimeout(() => {
             const index = state.departments.length - 1;
             const input = document.querySelector(`[data-field="department-name"][data-department-index="${index}"]`);
@@ -1366,7 +1432,7 @@ const Permissions = {
         if (!state || !Array.isArray(state.departments)) return;
         if (!Number.isInteger(index) || index < 0 || index >= state.departments.length) return;
         state.departments.splice(index, 1);
-        this.refreshFormSettingsUI();
+        this.refreshFormSettingsUI('departments');
     },
 
     handleAddSafetyMember() {
@@ -1376,7 +1442,7 @@ const Permissions = {
             state.safetyTeam = [];
         }
         state.safetyTeam.push('');
-        this.refreshFormSettingsUI();
+        this.refreshFormSettingsUI('safety');
         setTimeout(() => {
             const index = state.safetyTeam.length - 1;
             const input = document.querySelector(`[data-field="safety-name"][data-safety-index="${index}"]`);
@@ -1400,7 +1466,7 @@ const Permissions = {
         if (!state || !Array.isArray(state.safetyTeam)) return;
         if (!Number.isInteger(index) || index < 0 || index >= state.safetyTeam.length) return;
         state.safetyTeam.splice(index, 1);
-        this.refreshFormSettingsUI();
+        this.refreshFormSettingsUI('safety');
     },
 
     handleResetFormSettings() {
@@ -1670,6 +1736,331 @@ const Permissions = {
         URL.revokeObjectURL(url);
 
         Notification.success('تم تصدير البيانات بنجاح.');
+    },
+
+    getFormSettingsSitesExcelImportFieldDefs() {
+        return [
+            { ar: 'اسم الموقع', en: 'siteName', aliases: ['اسم الموقع', 'siteName', 'Site Name', 'الموقع', 'Site'] },
+            { ar: 'اسم المكان', en: 'placeName', aliases: ['اسم المكان', 'placeName', 'Place Name', 'المكان', 'Place'] },
+            { ar: 'معرف الموقع', en: 'siteId', aliases: ['معرف الموقع', 'siteId', 'Site ID', 'Site Id'] },
+            { ar: 'معرف المكان', en: 'placeId', aliases: ['معرف المكان', 'placeId', 'Place ID', 'Place Id'] }
+        ];
+    },
+
+    getFormSettingsSitesExcelCell(row, ...aliases) {
+        if (!row || typeof row !== 'object') return '';
+        for (let i = 0; i < aliases.length; i++) {
+            const key = aliases[i];
+            if (key in row && row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== '') {
+                return row[key];
+            }
+        }
+        const keys = Object.keys(row);
+        for (let j = 0; j < keys.length; j++) {
+            const k = keys[j];
+            const normalized = k && k.replace(/\s+/g, ' ').trim();
+            for (let i = 0; i < aliases.length; i++) {
+                if (normalized === aliases[i]) {
+                    return row[k];
+                }
+            }
+        }
+        return '';
+    },
+
+    flattenFormSettingsSitesForExcel(sites) {
+        const rows = [];
+        let order = 0;
+        (sites || []).forEach((site) => {
+            const siteName = String(site?.name || '').trim();
+            const siteId = String(site?.id || '').trim();
+            const places = Array.isArray(site?.places) ? site.places : [];
+            if (places.length === 0) {
+                order += 1;
+                rows.push({
+                    'الترتيب': order,
+                    'اسم الموقع': siteName,
+                    'معرف الموقع': siteId,
+                    'اسم المكان': '',
+                    'معرف المكان': ''
+                });
+                return;
+            }
+            places.forEach((place) => {
+                order += 1;
+                rows.push({
+                    'الترتيب': order,
+                    'اسم الموقع': siteName,
+                    'معرف الموقع': siteId,
+                    'اسم المكان': String(place?.name || '').trim(),
+                    'معرف المكان': String(place?.id || '').trim()
+                });
+            });
+        });
+        return rows;
+    },
+
+    parseFormSettingsSitesFromExcelRows(rows) {
+        if (!Array.isArray(rows) || rows.length === 0) return [];
+        const siteMap = new Map();
+        rows.forEach((row) => {
+            const siteName = String(this.getFormSettingsSitesExcelCell(row, 'اسم الموقع', 'siteName', 'Site Name', 'الموقع', 'Site') || '').trim();
+            const placeName = String(this.getFormSettingsSitesExcelCell(row, 'اسم المكان', 'placeName', 'Place Name', 'المكان', 'Place') || '').trim();
+            const siteId = String(this.getFormSettingsSitesExcelCell(row, 'معرف الموقع', 'siteId', 'Site ID', 'Site Id') || '').trim();
+            const placeId = String(this.getFormSettingsSitesExcelCell(row, 'معرف المكان', 'placeId', 'Place ID', 'Place Id') || '').trim();
+            if (!siteName && !siteId) return;
+            const key = siteId || siteName.toLowerCase();
+            if (!siteMap.has(key)) {
+                siteMap.set(key, {
+                    id: siteId || Utils.generateId('SITE'),
+                    name: siteName || siteId,
+                    places: []
+                });
+            }
+            const site = siteMap.get(key);
+            if (siteName && !site.name) site.name = siteName;
+            if (placeName || placeId) {
+                site.places.push({
+                    id: placeId || Utils.generateId('PLACE'),
+                    name: placeName || placeId
+                });
+            }
+        });
+        return Array.from(siteMap.values());
+    },
+
+    writeFormSettingsSitesExcelWorkbook(rows, sheetName) {
+        if (typeof XLSX === 'undefined') {
+            Notification.error('مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة.');
+            return false;
+        }
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws['!cols'] = [
+            { wch: 8 },
+            { wch: 28 },
+            { wch: 22 },
+            { wch: 36 },
+            { wch: 22 }
+        ];
+        XLSX.utils.book_append_sheet(wb, ws, sheetName || 'المواقع والأماكن');
+        return wb;
+    },
+
+    handleExportFormSettingsSitesExcel() {
+        const state = this.getFormSettingsState();
+        if (!state) {
+            Utils.safeError('❌ فشل تهيئة حالة إعدادات النماذج');
+            return;
+        }
+        const rows = this.flattenFormSettingsSitesForExcel(state.sites || []);
+        if (rows.length === 0) {
+            Notification.warning('لا توجد مواقع للتصدير.');
+            return;
+        }
+        const wb = this.writeFormSettingsSitesExcelWorkbook(rows, 'المواقع والأماكن');
+        if (!wb) return;
+        const fileName = `المواقع_والأماكن_${new Date().toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+        Notification.success(`تم تصدير ${rows.length} صفاً بنجاح.`);
+    },
+
+    handleDownloadFormSettingsSitesTemplate() {
+        const templateRows = [
+            {
+                'الترتيب': 1,
+                'اسم الموقع': 'موقع 1',
+                'معرف الموقع': '',
+                'اسم المكان': 'مكان 1 داخل الموقع',
+                'معرف المكان': ''
+            },
+            {
+                'الترتيب': 2,
+                'اسم الموقع': 'موقع 1',
+                'معرف الموقع': '',
+                'اسم المكان': 'مكان 2 داخل الموقع',
+                'معرف المكان': ''
+            },
+            {
+                'الترتيب': 3,
+                'اسم الموقع': 'موقع 2',
+                'معرف الموقع': '',
+                'اسم المكان': '',
+                'معرف المكان': ''
+            }
+        ];
+        const wb = this.writeFormSettingsSitesExcelWorkbook(templateRows, 'قالب المواقع');
+        if (!wb) return;
+        XLSX.writeFile(wb, 'قالب_المواقع_والأماكن.xlsx');
+        Notification.success('تم تحميل قالب Excel للمواقع والأماكن.');
+    },
+
+    showFormSettingsSitesImportModal() {
+        if (typeof XLSX === 'undefined') {
+            Notification.error('مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة.');
+            return;
+        }
+        try {
+            document.getElementById('form-settings-sites-import-modal')?.remove();
+        } catch (_e) { /* ignore */ }
+
+        const defs = this.getFormSettingsSitesExcelImportFieldDefs();
+        const colsList = defs.map((d) => `<li><strong>${Utils.escapeHTML(d.ar)}</strong> — <span class="font-mono text-xs">${Utils.escapeHTML(d.en)}</span></li>`).join('');
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'form-settings-sites-import-modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h2 class="modal-title"><i class="fas fa-file-excel ml-2 text-green-600"></i>استيراد المواقع والأماكن من Excel</h2>
+                    <button type="button" class="modal-close" onclick="this.closest('.modal-overlay').remove()" aria-label="إغلاق">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body space-y-4">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p class="text-sm text-blue-900 font-semibold mb-2">
+                            <i class="fas fa-info-circle ml-2"></i>
+                            حمّل القالب أو اتبع الأعمدة التالية. كل صف يمثل مكاناً؛ كرر اسم الموقع لإضافة عدة أماكن تحت نفس الموقع.
+                        </p>
+                        <button type="button" id="form-settings-sites-modal-download-template" class="btn-secondary btn-sm mb-3">
+                            <i class="fas fa-file-download ml-2"></i>تحميل القالب
+                        </button>
+                        <p class="text-sm text-blue-800 mb-2">الأعمدة المتوقعة في الصف الأول:</p>
+                        <ul class="text-sm text-blue-800 list-disc mr-6 space-y-1">${colsList}</ul>
+                        <p class="text-xs text-blue-700 mt-3">
+                            <i class="fas fa-exclamation-triangle ml-1"></i>
+                            الاستيراد يستبدل قائمة المواقع الحالية بالكامل. راجع المعاينة ثم احفظ الإعدادات من أسفل الصفحة.
+                        </p>
+                    </div>
+                    <div>
+                        <label for="form-settings-sites-modal-file" class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-file-excel ml-2"></i>اختر ملف Excel (.xlsx أو .xls)
+                        </label>
+                        <input type="file" id="form-settings-sites-modal-file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="form-input">
+                    </div>
+                    <div id="form-settings-sites-import-preview" class="hidden">
+                        <h3 class="text-sm font-semibold text-gray-800 mb-2">معاينة (أول 5 صفوف بيانات):</h3>
+                        <div class="max-h-60 overflow-auto border rounded bg-white">
+                            <table class="data-table text-xs">
+                                <thead id="form-settings-sites-preview-head"></thead>
+                                <tbody id="form-settings-sites-preview-body"></tbody>
+                            </table>
+                        </div>
+                        <p id="form-settings-sites-preview-count" class="text-sm text-gray-600 mt-2"></p>
+                    </div>
+                </div>
+                <div class="modal-footer flex justify-end gap-2">
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                    <button type="button" id="form-settings-sites-import-confirm" class="btn-primary" disabled>
+                        <i class="fas fa-check ml-2"></i>تأكيد الاستيراد
+                    </button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+
+        const fileInput = modal.querySelector('#form-settings-sites-modal-file');
+        const dlTpl = modal.querySelector('#form-settings-sites-modal-download-template');
+        const previewWrap = modal.querySelector('#form-settings-sites-import-preview');
+        const previewHead = modal.querySelector('#form-settings-sites-preview-head');
+        const previewBody = modal.querySelector('#form-settings-sites-preview-body');
+        const previewCount = modal.querySelector('#form-settings-sites-preview-count');
+        const confirmBtn = modal.querySelector('#form-settings-sites-import-confirm');
+        let parsedSites = null;
+
+        if (dlTpl) {
+            dlTpl.onclick = () => this.handleDownloadFormSettingsSitesTemplate();
+        }
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files && e.target.files[0];
+            parsedSites = null;
+            confirmBtn.disabled = true;
+            if (!file) {
+                previewWrap.classList.add('hidden');
+                return;
+            }
+            try {
+                const sites = await this.readFormSettingsSitesFromExcelFile(file);
+                if (!sites.length) {
+                    previewWrap.classList.add('hidden');
+                    Notification.warning('الملف فارغ أو لا يحتوي مواقع صالحة.');
+                    return;
+                }
+                parsedSites = sites;
+                const previewRows = this.flattenFormSettingsSitesForExcel(sites).slice(0, 5);
+                const headers = ['الترتيب', 'اسم الموقع', 'معرف الموقع', 'اسم المكان', 'معرف المكان'];
+                previewHead.innerHTML = `<tr>${headers.map((h) => `<th>${Utils.escapeHTML(h)}</th>`).join('')}</tr>`;
+                previewBody.innerHTML = previewRows.map((row) => `
+                    <tr>${headers.map((h) => `<td>${Utils.escapeHTML(String(row[h] ?? ''))}</td>`).join('')}</tr>
+                `).join('');
+                const placesCount = sites.reduce((sum, s) => sum + (Array.isArray(s.places) ? s.places.length : 0), 0);
+                previewCount.textContent = `سيتم استيراد ${sites.length} موقعاً و${placesCount} مكاناً.`;
+                previewWrap.classList.remove('hidden');
+                confirmBtn.disabled = false;
+            } catch (error) {
+                previewWrap.classList.add('hidden');
+                Notification.error('فشل قراءة الملف: ' + (error?.message || error));
+            }
+        });
+
+        confirmBtn.addEventListener('click', () => {
+            if (!parsedSites || !parsedSites.length) return;
+            this.importFormSettingsSitesData(parsedSites);
+            modal.remove();
+        });
+    },
+
+    async readFormSettingsSitesFromExcelFile(file) {
+        if (!file) return [];
+        if (typeof XLSX === 'undefined') {
+            throw new Error('مكتبة SheetJS غير محمّلة');
+        }
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
+        return this.parseFormSettingsSitesFromExcelRows(rows);
+    },
+
+    async handleImportFormSettingsSitesExcelFile(file) {
+        try {
+            const sites = await this.readFormSettingsSitesFromExcelFile(file);
+            if (!sites.length) {
+                Notification.warning('لم يتم العثور على مواقع صالحة في الملف.');
+                return;
+            }
+            this.importFormSettingsSitesData(sites);
+        } catch (error) {
+            Notification.error('فشل استيراد الملف: ' + (error?.message || error));
+        }
+    },
+
+    importFormSettingsSitesData(sites) {
+        if (!Array.isArray(sites) || sites.length === 0) {
+            Notification.warning('لا توجد مواقع للاستيراد.');
+            return;
+        }
+        const state = this.getFormSettingsState();
+        if (!state) {
+            Utils.safeError('❌ فشل تهيئة حالة إعدادات النماذج');
+            return;
+        }
+        state.sites = sites.map((site) => ({
+            id: site.id || Utils.generateId('SITE'),
+            name: String(site.name || '').trim(),
+            places: Array.isArray(site.places)
+                ? site.places.map((place) => ({
+                    id: place.id || Utils.generateId('PLACE'),
+                    name: String(place.name || '').trim()
+                }))
+                : []
+        }));
+        state.selectedSiteId = state.sites[0]?.id || '';
+        this.refreshFormSettingsUI();
+        const placesCount = state.sites.reduce((sum, s) => sum + (s.places?.length || 0), 0);
+        Notification.success(`تم استيراد ${state.sites.length} موقعاً و${placesCount} مكاناً. راجع القائمة ثم احفظ الإعدادات.`);
     },
 
     handlePasteFormSettings() {
@@ -2928,7 +3319,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.337',
+    appVersion: '1.0.338',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,

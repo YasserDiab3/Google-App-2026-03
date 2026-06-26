@@ -101,6 +101,27 @@
     border-bottom: 1px solid var(--border-color, #e5e7eb);
 }
 
+.form-settings-sites-excel-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+    .form-settings-sites-excel-toolbar {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .form-settings-sites-excel-toolbar .btn-sm {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+}
+
 .form-settings-locations-block__title {
     display: flex;
     align-items: center;
