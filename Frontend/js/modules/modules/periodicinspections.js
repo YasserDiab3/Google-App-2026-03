@@ -264,6 +264,7 @@ const PeriodicInspections = {
             cardStyle: 'gradient',
             barStyle: 'rounded'
         },
+        dailySafetyFilterPanelOpen: false,
         currentView: 'list', // list, form, edit
         currentEditId: null,
         selectedTemplate: null
@@ -3740,6 +3741,38 @@ const PeriodicInspections = {
         }
     },
 
+    _getDailySafetyActiveFilterChips(f, filterOptions, t) {
+        const chips = [];
+        const tf = (key, fallback) => (typeof t === 'function' ? t(key, fallback) : fallback);
+        if (f.search && String(f.search).trim()) {
+            chips.push({ key: 'search', label: String(f.search).trim(), icon: 'fa-search' });
+        }
+        if (f.siteId) {
+            const site = (filterOptions.sites || []).find((s) => String(s.id) === String(f.siteId));
+            chips.push({ key: 'siteId', label: site?.name || f.siteId, icon: 'fa-industry' });
+        }
+        if (f.inspectorName) {
+            chips.push({ key: 'inspectorName', label: f.inspectorName, icon: 'fa-user-hard-hat' });
+        }
+        if (f.shift) {
+            chips.push({ key: 'shift', label: this._formatDailyShiftLabel(f.shift), icon: 'fa-layer-group' });
+        }
+        if (f.dateFrom) {
+            chips.push({ key: 'dateFrom', label: `${tf('module.periodic.fromDate', 'من')}: ${f.dateFrom}`, icon: 'fa-calendar-alt' });
+        }
+        if (f.dateTo) {
+            chips.push({ key: 'dateTo', label: `${tf('module.periodic.toDate', 'إلى')}: ${f.dateTo}`, icon: 'fa-calendar-alt' });
+        }
+        return chips;
+    },
+
+    _clearDailySafetyFilterKey(key) {
+        const defaults = { search: '', siteId: '', inspectorName: '', shift: '', dateFrom: '', dateTo: '' };
+        if (!Object.prototype.hasOwnProperty.call(defaults, key)) return;
+        this.state.dailySafetyFilters[key] = defaults[key];
+        if (key === 'dateFrom' || key === 'dateTo') this._dscPeriod = '0';
+    },
+
     getDailySafetyCheckListStats(records) {
         const list = records || this.getDailySafetyCheckListRecords();
         const now = new Date();
@@ -3770,6 +3803,9 @@ const PeriodicInspections = {
         const dscJustify = en ? 'flex-start' : 'flex-end';
         // حساب عدد الفلاتر النشطة
         const activeFilterCount = [f.search, f.siteId, f.inspectorName, f.shift, f.dateFrom, f.dateTo].filter(v => v && String(v).trim()).length;
+        const filterChips = this._getDailySafetyActiveFilterChips(f, filterOptions, t);
+        const filterPanelOpen = Boolean(this.state.dailySafetyFilterPanelOpen);
+        const listPeriod = this._dscPeriod || '0';
         // نسبة تغطية كل وردية (لشريط التقدم)
         const totalForBar = stats.total || 1;
         const shift1Pct = Math.round((stats.shift1 / totalForBar) * 100);
@@ -3832,44 +3868,115 @@ const PeriodicInspections = {
                     display:inline-flex; align-items:center; gap:0.35rem; transition:all 0.15s;
                 }
                 .dsc-btn-white-outline:hover { background:rgba(255,255,255,0.28); }
-                /* ═══ Filter panel ══════════════════════════════════════════════════ */
-                .dsc-filter-panel {
-                    background: #fff; border:1px solid #e2e8f0; border-radius:12px;
-                    margin-bottom:1rem; overflow:hidden;
-                    box-shadow:0 1px 8px rgba(0,0,0,0.05);
+                /* ═══ Compact filter strip ══════════════════════════════════════════ */
+                .dsc-filter-strip {
+                    display:flex; align-items:center; gap:0.55rem; flex-wrap:wrap;
+                    margin-bottom:0.65rem; padding:0.45rem 0.65rem;
+                    background:linear-gradient(180deg,#f8fafc 0%,#fff 100%);
+                    border:1px solid #e2e8f0; border-radius:10px;
+                    box-shadow:0 1px 4px rgba(15,23,42,0.04);
                 }
-                .dsc-filter-header {
-                    display:flex; align-items:center; justify-content:space-between;
-                    padding:0.7rem 1rem; cursor:pointer;
-                    background:linear-gradient(90deg,#f8fafc,#fff);
-                    border-bottom:1px solid #e2e8f0;
-                    user-select:none;
+                .dsc-filter-strip-search {
+                    flex:1 1 220px; min-width:180px; max-width:420px;
+                    display:flex; align-items:center; gap:0.45rem;
+                    background:#fff; border:1.5px solid #e2e8f0; border-radius:8px;
+                    padding:0.35rem 0.6rem; transition:border-color 0.15s, box-shadow 0.15s;
                 }
-                .dsc-filter-header .fh-left { display:flex; align-items:center; gap:0.5rem; font-weight:700; color:#1e293b; font-size:0.9rem; }
-                .dsc-filter-header .fh-right { display:flex; align-items:center; gap:0.5rem; }
-                .dsc-active-count { background:#2563eb; color:#fff; padding:0.15rem 0.5rem; border-radius:999px; font-size:0.72rem; font-weight:700; }
-                .dsc-filter-toggle-icon { color:#64748b; transition:transform 0.2s; font-size:0.8rem; }
-                .dsc-filter-body { padding:1rem; display:grid; grid-template-columns:repeat(3,1fr); gap:0.85rem; }
-                @media(max-width:900px){ .dsc-filter-body{ grid-template-columns:repeat(2,1fr); } }
-                @media(max-width:520px){ .dsc-filter-body{ grid-template-columns:1fr; } }
-                .dsc-filter-body .dsc-field label { font-size:0.78rem; font-weight:600; color:#475569; margin-bottom:0.25rem; display:block; }
-                .dsc-filter-body .dsc-field input,
-                .dsc-filter-body .dsc-field select {
-                    width:100%; padding:0.5rem 0.7rem; font-size:0.85rem;
-                    border:1.5px solid #e2e8f0; border-radius:8px; background:#fff;
+                .dsc-filter-strip-search:focus-within {
+                    border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,0.1);
+                }
+                .dsc-filter-strip-search i { color:#94a3b8; font-size:0.82rem; flex-shrink:0; }
+                .dsc-filter-strip-search input {
+                    flex:1; border:none; outline:none; background:transparent;
+                    font-size:0.82rem; color:#1e293b; min-width:0;
+                }
+                .dsc-filter-strip-actions {
+                    display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; margin-${en ? 'left' : 'right'}:auto;
+                }
+                .dsc-filter-toggle-btn {
+                    display:inline-flex; align-items:center; gap:0.35rem;
+                    padding:0.38rem 0.72rem; border-radius:8px; cursor:pointer;
+                    border:1.5px solid #cbd5e1; background:#fff; color:#334155;
+                    font-size:0.78rem; font-weight:700; transition:all 0.15s;
+                }
+                .dsc-filter-toggle-btn:hover { border-color:#2563eb; color:#1d4ed8; background:#eff6ff; }
+                .dsc-filter-toggle-btn.is-open { border-color:#2563eb; background:#eff6ff; color:#1d4ed8; }
+                .dsc-filter-count-pill {
+                    background:#dbeafe; color:#1e40af; font-size:0.68rem; font-weight:800;
+                    padding:0.1rem 0.42rem; border-radius:999px; min-width:1.1rem; text-align:center;
+                }
+                .dsc-filter-result-pill {
+                    font-size:0.72rem; font-weight:600; color:#64748b;
+                    background:#f1f5f9; padding:0.28rem 0.55rem; border-radius:999px; white-space:nowrap;
+                }
+                .dsc-filter-chips {
+                    display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;
+                    margin:-0.25rem 0 0.55rem; min-height:0;
+                }
+                .dsc-filter-chip {
+                    display:inline-flex; align-items:center; gap:0.3rem;
+                    padding:0.2rem 0.45rem 0.2rem 0.55rem; border-radius:999px;
+                    background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af;
+                    font-size:0.72rem; font-weight:600; max-width:220px;
+                }
+                .dsc-filter-chip span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+                .dsc-filter-chip button {
+                    border:none; background:transparent; color:#3b82f6; cursor:pointer;
+                    padding:0; line-height:1; font-size:0.72rem; flex-shrink:0;
+                }
+                .dsc-filter-chip button:hover { color:#dc2626; }
+                .dsc-filter-panel-compact {
+                    background:#fff; border:1px solid #e2e8f0; border-radius:10px;
+                    margin-bottom:0.75rem; overflow:hidden;
+                    box-shadow:0 2px 10px rgba(15,23,42,0.05);
+                    animation:dscFilterSlide 0.18s ease-out;
+                }
+                @keyframes dscFilterSlide {
+                    from { opacity:0; transform:translateY(-4px); }
+                    to { opacity:1; transform:translateY(0); }
+                }
+                .dsc-filter-panel-head {
+                    display:flex; align-items:center; justify-content:space-between; gap:0.5rem;
+                    padding:0.55rem 0.75rem; background:#f8fafc; border-bottom:1px solid #e2e8f0;
+                }
+                .dsc-filter-panel-head .fp-title {
+                    font-size:0.78rem; font-weight:700; color:#334155;
+                    display:flex; align-items:center; gap:0.35rem;
+                }
+                .dsc-filter-period-group { display:flex; gap:0.25rem; flex-wrap:wrap; }
+                .dsc-filter-period-btn {
+                    padding:0.28rem 0.55rem; border-radius:999px; border:1px solid #e2e8f0;
+                    background:#fff; color:#64748b; font-size:0.7rem; font-weight:700;
+                    cursor:pointer; transition:all 0.15s;
+                }
+                .dsc-filter-period-btn:hover { border-color:#93c5fd; color:#2563eb; }
+                .dsc-filter-period-btn.is-active {
+                    background:#2563eb; border-color:#2563eb; color:#fff;
+                    box-shadow:0 2px 6px rgba(37,99,235,0.25);
+                }
+                .dsc-filter-grid {
+                    display:grid; grid-template-columns:repeat(auto-fill,minmax(155px,1fr));
+                    gap:0.55rem; padding:0.65rem 0.75rem 0.75rem;
+                }
+                .dsc-filter-grid .dsc-field label {
+                    font-size:0.7rem; font-weight:700; color:#64748b;
+                    margin-bottom:0.2rem; display:flex; align-items:center; gap:0.25rem;
+                }
+                .dsc-filter-grid .dsc-field label i { font-size:0.68rem; }
+                .dsc-filter-grid .dsc-field input,
+                .dsc-filter-grid .dsc-field select {
+                    width:100%; padding:0.42rem 0.55rem; font-size:0.8rem;
+                    border:1.5px solid #e2e8f0; border-radius:7px; background:#fff;
                     transition:border-color 0.15s, box-shadow 0.15s; outline:none;
                 }
-                .dsc-filter-body .dsc-field input:focus,
-                .dsc-filter-body .dsc-field select:focus {
-                    border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,0.12);
+                .dsc-filter-grid .dsc-field input:focus,
+                .dsc-filter-grid .dsc-field select:focus {
+                    border-color:#2563eb; box-shadow:0 0 0 2px rgba(37,99,235,0.1);
                 }
-                .dsc-filter-body .dsc-field input[value]:not([value=""]),
-                .dsc-filter-body .dsc-field select option:checked:not([value=""]) { border-color:#2563eb; }
-                .dsc-filter-footer { padding:0.6rem 1rem; border-top:1px solid #f1f5f9; background:#fafbfc; display:flex; justify-content:flex-end; }
                 .dsc-reset-btn {
                     background:#fff; border:1px solid #cbd5e1; color:#64748b;
-                    padding:0.4rem 0.9rem; border-radius:7px; font-size:0.8rem;
-                    font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:0.35rem;
+                    padding:0.32rem 0.65rem; border-radius:7px; font-size:0.74rem;
+                    font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:0.3rem;
                     transition:all 0.15s;
                 }
                 .dsc-reset-btn:hover { border-color:#ef4444; color:#ef4444; background:#fff1f2; }
@@ -3950,58 +4057,80 @@ const PeriodicInspections = {
                 </div>
             </div>
 
-            <!-- ════ Filter panel ════════════════════════════════════════════════ -->
-            <div class="dsc-filter-panel">
-                <div class="dsc-filter-header" id="dsc-filter-toggle-header">
-                    <div class="fh-left">
-                        <i class="fas fa-sliders-h" style="color:#2563eb;"></i>
+            <!-- ════ Compact filter strip ════════════════════════════════════════ -->
+            <div class="dsc-filter-strip" style="direction:${dscDir};">
+                <div class="dsc-filter-strip-search">
+                    <i class="fas fa-search"></i>
+                    <input id="dsc-filter-search" type="text" value="${Utils.escapeHTML(f.search || '')}" placeholder="${t('module.periodic.searchPlaceholder','بحث برقم التقرير، الموقع، الاسم...')}" autocomplete="off">
+                </div>
+                <div class="dsc-filter-strip-actions">
+                    ${records.length !== filteredRecords.length ? `<span class="dsc-filter-result-pill">${filteredRecords.length} / ${records.length}</span>` : ''}
+                    <button type="button" id="dsc-list-toggle-filters-btn" class="dsc-filter-toggle-btn${filterPanelOpen ? ' is-open' : ''}" aria-expanded="${filterPanelOpen}">
+                        <i class="fas fa-sliders-h"></i>
+                        <span>${t('module.periodic.analytics.filterData','فلترة')}</span>
+                        ${activeFilterCount > 0 ? `<span class="dsc-filter-count-pill">${activeFilterCount}</span>` : ''}
+                        <i class="fas fa-chevron-down" id="dsc-list-filter-chevron" style="font-size:0.65rem;transition:transform .2s;transform:rotate(${filterPanelOpen ? '180deg' : '0deg'});"></i>
+                    </button>
+                    ${activeFilterCount > 0 ? `<button type="button" id="dsc-filter-reset-btn" class="dsc-reset-btn"><i class="fas fa-times"></i>${t('module.periodic.resetFilters','مسح')}</button>` : ''}
+                </div>
+            </div>
+
+            ${!filterPanelOpen && filterChips.length > 0 ? `
+            <div class="dsc-filter-chips" id="dsc-filter-chips" style="direction:${dscDir};">
+                ${filterChips.map((chip) => `
+                    <span class="dsc-filter-chip" title="${Utils.escapeHTML(chip.label)}">
+                        <i class="fas ${chip.icon}"></i>
+                        <span>${Utils.escapeHTML(chip.label)}</span>
+                        <button type="button" class="dsc-filter-chip-remove" data-filter-key="${chip.key}" aria-label="${t('module.periodic.resetFilters','مسح')}"><i class="fas fa-times"></i></button>
+                    </span>
+                `).join('')}
+            </div>` : ''}
+
+            <div id="dsc-list-filter-panel" class="dsc-filter-panel-compact" style="display:${filterPanelOpen ? 'block' : 'none'}; direction:${dscDir};">
+                <div class="dsc-filter-panel-head">
+                    <div class="fp-title">
+                        <i class="fas fa-filter" style="color:#2563eb;"></i>
                         ${t('module.periodic.analytics.filterData','فلترة البيانات')}
-                        ${activeFilterCount > 0 ? `<span class="dsc-active-count">${activeFilterCount}</span>` : ''}
                     </div>
-                    <div class="fh-right">
-                        ${activeFilterCount > 0 ? `<span style="font-size:0.75rem; color:#64748b;">${filteredRecords.length} / ${records.length}</span>` : ''}
-                        <i class="fas fa-chevron-down dsc-filter-toggle-icon" id="dsc-filter-chevron"></i>
+                    <div class="dsc-filter-period-group">
+                        ${[
+                            { v: '7', label: en ? '7d' : '7 أيام' },
+                            { v: '30', label: en ? '30d' : '30 يوم' },
+                            { v: '90', label: en ? '3mo' : '3 أشهر' },
+                            { v: '0', label: t('module.periodic.all','الكل') }
+                        ].map((p) => `<button type="button" class="dsc-filter-period-btn dsc-list-period-btn${listPeriod === p.v ? ' is-active' : ''}" data-period="${p.v}">${p.label}</button>`).join('')}
                     </div>
                 </div>
-                <div id="dsc-filter-body" class="dsc-filter-body">
-                    <div class="dsc-field" style="grid-column:1/-1;">
-                        <label><i class="fas fa-search" style="margin-${en?'right':'left'}:0.3rem; color:#94a3b8;"></i>${t('module.periodic.search','بحث')}</label>
-                        <input id="dsc-filter-search" type="text" value="${Utils.escapeHTML(f.search || '')}" placeholder="${t('module.periodic.searchPlaceholder','بحث برقم التقرير/الموقع/الاسم...')}">
+                <div class="dsc-filter-grid">
+                    <div class="dsc-field">
+                        <label><i class="fas fa-calendar-alt" style="color:#2563eb;"></i>${t('module.periodic.fromDate','من تاريخ')}</label>
+                        <input id="dsc-filter-date-from" type="date" value="${Utils.escapeHTML(f.dateFrom || '')}">
                     </div>
                     <div class="dsc-field">
-                        <label><i class="fas fa-industry" style="margin-${en?'right':'left'}:0.3rem; color:#94a3b8;"></i>${t('module.periodic.dsc.table.site','المصنع/الموقع')}</label>
-                        <select id="dsc-filter-site">
-                            <option value="">${t('module.periodic.all','الكل')}</option>
-                            ${filterOptions.sites.map(s => `<option value="${Utils.escapeHTML(s.id)}" ${String(f.siteId||'')===String(s.id)?'selected':''}>${Utils.escapeHTML(s.name)}</option>`).join('')}
-                        </select>
+                        <label><i class="fas fa-calendar-alt" style="color:#2563eb;"></i>${t('module.periodic.toDate','إلى تاريخ')}</label>
+                        <input id="dsc-filter-date-to" type="date" value="${Utils.escapeHTML(f.dateTo || '')}">
                     </div>
                     <div class="dsc-field">
-                        <label><i class="fas fa-user-hard-hat" style="margin-${en?'right':'left'}:0.3rem; color:#94a3b8;"></i>${t('module.periodic.dsc.table.inspector','القائم بالمرور')}</label>
-                        <select id="dsc-filter-inspector">
-                            <option value="">${t('module.periodic.all','الكل')}</option>
-                            ${filterOptions.inspectors.map(name => `<option value="${Utils.escapeHTML(name)}" ${String(f.inspectorName||'')===String(name)?'selected':''}>${Utils.escapeHTML(name)}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="dsc-field">
-                        <label><i class="fas fa-layer-group" style="margin-${en?'right':'left'}:0.3rem; color:#94a3b8;"></i>${t('module.periodic.dsc.table.shift','الوردية')}</label>
+                        <label><i class="fas fa-layer-group" style="color:#f59e0b;"></i>${t('module.periodic.dsc.table.shift','الوردية')}</label>
                         <select id="dsc-filter-shift">
                             <option value="">${t('module.periodic.all','الكل')}</option>
-                            ${filterOptions.shifts.map(shift => `<option value="${Utils.escapeHTML(shift)}" ${String(f.shift||'')===String(shift)?'selected':''}>${Utils.escapeHTML(this._formatDailyShiftLabel(shift))}</option>`).join('')}
+                            ${filterOptions.shifts.map(shift => `<option value="${Utils.escapeHTML(shift)}" ${String(f.shift || '') === String(shift) ? 'selected' : ''}>${Utils.escapeHTML(this._formatDailyShiftLabel(shift))}</option>`).join('')}
                         </select>
                     </div>
                     <div class="dsc-field">
-                        <label><i class="fas fa-calendar-alt" style="margin-${en?'right':'left'}:0.3rem; color:#94a3b8;"></i>${t('module.periodic.fromDate','من تاريخ')}</label>
-                        <input id="dsc-filter-date-from" type="date" value="${Utils.escapeHTML(f.dateFrom||'')}">
+                        <label><i class="fas fa-user-hard-hat" style="color:#6366f1;"></i>${t('module.periodic.dsc.table.inspector','القائم بالمرور')}</label>
+                        <select id="dsc-filter-inspector">
+                            <option value="">${t('module.periodic.all','الكل')}</option>
+                            ${filterOptions.inspectors.map(name => `<option value="${Utils.escapeHTML(name)}" ${String(f.inspectorName || '') === String(name) ? 'selected' : ''}>${Utils.escapeHTML(name)}</option>`).join('')}
+                        </select>
                     </div>
                     <div class="dsc-field">
-                        <label><i class="fas fa-calendar-alt" style="margin-${en?'right':'left'}:0.3rem; color:#94a3b8;"></i>${t('module.periodic.toDate','إلى تاريخ')}</label>
-                        <input id="dsc-filter-date-to" type="date" value="${Utils.escapeHTML(f.dateTo||'')}">
+                        <label><i class="fas fa-industry" style="color:#0ea5e9;"></i>${t('module.periodic.dsc.table.site','المصنع/الموقع')}</label>
+                        <select id="dsc-filter-site">
+                            <option value="">${t('module.periodic.all','الكل')}</option>
+                            ${filterOptions.sites.map(s => `<option value="${Utils.escapeHTML(s.id)}" ${String(f.siteId || '') === String(s.id) ? 'selected' : ''}>${Utils.escapeHTML(s.name)}</option>`).join('')}
+                        </select>
                     </div>
-                </div>
-                <div class="dsc-filter-footer">
-                    <button type="button" id="dsc-filter-reset-btn" class="dsc-reset-btn">
-                        <i class="fas fa-times-circle"></i>${t('module.periodic.resetFilters','مسح الفلاتر')}
-                    </button>
                 </div>
             </div>
 
@@ -5224,9 +5353,47 @@ const PeriodicInspections = {
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
                 this.state.dailySafetyFilters = { search: '', siteId: '', inspectorName: '', shift: '', dateFrom: '', dateTo: '' };
+                this._dscPeriod = '0';
                 this.refreshCurrentTabContent();
             });
         }
+
+        const listFilterToggleBtn = document.getElementById('dsc-list-toggle-filters-btn');
+        if (listFilterToggleBtn) {
+            listFilterToggleBtn.addEventListener('click', () => {
+                this.state.dailySafetyFilterPanelOpen = !this.state.dailySafetyFilterPanelOpen;
+                this.refreshCurrentTabContent();
+            });
+        }
+
+        document.querySelectorAll('.dsc-filter-chip-remove').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const key = btn.getAttribute('data-filter-key');
+                if (!key) return;
+                this._clearDailySafetyFilterKey(key);
+                this.refreshCurrentTabContent();
+            });
+        });
+
+        document.querySelectorAll('.dsc-list-period-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const v = btn.getAttribute('data-period') || '0';
+                this._dscPeriod = v;
+                if (v === '0') {
+                    this.state.dailySafetyFilters.dateFrom = '';
+                    this.state.dailySafetyFilters.dateTo = '';
+                } else {
+                    const days = parseInt(v, 10);
+                    const d = new Date();
+                    d.setDate(d.getDate() - days);
+                    this.state.dailySafetyFilters.dateFrom = d.toISOString().slice(0, 10);
+                    this.state.dailySafetyFilters.dateTo = '';
+                }
+                this.refreshCurrentTabContent();
+            });
+        });
 
         const topNEl = document.getElementById('dsc-analytics-topn');
         if (topNEl) {
