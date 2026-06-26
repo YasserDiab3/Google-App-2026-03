@@ -3666,7 +3666,7 @@ const Contractors = {
             : '';
         const hasContractors = filterOptions.length > 0;
         const evaluationsTable = this.renderEvaluationsTable(this.currentEvaluationFilter || '');
-        const isAdmin = (AppState.currentUser && AppState.currentUser.role === 'admin');
+        const isAdmin = this.isContractorApprovalAdminUser();
         this.ensureEvaluationApprovalRequestsSetup();
         const myEvaluationRequests = this.getMyEvaluationApprovalRequests();
         const pendingEvaluationRequests = isAdmin ? this.getPendingEvaluationApprovalRequests() : [];
@@ -3718,8 +3718,14 @@ const Contractors = {
                         </div>
                     </div>
                     ` : ''}
-                    <div id="contractor-evaluations-container">
-                        ${evaluationsTable}
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                            <i class="fas fa-table ml-2"></i>
+                            التقييمات المعتمدة
+                        </h3>
+                        <div id="contractor-evaluations-container">
+                            ${evaluationsTable}
+                        </div>
                     </div>
                 </div>
             </div>

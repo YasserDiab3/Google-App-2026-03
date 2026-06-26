@@ -398,6 +398,15 @@ const Contractors = {
                 this.ensureEvaluationsEventListeners();
                 if (options.fetchData !== false) {
                     this.ensureEvaluationsDataLoaded();
+                    this.ensureEvaluationApprovalRequestsDataLoaded({
+                        force: options.forceData === true
+                    })
+                        .then(() => {
+                            if (this.currentTab === 'evaluations') {
+                                this.refreshEvaluationApprovalRequestsSection();
+                            }
+                        })
+                        .catch(() => {});
                 }
                 return;
             }
@@ -450,6 +459,10 @@ const Contractors = {
             } else if (activeTab === 'approved') {
                 this.ensureApprovedTabContentLoaded(true);
                 this.refreshApprovedEntitiesList();
+            } else if (activeTab === 'evaluations') {
+                this.ensureEvaluationApprovalRequestsDataLoaded({ force: false })
+                    .then(() => this.refreshEvaluationApprovalRequestsSection())
+                    .catch(() => {});
             } else if (activeTab === 'analytics') {
                 this.loadContractorAnalytics();
             }
@@ -1558,6 +1571,13 @@ const Contractors = {
             } else {
                 this.ensureEvaluationsEventListeners();
                 this.ensureEvaluationsDataLoaded();
+                this.ensureEvaluationApprovalRequestsDataLoaded({ force: false })
+                    .then(() => {
+                        if (this.currentTab === 'evaluations') {
+                            this.refreshEvaluationApprovalRequestsSection();
+                        }
+                    })
+                    .catch(() => {});
             }
         }
 
@@ -4455,7 +4475,10 @@ const Contractors = {
             : '';
         const hasContractors = filterOptions.length > 0;
         const evaluationsTable = this.renderEvaluationsTable(this.currentEvaluationFilter || '');
-        const isAdmin = (AppState.currentUser && AppState.currentUser.role === 'admin');
+        const isAdmin = this.isContractorApprovalAdminUser();
+        this.ensureEvaluationApprovalRequestsSetup();
+        const myEvaluationRequests = this.getMyEvaluationApprovalRequests();
+        const pendingEvaluationRequests = isAdmin ? this.getPendingEvaluationApprovalRequests() : [];
 
         return `
             <div class="content-card" id="contractor-evaluation-card">
@@ -4483,9 +4506,35 @@ const Contractors = {
                         </div>
                     </div>
                 </div>
-                <div class="card-body">
-                    <div id="contractor-evaluations-container">
-                        ${evaluationsTable}
+                <div class="card-body space-y-6">
+                    <div class="border-b pb-4">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                            <i class="fas fa-list ml-2"></i>
+                            طلبات تقييمي
+                        </h3>
+                        <div id="my-evaluation-approval-requests-container">
+                            ${this.renderApprovalRequestsTable(myEvaluationRequests, false)}
+                        </div>
+                    </div>
+                    ${isAdmin ? `
+                    <div class="border-b pb-4">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                            <i class="fas fa-clipboard-check ml-2"></i>
+                            طلبات تقييم قيد المراجعة (للمدير)
+                        </h3>
+                        <div id="pending-evaluation-approval-requests-container">
+                            ${this.renderApprovalRequestsTable(pendingEvaluationRequests, true)}
+                        </div>
+                    </div>
+                    ` : ''}
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                            <i class="fas fa-table ml-2"></i>
+                            التقييمات المعتمدة
+                        </h3>
+                        <div id="contractor-evaluations-container">
+                            ${evaluationsTable}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -9190,6 +9239,52 @@ const Contractors = {
             }
         }
         return { synced, failed };
+    },
+
+    /**
+     * ✅ تحميل طلبات اعتماد التقييم (منفصل عن syncDataFromServer — لا تلمس مسارات التحميل المحمية)
+     */
+    ensureEvaluationApprovalRequestsDataLoaded(options = {}) {
+        const force = options.force === true;
+        const debounceMs = 30000;
+        const now = Date.now();
+        if (!force && this._evaluationApprovalRequestsLastLoadAt &&
+            (now - this._evaluationApprovalRequestsLastLoadAt) < debounceMs) {
+            return Promise.resolve(false);
+        }
+        if (this._evaluationApprovalRequestsSyncInFlight) {
+            return this._evaluationApprovalRequestsSyncInFlight;
+        }
+
+        const canLoad = typeof GoogleIntegration !== 'undefined' &&
+            typeof GoogleIntegration.sendRequest === 'function' &&
+            typeof GoogleIntegration._isBackendRpcConfigured === 'function' &&
+            GoogleIntegration._isBackendRpcConfigured();
+
+        if (!canLoad) {
+            return Promise.resolve(false);
+        }
+
+        this.ensureEvaluationApprovalRequestsSetup();
+        this._evaluationApprovalRequestsSyncInFlight = this.syncPendingEvaluationApprovalRequests()
+            .then(() => this.fetchEvaluationApprovalRequestsFromBackend())
+            .then((loaded) => {
+                if (loaded) {
+                    this._evaluationApprovalRequestsLastLoadAt = Date.now();
+                }
+                return loaded;
+            })
+            .catch((err) => {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ فشل مزامنة طلبات اعتماد التقييم:', err);
+                }
+                return false;
+            })
+            .finally(() => {
+                this._evaluationApprovalRequestsSyncInFlight = null;
+            });
+
+        return this._evaluationApprovalRequestsSyncInFlight;
     },
 
     getMyEvaluationApprovalRequests() {
