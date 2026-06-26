@@ -1070,6 +1070,45 @@ const SafetyCalendar = {
     },
 
     /** Dashboard widget — mini view */
+    _getDashEventCategoryIcon(category) {
+        const icons = {
+            'periodic-schedule': 'fa-calendar-check',
+            'periodic-record': 'fa-clipboard-list',
+            'daily-safety-check': 'fa-clipboard-check',
+            training: 'fa-graduation-cap',
+            'legal-training': 'fa-gavel',
+            ptw: 'fa-file-signature',
+            incidents: 'fa-exclamation-triangle',
+            nearmiss: 'fa-exclamation-circle',
+            observations: 'fa-eye',
+            'user-tasks': 'fa-tasks',
+            'safety-team-task': 'fa-user-shield',
+            'hse-audit': 'fa-search',
+            'fire-inspection': 'fa-fire-extinguisher',
+            emergency: 'fa-bell',
+            'action-tracking': 'fa-check-double',
+            violations: 'fa-ban',
+            behavior: 'fa-user-check',
+            'clinic-visit': 'fa-hospital',
+            'clinic-injury': 'fa-user-injured',
+            'clinic-sick-leave': 'fa-notes-medical',
+            'egypt-holiday': 'fa-flag',
+            'intl-hse-env': 'fa-globe-americas',
+            'custom-event': 'fa-star'
+        };
+        return icons[category] || 'fa-calendar-day';
+    },
+
+    _formatDashEventTitle(ev) {
+        const title = String(ev?.title || '').trim();
+        const catLabel = ev?.extendedProps?.categoryLabel;
+        const prefix = catLabel ? `${catLabel} — ` : '';
+        if (prefix && title.startsWith(prefix)) {
+            return title.slice(prefix.length).trim() || title;
+        }
+        return title;
+    },
+
     _buildUpcomingEventsListHtml(events, today) {
         const upcoming = (events || [])
             .filter((e) => e.start >= today)
@@ -1081,10 +1120,15 @@ const SafetyCalendar = {
         return upcoming.map((ev) => {
             const cat = ev.extendedProps?.category;
             const color = SafetyCalendarEvents?.SAFETY_CALENDAR_CATEGORIES?.[cat]?.color || '#64748b';
+            const icon = this._getDashEventCategoryIcon(cat);
+            const displayTitle = this._formatDashEventTitle(ev);
             return `<button type="button" class="sc-dash-event" data-event-id="${this.esc(ev.id)}"
                 style="--sc-ev-color:${this.esc(color)}">
-                <span class="sc-dash-event-date">${this.esc(ev.start)}</span>
-                <span class="sc-dash-event-title">${this.esc(ev.title)}</span>
+                <span class="sc-dash-event-icon" aria-hidden="true"><i class="fas ${icon}"></i></span>
+                <span class="sc-dash-event-body">
+                    <span class="sc-dash-event-date">${this.esc(ev.start)}</span>
+                    <span class="sc-dash-event-title">${this.esc(displayTitle)}</span>
+                </span>
             </button>`;
         }).join('');
     },
