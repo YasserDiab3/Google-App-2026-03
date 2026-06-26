@@ -28,6 +28,50 @@ const PeriodicEquipment = {
         }
     },
 
+    getSiteOptions() {
+        if (typeof PeriodicInspections !== 'undefined' && typeof PeriodicInspections.getSiteOptions === 'function') {
+            return PeriodicInspections.getSiteOptions();
+        }
+        return [];
+    },
+
+    getPlaceOptions(siteId) {
+        if (typeof PeriodicInspections !== 'undefined' && typeof PeriodicInspections.getPlaceOptions === 'function') {
+            return PeriodicInspections.getPlaceOptions(siteId);
+        }
+        return [];
+    },
+
+    resolveAssetFactoryId(asset) {
+        if (!asset) return '';
+        if (asset.factoryId) return String(asset.factoryId);
+        if (asset.factory) return String(asset.factory);
+        if (asset.location) {
+            const byName = this.getSiteOptions().find(s => s.name === asset.location);
+            if (byName) return String(byName.id);
+        }
+        return '';
+    },
+
+    resolveAssetSubLocationId(asset, factoryId) {
+        if (!asset) return '';
+        if (asset.subLocationId) return String(asset.subLocationId);
+        const fid = factoryId || this.resolveAssetFactoryId(asset);
+        if (asset.subLocation && fid) {
+            const byName = this.getPlaceOptions(fid).find(p => p.name === asset.subLocation || p.id === asset.subLocation);
+            if (byName) return String(byName.id);
+        }
+        return '';
+    },
+
+    getAssetSiteLabel(asset) {
+        return asset?.factoryName || asset?.location || '-';
+    },
+
+    getAssetSubLocationLabel(asset) {
+        return asset?.subLocationName || asset?.subLocation || '-';
+    },
+
     getAssets() {
         this.ensureData();
         return PeriodicEquipmentStore.listAssets();
@@ -116,7 +160,7 @@ const PeriodicEquipment = {
                             <label class="form-label">${this._t('module.periodic.equipment.location', 'الموقع')}</label>
                             <select id="pe-filter-location" class="form-input">
                                 <option value="all">${this._t('module.periodic.equipment.allLocations', 'جميع المواقع')}</option>
-                                ${Array.from(new Set(this.getAssets().map(a => a.location).filter(Boolean))).map(loc => `<option value="${Utils.escapeHTML(loc)}" ${this.state.filters.location === loc ? 'selected' : ''}>${Utils.escapeHTML(loc)}</option>`).join('')}
+                                ${this.getSiteOptions().map(site => `<option value="${Utils.escapeHTML(site.id)}" ${this.state.filters.location === site.id ? 'selected' : ''}>${Utils.escapeHTML(site.name)}</option>`).join('')}
                             </select>
                         </div>
                     </div>
@@ -147,7 +191,10 @@ const PeriodicEquipment = {
         return this.getAssets().filter(a => {
             if (f.typeId !== 'all' && a.typeId !== f.typeId) return false;
             if (f.status !== 'all' && a.status !== f.status) return false;
-            if (f.location !== 'all' && a.location !== f.location) return false;
+            if (f.location !== 'all') {
+                const matchLocation = a.factoryId === f.location || a.factory === f.location || a.location === f.location;
+                if (!matchLocation) return false;
+            }
             if (f.search) {
                 const q = f.search.toLowerCase();
                 const hay = [a.id, a.assetNumber, a.typeName, a.location, a.serialNumber, a.manufacturer].join(' ').toLowerCase();
@@ -169,6 +216,7 @@ const PeriodicEquipment = {
                             <th>${this._t('module.periodic.equipment.colNumber', 'الرقم')}</th>
                             <th>${this._t('module.periodic.equipment.colType', 'النوع')}</th>
                             <th>${this._t('module.periodic.equipment.colLocation', 'الموقع')}</th>
+                            <th>${this._t('module.periodic.equipment.colSubLocation', 'الموقع الفرعي')}</th>
                             <th>${this._t('module.periodic.equipment.colStatus', 'الحالة')}</th>
                             <th>${this._t('module.periodic.equipment.colLastInspection', 'آخر فحص')}</th>
                             <th>${this._t('module.periodic.equipment.colActions', 'إجراءات')}</th>
@@ -179,7 +227,8 @@ const PeriodicEquipment = {
                             <tr>
                                 <td><span class="font-mono font-semibold">${Utils.escapeHTML(a.assetNumber || a.id)}</span></td>
                                 <td>${Utils.escapeHTML(a.typeName || '-')}</td>
-                                <td>${Utils.escapeHTML(a.location || '-')}</td>
+                                <td>${Utils.escapeHTML(this.getAssetSiteLabel(a))}</td>
+                                <td class="text-sm text-gray-600">${Utils.escapeHTML(this.getAssetSubLocationLabel(a))}</td>
                                 <td>${this.getStatusBadge(a.status)}</td>
                                 <td>${a.lastInspection ? Utils.formatDate(a.lastInspection) : '-'}</td>
                                 <td>
@@ -277,9 +326,15 @@ const PeriodicEquipment = {
             Notification.error('ليس لديك صلاحية. يجب أن تكون مدير النظام.');
             return;
         }
+        if (typeof Permissions !== 'undefined' && typeof Permissions.ensureFormSettingsState === 'function') {
+            await Permissions.ensureFormSettingsState();
+        }
         const isEdit = !!asset;
         const types = PeriodicEquipmentStore.listTypes();
         const assetId = asset?.id || PeriodicEquipmentStore.generateAssetId();
+        const resolvedFactoryId = this.resolveAssetFactoryId(asset);
+        const resolvedSubLocationId = this.resolveAssetSubLocationId(asset, resolvedFactoryId);
+        const initialPlaces = this.getPlaceOptions(resolvedFactoryId);
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -305,11 +360,23 @@ const PeriodicEquipment = {
                             </div>
                             <div>
                                 <label class="form-label">الموقع *</label>
-                                <input type="text" id="pe-asset-location" class="form-input" required value="${Utils.escapeHTML(asset?.location || '')}">
+                                <select id="pe-asset-site" class="form-input" required>
+                                    <option value="">-- اختر الموقع --</option>
+                                    ${this.getSiteOptions().map(site => {
+                                        const isSelected = resolvedFactoryId && (resolvedFactoryId === site.id || resolvedFactoryId === String(site.id));
+                                        return `<option value="${Utils.escapeHTML(site.id)}" ${isSelected ? 'selected' : ''}>${Utils.escapeHTML(site.name)}</option>`;
+                                    }).join('')}
+                                </select>
                             </div>
                             <div>
                                 <label class="form-label">الموقع الفرعي</label>
-                                <input type="text" id="pe-asset-sublocation" class="form-input" value="${Utils.escapeHTML(asset?.subLocation || '')}">
+                                <select id="pe-asset-sub-location" class="form-input">
+                                    <option value="">-- اختر الموقع الفرعي --</option>
+                                    ${initialPlaces.map(place => {
+                                        const isSelected = resolvedSubLocationId && (resolvedSubLocationId === place.id || resolvedSubLocationId === String(place.id));
+                                        return `<option value="${Utils.escapeHTML(place.id)}" ${isSelected ? 'selected' : ''}>${Utils.escapeHTML(place.name)}</option>`;
+                                    }).join('')}
+                                </select>
                             </div>
                             <div>
                                 <label class="form-label">الشركة المصنعة</label>
@@ -361,19 +428,44 @@ const PeriodicEquipment = {
         modal.querySelector('[data-close]')?.addEventListener('click', close);
         modal.addEventListener('click', e => { if (e.target === modal) close(); });
 
+        const siteSelect = modal.querySelector('#pe-asset-site');
+        const subLocationSelect = modal.querySelector('#pe-asset-sub-location');
+        if (siteSelect && subLocationSelect) {
+            siteSelect.addEventListener('change', () => {
+                const places = this.getPlaceOptions(siteSelect.value);
+                subLocationSelect.innerHTML = '<option value="">-- اختر الموقع الفرعي --</option>' +
+                    places.map(place => `<option value="${Utils.escapeHTML(place.id)}">${Utils.escapeHTML(place.name)}</option>`).join('');
+            });
+        }
+
         modal.querySelector('#pe-asset-form')?.addEventListener('submit', async e => {
             e.preventDefault();
             try {
                 const typeId = modal.querySelector('#pe-asset-type')?.value;
                 const type = PeriodicEquipmentStore.getTypeById(typeId);
+                const factoryId = modal.querySelector('#pe-asset-site')?.value || '';
+                const subLocationId = modal.querySelector('#pe-asset-sub-location')?.value || '';
+                if (!factoryId) {
+                    Notification.warning('يجب اختيار الموقع');
+                    return;
+                }
+                const sites = this.getSiteOptions();
+                const selectedSite = sites.find(s => s.id === factoryId);
+                const places = this.getPlaceOptions(factoryId);
+                const selectedPlace = places.find(p => p.id === subLocationId);
                 const payload = {
                     ...(asset || {}),
                     id: assetId,
                     typeId,
                     typeName: type?.name || '',
                     assetNumber: modal.querySelector('#pe-asset-number')?.value.trim() || assetId,
-                    location: modal.querySelector('#pe-asset-location')?.value.trim(),
-                    subLocation: modal.querySelector('#pe-asset-sublocation')?.value.trim(),
+                    factoryId,
+                    factory: factoryId,
+                    factoryName: selectedSite?.name || '',
+                    location: selectedSite?.name || '',
+                    subLocationId: subLocationId || '',
+                    subLocation: selectedPlace?.name || '',
+                    subLocationName: selectedPlace?.name || '',
                     manufacturer: modal.querySelector('#pe-asset-manufacturer')?.value.trim(),
                     model: modal.querySelector('#pe-asset-model')?.value.trim(),
                     serialNumber: modal.querySelector('#pe-asset-serial')?.value.trim(),
@@ -545,7 +637,8 @@ const PeriodicEquipment = {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="content-card"><div class="card-body text-sm space-y-1">
                             <p><strong>النوع:</strong> ${Utils.escapeHTML(asset.typeName || '-')}</p>
-                            <p><strong>الموقع:</strong> ${Utils.escapeHTML(asset.location || '-')}</p>
+                            <p><strong>الموقع:</strong> ${Utils.escapeHTML(this.getAssetSiteLabel(asset))}</p>
+                            <p><strong>الموقع الفرعي:</strong> ${Utils.escapeHTML(this.getAssetSubLocationLabel(asset))}</p>
                             <p><strong>الحالة:</strong> ${this.getStatusBadge(asset.status)}</p>
                             <p><strong>المصنع:</strong> ${Utils.escapeHTML(asset.manufacturer || '-')}</p>
                             <p><strong>الموديل:</strong> ${Utils.escapeHTML(asset.model || '-')}</p>
@@ -588,7 +681,7 @@ const PeriodicEquipment = {
         if (!w) { Notification.warning('اسمح بالنوافذ المنبثقة للطباعة'); return; }
         w.document.write(`<html dir="rtl"><head><title>QR ${asset.id}</title></head><body style="text-align:center;font-family:sans-serif;padding:24px">
             <h2>${Utils.escapeHTML(asset.typeName || '')}</h2>
-            <p>${Utils.escapeHTML(asset.assetNumber || asset.id)} — ${Utils.escapeHTML(asset.location || '')}</p>
+            <p>${Utils.escapeHTML(asset.assetNumber || asset.id)} — ${Utils.escapeHTML(this.getAssetSiteLabel(asset))}</p>
             ${qrImage ? `<img src="${qrImage}" style="width:240px;height:240px">` : ''}
             <p style="font-size:12px;margin-top:12px">${Utils.escapeHTML(asset.qrCodeData || asset.id)}</p>
             <script>window.onload=function(){window.print();}</script></body></html>`);
