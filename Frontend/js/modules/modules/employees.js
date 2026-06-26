@@ -493,8 +493,15 @@ const Employees = {
                     // ✅ إعادة إعداد event listeners بعد تحميل المحتوى
                     this.setupEventListeners();
                     
-                    // ✅ تحميل القائمة بعد إعداد event listeners
-                    await this.loadEmployeesList();
+                    // ✅ تحميل التبويب النشط بعد إعداد event listeners
+                    if (this.activeTab === 'data-analysis' && this.canViewEmployeesAnalysisTab()) {
+                        await this.loadEmployeesAnalysis();
+                    } else if (this.canViewEmployeesRegistryTab()) {
+                        await this.loadEmployeesList();
+                    } else if (this.activeTab === 'external-workforce' && this.canViewExternalWorkforceTab()) {
+                        await this.ensureExternalWorkforceDataLoaded();
+                        this.renderExternalWorkforceTable();
+                    }
                     
                     // ✅ تطبيق الفلاتر إذا كان هناك قيم
                     setTimeout(async () => {
@@ -3215,6 +3222,9 @@ const Employees = {
                 ${this.renderExternalWorkforcePanel()}
             </div>
             ` : ''}
+            ${canViewAnalysis ? `
+            <div id="employees-analysis-panel" class="${this.activeTab !== 'data-analysis' ? 'hidden' : ''}"></div>
+            ` : ''}
         `;
     },
 
@@ -3855,6 +3865,14 @@ const Employees = {
                     return;
                 }
 
+                if (this.activeTab === 'data-analysis' && document.getElementById('emp-analytics-root')) {
+                    clearTimeout(this._employeesUpdateDebounceTimer);
+                    this._employeesUpdateDebounceTimer = setTimeout(() => {
+                        this.updateEmployeesAnalyticsDashboard().catch(() => {});
+                    }, 120);
+                    return;
+                }
+
                 if (event.detail && event.detail.count) {
                     // Debounce لتجنب handler ثقيل عند تكرار التحديثات المتتالية
                     clearTimeout(this._employeesUpdateDebounceTimer);
@@ -3926,7 +3944,7 @@ const Employees = {
 
             if (this.canViewExternalWorkforceTab()) {
                 this.populateExternalWorkforceYearSelector();
-                if (this.activeTab === 'external-workforce' || !this.canViewEmployeesRegistryTab()) {
+                if (this.activeTab === 'external-workforce') {
                     this.ensureExternalWorkforceDataLoaded().then(() => this.renderExternalWorkforceTable()).catch(() => {});
                 }
             }
@@ -5014,25 +5032,27 @@ const Employees = {
 
     async showList() {
         this.currentEditId = null;
-        if (!this.canViewEmployeesRegistryTab() && this.canViewExternalWorkforceTab()) {
+        if (!this.canViewEmployeesRegistryTab() && this.canViewEmployeesAnalysisTab()) {
+            this.activeTab = 'data-analysis';
+        } else if (!this.canViewEmployeesRegistryTab() && this.canViewExternalWorkforceTab()) {
             this.activeTab = 'external-workforce';
-        } else if (!this.canViewExternalWorkforceTab()) {
+        } else if (!this.canViewExternalWorkforceTab() && !this.canViewEmployeesAnalysisTab()) {
             this.activeTab = 'employees-list';
         }
         const content = document.getElementById('employees-content');
         if (content) {
             content.innerHTML = await this.renderList();
             this.applyModuleI18n(content);
-            // استخدام requestAnimationFrame لضمان عدم حدوث reflow متعدد
             requestAnimationFrame(() => {
                 this.setupEventListeners();
                 if (this.canViewEmployeesRegistryTab() && this.activeTab === 'employees-list') {
                     this.loadEmployeesList();
+                } else if (this.activeTab === 'data-analysis' && this.canViewEmployeesAnalysisTab()) {
+                    this.loadEmployeesAnalysis().catch(() => {});
                 } else if (this.canViewExternalWorkforceTab()) {
                     this.populateExternalWorkforceYearSelector();
                     this.ensureExternalWorkforceDataLoaded().then(() => this.renderExternalWorkforceTable()).catch(() => {});
                 }
-                // التمرير السلس إلى حقل البحث بعد تحميل القائمة
                 if (this.activeTab === 'employees-list') this.scrollToSearchField();
             });
         }

@@ -135,7 +135,8 @@ const MODULE_DETAILED_PERMISSIONS = {
         label: 'صلاحيات مديول قاعدة بيانات الموظفين',
         permissions: [
             { key: 'employees-list', label: 'قائمة الموظفين', icon: 'fa-id-badge' },
-            { key: 'external-workforce', label: 'تبويب العمالة الخارجية والمقاولين', icon: 'fa-helmet-safety' }
+            { key: 'external-workforce', label: 'تبويب العمالة الخارجية والمقاولين', icon: 'fa-helmet-safety' },
+            { key: 'data-analysis', label: 'تحليل البيانات', icon: 'fa-chart-bar' }
         ]
     },
     'incidents': {
@@ -2874,7 +2875,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.330',
+    appVersion: '1.0.331',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
