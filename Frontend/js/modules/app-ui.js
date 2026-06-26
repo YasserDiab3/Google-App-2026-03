@@ -9575,6 +9575,8 @@ window.UI = {
                 AppState.appData.contractorEvaluationApprovalRequests
                     .filter((req) => {
                         if (!req) return false;
+                        const rid = String(req.id || '').trim();
+                        if (req._isPendingSync || rid.startsWith('TEMP_')) return false;
                         const st = String(req.status || '').trim().toLowerCase();
                         if (isEvalAdmin) return st === 'pending' || st === 'under_review';
                         return req.createdBy === currentUserIdEval &&
