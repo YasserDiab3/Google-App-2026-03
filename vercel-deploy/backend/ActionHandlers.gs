@@ -6119,4 +6119,27 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'reprocessDailySafetyFormRows': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action);
+            if (adminFail) { result = adminFail; return; }
+
+            if (typeof reprocessDailySafetyFormRows !== 'function') {
+                result = { success: false, message: 'دالة reprocessDailySafetyFormRows غير متوفرة' };
+                return;
+            }
+
+            var fromRow = payload && (payload.fromRow != null ? payload.fromRow : payload.from);
+            var toRow = payload && (payload.toRow != null ? payload.toRow : payload.to);
+            if (fromRow == null || fromRow === '') {
+                result = { success: false, message: 'يجب تحديد fromRow (رقم صف بداية النطاق في جدول الفورم)' };
+                return;
+            }
+
+            result = reprocessDailySafetyFormRows(fromRow, toRow);
+            return;
+        })();
+        return result;
+    },
 };

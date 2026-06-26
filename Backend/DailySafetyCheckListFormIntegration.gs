@@ -44,15 +44,109 @@ function formatDateOnly(dateInput) {
 }
 
 /**
+ * عد الخلايا غير الفارغة في صف إجابات الفورم
+ */
+function countNonEmptyFormCells(rowData) {
+  if (!rowData || !rowData.length) return 0;
+  var nonEmpty = 0;
+  for (var c = 0; c < rowData.length; c++) {
+    if (rowData[c] !== null && rowData[c] !== undefined && String(rowData[c]).trim() !== '') {
+      nonEmpty++;
+    }
+  }
+  return nonEmpty;
+}
+
+/**
+ * فتح ورقة إجابات الفورم
+ */
+function getDailySafetyFormResponsesSheet() {
+  var spreadsheet = SpreadsheetApp.openById(FORM_SHEET_ID);
+  var sheet = spreadsheet.getSheetByName(FORM_RESPONSES_SHEET_NAME);
+  if (!sheet) {
+    sheet = spreadsheet.getSheets()[0];
+  }
+  return sheet;
+}
+
+/**
+ * هل يحتوي الصف على إجابات أسئلة مصنع 1 (الأعمدة F–X)؟
+ */
+function hasFactory1QuestionData(rowData) {
+  if (!rowData || rowData.length <= COL_F) return false;
+  for (var c = COL_F; c < COL_Y && c < rowData.length; c++) {
+    if (rowData[c] !== null && rowData[c] !== undefined && String(rowData[c]).trim() !== '') {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * هل يحتوي الصف على إجابات أسئلة مصنع 2 (الأعمدة Y–AQ)؟
+ */
+function hasFactory2QuestionData(rowData) {
+  if (!rowData || rowData.length <= COL_Y) return false;
+  for (var c = COL_Y; c < Math.min(COL_Y + QUESTION_COUNT + 2, rowData.length); c++) {
+    if (rowData[c] !== null && rowData[c] !== undefined && String(rowData[c]).trim() !== '') {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * هل اسم الموقع يشير إلى مصنع 2؟
+ */
+function isSiteNameFactory2(siteName) {
+  var siteB = (siteName || '').toString().trim().toLowerCase();
+  if (!siteB) return false;
+  return siteB.indexOf('2') >= 0 ||
+    siteB.indexOf('icapp 2') >= 0 ||
+    siteB.indexOf('icapp2') >= 0 ||
+    siteB.indexOf('مصنع 2') >= 0 ||
+    siteB.indexOf('مصنع2') >= 0;
+}
+
+/**
+ * هل اسم الموقع يشير إلى مصنع 1؟
+ */
+function isSiteNameFactory1(siteName) {
+  var siteB = (siteName || '').toString().trim().toLowerCase();
+  if (!siteB) return false;
+  return siteB.indexOf('1') >= 0 ||
+    siteB.indexOf('icapp 1') >= 0 ||
+    siteB.indexOf('icapp1') >= 0 ||
+    siteB.indexOf('مصنع 1') >= 0 ||
+    siteB.indexOf('مصنع1') >= 0;
+}
+
+/**
+ * تحديد المصانع المطلوب استخراجها من صف واحد (قد يُرجع مصنعاً واحداً أو اثنين)
+ * @returns {boolean[]} مصفوفة: false = مصنع 1، true = مصنع 2
+ */
+function getFactoriesForFormRow(rowData, headers) {
+  var hasF1 = hasFactory1QuestionData(rowData);
+  var hasF2 = hasFactory2QuestionData(rowData);
+  if (hasF1 && hasF2) {
+    return [false, true];
+  }
+  if (hasF2 && !hasF1) {
+    return [true];
+  }
+  if (hasF1 && !hasF2) {
+    return [false];
+  }
+  return [isFactory2Row(rowData, headers)];
+}
+
+/**
  * معالجة البيانات من جدول إجابات الفورم وحفظها في DailySafetyCheckList
+ * يُعالج كل الصفوف الجديدة من lastProcessedRow+1 حتى آخر صف (وليس آخر صف فقط).
  */
 function processFormDataFromSheet() {
   try {
-    var spreadsheet = SpreadsheetApp.openById(FORM_SHEET_ID);
-    var sheet = spreadsheet.getSheetByName(FORM_RESPONSES_SHEET_NAME);
-    if (!sheet) {
-      sheet = spreadsheet.getSheets()[0];
-    }
+    var sheet = getDailySafetyFormResponsesSheet();
     if (!sheet) {
       return { success: false, message: 'ورقة إجابات الفورم غير موجودة' };
     }
@@ -74,67 +168,8 @@ function processFormDataFromSheet() {
       return { success: false, message: 'لا توجد إرسالات جديدة' };
     }
 
-    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     var startRow = lastProcessedRow > 0 ? lastProcessedRow + 1 : 2;
-    var targetRow = lastRow;
-    var rowData = [];
-    var foundData = false;
-
-    for (var row = lastRow; row >= startRow; row--) {
-      var currentRowData = sheet.getRange(row, 1, row, sheet.getLastColumn()).getValues()[0];
-      var nonEmpty = 0;
-      for (var c = 0; c < currentRowData.length; c++) {
-        if (currentRowData[c] !== null && currentRowData[c] !== undefined && String(currentRowData[c]).trim() !== '') {
-          nonEmpty++;
-        }
-      }
-      if (nonEmpty >= 2) {
-        targetRow = row;
-        rowData = currentRowData;
-        foundData = true;
-        break;
-      }
-    }
-
-    if (!foundData && lastRow >= 2 && startRow === 2) {
-      for (var row = lastRow - 1; row >= 2; row--) {
-        var currentRowData = sheet.getRange(row, 1, row, sheet.getLastColumn()).getValues()[0];
-        var nonEmpty = 0;
-        for (var c = 0; c < currentRowData.length; c++) {
-          if (currentRowData[c] !== null && currentRowData[c] !== undefined && String(currentRowData[c]).trim() !== '') {
-            nonEmpty++;
-          }
-        }
-        if (nonEmpty >= 2) {
-          targetRow = row;
-          rowData = currentRowData;
-          foundData = true;
-          break;
-        }
-      }
-    }
-
-    if (!foundData) {
-      return { success: false, message: 'لا توجد بيانات كافية في الجدول' };
-    }
-
-    var recordData = mapFormRowToDailySafetyCheckList(rowData, headers);
-    if (!recordData) {
-      return { success: false, message: 'فشل تحويل بيانات الصف' };
-    }
-
-    var result = saveDailySafetyCheckListToAppSheet(recordData);
-    if (result && result.success) {
-      properties.setProperty(LAST_PROCESSED_ROW_KEY, String(targetRow));
-      return {
-        success: true,
-        message: 'تم حفظ سجل الفحص اليومي في جدول التطبيق',
-        data: recordData,
-        originalSheet: FORM_SHEET_ID,
-        appSheet: APP_SPREADSHEET_ID
-      };
-    }
-    return { success: false, message: (result && result.message) ? result.message : 'فشل الحفظ' };
+    return processFormRowsRange(sheet, startRow, lastRow, true);
   } catch (error) {
     Logger.log('processFormDataFromSheet (DSC): ' + error.toString());
     return { success: false, message: 'حدث خطأ: ' + error.toString() };
@@ -142,44 +177,159 @@ function processFormDataFromSheet() {
 }
 
 /**
- * تحديد هل الصف لمصنع 2 (البيانات في Y–AQ)
+ * إعادة معالجة نطاق صفوف من جدول إجابات الفورم (استرجاع الصفوف المتخطاة).
+ * لا يُحدّث مؤشر lastProcessedRow — آمن للتشغيل اليدوي بعد الإصلاح.
+ *
+ * @param {number} fromRow - أول صف (≥ 2)
+ * @param {number} toRow - آخر صف (اختياري: آخر صف في الورقة)
  */
-function isFactory2Row(rowData, headers) {
-  if (!rowData || rowData.length <= COL_Y) return false;
-  var hasDataInYtoAQ = false;
-  for (var c = COL_Y; c < Math.min(COL_Y + QUESTION_COUNT + 2, rowData.length); c++) {
-    if (rowData[c] !== null && rowData[c] !== undefined && String(rowData[c]).trim() !== '') {
-      hasDataInYtoAQ = true;
+function reprocessDailySafetyFormRows(fromRow, toRow) {
+  try {
+    var sheet = getDailySafetyFormResponsesSheet();
+    if (!sheet) {
+      return { success: false, message: 'ورقة إجابات الفورم غير موجودة' };
+    }
+
+    var startRow = parseInt(fromRow, 10) || 2;
+    if (startRow < 2) startRow = 2;
+
+    var endRow = parseInt(toRow, 10);
+    if (!endRow || isNaN(endRow)) {
+      endRow = sheet.getLastRow();
+    }
+    if (endRow < startRow) {
+      return { success: false, message: 'نطاق صفوف غير صالح (fromRow > toRow)' };
+    }
+
+    return processFormRowsRange(sheet, startRow, endRow, false);
+  } catch (error) {
+    Logger.log('reprocessDailySafetyFormRows: ' + error.toString());
+    return { success: false, message: 'حدث خطأ: ' + error.toString() };
+  }
+}
+
+/**
+ * معالجة نطاق صفوف من جدول إجابات الفورم وحفظها في DailySafetyCheckList
+ *
+ * @param {boolean} updateLastProcessed - إذا true يُحدَّث LAST_PROCESSED_ROW بعد آخر صف ناجح
+ */
+function processFormRowsRange(sheet, startRow, endRow, updateLastProcessed) {
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var properties = PropertiesService.getScriptProperties();
+  var processedCount = 0;
+  var skippedDuplicateCount = 0;
+  var failedRows = [];
+  var savedRecords = [];
+  var lastSuccessRow = startRow - 1;
+  var numCols = sheet.getLastColumn();
+
+  for (var row = startRow; row <= endRow; row++) {
+    var rowData = sheet.getRange(row, 1, row, numCols).getValues()[0];
+
+    if (countNonEmptyFormCells(rowData) < 2) {
+      lastSuccessRow = row;
+      continue;
+    }
+
+    var records = mapFormRowToDailySafetyCheckListRecords(rowData, headers);
+    if (!records || records.length === 0) {
+      failedRows.push({ row: row, message: 'فشل تحويل بيانات الصف' });
       break;
     }
-  }
-  if (hasDataInYtoAQ) {
-    var hasDataInBtoX = false;
-    for (var c = COL_F; c < COL_Y && c < rowData.length; c++) {
-      if (rowData[c] !== null && rowData[c] !== undefined && String(rowData[c]).trim() !== '') {
-        hasDataInBtoX = true;
+
+    var rowOk = true;
+    for (var r = 0; r < records.length; r++) {
+      var result = saveDailySafetyCheckListFromForm(records[r], { skipDuplicates: true });
+      if (!result || !result.success) {
+        rowOk = false;
+        failedRows.push({
+          row: row,
+          message: (result && result.message) ? result.message : 'فشل الحفظ'
+        });
         break;
       }
+      if (result.skipped) {
+        skippedDuplicateCount++;
+      } else {
+        savedRecords.push(records[r]);
+        processedCount++;
+      }
     }
-    if (!hasDataInBtoX) return true;
+
+    if (!rowOk) {
+      break;
+    }
+    lastSuccessRow = row;
+  }
+
+  if (updateLastProcessed && lastSuccessRow >= startRow) {
+    properties.setProperty(LAST_PROCESSED_ROW_KEY, String(lastSuccessRow));
+  }
+
+  if (processedCount === 0 && skippedDuplicateCount === 0 && failedRows.length === 0) {
+    return { success: false, message: 'لا توجد بيانات كافية في النطاق المحدد' };
+  }
+
+  var ok = failedRows.length === 0;
+  return {
+    success: ok,
+    message: ok
+      ? ('تمت معالجة ' + processedCount + ' سجل/سجلات من الصفوف ' + startRow + '–' + lastSuccessRow)
+      : ('توقفت المعالجة عند الصف ' + failedRows[0].row + ': ' + failedRows[0].message),
+    processedCount: processedCount,
+    skippedDuplicateCount: skippedDuplicateCount,
+    failedRows: failedRows,
+    lastRow: lastSuccessRow,
+    data: savedRecords.length === 1 ? savedRecords[0] : savedRecords,
+    originalSheet: FORM_SHEET_ID,
+    appSheet: APP_SPREADSHEET_ID
+  };
+}
+
+/**
+ * تحديد هل الصف لمصنع 2 (البيانات في Y–AQ) عند وجود مصنع واحد فقط
+ */
+function isFactory2Row(rowData, headers) {
+  var hasF1 = hasFactory1QuestionData(rowData);
+  var hasF2 = hasFactory2QuestionData(rowData);
+  if (hasF2 && !hasF1) return true;
+  if (hasF1 && !hasF2) return false;
+  if (hasF2 && hasF1) {
     var siteB = (rowData[COL_B] || '').toString().trim();
-    if (siteB.indexOf('2') >= 0 || siteB.toLowerCase().indexOf('icapp 2') >= 0 || siteB.indexOf('مصنع 2') >= 0) {
-      return true;
-    }
+    if (isSiteNameFactory2(siteB)) return true;
+    if (isSiteNameFactory1(siteB)) return false;
+    return false;
   }
   return false;
+}
+
+/**
+ * تحويل صف واحد إلى سجل أو سجلين (مصنع 1 و/أو مصنع 2)
+ */
+function mapFormRowToDailySafetyCheckListRecords(rowData, headers) {
+  if (!rowData || !headers || rowData.length === 0) return [];
+  var factories = getFactoriesForFormRow(rowData, headers);
+  var records = [];
+  for (var i = 0; i < factories.length; i++) {
+    var rec = mapFormRowToDailySafetyCheckList(rowData, headers, factories[i]);
+    if (rec) records.push(rec);
+  }
+  return records;
 }
 
 /**
  * تحويل صف من جدول إجابات الفورم إلى كائن مطابق لـ DailySafetyCheckList
  * مصنع 1: أسئلة من F. مصنع 2: أسئلة من Y.
  * الموقع، التاريخ، المفتش، الوردية تُقرأ دائماً من A,B,C,D,E فقط.
- * التاريخ يُخزّن بصيغة YYYY-MM-DD. الوردية لا تأخذ "مطابق"/"غير مطابق".
+ *
+ * @param {boolean|undefined} forceFactory2 - إذا true/false يُجبر المصنع؛ وإلا يُستنتج تلقائياً
  */
-function mapFormRowToDailySafetyCheckList(rowData, headers) {
+function mapFormRowToDailySafetyCheckList(rowData, headers, forceFactory2) {
   if (!rowData || !headers || rowData.length === 0) return null;
 
-  var useFactory2 = isFactory2Row(rowData, headers);
+  var useFactory2 = (forceFactory2 === true || forceFactory2 === false)
+    ? forceFactory2
+    : isFactory2Row(rowData, headers);
   var firstQuestionCol = useFactory2 ? COL_Y : COL_F;
 
   var siteName = (rowData[COL_B] !== undefined && rowData[COL_B] !== null && String(rowData[COL_B]).trim() !== '')
@@ -250,6 +400,51 @@ function mapFormRowToDailySafetyCheckList(rowData, headers) {
 }
 
 /**
+ * هل يوجد سجل مطابق مسبقاً في DailySafetyCheckList (لتجنب التكرار عند إعادة المعالجة)؟
+ */
+function dailySafetyFormRecordExists(recordData) {
+  if (!recordData) return false;
+  var existing = [];
+  try {
+    existing = typeof readFromSheet === 'function'
+      ? readFromSheet('DailySafetyCheckList', APP_SPREADSHEET_ID)
+      : [];
+  } catch (e) {
+    Logger.log('dailySafetyFormRecordExists read error: ' + e.toString());
+    return false;
+  }
+  if (!Array.isArray(existing) || existing.length === 0) return false;
+
+  var date = formatDateOnly(recordData.date);
+  var site = String(recordData.siteName || recordData.siteId || '').trim();
+  var inspector = String(recordData.inspectorName || '').trim();
+  var shift = String(recordData.shift || '').trim();
+
+  for (var i = 0; i < existing.length; i++) {
+    var r = existing[i];
+    if (!r) continue;
+    if (formatDateOnly(r.date) === date &&
+        String(r.siteName || r.siteId || '').trim() === site &&
+        String(r.inspectorName || '').trim() === inspector &&
+        String(r.shift || '').trim() === shift) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * حفظ سجل من الفورم مع خيار تخطي المكرر
+ */
+function saveDailySafetyCheckListFromForm(recordData, options) {
+  options = options || {};
+  if (options.skipDuplicates && dailySafetyFormRecordExists(recordData)) {
+    return { success: true, skipped: true, message: 'السجل موجود مسبقاً في DailySafetyCheckList' };
+  }
+  return saveDailySafetyCheckListToAppSheet(recordData);
+}
+
+/**
  * حفظ السجل في ورقة DailySafetyCheckList في جدول التطبيق
  */
 function saveDailySafetyCheckListToAppSheet(recordData) {
@@ -290,7 +485,9 @@ function checkForNewDailySafetyFormSubmissions() {
   try {
     var result = processFormDataFromSheet();
     if (result && result.success) {
-      Logger.log('DSC Form: تم حفظ سجل - ' + (result.data && result.data.id ? result.data.id : ''));
+      Logger.log('DSC Form: تمت معالجة ' + (result.processedCount || 0) + ' سجل/سجلات');
+    } else if (result && result.message) {
+      Logger.log('DSC Form: ' + result.message);
     }
   } catch (error) {
     Logger.log('checkForNewDailySafetyFormSubmissions: ' + error.toString());

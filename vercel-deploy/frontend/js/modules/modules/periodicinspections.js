@@ -6399,6 +6399,33 @@ const PeriodicInspections = {
         }
     },
 
+    /**
+     * استرجاع صف/صفوف من جدول إجابات فورم المرور اليومي إلى DailySafetyCheckList (مدير فقط).
+     * مثال من الكونسول: reprocessDailySafetyFormRows(492, 492)
+     */
+    async reprocessDailySafetyFormRows(fromRow, toRow) {
+        if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
+            throw new Error('GoogleIntegration غير متاح');
+        }
+        const payload = {
+            fromRow,
+            toRow: toRow != null ? toRow : fromRow
+        };
+        if (typeof AppState !== 'undefined' && AppState.currentUser) {
+            payload.userData = AppState.currentUser;
+        }
+        const result = await GoogleIntegration.sendRequest({
+            action: 'reprocessDailySafetyFormRows',
+            data: payload
+        });
+        if (typeof Utils !== 'undefined' && Utils.safeLog) {
+            Utils.safeLog('reprocessDailySafetyFormRows:', result);
+        } else {
+            console.log('reprocessDailySafetyFormRows:', result);
+        }
+        return result;
+    },
+
     async deleteDailySafetyCheckListRecord(id) {
         if (!confirm('هل أنت متأكد من حذف هذا السجل؟')) return;
         this.getDailySafetyCheckListRecords();
@@ -6795,7 +6822,10 @@ Object.keys(PeriodicInspections).forEach(key => {
     try {
         if (typeof window !== 'undefined' && typeof PeriodicInspections !== 'undefined') {
             window.PeriodicInspections = PeriodicInspections;
-            
+            window.reprocessDailySafetyFormRows = function (fromRow, toRow) {
+                return PeriodicInspections.reprocessDailySafetyFormRows(fromRow, toRow);
+            };
+
             // إشعار عند تحميل الموديول بنجاح
             if (typeof AppState !== 'undefined' && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
                 Utils.safeLog('✅ PeriodicInspections module loaded and available on window.PeriodicInspections');

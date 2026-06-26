@@ -13108,7 +13108,7 @@
             defer
         ></script>
         <script src="js/modules/services/workflow.js" defer></script>
-        <script src="js/modules/services/google-integration.js?v=20260626-reconcile" defer></script>
+        <script src="js/modules/services/google-integration.js?v=20260626-dsc-reprocess" defer></script>
         <script src="js/modules/services/hse-metrics.js?v=20260622-1" defer></script>
         <script src="js/modules/services/data-integrity.js?v=20260611-integrity" defer></script>
         <script src="js/modules/services/data-repository.js" defer></script>
@@ -13156,7 +13156,7 @@
         <script src="js/modules/modules/fireequipment.js" defer></script>
         <script src="js/modules/modules/ppe.js" defer></script>
         <script src="js/modules/modules/periodic-equipment.js?v=20260626-1" defer></script>
-        <script src="js/modules/modules/periodicinspections.js?v=20260626-1" defer></script>
+        <script src="js/modules/modules/periodicinspections.js?v=20260626-dsc-reprocess" defer></script>
         <script src="js/modules/modules/contractors.js?v=20260626-analytics-kpi" defer></script>
         <script src="js/modules/modules/violations.js?v=20260525-approval-circuit" defer></script>
         <script src="js/modules/modules/employees.js" defer></script>
@@ -13185,6 +13185,41 @@
 
         <!-- 5. Events (Event listeners and initialization) -->
         <script src="js/modules/app-events.js" defer></script>
+        <script>
+            (function () {
+                function attachReprocessDailySafetyHelper() {
+                    if (typeof window.GoogleIntegration === 'undefined' || typeof window.GoogleIntegration.sendRequest !== 'function') {
+                        return false;
+                    }
+                    window.reprocessDailySafetyFormRows = async function reprocessDailySafetyFormRows(fromRow, toRow) {
+                        const result = await window.GoogleIntegration.sendRequest({
+                            action: 'reprocessDailySafetyFormRows',
+                            data: {
+                                fromRow: fromRow,
+                                toRow: toRow != null ? toRow : fromRow
+                            }
+                        });
+                        console.log('reprocessDailySafetyFormRows:', result);
+                        return result;
+                    };
+                    return true;
+                }
+                function waitForGoogleIntegration() {
+                    if (attachReprocessDailySafetyHelper()) return;
+                    let tries = 0;
+                    const timer = setInterval(function () {
+                        if (attachReprocessDailySafetyHelper() || ++tries >= 60) {
+                            clearInterval(timer);
+                        }
+                    }, 250);
+                }
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', waitForGoogleIntegration);
+                } else {
+                    waitForGoogleIntegration();
+                }
+            })();
+        </script>
         
         <!-- Login Init - تحميل مباشر -->
         <script src="login-init-fixed.js?v=8" defer></script>
@@ -13275,7 +13310,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.353-20260626";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.354-20260626";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

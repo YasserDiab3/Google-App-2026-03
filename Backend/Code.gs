@@ -489,6 +489,21 @@ function doPost(e) {
             } else if (action === 'reconcileMissingApprovedContractors' && typeof reconcileMissingApprovedContractorsFromRequests === 'function') {
                 var reconActor = actorUserData || (payload && payload.userData) || (postData && postData.userData) || {};
                 result = reconcileMissingApprovedContractorsFromRequests(payload || {}, reconActor);
+            } else if (action === 'reprocessDailySafetyFormRows' && typeof reprocessDailySafetyFormRows === 'function') {
+                var adminFailDsc = (typeof actionRequireAdmin_ === 'function')
+                    ? actionRequireAdmin_(actorUserData, action)
+                    : null;
+                if (adminFailDsc) {
+                    result = adminFailDsc;
+                } else {
+                    var fromRowDsc = payload && (payload.fromRow != null ? payload.fromRow : payload.from);
+                    var toRowDsc = payload && (payload.toRow != null ? payload.toRow : payload.to);
+                    if (fromRowDsc == null || fromRowDsc === '') {
+                        result = { success: false, message: 'يجب تحديد fromRow (رقم صف بداية النطاق في جدول الفورم)' };
+                    } else {
+                        result = reprocessDailySafetyFormRows(fromRowDsc, toRowDsc);
+                    }
+                }
             } else {
                 result = {
                     success: false,
