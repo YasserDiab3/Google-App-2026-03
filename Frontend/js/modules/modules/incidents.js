@@ -6683,7 +6683,17 @@ const Incidents = {
             const form = document.getElementById('incident-form');
             if (form) form.addEventListener('submit', (e) => this.handleSubmit(e));
             const cancelBtn = document.getElementById('cancel-incident-btn');
-            if (cancelBtn) cancelBtn.addEventListener('click', () => this.switchTab('incidents-list'));
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => {
+                    this.exitIncidentForm(this._formReturnTab || 'incidents-list');
+                });
+            }
+            const backBtn = document.getElementById('incident-form-back-btn');
+            if (backBtn) {
+                backBtn.addEventListener('click', () => {
+                    this.exitIncidentForm(this._formReturnTab || 'incidents-list');
+                });
+            }
 
             const investigationBtn = document.getElementById('open-investigation-btn');
             if (investigationBtn && this.currentEditId) {
@@ -6778,9 +6788,34 @@ const Incidents = {
         }, 100);
     },
 
+    async exitIncidentForm(returnTab = 'incidents-list') {
+        const tab = returnTab || 'incidents-list';
+        this.currentEditId = null;
+        this.currentAttachments = [];
+        this._formReturnTab = null;
+
+        const content = document.getElementById('incidents-content');
+        if (!content) {
+            if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
+            return;
+        }
+
+        content.innerHTML = await this.renderMainView();
+        if (typeof this.applyModuleI18n === 'function') {
+            this.applyModuleI18n(content);
+        }
+        this.setupEventListeners();
+        this.currentTab = tab;
+        await this.switchTab(tab);
+        if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
+    },
+
     async showForm(incidentData = null) {
         if (typeof Permissions !== 'undefined' && Permissions.ensureFormSettingsState) {
             try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
+        }
+        if (!this._formReturnTab) {
+            this._formReturnTab = this.currentTab || 'incidents-list';
         }
         if (incidentData) this._mergeIncidentWithInvestigationData(incidentData);
         this.currentEditId = incidentData?.id || null;
@@ -6815,10 +6850,16 @@ const Incidents = {
                     </div>
                 ` : ''}
                 <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-${isEdit ? 'edit' : 'plus-circle'} ml-2"></i>
-                        ${isEdit ? 'تعديل حادث' : 'تسجيل حادث جديد'}
-                    </h2>
+                    <div class="flex items-center justify-between flex-wrap gap-3">
+                        <h2 class="card-title mb-0">
+                            <i class="fas fa-${isEdit ? 'edit' : 'plus-circle'} ml-2"></i>
+                            ${isEdit ? 'تعديل حادث' : 'تسجيل حادث جديد'}
+                        </h2>
+                        <button type="button" id="incident-form-back-btn" class="btn-secondary btn-sm">
+                            <i class="fas fa-arrow-right ml-2"></i>
+                            العودة إلى القائمة
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <form id="incident-form" class="space-y-6">
@@ -6833,7 +6874,7 @@ const Incidents = {
                                     id="incident-employee-code" 
                                     required
                                     class="form-input"
-                                    value="${incidentData?.employeeCode || incidentData?.employeeNumber || ''}"
+                                    value="${incidentData?.reporterCode || incidentData?.employeeCode || incidentData?.employeeNumber || ''}"
                                     placeholder="الكود الوظيفي"
                                 >
                             </div>
@@ -7501,6 +7542,8 @@ const Incidents = {
             } : null
         };
 
+        formData.reporterCode = employeeCode;
+
         if (!formData.title || !formData.location || !formData.severity || !formData.status) {
             Notification.error('يرجى ملء جميع الحقول المطلوبة');
             // استعادة الزر عند فشل التحقق
@@ -7512,9 +7555,11 @@ const Incidents = {
         }
 
         Loading.show('جاري حفظ البيانات...');
+        const returnTab = this._formReturnTab || 'incidents-list';
+        const wasEdit = !!this.currentEditId;
         try {
             // 1. حفظ البيانات فوراً في الذاكرة
-            if (this.currentEditId) {
+            if (wasEdit) {
                 const index = AppState.appData.incidents.findIndex(i => i.id === this.currentEditId);
                 if (index !== -1) {
                     AppState.appData.incidents[index] = formData;
@@ -7532,42 +7577,39 @@ const Incidents = {
                 Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
             }
 
-            // 2. إغلاق النموذج فوراً بعد الحفظ في الذاكرة
-            this.switchTab('incidents-list');
+            // 2. إعادة القائمة/التبويبات فوراً (لا تنتظر المزامنة)
+            await this.exitIncidentForm(returnTab);
 
-            // 3. استعادة الزر بعد النجاح (إذا كان موجوداً)
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }
-
-            // 4. تحديث Dashboard فوراً
+            // 3. تحديث Dashboard فوراً
             if (typeof Dashboard !== 'undefined' && Dashboard.refreshIncidents) {
                 Dashboard.refreshIncidents();
             }
 
-            // 5. معالجة المهام الخلفية في الخلفية
+            // 4. معالجة المهام الخلفية دون حجب الواجهة
             Promise.all([
-                // إضافة/تحديث السجل
-                this.currentEditId
-                    ? this.updateRegistryEntry(formData).catch(error => {
+                wasEdit
+                    ? this.updateRegistryEntry(formData, { persist: false }).catch(error => {
                         Utils.safeError('خطأ في تحديث السجل:', error);
                     })
-                    : this.addToRegistry(formData).catch(error => {
+                    : this.addToRegistry(formData, { persist: false }).catch(error => {
                         Utils.safeError('خطأ في إضافة السجل:', error);
                     }),
-                // معالجة الملفات والإجراءات الإضافية
                 this.processIncidentBackgroundTasks(formData).catch(error => {
                     Utils.safeError('خطأ في معالجة المهام الخلفية:', error);
                 })
-            ]).catch(error => {
+            ]).then(() => {
+                return this.saveRegistryData().catch(error => {
+                    Utils.safeError('خطأ في حفظ سجل الحوادث:', error);
+                });
+            }).catch(error => {
                 Utils.safeError('خطأ في معالجة المهام الخلفية:', error);
             });
 
         } catch (error) {
             Utils.safeError('خطأ في حفظ الحادث:', error);
             Notification.error('حدث خطأ: ' + error.message);
-            // استعادة الزر في حالة الخطأ
+        } finally {
+            if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
             if (submitBtn && originalText) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
@@ -7675,14 +7717,8 @@ const Incidents = {
         }
     },
 
-    async showList() {
-        this.currentEditId = null;
-        const content = document.getElementById('incidents-content');
-        if (content) {
-            content.innerHTML = await this.renderMainView();
-            this.setupEventListeners();
-            this.loadIncidentsList();
-        }
+    async showList(tabName = 'incidents-list') {
+        await this.exitIncidentForm(tabName);
     },
 
     isNotificationNonInjuryType(incidentType) {
@@ -8930,6 +8966,7 @@ const Incidents = {
 
         const incident = AppState.appData.incidents.find(i => i.id === id);
         if (incident) {
+            this._formReturnTab = this.currentTab || 'incidents-list';
             const merged = { ...incident };
             this._mergeIncidentWithInvestigationData(merged);
             await this.showForm(merged);
