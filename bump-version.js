@@ -15,6 +15,9 @@
  *   node bump-version.js major        → x.y.z → (x+1).0.0
  *
  * بعد التشغيل: راجع git diff ثم commit + push (Vercel ينشر تلقائياً، وإشعار التحديث يظهر للمستخدمين).
+ *
+ * pre-push hook (مرة واحدة): node scripts/install-git-hooks.mjs
+ * يمنع push واجهة بدون تحديث الإصدار — انظر scripts/check-version-bump.js
  */
 
 const fs = require('fs');
