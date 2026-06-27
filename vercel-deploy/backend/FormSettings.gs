@@ -171,7 +171,6 @@ function replaceFormSettingsSheetData_(sheetName, data, spreadsheetId) {
         }
 
         sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-        sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#f0f0f0');
 
         const lastRow = sheet.getLastRow();
         if (lastRow > 1) {
@@ -947,63 +946,46 @@ function saveFormSettingsToSheet(settingsData, actorUserData) {
             };
         }
         
-        // قراءة البيانات الحالية للدمج
-        const existingSites = readFromSheet(FORM_SETTINGS_SHEETS.SITES, spreadsheetId);
-        const existingPlaces = readFromSheet(FORM_SETTINGS_SHEETS.PLACES, spreadsheetId);
+        // قراءة الإدارات وفريق السلامة فقط — المواقع/الأماكن تُبنى من الواجهة مباشرة (استبدال كامل)
         const existingDepartments = readFromSheet(FORM_SETTINGS_SHEETS.DEPARTMENTS, spreadsheetId);
         const existingSafetyTeam = readFromSheet(FORM_SETTINGS_SHEETS.SAFETY_TEAM, spreadsheetId);
         
-        // معالجة المواقع والأماكن
+        const nowIso = new Date().toISOString();
+        const actorName = userData.name || userData.email || 'System';
+        
         const sitesToSave = [];
         const placesToSave = [];
         
-        sites.forEach((site, siteIndex) => {
-            const siteId = site.id || Utilities.getUuid();
-            const normalizedSiteId = String(siteId || '').trim();
-            const normalizedSiteName = String(site.name || '').trim();
-            const existingSite = existingSites.find(function(s) {
-                return String(s.id || '').trim() === normalizedSiteId ||
-                    (normalizedSiteName && String(s.name || '').trim() === normalizedSiteName);
-            });
+        sites.forEach(function(site, siteIndex) {
+            const siteId = String(site.id || '').trim() || Utilities.getUuid();
             
             sitesToSave.push({
-                id: existingSite ? String(existingSite.id || '').trim() || siteId : siteId,
+                id: siteId,
                 name: site.name || '',
                 description: site.description || '',
                 isActive: 'نشط',
                 sortOrder: siteIndex,
-                createdAt: existingSite?.createdAt || new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                createdBy: existingSite?.createdBy || userData.name || userData.email || 'System',
-                updatedBy: userData.name || userData.email || 'System'
+                createdAt: site.createdAt || nowIso,
+                updatedAt: nowIso,
+                createdBy: site.createdBy || actorName,
+                updatedBy: actorName
             });
             
-            // معالجة الأماكن الفرعية
             if (Array.isArray(site.places)) {
-                site.places.forEach((place, placeIndex) => {
-                    const placeId = place.id || generateSequentialId('PLA', FORM_SETTINGS_SHEETS.PLACES, spreadsheetId);
-                    const normalizedPlaceId = String(placeId || '').trim();
-                    const normalizedPlaceName = String(place.name || '').trim();
-                    const resolvedSiteId = existingSite ? String(existingSite.id || '').trim() || siteId : siteId;
-                    const existingPlace = existingPlaces.find(function(p) {
-                        return String(p.id || '').trim() === normalizedPlaceId ||
-                            (String(p.siteId || '').trim() === resolvedSiteId &&
-                                normalizedPlaceName &&
-                                String(p.name || '').trim() === normalizedPlaceName);
-                    });
-                    
+                site.places.forEach(function(place, placeIndex) {
+                    const placeId = String(place.id || '').trim() || Utilities.getUuid();
                     placesToSave.push({
-                        id: existingPlace ? String(existingPlace.id || '').trim() || placeId : placeId,
-                        siteId: resolvedSiteId,
+                        id: placeId,
+                        siteId: siteId,
                         siteName: site.name || '',
                         name: place.name || '',
                         description: place.description || '',
                         isActive: 'نشط',
                         sortOrder: placeIndex,
-                        createdAt: existingPlace?.createdAt || new Date().toISOString(),
-                        updatedAt: new Date().toISOString(),
-                        createdBy: existingPlace?.createdBy || userData.name || userData.email || 'System',
-                        updatedBy: userData.name || userData.email || 'System'
+                        createdAt: place.createdAt || nowIso,
+                        updatedAt: nowIso,
+                        createdBy: place.createdBy || actorName,
+                        updatedBy: actorName
                     });
                 });
             }

@@ -1883,6 +1883,7 @@ const Permissions = {
                 sites: payload.sites,
                 departments: payload.departments,
                 safetyTeam: payload.safetyTeam,
+                __timeoutMs: 120000,
                 userData: {
                     email: userData.email,
                     name: userData.name,
@@ -3929,7 +3930,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.367',
+    appVersion: '1.0.369',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,

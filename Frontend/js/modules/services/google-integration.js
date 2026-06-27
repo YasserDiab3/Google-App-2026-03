@@ -898,7 +898,9 @@ const GoogleIntegration = {
                 // قراءة كاملة لورقة الموظفين (شيت كبير + إقلاع بارد لـ GAS) — لا يُطابق شرط getAll المخصص أعلاه
                 'getAllEmployees',
                 // لوحة إصدارات المستخدمين — قراءة Users + UserVersions
-                'getUserVersionsDashboard', 'getAllUserVersions', 'getUserVersionStats'
+                'getUserVersionsDashboard', 'getAllUserVersions', 'getUserVersionStats',
+                // إعدادات النماذج — استبدال كامل لجداول كبيرة
+                'saveFormSettings', 'getFormSettings', 'deleteSite', 'deletePlace', 'initFormSettingsTables'
             ];
             const mediumOperations = [
                 'getData', 'readData', 'loadData', 'fetchData', 'add', 'update'
@@ -917,7 +919,8 @@ const GoogleIntegration = {
             // تقليل المهلات لتفعيل fail-fast ومنع تكدس الطابور لعدة دقائق
             const timeoutDuration = Number(data?.__timeoutMs) > 0
                 ? Number(data.__timeoutMs)
-                : (isHeavyOperation ? 40000 : (isMediumOperation ? 30000 : 12000));
+                : (action === 'saveFormSettings' ? 120000
+                    : (isHeavyOperation ? 90000 : (isMediumOperation ? 45000 : 12000)));
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => {
