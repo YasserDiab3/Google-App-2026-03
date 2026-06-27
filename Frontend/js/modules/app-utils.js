@@ -1443,11 +1443,12 @@ const Permissions = {
         if (!siteId || !state || !Array.isArray(state.sites)) return;
         const index = state.sites.findIndex((site) => site.id === siteId);
         if (index === -1) return;
-        const siteName = state.sites[index].name || 'موقع بدون اسم';
+        const removedSite = state.sites[index];
+        const removedHadName = String(removedSite?.name || '').trim().length > 0;
+        const siteName = removedSite?.name || 'موقع بدون اسم';
         if (!confirm(`سيتم حذف الموقع "${siteName}" وجميع الأماكن المرتبطة به. هل ترغب بالمتابعة؟`)) {
             return;
         }
-        const wasPersisted = this.isFormSettingsSitePersisted(state, siteId);
         state.sites.splice(index, 1);
         if (state._persistedSiteIds) {
             state._persistedSiteIds.delete(String(siteId));
@@ -1461,32 +1462,21 @@ const Permissions = {
         this.refreshFormSettingsUI('sites');
         this.refreshFormSettingsPlacesPanel();
 
-        if (!wasPersisted) return;
+        if (!removedHadName) return;
 
         const cloudReady = typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync();
-        if (!cloudReady || typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendToAppsScript !== 'function') {
-            return;
-        }
+        if (!cloudReady) return;
 
         try {
-            const userData = AppState.currentUser || {};
-            const result = await GoogleIntegration.sendToAppsScript('deleteSite', {
-                siteId: siteId,
-                userData: {
-                    email: userData.email,
-                    name: userData.name,
-                    role: userData.role,
-                    permissions: userData.permissions
-                }
-            });
-            if (result && result.success) {
-                Utils.safeLog('✅ تم حذف الموقع من قاعدة البيانات');
-            } else if (result?.message && result.message !== 'الموقع غير موجود') {
-                Notification.warning(result.message);
+            const result = await this.pushFormSettingsToCloud(state, { silent: true });
+            if (result?.success) {
+                Utils.safeLog('✅ تم حذف الموقع ومزامنة قاعدة البيانات');
+            } else if (!result?.skipped) {
+                Notification.warning('تم الحذف من الواجهة. اضغط «حفظ الإعدادات» لمزامنة قاعدة البيانات.');
             }
         } catch (error) {
-            Utils.safeWarn('⚠️ فشل حذف الموقع من قاعدة البيانات:', error);
-            Notification.warning('تم الحذف من الواجهة. احفظ الإعدادات لمزامنة قاعدة البيانات.');
+            Utils.safeWarn('⚠️ فشل مزامنة حذف الموقع مع قاعدة البيانات:', error);
+            Notification.warning('تم الحذف من الواجهة. اضغط «حفظ الإعدادات» لمزامنة قاعدة البيانات.');
         }
     },
 
@@ -1566,20 +1556,43 @@ const Permissions = {
         }
     },
 
-    handleRemovePlace(placeId) {
+    async handleRemovePlace(placeId) {
         const state = this.getFormSettingsState();
         if (!state || !Array.isArray(state.sites)) return;
         const site = state.sites.find((item) => item.id === state.selectedSiteId);
         if (!site || !Array.isArray(site.places)) return;
         const index = site.places.findIndex((item) => item.id === placeId);
         if (index === -1) return;
-        const placeName = site.places[index].name || 'مكان بدون اسم';
+        const removedPlace = site.places[index];
+        const placeName = removedPlace?.name || 'مكان بدون اسم';
         if (!confirm(`هل ترغب في حذف المكان "${placeName}"؟`)) {
             return;
         }
+        const removedHadName = String(removedPlace?.name || '').trim().length > 0;
         site.places.splice(index, 1);
+        if (state._persistedPlaceIds) {
+            state._persistedPlaceIds.delete(String(placeId));
+        }
+        this.syncFormSettingsObservationSites(state);
         this.invalidateFormSettingsPlacesCache(state.selectedSiteId);
         this.refreshFormSettingsUI('places');
+
+        if (!removedHadName) return;
+
+        const cloudReady = typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync();
+        if (!cloudReady) return;
+
+        try {
+            const result = await this.pushFormSettingsToCloud(state, { silent: true });
+            if (result?.success) {
+                Utils.safeLog('✅ تم حذف المكان ومزامنة قاعدة البيانات');
+            } else if (!result?.skipped) {
+                Notification.warning('تم الحذف من الواجهة. اضغط «حفظ الإعدادات» لمزامنة قاعدة البيانات.');
+            }
+        } catch (error) {
+            Utils.safeWarn('⚠️ فشل مزامنة حذف المكان مع قاعدة البيانات:', error);
+            Notification.warning('تم الحذف من الواجهة. اضغط «حفظ الإعدادات» لمزامنة قاعدة البيانات.');
+        }
     },
 
     handleAddDepartment() {
@@ -1712,6 +1725,102 @@ const Permissions = {
         return { sites };
     },
 
+    hasNamedFormSettingsSites(sites) {
+        return (sites || []).some((site) => String(site?.name || '').trim());
+    },
+
+    buildFormSettingsCloudPayload(state, options = {}) {
+        const requireAllNamed = options.requireAllNamed === true;
+        const departments = (state?.departments || [])
+            .map((value) => String(value || '').trim())
+            .filter((value, index, array) => value && array.indexOf(value) === index);
+        const safetyTeam = (state?.safetyTeam || [])
+            .map((value) => String(value || '').trim())
+            .filter((value, index, array) => value && array.indexOf(value) === index);
+
+        if (requireAllNamed) {
+            const sanitizedResult = this.sanitizeSites(state?.sites || []);
+            if (sanitizedResult.error) {
+                return { error: sanitizedResult };
+            }
+            return { sites: sanitizedResult.sites, departments, safetyTeam };
+        }
+
+        const sites = (state?.sites || [])
+            .filter((site) => String(site?.name || '').trim())
+            .map((site) => ({
+                id: site.id || Utils.generateId('SITE'),
+                name: String(site.name).trim(),
+                places: (Array.isArray(site.places) ? site.places : [])
+                    .filter((place) => String(place?.name || '').trim())
+                    .map((place) => ({
+                        id: place.id || Utils.generateId('PLACE'),
+                        name: String(place.name).trim()
+                    }))
+            }));
+
+        return { sites, departments, safetyTeam };
+    },
+
+    async pushFormSettingsToCloud(state, options = {}) {
+        const silent = options.silent === true;
+        const cloudReady = typeof Utils !== 'undefined' &&
+            typeof Utils.hasCloudBackendSync === 'function' &&
+            Utils.hasCloudBackendSync();
+        if (!cloudReady ||
+            typeof GoogleIntegration === 'undefined' ||
+            typeof GoogleIntegration.sendToAppsScript !== 'function') {
+            return { skipped: true };
+        }
+
+        const payload = this.buildFormSettingsCloudPayload(state, {
+            requireAllNamed: options.requireAllNamed === true
+        });
+        if (payload.error) {
+            if (!silent) {
+                Notification.error(payload.error.error);
+                if (payload.error.focusSelector) {
+                    const element = document.querySelector(payload.error.focusSelector);
+                    if (element) {
+                        element.focus();
+                        element.classList.add('ring', 'ring-ring-500');
+                        setTimeout(() => element.classList.remove('ring', 'ring-red-500'), 1500);
+                    }
+                }
+            }
+            return { success: false, message: payload.error.error };
+        }
+
+        const userData = AppState.currentUser || {};
+        try {
+            const result = await GoogleIntegration.sendToAppsScript('saveFormSettings', {
+                id: 'FORM-SETTINGS-1',
+                sites: payload.sites,
+                departments: payload.departments,
+                safetyTeam: payload.safetyTeam,
+                userData: {
+                    email: userData.email,
+                    name: userData.name,
+                    role: userData.role,
+                    permissions: userData.permissions
+                }
+            });
+            if (result?.success) {
+                this.markFormSettingsPersistedIds(state);
+                Utils.safeLog('✅ تم مزامنة إعدادات النماذج مع Google Sheets');
+            } else if (!silent && result?.message) {
+                Notification.warning(result.message);
+            }
+            return result || { success: false };
+        } catch (error) {
+            Utils.safeWarn('⚠️ فشل مزامنة إعدادات النماذج مع Google Sheets:', error);
+            if (!silent) {
+                Notification.warning('فشل المزامنة مع قاعدة البيانات.');
+            }
+            return { success: false, error };
+        }
+    },
+
     async handleSaveFormSettings() {
         const state = await this.ensureFormSettingsState();
         if (!state) {
@@ -1757,36 +1866,10 @@ const Permissions = {
             dm.saveCompanySettings();
         }
 
-        // مزامنة مع Google Sheets إذا كان متاحاً
-        if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
-            try {
-                const userData = AppState.currentUser || {};
-                const result = await GoogleIntegration.sendToAppsScript('saveFormSettings', {
-                    id: 'FORM-SETTINGS-1',
-                    sites: sites,
-                    departments: departments,
-                    safetyTeam: safetyTeam,
-                    userData: {
-                        email: userData.email,
-                        name: userData.name,
-                        role: userData.role,
-                        permissions: userData.permissions
-                    }
-                });
-
-                if (result && result.success) {
-                    Utils.safeLog('✅ تم حفظ إعدادات النماذج في Google Sheets بنجاح');
-                } else {
-                    const msg = result?.message || 'فشل حفظ إعدادات النماذج في Google Sheets';
-                    Utils.safeWarn('⚠️ فشل حفظ إعدادات النماذج في Google Sheets:', msg);
-                    if (result?.errorCode === 'DUPLICATE_ENTRY') {
-                        Notification.error(msg);
-                        return;
-                    }
-                }
-            } catch (error) {
-                Utils.safeWarn('⚠️ خطأ أثناء مزامنة إعدادات النماذج مع Google Sheets:', error);
-            }
+        const cloudResult = await this.pushFormSettingsToCloud(state, { requireAllNamed: true, silent: true });
+        if (cloudResult?.errorCode === 'DUPLICATE_ENTRY') {
+            Notification.error(cloudResult.message || 'لا يمكن حفظ مواقع أو أماكن مكررة.');
+            return;
         }
 
         // تسجيل حركة المستخدم
@@ -3747,7 +3830,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.362',
+    appVersion: '1.0.363',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,

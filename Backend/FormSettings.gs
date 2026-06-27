@@ -211,9 +211,9 @@ function updateSiteInSheet(siteId, updateData) {
 /**
  * حذف موقع
  */
-function deleteSiteFromSheet(siteId, userData) {
+function deleteSiteFromSheet(siteId, userData, siteNameOpt) {
     try {
-        if (!siteId) {
+        if (!siteId && !siteNameOpt) {
             return { success: false, message: 'معرف الموقع غير محدد' };
         }
         
@@ -227,19 +227,42 @@ function deleteSiteFromSheet(siteId, userData) {
         
         // حذف الموقع
         const normalizedSiteId = String(siteId || '').trim();
+        const normalizedSiteName = String(siteNameOpt || '').trim().toLowerCase();
         const sites = readFromSheet(FORM_SETTINGS_SHEETS.SITES, spreadsheetId);
-        const filteredSites = sites.filter(function(s) {
+        let filteredSites = sites.filter(function(s) {
             return String(s.id || '').trim() !== normalizedSiteId;
         });
+        
+        if (filteredSites.length === sites.length && normalizedSiteName) {
+            filteredSites = sites.filter(function(s) {
+                return String(s.name || '').trim().toLowerCase() !== normalizedSiteName;
+            });
+        }
         
         if (filteredSites.length === sites.length) {
             return { success: false, message: 'الموقع غير موجود' };
         }
         
+        const removedSiteIds = sites
+            .filter(function(s) {
+                const sid = String(s.id || '').trim();
+                if (!sid) return false;
+                return !filteredSites.some(function(fs) {
+                    return String(fs.id || '').trim() === sid;
+                });
+            })
+            .map(function(s) {
+                return String(s.id || '').trim();
+            });
+        
         // حذف الأماكن المرتبطة بالموقع
         const places = readFromSheet(FORM_SETTINGS_SHEETS.PLACES, spreadsheetId);
         const filteredPlaces = places.filter(function(p) {
-            return String(p.siteId || '').trim() !== normalizedSiteId;
+            const placeSiteId = String(p.siteId || '').trim();
+            if (normalizedSiteId && placeSiteId === normalizedSiteId) {
+                return false;
+            }
+            return removedSiteIds.indexOf(placeSiteId) === -1;
         });
         
         // حفظ البيانات
@@ -814,10 +837,15 @@ function saveFormSettingsToSheet(settingsData) {
         
         sites.forEach((site, siteIndex) => {
             const siteId = site.id || Utilities.getUuid();
-            const existingSite = existingSites.find(s => s.id === siteId || s.name === site.name);
+            const normalizedSiteId = String(siteId || '').trim();
+            const normalizedSiteName = String(site.name || '').trim();
+            const existingSite = existingSites.find(function(s) {
+                return String(s.id || '').trim() === normalizedSiteId ||
+                    (normalizedSiteName && String(s.name || '').trim() === normalizedSiteName);
+            });
             
             sitesToSave.push({
-                id: existingSite?.id || siteId,
+                id: existingSite ? String(existingSite.id || '').trim() || siteId : siteId,
                 name: site.name || '',
                 description: site.description || '',
                 isActive: 'نشط',
@@ -832,11 +860,19 @@ function saveFormSettingsToSheet(settingsData) {
             if (Array.isArray(site.places)) {
                 site.places.forEach((place, placeIndex) => {
                     const placeId = place.id || generateSequentialId('PLA', FORM_SETTINGS_SHEETS.PLACES, spreadsheetId);
-                    const existingPlace = existingPlaces.find(p => p.id === placeId || (p.siteId === siteId && p.name === place.name));
+                    const normalizedPlaceId = String(placeId || '').trim();
+                    const normalizedPlaceName = String(place.name || '').trim();
+                    const resolvedSiteId = existingSite ? String(existingSite.id || '').trim() || siteId : siteId;
+                    const existingPlace = existingPlaces.find(function(p) {
+                        return String(p.id || '').trim() === normalizedPlaceId ||
+                            (String(p.siteId || '').trim() === resolvedSiteId &&
+                                normalizedPlaceName &&
+                                String(p.name || '').trim() === normalizedPlaceName);
+                    });
                     
                     placesToSave.push({
-                        id: existingPlace?.id || placeId,
-                        siteId: existingSite?.id || siteId,
+                        id: existingPlace ? String(existingPlace.id || '').trim() || placeId : placeId,
+                        siteId: resolvedSiteId,
                         siteName: site.name || '',
                         name: place.name || '',
                         description: place.description || '',

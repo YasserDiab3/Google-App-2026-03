@@ -4517,7 +4517,11 @@ var ActionHandlers = {
         var result = { success: false, message: '' };
         (function() {
 
-                    result = deleteSiteFromSheet(payload.siteId || payload.id, payload.userData || payload.user);
+                    result = deleteSiteFromSheet(
+                        payload.siteId || payload.id,
+                        payload.userData || payload.user,
+                        payload.siteName || payload.name || ''
+                    );
                     return;
 
         })();
