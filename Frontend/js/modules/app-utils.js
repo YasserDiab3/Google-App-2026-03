@@ -1898,11 +1898,12 @@ const Permissions = {
             }
             return result || { success: false };
         } catch (error) {
-            Utils.safeWarn('⚠️ فشل مزامنة إعدادات النماذج مع Google Sheets:', error);
+            const errMsg = (error && error.message) ? String(error.message) : String(error || 'خطأ غير معروف');
+            Utils.safeWarn('⚠️ فشل مزامنة إعدادات النماذج مع Google Sheets:', errMsg);
             if (!silent) {
-                Notification.warning('فشل المزامنة مع قاعدة البيانات.');
+                Notification.warning(errMsg || 'فشل المزامنة مع قاعدة البيانات.');
             }
-            return { success: false, error };
+            return { success: false, message: errMsg, error: error };
         }
     },
 
@@ -1960,8 +1961,11 @@ const Permissions = {
             typeof Utils.hasCloudBackendSync === 'function' &&
             Utils.hasCloudBackendSync();
         if (cloudReady && cloudResult && !cloudResult.success && !cloudResult.skipped) {
+            const errDetail = cloudResult.message ||
+                (cloudResult.error && cloudResult.error.message) ||
+                '';
             Notification.warning(
-                cloudResult.message ||
+                errDetail ||
                 'تم الحفظ محلياً فقط. فشلت مزامنة قاعدة البيانات — راجع الاتصال أو الصلاحيات ثم أعد المحاولة.'
             );
             return;
@@ -3925,7 +3929,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.366',
+    appVersion: '1.0.367',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,

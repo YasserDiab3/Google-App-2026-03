@@ -1091,6 +1091,12 @@ function getHeaders(sheetName, data) {
         return merged;
     }
     
+    // ✅ إعدادات النماذج: رؤوس ثابتة لضمان تطابق الكتابة مع replaceFormSettingsSheetData_
+    if (sheetName === 'Form_Sites' || sheetName === 'Form_Places' ||
+        sheetName === 'Form_Departments' || sheetName === 'Form_SafetyTeam') {
+        return getDefaultHeaders(sheetName);
+    }
+
     // للأوراق الأخرى، نستخدم الرؤوس الديناميكية أو الافتراضية
     const dynamicHeaders = extractHeadersFromData(data);
     if (dynamicHeaders && dynamicHeaders.length > 0) {

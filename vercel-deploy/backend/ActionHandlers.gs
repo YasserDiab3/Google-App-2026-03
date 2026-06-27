@@ -4408,7 +4408,7 @@ var ActionHandlers = {
                             email: payload.email || ''
                         };
                     }
-                    result = saveFormSettingsToSheet(payload);
+                    result = saveFormSettingsToSheet(payload, actorUserData);
                     return;
 
         })();

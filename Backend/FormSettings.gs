@@ -26,41 +26,62 @@ const FORM_SETTINGS_SHEETS = {
 /**
  * التحقق من صلاحيات المستخدم (مدير النظام فقط)
  */
-function checkFormSettingsPermission(userData) {
+function checkFormSettingsPermission(userData, actorUserDataOpt) {
     try {
-        // إذا لم يتم تمرير بيانات المستخدم، رفض الوصول
-        if (!userData) {
+        var candidates = [];
+        if (userData && typeof userData === 'object') candidates.push(userData);
+        if (actorUserDataOpt && typeof actorUserDataOpt === 'object' &&
+            actorUserDataOpt !== userData) {
+            candidates.push(actorUserDataOpt);
+        }
+
+        if (candidates.length === 0) {
             return { hasPermission: false, message: 'يجب تسجيل الدخول أولاً' };
         }
-        
-        // التحقق من الدور (Role) - فقط مدير النظام
-        const userRole = userData.role || '';
-        
-        // فقط admin مسموح له
-        if (userRole.toLowerCase() === 'admin') {
-            return { hasPermission: true, message: 'صلاحية صحيحة' };
-        }
-        
-        // التحقق من الصلاحيات المخصصة (Permissions)
-        let userPermissions = userData.permissions || {};
-        if (typeof userPermissions === 'string') {
-            try {
-                userPermissions = JSON.parse(userPermissions);
-            } catch (e) {
-                userPermissions = {};
+
+        var adminRoles = {
+            'admin': true,
+            'administrator': true,
+            'مدير': true,
+            'مدير النظام': true,
+            'system admin': true
+        };
+
+        for (var c = 0; c < candidates.length; c++) {
+            var ud = candidates[c];
+            var userRole = String(ud.role || '').trim().toLowerCase();
+            if (adminRoles[userRole]) {
+                return { hasPermission: true, message: 'صلاحية صحيحة' };
+            }
+
+            var userPermissions = ud.permissions || {};
+            if (typeof userPermissions === 'string') {
+                try {
+                    userPermissions = JSON.parse(userPermissions);
+                } catch (e) {
+                    userPermissions = {};
+                }
+            }
+
+            if (userPermissions['admin'] === true ||
+                userPermissions['manage-settings'] === true ||
+                userPermissions['form-settings'] === true) {
+                return { hasPermission: true, message: 'صلاحية صحيحة' };
             }
         }
-        
-        // التحقق من صلاحية 'admin' أو 'manage-settings'
-        if (userPermissions['admin'] === true || 
-            userPermissions['manage-settings'] === true ||
-            userPermissions['form-settings'] === true) {
+
+        if (actorUserDataOpt && typeof checkAdminPermissionsAuthoritative === 'function' &&
+            checkAdminPermissionsAuthoritative(actorUserDataOpt)) {
             return { hasPermission: true, message: 'صلاحية صحيحة' };
         }
-        
-        return { 
-            hasPermission: false, 
-            message: 'ليس لديك صلاحية للوصول إلى إعدادات النماذج. يجب أن تكون مدير النظام فقط.' 
+        if (actorUserDataOpt && typeof checkAdminPermissions === 'function' &&
+            checkAdminPermissions(actorUserDataOpt)) {
+            return { hasPermission: true, message: 'صلاحية صحيحة' };
+        }
+
+        return {
+            hasPermission: false,
+            message: 'ليس لديك صلاحية للوصول إلى إعدادات النماذج. يجب أن تكون مدير النظام فقط.'
         };
     } catch (error) {
         Logger.log('Error checking form settings permissions: ' + error.toString());
@@ -138,30 +159,26 @@ function replaceFormSettingsSheetData_(sheetName, data, spreadsheetId) {
         }
         initFormSettingsTables(spreadsheetId);
         const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
-        let sheet = spreadsheet.getSheetByName(sheetName);
+        const sheet = spreadsheet.getSheetByName(sheetName);
         if (!sheet) {
             return { success: false, message: 'الورقة غير موجودة: ' + sheetName };
         }
 
         const rows = Array.isArray(data) ? data : [];
-        const sampleRow = rows.length > 0 ? rows[0] : {};
-        ensureSheetHeaders(sheet, sheetName, rows.length > 0 ? rows : [sampleRow]);
-        const headers = getHeaders(sheetName, rows.length > 0 ? rows : [sampleRow]);
+        const headers = getDefaultHeaders(sheetName);
         if (!headers || headers.length === 0) {
-            return { success: false, message: 'لا يمكن استخراج رؤوس الورقة: ' + sheetName };
+            return { success: false, message: 'لا يمكن تحديد رؤوس الورقة: ' + sheetName };
         }
 
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+        sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#f0f0f0');
+
         const lastRow = sheet.getLastRow();
-        const lastCol = Math.max(sheet.getLastColumn(), headers.length);
-        const numDataRows = Math.max(0, lastRow - 1);
-        if (numDataRows > 0) {
-            sheet.getRange(2, 1, numDataRows, lastCol).clearContent();
+        if (lastRow > 1) {
+            sheet.deleteRows(2, lastRow - 1);
         }
 
         if (rows.length === 0) {
-            if (lastRow > 1) {
-                sheet.deleteRows(2, lastRow - 1);
-            }
             invalidateHseSheetCaches(sheetName);
             SpreadsheetApp.flush();
             return { success: true, message: 'تم مسح بيانات ' + sheetName };
@@ -172,12 +189,11 @@ function replaceFormSettingsSheetData_(sheetName, data, spreadsheetId) {
                 return toSheetCellValue_(header, item[header], sheetName);
             });
         });
-        sheet.getRange(2, 1, values.length, headers.length).setValues(values);
 
-        const expectedLastRow = 1 + values.length;
-        const currentLastRow = sheet.getLastRow();
-        if (currentLastRow > expectedLastRow) {
-            sheet.deleteRows(expectedLastRow + 1, currentLastRow - expectedLastRow);
+        if (values.length === 1) {
+            sheet.getRange(2, 1, 1, headers.length).setValues(values);
+        } else {
+            sheet.getRange(2, 1, values.length, headers.length).setValues(values);
         }
 
         invalidateHseSheetCaches(sheetName);
@@ -886,11 +902,10 @@ function validateFormSettingsSitesNoDuplicates_(sites) {
  * حفظ إعدادات النماذج (للتوافق مع النظام القديم)
  * هذه الدالة تحول البيانات القديمة إلى الجداول الجديدة
  */
-function saveFormSettingsToSheet(settingsData) {
+function saveFormSettingsToSheet(settingsData, actorUserData) {
     try {
-        // التحقق من الصلاحيات
-        const userData = settingsData.userData || settingsData.user || {};
-        const permissionCheck = checkFormSettingsPermission(userData);
+        const userData = settingsData.userData || settingsData.user || actorUserData || {};
+        const permissionCheck = checkFormSettingsPermission(userData, actorUserData);
         
         if (!permissionCheck.hasPermission) {
             return { 
