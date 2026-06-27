@@ -9033,10 +9033,12 @@ const Incidents = {
             Notification.success('تم إرسال الإخطار وإنشاء تحقيق تلقائي بنجاح');
             modal.remove();
 
-            // معالجة المهام الخلفية بدون تعطيل واجهة المستخدم
-            this.processNotificationBackgroundTasks(notificationData, investigationData).catch(error => {
+            // معالجة المهام الخلفية (حفظ الإخطار والتحقيق)
+            try {
+                await this.processNotificationBackgroundTasks(notificationData, investigationData);
+            } catch (error) {
                 Utils.safeError('خطأ في معالجة المهام الخلفية:', error);
-            });
+            }
 
             // فتح نموذج التحقيق الجديد للمستخدم
             setTimeout(() => {
@@ -9440,18 +9442,20 @@ const Incidents = {
     },
 
     async editIncident(id) {
-        // التحقق من الصلاحيات
-        const isAdmin = AppState.currentUser?.role === 'admin' ||
-            (AppState.currentUser?.permissions && (
-                AppState.currentUser.permissions.admin === true ||
-                AppState.currentUser.permissions['manage-modules'] === true
-            ));
-
-        if (!isAdmin) {
-            Notification.error('ليس لديك صلاحية لتعديل الحوادث. يجب أن تكون مدير النظام.');
+        const user = AppState.currentUser;
+        if (!user) {
+            Notification.error('يجب تسجيل الدخول أولاً');
             return;
         }
-
+        const role = String(user.role || '').trim().toLowerCase();
+        const perms = user.permissions || {};
+        const canEdit = role === 'admin' || role === 'administrator' || role === 'system_admin' ||
+            perms.admin === true || perms['manage-modules'] === true || perms['incidents-manage'] === true ||
+            role === 'safety_officer' || perms['incidents-complete-investigation'] === true;
+        if (!canEdit) {
+            Notification.error('ليس لديك صلاحية لتعديل الحوادث.');
+            return;
+        }
         const incident = AppState.appData.incidents.find(i => i.id === id);
         if (incident) {
             const merged = { ...incident };

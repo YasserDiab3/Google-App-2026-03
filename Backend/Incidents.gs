@@ -7,10 +7,16 @@
 /**
  * إضافة حادث جديد
  */
-function addIncidentToSheet(incidentData) {
+function addIncidentToSheet(incidentData, actorUserData) {
     try {
         if (!incidentData) {
             return { success: false, message: 'بيانات الحادث غير موجودة' };
+        }
+        
+        // التحقق من هوية المستخدم
+        var identity = actorUserData || incidentData.userData || incidentData.createdBy || null;
+        if (!identity || !identity.id) {
+            return { success: false, message: 'يجب تسجيل الدخول أولاً لإضافة حادث' };
         }
         
         const sheetName = 'Incidents';
@@ -471,10 +477,16 @@ function cleanupIncidentsRegistryDuplicates(spreadsheetId) {
 /**
  * إضافة إخطار حادث جديد
  */
-function addIncidentNotificationToSheet(notificationData) {
+function addIncidentNotificationToSheet(notificationData, actorUserData) {
     try {
         if (!notificationData) {
             return { success: false, message: 'بيانات الإخطار غير موجودة' };
+        }
+        
+        // التحقق من هوية المستخدم
+        var identity = actorUserData || notificationData.userData || notificationData.createdBy || null;
+        if (!identity || !identity.id) {
+            return { success: false, message: 'يجب تسجيل الدخول أولاً لإضافة إخطار حادث' };
         }
         
         const sheetName = 'IncidentNotifications';

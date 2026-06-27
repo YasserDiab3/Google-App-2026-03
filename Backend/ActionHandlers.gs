@@ -589,7 +589,7 @@ var ActionHandlers = {
         var result = { success: false, message: '' };
         (function() {
 
-                    result = addIncidentToSheet(payload);
+                    result = addIncidentToSheet(payload, actorUserData);
                     return;
 
         })();
@@ -741,7 +741,7 @@ var ActionHandlers = {
         var result = { success: false, message: '' };
         (function() {
 
-                    result = addIncidentNotificationToSheet(payload);
+                    result = addIncidentNotificationToSheet(payload, actorUserData);
                     return;
 
         })();
