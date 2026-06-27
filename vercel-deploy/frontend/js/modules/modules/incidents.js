@@ -159,6 +159,70 @@ const Incidents = {
         };
     },
 
+    /** مصدر موحّد لعدّ الحوادث في كل التبويبات */
+    getCanonicalIncidents() {
+        if (!AppState?.appData?.incidents || !Array.isArray(AppState.appData.incidents)) {
+            return [];
+        }
+        return AppState.appData.incidents.filter((item) => item && typeof item === 'object' && item.id);
+    },
+
+    getUnifiedIncidentCounts() {
+        const incidents = this.getCanonicalIncidents();
+        incidents.forEach((inc) => {
+            try { this._normalizeIncidentApprovalRecord(inc); } catch (_e) { /* ignore */ }
+        });
+        const counts = { total: incidents.length, open: 0, investigating: 0, completed: 0, closed: 0 };
+        incidents.forEach((inc) => {
+            const display = this.getIncidentDisplayStatus(inc);
+            if (display === 'مفتوح' || display === 'في انتظار الموافقة') counts.open++;
+            else if (display === 'قيد التحقيق') counts.investigating++;
+            else if (display === 'مكتمل' || display === 'تحقيق منتهي') counts.completed++;
+            else if (display === 'مغلق') counts.closed++;
+        });
+        return counts;
+    },
+
+    getLinkedRegistryEntries() {
+        const incidentIds = new Set(this.getCanonicalIncidents().map((i) => i.id));
+        return (this.registryData || []).filter((entry) => {
+            if (!entry || typeof entry !== 'object') return false;
+            const incId = (entry.incidentId != null && String(entry.incidentId).trim() !== '' && String(entry.incidentId).trim() !== 'null')
+                ? String(entry.incidentId).trim() : '';
+            return incId && incidentIds.has(incId);
+        });
+    },
+
+    /**
+     * إزالة صفوف السجل غير المرتبطة بحادث فعلي (يتيمة أو محذوفة)
+     * @returns {number} عدد الصفوف المُزالة
+     */
+    cleanupRegistryOrphans(options = {}) {
+        const { persist = false } = options;
+        if (!Array.isArray(this.registryData)) this.registryData = [];
+        this._dedupeRegistryData();
+        const incidentIds = new Set(this.getCanonicalIncidents().map((i) => i.id));
+        const before = this.registryData.length;
+        this.registryData = this.registryData.filter((entry) => {
+            if (!entry || typeof entry !== 'object') return false;
+            const incId = (entry.incidentId != null && String(entry.incidentId).trim() !== '' && String(entry.incidentId).trim() !== 'null')
+                ? String(entry.incidentId).trim() : '';
+            return incId && incidentIds.has(incId);
+        });
+        const removed = before - this.registryData.length;
+        if (removed > 0) {
+            try { Utils.safeLog(`🧹 IncidentsRegistry: إزالة ${removed} سجل غير مرتبط بحادث`); } catch (_e) { /* ignore */ }
+            if (!AppState.appData) AppState.appData = {};
+            AppState.appData.incidentsRegistry = this.registryData;
+            if (persist) {
+                try {
+                    localStorage.setItem('hse_incidents_registry', Utils.safeStringify(this.registryData));
+                } catch (_e) { /* ignore */ }
+            }
+        }
+        return removed;
+    },
+
     getIncidentDateValue(incident = {}) {
         const possibleDates = [
             incident.date,
@@ -215,7 +279,7 @@ const Incidents = {
     },
 
     getThreeYearIncidents() {
-        const data = AppState?.appData?.incidents || [];
+        const data = this.getCanonicalIncidents();
         const { earliestYear, currentYear } = this.getThreeYearConfig();
 
         return data.map((incident) => {
@@ -361,9 +425,17 @@ const Incidents = {
             }
             // ✅ تنظيف أي تكرارات قديمة عند التحميل (بنفس id أو نفس incidentId)
             // يضمن أن أي تكرارات تراكمت سابقاً في IncidentsRegistry تُزال وتُمزامن نظيفة
-            const removed = this._dedupeRegistryData();
-            if (removed > 0 && AppState.appData) {
+            const dedupeRemoved = this._dedupeRegistryData();
+            let registryDirty = dedupeRemoved > 0;
+            if (Array.isArray(AppState?.appData?.incidents)) {
+                const orphansRemoved = this.cleanupRegistryOrphans({ persist: false });
+                if (orphansRemoved > 0) registryDirty = true;
+            }
+            if (registryDirty && AppState.appData) {
                 AppState.appData.incidentsRegistry = this.registryData;
+                try {
+                    localStorage.setItem('hse_incidents_registry', Utils.safeStringify(this.registryData));
+                } catch (_e) { /* ignore */ }
                 // ✅ التنظيف المحلي وحده لا يكفي — الورقة (السيرفر) لا تزال بها صفوف orphan
                 // (saveToSheet يعمل UPSERT بـ id فقط ولا يحذف الصفوف غير المطابقة).
                 // نُرسل طلب تنظيف للسيرفر مرة واحدة في الجلسة لتنظيف الصفوف المكررة الفعلية.
@@ -1193,11 +1265,7 @@ const Incidents = {
                 Utils.safeWarn('AppState غير متاح للمزامنة');
                 return;
             }
-            const incidents = AppState.appData.incidents || [];
-            if (!Array.isArray(incidents)) {
-                Utils.safeWarn('قائمة الحوادث غير صحيحة');
-                return;
-            }
+            const incidents = this.getCanonicalIncidents();
 
             // مزامنة محدودة — تحديث بالذاكرة ثم حفظ واحد (تجنب 50 طلب شبكة متتالي)
             const maxSync = 50;
@@ -1228,6 +1296,20 @@ const Incidents = {
 
             if (registryChanged) {
                 await this.saveRegistryData();
+            }
+
+            const orphansRemoved = this.cleanupRegistryOrphans({ persist: false });
+            if (orphansRemoved > 0) {
+                await this.saveRegistryData();
+                registryChanged = true;
+            }
+
+            if (registryChanged && this.currentTab === 'registry') {
+                const contentContainer = document.getElementById('incidents-tab-content');
+                if (contentContainer) {
+                    contentContainer.innerHTML = await this.renderRegistryTab();
+                    this.setupTabEventListeners('registry');
+                }
             }
 
             if (incidents.length > maxSync) {
@@ -2068,7 +2150,7 @@ const Incidents = {
     /** المصدر الموحّد لبيانات الحوادث */
     _getIncidentsData() {
         try { if (typeof this.ensureData === 'function') this.ensureData(); } catch (e) {}
-        return Array.isArray(AppState?.appData?.incidents) ? AppState.appData.incidents : [];
+        return this.getCanonicalIncidents();
     },
 
     /** الدالة الرئيسية: تحديث لوحة التحليلات */
@@ -2569,11 +2651,12 @@ const Incidents = {
      * عرض محتوى سجل الحوادث
      */
     renderRegistryContent() {
-        const totalCount = this.registryData.length;
-        const openCount = this.registryData.filter(r => r.status === 'مفتوح').length;
-        const investigatingCount = this.registryData.filter(r => r.status === 'قيد التحقيق').length;
-        const completedCount = this.registryData.filter(r => r.status === 'مكتمل').length;
-        const closedCount = this.registryData.filter(r => r.status === 'مغلق').length;
+        const counts = this.getUnifiedIncidentCounts();
+        const totalCount = counts.total;
+        const openCount = counts.open;
+        const investigatingCount = counts.investigating;
+        const completedCount = counts.completed;
+        const closedCount = counts.closed;
 
         return `
             <!-- أزرار التصدير والإدخال -->
@@ -2599,7 +2682,7 @@ const Incidents = {
                 <div class="kpi-card kpi-info">
                     <div class="kpi-icon"><i class="fas fa-list-ol"></i></div>
                     <div class="kpi-content">
-                        <h3 class="kpi-label">إجمالي السجلات</h3>
+                        <h3 class="kpi-label">إجمالي الحوادث</h3>
                         <p class="kpi-value">${totalCount}</p>
                     </div>
                 </div>
@@ -2692,7 +2775,8 @@ const Incidents = {
      * عرض جدول السجل
      */
     renderRegistryTable() {
-        if (this.registryData.length === 0) {
+        const linkedEntries = this.getLinkedRegistryEntries();
+        if (linkedEntries.length === 0) {
             return `
                 <div class="empty-state">
                     <i class="fas fa-clipboard-list text-4xl text-gray-300 mb-4"></i>
@@ -2702,7 +2786,7 @@ const Incidents = {
             `;
         }
 
-        const sortedData = [...this.registryData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const sortedData = [...linkedEntries].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
         const formatDate = (dateStr) => {
             if (!dateStr) return '-';
@@ -5034,7 +5118,7 @@ const Incidents = {
         const dateFrom = document.getElementById('incidents-registry-filter-date-from')?.value || '';
         const dateTo = document.getElementById('incidents-registry-filter-date-to')?.value || '';
 
-        let filtered = [...this.registryData];
+        let filtered = [...this.getLinkedRegistryEntries()];
 
         if (searchTerm) {
             filtered = filtered.filter(entry =>
@@ -6406,7 +6490,7 @@ const Incidents = {
         const container = document.getElementById('incidents-table-container');
         if (!container) return;
 
-        const incidents = (AppState.appData.incidents || []).filter((item) => item && typeof item === 'object');
+        const incidents = this.getCanonicalIncidents();
         incidents.forEach((inc) => this._normalizeIncidentApprovalRecord(inc));
         const signature = incidents.map((item) => `${item?.id || 'NA'}-${item?.updatedAt || item?.createdAt || 'NA'}`).join('|');
         if (this.lastRenderedSignature === signature && container.dataset.renderSignature === signature) {
