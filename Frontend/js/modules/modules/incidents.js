@@ -7634,8 +7634,11 @@ const Incidents = {
         const selectEl = document.getElementById('notification-employee-department-select');
         const textEl = document.getElementById('notification-employee-department');
         const incidentTypeEl = document.getElementById('notification-incident-type');
+        const affiliationEl = document.getElementById('notification-affiliation');
         const isNonInjury = this.isNotificationNonInjuryType(incidentTypeEl?.value || '');
+        const isContractor = (affiliationEl?.value || '') === 'contractor';
         if (isNonInjury && selectEl) return (selectEl.value || '').trim();
+        if (isContractor) return this.getNotificationContractorValue();
         return (textEl?.value || '').trim();
     },
 
@@ -7790,18 +7793,18 @@ const Incidents = {
                                 </div>
 
                                 <div id="notification-employee-name-wrapper" class="notification-field" style="border-color: #f59e0b;">
-                                    <label>
+                                    <label id="notification-employee-name-label">
                                         <i class="fas fa-user" style="color: #f59e0b;"></i>
-                                        اسم الموظف *
+                                        <span id="notification-employee-name-label-text">اسم الموظف *</span>
                                     </label>
                                     <input type="text" id="notification-employee-name" class="form-input" required placeholder="اسم الموظف" style="border: 2px solid #f59e0b;" autocomplete="off">
                                 </div>
                                 <div id="notification-employee-job-wrapper" class="notification-field" style="border-color: #f59e0b;">
-                                    <label>
+                                    <label id="notification-employee-job-label">
                                         <i class="fas fa-briefcase" style="color: #f59e0b;"></i>
-                                        الوظيفة *
+                                        <span id="notification-employee-job-label-text">الوظيفة *</span>
                                     </label>
-                                    <input type="text" id="notification-employee-job" class="form-input" required placeholder="الوظيفة" style="border: 2px solid #f59e0b;">
+                                    <input type="text" id="notification-employee-job" class="form-input" required placeholder="الوظيفة" style="border: 2px solid #f59e0b;" autocomplete="off">
                                 </div>
                                 <div id="notification-employee-department-text-wrapper" class="notification-field col-span-1 md:col-span-2" style="border-color: #f59e0b;">
                                     <label>
@@ -8008,10 +8011,26 @@ const Incidents = {
 
             const contractorNameWrapper = document.getElementById('notification-contractor-name-wrapper');
             const contractorSelect = document.getElementById('notification-contractor-select');
+            const employeeNameLabelText = document.getElementById('notification-employee-name-label-text');
+            const employeeJobLabelText = document.getElementById('notification-employee-job-label-text');
 
             const isEmployeeAffiliation = () => {
                 const v = (notificationAffiliationSelect?.value || '').toString().trim();
                 return v === 'employee' || v === 'company'; // backward compatibility
+            };
+
+            const isContractorAffiliation = () => (notificationAffiliationSelect?.value || '') === 'contractor';
+
+            const setNotificationEmployeeLookupEnabled = (enabled) => {
+                if (!employeeNameInput) return;
+                const listId = `${employeeNameInput.id}-employee-helper-list`;
+                if (enabled) {
+                    employeeNameInput.setAttribute('list', listId);
+                    employeeNameInput.setAttribute('autocomplete', 'off');
+                } else {
+                    employeeNameInput.removeAttribute('list');
+                    employeeNameInput.setAttribute('autocomplete', 'off');
+                }
             };
 
             const setEmployeeFieldsEditable = (editable) => {
@@ -8064,36 +8083,60 @@ const Incidents = {
                 const isNonInjury = this.isNotificationNonInjuryType(incidentType);
                 const isWorkInjury = incidentType === 'إصابة عمل';
                 const isEmployee = isEmployeeAffiliation();
-                const isContractor = (notificationAffiliationSelect?.value || '') === 'contractor';
+                const isContractor = isContractorAffiliation();
+                const isContractorWorkInjury = isWorkInjury && isContractor;
 
                 if (employeeNameWrapper) employeeNameWrapper.style.display = isNonInjury ? 'none' : 'block';
                 if (employeeJobWrapper) employeeJobWrapper.style.display = isNonInjury ? 'none' : 'block';
-                if (employeeDepartmentTextWrapper) employeeDepartmentTextWrapper.style.display = isNonInjury ? 'none' : 'block';
+                if (employeeDepartmentTextWrapper) {
+                    employeeDepartmentTextWrapper.style.display = (isNonInjury || isContractor) ? 'none' : 'block';
+                }
                 if (employeeDepartmentSelectWrapper) employeeDepartmentSelectWrapper.style.display = isNonInjury ? 'block' : 'none';
                 if (injuryDescriptionWrapper) injuryDescriptionWrapper.style.display = isWorkInjury ? 'block' : 'none';
 
+                if (employeeNameLabelText) {
+                    employeeNameLabelText.textContent = isContractorWorkInjury
+                        ? 'اسم العامل (تابع للمقاول) *'
+                        : 'اسم الموظف *';
+                }
+                if (employeeJobLabelText) {
+                    employeeJobLabelText.textContent = isContractorWorkInjury
+                        ? 'وظيفة العامل *'
+                        : 'الوظيفة *';
+                }
                 if (employeeNameInput) {
                     employeeNameInput.required = !isNonInjury;
+                    employeeNameInput.placeholder = isContractorWorkInjury
+                        ? 'أدخل اسم العامل يدوياً'
+                        : 'اسم الموظف';
                     if (isNonInjury) employeeNameInput.value = '';
                 }
                 if (employeeJobInput) {
                     employeeJobInput.required = !isNonInjury;
+                    employeeJobInput.placeholder = isContractorWorkInjury
+                        ? 'أدخل الوظيفة يدوياً'
+                        : 'الوظيفة';
                     if (isNonInjury) employeeJobInput.value = '';
                 }
-                if (employeeDepartmentInput) employeeDepartmentInput.required = !isNonInjury;
+                if (employeeDepartmentInput) employeeDepartmentInput.required = !isNonInjury && !isContractor;
                 if (employeeDepartmentSelect) employeeDepartmentSelect.required = isNonInjury;
 
-                if (!isNonInjury) syncDepartmentSelectFromText();
+                if (!isNonInjury && !isContractor) syncDepartmentSelectFromText();
 
-                // Employee code field
+                // Employee code field — موظف الشركة فقط
                 if (employeeCodeWrapper) employeeCodeWrapper.style.display = isEmployee ? 'block' : 'none';
                 if (employeeCodeInput) {
                     employeeCodeInput.required = isEmployee;
                     if (!isEmployee) employeeCodeInput.value = '';
                 }
 
-                // Lock/unlock employee fields for injury types
-                setEmployeeFieldsEditable(!isEmployee);
+                // مقاول + إصابة عمل: إدخال يدوي بدون قائمة موظفي الشركة
+                setNotificationEmployeeLookupEnabled(isEmployee && isWorkInjury);
+                setEmployeeFieldsEditable(isContractor || (!isEmployee && isWorkInjury));
+
+                if (isContractor && isWorkInjury) {
+                    if (employeeDepartmentInput) employeeDepartmentInput.value = '';
+                }
 
                 // Contractor select
                 if (contractorNameWrapper) contractorNameWrapper.style.display = isContractor ? 'block' : 'none';
@@ -8113,10 +8156,12 @@ const Incidents = {
                 updateNotificationFormUI();
             }
 
-            // Employee auto-fill (only when affiliation is employee)
+            // Employee auto-fill (only when affiliation is company employee + work injury)
             if (typeof EmployeeHelper !== 'undefined') {
                 EmployeeHelper.setupEmployeeCodeSearch('notification-employee-code', 'notification-employee-name', (employee) => {
                     if (!employee || !isEmployeeAffiliation()) return;
+                    const incidentType = notificationIncidentTypeSelect?.value || '';
+                    if (incidentType !== 'إصابة عمل') return;
                     if (employeeCodeInput) employeeCodeInput.value = employee.code || employee.employeeNumber || employee.sapId || employee.id || '';
                     if (employeeNameInput) employeeNameInput.value = employee.name || employee.fullName || '';
                     if (employeeJobInput) employeeJobInput.value = employee.job || employee.jobTitle || employee.position || '';
@@ -8125,6 +8170,8 @@ const Incidents = {
 
                 EmployeeHelper.setupAutocomplete('notification-employee-name', (employee) => {
                     if (!employee || !isEmployeeAffiliation()) return;
+                    const incidentType = notificationIncidentTypeSelect?.value || '';
+                    if (incidentType !== 'إصابة عمل') return;
                     if (employeeCodeInput) employeeCodeInput.value = employee.code || employee.employeeNumber || employee.sapId || employee.id || '';
                     if (employeeJobInput) employeeJobInput.value = employee.job || employee.jobTitle || employee.position || '';
                     fillNotificationDepartmentFromEmployee.call(this, employee);
@@ -8192,14 +8239,18 @@ const Incidents = {
 
             const affiliationValue = (affiliationEl?.value || '').toString().trim();
             const isEmployeeAffiliation = affiliationValue === 'employee' || affiliationValue === 'company';
+            const isContractorAffiliation = affiliationValue === 'contractor';
             const isNonInjuryType = this.isNotificationNonInjuryType(incidentTypeEl?.value || '');
-            const departmentValue = isNonInjuryType
-                ? (employeeDepartmentSelectEl?.value || '').trim()
-                : (employeeDepartmentEl?.value || '').trim();
+            const isWorkInjuryType = (incidentTypeEl?.value || '') === 'إصابة عمل';
             const contractorValue = (contractorSelectEl?.value || '').trim();
+            let departmentValue = isNonInjuryType
+                ? (employeeDepartmentSelectEl?.value || '').trim()
+                : (isContractorAffiliation
+                    ? contractorValue
+                    : (employeeDepartmentEl?.value || '').trim());
 
             // Validate contractor when affiliation is "contractor"
-            if (affiliationEl && affiliationValue === 'contractor') {
+            if (affiliationEl && isContractorAffiliation) {
                 if (!contractorValue) {
                     Loading.hide();
                     Notification.error('يرجى اختيار المقاول من القائمة');
@@ -8207,23 +8258,23 @@ const Incidents = {
                 }
             }
 
-            // Validate employee fields for work injury
+            // Validate worker fields for work injury
             if (!isNonInjuryType) {
                 if (!employeeNameEl || !employeeNameEl.value.trim()) {
                     Loading.hide();
-                    Notification.error('اسم الموظف مطلوب');
+                    Notification.error(isContractorAffiliation ? 'اسم العامل التابع للمقاول مطلوب' : 'اسم الموظف مطلوب');
                     return;
                 }
                 if (!employeeJobEl || !employeeJobEl.value.trim()) {
                     Loading.hide();
-                    Notification.error('الوظيفة مطلوبة');
+                    Notification.error(isContractorAffiliation ? 'وظيفة العامل مطلوبة' : 'الوظيفة مطلوبة');
                     return;
                 }
             }
 
             if (!departmentValue) {
                 Loading.hide();
-                Notification.error('الإدارة مطلوبة');
+                Notification.error(isContractorAffiliation && isWorkInjuryType ? 'يرجى اختيار المقاول' : 'الإدارة مطلوبة');
                 return;
             }
 
