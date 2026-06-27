@@ -1665,18 +1665,35 @@ const Permissions = {
         if (!removedHadName) return;
 
         const cloudReady = typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync();
-        if (!cloudReady) return;
+        if (!cloudReady) {
+            Notification.warning('تم الحذف من الواجهة. لا يوجد اتصال بالخادم — اضغط «حفظ الإعدادات» لاحقاً.');
+            return;
+        }
 
+        const displayName = String(removedPlace?.name || '').trim() || placeName;
         try {
-            const result = await this.pushFormSettingsToCloud(state, { silent: true });
+            const result = await this.deleteFormSettingsPlaceFromCloud(removedPlace, site, { state, silent: true });
             if (result?.success) {
+                this.markFormSettingsPersistedIds(state);
+                Notification.success(`تم حذف «${displayName}» من قاعدة البيانات`);
                 Utils.safeLog('✅ تم حذف المكان ومزامنة قاعدة البيانات');
-            } else if (!result?.skipped) {
-                Notification.warning('تم الحذف من الواجهة. اضغط «حفظ الإعدادات» لمزامنة قاعدة البيانات.');
+                return;
             }
+            if (result?.skipped) {
+                Notification.warning('تم الحذف من الواجهة. اضغط «حفظ الإعدادات» لمزامنة قاعدة البيانات.');
+                return;
+            }
+            const syncResult = await this.pushFormSettingsToCloud(state, { silent: true });
+            if (syncResult?.success) {
+                this.markFormSettingsPersistedIds(state);
+                Notification.success(`تم حذف «${displayName}» من قاعدة البيانات`);
+                return;
+            }
+            const errMsg = result?.message || syncResult?.message || 'فشل مزامنة قاعدة البيانات';
+            Notification.error(`تم الحذف من الواجهة. ${errMsg} — جرّب «حفظ الإعدادات».`);
         } catch (error) {
             Utils.safeWarn('⚠️ فشل مزامنة حذف المكان مع قاعدة البيانات:', error);
-            Notification.warning('تم الحذف من الواجهة. اضغط «حفظ الإعدادات» لمزامنة قاعدة البيانات.');
+            Notification.error('تم الحذف من الواجهة. فشل الاتصال بالخادم — اضغط «حفظ الإعدادات» لإعادة المحاولة.');
         }
     },
 
@@ -1845,6 +1862,70 @@ const Permissions = {
             }));
 
         return { sites, departments, safetyTeam };
+    },
+
+    async deleteFormSettingsPlaceFromCloud(removedPlace, site, options = {}) {
+        const silent = options.silent === true;
+        const cloudReady = typeof Utils !== 'undefined' &&
+            typeof Utils.hasCloudBackendSync === 'function' &&
+            Utils.hasCloudBackendSync();
+        if (!cloudReady ||
+            typeof GoogleIntegration === 'undefined' ||
+            typeof GoogleIntegration.sendToAppsScript !== 'function') {
+            return { skipped: true };
+        }
+
+        const userData = AppState.currentUser || {};
+        const placeId = String(removedPlace?.id || '').trim();
+        const placeName = String(removedPlace?.name || '').trim();
+        const siteId = String(site?.id || '').trim();
+        const siteName = String(site?.name || '').trim();
+
+        if (!placeId && !placeName) {
+            return { skipped: true };
+        }
+
+        try {
+            const deleteResult = await GoogleIntegration.sendToAppsScript('deletePlace', {
+                id: placeId,
+                placeId: placeId,
+                siteId: siteId,
+                siteName: siteName,
+                placeName: placeName,
+                name: placeName,
+                __timeoutMs: 90000,
+                userData: {
+                    email: userData.email,
+                    name: userData.name,
+                    role: userData.role,
+                    permissions: userData.permissions
+                }
+            });
+
+            if (deleteResult?.success) {
+                return deleteResult;
+            }
+
+            if (deleteResult?.notFound && options.state) {
+                const syncResult = await this.pushFormSettingsToCloud(options.state, { silent: true });
+                if (syncResult?.success) {
+                    return syncResult;
+                }
+                return syncResult || deleteResult;
+            }
+
+            if (!silent && deleteResult?.message) {
+                Notification.warning(deleteResult.message);
+            }
+            return deleteResult || { success: false };
+        } catch (error) {
+            const errMsg = (error && error.message) ? String(error.message) : String(error || 'خطأ غير معروف');
+            Utils.safeWarn('⚠️ فشل حذف المكان من Google Sheets:', errMsg);
+            if (!silent) {
+                Notification.warning(errMsg || 'فشل حذف المكان من قاعدة البيانات.');
+            }
+            return { success: false, message: errMsg, error: error };
+        }
     },
 
     async pushFormSettingsToCloud(state, options = {}) {
@@ -3930,7 +4011,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.369',
+    appVersion: '1.0.370',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,

@@ -4578,8 +4578,15 @@ var ActionHandlers = {
     'deletePlace': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
-                    result = deletePlaceFromSheet(payload.placeId || payload.id, payload.userData || payload.user);
+                    if (payload && !payload.userData && !payload.user) {
+                        payload.userData = actorUserData || {
+                            role: payload.role || '',
+                            permissions: payload.permissions || {},
+                            name: payload.name || '',
+                            email: payload.email || ''
+                        };
+                    }
+                    result = deletePlaceFromSheet(payload, payload.userData || payload.user || actorUserData);
                     return;
 
         })();

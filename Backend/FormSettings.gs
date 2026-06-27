@@ -220,22 +220,45 @@ function dedupeFormSettingsSitesForRead_(sites) {
     return result;
 }
 
+function formSettingsPlaceDedupeKey_(place) {
+    const siteId = String(place && place.siteId || '').trim();
+    const siteNameKey = normalizeFormSettingsNameKey_(place && place.siteName);
+    const nameKey = normalizeFormSettingsNameKey_(place && place.name);
+    const sitePart = siteId || ('n:' + siteNameKey);
+    return sitePart + '\u0000' + nameKey;
+}
+
 function dedupeFormSettingsPlacesForRead_(places) {
     const seen = {};
     const result = [];
     (places || []).forEach(function(place) {
-        const siteId = String(place && place.siteId || '').trim();
         const nameKey = normalizeFormSettingsNameKey_(place && place.name);
-        const key = siteId + '\u0000' + nameKey;
         if (!nameKey) {
             result.push(place);
             return;
         }
+        const key = formSettingsPlaceDedupeKey_(place);
         if (seen[key]) return;
         seen[key] = true;
         result.push(place);
     });
     return result;
+}
+
+/**
+ * إزالة الصفوف المكررة من الشيت عند القراءة (يتيمة لا تظهر بالواجهة)
+ */
+function maybeRepairFormSettingsSheetDuplicates_(sheetName, rawRows, dedupedRows, spreadsheetId) {
+    if (!Array.isArray(rawRows) || !Array.isArray(dedupedRows)) return;
+    if (rawRows.length <= dedupedRows.length) return;
+    try {
+        const repairResult = replaceFormSettingsSheetData_(sheetName, dedupedRows, spreadsheetId);
+        if (repairResult && repairResult.success) {
+            Logger.log('Repaired duplicate rows in ' + sheetName + ': ' + rawRows.length + ' -> ' + dedupedRows.length);
+        }
+    } catch (error) {
+        Logger.log('Failed to repair duplicates in ' + sheetName + ': ' + error.toString());
+    }
 }
 
 // ============================================
@@ -412,6 +435,7 @@ function getAllSitesFromSheet() {
         });
         
         const dedupedSites = dedupeFormSettingsSitesForRead_(sites);
+        maybeRepairFormSettingsSheetDuplicates_(FORM_SETTINGS_SHEETS.SITES, sites, dedupedSites, spreadsheetId);
         
         return { success: true, data: dedupedSites, count: dedupedSites.length };
     } catch (error) {
@@ -510,32 +534,74 @@ function updatePlaceInSheet(placeId, updateData) {
 }
 
 /**
- * حذف مكان
+ * حذف مكان — بالمعرّف أو بالموقع+الاسم (يشمل الصفوف المكررة)
  */
-function deletePlaceFromSheet(placeId, userData) {
+function deletePlaceFromSheet(placeRef, userData) {
     try {
-        if (!placeId) {
-            return { success: false, message: 'معرف المكان غير محدد' };
+        var placeId = '';
+        var siteId = '';
+        var siteName = '';
+        var placeName = '';
+
+        if (placeRef && typeof placeRef === 'object') {
+            placeId = placeRef.placeId || placeRef.id || '';
+            siteId = placeRef.siteId || '';
+            siteName = placeRef.siteName || '';
+            placeName = placeRef.placeName || placeRef.name || '';
+            userData = userData || placeRef.userData || placeRef.user || {};
+        } else {
+            placeId = placeRef;
         }
-        
-        // التحقق من الصلاحيات
+
+        if (!String(placeId || '').trim() && !String(placeName || '').trim()) {
+            return { success: false, message: 'معرف المكان أو اسمه غير محدد' };
+        }
+
         const permissionCheck = checkFormSettingsPermission(userData);
         if (!permissionCheck.hasPermission) {
             return { success: false, message: permissionCheck.message, errorCode: 'PERMISSION_DENIED' };
         }
-        
+
         const spreadsheetId = getSpreadsheetId();
         const normalizedPlaceId = String(placeId || '').trim();
+        const normalizedSiteId = String(siteId || '').trim();
+        const normalizedSiteName = String(siteName || '').trim();
+        const normalizedPlaceNameKey = normalizeFormSettingsNameKey_(placeName);
+
         const data = readFromSheet(FORM_SETTINGS_SHEETS.PLACES, spreadsheetId);
         const filteredData = data.filter(function(p) {
-            return String(p.id || '').trim() !== normalizedPlaceId;
+            const pid = String(p.id || '').trim();
+            if (normalizedPlaceId && pid === normalizedPlaceId) {
+                return false;
+            }
+            if (normalizedPlaceNameKey) {
+                const pNameKey = normalizeFormSettingsNameKey_(p.name);
+                if (pNameKey !== normalizedPlaceNameKey) {
+                    return true;
+                }
+                const psiteId = String(p.siteId || '').trim();
+                const pSiteName = String(p.siteName || '').trim();
+                if (normalizedSiteId && psiteId === normalizedSiteId) {
+                    return false;
+                }
+                if (normalizedSiteName && pSiteName === normalizedSiteName) {
+                    return false;
+                }
+            }
+            return true;
         });
-        
+
         if (filteredData.length === data.length) {
-            return { success: false, message: 'المكان غير موجود' };
+            return { success: false, message: 'المكان غير موجود في قاعدة البيانات', notFound: true };
         }
-        
-        return replaceFormSettingsSheetData_(FORM_SETTINGS_SHEETS.PLACES, filteredData, spreadsheetId);
+
+        const removedCount = data.length - filteredData.length;
+        const replaceResult = replaceFormSettingsSheetData_(FORM_SETTINGS_SHEETS.PLACES, filteredData, spreadsheetId);
+        if (replaceResult && replaceResult.success) {
+            replaceResult.removedCount = removedCount;
+            replaceResult.message = 'تم حذف المكان بنجاح' + (removedCount > 1 ? ' (' + removedCount + ' صف)' : '');
+        }
+        return replaceResult;
     } catch (error) {
         Logger.log('Error in deletePlaceFromSheet: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء حذف المكان: ' + error.toString() };
@@ -565,6 +631,9 @@ function getAllPlacesFromSheet(siteId) {
         });
         
         const dedupedPlaces = dedupeFormSettingsPlacesForRead_(places);
+        if (!siteId) {
+            maybeRepairFormSettingsSheetDuplicates_(FORM_SETTINGS_SHEETS.PLACES, places, dedupedPlaces, spreadsheetId);
+        }
         
         return { success: true, data: dedupedPlaces, count: dedupedPlaces.length };
     } catch (error) {
