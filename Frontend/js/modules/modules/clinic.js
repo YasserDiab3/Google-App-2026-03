@@ -5004,49 +5004,76 @@ const Clinic = {
             const pageW = doc.internal.pageSize.getWidth();
             const pageH = doc.internal.pageSize.getHeight();
             const ctX = pageW / 2;
-            const topY = 14;
+            const companyName = AppState?.companySettings?.name || AppState?.companySettings?.companyName || 'شركة';
+            const logo = AppState?.companyLogo || '';
+            const formCode = `CLINIC-MED-${new Date().toISOString().slice(0, 10)}`;
+            const todayStr = new Date().toLocaleDateString('ar-SA');
 
-            // Header bar
+            let topY = 8;
+
+            // System header: logo + company name + form code
+            if (logo) {
+                try { doc.addImage(logo, 'PNG', margin, topY - 1, 15, 10); } catch (e) { /* skip */ }
+            }
+            doc.setFontSize(9);
+            doc.setTextColor(15, 23, 42);
+            doc.text(companyName, margin + (logo ? 18 : 0), topY + 3);
+            doc.setFontSize(6);
+            doc.setTextColor(148, 163, 184);
+            doc.text(formCode, pageW - margin, topY + 3, { align: 'right' });
+            doc.setDrawColor(0, 56, 101);
+            doc.setLineWidth(0.5);
+            doc.line(margin, topY + 9, pageW - margin, topY + 9);
+            topY += 12;
+
+            // Blue header bar
             doc.setFillColor(26, 82, 118);
-            doc.rect(0, 0, pageW, 10, 'F');
-            doc.setFontSize(8);
+            doc.rect(0, topY, pageW, 8, 'F');
+            doc.setFontSize(7);
             doc.setTextColor(255);
-            const companyName = AppState?.companySettings?.companyName || 'شركة';
-            doc.text(companyName, margin, 7);
-            doc.text('سجل الأدوية', ctX, 7, { align: 'center' });
+            doc.text(companyName, margin, topY + 5.5);
+            doc.text('سجل الأدوية', ctX, topY + 5.5, { align: 'center' });
+            topY += 12;
 
             // Title
-            doc.setFontSize(16);
+            doc.setFontSize(14);
             doc.setTextColor(26, 82, 118);
-            doc.text('سجل الأدوية', ctX, topY + 12, { align: 'center' });
-
-            // Meta line
+            doc.text('سجل الأدوية', ctX, topY, { align: 'center' });
             doc.setFontSize(7);
             doc.setTextColor(100);
-            const todayStr = new Date().toLocaleDateString('ar-SA');
-            doc.text(`تاريخ التقرير: ${todayStr}`, margin, topY + 20);
-            doc.text(`إجمالي السجلات: ${medications.length}`, pageW - margin, topY + 20, { align: 'right' });
+            doc.text(`تاريخ التقرير: ${todayStr}`, margin, topY + 7);
+            doc.text(`إجمالي السجلات: ${medications.length}`, pageW - margin, topY + 7, { align: 'right' });
+            topY += 11;
 
-            // Summary badges
+            // Cards
             const activeCount = medications.filter(m => m.status === 'ساري').length;
             const expiringCount = medications.filter(m => m.status === 'قريب الانتهاء').length;
             const expiredCount = medications.filter(m => m.status === 'منتهي').length;
-            const sumY = topY + 26;
-            doc.setDrawColor(220);
-            doc.setFillColor(248, 249, 251);
-            doc.roundedRect(margin, sumY, pageW - 2 * margin, 10, 1.5, 1.5, 'FD');
-            doc.setFontSize(8);
-            doc.text(`ساري`, margin + 8, sumY + 7);
-            doc.text(`: ${activeCount}`, margin + 22, sumY + 7);
-            doc.setTextColor(255, 152, 0);
-            doc.text(`قريب الانتهاء`, margin + 50, sumY + 7);
-            doc.text(`: ${expiringCount}`, margin + 76, sumY + 7);
-            doc.setTextColor(198, 40, 40);
-            doc.text(`منتهي`, margin + 100, sumY + 7);
-            doc.text(`: ${expiredCount}`, margin + 118, sumY + 7);
-            doc.setTextColor(46, 125, 50);
-            doc.text(`إجمالي`, pageW - margin - 30, sumY + 7);
-            doc.text(`: ${medications.length}`, pageW - margin - 16, sumY + 7);
+            const total = medications.length;
+            const cards = [
+                { label: 'ساري', value: activeCount, bg: [232, 245, 233], accent: [46, 125, 50], tc: [27, 94, 32] },
+                { label: 'قريب الانتهاء', value: expiringCount, bg: [255, 243, 224], accent: [245, 124, 0], tc: [230, 81, 0] },
+                { label: 'منتهي', value: expiredCount, bg: [251, 233, 231], accent: [211, 47, 47], tc: [183, 28, 28] },
+                { label: 'إجمالي', value: total, bg: [227, 242, 253], accent: [21, 101, 192], tc: [13, 71, 161] }
+            ];
+            const cardW = (pageW - 2 * margin - 9) / 4;
+            const cardH = 13;
+            cards.forEach((c, i) => {
+                const cx = margin + i * (cardW + 3);
+                doc.setFillColor(c.bg[0], c.bg[1], c.bg[2]);
+                doc.setDrawColor(220);
+                doc.setLineWidth(0.3);
+                doc.roundedRect(cx, topY, cardW, cardH, 2, 2, 'FD');
+                doc.setFillColor(c.accent[0], c.accent[1], c.accent[2]);
+                doc.rect(cx, topY, 1.5, cardH, 'F');
+                doc.setFontSize(6);
+                doc.setTextColor(c.accent[0], c.accent[1], c.accent[2]);
+                doc.text(c.label, cx + 4, topY + 4.5);
+                doc.setFontSize(11);
+                doc.setTextColor(c.tc[0], c.tc[1], c.tc[2]);
+                doc.text(String(c.value), cx + cardW - 4, topY + cardH - 2.5, { align: 'right' });
+            });
+            topY += cardH + 9;
 
             // Table
             const statusColorMap = {
@@ -5056,7 +5083,7 @@ const Clinic = {
             };
 
             doc.autoTable({
-                startY: sumY + 14,
+                startY: topY,
                 head: [['#', 'اسم الدواء', 'النوع', 'الاستخدام', 'تاريخ الشراء', 'تاريخ الانتهاء', 'الحالة', 'الأيام', 'الكمية', 'المنصرف', 'الرصيد']],
                 body: medications.map((item, i) => {
                     const qty = item.quantityAdded ?? item.quantity ?? 0;
@@ -5090,10 +5117,17 @@ const Clinic = {
                 margin: { left: margin, right: margin },
                 didDrawPage: function(data) {
                     const pg = doc.internal.getNumberOfPages();
+                    doc.setFillColor(26, 82, 118);
+                    doc.rect(0, 0, pageW, 8, 'F');
+                    doc.setFontSize(7);
+                    doc.setTextColor(255);
+                    doc.text(companyName, margin, 5.5);
+                    doc.text('سجل الأدوية', ctX, 5.5, { align: 'center' });
                     doc.setFontSize(6);
                     doc.setTextColor(150);
                     doc.text(`الصفحة ${pg}`, pageW - margin, pageH - 6, { align: 'right' });
                     doc.text(`تم الإنشاء: ${todayStr}`, margin, pageH - 6);
+                    doc.text(formCode, ctX, pageH - 6, { align: 'center' });
                 }
             });
 
@@ -18036,29 +18070,61 @@ const Clinic = {
             const pageW = doc.internal.pageSize.getWidth();
             const pageH = doc.internal.pageSize.getHeight();
             const ctX = pageW / 2;
+            const companyName = AppState?.companySettings?.name || AppState?.companySettings?.companyName || 'شركة';
+            const logo = AppState?.companyLogo || '';
+            const formCode = `CLINIC-DISP-${new Date().toISOString().slice(0, 10)}`;
+            const todayStr = new Date().toLocaleDateString('ar-SA');
 
-            // Header bar
+            let topY = 8;
+
+            // System header: logo + company name + form code
+            if (logo) {
+                try { doc.addImage(logo, 'PNG', margin, topY - 1, 15, 10); } catch (e) { /* skip */ }
+            }
+            doc.setFontSize(9);
+            doc.setTextColor(15, 23, 42);
+            doc.text(companyName, margin + (logo ? 18 : 0), topY + 3);
+            doc.setFontSize(6);
+            doc.setTextColor(148, 163, 184);
+            doc.text(formCode, pageW - margin, topY + 3, { align: 'right' });
+            doc.setDrawColor(0, 56, 101);
+            doc.setLineWidth(0.5);
+            doc.line(margin, topY + 9, pageW - margin, topY + 9);
+            topY += 12;
+
+            // Blue header bar
             doc.setFillColor(26, 82, 118);
-            doc.rect(0, 0, pageW, 10, 'F');
-            doc.setFontSize(8);
+            doc.rect(0, topY, pageW, 8, 'F');
+            doc.setFontSize(7);
             doc.setTextColor(255);
-            const companyName = AppState?.companySettings?.companyName || 'شركة';
-            doc.text(companyName, margin, 7);
-            doc.text('سجل الأدوية المنصرفة', ctX, 7, { align: 'center' });
+            doc.text(companyName, margin, topY + 5.5);
+            doc.text('سجل الأدوية المنصرفة', ctX, topY + 5.5, { align: 'center' });
+            topY += 12;
 
             // Title
-            doc.setFontSize(16);
+            doc.setFontSize(14);
             doc.setTextColor(26, 82, 118);
-            doc.text('سجل الأدوية المنصرفة', ctX, 28, { align: 'center' });
-
-            // Meta line
-            const todayStr = new Date().toLocaleDateString('ar-SA');
+            doc.text('سجل الأدوية المنصرفة', ctX, topY, { align: 'center' });
             doc.setFontSize(7);
             doc.setTextColor(100);
-            doc.text(`تاريخ التقرير: ${todayStr}`, margin, 36);
-            doc.text(`إجمالي السجلات: ${medications.length}`, pageW - margin, 36, { align: 'right' });
+            doc.text(`تاريخ التقرير: ${todayStr}`, margin, topY + 7);
+            doc.text(`إجمالي السجلات: ${medications.length}`, pageW - margin, topY + 7, { align: 'right' });
+            topY += 11;
+
+            // Total card
+            doc.setFillColor(227, 242, 253);
             doc.setDrawColor(220);
-            doc.line(margin, 40, pageW - margin, 40);
+            doc.setLineWidth(0.3);
+            doc.roundedRect(margin, topY, 80, 13, 2, 2, 'FD');
+            doc.setFillColor(21, 101, 192);
+            doc.rect(margin, topY, 1.5, 13, 'F');
+            doc.setFontSize(6);
+            doc.setTextColor(21, 101, 192);
+            doc.text('إجمالي السجلات', margin + 4, topY + 4.5);
+            doc.setFontSize(11);
+            doc.setTextColor(13, 71, 161);
+            doc.text(String(medications.length), margin + 76, topY + 11, { align: 'right' });
+            topY += 18;
 
             const formatDate = (item) => {
                 let d = item.visitDate || item.createdAt || '';
@@ -18067,7 +18133,7 @@ const Clinic = {
             };
 
             doc.autoTable({
-                startY: 44,
+                startY: topY,
                 head: [['م', 'تاريخ الصرف', 'الكود الوظيفي', 'اسم المريض', 'الإدارة', 'المصنع', 'الموقع', 'اسم الدواء', 'الكمية', 'ملاحظات']],
                 body: medications.map((item, i) => [
                     i + 1,
@@ -18091,10 +18157,17 @@ const Clinic = {
                 margin: { left: margin, right: margin },
                 didDrawPage: function(data) {
                     const pg = doc.internal.getNumberOfPages();
+                    doc.setFillColor(26, 82, 118);
+                    doc.rect(0, 0, pageW, 8, 'F');
+                    doc.setFontSize(7);
+                    doc.setTextColor(255);
+                    doc.text(companyName, margin, 5.5);
+                    doc.text('سجل الأدوية المنصرفة', ctX, 5.5, { align: 'center' });
                     doc.setFontSize(6);
                     doc.setTextColor(150);
                     doc.text(`الصفحة ${pg}`, pageW - margin, pageH - 6, { align: 'right' });
                     doc.text(`تم الإنشاء: ${todayStr}`, margin, pageH - 6);
+                    doc.text(formCode, ctX, pageH - 6, { align: 'center' });
                 }
             });
 
