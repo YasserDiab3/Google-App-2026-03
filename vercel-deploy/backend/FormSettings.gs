@@ -220,6 +220,37 @@ function dedupeFormSettingsSitesForRead_(sites) {
     return result;
 }
 
+function formSettingsSiteKeysMatch_(rowSiteId, rowSiteName, criteriaSiteId, criteriaSiteName) {
+    const rsid = String(rowSiteId || '').trim();
+    const csid = String(criteriaSiteId || '').trim();
+    if (csid && rsid && rsid === csid) {
+        return true;
+    }
+    const rsn = normalizeFormSettingsNameKey_(rowSiteName);
+    const csn = normalizeFormSettingsNameKey_(criteriaSiteName);
+    return !!(csn && rsn && rsn === csn);
+}
+
+function shouldRemoveFormSettingsPlaceRow_(row, criteria) {
+    if (!row || !criteria) return false;
+    const rowPlaceId = String(row.id || '').trim();
+    const criteriaPlaceId = String(criteria.placeId || '').trim();
+    if (criteriaPlaceId && rowPlaceId === criteriaPlaceId) {
+        return true;
+    }
+    const rowNameKey = normalizeFormSettingsNameKey_(row.name);
+    const criteriaNameKey = normalizeFormSettingsNameKey_(criteria.placeName || criteria.name);
+    if (!criteriaNameKey || rowNameKey !== criteriaNameKey) {
+        return false;
+    }
+    return formSettingsSiteKeysMatch_(
+        row.siteId,
+        row.siteName,
+        criteria.siteId,
+        criteria.siteName
+    );
+}
+
 function formSettingsPlaceDedupeKey_(place) {
     const siteId = String(place && place.siteId || '').trim();
     const siteNameKey = normalizeFormSettingsNameKey_(place && place.siteName);
@@ -566,29 +597,16 @@ function deletePlaceFromSheet(placeRef, userData) {
         const normalizedPlaceId = String(placeId || '').trim();
         const normalizedSiteId = String(siteId || '').trim();
         const normalizedSiteName = String(siteName || '').trim();
-        const normalizedPlaceNameKey = normalizeFormSettingsNameKey_(placeName);
 
         const data = readFromSheet(FORM_SETTINGS_SHEETS.PLACES, spreadsheetId);
+        const removeCriteria = {
+            placeId: normalizedPlaceId,
+            placeName: placeName,
+            siteId: normalizedSiteId,
+            siteName: siteName
+        };
         const filteredData = data.filter(function(p) {
-            const pid = String(p.id || '').trim();
-            if (normalizedPlaceId && pid === normalizedPlaceId) {
-                return false;
-            }
-            if (normalizedPlaceNameKey) {
-                const pNameKey = normalizeFormSettingsNameKey_(p.name);
-                if (pNameKey !== normalizedPlaceNameKey) {
-                    return true;
-                }
-                const psiteId = String(p.siteId || '').trim();
-                const pSiteName = String(p.siteName || '').trim();
-                if (normalizedSiteId && psiteId === normalizedSiteId) {
-                    return false;
-                }
-                if (normalizedSiteName && pSiteName === normalizedSiteName) {
-                    return false;
-                }
-            }
-            return true;
+            return !shouldRemoveFormSettingsPlaceRow_(p, removeCriteria);
         });
 
         if (filteredData.length === data.length) {
@@ -1121,7 +1139,12 @@ function saveFormSettingsToSheet(settingsData, actorUserData) {
         }
         
         Logger.log('Form settings saved successfully to new tables');
-        return { success: true, message: 'تم حفظ إعدادات النماذج بنجاح' };
+        return {
+            success: true,
+            message: 'تم حفظ إعدادات النماذج: ' + sitesToSave.length + ' موقع، ' + placesToSave.length + ' مكان',
+            sitesCount: sitesToSave.length,
+            placesCount: placesToSave.length
+        };
     } catch (error) {
         Logger.log('Error in saveFormSettingsToSheet: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء حفظ إعدادات النماذج: ' + error.toString() };

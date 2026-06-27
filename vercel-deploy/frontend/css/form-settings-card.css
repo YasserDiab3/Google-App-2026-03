@@ -680,3 +680,37 @@
     border-color: #60a5fa;
     box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
 }
+
+.form-settings-sync-status {
+    flex: 1 1 100%;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.35rem 0.65rem;
+    border-radius: 0.5rem;
+    line-height: 1.45;
+}
+
+.form-settings-sync-status--info {
+    color: #1d4ed8;
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.form-settings-sync-status--success {
+    color: #047857;
+    background: rgba(16, 185, 129, 0.12);
+}
+
+.form-settings-sync-status--warning {
+    color: #b45309;
+    background: rgba(245, 158, 11, 0.12);
+}
+
+.form-settings-sync-status--error {
+    color: #b91c1c;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+[data-action="save-form-settings"].is-loading {
+    opacity: 0.75;
+    pointer-events: none;
+}

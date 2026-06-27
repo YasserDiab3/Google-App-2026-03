@@ -810,8 +810,12 @@ const GoogleIntegration = {
             const cleanData = (data && typeof data === 'object')
                 ? { ...data }
                 : data;
+            const allowStructuredFailure = !!(cleanData && typeof cleanData === 'object' && cleanData.__allowStructuredFailure === true);
             if (cleanData && typeof cleanData === 'object' && '__timeoutMs' in cleanData) {
                 delete cleanData.__timeoutMs;
+            }
+            if (cleanData && typeof cleanData === 'object' && '__allowStructuredFailure' in cleanData) {
+                delete cleanData.__allowStructuredFailure;
             }
 
             const payload = {
@@ -1245,6 +1249,9 @@ const GoogleIntegration = {
             }
 
             if (result.success === false) {
+                if (allowStructuredFailure) {
+                    return result;
+                }
                 // التحقق من هل هو errorMessage
                 const errorMessage = result.message || 'فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو errorMessage';
                 if (errorMessage.includes('فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو errorMessage')) {

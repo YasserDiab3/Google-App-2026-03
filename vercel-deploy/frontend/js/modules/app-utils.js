@@ -989,8 +989,9 @@ const Permissions = {
                 <div class="card-footer flex flex-wrap items-center justify-between gap-3">
                     <div class="form-settings-footer-hint">
                         <i class="fas fa-database"></i>
-                        <span>التغييرات تُحفظ عند الضغط على «حفظ إعدادات النماذج»</span>
+                        <span id="form-settings-sync-hint">الحذف والحفظ يُزامنان تلقائياً مع قاعدة البيانات</span>
                     </div>
+                    <div id="form-settings-sync-status" class="form-settings-sync-status" aria-live="polite" hidden></div>
                     <div class="flex flex-wrap gap-2">
                         <button type="button" class="btn-secondary" data-action="reset-form-settings">
                             <i class="fas fa-undo ml-2"></i>إلغاء التعديلات
@@ -1347,13 +1348,15 @@ const Permissions = {
                     this.handleSelectSite(actionElement.getAttribute('data-site-id'));
                     break;
                 case 'remove-site':
-                    this.handleRemoveSite(actionElement.getAttribute('data-site-id'));
+                    event.preventDefault();
+                    void this._runFormSettingsAction(() => this.handleRemoveSite(actionElement.getAttribute('data-site-id')));
                     break;
                 case 'add-place':
                     this.handleAddPlace();
                     break;
                 case 'remove-place':
-                    this.handleRemovePlace(actionElement.getAttribute('data-place-id'));
+                    event.preventDefault();
+                    void this._runFormSettingsAction(() => this.handleRemovePlace(actionElement.getAttribute('data-place-id')));
                     break;
                 case 'add-department':
                     this.handleAddDepartment();
@@ -1371,7 +1374,8 @@ const Permissions = {
                     this.handleResetFormSettings();
                     break;
                 case 'save-form-settings':
-                    this.handleSaveFormSettings();
+                    event.preventDefault();
+                    void this._runFormSettingsAction(() => this.handleSaveFormSettings());
                     break;
                 case 'import-form-settings-file':
                     this.handleImportFormSettingsFile();
@@ -1526,23 +1530,18 @@ const Permissions = {
         this.refreshFormSettingsUI('sites');
         this.refreshFormSettingsPlacesPanel();
 
-        if (!removedHadName) return;
-
-        const cloudReady = typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync();
-        if (!cloudReady) return;
-
-        try {
-            const result = await this.pushFormSettingsToCloud(state, { silent: true });
-            if (result?.success) {
-                Utils.safeLog('✅ تم حذف الموقع ومزامنة قاعدة البيانات');
-            } else if (!result?.skipped) {
-                const errMsg = result?.message || 'فشل مزامنة قاعدة البيانات';
-                Notification.warning(`تم الحذف من الواجهة. ${errMsg} — اضغط «حفظ الإعدادات» لإعادة المحاولة.`);
+        if (!removedHadName) {
+            if (typeof Notification !== 'undefined') {
+                Notification.success('تم حذف الصف الفارغ من القائمة');
             }
-        } catch (error) {
-            Utils.safeWarn('⚠️ فشل مزامنة حذف الموقع مع قاعدة البيانات:', error);
-            Notification.warning('تم الحذف من الواجهة. اضغط «حفظ الإعدادات» لمزامنة قاعدة البيانات.');
+            return;
         }
+
+        await this.syncFormSettingsToDatabase(state, {
+            actionLabel: `حذف موقع «${siteName}» وحفظ التغييرات`,
+            showToast: true,
+            requireAllNamed: false
+        });
     },
 
     handleSiteNameChange(siteId, value) {
@@ -1662,39 +1661,19 @@ const Permissions = {
         this.invalidateFormSettingsPlacesCache(state.selectedSiteId);
         this.refreshFormSettingsUI('places');
 
-        if (!removedHadName) return;
-
-        const cloudReady = typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync();
-        if (!cloudReady) {
-            Notification.warning('تم الحذف من الواجهة. لا يوجد اتصال بالخادم — اضغط «حفظ الإعدادات» لاحقاً.');
+        const displayName = String(removedPlace?.name || '').trim() || placeName;
+        if (!removedHadName) {
+            if (typeof Notification !== 'undefined') {
+                Notification.success('تم حذف الصف الفارغ من القائمة');
+            }
             return;
         }
 
-        const displayName = String(removedPlace?.name || '').trim() || placeName;
-        try {
-            const result = await this.deleteFormSettingsPlaceFromCloud(removedPlace, site, { state, silent: true });
-            if (result?.success) {
-                this.markFormSettingsPersistedIds(state);
-                Notification.success(`تم حذف «${displayName}» من قاعدة البيانات`);
-                Utils.safeLog('✅ تم حذف المكان ومزامنة قاعدة البيانات');
-                return;
-            }
-            if (result?.skipped) {
-                Notification.warning('تم الحذف من الواجهة. اضغط «حفظ الإعدادات» لمزامنة قاعدة البيانات.');
-                return;
-            }
-            const syncResult = await this.pushFormSettingsToCloud(state, { silent: true });
-            if (syncResult?.success) {
-                this.markFormSettingsPersistedIds(state);
-                Notification.success(`تم حذف «${displayName}» من قاعدة البيانات`);
-                return;
-            }
-            const errMsg = result?.message || syncResult?.message || 'فشل مزامنة قاعدة البيانات';
-            Notification.error(`تم الحذف من الواجهة. ${errMsg} — جرّب «حفظ الإعدادات».`);
-        } catch (error) {
-            Utils.safeWarn('⚠️ فشل مزامنة حذف المكان مع قاعدة البيانات:', error);
-            Notification.error('تم الحذف من الواجهة. فشل الاتصال بالخادم — اضغط «حفظ الإعدادات» لإعادة المحاولة.');
-        }
+        await this.syncFormSettingsToDatabase(state, {
+            actionLabel: `حذف «${displayName}» وحفظ التغييرات`,
+            showToast: true,
+            requireAllNamed: false
+        });
     },
 
     handleAddDepartment() {
@@ -1864,87 +1843,74 @@ const Permissions = {
         return { sites, departments, safetyTeam };
     },
 
-    async deleteFormSettingsPlaceFromCloud(removedPlace, site, options = {}) {
-        const silent = options.silent === true;
-        const cloudReady = typeof Utils !== 'undefined' &&
-            typeof Utils.hasCloudBackendSync === 'function' &&
-            Utils.hasCloudBackendSync();
-        if (!cloudReady ||
-            typeof GoogleIntegration === 'undefined' ||
-            typeof GoogleIntegration.sendToAppsScript !== 'function') {
-            return { skipped: true };
-        }
-
-        const userData = AppState.currentUser || {};
-        const placeId = String(removedPlace?.id || '').trim();
-        const placeName = String(removedPlace?.name || '').trim();
-        const siteId = String(site?.id || '').trim();
-        const siteName = String(site?.name || '').trim();
-
-        if (!placeId && !placeName) {
-            return { skipped: true };
-        }
-
+    async _runFormSettingsAction(actionFn) {
         try {
-            const deleteResult = await GoogleIntegration.sendToAppsScript('deletePlace', {
-                id: placeId,
-                placeId: placeId,
-                siteId: siteId,
-                siteName: siteName,
-                placeName: placeName,
-                name: placeName,
-                __timeoutMs: 90000,
-                userData: {
-                    email: userData.email,
-                    name: userData.name,
-                    role: userData.role,
-                    permissions: userData.permissions
-                }
-            });
-
-            if (deleteResult?.success) {
-                return deleteResult;
-            }
-
-            if (deleteResult?.notFound && options.state) {
-                const syncResult = await this.pushFormSettingsToCloud(options.state, { silent: true });
-                if (syncResult?.success) {
-                    return syncResult;
-                }
-                return syncResult || deleteResult;
-            }
-
-            if (!silent && deleteResult?.message) {
-                Notification.warning(deleteResult.message);
-            }
-            return deleteResult || { success: false };
+            await actionFn();
         } catch (error) {
             const errMsg = (error && error.message) ? String(error.message) : String(error || 'خطأ غير معروف');
-            Utils.safeWarn('⚠️ فشل حذف المكان من Google Sheets:', errMsg);
-            if (!silent) {
-                Notification.warning(errMsg || 'فشل حذف المكان من قاعدة البيانات.');
+            Utils.safeWarn('⚠️ فشل إجراء إعدادات النماذج:', errMsg);
+            this.setFormSettingsSyncStatus(errMsg, 'error');
+            if (typeof Notification !== 'undefined' && typeof Notification.error === 'function') {
+                Notification.error(errMsg);
             }
-            return { success: false, message: errMsg, error: error };
         }
     },
 
-    async pushFormSettingsToCloud(state, options = {}) {
-        const silent = options.silent === true;
+    setFormSettingsSyncStatus(message, level = 'info') {
+        const statusEl = document.getElementById('form-settings-sync-status');
+        const hintEl = document.getElementById('form-settings-sync-hint');
+        const text = String(message || '').trim();
+        if (statusEl) {
+            statusEl.hidden = !text;
+            statusEl.textContent = text;
+            statusEl.className = 'form-settings-sync-status form-settings-sync-status--' + String(level || 'info');
+        }
+        if (hintEl && text) {
+            hintEl.textContent = text;
+        }
+    },
+
+    _setFormSettingsSaveBusy(busy) {
+        const saveBtn = document.querySelector('[data-action="save-form-settings"]');
+        if (!saveBtn) return;
+        saveBtn.disabled = !!busy;
+        saveBtn.classList.toggle('is-loading', !!busy);
+        if (busy) {
+            saveBtn.setAttribute('aria-busy', 'true');
+        } else {
+            saveBtn.removeAttribute('aria-busy');
+        }
+    },
+
+    /**
+     * مزامنة موحّدة مع قاعدة البيانات — استبدال كامل لجداول Form_Sites / Form_Places
+     * (المسار الوحيد الموثوق لحذف الأماكن والصفوف المكررة)
+     */
+    async syncFormSettingsToDatabase(state, options = {}) {
+        const actionLabel = String(options.actionLabel || 'حفظ إعدادات النماذج').trim();
+        const showToast = options.showToast !== false;
+        const requireAllNamed = options.requireAllNamed === true;
+
         const cloudReady = typeof Utils !== 'undefined' &&
             typeof Utils.hasCloudBackendSync === 'function' &&
             Utils.hasCloudBackendSync();
         if (!cloudReady ||
             typeof GoogleIntegration === 'undefined' ||
             typeof GoogleIntegration.sendToAppsScript !== 'function') {
-            return { skipped: true };
+            const msg = 'لا يوجد اتصال بخادم Google Apps Script — التغييرات محلية فقط.';
+            this.setFormSettingsSyncStatus(msg, 'warning');
+            if (showToast && typeof Notification !== 'undefined') {
+                Notification.warning(msg);
+            }
+            return { success: false, skipped: true, message: msg };
         }
 
-        const payload = this.buildFormSettingsCloudPayload(state, {
-            requireAllNamed: options.requireAllNamed === true
-        });
+        const payload = this.buildFormSettingsCloudPayload(state, { requireAllNamed });
         if (payload.error) {
-            if (!silent) {
-                Notification.error(payload.error.error);
+            const errText = payload.error.error || 'بيانات غير صالحة';
+            this.setFormSettingsSyncStatus(errText, 'error');
+            if (showToast && typeof Notification !== 'undefined') {
+                Notification.error(errText);
                 if (payload.error.focusSelector) {
                     const element = document.querySelector(payload.error.focusSelector);
                     if (element) {
@@ -1954,39 +1920,109 @@ const Permissions = {
                     }
                 }
             }
-            return { success: false, message: payload.error.error };
+            return { success: false, message: errText, errorCode: 'VALIDATION' };
         }
 
-        const userData = AppState.currentUser || {};
-        try {
-            const result = await GoogleIntegration.sendToAppsScript('saveFormSettings', {
-                id: 'FORM-SETTINGS-1',
-                sites: payload.sites,
-                departments: payload.departments,
-                safetyTeam: payload.safetyTeam,
-                __timeoutMs: 120000,
-                userData: {
-                    email: userData.email,
-                    name: userData.name,
-                    role: userData.role,
-                    permissions: userData.permissions
-                }
-            });
-            if (result?.success) {
-                this.markFormSettingsPersistedIds(state);
-                Utils.safeLog('✅ تم مزامنة إعدادات النماذج مع Google Sheets');
-            } else if (!silent && result?.message) {
-                Notification.warning(result.message);
-            }
-            return result || { success: false };
-        } catch (error) {
-            const errMsg = (error && error.message) ? String(error.message) : String(error || 'خطأ غير معروف');
-            Utils.safeWarn('⚠️ فشل مزامنة إعدادات النماذج مع Google Sheets:', errMsg);
-            if (!silent) {
-                Notification.warning(errMsg || 'فشل المزامنة مع قاعدة البيانات.');
-            }
-            return { success: false, message: errMsg, error: error };
+        if (this._formSettingsSyncPromise) {
+            try {
+                await this._formSettingsSyncPromise;
+            } catch (_waitErr) { /* ignore */ }
         }
+
+        const syncTask = (async () => {
+            this.setFormSettingsSyncStatus(`جاري ${actionLabel}...`, 'info');
+            this._setFormSettingsSaveBusy(true);
+            if (showToast && typeof Notification !== 'undefined' && typeof Notification.info === 'function') {
+                Notification.info(`جاري ${actionLabel}...`, 'info', 2800);
+            }
+
+            const userData = AppState.currentUser || {};
+            try {
+                const result = await GoogleIntegration.sendToAppsScript('saveFormSettings', {
+                    id: 'FORM-SETTINGS-1',
+                    sites: payload.sites,
+                    departments: payload.departments,
+                    safetyTeam: payload.safetyTeam,
+                    __timeoutMs: 120000,
+                    __allowStructuredFailure: true,
+                    skipCache: true,
+                    userData: {
+                        email: userData.email,
+                        name: userData.name,
+                        role: userData.role,
+                        permissions: userData.permissions
+                    }
+                });
+
+                if (result?.success) {
+                    this.markFormSettingsPersistedIds(state);
+                    this.syncFormSettingsObservationSites(state);
+                    const placesCount = (payload.sites || []).reduce((sum, site) => {
+                        return sum + (Array.isArray(site.places) ? site.places.length : 0);
+                    }, 0);
+                    const msg = result.message ||
+                        `تم ${actionLabel} — ${payload.sites.length} موقع، ${placesCount} مكان`;
+                    this.setFormSettingsSyncStatus(msg, 'success');
+                    if (showToast && typeof Notification !== 'undefined') {
+                        Notification.success(msg);
+                    }
+                    Utils.safeLog('✅ مزامنة إعدادات النماذج:', msg);
+                    return { success: true, message: msg };
+                }
+
+                const errMsg = result?.message || `فشل ${actionLabel}`;
+                const errorCode = result?.errorCode || '';
+                this.setFormSettingsSyncStatus(errMsg, 'error');
+                if (showToast && typeof Notification !== 'undefined') {
+                    if (errorCode === 'PERMISSION_DENIED') {
+                        Notification.error(`صلاحيات غير كافية: ${errMsg}`);
+                    } else if (errorCode === 'DUPLICATE_ENTRY') {
+                        Notification.error(errMsg);
+                    } else {
+                        Notification.error(errMsg);
+                    }
+                }
+                return { success: false, message: errMsg, errorCode: errorCode };
+            } catch (error) {
+                const errMsg = (error && error.message) ? String(error.message) : String(error || 'خطأ غير معروف');
+                Utils.safeWarn('⚠️ فشل مزامنة إعدادات النماذج:', errMsg);
+                this.setFormSettingsSyncStatus(errMsg, 'error');
+                if (showToast && typeof Notification !== 'undefined') {
+                    Notification.error(errMsg);
+                }
+                return { success: false, message: errMsg, error: error };
+            } finally {
+                this._setFormSettingsSaveBusy(false);
+            }
+        })();
+
+        this._formSettingsSyncPromise = syncTask;
+        try {
+            return await syncTask;
+        } finally {
+            this._formSettingsSyncPromise = null;
+        }
+    },
+
+    async deleteFormSettingsPlaceFromCloud(removedPlace, site, options = {}) {
+        if (!options.state) {
+            return { success: false, message: 'حالة إعدادات النماذج غير متوفرة' };
+        }
+        const displayName = String(removedPlace?.name || '').trim() || 'المكان';
+        return this.syncFormSettingsToDatabase(options.state, {
+            actionLabel: `حذف «${displayName}» وحفظ التغييرات`,
+            showToast: options.showToast !== false,
+            requireAllNamed: false
+        });
+    },
+
+    async pushFormSettingsToCloud(state, options = {}) {
+        const silent = options.silent === true;
+        return this.syncFormSettingsToDatabase(state, {
+            actionLabel: options.actionLabel || 'مزامنة إعدادات النماذج',
+            showToast: !silent,
+            requireAllNamed: options.requireAllNamed === true
+        });
     },
 
     async handleSaveFormSettings() {
@@ -2034,23 +2070,19 @@ const Permissions = {
             dm.saveCompanySettings();
         }
 
-        const cloudResult = await this.pushFormSettingsToCloud(state, { requireAllNamed: true, silent: true });
-        if (cloudResult?.errorCode === 'DUPLICATE_ENTRY') {
-            Notification.error(cloudResult.message || 'لا يمكن حفظ مواقع أو أماكن مكررة.');
+        const cloudResult = await this.syncFormSettingsToDatabase(state, {
+            actionLabel: 'حفظ إعدادات النماذج',
+            showToast: true,
+            requireAllNamed: true
+        });
+        if (cloudResult?.errorCode === 'DUPLICATE_ENTRY' || cloudResult?.errorCode === 'VALIDATION') {
             return;
         }
-        const cloudReady = typeof Utils !== 'undefined' &&
-            typeof Utils.hasCloudBackendSync === 'function' &&
-            Utils.hasCloudBackendSync();
-        if (cloudReady && cloudResult && !cloudResult.success && !cloudResult.skipped) {
-            const errDetail = cloudResult.message ||
-                (cloudResult.error && cloudResult.error.message) ||
-                '';
-            Notification.warning(
-                errDetail ||
-                'تم الحفظ محلياً فقط. فشلت مزامنة قاعدة البيانات — راجع الاتصال أو الصلاحيات ثم أعد المحاولة.'
-            );
+        if (cloudResult && !cloudResult.success && !cloudResult.skipped) {
             return;
+        }
+        if (cloudResult?.skipped) {
+            // محلي فقط — رسالة تحذيرية أُظهرت من syncFormSettingsToDatabase
         }
 
         // تسجيل حركة المستخدم
@@ -2066,7 +2098,13 @@ const Permissions = {
             safetyTeam: safetyTeam.length
         });
 
-        Notification.success('تم حفظ إعدادات النماذج بنجاح.');
+        if (cloudResult?.success) {
+            this.initFormSettingsState();
+            this.refreshFormSettingsUI();
+            return;
+        }
+
+        Notification.success('تم حفظ إعدادات النماذج محلياً.');
         this.initFormSettingsState();
         this.refreshFormSettingsUI();
     },
@@ -4011,7 +4049,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.372',
+    appVersion: '1.0.374',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
