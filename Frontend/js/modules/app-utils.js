@@ -734,7 +734,8 @@ const Permissions = {
             sites: clonedSites,
             selectedSiteId,
             departments: this.getInitialFormDepartments(),
-            safetyTeam: this.getInitialSafetyTeam()
+            safetyTeam: this.getInitialSafetyTeam(),
+            placesSearchQuery: ''
         };
         this.markFormSettingsPersistedIds(this.formSettingsState);
         this.invalidateFormSettingsPlacesCache();
@@ -898,10 +899,25 @@ const Permissions = {
                                         <i class="fas fa-location-dot" aria-hidden="true"></i>
                                         الأماكن داخل الموقع المحدد
                                     </h4>
-                                    <p class="form-settings-panel__desc">الأماكن الفرعية التابعة للموقع المختار تظهر هنا.</p>
+                                    <p class="form-settings-panel__desc">الأماكن الفرعية التابعة للموقع المختار تظهر هنا. استخدم البحث للعثور على مكان بسرعة.</p>
                                 </div>
                                 <div class="form-settings-panel__body">
                                     <div id="form-settings-places-context" class="form-settings-places-context is-empty" aria-live="polite"></div>
+                                    <div class="form-settings-places-search" id="form-settings-places-search-wrap" hidden>
+                                        <label class="form-settings-places-search__label" for="form-settings-places-search">
+                                            <i class="fas fa-search" aria-hidden="true"></i>
+                                            بحث في الأماكن
+                                        </label>
+                                        <div class="form-settings-places-search__field">
+                                            <input type="search" id="form-settings-places-search" class="form-settings-places-search__input"
+                                                data-field="places-search" placeholder="ابحث باسم المكان داخل الموقع المحدد…"
+                                                autocomplete="off" enterkeyhint="search" aria-label="بحث في الأماكن داخل الموقع المحدد">
+                                            <button type="button" class="form-settings-places-search__clear" id="form-settings-places-search-clear"
+                                                data-action="clear-places-search" title="مسح البحث" aria-label="مسح البحث" hidden>
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
                                     <div id="form-settings-places-list" class="form-settings-panel__list" role="list"></div>
                                 </div>
                                 <div class="form-settings-panel__footer">
@@ -1022,7 +1038,15 @@ const Permissions = {
         }).join('');
     },
 
-    renderFormPlacesList(site = null) {
+    filterFormSettingsPlacesByQuery(places, query) {
+        const q = String(query || '').trim().toLowerCase();
+        if (!q) return Array.isArray(places) ? places.slice() : [];
+        return (places || []).filter((place) =>
+            String(place?.name || '').toLowerCase().includes(q)
+        );
+    },
+
+    renderFormPlacesList(site = null, filterQuery = '') {
         const state = this.getFormSettingsState();
         const emptyBox = (icon, body) => `
             <div class="form-settings-empty" role="listitem">
@@ -1043,8 +1067,13 @@ const Permissions = {
             const label = (resolvedSite.name || '').trim() || 'هذا الموقع';
             return emptyBox('fa-location-dot', `لا توجد أماكن مسجلة لـ <strong>${Utils.escapeHTML(label)}</strong>. استخدم زر <strong>إضافة مكان</strong> أدناه.`);
         }
+        const searchQuery = String(filterQuery || '').trim();
+        const visiblePlaces = this.filterFormSettingsPlacesByQuery(resolvedSite.places, searchQuery);
+        if (searchQuery && visiblePlaces.length === 0) {
+            return emptyBox('fa-search', `لا توجد أماكن تطابق «${Utils.escapeHTML(searchQuery)}» داخل هذا الموقع.`);
+        }
         const padIndex = (n) => String(n).padStart(2, '0');
-        return resolvedSite.places.map((place, index) => `
+        return visiblePlaces.map((place, index) => `
             <div class="form-settings-item-row" role="listitem" data-place-id="${Utils.escapeHTML(place.id)}">
                 <span class="form-settings-item-row__index" title="الترتيب">${padIndex(index + 1)}</span>
                 <input type="text" class="form-settings-item-row__input" data-field="place-name" data-place-id="${Utils.escapeHTML(place.id)}"
@@ -1201,13 +1230,37 @@ const Permissions = {
             return;
         }
         const name = String(site.name || '').trim() || site.id;
-        const n = Array.isArray(site.places) ? site.places.length : 0;
+        const totalPlaces = Array.isArray(site.places) ? site.places.length : 0;
+        const searchQuery = String(this.getFormSettingsState()?.placesSearchQuery || '').trim();
+        let countLabel = `${totalPlaces} مكان`;
+        if (searchQuery && totalPlaces > 0) {
+            const matched = this.filterFormSettingsPlacesByQuery(site.places, searchQuery).length;
+            countLabel = `${matched} من ${totalPlaces} مكان`;
+        }
         placesCtx.className = 'form-settings-places-context';
         placesCtx.innerHTML = `
             <span class="form-settings-places-context__badge"><i class="fas fa-map-marker-alt"></i> ${Utils.escapeHTML(name)}</span>
             <span>الموقع النشط</span>
-            <span class="form-settings-places-context__count"><i class="fas fa-layer-group"></i> ${n} مكان</span>
+            <span class="form-settings-places-context__count"><i class="fas fa-layer-group"></i> ${countLabel}</span>
         `;
+    },
+
+    syncFormSettingsPlacesSearchUi(state, resolvedSite) {
+        const searchWrap = document.getElementById('form-settings-places-search-wrap');
+        const searchInput = document.getElementById('form-settings-places-search');
+        const clearBtn = document.getElementById('form-settings-places-search-clear');
+        const hasPlaces = !!(resolvedSite && Array.isArray(resolvedSite.places) && resolvedSite.places.length > 0);
+        const query = String(state?.placesSearchQuery || '');
+
+        if (searchWrap) {
+            searchWrap.hidden = !resolvedSite || !hasPlaces;
+        }
+        if (searchInput && document.activeElement !== searchInput) {
+            searchInput.value = query;
+        }
+        if (clearBtn) {
+            clearBtn.hidden = !query.trim();
+        }
     },
 
     refreshFormSettingsPlacesPanel(state = null, site = null) {
@@ -1215,12 +1268,16 @@ const Permissions = {
         const resolvedSite = site || (currentState?.selectedSiteId
             ? this.getFormSettingsSiteById(currentState.selectedSiteId, currentState)
             : null);
+        const searchQuery = String(currentState?.placesSearchQuery || '').trim();
         const placesList = document.getElementById('form-settings-places-list');
         if (placesList) {
-            placesList.innerHTML = resolvedSite
-                ? this.getFormSettingsPlacesListHtml(resolvedSite)
-                : this.renderFormPlacesList();
+            if (resolvedSite && !searchQuery) {
+                placesList.innerHTML = this.getFormSettingsPlacesListHtml(resolvedSite);
+            } else {
+                placesList.innerHTML = this.renderFormPlacesList(resolvedSite, searchQuery);
+            }
         }
+        this.syncFormSettingsPlacesSearchUi(currentState, resolvedSite);
         const addPlaceBtn = document.getElementById('form-settings-add-place-btn');
         const placesPanel = document.getElementById('form-settings-places-panel');
         const hasSelectedSite = !!(currentState && currentState.selectedSiteId);
@@ -1340,6 +1397,9 @@ const Permissions = {
                 case 'import-form-settings-sites-excel':
                     this.showFormSettingsSitesImportModal();
                     break;
+                case 'clear-places-search':
+                    this.handleClearPlacesSearch();
+                    break;
                 default:
                     break;
             }
@@ -1356,6 +1416,9 @@ const Permissions = {
                     break;
                 case 'place-name':
                     this.handlePlaceNameChange(target.getAttribute('data-place-id'), target.value);
+                    break;
+                case 'places-search':
+                    this.handlePlacesSearchChange(target.value);
                     break;
                 case 'department-name':
                     this.handleDepartmentChange(Number(target.getAttribute('data-department-index')), target.value);
@@ -1432,6 +1495,7 @@ const Permissions = {
         if (!state.sites.some((site) => site.id === siteId)) return;
         if (state.selectedSiteId === siteId) return;
         const previousSiteId = state.selectedSiteId;
+        state.placesSearchQuery = '';
         state.selectedSiteId = siteId;
         const site = this.getFormSettingsSiteById(siteId, state);
         this.updateFormSettingsSiteSelection(previousSiteId, siteId);
@@ -1553,7 +1617,27 @@ const Permissions = {
             }
             place.name = value;
             this.invalidateFormSettingsPlacesCache(state.selectedSiteId);
+            if (String(state.placesSearchQuery || '').trim()) {
+                this.refreshFormSettingsPlacesPanel(state);
+            }
         }
+    },
+
+    handlePlacesSearchChange(value) {
+        const state = this.getFormSettingsState();
+        if (!state) return;
+        state.placesSearchQuery = String(value || '');
+        this.refreshFormSettingsPlacesPanel(state);
+    },
+
+    handleClearPlacesSearch() {
+        const state = this.getFormSettingsState();
+        if (!state) return;
+        state.placesSearchQuery = '';
+        const searchInput = document.getElementById('form-settings-places-search');
+        if (searchInput) searchInput.value = '';
+        this.refreshFormSettingsPlacesPanel(state);
+        if (searchInput) searchInput.focus();
     },
 
     async handleRemovePlace(placeId) {
@@ -3830,7 +3914,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.363',
+    appVersion: '1.0.365',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
