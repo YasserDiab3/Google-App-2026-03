@@ -728,6 +728,152 @@ const Incidents = {
         return this.extractInjuredPart(incident.description || '', injuryDesc);
     },
 
+    /** معد الإخطار/المبلّغ — منفصل عن الطرف المتضرر */
+    getIncidentListReporter(incident) {
+        if (!incident) return '-';
+        const inv = this._parseInvestigationRecord(incident);
+        const candidates = [
+            incident.reportedBy,
+            incident.reporterName,
+            inv?.reporterName,
+            incident.createdBy?.name,
+            incident.createdBy?.displayName
+        ];
+        for (const candidate of candidates) {
+            const value = String(candidate || '').trim();
+            if (value) return value;
+        }
+        return '-';
+    },
+
+    /** اسم الطرف المتضرر — منفصل عن المبلّغ */
+    getIncidentAffectedPartyName(incident) {
+        if (!incident) return '';
+        const inv = this._parseInvestigationRecord(incident);
+        const affiliation = String(
+            incident.affiliation || inv?.affectedAffiliation || incident.affectedType || ''
+        ).trim().toLowerCase();
+
+        const personName = String(
+            incident.affectedName ||
+            inv?.affectedName ||
+            incident.employeeName ||
+            ''
+        ).trim();
+
+        const contractorName = String(
+            incident.contractorName ||
+            (affiliation === 'contractor' ? (incident.affectedDepartment || inv?.affectedDepartment) : '') ||
+            ''
+        ).trim();
+
+        if (affiliation === 'contractor' || incident.affectedType === 'contractor') {
+            if (personName && contractorName && personName !== contractorName) {
+                return `${personName} — ${contractorName}`;
+            }
+            return personName || contractorName || '';
+        }
+
+        return personName;
+    },
+
+    /** موقع العرض في قائمة الحوادث */
+    getIncidentListLocation(incident) {
+        return this._resolveHotspotLabel(incident);
+    },
+
+    /** خلية الأطراف / الجزء المتضرر في الجدول */
+    renderIncidentListAffectedCell(incident) {
+        const party = this.getIncidentAffectedPartyName(incident);
+        const injuredPart = String(this.resolveIncidentInjuredPart(incident) || '').trim();
+        const inv = this._parseInvestigationRecord(incident);
+        const equipment = String(incident?.equipmentCause || inv?.equipmentCause || '').trim();
+        const job = String(
+            incident.affectedJobTitle || inv?.affectedJob || incident.employeeJob || ''
+        ).trim();
+
+        const lines = [];
+        if (party) {
+            lines.push(`<div class="font-medium text-gray-800">${Utils.escapeHTML(party)}</div>`);
+        }
+        if (job) {
+            lines.push(`<div class="text-xs text-gray-500">${Utils.escapeHTML(job)}</div>`);
+        }
+        if (injuredPart && injuredPart !== 'غير محدد') {
+            lines.push(`<div class="text-xs text-gray-600">الجزء: ${Utils.escapeHTML(injuredPart)}</div>`);
+        }
+        if (equipment && equipment !== 'غير محدد') {
+            lines.push(`<div class="text-xs text-gray-500">المعدة: ${Utils.escapeHTML(equipment)}</div>`);
+        }
+        return lines.length ? lines.join('') : '-';
+    },
+
+    renderIncidentsListRowActions(incident, compact = false) {
+        const id = incident?.id || '';
+        if (compact) {
+            return `
+                <div class="flex items-center gap-2">
+                    <button onclick="Incidents.viewIncident('${id}')" class="btn-icon btn-icon-info" title="عرض">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button onclick="Incidents.editIncident('${id}')" class="btn-icon btn-icon-primary" title="تعديل">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="Incidents.manageWorkflow('${id}')" class="btn-icon btn-icon-warning" title="إدارة التدفق">
+                        <i class="fas fa-project-diagram"></i>
+                    </button>
+                    ${this.renderIncidentDeleteButton(id)}
+                </div>
+            `;
+        }
+        return `
+            <div class="flex items-center gap-2 flex-wrap">
+                <button onclick="Incidents.viewIncident('${id}')" class="btn-icon btn-icon-info" title="عرض">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button onclick="if(typeof Incidents !== 'undefined' && typeof Incidents.showInvestigationForm === 'function') { Incidents.showInvestigationForm('${id}'); } else { console.error('Incidents.showInvestigationForm is not available'); alert('نموذج التحقيق غير متاح. يرجى إعادة تحميل الصفحة.'); }" class="btn-icon btn-icon-warning" title="التحقيق في الحادث">
+                    <i class="fas fa-search"></i>
+                </button>
+                <button onclick="Incidents.editIncident('${id}')" class="btn-icon btn-icon-primary" title="تعديل">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="Incidents.manageWorkflow('${id}')" class="btn-icon btn-icon-warning" title="إدارة التدفق">
+                    <i class="fas fa-project-diagram"></i>
+                </button>
+                <button onclick="Incidents.exportPDF('${id}')" class="btn-icon btn-icon-secondary" title="تصدير PDF">
+                    <i class="fas fa-print"></i>
+                </button>
+                ${this.renderIncidentDeleteButton(id)}
+            </div>
+        `;
+    },
+
+    renderIncidentsListRow(incident, compactActions = false) {
+        const id = incident?.id || '';
+        return `
+            <tr data-incident-id="${Utils.escapeHTML(id)}">
+                <td>${Utils.escapeHTML(incident?.title || '')}</td>
+                <td>${Utils.escapeHTML(this.getIncidentListLocation(incident))}</td>
+                <td>${incident?.date ? Utils.formatDate(incident.date) : '-'}</td>
+                <td>
+                    <span class="badge badge-${this.getSeverityBadgeClass(incident?.severity)}">
+                        ${incident?.severity || '-'}
+                    </span>
+                </td>
+                <td>${Utils.escapeHTML(incident?.incidentType || '-')}</td>
+                <td>${Utils.escapeHTML(this.getIncidentListReporter(incident))}</td>
+                <td>${this.renderIncidentListAffectedCell(incident)}</td>
+                <td>
+                    <span class="badge badge-${this.getStatusBadgeClass(this.getIncidentDisplayStatus(incident))}">
+                        ${Utils.escapeHTML(this.getIncidentDisplayStatus(incident))}
+                    </span>
+                </td>
+                <td>${this.renderWorkflowStatusBadge(incident)}</td>
+                <td>${this.renderIncidentsListRowActions(incident, compactActions)}</td>
+            </tr>
+        `;
+    },
+
     /** تسمية موقع الحادث للتحليل (مصنع + مكان فرعي) */
     _resolveHotspotLabel(incident) {
         const factory = String(incident.siteName || incident.factory || '').trim();
@@ -3935,7 +4081,7 @@ const Incidents = {
                                                     ${Utils.escapeHTML(incident.severity || 'متوسطة')}
                                                 </span>
                                             </td>
-                                            <td>${Utils.escapeHTML(incident.reportedBy || '')}</td>
+                                            <td>${Utils.escapeHTML(this.getIncidentListReporter(incident))}</td>
                                             <td>
                                                 <div class="flex items-center gap-2">
                                                     <button 
@@ -4684,8 +4830,13 @@ const Incidents = {
             incidentType: entry.incidentType || '',
             status: 'مفتوح',
             requiresApproval: true,
-            reportedBy: entry.employeeName ? entry.employeeName + (entry.employeeCode ? ' (' + entry.employeeCode + ')' : '') : 'إدخال يدوي',
+            reportedBy: AppState.currentUser?.name || AppState.currentUser?.displayName || 'إدخال يدوي',
+            reporterName: AppState.currentUser?.name || AppState.currentUser?.displayName || '',
             department: entry.employeeDepartment || '',
+            affectedName: entry.employeeName || '',
+            affectedCode: entry.employeeCode || '',
+            affectedJobTitle: entry.employeeJob || '',
+            affectedDepartment: entry.employeeDepartment || '',
             employeeCode: entry.employeeCode || '',
             employeeName: entry.employeeName || '',
             employeeJob: entry.employeeJob || '',
@@ -6319,61 +6470,7 @@ const Incidents = {
                             </tr>
                         </thead>
                         <tbody>
-                            ${incidents.map((incident) => {
-                const id = incident?.id || '';
-                return `
-                                    <tr>
-                                        <td>${Utils.escapeHTML(incident?.title || '')}</td>
-                                        <td>${Utils.escapeHTML(incident?.location || '')}</td>
-                                        <td>${incident?.date ? Utils.formatDate(incident.date) : '-'}</td>
-                                        <td>
-                                            <span class="badge badge-${this.getSeverityBadgeClass(incident?.severity)}">
-                                                ${incident?.severity || '-'}
-                                            </span>
-                                        </td>
-                                        <td>${Utils.escapeHTML(incident?.incidentType || '-')}</td>
-                                        <td>${Utils.escapeHTML(incident?.reportedBy || incident?.employeeCode || '-')}</td>
-                                        <td>
-                                            ${Utils.escapeHTML(this.resolveIncidentInjuredPart(incident) || '-')}
-                                            ${(() => {
-                                                const inv = this._parseInvestigationRecord(incident);
-                                                const eq = String(incident?.equipmentCause || inv?.equipmentCause || '').trim();
-                                                return eq && eq !== 'غير محدد'
-                                                    ? `<div class="text-xs text-gray-500">المعدة: ${Utils.escapeHTML(eq)}</div>`
-                                                    : '';
-                                            })()}
-                                        </td>
-                                        <td>
-                                            <span class="badge badge-${this.getStatusBadgeClass(this.getIncidentDisplayStatus(incident))}">
-                                                ${Utils.escapeHTML(this.getIncidentDisplayStatus(incident))}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            ${this.renderWorkflowStatusBadge(incident)}
-                                        </td>
-                                        <td>
-                                            <div class="flex items-center gap-2 flex-wrap">
-                                                <button onclick="Incidents.viewIncident('${id}')" class="btn-icon btn-icon-info" title="عرض">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
-                                                <button onclick="if(typeof Incidents !== 'undefined' && typeof Incidents.showInvestigationForm === 'function') { Incidents.showInvestigationForm('${id}'); } else { console.error('Incidents.showInvestigationForm is not available'); alert('نموذج التحقيق غير متاح. يرجى إعادة تحميل الصفحة.'); }" class="btn-icon btn-icon-warning" title="التحقيق في الحادث">
-                                                    <i class="fas fa-search"></i>
-                                                </button>
-                                                <button onclick="Incidents.editIncident('${id}')" class="btn-icon btn-icon-primary" title="تعديل">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button onclick="Incidents.manageWorkflow('${id}')" class="btn-icon btn-icon-warning" title="إدارة التدفق">
-                                                    <i class="fas fa-project-diagram"></i>
-                                                </button>
-                                                <button onclick="Incidents.exportPDF('${id}')" class="btn-icon btn-icon-secondary" title="تصدير PDF">
-                                                    <i class="fas fa-print"></i>
-                                                </button>
-                                                ${this.renderIncidentDeleteButton(id)}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                `;
-            }).join('')}
+                            ${incidents.map((incident) => this.renderIncidentsListRow(incident)).join('')}
                         </tbody>
                     </table>
                 </div>
@@ -8374,8 +8471,8 @@ const Incidents = {
                 losses: notificationData.losses,
                 actionsTaken: notificationData.actions,
                 reportedBy: notificationData.reporterName,
-                employeeCode: notificationData.reporterCode,
-                employeeNumber: notificationData.reporterCode,
+                reporterName: notificationData.reporterName,
+                reporterCode: notificationData.reporterCode || '',
                 status: 'مفتوح', // سيتم تحديثه إلى "قيد التحقيق" عند فتح نموذج التحقيق
                 severity: 'متوسطة',
                 // تم نقل تحليل الأسباب والإجراءات إلى نموذج التحقيق المنفصل
@@ -11247,10 +11344,11 @@ const Incidents = {
 
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
-            filtered = filtered.filter(incident =>
+            filtered = filtered.filter((incident) =>
                 incident.title?.toLowerCase().includes(term) ||
-                incident.location?.toLowerCase().includes(term) ||
-                incident.reportedBy?.toLowerCase().includes(term) ||
+                this.getIncidentListLocation(incident).toLowerCase().includes(term) ||
+                this.getIncidentListReporter(incident).toLowerCase().includes(term) ||
+                this.getIncidentAffectedPartyName(incident).toLowerCase().includes(term) ||
                 incident.isoCode?.toLowerCase().includes(term)
             );
         }
@@ -11264,50 +11362,7 @@ const Incidents = {
         if (tbody) {
             tbody.innerHTML = filtered.length === 0 ?
                 '<tr><td colspan="10" class="text-center text-gray-500 py-8">لا توجد نتائج</td></tr>' :
-                filtered.map(incident => `
-                    <tr>
-                        <td>${Utils.escapeHTML(incident.title || '')}</td>
-                        <td>${Utils.escapeHTML(incident.location || '')}</td>
-                        <td>${incident.date ? Utils.formatDate(incident.date) : '-'}</td>
-                        <td>
-                            <span class="badge badge-${this.getSeverityBadgeClass(incident.severity)}">
-                                ${incident.severity || '-'}
-                            </span>
-                        </td>
-                        <td>${Utils.escapeHTML(incident.incidentType || '-')}</td>
-                        <td>${Utils.escapeHTML(incident.reportedBy || incident.employeeCode || '-')}</td>
-                        <td>
-                            ${Utils.escapeHTML(this.resolveIncidentInjuredPart(incident) || '-')}
-                            ${(() => {
-                                const inv = this._parseInvestigationRecord(incident);
-                                const eq = String(incident.equipmentCause || inv?.equipmentCause || '').trim();
-                                return eq && eq !== 'غير محدد'
-                                    ? `<div class="text-xs text-gray-500">المعدة: ${Utils.escapeHTML(eq)}</div>`
-                                    : '';
-                            })()}
-                        </td>
-                        <td>
-                            <span class="badge badge-${this.getStatusBadgeClass(this.getIncidentDisplayStatus(incident))}">
-                                ${Utils.escapeHTML(this.getIncidentDisplayStatus(incident))}
-                            </span>
-                        </td>
-                        <td>${this.renderWorkflowStatusBadge(incident)}</td>
-                        <td>
-                            <div class="flex items-center gap-2">
-                                <button onclick="Incidents.viewIncident('${incident.id}')" class="btn-icon btn-icon-info">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button onclick="Incidents.editIncident('${incident.id}')" class="btn-icon btn-icon-primary">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button onclick="Incidents.manageWorkflow('${incident.id}')" class="btn-icon btn-icon-warning">
-                                    <i class="fas fa-project-diagram"></i>
-                                </button>
-                                ${this.renderIncidentDeleteButton(incident.id)}
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
+                filtered.map((incident) => this.renderIncidentsListRow(incident, true)).join('');
         }
     },
 
