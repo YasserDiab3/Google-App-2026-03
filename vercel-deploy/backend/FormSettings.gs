@@ -226,8 +226,11 @@ function deleteSiteFromSheet(siteId, userData) {
         const spreadsheetId = getSpreadsheetId();
         
         // حذف الموقع
+        const normalizedSiteId = String(siteId || '').trim();
         const sites = readFromSheet(FORM_SETTINGS_SHEETS.SITES, spreadsheetId);
-        const filteredSites = sites.filter(s => s.id !== siteId);
+        const filteredSites = sites.filter(function(s) {
+            return String(s.id || '').trim() !== normalizedSiteId;
+        });
         
         if (filteredSites.length === sites.length) {
             return { success: false, message: 'الموقع غير موجود' };
@@ -235,7 +238,9 @@ function deleteSiteFromSheet(siteId, userData) {
         
         // حذف الأماكن المرتبطة بالموقع
         const places = readFromSheet(FORM_SETTINGS_SHEETS.PLACES, spreadsheetId);
-        const filteredPlaces = places.filter(p => p.siteId !== siteId);
+        const filteredPlaces = places.filter(function(p) {
+            return String(p.siteId || '').trim() !== normalizedSiteId;
+        });
         
         // حفظ البيانات
         saveToSheet(FORM_SETTINGS_SHEETS.SITES, filteredSites, spreadsheetId);
@@ -377,8 +382,11 @@ function deletePlaceFromSheet(placeId, userData) {
         }
         
         const spreadsheetId = getSpreadsheetId();
+        const normalizedPlaceId = String(placeId || '').trim();
         const data = readFromSheet(FORM_SETTINGS_SHEETS.PLACES, spreadsheetId);
-        const filteredData = data.filter(p => p.id !== placeId);
+        const filteredData = data.filter(function(p) {
+            return String(p.id || '').trim() !== normalizedPlaceId;
+        });
         
         if (filteredData.length === data.length) {
             return { success: false, message: 'المكان غير موجود' };
@@ -887,13 +895,9 @@ function saveFormSettingsToSheet(settingsData) {
             });
         });
         
-        // حفظ البيانات في الجداول الجديدة
-        if (sitesToSave.length > 0) {
-            saveToSheet(FORM_SETTINGS_SHEETS.SITES, sitesToSave, spreadsheetId);
-        }
-        if (placesToSave.length > 0) {
-            saveToSheet(FORM_SETTINGS_SHEETS.PLACES, placesToSave, spreadsheetId);
-        }
+        // حفظ البيانات في الجداول الجديدة — استبدال كامل لضمان إزالة المحذوفات من الواجهة
+        saveToSheet(FORM_SETTINGS_SHEETS.SITES, sitesToSave, spreadsheetId);
+        saveToSheet(FORM_SETTINGS_SHEETS.PLACES, placesToSave, spreadsheetId);
         if (departmentsToSave.length > 0) {
             saveToSheet(FORM_SETTINGS_SHEETS.DEPARTMENTS, departmentsToSave, spreadsheetId);
         }
