@@ -1536,7 +1536,8 @@ const Permissions = {
             if (result?.success) {
                 Utils.safeLog('✅ تم حذف الموقع ومزامنة قاعدة البيانات');
             } else if (!result?.skipped) {
-                Notification.warning('تم الحذف من الواجهة. اضغط «حفظ الإعدادات» لمزامنة قاعدة البيانات.');
+                const errMsg = result?.message || 'فشل مزامنة قاعدة البيانات';
+                Notification.warning(`تم الحذف من الواجهة. ${errMsg} — اضغط «حفظ الإعدادات» لإعادة المحاولة.`);
             }
         } catch (error) {
             Utils.safeWarn('⚠️ فشل مزامنة حذف الموقع مع قاعدة البيانات:', error);
@@ -1953,6 +1954,16 @@ const Permissions = {
         const cloudResult = await this.pushFormSettingsToCloud(state, { requireAllNamed: true, silent: true });
         if (cloudResult?.errorCode === 'DUPLICATE_ENTRY') {
             Notification.error(cloudResult.message || 'لا يمكن حفظ مواقع أو أماكن مكررة.');
+            return;
+        }
+        const cloudReady = typeof Utils !== 'undefined' &&
+            typeof Utils.hasCloudBackendSync === 'function' &&
+            Utils.hasCloudBackendSync();
+        if (cloudReady && cloudResult && !cloudResult.success && !cloudResult.skipped) {
+            Notification.warning(
+                cloudResult.message ||
+                'تم الحفظ محلياً فقط. فشلت مزامنة قاعدة البيانات — راجع الاتصال أو الصلاحيات ثم أعد المحاولة.'
+            );
             return;
         }
 
@@ -3914,7 +3925,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.365',
+    appVersion: '1.0.366',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,

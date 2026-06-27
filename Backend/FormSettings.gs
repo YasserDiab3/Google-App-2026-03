@@ -126,6 +126,103 @@ function initFormSettingsTables(spreadsheetId) {
     }
 }
 
+/**
+ * استبدال كامل لورقة إعدادات النماذج (Form_Sites / Form_Places …)
+ * saveToSheet العام يعمل upsert ولا يحذف الصفوف اليتيمة — هذا ينظّف الشيت بالكامل.
+ */
+function replaceFormSettingsSheetData_(sheetName, data, spreadsheetId) {
+    try {
+        if (!spreadsheetId) spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) {
+            return { success: false, message: 'معرف Google Sheets غير محدد' };
+        }
+        initFormSettingsTables(spreadsheetId);
+        const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            return { success: false, message: 'الورقة غير موجودة: ' + sheetName };
+        }
+
+        const rows = Array.isArray(data) ? data : [];
+        const sampleRow = rows.length > 0 ? rows[0] : {};
+        ensureSheetHeaders(sheet, sheetName, rows.length > 0 ? rows : [sampleRow]);
+        const headers = getHeaders(sheetName, rows.length > 0 ? rows : [sampleRow]);
+        if (!headers || headers.length === 0) {
+            return { success: false, message: 'لا يمكن استخراج رؤوس الورقة: ' + sheetName };
+        }
+
+        const lastRow = sheet.getLastRow();
+        const lastCol = Math.max(sheet.getLastColumn(), headers.length);
+        const numDataRows = Math.max(0, lastRow - 1);
+        if (numDataRows > 0) {
+            sheet.getRange(2, 1, numDataRows, lastCol).clearContent();
+        }
+
+        if (rows.length === 0) {
+            if (lastRow > 1) {
+                sheet.deleteRows(2, lastRow - 1);
+            }
+            invalidateHseSheetCaches(sheetName);
+            SpreadsheetApp.flush();
+            return { success: true, message: 'تم مسح بيانات ' + sheetName };
+        }
+
+        const values = rows.map(function(item) {
+            return headers.map(function(header) {
+                return toSheetCellValue_(header, item[header], sheetName);
+            });
+        });
+        sheet.getRange(2, 1, values.length, headers.length).setValues(values);
+
+        const expectedLastRow = 1 + values.length;
+        const currentLastRow = sheet.getLastRow();
+        if (currentLastRow > expectedLastRow) {
+            sheet.deleteRows(expectedLastRow + 1, currentLastRow - expectedLastRow);
+        }
+
+        invalidateHseSheetCaches(sheetName);
+        SpreadsheetApp.flush();
+        return { success: true, message: 'تم استبدال بيانات ' + sheetName + ' (' + rows.length + ' سجل)' };
+    } catch (error) {
+        Logger.log('Error in replaceFormSettingsSheetData_: ' + error.toString());
+        return { success: false, message: 'فشل استبدال بيانات ' + sheetName + ': ' + error.toString() };
+    }
+}
+
+function dedupeFormSettingsSitesForRead_(sites) {
+    const seen = {};
+    const result = [];
+    (sites || []).forEach(function(site) {
+        const key = normalizeFormSettingsNameKey_(site && site.name);
+        if (!key) {
+            result.push(site);
+            return;
+        }
+        if (seen[key]) return;
+        seen[key] = true;
+        result.push(site);
+    });
+    return result;
+}
+
+function dedupeFormSettingsPlacesForRead_(places) {
+    const seen = {};
+    const result = [];
+    (places || []).forEach(function(place) {
+        const siteId = String(place && place.siteId || '').trim();
+        const nameKey = normalizeFormSettingsNameKey_(place && place.name);
+        const key = siteId + '\u0000' + nameKey;
+        if (!nameKey) {
+            result.push(place);
+            return;
+        }
+        if (seen[key]) return;
+        seen[key] = true;
+        result.push(place);
+    });
+    return result;
+}
+
 // ============================================
 // دوال المواقع (Sites)
 // ============================================
@@ -265,9 +362,15 @@ function deleteSiteFromSheet(siteId, userData, siteNameOpt) {
             return removedSiteIds.indexOf(placeSiteId) === -1;
         });
         
-        // حفظ البيانات
-        saveToSheet(FORM_SETTINGS_SHEETS.SITES, filteredSites, spreadsheetId);
-        saveToSheet(FORM_SETTINGS_SHEETS.PLACES, filteredPlaces, spreadsheetId);
+        // حفظ البيانات — استبدال كامل لإزالة الصفوف المحذوفة والمكررة
+        const sitesSave = replaceFormSettingsSheetData_(FORM_SETTINGS_SHEETS.SITES, filteredSites, spreadsheetId);
+        if (!sitesSave || !sitesSave.success) {
+            return sitesSave || { success: false, message: 'فشل حذف الموقع من جدول المواقع' };
+        }
+        const placesSave = replaceFormSettingsSheetData_(FORM_SETTINGS_SHEETS.PLACES, filteredPlaces, spreadsheetId);
+        if (!placesSave || !placesSave.success) {
+            return placesSave || { success: false, message: 'فشل حذف الأماكن المرتبطة من جدول الأماكن' };
+        }
         
         return { success: true, message: 'تم حذف الموقع وجميع الأماكن المرتبطة به بنجاح' };
     } catch (error) {
@@ -293,7 +396,9 @@ function getAllSitesFromSheet() {
             return (a.name || '').localeCompare(b.name || '', 'ar');
         });
         
-        return { success: true, data: sites, count: sites.length };
+        const dedupedSites = dedupeFormSettingsSitesForRead_(sites);
+        
+        return { success: true, data: dedupedSites, count: dedupedSites.length };
     } catch (error) {
         Logger.log('Error in getAllSitesFromSheet: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء قراءة المواقع: ' + error.toString(), data: [] };
@@ -415,7 +520,7 @@ function deletePlaceFromSheet(placeId, userData) {
             return { success: false, message: 'المكان غير موجود' };
         }
         
-        return saveToSheet(FORM_SETTINGS_SHEETS.PLACES, filteredData, spreadsheetId);
+        return replaceFormSettingsSheetData_(FORM_SETTINGS_SHEETS.PLACES, filteredData, spreadsheetId);
     } catch (error) {
         Logger.log('Error in deletePlaceFromSheet: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء حذف المكان: ' + error.toString() };
@@ -444,7 +549,9 @@ function getAllPlacesFromSheet(siteId) {
             return (a.name || '').localeCompare(b.name || '', 'ar');
         });
         
-        return { success: true, data: places, count: places.length };
+        const dedupedPlaces = dedupeFormSettingsPlacesForRead_(places);
+        
+        return { success: true, data: dedupedPlaces, count: dedupedPlaces.length };
     } catch (error) {
         Logger.log('Error in getAllPlacesFromSheet: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء قراءة الأماكن: ' + error.toString(), data: [] };
@@ -931,9 +1038,15 @@ function saveFormSettingsToSheet(settingsData) {
             });
         });
         
-        // حفظ البيانات في الجداول الجديدة — استبدال كامل لضمان إزالة المحذوفات من الواجهة
-        saveToSheet(FORM_SETTINGS_SHEETS.SITES, sitesToSave, spreadsheetId);
-        saveToSheet(FORM_SETTINGS_SHEETS.PLACES, placesToSave, spreadsheetId);
+        // حفظ البيانات في الجداول — استبدال كامل (لا upsert) لضمان حذف المحذوفات والصفوف المكررة
+        const sitesSave = replaceFormSettingsSheetData_(FORM_SETTINGS_SHEETS.SITES, sitesToSave, spreadsheetId);
+        if (!sitesSave || !sitesSave.success) {
+            return sitesSave || { success: false, message: 'فشل حفظ جدول المواقع' };
+        }
+        const placesSave = replaceFormSettingsSheetData_(FORM_SETTINGS_SHEETS.PLACES, placesToSave, spreadsheetId);
+        if (!placesSave || !placesSave.success) {
+            return placesSave || { success: false, message: 'فشل حفظ جدول الأماكن' };
+        }
         if (departmentsToSave.length > 0) {
             saveToSheet(FORM_SETTINGS_SHEETS.DEPARTMENTS, departmentsToSave, spreadsheetId);
         }
