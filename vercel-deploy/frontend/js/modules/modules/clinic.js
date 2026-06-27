@@ -5005,29 +5005,52 @@ const Clinic = {
             const pageH = doc.internal.pageSize.getHeight();
             const ctX = pageW / 2;
             const companyName = AppState?.companySettings?.name || AppState?.companySettings?.companyName || 'شركة';
+            const companySecondary = AppState?.companySettings?.secondaryName || '';
+            const companyAddr = AppState?.companySettings?.address || '';
+            const companyPhone = AppState?.companySettings?.phone || '';
+            const companyEmail = AppState?.companySettings?.email || '';
+            const formVersion = AppState?.companySettings?.formVersion || '1.0';
             const logo = AppState?.companyLogo || '';
             const formCode = `CLINIC-MED-${new Date().toISOString().slice(0, 10)}`;
             const todayStr = new Date().toLocaleDateString('ar-SA');
 
             let topY = 8;
 
-            // System header: logo + company name + form code
+            // System header: logo + company name + secondary name + form code + title
             if (logo) {
                 try { doc.addImage(logo, 'PNG', margin, topY - 1, 15, 10); } catch (e) { /* skip */ }
             }
-            doc.setFontSize(9);
+            const nameX = margin + (logo ? 18 : 0);
+            doc.setFontSize(10);
             doc.setTextColor(15, 23, 42);
-            doc.text(companyName, margin + (logo ? 18 : 0), topY + 3);
-            doc.setFontSize(6);
+            doc.text(companyName, nameX, topY + 3);
+            if (companySecondary) {
+                doc.setFontSize(7);
+                doc.setTextColor(107, 114, 128);
+                doc.text(companySecondary, nameX, topY + 9);
+            }
+            const contactLine = [companyAddr, companyPhone, companyEmail].filter(Boolean).join(' | ');
+            if (contactLine) {
+                doc.setFontSize(5);
+                doc.setTextColor(148, 163, 184);
+                doc.text(contactLine, nameX, (companySecondary ? topY + 15 : topY + 9));
+            }
+            // Title area (right side)
+            doc.setFontSize(12);
+            doc.setTextColor(0, 56, 101);
+            doc.text('سجل الأدوية', pageW - margin, topY + 3, { align: 'right' });
+            doc.setFontSize(5);
             doc.setTextColor(148, 163, 184);
-            doc.text(formCode, pageW - margin, topY + 3, { align: 'right' });
+            doc.text(formCode, pageW - margin, topY + 9, { align: 'right' });
+            // Divider line (3px system-template style)
+            const hdrBottom = contactLine ? (companySecondary ? topY + 21 : topY + 15) : (companySecondary ? topY + 15 : topY + 9);
             doc.setDrawColor(0, 56, 101);
-            doc.setLineWidth(0.5);
-            doc.line(margin, topY + 9, pageW - margin, topY + 9);
-            topY += 12;
+            doc.setLineWidth(0.6);
+            doc.line(margin, hdrBottom, pageW - margin, hdrBottom);
+            topY = hdrBottom + 4;
 
             // Blue header bar
-            doc.setFillColor(26, 82, 118);
+            doc.setFillColor(0, 56, 101);
             doc.rect(0, topY, pageW, 8, 'F');
             doc.setFontSize(7);
             doc.setTextColor(255);
@@ -5037,7 +5060,7 @@ const Clinic = {
 
             // Title
             doc.setFontSize(14);
-            doc.setTextColor(26, 82, 118);
+            doc.setTextColor(0, 56, 101);
             doc.text('سجل الأدوية', ctX, topY, { align: 'center' });
             doc.setFontSize(7);
             doc.setTextColor(100);
@@ -5104,7 +5127,7 @@ const Clinic = {
                     ];
                 }),
                 styles: { font: 'Amiri', fontSize: 6.5, cellPadding: 1.5, halign: 'right' },
-                headStyles: { fillColor: [26, 82, 118], textColor: 255, fontSize: 7, halign: 'center' },
+                headStyles: { fillColor: [0, 56, 101], textColor: 255, fontSize: 7, halign: 'center' },
                 alternateRowStyles: { fillColor: [245, 247, 250] },
                 columnStyles: {
                     0: { halign: 'center', cellWidth: 8 },
@@ -5117,17 +5140,20 @@ const Clinic = {
                 margin: { left: margin, right: margin },
                 didDrawPage: function(data) {
                     const pg = doc.internal.getNumberOfPages();
-                    doc.setFillColor(26, 82, 118);
-                    doc.rect(0, 0, pageW, 8, 'F');
-                    doc.setFontSize(7);
-                    doc.setTextColor(255);
-                    doc.text(companyName, margin, 5.5);
-                    doc.text('سجل الأدوية', ctX, 5.5, { align: 'center' });
+                    doc.setFillColor(0, 56, 101);
+                    doc.rect(0, 0, pageW, 6, 'F');
                     doc.setFontSize(6);
-                    doc.setTextColor(150);
-                    doc.text(`الصفحة ${pg}`, pageW - margin, pageH - 6, { align: 'right' });
-                    doc.text(`تم الإنشاء: ${todayStr}`, margin, pageH - 6);
-                    doc.text(formCode, ctX, pageH - 6, { align: 'center' });
+                    doc.setTextColor(255);
+                    doc.text('سجل الأدوية', ctX, 4.5, { align: 'center' });
+                    // Footer: divider line + version + form code + page
+                    doc.setDrawColor(0, 56, 101);
+                    doc.setLineWidth(0.3);
+                    doc.line(margin, pageH - 9, pageW - margin, pageH - 9);
+                    doc.setFontSize(5.5);
+                    doc.setTextColor(148, 163, 184);
+                    doc.text(`الإصدار: ${formVersion}`, margin, pageH - 5);
+                    doc.text(formCode, ctX, pageH - 5, { align: 'center' });
+                    doc.text(`${todayStr} | صفحة ${pg}`, pageW - margin, pageH - 5, { align: 'right' });
                 }
             });
 
@@ -18071,29 +18097,52 @@ const Clinic = {
             const pageH = doc.internal.pageSize.getHeight();
             const ctX = pageW / 2;
             const companyName = AppState?.companySettings?.name || AppState?.companySettings?.companyName || 'شركة';
+            const companySecondary = AppState?.companySettings?.secondaryName || '';
+            const companyAddr = AppState?.companySettings?.address || '';
+            const companyPhone = AppState?.companySettings?.phone || '';
+            const companyEmail = AppState?.companySettings?.email || '';
+            const formVersion = AppState?.companySettings?.formVersion || '1.0';
             const logo = AppState?.companyLogo || '';
             const formCode = `CLINIC-DISP-${new Date().toISOString().slice(0, 10)}`;
             const todayStr = new Date().toLocaleDateString('ar-SA');
 
             let topY = 8;
 
-            // System header: logo + company name + form code
+            // System header: logo + company info (left) + form code + title (right)
             if (logo) {
                 try { doc.addImage(logo, 'PNG', margin, topY - 1, 15, 10); } catch (e) { /* skip */ }
             }
-            doc.setFontSize(9);
+            const nameX = margin + (logo ? 18 : 0);
+            doc.setFontSize(10);
             doc.setTextColor(15, 23, 42);
-            doc.text(companyName, margin + (logo ? 18 : 0), topY + 3);
-            doc.setFontSize(6);
+            doc.text(companyName, nameX, topY + 3);
+            if (companySecondary) {
+                doc.setFontSize(7);
+                doc.setTextColor(107, 114, 128);
+                doc.text(companySecondary, nameX, topY + 9);
+            }
+            const contactLine = [companyAddr, companyPhone, companyEmail].filter(Boolean).join(' | ');
+            if (contactLine) {
+                doc.setFontSize(5);
+                doc.setTextColor(148, 163, 184);
+                doc.text(contactLine, nameX, (companySecondary ? topY + 15 : topY + 9));
+            }
+            // Title area (right side)
+            doc.setFontSize(12);
+            doc.setTextColor(0, 56, 101);
+            doc.text('سجل الأدوية المنصرفة', pageW - margin, topY + 3, { align: 'right' });
+            doc.setFontSize(5);
             doc.setTextColor(148, 163, 184);
-            doc.text(formCode, pageW - margin, topY + 3, { align: 'right' });
+            doc.text(formCode, pageW - margin, topY + 9, { align: 'right' });
+            // Divider line (3px system-template style)
+            const hdrBottom = contactLine ? (companySecondary ? topY + 21 : topY + 15) : (companySecondary ? topY + 15 : topY + 9);
             doc.setDrawColor(0, 56, 101);
-            doc.setLineWidth(0.5);
-            doc.line(margin, topY + 9, pageW - margin, topY + 9);
-            topY += 12;
+            doc.setLineWidth(0.6);
+            doc.line(margin, hdrBottom, pageW - margin, hdrBottom);
+            topY = hdrBottom + 4;
 
             // Blue header bar
-            doc.setFillColor(26, 82, 118);
+            doc.setFillColor(0, 56, 101);
             doc.rect(0, topY, pageW, 8, 'F');
             doc.setFontSize(7);
             doc.setTextColor(255);
@@ -18103,7 +18152,7 @@ const Clinic = {
 
             // Title
             doc.setFontSize(14);
-            doc.setTextColor(26, 82, 118);
+            doc.setTextColor(0, 56, 101);
             doc.text('سجل الأدوية المنصرفة', ctX, topY, { align: 'center' });
             doc.setFontSize(7);
             doc.setTextColor(100);
@@ -18148,7 +18197,7 @@ const Clinic = {
                     item.notes || '-'
                 ]),
                 styles: { font: 'Amiri', fontSize: 7, cellPadding: 1.5, halign: 'right' },
-                headStyles: { fillColor: [26, 82, 118], textColor: 255, fontSize: 7, halign: 'center' },
+                headStyles: { fillColor: [0, 56, 101], textColor: 255, fontSize: 7, halign: 'center' },
                 alternateRowStyles: { fillColor: [245, 247, 250] },
                 columnStyles: {
                     0: { halign: 'center', cellWidth: 8 },
@@ -18157,17 +18206,20 @@ const Clinic = {
                 margin: { left: margin, right: margin },
                 didDrawPage: function(data) {
                     const pg = doc.internal.getNumberOfPages();
-                    doc.setFillColor(26, 82, 118);
-                    doc.rect(0, 0, pageW, 8, 'F');
-                    doc.setFontSize(7);
-                    doc.setTextColor(255);
-                    doc.text(companyName, margin, 5.5);
-                    doc.text('سجل الأدوية المنصرفة', ctX, 5.5, { align: 'center' });
+                    doc.setFillColor(0, 56, 101);
+                    doc.rect(0, 0, pageW, 6, 'F');
                     doc.setFontSize(6);
-                    doc.setTextColor(150);
-                    doc.text(`الصفحة ${pg}`, pageW - margin, pageH - 6, { align: 'right' });
-                    doc.text(`تم الإنشاء: ${todayStr}`, margin, pageH - 6);
-                    doc.text(formCode, ctX, pageH - 6, { align: 'center' });
+                    doc.setTextColor(255);
+                    doc.text('سجل الأدوية المنصرفة', ctX, 4.5, { align: 'center' });
+                    // Footer: divider line + version + form code + page
+                    doc.setDrawColor(0, 56, 101);
+                    doc.setLineWidth(0.3);
+                    doc.line(margin, pageH - 9, pageW - margin, pageH - 9);
+                    doc.setFontSize(5.5);
+                    doc.setTextColor(148, 163, 184);
+                    doc.text(`الإصدار: ${formVersion}`, margin, pageH - 5);
+                    doc.text(formCode, ctX, pageH - 5, { align: 'center' });
+                    doc.text(`${todayStr} | صفحة ${pg}`, pageW - margin, pageH - 5, { align: 'right' });
                 }
             });
 
