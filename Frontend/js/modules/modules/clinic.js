@@ -4981,19 +4981,137 @@ const Clinic = {
         XLSX.writeFile(workbook, fileName);
     },
 
-    exportMedicationsToPDF() {
+    async exportMedicationsToPDF() {
         const medications = this.getFilteredMedications();
         if (medications.length === 0) {
             Notification?.info?.('لا توجد بيانات لتصديرها');
             return;
         }
 
+        // Try direct PDF download via jsPDF + autoTable; fall back to window.print()
+        try {
+            Notification?.info?.('جاري إنشاء التقرير...');
+
+            const { success, doc } = await this._createClinicPdfWithFont({
+                orientation: 'landscape',
+                format: 'a4',
+                fontUrl: 'https://fonts.gstatic.com/s/amiri/v17/J7aRnpd8CGxBHpUut6k6.ttf',
+                fontFamily: 'Amiri'
+            });
+            if (!success || !doc) throw new Error('فشل تحميل مكتبة PDF أو الخط العربي');
+
+            const margin = 8;
+            const pageW = doc.internal.pageSize.getWidth();
+            const pageH = doc.internal.pageSize.getHeight();
+            const ctX = pageW / 2;
+            const topY = 14;
+
+            // Header bar
+            doc.setFillColor(26, 82, 118);
+            doc.rect(0, 0, pageW, 10, 'F');
+            doc.setFontSize(8);
+            doc.setTextColor(255);
+            const companyName = AppState?.companySettings?.companyName || 'شركة';
+            doc.text(companyName, margin, 7);
+            doc.text('سجل الأدوية', ctX, 7, { align: 'center' });
+
+            // Title
+            doc.setFontSize(16);
+            doc.setTextColor(26, 82, 118);
+            doc.text('سجل الأدوية', ctX, topY + 12, { align: 'center' });
+
+            // Meta line
+            doc.setFontSize(7);
+            doc.setTextColor(100);
+            const todayStr = new Date().toLocaleDateString('ar-SA');
+            doc.text(`تاريخ التقرير: ${todayStr}`, margin, topY + 20);
+            doc.text(`إجمالي السجلات: ${medications.length}`, pageW - margin, topY + 20, { align: 'right' });
+
+            // Summary badges
+            const activeCount = medications.filter(m => m.status === 'ساري').length;
+            const expiringCount = medications.filter(m => m.status === 'قريب الانتهاء').length;
+            const expiredCount = medications.filter(m => m.status === 'منتهي').length;
+            const sumY = topY + 26;
+            doc.setDrawColor(220);
+            doc.setFillColor(248, 249, 251);
+            doc.roundedRect(margin, sumY, pageW - 2 * margin, 10, 1.5, 1.5, 'FD');
+            doc.setFontSize(8);
+            doc.text(`ساري`, margin + 8, sumY + 7);
+            doc.text(`: ${activeCount}`, margin + 22, sumY + 7);
+            doc.setTextColor(255, 152, 0);
+            doc.text(`قريب الانتهاء`, margin + 50, sumY + 7);
+            doc.text(`: ${expiringCount}`, margin + 76, sumY + 7);
+            doc.setTextColor(198, 40, 40);
+            doc.text(`منتهي`, margin + 100, sumY + 7);
+            doc.text(`: ${expiredCount}`, margin + 118, sumY + 7);
+            doc.setTextColor(46, 125, 50);
+            doc.text(`إجمالي`, pageW - margin - 30, sumY + 7);
+            doc.text(`: ${medications.length}`, pageW - margin - 16, sumY + 7);
+
+            // Table
+            const statusColorMap = {
+                'ساري': [46, 125, 50],
+                'قريب الانتهاء': [255, 152, 0],
+                'منتهي': [198, 40, 40]
+            };
+
+            doc.autoTable({
+                startY: sumY + 14,
+                head: [['#', 'اسم الدواء', 'النوع', 'الاستخدام', 'تاريخ الشراء', 'تاريخ الانتهاء', 'الحالة', 'الأيام', 'الكمية', 'المنصرف', 'الرصيد']],
+                body: medications.map((item, i) => {
+                    const qty = item.quantityAdded ?? item.quantity ?? 0;
+                    const rem = item.remainingQuantity ?? item.quantity ?? 0;
+                    const disp = Math.max(0, qty - rem);
+                    return [
+                        i + 1,
+                        item.name || '',
+                        item.type || '',
+                        item.usage || item.notes || '—',
+                        this.formatDate(item.purchaseDate),
+                        item.expiryDate ? this.formatDate(item.expiryDate) : '—',
+                        { content: item.status || 'ساري', styles: { textColor: statusColorMap[item.status] || [0, 0, 0] } },
+                        item.daysRemaining ?? '—',
+                        qty,
+                        disp,
+                        rem
+                    ];
+                }),
+                styles: { font: 'Amiri', fontSize: 6.5, cellPadding: 1.5, halign: 'right' },
+                headStyles: { fillColor: [26, 82, 118], textColor: 255, fontSize: 7, halign: 'center' },
+                alternateRowStyles: { fillColor: [245, 247, 250] },
+                columnStyles: {
+                    0: { halign: 'center', cellWidth: 8 },
+                    6: { halign: 'center' },
+                    7: { halign: 'center' },
+                    8: { halign: 'center', cellWidth: 10 },
+                    9: { halign: 'center', cellWidth: 10 },
+                    10: { halign: 'center', cellWidth: 10 }
+                },
+                margin: { left: margin, right: margin },
+                didDrawPage: function(data) {
+                    const pg = doc.internal.getNumberOfPages();
+                    doc.setFontSize(6);
+                    doc.setTextColor(150);
+                    doc.text(`الصفحة ${pg}`, pageW - margin, pageH - 6, { align: 'right' });
+                    doc.text(`تم الإنشاء: ${todayStr}`, margin, pageH - 6);
+                }
+            });
+
+            const fileName = `سجل_الأدوية_${new Date().toISOString().slice(0, 10)}.pdf`;
+            doc.save(fileName);
+            Notification?.success?.(`تم تصدير التقرير (${medications.length} سجل)`);
+        } catch (err) {
+            Utils.safeWarn('⚠️ فشل التصدير المباشر، تجربة طريقة الطباعة:', err);
+            this._fallbackPrintMedicationsPDF(medications);
+        }
+    },
+
+    _fallbackPrintMedicationsPDF(medications) {
         const rows = medications.map((item) => {
-            const quantityAdded = item.quantityAdded ?? item.quantity ?? 0;
-            const remainingQuantity = item.remainingQuantity ?? item.quantity ?? 0;
-            const dispensed = Math.max(0, quantityAdded - remainingQuantity);
-            return `
-            <tr>
+            const qty = item.quantityAdded ?? item.quantity ?? 0;
+            const rem = item.remainingQuantity ?? item.quantity ?? 0;
+            const disp = Math.max(0, qty - rem);
+            return `<tr>
                 <td>${Utils.escapeHTML(item.name || '')}</td>
                 <td>${Utils.escapeHTML(item.type || '')}</td>
                 <td>${Utils.escapeHTML(item.usage || item.notes || '—')}</td>
@@ -5001,34 +5119,18 @@ const Clinic = {
                 <td>${item.expiryDate ? this.formatDate(item.expiryDate) : '—'}</td>
                 <td>${Utils.escapeHTML(item.status || 'ساري')}</td>
                 <td>${item.daysRemaining ?? '—'}</td>
-                <td class="text-center">${quantityAdded}</td>
-                <td class="text-center">${dispensed}</td>
-                <td class="text-center">${remainingQuantity}</td>
-            </tr>
-        `;
+                <td class="text-center">${qty}</td>
+                <td class="text-center">${disp}</td>
+                <td class="text-center">${rem}</td>
+            </tr>`;
         }).join('');
 
-        const content = `
-            <table>
-                <thead>
-                    <tr>
-                        <th>اسم الدواء</th>
-                        <th>نوع الدواء</th>
-                        <th>الاستخدام</th>
-                        <th>تاريخ الشراء</th>
-                        <th>تاريخ انتهاء الصلاحية</th>
-                        <th>الحالة</th>
-                        <th>عدد الأيام المتبقية</th>
-                        <th>الكمية</th>
-                        <th>المنصرف</th>
-                        <th>الرصيد</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${rows}
-                </tbody>
-            </table>
-        `;
+        const content = `<table><thead><tr>
+            <th>اسم الدواء</th><th>نوع الدواء</th><th>الاستخدام</th>
+            <th>تاريخ الشراء</th><th>تاريخ انتهاء الصلاحية</th>
+            <th>الحالة</th><th>عدد الأيام المتبقية</th>
+            <th>الكمية</th><th>المنصرف</th><th>الرصيد</th>
+        </tr></thead><tbody>${rows}</tbody></table>`;
 
         const formCode = `CLINIC-MED-${new Date().toISOString().slice(0, 10)}`;
         const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
@@ -5040,18 +5142,43 @@ const Clinic = {
             const url = URL.createObjectURL(blob);
             const printWindow = window.open(url, '_blank');
             if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    }, 400);
-                };
+                printWindow.onload = () => { setTimeout(() => { printWindow.print(); setTimeout(() => URL.revokeObjectURL(url), 1000); }, 400); };
             } else {
                 Notification?.error?.('يرجى السماح للنوافذ المنبثقة لتصدير PDF');
             }
         } catch (error) {
             Utils.safeError('فشل تصدير سجل الأدوية:', error);
             Notification?.error?.('تعذر تصدير سجل الأدوية');
+        }
+    },
+
+    async _createClinicPdfWithFont({ orientation = 'portrait', format = 'a4', fontUrl, fontFamily } = {}) {
+        const JsPDF = (typeof Utils !== 'undefined' && Utils.PdfExport)
+            ? Utils.PdfExport.getJsPdfConstructor()
+            : (window.jspdf?.jsPDF || window.jsPDF?.jsPDF || window.jsPDF || null);
+        if (!JsPDF) return { success: false };
+
+        try {
+            // Use cached font if available
+            if (!this._arabicFontBase64) {
+                const resp = await fetch(fontUrl, { cache: 'force-cache' });
+                if (!resp.ok) throw new Error('خطأ في تحميل الخط: ' + resp.status);
+                const blob = await resp.blob();
+                this._arabicFontBase64 = await new Promise(resolve => {
+                    const r = new FileReader();
+                    r.onload = () => resolve(r.result.split(',')[1]);
+                    r.readAsDataURL(blob);
+                });
+            }
+
+            const doc = new JsPDF(orientation, 'mm', format);
+            doc.addFileToVFS(fontFamily + '.ttf', this._arabicFontBase64);
+            doc.addFont(fontFamily + '.ttf', fontFamily, 'normal');
+            doc.setFont(fontFamily);
+            return { success: true, doc };
+        } catch (e) {
+            Utils.safeWarn('⚠️ فشل تحميل الخط العربي:', e);
+            return { success: false, error: e };
         }
     },
 
@@ -17866,95 +17993,151 @@ const Clinic = {
     /**
      * تصدير سجل الأدوية المنصرفة إلى PDF (طباعة/حفظ كـ PDF)
      */
-    exportDispensedMedicationsToPDF(medications) {
+    async exportDispensedMedicationsToPDF(medications) {
         if (!medications || medications.length === 0) {
             Notification?.warning?.('لا توجد بيانات للتصدير');
             return;
         }
 
         try {
-            const tableRows = medications.map((item, index) => {
-                let displayDate = item.visitDate || item.createdAt || '';
-                if (displayDate) {
-                    try {
-                        const testDate = new Date(displayDate);
-                        if (isNaN(testDate.getTime())) {
-                            displayDate = item.createdAt || '';
-                        }
-                    } catch (e) {
-                        displayDate = item.createdAt || '';
-                    }
+            Notification?.info?.('جاري إنشاء التقرير...');
+
+            const { success, doc } = await this._createClinicPdfWithFont({
+                orientation: 'landscape',
+                format: 'a4',
+                fontUrl: 'https://fonts.gstatic.com/s/amiri/v17/J7aRnpd8CGxBHpUut6k6.ttf',
+                fontFamily: 'Amiri'
+            });
+            if (!success || !doc) throw new Error('فشل تحميل مكتبة PDF أو الخط العربي');
+
+            const margin = 8;
+            const pageW = doc.internal.pageSize.getWidth();
+            const pageH = doc.internal.pageSize.getHeight();
+            const ctX = pageW / 2;
+
+            // Header bar
+            doc.setFillColor(26, 82, 118);
+            doc.rect(0, 0, pageW, 10, 'F');
+            doc.setFontSize(8);
+            doc.setTextColor(255);
+            const companyName = AppState?.companySettings?.companyName || 'شركة';
+            doc.text(companyName, margin, 7);
+            doc.text('سجل الأدوية المنصرفة', ctX, 7, { align: 'center' });
+
+            // Title
+            doc.setFontSize(16);
+            doc.setTextColor(26, 82, 118);
+            doc.text('سجل الأدوية المنصرفة', ctX, 28, { align: 'center' });
+
+            // Meta line
+            const todayStr = new Date().toLocaleDateString('ar-SA');
+            doc.setFontSize(7);
+            doc.setTextColor(100);
+            doc.text(`تاريخ التقرير: ${todayStr}`, margin, 36);
+            doc.text(`إجمالي السجلات: ${medications.length}`, pageW - margin, 36, { align: 'right' });
+            doc.setDrawColor(220);
+            doc.line(margin, 40, pageW - margin, 40);
+
+            const formatDate = (item) => {
+                let d = item.visitDate || item.createdAt || '';
+                if (d) { try { if (isNaN(new Date(d).getTime())) d = item.createdAt || ''; } catch (e) { d = item.createdAt || ''; } }
+                return this.formatDate(d, true);
+            };
+
+            doc.autoTable({
+                startY: 44,
+                head: [['م', 'تاريخ الصرف', 'الكود الوظيفي', 'اسم المريض', 'الإدارة', 'المصنع', 'الموقع', 'اسم الدواء', 'الكمية', 'ملاحظات']],
+                body: medications.map((item, i) => [
+                    i + 1,
+                    formatDate(item),
+                    item.employeeCode || '',
+                    item.employeeName || '',
+                    item.employeeDepartment || '',
+                    item.factory || '-',
+                    item.location || '-',
+                    item.medicationName || '',
+                    (item.quantity || '') + ' ' + (item.unit || ''),
+                    item.notes || '-'
+                ]),
+                styles: { font: 'Amiri', fontSize: 7, cellPadding: 1.5, halign: 'right' },
+                headStyles: { fillColor: [26, 82, 118], textColor: 255, fontSize: 7, halign: 'center' },
+                alternateRowStyles: { fillColor: [245, 247, 250] },
+                columnStyles: {
+                    0: { halign: 'center', cellWidth: 8 },
+                    8: { halign: 'center', cellWidth: 18 }
+                },
+                margin: { left: margin, right: margin },
+                didDrawPage: function(data) {
+                    const pg = doc.internal.getNumberOfPages();
+                    doc.setFontSize(6);
+                    doc.setTextColor(150);
+                    doc.text(`الصفحة ${pg}`, pageW - margin, pageH - 6, { align: 'right' });
+                    doc.text(`تم الإنشاء: ${todayStr}`, margin, pageH - 6);
                 }
-                const visitDate = this.formatDate(displayDate, true);
-                return `
-                    <tr>
-                        <td style="border: 1px solid #d1d5db; padding: 6px; text-align: center;">${index + 1}</td>
-                        <td style="border: 1px solid #d1d5db; padding: 6px; text-align: right;">${Utils.escapeHTML(visitDate)}</td>
-                        <td style="border: 1px solid #d1d5db; padding: 6px; text-align: right;">${Utils.escapeHTML(item.employeeCode)}</td>
-                        <td style="border: 1px solid #d1d5db; padding: 6px; text-align: right;">${Utils.escapeHTML(item.employeeName)}</td>
-                        <td style="border: 1px solid #d1d5db; padding: 6px; text-align: right;">${Utils.escapeHTML(item.employeeDepartment)}</td>
-                        <td style="border: 1px solid #d1d5db; padding: 6px; text-align: right;">${Utils.escapeHTML(item.factory || '-')}</td>
-                        <td style="border: 1px solid #d1d5db; padding: 6px; text-align: right;">${Utils.escapeHTML(item.location || '-')}</td>
-                        <td style="border: 1px solid #d1d5db; padding: 6px; text-align: right;">${Utils.escapeHTML(item.medicationName)}</td>
-                        <td style="border: 1px solid #d1d5db; padding: 6px; text-align: center;">${item.quantity} ${Utils.escapeHTML(item.unit)}</td>
-                        <td style="border: 1px solid #d1d5db; padding: 6px; text-align: right;">${Utils.escapeHTML(item.notes || '-')}</td>
-                    </tr>
-                `;
-            }).join('');
+            });
 
-            const formCode = `CLINIC-DISPENSED-MEDS-${new Date().toISOString().slice(0, 10)}`;
-            const formTitle = 'سجل الأدوية المنصرفة';
+            const fileName = `سجل_الأدوية_المنصرفة_${new Date().toISOString().slice(0, 10)}.pdf`;
+            doc.save(fileName);
+            Notification?.success?.(`تم تصدير التقرير (${medications.length} سجل)`);
+        } catch (error) {
+            Utils.safeWarn('⚠️ فشل التصدير المباشر، تجربة طريقة الطباعة:', error);
+            this._fallbackPrintDispensedMedicationsPDF(medications);
+        }
+    },
 
-            const content = `
-                <div style="margin-bottom: 20px;">
-                    <h2 style="text-align: center; color: #1f2937; margin-bottom: 15px;">سجل الأدوية المنصرفة</h2>
-                    <p style="text-align: center; color: #6b7280; font-size: 14px;">إجمالي السجلات: ${medications.length}</p>
-                </div>
-                <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 10px;">
-                    <thead>
-                        <tr style="background-color: #f3f4f6;">
-                            <th style="border: 1px solid #d1d5db; padding: 8px; text-align: center; font-weight: bold;">م</th>
-                            <th style="border: 1px solid #d1d5db; padding: 8px; text-align: right; font-weight: bold;">تاريخ الصرف</th>
-                            <th style="border: 1px solid #d1d5db; padding: 8px; text-align: right; font-weight: bold;">الكود الوظيفي</th>
-                            <th style="border: 1px solid #d1d5db; padding: 8px; text-align: right; font-weight: bold;">اسم المريض</th>
-                            <th style="border: 1px solid #d1d5db; padding: 8px; text-align: right; font-weight: bold;">الإدارة</th>
-                            <th style="border: 1px solid #d1d5db; padding: 8px; text-align: right; font-weight: bold;">المصنع</th>
-                            <th style="border: 1px solid #d1d5db; padding: 8px; text-align: right; font-weight: bold;">الموقع</th>
-                            <th style="border: 1px solid #d1d5db; padding: 8px; text-align: right; font-weight: bold;">اسم الدواء</th>
-                            <th style="border: 1px solid #d1d5db; padding: 8px; text-align: center; font-weight: bold;">الكمية</th>
-                            <th style="border: 1px solid #d1d5db; padding: 8px; text-align: right; font-weight: bold;">ملاحظات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${tableRows}
-                    </tbody>
-                </table>
-            `;
+    _fallbackPrintDispensedMedicationsPDF(medications) {
+        const tableRows = medications.map((item, index) => {
+            let displayDate = item.visitDate || item.createdAt || '';
+            if (displayDate) {
+                try { const testDate = new Date(displayDate); if (isNaN(testDate.getTime())) displayDate = item.createdAt || ''; } catch (e) { displayDate = item.createdAt || ''; }
+            }
+            const visitDate = this.formatDate(displayDate, true);
+            return `<tr>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:center;">${index + 1}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${Utils.escapeHTML(visitDate)}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${Utils.escapeHTML(item.employeeCode)}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${Utils.escapeHTML(item.employeeName)}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${Utils.escapeHTML(item.employeeDepartment)}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${Utils.escapeHTML(item.factory || '-')}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${Utils.escapeHTML(item.location || '-')}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${Utils.escapeHTML(item.medicationName)}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:center;">${item.quantity} ${Utils.escapeHTML(item.unit)}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${Utils.escapeHTML(item.notes || '-')}</td>
+            </tr>`;
+        }).join('');
 
-            const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-                ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, true, { source: 'ClinicDispensedMeds' }, new Date().toISOString(), new Date().toISOString())
-                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body>${content}</body></html>`;
+        const formCode = `CLINIC-DISPENSED-MEDS-${new Date().toISOString().slice(0, 10)}`;
+        const formTitle = 'سجل الأدوية المنصرفة';
+        const content = `<table style="width:100%;border-collapse:collapse;font-size:10px;"><thead><tr style="background-color:#f3f4f6;">
+            <th style="border:1px solid #d1d5db;padding:8px;text-align:center;font-weight:bold;">م</th>
+            <th style="border:1px solid #d1d5db;padding:8px;text-align:right;font-weight:bold;">تاريخ الصرف</th>
+            <th style="border:1px solid #d1d5db;padding:8px;text-align:right;font-weight:bold;">الكود الوظيفي</th>
+            <th style="border:1px solid #d1d5db;padding:8px;text-align:right;font-weight:bold;">اسم المريض</th>
+            <th style="border:1px solid #d1d5db;padding:8px;text-align:right;font-weight:bold;">الإدارة</th>
+            <th style="border:1px solid #d1d5db;padding:8px;text-align:right;font-weight:bold;">المصنع</th>
+            <th style="border:1px solid #d1d5db;padding:8px;text-align:right;font-weight:bold;">الموقع</th>
+            <th style="border:1px solid #d1d5db;padding:8px;text-align:right;font-weight:bold;">اسم الدواء</th>
+            <th style="border:1px solid #d1d5db;padding:8px;text-align:center;font-weight:bold;">الكمية</th>
+            <th style="border:1px solid #d1d5db;padding:8px;text-align:right;font-weight:bold;">ملاحظات</th>
+        </tr></thead><tbody>${tableRows}</tbody></table>`;
 
+        const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
+            ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, true, { source: 'ClinicDispensedMeds' }, new Date().toISOString(), new Date().toISOString())
+            : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body>${content}</body></html>`;
+
+        try {
             const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const printWindow = window.open(url, '_blank');
-
             if (printWindow) {
                 printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                        }, 1000);
-                        Notification?.success?.('تم تحضير السجلات للطباعة/الحفظ كـ PDF');
-                    }, 250);
+                    setTimeout(() => { printWindow.print(); setTimeout(() => { URL.revokeObjectURL(url); }, 1000); Notification?.success?.('تم تحضير السجلات للطباعة/الحفظ كـ PDF'); }, 250);
                 };
             } else {
                 URL.revokeObjectURL(url);
                 Notification?.error?.('يرجى السماح للنوافذ المنبثقة لتصدير PDF');
             }
         } catch (error) {
-            URL.revokeObjectURL(url);
             Utils.safeError('خطأ في تصدير PDF:', error);
             Notification?.error?.('فشل تصدير PDF: ' + (error?.message || error));
         }

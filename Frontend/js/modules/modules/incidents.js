@@ -7642,50 +7642,32 @@ const Incidents = {
         const returnTab = this._formReturnTab || 'incidents-list';
         const wasEdit = !!this.currentEditId;
         try {
-            // 1. حفظ البيانات فوراً في الذاكرة
             if (wasEdit) {
                 const index = AppState.appData.incidents.findIndex(i => i.id === this.currentEditId);
                 if (index !== -1) {
                     AppState.appData.incidents[index] = formData;
                 }
-                Notification.success('تم تحديث الحادث بنجاح');
             } else {
                 AppState.appData.incidents.push(formData);
-                Notification.success('تم تسجيل الحادث بنجاح');
             }
 
-            // حفظ البيانات باستخدام window.DataManager
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                 window.DataManager.save();
             } else {
                 Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
             }
 
-            // 2. إعادة القائمة/التبويبات فوراً (لا تنتظر المزامنة)
+            await this.persistIncidentToServer(formData, { syncRegistry: true, silent: true });
+
+            Notification.success(wasEdit ? 'تم تحديث الحادث بنجاح' : 'تم تسجيل الحادث بنجاح');
+
             await this.exitIncidentForm(returnTab);
 
-            // 3. تحديث Dashboard فوراً
             if (typeof Dashboard !== 'undefined' && Dashboard.refreshIncidents) {
                 Dashboard.refreshIncidents();
             }
 
-            // 4. معالجة المهام الخلفية دون حجب الواجهة
-            Promise.all([
-                wasEdit
-                    ? this.updateRegistryEntry(formData, { persist: false }).catch(error => {
-                        Utils.safeError('خطأ في تحديث السجل:', error);
-                    })
-                    : this.addToRegistry(formData, { persist: false }).catch(error => {
-                        Utils.safeError('خطأ في إضافة السجل:', error);
-                    }),
-                this.processIncidentBackgroundTasks(formData).catch(error => {
-                    Utils.safeError('خطأ في معالجة المهام الخلفية:', error);
-                })
-            ]).then(() => {
-                return this.saveRegistryData().catch(error => {
-                    Utils.safeError('خطأ في حفظ سجل الحوادث:', error);
-                });
-            }).catch(error => {
+            this.processIncidentBackgroundTasks(formData, { skipServerPersist: true }).catch((error) => {
                 Utils.safeError('خطأ في معالجة المهام الخلفية:', error);
             });
 
@@ -7702,7 +7684,8 @@ const Incidents = {
     },
 
     // معالجة المهام الخلفية بعد حفظ الحادث
-    async processIncidentBackgroundTasks(formData) {
+    async processIncidentBackgroundTasks(formData, options = {}) {
+        const { skipServerPersist = false } = options;
         try {
             // معالجة المرفقات ورفع الصور إلى Google Drive
             let needsUpdate = false;
@@ -7757,8 +7740,11 @@ const Incidents = {
                 }
             }
 
-            // حفظ تلقائي في Google Sheets
-            await GoogleIntegration.autoSave('Incidents', AppState.appData.incidents);
+            // مزامنة صف الحادث مع الخادم (بدل autoSave للمصفوفة كاملة)
+            if (!skipServerPersist || needsUpdate) {
+                const latest = AppState.appData.incidents.find(i => i.id === formData.id) || formData;
+                await this.persistIncidentToServer(latest, { syncRegistry: false, silent: true });
+            }
 
             // إنشاء إجراءات تلقائية في Action Tracking إذا كانت هناك إجراءات في خطة الإجراءات
             if (formData.actionPlan && Array.isArray(formData.actionPlan) && formData.actionPlan.length > 0) {
@@ -7981,6 +7967,127 @@ const Incidents = {
             employeeNumber: notificationData.reporterCode || base.employeeNumber || '',
             updatedAt: new Date().toISOString()
         };
+    },
+
+    getIncidentMutationUserData() {
+        const u = AppState.currentUser || {};
+        let permissions = u.permissions || {};
+        if (typeof permissions === 'string') {
+            try { permissions = JSON.parse(permissions); } catch (_e) { permissions = {}; }
+        }
+        return {
+            id: u.id || '',
+            name: u.name || u.displayName || '',
+            email: u.email || '',
+            role: u.role || '',
+            permissions
+        };
+    },
+
+    buildIncidentServerUpdatePayload(incident, extra = {}) {
+        if (!incident) return { ...extra };
+        const safeDateIso = (this.getIncidentDateValue(incident) || new Date()).toISOString();
+        let investigation = incident.investigation;
+        if (investigation && typeof investigation === 'string') {
+            try { investigation = JSON.parse(investigation); } catch (_e) { /* keep */ }
+        }
+        return {
+            id: incident.id,
+            title: incident.title || `حادث - ${incident.incidentType || ''}`.trim(),
+            description: incident.description || '',
+            date: safeDateIso,
+            status: incident.status,
+            severity: incident.severity || 'متوسطة',
+            location: incident.location || '',
+            siteId: incident.siteId || '',
+            siteName: incident.siteName || '',
+            sublocation: incident.sublocation || '',
+            sublocationId: incident.sublocationId || '',
+            sublocationName: incident.sublocationName || '',
+            incidentType: incident.incidentType || '',
+            affiliation: incident.affiliation || '',
+            contractorName: incident.contractorName || '',
+            department: incident.department || '',
+            affectedName: incident.affectedName || '',
+            affectedCode: incident.affectedCode || '',
+            affectedJobTitle: incident.affectedJobTitle || '',
+            affectedDepartment: incident.affectedDepartment || '',
+            affectedType: incident.affectedType || '',
+            affectedContact: incident.affectedContact || '',
+            employeeName: incident.employeeName || '',
+            employeeJob: incident.employeeJob || '',
+            employeeDepartment: incident.employeeDepartment || '',
+            employeeCode: incident.reporterCode || incident.employeeCode || '',
+            employeeNumber: incident.reporterCode || incident.employeeNumber || '',
+            employeeAffectedCode: incident.affectedCode || incident.employeeAffectedCode || '',
+            reportedBy: incident.reportedBy || incident.reporterName || '',
+            reporterName: incident.reporterName || incident.reportedBy || '',
+            reporterCode: incident.reporterCode || '',
+            injuryDescription: incident.injuryDescription || '',
+            losses: incident.losses || '',
+            actionsTaken: incident.actionsTaken || incident.actions || '',
+            actions: incident.actions || incident.actionsTaken || '',
+            injuredPart: incident.injuredPart || '',
+            equipmentCause: incident.equipmentCause || '',
+            notificationId: incident.notificationId || '',
+            notificationNumber: incident.notificationNumber || '',
+            isoCode: incident.isoCode || '',
+            image: incident.image || '',
+            attachments: incident.attachments || [],
+            actionPlan: incident.actionPlan || [],
+            investigation: investigation ?? incident.investigation,
+            rootCause: incident.rootCause || '',
+            correctiveAction: incident.correctiveAction || '',
+            preventiveAction: incident.preventiveAction || '',
+            requiresApproval: !!incident.requiresApproval,
+            approvedBy: incident.approvedBy || null,
+            approvedAt: incident.approvedAt || null,
+            rejectedBy: incident.rejectedBy || null,
+            rejectionReason: incident.rejectionReason || '',
+            rejectedAt: incident.rejectedAt || null,
+            updatedAt: incident.updatedAt || new Date().toISOString(),
+            createdAt: incident.createdAt || new Date().toISOString(),
+            createdBy: incident.createdBy || null,
+            userData: this.getIncidentMutationUserData(),
+            ...extra
+        };
+    },
+
+    async persistIncidentToServer(incident, options = {}) {
+        const { syncRegistry = true, silent = false } = options;
+        if (!incident?.id) {
+            throw new Error('معرف الحادث غير موجود');
+        }
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) {
+            throw new Error('الاتصال بالخادم غير متاح — تحقق من الإعدادات');
+        }
+
+        const updatePayload = this.buildIncidentServerUpdatePayload(incident);
+        const result = await GoogleIntegration.sendRequest({
+            action: 'updateIncident',
+            data: { incidentId: incident.id, updateData: updatePayload }
+        });
+
+        if (!result?.success) {
+            throw new Error(result?.message || 'فشل حفظ الحادث على الخادم');
+        }
+
+        if (typeof GoogleIntegration.clearCache === 'function') {
+            GoogleIntegration.clearCache('Incidents');
+        }
+
+        if (syncRegistry) {
+            try {
+                await this.updateRegistryEntry(incident, { persist: true });
+            } catch (regErr) {
+                Utils.safeWarn('⚠️ فشل مزامنة سجل الحادث بعد الحفظ:', regErr);
+            }
+        }
+
+        if (!silent) {
+            Utils.safeLog(`✅ تم حفظ الحادث ${incident.id} على الخادم`);
+        }
+        return result;
     },
 
     applyNotificationDraftToForm(draft, helpers = {}) {
@@ -8858,33 +8965,27 @@ const Incidents = {
 
                 AppState.appData.incidents[incidentIndex] = updatedIncident;
 
-                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                    window.DataManager.save();
+                try {
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        window.DataManager.save();
+                    }
+
+                    await this.persistIncidentToServer(updatedIncident, { syncRegistry: true, silent: true });
+
+                    Loading.hide();
+                    Notification.success('تم تحديث الحادث بنجاح');
+                    modal.remove();
+                    this._notificationEditContext = null;
+                    await this._refreshIncidentsViewsAfterUpdate(updatedIncident.id);
+
+                    this.processIncidentBackgroundTasks(updatedIncident, { skipServerPersist: true }).catch((error) => {
+                        Utils.safeError('خطأ في معالجة المرفقات:', error);
+                    });
+                } catch (serverError) {
+                    Loading.hide();
+                    Utils.safeError('خطأ في حفظ الحادث على الخادم:', serverError);
+                    Notification.error('فشل حفظ التعديل: ' + (serverError.message || 'خطأ غير معروف'));
                 }
-
-                if (typeof Dashboard !== 'undefined' && Dashboard.refreshIncidents) {
-                    Dashboard.refreshIncidents();
-                }
-
-                Loading.hide();
-                Notification.success('تم تحديث الحادث بنجاح');
-                modal.remove();
-                this._notificationEditContext = null;
-
-                if (this.currentTab === 'incidents-list') {
-                    this.loadIncidentsList();
-                }
-
-                Promise.all([
-                    this.updateRegistryEntry(updatedIncident, { persist: false }).catch((error) => {
-                        Utils.safeError('خطأ في تحديث السجل:', error);
-                    }),
-                    this.processIncidentBackgroundTasks(updatedIncident).catch((error) => {
-                        Utils.safeError('خطأ في معالجة المهام الخلفية:', error);
-                    })
-                ]).then(() => this.saveRegistryData().catch((error) => {
-                    Utils.safeError('خطأ في حفظ سجل الحوادث:', error);
-                }));
 
                 return;
             }
@@ -9550,13 +9651,21 @@ const Incidents = {
                     permissions: AppState.currentUser?.permissions || {}
                 };
 
-            await GoogleIntegration.sendRequest({
+            const result = await GoogleIntegration.sendRequest({
                     action: 'deleteIncident',
                     data: {
                         incidentId: id,
                         userData: userData
                     }
                 });
+
+            if (!result?.success) {
+                throw new Error(result?.message || 'فشل حذف الحادث على الخادم');
+            }
+
+            if (typeof GoogleIntegration.clearCache === 'function') {
+                GoogleIntegration.clearCache('Incidents');
+            }
 
             AppState.appData.incidents = (AppState.appData.incidents || []).filter(i => i.id !== id);
                     if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
@@ -13242,6 +13351,8 @@ const Incidents = {
                     window.DataManager.save();
                 }
 
+                await this.persistIncidentToServer(incident, { syncRegistry: true, silent: true });
+
                 Loading.hide();
                 
                 // رسالة مختلفة حسب نوع المستخدم
@@ -13253,82 +13364,6 @@ const Incidents = {
 
                 this._closeInvestigationModal();
                 await this._refreshIncidentsViewsAfterUpdate(incidentId);
-
-                // مزامنة في الخلفية بدون تعطيل واجهة المستخدم
-                const safeIncidentDateIso = (this.getIncidentDateValue(incident) || new Date()).toISOString();
-                const updatePayload = {
-                    // بيانات الحادث الأساسية (مطلوبة في حالة عدم وجود الحادث في Google Sheets)
-                    id: incident.id,
-                    title: incident.title || 'حادث بدون عنوان',
-                    description: incident.description || '',
-                    date: safeIncidentDateIso,
-                    status: incident.status,
-                    severity: incident.severity || 'متوسطة',
-                    location: incident.location || '',
-                    siteId: incident.siteId || '',
-                    siteName: incident.siteName || '',
-                    sublocationId: incident.sublocationId || '',
-                    sublocationName: incident.sublocationName || '',
-                    incidentType: incident.incidentType || '',
-                    affectedName: incident.affectedName || '',
-                    affectedCode: incident.affectedCode || '',
-                    affectedJobTitle: incident.affectedJobTitle || '',
-                    affectedDepartment: incident.affectedDepartment || '',
-                    affectedType: incident.affectedType || '',
-                    injuredPart: incident.injuredPart || '',
-                    equipmentCause: incident.equipmentCause || '',
-                    actionPlan: incident.actionPlan || [],
-                    // بيانات التحقيق
-                    investigation: investigationData,
-                    rootCause: incident.rootCause || investigationData.rca?.rootCauseSummary || '',
-                    // بيانات إضافية
-                    updatedAt: incident.updatedAt,
-                    createdAt: incident.createdAt || new Date().toISOString(),
-                    requiresApproval: incident.requiresApproval || false,
-                    approvedBy: incident.approvedBy || null,
-                    approvedAt: incident.approvedAt || null,
-                    createdBy: incident.createdBy || (AppState.currentUser ? {
-                        id: AppState.currentUser.id || '',
-                        name: AppState.currentUser.name || AppState.currentUser.displayName || '',
-                        email: AppState.currentUser.email || ''
-                    } : null),
-                    userData: AppState.currentUser ? {
-                        id: AppState.currentUser.id || '',
-                        name: AppState.currentUser.name || AppState.currentUser.displayName || '',
-                        email: AppState.currentUser.email || '',
-                        role: AppState.currentUser.role || '',
-                        permissions: AppState.currentUser.permissions || {}
-                    } : null
-                };
-
-                setTimeout(() => {
-                    try {
-                        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
-                            GoogleIntegration.autoSave('Incidents', AppState.appData.incidents).catch((err) => {
-                                Utils.safeWarn('⚠️ فشل autoSave للحوادث في الخلفية:', err);
-                            });
-                        }
-                    } catch (e) {
-                        Utils.safeWarn('⚠️ خطأ أثناء autoSave للحوادث:', e);
-                    }
-
-                    try {
-                        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                            GoogleIntegration.sendRequest({
-                                action: 'updateIncident',
-                                data: { incidentId: incidentId, updateData: updatePayload }
-                            }).catch((err) => {
-                                Utils.safeWarn('⚠️ فشل تحديث الحادث في الخلفية (Backend):', err);
-                            });
-                        }
-                    } catch (e) {
-                        Utils.safeWarn('⚠️ خطأ أثناء تحديث الحادث في الخلفية (Backend):', e);
-                    }
-
-                    this.updateRegistryEntry(incident).catch((err) => {
-                        Utils.safeWarn('⚠️ فشل تحديث سجل الحوادث في الخلفية:', err);
-                    });
-                }, 0);
             } else {
                 throw new Error('الحادث غير موجود');
             }
@@ -14167,74 +14202,28 @@ const Incidents = {
                 window.DataManager.save();
             }
 
+            await this.persistIncidentToServer(incident, { syncRegistry: true, silent: true });
+
             Loading.hide();
             Notification.success('تم الموافقة على الحادث بنجاح');
 
-            // تحديث الواجهة حسب التبويب الحالي
-            setTimeout(async () => {
-                try {
-                    if (document.getElementById('incidents-content')) {
-                        this.loadIncidentsList();
-                    }
-                    const container = document.getElementById('incidents-tab-content');
-                    if (container) {
-                        if (this.currentTab === 'approvals') {
-                            container.innerHTML = await this.renderApprovalsTab();
-                            this.setupTabEventListeners('approvals');
-                        } else if (this.currentTab === 'registry') {
-                            container.innerHTML = await this.renderRegistryTab();
-                            this.setupTabEventListeners('registry');
-                        }
-                    }
-                } catch (e) {
-                    Utils.safeWarn('تعذر تحديث الواجهة بعد الموافقة:', e);
+            try {
+                if (document.getElementById('incidents-content')) {
+                    this.loadIncidentsList();
                 }
-            }, 0);
-
-            // مزامنة في الخلفية (بدون تعطيل الواجهة)
-            const updateData = {
-                status: incident.status,
-                requiresApproval: incident.requiresApproval,
-                approvedBy: incident.approvedBy,
-                approvedAt: incident.approvedAt,
-                updatedAt: incident.updatedAt,
-                userData: AppState.currentUser ? {
-                    id: AppState.currentUser.id || '',
-                    name: AppState.currentUser.name || AppState.currentUser.displayName || '',
-                    email: AppState.currentUser.email || '',
-                    role: AppState.currentUser.role || '',
-                    permissions: AppState.currentUser.permissions || {}
-                } : null
-            };
-
-            setTimeout(() => {
-                try {
-                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
-                        GoogleIntegration.autoSave('Incidents', AppState.appData.incidents).catch((err) => {
-                            Utils.safeWarn('⚠️ فشل autoSave للحوادث بعد الموافقة:', err);
-                        });
+                const container = document.getElementById('incidents-tab-content');
+                if (container) {
+                    if (this.currentTab === 'approvals') {
+                        container.innerHTML = await this.renderApprovalsTab();
+                        this.setupTabEventListeners('approvals');
+                    } else if (this.currentTab === 'registry') {
+                        container.innerHTML = await this.renderRegistryTab();
+                        this.setupTabEventListeners('registry');
                     }
-                } catch (e) {
-                    Utils.safeWarn('⚠️ خطأ أثناء autoSave بعد الموافقة:', e);
                 }
-
-                try {
-                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                        GoogleIntegration.sendRequest({
-                            action: 'updateIncident',
-                            data: { incidentId: incidentId, updateData }
-                        }).catch((err) => {
-                            Utils.safeWarn('⚠️ فشل تحديث الحادث (Backend) بعد الموافقة:', err);
-                        });
-                    }
-                } catch (e) {
-                    Utils.safeWarn('⚠️ خطأ أثناء تحديث الحادث (Backend) بعد الموافقة:', e);
-                }
-
-                this.updateRegistryEntry(incident).catch((err) => {
-                    Utils.safeWarn('⚠️ فشل تحديث سجل الحوادث بعد الموافقة:', err);
-                });
-            }, 0);
+            } catch (e) {
+                Utils.safeWarn('تعذر تحديث الواجهة بعد الموافقة:', e);
+            }
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في الموافقة على الحادث:', error);
@@ -14290,75 +14279,28 @@ const Incidents = {
                 window.DataManager.save();
             }
 
+            await this.persistIncidentToServer(incident, { syncRegistry: true, silent: true });
+
             Loading.hide();
             Notification.success('تم رفض الحادث بنجاح');
 
-            // تحديث الواجهة حسب التبويب الحالي
-            setTimeout(async () => {
-                try {
-                    if (document.getElementById('incidents-content')) {
-                        this.loadIncidentsList();
-                    }
-                    const container = document.getElementById('incidents-tab-content');
-                    if (container) {
-                        if (this.currentTab === 'approvals') {
-                            container.innerHTML = await this.renderApprovalsTab();
-                            this.setupTabEventListeners('approvals');
-                        } else if (this.currentTab === 'registry') {
-                            container.innerHTML = await this.renderRegistryTab();
-                            this.setupTabEventListeners('registry');
-                        }
-                    }
-                } catch (e) {
-                    Utils.safeWarn('تعذر تحديث الواجهة بعد الرفض:', e);
+            try {
+                if (document.getElementById('incidents-content')) {
+                    this.loadIncidentsList();
                 }
-            }, 0);
-
-            // مزامنة في الخلفية (بدون تعطيل الواجهة)
-            const updateData = {
-                status: incident.status,
-                requiresApproval: incident.requiresApproval,
-                rejectedBy: incident.rejectedBy,
-                rejectedAt: incident.rejectedAt,
-                rejectionReason: incident.rejectionReason,
-                updatedAt: incident.updatedAt,
-                userData: AppState.currentUser ? {
-                    id: AppState.currentUser.id || '',
-                    name: AppState.currentUser.name || AppState.currentUser.displayName || '',
-                    email: AppState.currentUser.email || '',
-                    role: AppState.currentUser.role || '',
-                    permissions: AppState.currentUser.permissions || {}
-                } : null
-            };
-
-            setTimeout(() => {
-                try {
-                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
-                        GoogleIntegration.autoSave('Incidents', AppState.appData.incidents).catch((err) => {
-                            Utils.safeWarn('⚠️ فشل autoSave للحوادث بعد الرفض:', err);
-                        });
+                const container = document.getElementById('incidents-tab-content');
+                if (container) {
+                    if (this.currentTab === 'approvals') {
+                        container.innerHTML = await this.renderApprovalsTab();
+                        this.setupTabEventListeners('approvals');
+                    } else if (this.currentTab === 'registry') {
+                        container.innerHTML = await this.renderRegistryTab();
+                        this.setupTabEventListeners('registry');
                     }
-                } catch (e) {
-                    Utils.safeWarn('⚠️ خطأ أثناء autoSave بعد الرفض:', e);
                 }
-
-                try {
-                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                        GoogleIntegration.sendRequest({
-                            action: 'updateIncident',
-                            data: { incidentId: incidentId, updateData }
-                        }).catch((err) => {
-                            Utils.safeWarn('⚠️ فشل تحديث الحادث (Backend) بعد الرفض:', err);
-                        });
-                    }
-                } catch (e) {
-                    Utils.safeWarn('⚠️ خطأ أثناء تحديث الحادث (Backend) بعد الرفض:', e);
-                }
-
-                this.updateRegistryEntry(incident).catch((err) => {
-                    Utils.safeWarn('⚠️ فشل تحديث سجل الحوادث بعد الرفض:', err);
-                });
-            }, 0);
+            } catch (e) {
+                Utils.safeWarn('تعذر تحديث الواجهة بعد الرفض:', e);
+            }
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في رفض الحادث:', error);
