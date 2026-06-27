@@ -6668,7 +6668,7 @@ const Incidents = {
                     this.showInvestigationFormSelector();
                 });
             }
-            if (addEmptyBtn) addEmptyBtn.addEventListener('click', () => this.showForm());
+            if (addEmptyBtn) addEmptyBtn.addEventListener('click', () => this.showNotificationForm());
             if (addNotificationBtn) addNotificationBtn.addEventListener('click', () => this.showNotificationForm());
 
             // تطبيق الصلاحيات
@@ -7780,13 +7780,243 @@ const Incidents = {
         return (selectEl?.value || '').trim();
     },
 
-    // نموذج إخطار عن حادث
-    async showNotificationForm() {
+    mapIncidentAffiliationToNotification(incident) {
+        const aff = String(incident?.affiliation || '').trim();
+        if (aff) return aff === 'company' ? 'employee' : aff;
+        const affectedType = String(incident?.affectedType || '').trim();
+        const map = { employee: 'employee', contractor: 'contractor', visitor: 'visitor', other: 'none' };
+        return map[affectedType] || '';
+    },
+
+    buildNotificationDraftFromIncident(incident) {
+        if (!incident) return null;
+        const affiliation = this.mapIncidentAffiliationToNotification(incident);
+        const isNonInjury = this.isNotificationNonInjuryType(incident.incidentType || '');
+        let contractorName = String(incident.contractorName || '').trim();
+        if (!contractorName && affiliation === 'contractor') {
+            contractorName = String(incident.affectedDepartment || incident.department || '').trim();
+        }
+        let employeeCode = String(incident.affectedCode || incident.employeeAffectedCode || '').trim();
+        const reporterCode = String(incident.reporterCode || '').trim();
+        if (!employeeCode && affiliation === 'employee') {
+            const legacyCode = String(incident.employeeCode || incident.employeeNumber || '').trim();
+            if (legacyCode && legacyCode !== reporterCode) {
+                employeeCode = legacyCode;
+            }
+        }
+        const employeeName = String(incident.affectedName || incident.employeeName || '').trim();
+        const employeeJob = String(incident.affectedJobTitle || incident.employeeJob || '').trim();
+        let employeeDepartment = String(incident.affectedDepartment || incident.employeeDepartment || incident.department || '').trim();
+        if (isNonInjury) {
+            employeeDepartment = String(incident.department || incident.affectedDepartment || employeeDepartment).trim();
+        }
+        let notificationNumber = String(incident.notificationNumber || '').trim();
+        if (!notificationNumber && incident.notificationId && Array.isArray(AppState.appData?.incidentNotifications)) {
+            const linked = AppState.appData.incidentNotifications.find((n) => n.id === incident.notificationId);
+            notificationNumber = String(linked?.notificationNumber || '').trim();
+        }
+        if (!notificationNumber) {
+            notificationNumber = incident.isoCode ? `REF-${incident.isoCode}` : `INC-${incident.id}`;
+        }
+        return {
+            incidentId: incident.id,
+            notificationId: incident.notificationId || '',
+            notificationNumber,
+            date: this.safeDateToISOString(incident.date),
+            siteId: incident.siteId || '',
+            siteName: incident.siteName || '',
+            location: incident.location || '',
+            sublocationId: incident.sublocationId || '',
+            sublocationName: incident.sublocationName || incident.sublocation || '',
+            incidentType: incident.incidentType || '',
+            affiliation,
+            contractorName,
+            employeeCode,
+            employeeName,
+            employeeJob,
+            employeeDepartment,
+            injuryDescription: incident.injuryDescription || '',
+            losses: incident.losses || '',
+            description: incident.description || '',
+            actions: incident.actionsTaken || incident.actions || '',
+            reporterName: incident.reportedBy || incident.reporterName || '',
+            reporterCode: incident.reporterCode || reporterCode || '',
+            preserve: {
+                isoCode: incident.isoCode,
+                title: incident.title,
+                status: incident.status,
+                severity: incident.severity,
+                investigation: incident.investigation,
+                actionPlan: incident.actionPlan,
+                attachments: incident.attachments,
+                image: incident.image,
+                createdAt: incident.createdAt,
+                createdBy: incident.createdBy,
+                affectedType: incident.affectedType,
+                affectedContact: incident.affectedContact
+            }
+        };
+    },
+
+    buildIncidentFieldsFromNotification(notificationData, notificationNumber, base = {}) {
+        const aff = notificationData.affiliation || '';
+        return {
+            ...base,
+            notificationId: base.notificationId || notificationData.id,
+            notificationNumber,
+            title: base.title || `حادث - ${notificationData.incidentType}`,
+            location: notificationData.location,
+            siteId: notificationData.siteId,
+            siteName: notificationData.siteName,
+            sublocation: notificationData.sublocation,
+            sublocationId: notificationData.sublocationId,
+            sublocationName: notificationData.sublocationName,
+            date: notificationData.date,
+            department: notificationData.department,
+            incidentType: notificationData.incidentType,
+            affiliation: aff,
+            contractorName: notificationData.contractorName,
+            affectedType: (aff === 'employee' || aff === 'company') ? 'employee' : (aff || base.affectedType || 'other'),
+            affectedCode: notificationData.employeeCode || '',
+            affectedName: notificationData.employeeName || '',
+            affectedJobTitle: notificationData.employeeJob || '',
+            affectedDepartment: notificationData.employeeDepartment || notificationData.department || '',
+            employeeName: notificationData.employeeName,
+            employeeJob: notificationData.employeeJob,
+            employeeDepartment: notificationData.employeeDepartment,
+            employeeAffectedCode: notificationData.employeeCode || '',
+            description: notificationData.description,
+            injuryDescription: notificationData.injuryDescription,
+            losses: notificationData.losses,
+            actionsTaken: notificationData.actions,
+            actions: notificationData.actions,
+            reportedBy: notificationData.reporterName,
+            reporterName: notificationData.reporterName,
+            reporterCode: notificationData.reporterCode || '',
+            employeeCode: notificationData.reporterCode || base.employeeCode || '',
+            employeeNumber: notificationData.reporterCode || base.employeeNumber || '',
+            updatedAt: new Date().toISOString()
+        };
+    },
+
+    applyNotificationDraftToForm(draft, helpers = {}) {
+        if (!draft) return;
+        const {
+            locationSelect,
+            sublocationSelect,
+            updateSublocationOptions,
+            notificationIncidentTypeSelect,
+            notificationAffiliationSelect,
+            updateNotificationFormUI,
+            employeeCodeInput,
+            employeeNameInput,
+            employeeJobInput,
+            employeeDepartmentInput,
+            employeeDepartmentSelect,
+            contractorSelect,
+            injuryDescriptionEl,
+            descriptionEl,
+            lossesEl,
+            actionsEl,
+            reporterNameEl,
+            reporterCodeEl,
+            dateEl
+        } = helpers;
+
+        const selectSite = () => {
+            if (!locationSelect) return false;
+            if (draft.siteId) {
+                locationSelect.value = draft.siteId;
+                if (typeof updateSublocationOptions === 'function') updateSublocationOptions(draft.siteId);
+                return true;
+            }
+            const sites = this.getSiteOptions ? this.getSiteOptions() : [];
+            const byName = sites.find((s) => s.name === draft.location || s.id === draft.location);
+            if (byName) {
+                locationSelect.value = byName.id;
+                if (typeof updateSublocationOptions === 'function') updateSublocationOptions(byName.id);
+                return true;
+            }
+            if (draft.location) {
+                const customOption = document.createElement('option');
+                customOption.value = draft.location;
+                customOption.textContent = draft.location;
+                customOption.selected = true;
+                locationSelect.appendChild(customOption);
+                return true;
+            }
+            return false;
+        };
+
+        selectSite();
+        if (sublocationSelect && draft.sublocationId) {
+            sublocationSelect.value = draft.sublocationId;
+        }
+
+        if (notificationIncidentTypeSelect && draft.incidentType) {
+            notificationIncidentTypeSelect.value = draft.incidentType;
+        }
+        if (notificationAffiliationSelect && draft.affiliation) {
+            notificationAffiliationSelect.value = draft.affiliation;
+        }
+        if (typeof updateNotificationFormUI === 'function') updateNotificationFormUI();
+
+        if (employeeCodeInput) employeeCodeInput.value = draft.employeeCode || '';
+        if (employeeNameInput) employeeNameInput.value = draft.employeeName || '';
+        if (employeeJobInput) employeeJobInput.value = draft.employeeJob || '';
+        if (employeeDepartmentInput) employeeDepartmentInput.value = draft.employeeDepartment || '';
+        if (employeeDepartmentSelect && draft.employeeDepartment) {
+            const dept = draft.employeeDepartment;
+            const hasOption = Array.from(employeeDepartmentSelect.options).some((opt) => opt.value === dept);
+            if (!hasOption) {
+                const option = document.createElement('option');
+                option.value = dept;
+                option.textContent = dept;
+                employeeDepartmentSelect.appendChild(option);
+            }
+            employeeDepartmentSelect.value = dept;
+        }
+        if (contractorSelect && draft.contractorName) {
+            const contractor = draft.contractorName;
+            const hasOption = Array.from(contractorSelect.options).some((opt) => opt.value === contractor);
+            if (!hasOption) {
+                const option = document.createElement('option');
+                option.value = contractor;
+                option.textContent = contractor;
+                contractorSelect.appendChild(option);
+            }
+            contractorSelect.value = contractor;
+        }
+        if (injuryDescriptionEl) injuryDescriptionEl.value = draft.injuryDescription || '';
+        if (descriptionEl) descriptionEl.value = draft.description || '';
+        if (lossesEl) lossesEl.value = draft.losses || '';
+        if (actionsEl) actionsEl.value = draft.actions || '';
+        if (reporterNameEl) reporterNameEl.value = draft.reporterName || '';
+        if (reporterCodeEl) reporterCodeEl.value = draft.reporterCode || '';
+        if (dateEl && draft.date) dateEl.value = draft.date;
+    },
+
+    // نموذج إخطار عن حادث (أو تعديل حادث موجود بنفس الواجهة)
+    async showNotificationForm(incidentForEdit = null) {
+        const draft = incidentForEdit ? this.buildNotificationDraftFromIncident(incidentForEdit) : null;
+        const isEdit = !!draft;
+        const d = draft || {};
+        this._notificationEditContext = isEdit
+            ? { incidentId: draft.incidentId, notificationId: draft.notificationId, preserve: draft.preserve }
+            : null;
+
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
-        const notificationNumber = `NOT-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String((AppState.appData.incidentNotifications || []).length + 1).padStart(4, '0')}`;
-        const notificationDeptOptionsHtml = this.buildNotificationDepartmentSelectOptions();
-        const notificationContractorOptionsHtml = this.buildNotificationContractorSelectOptions();
+        const esc = (v) => Utils.escapeHTML(String(v ?? ''));
+        const notificationNumber = isEdit
+            ? d.notificationNumber
+            : `NOT-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String((AppState.appData.incidentNotifications || []).length + 1).padStart(4, '0')}`;
+        const notificationDeptOptionsHtml = this.buildNotificationDepartmentSelectOptions(d.employeeDepartment || '');
+        const notificationContractorOptionsHtml = this.buildNotificationContractorSelectOptions(d.contractorName || '');
+        const modalTitle = isEdit ? 'تعديل إخطار / حادث' : 'إخطار عن حادث - Incident Notification';
+        const submitLabel = isEdit ? 'حفظ التعديلات' : 'إرسال الإخطار';
+        const submitIcon = isEdit ? 'fa-save' : 'fa-paper-plane';
+        const defaultDate = isEdit ? d.date : new Date().toISOString().slice(0, 16);
 
         modal.innerHTML = `
             <style>
@@ -7828,8 +8058,8 @@ const Incidents = {
             <div class="modal-content" style="max-width: 1200px; width: 95%; background: linear-gradient(to bottom, #f8f9fa, #ffffff);">
                 <div class="modal-header modal-header-centered" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 24px 30px;">
                     <h2 class="modal-title" style="font-size: 1.75rem; font-weight: 700; color: white;">
-                        <i class="fas fa-bell ml-2"></i>
-                        إخطار عن حادث - Incident Notification
+                        <i class="fas fa-${isEdit ? 'edit' : 'bell'} ml-2"></i>
+                        ${modalTitle}
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" style="color: white; font-size: 1.5rem;">
                         <i class="fas fa-times"></i>
@@ -7849,14 +8079,14 @@ const Incidents = {
                                         <i class="fas fa-hashtag" style="color: #667eea;"></i>
                                         رقم الإخطار *
                                     </label>
-                                    <input type="text" id="notification-number" class="form-input" value="${notificationNumber}" readonly style="background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 50%); font-weight: 700; border: 2px solid #667eea; color: #5145cd;">
+                                    <input type="text" id="notification-number" class="form-input" value="${esc(notificationNumber)}" readonly style="background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 50%); font-weight: 700; border: 2px solid #667eea; color: #5145cd;">
                                 </div>
                                 <div class="notification-field" style="border-color: #667eea;">
                                     <label>
                                         <i class="fas fa-calendar-alt" style="color: #667eea;"></i>
                                         تاريخ ووقت الحادث *
                                     </label>
-                                    <input type="datetime-local" id="notification-date" class="form-input" required value="${new Date().toISOString().slice(0, 16)}" style="border: 2px solid #667eea; font-weight: 500;">
+                                    <input type="datetime-local" id="notification-date" class="form-input" required value="${esc(defaultDate)}" style="border: 2px solid #667eea; font-weight: 500;">
                                 </div>
                                 <div class="notification-field" style="border-color: #667eea;">
                                     <label>
@@ -7895,11 +8125,11 @@ const Incidents = {
                                     </label>
                                     <select id="notification-incident-type" class="form-input" required style="border: 2px solid #f59e0b;">
                                         <option value="">اختر نوع الحادث</option>
-                                        <option value="إصابة عمل">إصابة عمل</option>
-                                        <option value="حادث معدات">حادث معدات</option>
-                                        <option value="أضرار ممتلكات">أضرار ممتلكات</option>
-                                        <option value="حادث بيئي">حادث بيئي</option>
-                                        <option value="آخر">آخر</option>
+                                        <option value="إصابة عمل" ${d.incidentType === 'إصابة عمل' ? 'selected' : ''}>إصابة عمل</option>
+                                        <option value="حادث معدات" ${d.incidentType === 'حادث معدات' ? 'selected' : ''}>حادث معدات</option>
+                                        <option value="أضرار ممتلكات" ${d.incidentType === 'أضرار ممتلكات' ? 'selected' : ''}>أضرار ممتلكات</option>
+                                        <option value="حادث بيئي" ${d.incidentType === 'حادث بيئي' ? 'selected' : ''}>حادث بيئي</option>
+                                        <option value="آخر" ${d.incidentType === 'آخر' ? 'selected' : ''}>آخر</option>
                                     </select>
                                 </div>
                                 <div class="notification-field" style="border-color: #f59e0b;">
@@ -7909,11 +8139,11 @@ const Incidents = {
                                     </label>
                                     <select id="notification-affiliation" class="form-input" style="border: 2px solid #f59e0b;">
                                         <option value="">اختر التبعية</option>
-                                        <option value="employee">موظف</option>
-                                        <option value="daily-labor">عمالة يومية</option>
-                                        <option value="contractor">مقاول</option>
-                                        <option value="visitor">زائر</option>
-                                        <option value="none">لا يوجد</option>
+                                        <option value="employee" ${d.affiliation === 'employee' ? 'selected' : ''}>موظف</option>
+                                        <option value="daily-labor" ${d.affiliation === 'daily-labor' ? 'selected' : ''}>عمالة يومية</option>
+                                        <option value="contractor" ${d.affiliation === 'contractor' ? 'selected' : ''}>مقاول</option>
+                                        <option value="visitor" ${d.affiliation === 'visitor' ? 'selected' : ''}>زائر</option>
+                                        <option value="none" ${d.affiliation === 'none' ? 'selected' : ''}>لا يوجد</option>
                                     </select>
                                 </div>
 
@@ -7922,7 +8152,7 @@ const Incidents = {
                                         <i class="fas fa-id-badge" style="color: #f59e0b;"></i>
                                         كود الموظف *
                                     </label>
-                                    <input type="text" id="notification-employee-code" class="form-input" placeholder="اكتب/ابحث بكود الموظف" style="border: 2px solid #f59e0b;" autocomplete="off">
+                                    <input type="text" id="notification-employee-code" class="form-input" value="${esc(d.employeeCode)}" placeholder="اكتب/ابحث بكود الموظف" style="border: 2px solid #f59e0b;" autocomplete="off">
                                 </div>
 
                                 <div id="notification-employee-name-wrapper" class="notification-field" style="border-color: #f59e0b;">
@@ -7930,21 +8160,21 @@ const Incidents = {
                                         <i class="fas fa-user" style="color: #f59e0b;"></i>
                                         <span id="notification-employee-name-label-text">اسم الموظف *</span>
                                     </label>
-                                    <input type="text" id="notification-employee-name" class="form-input" required placeholder="اسم الموظف" style="border: 2px solid #f59e0b;" autocomplete="off">
+                                    <input type="text" id="notification-employee-name" class="form-input" required value="${esc(d.employeeName)}" placeholder="اسم الموظف" style="border: 2px solid #f59e0b;" autocomplete="off">
                                 </div>
                                 <div id="notification-employee-job-wrapper" class="notification-field" style="border-color: #f59e0b;">
                                     <label id="notification-employee-job-label">
                                         <i class="fas fa-briefcase" style="color: #f59e0b;"></i>
                                         <span id="notification-employee-job-label-text">الوظيفة *</span>
                                     </label>
-                                    <input type="text" id="notification-employee-job" class="form-input" required placeholder="الوظيفة" style="border: 2px solid #f59e0b;" autocomplete="off">
+                                    <input type="text" id="notification-employee-job" class="form-input" required value="${esc(d.employeeJob)}" placeholder="الوظيفة" style="border: 2px solid #f59e0b;" autocomplete="off">
                                 </div>
                                 <div id="notification-employee-department-text-wrapper" class="notification-field col-span-1 md:col-span-2" style="border-color: #f59e0b;">
                                     <label>
                                         <i class="fas fa-building" style="color: #f59e0b;"></i>
                                         الإدارة *
                                     </label>
-                                    <input type="text" id="notification-employee-department" class="form-input" required placeholder="الإدارة" style="border: 2px solid #f59e0b;">
+                                    <input type="text" id="notification-employee-department" class="form-input" required value="${esc(d.employeeDepartment)}" placeholder="الإدارة" style="border: 2px solid #f59e0b;">
                                 </div>
                                 <div id="notification-employee-department-select-wrapper" class="notification-field col-span-1 md:col-span-2" style="border-color: #f59e0b; display: none;">
                                     <label>
@@ -7972,28 +8202,28 @@ const Incidents = {
                                     <i class="fas fa-heartbeat" style="color: #f59e0b;"></i>
                                     وصف الإصابة
                                 </label>
-                                <textarea id="notification-injury-description" class="form-input" rows="4" placeholder="وصف تفصيلي للإصابة..." style="border: 2px solid #f59e0b;"></textarea>
+                                <textarea id="notification-injury-description" class="form-input" rows="4" placeholder="وصف تفصيلي للإصابة..." style="border: 2px solid #f59e0b;">${esc(d.injuryDescription)}</textarea>
                             </div>
                             <div class="notification-field mt-5" style="border-color: #f59e0b;">
                                 <label>
                                     <i class="fas fa-coins" style="color: #f59e0b;"></i>
                                     الخسائر
                                 </label>
-                                <textarea id="notification-losses" class="form-input" rows="4" placeholder="وصف الخسائر المادية أو البشرية..." style="border: 2px solid #f59e0b;"></textarea>
+                                <textarea id="notification-losses" class="form-input" rows="4" placeholder="وصف الخسائر المادية أو البشرية..." style="border: 2px solid #f59e0b;">${esc(d.losses)}</textarea>
                             </div>
                             <div class="notification-field mt-5" style="border-color: #f59e0b;">
                                 <label>
                                     <i class="fas fa-file-alt" style="color: #f59e0b;"></i>
                                     وصف مختصر للحادث *
                                 </label>
-                                <textarea id="notification-description" class="form-input" rows="5" required placeholder="وصف تفصيلي للحادث..." style="border: 2px solid #f59e0b; font-size: 1rem;"></textarea>
+                                <textarea id="notification-description" class="form-input" rows="5" required placeholder="وصف تفصيلي للحادث..." style="border: 2px solid #f59e0b; font-size: 1rem;">${esc(d.description)}</textarea>
                             </div>
                             <div class="notification-field mt-5" style="border-color: #f59e0b;">
                                 <label>
                                     <i class="fas fa-tasks" style="color: #f59e0b;"></i>
                                     الإجراءات المتخذة
                                 </label>
-                                <textarea id="notification-actions" class="form-input" rows="4" placeholder="وصف الإجراءات المتخذة..." style="border: 2px solid #f59e0b;"></textarea>
+                                <textarea id="notification-actions" class="form-input" rows="4" placeholder="وصف الإجراءات المتخذة..." style="border: 2px solid #f59e0b;">${esc(d.actions)}</textarea>
                             </div>
                         </div>
 
@@ -8009,14 +8239,14 @@ const Incidents = {
                                         <i class="fas fa-user" style="color: #10b981;"></i>
                                         اسم معد الإخطار *
                                     </label>
-                                    <input type="text" id="notification-reporter-name" class="form-input" required placeholder="اسم معد الإخطار" style="border: 2px solid #10b981;">
+                                    <input type="text" id="notification-reporter-name" class="form-input" required value="${esc(d.reporterName)}" placeholder="اسم معد الإخطار" style="border: 2px solid #10b981;">
                                 </div>
                                 <div class="notification-field" style="border-color: #10b981;">
                                     <label>
                                         <i class="fas fa-id-card" style="color: #10b981;"></i>
                                         كود معد الإخطار
                                     </label>
-                                    <input type="text" id="notification-reporter-code" class="form-input" placeholder="الكود الوظيفي" style="border: 2px solid #10b981;">
+                                    <input type="text" id="notification-reporter-code" class="form-input" value="${esc(d.reporterCode)}" placeholder="الكود الوظيفي" style="border: 2px solid #10b981;">
                                 </div>
                             </div>
                         </div>
@@ -8035,8 +8265,8 @@ const Incidents = {
                                 تصدير PDF
                             </button>
                             <button type="submit" class="btn-primary" style="padding: 12px 30px; font-size: 1.1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                                <i class="fas fa-paper-plane ml-2"></i>
-                                إرسال الإخطار
+                                <i class="fas ${submitIcon} ml-2"></i>
+                                ${submitLabel}
                             </button>
                         </div>
                     </form>
@@ -8081,37 +8311,8 @@ const Incidents = {
             };
 
             if (locationSelect) {
-                // التأكد من تحميل إعدادات النماذج
-                if (typeof Permissions !== 'undefined' && typeof Permissions.ensureFormSettingsState === 'function') {
-                    Permissions.ensureFormSettingsState().then(() => {
-                        // الحصول على المواقع من إعدادات النماذج
-                        const sites = this.getSiteOptions();
-
-                        // إضافة المواقع إلى القائمة المنسدلة
-                        sites.forEach(site => {
-                            const option = document.createElement('option');
-                            option.value = site.id;
-                            option.textContent = site.name;
-                            locationSelect.appendChild(option);
-                        });
-                    });
-                } else {
-                    // الحصول على المواقع من إعدادات النماذج
-                    const sites = this.getSiteOptions();
-
-                    // إضافة المواقع إلى القائمة المنسدلة
-                    sites.forEach(site => {
-                        const option = document.createElement('option');
-                        option.value = site.id;
-                        option.textContent = site.name;
-                        locationSelect.appendChild(option);
-                    });
-                }
-
-                // إضافة event listener لتحديث الأماكن الفرعية عند تغيير الموقع
                 locationSelect.addEventListener('change', (e) => {
-                    const selectedSiteId = e.target.value;
-                    updateSublocationOptions(selectedSiteId);
+                    updateSublocationOptions(e.target.value);
                 });
             }
 
@@ -8284,10 +8485,51 @@ const Incidents = {
             }
             if (notificationAffiliationSelect) {
                 notificationAffiliationSelect.addEventListener('change', updateNotificationFormUI);
-                updateNotificationFormUI(); // initial state
-            } else {
-                updateNotificationFormUI();
             }
+
+            const finishFormInit = () => {
+                if (draft) {
+                    this.applyNotificationDraftToForm(draft, {
+                        locationSelect,
+                        sublocationSelect,
+                        updateSublocationOptions,
+                        notificationIncidentTypeSelect,
+                        notificationAffiliationSelect,
+                        updateNotificationFormUI,
+                        employeeCodeInput,
+                        employeeNameInput,
+                        employeeJobInput,
+                        employeeDepartmentInput,
+                        employeeDepartmentSelect,
+                        contractorSelect,
+                        injuryDescriptionEl: document.getElementById('notification-injury-description'),
+                        descriptionEl: document.getElementById('notification-description'),
+                        lossesEl: document.getElementById('notification-losses'),
+                        actionsEl: document.getElementById('notification-actions'),
+                        reporterNameEl: document.getElementById('notification-reporter-name'),
+                        reporterCodeEl: document.getElementById('notification-reporter-code'),
+                        dateEl: document.getElementById('notification-date')
+                    });
+                } else {
+                    updateNotificationFormUI();
+                }
+            };
+
+            const loadSitesPromise = (async () => {
+                if (!locationSelect || locationSelect.options.length > 1) return;
+                if (typeof Permissions !== 'undefined' && typeof Permissions.ensureFormSettingsState === 'function') {
+                    try { await Permissions.ensureFormSettingsState(); } catch (_e) { /* ignore */ }
+                }
+                const sites = this.getSiteOptions();
+                sites.forEach((site) => {
+                    const option = document.createElement('option');
+                    option.value = site.id;
+                    option.textContent = site.name;
+                    locationSelect.appendChild(option);
+                });
+            })();
+
+            loadSitesPromise.finally(() => finishFormInit());
 
             // Employee auto-fill (only when affiliation is company employee + work injury)
             if (typeof EmployeeHelper !== 'undefined') {
@@ -8329,20 +8571,31 @@ const Incidents = {
         // معالجة إرسال النموذج
         modal.querySelector('#incident-notification-form')?.addEventListener('submit', async (e) => {
             e.preventDefault();
-            await this.handleNotificationSubmit(modal, notificationNumber);
+            await this.handleNotificationSubmit(modal, notificationNumber, { isEdit });
         });
 
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 const ok = confirm('تنبيه: سيتم إغلاق النموذج.\nقد تفقد أي بيانات غير محفوظة.\n\nهل تريد الإغلاق؟');
-                if (ok) modal.remove();
+                if (ok) {
+                    this._notificationEditContext = null;
+                    modal.remove();
+                }
             }
         });
+
+        const closeBtn = modal.querySelector('.modal-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                this._notificationEditContext = null;
+            });
+        }
     },
 
-    async handleNotificationSubmit(modal, notificationNumber) {
+    async handleNotificationSubmit(modal, notificationNumber, options = {}) {
+        const isEdit = !!options.isEdit || !!this._notificationEditContext?.incidentId;
         try {
-            Loading.show('جاري إرسال الإخطار...');
+            Loading.show(isEdit ? 'جاري حفظ التعديلات...' : 'جاري إرسال الإخطار...');
 
             // الحصول على بيانات الموقع والمكان الفرعي
             const locationSelect = document.getElementById('notification-location');
@@ -8426,8 +8679,9 @@ const Incidents = {
                 return;
             }
 
+            const editCtx = this._notificationEditContext;
             const notificationData = {
-                id: Utils.generateId('NOTIF'),
+                id: (isEdit && editCtx?.notificationId) ? editCtx.notificationId : Utils.generateId('NOTIF'),
                 notificationNumber: notificationNumber,
                 date: (() => {
                     try {
@@ -8449,19 +8703,17 @@ const Incidents = {
                 incidentType: incidentTypeEl.value,
                 affiliation: affiliationValue,
                 contractorName: contractorValue,
-                // Employee fields (for work injury)
                 employeeName: employeeNameEl?.value || '',
                 employeeJob: employeeJobEl?.value || '',
                 employeeDepartment: departmentValue,
                 employeeCode: employeeCodeEl?.value || '',
-                // Description fields
                 description: descriptionEl.value,
                 injuryDescription: injuryDescriptionEl?.value || '',
                 losses: lossesEl?.value || '',
                 actions: actionsEl?.value || '',
                 reporterName: reporterNameEl.value,
                 reporterCode: reporterCodeEl?.value || '',
-                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
                 createdBy: AppState.currentUser ? {
                     id: AppState.currentUser.id || '',
                     name: AppState.currentUser.name || AppState.currentUser.displayName || '',
@@ -8469,58 +8721,110 @@ const Incidents = {
                 } : null
             };
 
+            if (isEdit && editCtx?.incidentId) {
+                if (!AppState.appData.incidents) AppState.appData.incidents = [];
+                const incidentIndex = AppState.appData.incidents.findIndex((i) => i.id === editCtx.incidentId);
+                if (incidentIndex === -1) {
+                    Loading.hide();
+                    Notification.error('لم يتم العثور على الحادث للتعديل');
+                    return;
+                }
+
+                const existing = AppState.appData.incidents[incidentIndex];
+                const preserve = editCtx.preserve || {};
+
+                if (!AppState.appData.incidentNotifications) {
+                    AppState.appData.incidentNotifications = [];
+                }
+                if (editCtx.notificationId) {
+                    const notifIndex = AppState.appData.incidentNotifications.findIndex((n) => n.id === editCtx.notificationId);
+                    const prevNotif = notifIndex !== -1 ? AppState.appData.incidentNotifications[notifIndex] : {};
+                    const mergedNotif = {
+                        ...prevNotif,
+                        ...notificationData,
+                        id: editCtx.notificationId,
+                        createdAt: prevNotif.createdAt || existing.createdAt || new Date().toISOString()
+                    };
+                    if (notifIndex !== -1) {
+                        AppState.appData.incidentNotifications[notifIndex] = mergedNotif;
+                    } else {
+                        AppState.appData.incidentNotifications.push(mergedNotif);
+                    }
+                }
+
+                const updatedIncident = this.buildIncidentFieldsFromNotification(notificationData, notificationNumber, {
+                    ...existing,
+                    id: existing.id,
+                    notificationId: existing.notificationId || editCtx.notificationId || '',
+                    isoCode: preserve.isoCode || existing.isoCode,
+                    title: preserve.title || existing.title,
+                    status: preserve.status || existing.status,
+                    severity: preserve.severity || existing.severity,
+                    investigation: preserve.investigation !== undefined ? preserve.investigation : existing.investigation,
+                    actionPlan: preserve.actionPlan || existing.actionPlan,
+                    attachments: preserve.attachments || existing.attachments,
+                    image: preserve.image || existing.image,
+                    createdAt: existing.createdAt,
+                    createdBy: existing.createdBy || notificationData.createdBy,
+                    affectedContact: preserve.affectedContact || existing.affectedContact,
+                    rootCause: existing.rootCause || '',
+                    correctiveAction: existing.correctiveAction || '',
+                    preventiveAction: existing.preventiveAction || ''
+                });
+
+                AppState.appData.incidents[incidentIndex] = updatedIncident;
+
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                }
+
+                if (typeof Dashboard !== 'undefined' && Dashboard.refreshIncidents) {
+                    Dashboard.refreshIncidents();
+                }
+
+                Loading.hide();
+                Notification.success('تم تحديث الحادث بنجاح');
+                modal.remove();
+                this._notificationEditContext = null;
+
+                if (this.currentTab === 'incidents-list') {
+                    this.loadIncidentsList();
+                }
+
+                Promise.all([
+                    this.updateRegistryEntry(updatedIncident, { persist: false }).catch((error) => {
+                        Utils.safeError('خطأ في تحديث السجل:', error);
+                    }),
+                    this.processIncidentBackgroundTasks(updatedIncident).catch((error) => {
+                        Utils.safeError('خطأ في معالجة المهام الخلفية:', error);
+                    })
+                ]).then(() => this.saveRegistryData().catch((error) => {
+                    Utils.safeError('خطأ في حفظ سجل الحوادث:', error);
+                }));
+
+                return;
+            }
+
+            notificationData.createdAt = new Date().toISOString();
+
             // حفظ الإخطار في Google Sheets
             if (!AppState.appData.incidentNotifications) {
                 AppState.appData.incidentNotifications = [];
             }
             AppState.appData.incidentNotifications.push(notificationData);
 
-            // إنشاء حادث جديد من الإخطار (سيتم إضافة التحقيق لاحقاً عبر النموذج الجديد)
-            const investigationData = {
+            const investigationData = this.buildIncidentFieldsFromNotification(notificationData, notificationNumber, {
                 id: Utils.generateId('INCIDENT'),
                 notificationId: notificationData.id,
-                notificationNumber: notificationNumber,
-                title: `حادث - ${notificationData.incidentType}`,
-                location: notificationData.location,
-                siteId: notificationData.siteId,
-                siteName: notificationData.siteName,
-                sublocation: notificationData.sublocation,
-                sublocationId: notificationData.sublocationId,
-                sublocationName: notificationData.sublocationName,
-                date: notificationData.date,
-                department: notificationData.department,
-                incidentType: notificationData.incidentType,
-                affiliation: notificationData.affiliation,
-                contractorName: notificationData.contractorName,
-                // Compatibility fields for the main incident form/registry
-                affectedType: (notificationData.affiliation === 'employee' || notificationData.affiliation === 'company') ? 'employee' : (notificationData.affiliation || 'other'),
-                affectedCode: notificationData.employeeCode || '',
-                affectedName: notificationData.employeeName || '',
-                affectedJobTitle: notificationData.employeeJob || '',
-                affectedDepartment: notificationData.employeeDepartment || '',
-                employeeName: notificationData.employeeName,
-                employeeJob: notificationData.employeeJob,
-                employeeDepartment: notificationData.employeeDepartment,
-                employeeAffectedCode: notificationData.employeeCode || '',
-                description: notificationData.description,
-                injuryDescription: notificationData.injuryDescription,
-                losses: notificationData.losses,
-                actionsTaken: notificationData.actions,
-                reportedBy: notificationData.reporterName,
-                reporterName: notificationData.reporterName,
-                reporterCode: notificationData.reporterCode || '',
-                status: 'مفتوح', // سيتم تحديثه إلى "قيد التحقيق" عند فتح نموذج التحقيق
+                status: 'مفتوح',
                 severity: 'متوسطة',
-                // تم نقل تحليل الأسباب والإجراءات إلى نموذج التحقيق المنفصل
                 rootCause: '',
                 correctiveAction: '',
                 preventiveAction: '',
-                // سيتم إضافة investigation عند فتح نموذج التحقيق
                 investigation: null,
                 createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
                 createdBy: notificationData.createdBy
-            };
+            });
 
             if (!AppState.appData.incidents) {
                 AppState.appData.incidents = [];
@@ -8554,8 +8858,7 @@ const Incidents = {
                 if (typeof this.showInvestigationForm === 'function') {
                     this.showInvestigationForm(investigationData.id);
                 } else {
-                    // Fallback: فتح نموذج التعديل إذا لم يكن النموذج الجديد متاحاً
-                    this.editIncident(investigationData.id);
+                    Notification.warning('نموذج التحقيق غير متاح حالياً');
                 }
             }, 500);
 
@@ -8966,10 +9269,9 @@ const Incidents = {
 
         const incident = AppState.appData.incidents.find(i => i.id === id);
         if (incident) {
-            this._formReturnTab = this.currentTab || 'incidents-list';
             const merged = { ...incident };
             this._mergeIncidentWithInvestigationData(merged);
-            await this.showForm(merged);
+            await this.showNotificationForm(merged);
         }
     },
 
