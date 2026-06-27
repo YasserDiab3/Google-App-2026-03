@@ -481,14 +481,22 @@ const Incidents = {
 
     /**
      * حساب إجمالي أيام الإجازة من تاريخ بداية الإجازة حتى تاريخ العودة للعمل
+     * (شامل يوم البدء ويوم العودة — بدون تواريخ = 0 يوم)
      */
     calculateTotalLeaveDays(leaveStartDate, returnToWorkDate) {
         if (!leaveStartDate || !returnToWorkDate) return 0;
         try {
-            const start = new Date(leaveStartDate);
-            const end = new Date(returnToWorkDate);
+            const toLocalDate = (value) => {
+                const raw = String(value).trim().split('T')[0];
+                const parts = raw.split('-').map((part) => parseInt(part, 10));
+                if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return null;
+                return new Date(parts[0], parts[1] - 1, parts[2]);
+            };
 
-            if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            const start = toLocalDate(leaveStartDate);
+            const end = toLocalDate(returnToWorkDate);
+
+            if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime())) {
                 return 0;
             }
 
@@ -496,14 +504,47 @@ const Incidents = {
                 return 0;
             }
 
-            // حساب الفرق بالأيام (شامل تاريخ البدء وتاريخ العودة)
-            const diffTime = end - start;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            const diffTime = end.getTime() - start.getTime();
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
             return diffDays;
         } catch (error) {
             Utils.safeError('خطأ في حساب أيام الإجازة:', error);
             return 0;
         }
+    },
+
+    /**
+     * استنتاج حقول الإجازة لسجل الحوادث — بدون افتراض تاريخ الحادث كإجازة.
+     * إصابة بدون فقد أيام عمل (injury-no-lost) → 0 يوم وتواريخ فارغة.
+     */
+    resolveRegistryLeaveFields(incident, existingEntry = null) {
+        const types = Array.isArray(incident?.investigation?.incidentTypes)
+            ? incident.investigation.incidentTypes
+            : [];
+        if (types.includes('injury-no-lost')) {
+            return { leaveStartDate: '', returnToWorkDate: '', totalLeaveDays: 0 };
+        }
+
+        const pickDate = (...values) => {
+            for (const value of values) {
+                const normalized = String(value ?? '').trim();
+                if (normalized) return normalized.split('T')[0];
+            }
+            return '';
+        };
+
+        const leaveStartDate = pickDate(incident?.leaveStartDate, existingEntry?.leaveStartDate);
+        const returnToWorkDate = pickDate(incident?.returnToWorkDate, existingEntry?.returnToWorkDate);
+
+        if (!leaveStartDate || !returnToWorkDate) {
+            return { leaveStartDate: '', returnToWorkDate: '', totalLeaveDays: 0 };
+        }
+
+        return {
+            leaveStartDate,
+            returnToWorkDate,
+            totalLeaveDays: this.calculateTotalLeaveDays(leaveStartDate, returnToWorkDate)
+        };
     },
 
     /**
@@ -875,15 +916,8 @@ const Incidents = {
             }
         }
 
-        // تعيين تواريخ الإجازة (افتراضي: تاريخ الحادث)
-        const incidentIsoDate = (incidentDate && !Number.isNaN(incidentDate.getTime()))
-            ? incidentDate.toISOString().split('T')[0]
-            : new Date().toISOString().split('T')[0];
-        const leaveStartDate = incident.leaveStartDate || incidentIsoDate;
-        const returnToWorkDate = incident.returnToWorkDate || incidentIsoDate;
-
-        // حساب إجمالي أيام الإجازة من تاريخ بداية الإجازة حتى تاريخ العودة
-        const totalLeaveDays = this.calculateTotalLeaveDays(leaveStartDate, returnToWorkDate);
+        // تواريخ الإجازة — فقط عند إدخالها صراحةً (بدون فقد أيام عمل = 0)
+        const leaveFields = this.resolveRegistryLeaveFields(incident);
 
         return {
             id: Utils.generateId('INCR'),
@@ -902,9 +936,9 @@ const Incidents = {
             incidentDetails: incident.description || 'غير محدد',
             injuredPart: this.resolveIncidentInjuredPart(incident),
             equipmentCause: this.extractEquipmentCause(incident.description || '', incident.equipmentCause),
-            leaveStartDate: leaveStartDate,
-            returnToWorkDate: returnToWorkDate,
-            totalLeaveDays: totalLeaveDays,
+            leaveStartDate: leaveFields.leaveStartDate,
+            returnToWorkDate: leaveFields.returnToWorkDate,
+            totalLeaveDays: leaveFields.totalLeaveDays,
             status: incident.status || 'مفتوح',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
@@ -977,17 +1011,10 @@ const Incidents = {
         entry.injuredPart = this.resolveIncidentInjuredPart(incident);
         entry.equipmentCause = this.extractEquipmentCause(incident.description || '', incident.equipmentCause);
 
-        // تحديث تواريخ الإجازة إذا كانت متوفرة في الحادث، وإلا نستخدم القيم الموجودة أو القيم الافتراضية
-        const incidentIsoDate = (incidentDate && !Number.isNaN(incidentDate.getTime()))
-            ? incidentDate.toISOString().split('T')[0]
-            : new Date().toISOString().split('T')[0];
-        const leaveStartDate = incident.leaveStartDate || entry.leaveStartDate || incidentIsoDate;
-        const returnToWorkDate = incident.returnToWorkDate || entry.returnToWorkDate || incidentIsoDate;
-        entry.leaveStartDate = leaveStartDate;
-        entry.returnToWorkDate = returnToWorkDate;
-
-        // حساب إجمالي أيام الإجازة من تاريخ بداية الإجازة حتى تاريخ العودة
-        entry.totalLeaveDays = this.calculateTotalLeaveDays(leaveStartDate, returnToWorkDate);
+        const leaveFields = this.resolveRegistryLeaveFields(incident, entry);
+        entry.leaveStartDate = leaveFields.leaveStartDate;
+        entry.returnToWorkDate = leaveFields.returnToWorkDate;
+        entry.totalLeaveDays = leaveFields.totalLeaveDays;
         entry.status = this.isInvestigationComplete(incident)
             ? 'مكتمل'
             : (incident.status === 'مفتوح' ? 'مفتوح' : (incident.status || entry.status || 'مفتوح'));
@@ -4378,47 +4405,14 @@ const Incidents = {
 
         // دالة حساب إجمالي أيام الإجازة من تاريخ البدء حتى تاريخ العودة
         const updateTotalLeaveDays = () => {
-            if (leaveStartDateInput && returnToWorkDateInput && totalLeaveDaysInput) {
-                const startDate = leaveStartDateInput.value;
-                const returnDate = returnToWorkDateInput.value;
-
-                if (startDate && returnDate) {
-                    try {
-                        const start = new Date(startDate);
-                        const end = new Date(returnDate);
-
-                        if (end >= start) {
-                            // حساب الفرق بالأيام (شامل تاريخ البدء وتاريخ العودة)
-                            const diffTime = end - start;
-                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-                            totalLeaveDaysInput.value = `${diffDays} يوم`;
-                        } else {
-                            totalLeaveDaysInput.value = '0 يوم';
-                        }
-                    } catch (e) {
-                        totalLeaveDaysInput.value = '0 يوم';
-                    }
-                } else {
-                    totalLeaveDaysInput.value = '0 يوم';
-                }
-            }
+            if (!totalLeaveDaysInput) return;
+            const days = this.calculateTotalLeaveDays(
+                leaveStartDateInput?.value || '',
+                returnToWorkDateInput?.value || ''
+            );
+            totalLeaveDaysInput.value = `${days} يوم`;
         };
 
-        // تعيين تاريخ بداية الإجازة من تاريخ الحادث عند تغيير تاريخ الحادث (فقط إذا كان إصابة)
-        if (dateInput && leaveStartDateInput) {
-            const updateLeaveStartDate = () => {
-                if (dateInput.value && typeSelect.value === 'اصابة') {
-                    if (!leaveStartDateInput.value) {
-                        leaveStartDateInput.value = dateInput.value;
-                        updateTotalLeaveDays();
-                    }
-                }
-            };
-
-            dateInput.addEventListener('change', updateLeaveStartDate);
-        }
-
-        // تحديث حساب أيام الإجازة عند تغيير التواريخ
         if (leaveStartDateInput) {
             leaveStartDateInput.addEventListener('change', updateTotalLeaveDays);
         }
@@ -4621,8 +4615,15 @@ const Incidents = {
         const dayInput = modal.querySelector('#manual-incident-day');
         const incidentDay = dayInput?.value || this.getDayName(incidentDateTime);
 
-        // حساب إجمالي أيام الإجازة
-        const totalLeaveDays = this.calculateTotalLeaveDays(leaveStartDateInput?.value, returnToWorkDateInput?.value);
+        // حساب إجمالي أيام الإجازة — بدون تواريخ كاملة = 0 يوم
+        let leaveStartValue = leaveStartDateInput?.value || '';
+        let returnToWorkValue = returnToWorkDateInput?.value || '';
+        let totalLeaveDays = this.calculateTotalLeaveDays(leaveStartValue, returnToWorkValue);
+        if (totalLeaveDays <= 0) {
+            leaveStartValue = '';
+            returnToWorkValue = '';
+            totalLeaveDays = 0;
+        }
 
         const entry = {
             id: Utils.generateId('INCR'),
@@ -4659,8 +4660,8 @@ const Incidents = {
             })(),
             equipmentCause: 'غير محدد', // Removed specific field in form, default to generic
 
-            leaveStartDate: leaveStartDateInput?.value || '',
-            returnToWorkDate: returnToWorkDateInput?.value || '',
+            leaveStartDate: leaveStartValue,
+            returnToWorkDate: returnToWorkValue,
             totalLeaveDays: totalLeaveDays,
 
             status: 'مفتوح',
@@ -4774,14 +4775,16 @@ const Incidents = {
         try {
             if (!entry) return false;
 
-            // Only for company employees (has code) and when leave dates exist
+            // Only for company employees with actual lost work days
             const employeeCode = (entry.employeeCode || '').toString().trim();
             const employeeName = (entry.employeeName || '').toString().trim();
             const employeeDepartment = (entry.employeeDepartment || '').toString().trim();
+            const totalLeaveDays = parseInt(entry.totalLeaveDays, 10) || 0;
             const startDateStr = (entry.leaveStartDate || '').toString().trim();
             const endDateStr = (entry.returnToWorkDate || '').toString().trim();
 
             if (!employeeCode || !employeeName || !employeeDepartment) return false;
+            if (totalLeaveDays <= 0) return false;
             if (!startDateStr || !endDateStr) return false;
 
             if (typeof Clinic === 'undefined' || typeof Clinic.normalizeSickLeaveRecord !== 'function') {
