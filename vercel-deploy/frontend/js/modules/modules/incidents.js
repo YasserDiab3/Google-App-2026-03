@@ -1,6 +1,5 @@
 /**
- * Incidents Module
- * ØªÙ… Ø§Ø³ØªØ®Ø±Ø§Ø¬Ù‡ Ù…Ù† app-modules.js
+ * Incidents Module — الحوادث
  */
 // ===== Incidents Module (الحوادث) =====
 const Incidents = {
@@ -7349,6 +7348,10 @@ const Incidents = {
     },
 
     generateISOCode(prefix) {
+        const gen = typeof window !== 'undefined' && typeof window.generateISOCode === 'function'
+            ? window.generateISOCode
+            : null;
+        if (gen) return gen(prefix, AppState.appData.incidents || []);
         const year = new Date().getFullYear();
         const month = String(new Date().getMonth() + 1).padStart(2, '0');
         const count = (AppState.appData.incidents || []).length + 1;
@@ -7356,12 +7359,7 @@ const Incidents = {
     },
 
     async convertImageToBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
+        return this.convertFileToBase64(file);
     },
 
     async handleSubmit(e) {
@@ -11635,12 +11633,7 @@ const Incidents = {
     },
 
     async readFileAsBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = (err) => reject(err);
-            reader.readAsDataURL(file);
-        });
+        return this.convertFileToBase64(file);
     },
 
     normalizeAttachment(attachment) {

@@ -6269,14 +6269,6 @@ const Employees = {
     }
 };
 
-// دالة مساعدة لتوليد كود ISO للنماذج
-function generateISOCode(prefix, dataArray) {
-    const year = new Date().getFullYear();
-    const month = String(new Date().getMonth() + 1).padStart(2, '0');
-    const count = (dataArray || []).length + 1;
-    return `${prefix}-${year}${month}-${String(count).padStart(4, '0')}`;
-}
-
 Employees.getExternalWorkforceExportHeaderInfo = function (reportTitle, exportDate = new Date()) {
     const companyName = String(AppState?.companySettings?.name || AppState?.companyName || 'Americana HSE Management System').trim();
     const secondaryName = String(AppState?.companySettings?.secondaryName || 'إدارة السلامة والصحة المهنية والبيئة').trim();

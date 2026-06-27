@@ -1275,3 +1275,133 @@ function deleteLegalTrainingAttendee(attendeeId, userData) {
     }
 }
 
+/**
+ * سجل التشريعات والقوانين (Legal Register)
+ * دوال CRUD لإدارة سجل حصر التشريعات والقوانين مع آلية التحديثات القانونية
+ */
+
+function addLegalRegisterToSheet(registerData) {
+    try {
+        if (!registerData) return { success: false, message: 'بيانات السجل القانوني غير موجودة' };
+        var sheetName = 'LegalRegister';
+        if (!registerData.id) registerData.id = generateSequentialId('LR', sheetName);
+        if (!registerData.status) registerData.status = 'applicable';
+        if (!registerData.priority) registerData.priority = 'medium';
+        if (!registerData.createdAt) registerData.createdAt = new Date();
+        if (!registerData.updatedAt) registerData.updatedAt = new Date();
+        if (typeof registerData.amendments === 'object') registerData.amendments = JSON.stringify(registerData.amendments);
+        var result = appendToSheet(sheetName, registerData);
+        return result && result.success
+            ? { success: true, data: { id: registerData.id }, message: result.message }
+            : result;
+    } catch (error) {
+        Logger.log('Error in addLegalRegisterToSheet: ' + error.toString());
+        return { success: false, message: 'خطأ في إضافة السجل القانوني: ' + error.toString() };
+    }
+}
+
+function updateLegalRegister(registerId, updateData) {
+    try {
+        if (!registerId) return { success: false, message: 'معرف السجل القانوني غير محدد' };
+        if (!updateData) return { success: false, message: 'بيانات التحديث غير صالحة' };
+        var sheetName = 'LegalRegister';
+        updateData.id = registerId;
+        updateData.updatedAt = new Date();
+        if (typeof updateData.amendments === 'object') updateData.amendments = JSON.stringify(updateData.amendments);
+        var result = updateSingleRowInSheet(sheetName, registerId, updateData, getSpreadsheetId());
+        if (result && result.success) return { success: true, message: 'تم تحديث السجل القانوني', data: updateData };
+        var allData = readFromSheet(sheetName, getSpreadsheetId());
+        var idx = Array.isArray(allData) ? allData.findIndex(function(r) { return r && String(r.id) === String(registerId); }) : -1;
+        if (idx === -1) return { success: false, message: 'السجل القانوني غير موجود' };
+        for (var key in updateData) { if (updateData.hasOwnProperty(key)) allData[idx][key] = updateData[key]; }
+        return saveToSheet(sheetName, allData, getSpreadsheetId());
+    } catch (error) {
+        Logger.log('Error in updateLegalRegister: ' + error.toString());
+        return { success: false, message: 'خطأ في تحديث السجل القانوني: ' + error.toString() };
+    }
+}
+
+function getLegalRegister(registerId) {
+    try {
+        if (!registerId) return { success: false, message: 'معرف السجل القانوني غير محدد' };
+        var data = readFromSheet('LegalRegister', getSpreadsheetId());
+        var record = Array.isArray(data) ? data.find(function(r) { return r && String(r.id) === String(registerId); }) : null;
+        if (!record) return { success: false, message: 'السجل القانوني غير موجود' };
+        if (typeof record.amendments === 'string') { try { record.amendments = JSON.parse(record.amendments); } catch (e) {} }
+        return { success: true, data: record };
+    } catch (error) {
+        Logger.log('Error in getLegalRegister: ' + error.toString());
+        return { success: false, message: 'خطأ في جلب السجل القانوني: ' + error.toString() };
+    }
+}
+
+function getAllLegalRegisters(filters) {
+    try {
+        var data = readFromSheet('LegalRegister', getSpreadsheetId());
+        if (!Array.isArray(data)) return [];
+        data.forEach(function(r) {
+            if (typeof r.amendments === 'string') { try { r.amendments = JSON.parse(r.amendments); } catch (e) {} }
+        });
+        if (filters && filters.category) data = data.filter(function(r) { return r.category === filters.category; });
+        if (filters && filters.status) data = data.filter(function(r) { return r.status === filters.status; });
+        if (filters && fsearch(filters, 'q')) data = data.filter(function(r) {
+            var q = filters.q.toLowerCase();
+            return (r.title || '').toLowerCase().indexOf(q) !== -1
+                || (r.legalReference || '').toLowerCase().indexOf(q) !== -1
+                || (r.issuingAuthority || '').toLowerCase().indexOf(q) !== -1;
+        });
+        return data;
+    } catch (error) {
+        Logger.log('Error in getAllLegalRegisters: ' + error.toString());
+        return [];
+    }
+}
+
+function deleteLegalRegister(registerId, userData) {
+    try {
+        if (typeof checkAdminPermissions !== 'function' || !checkAdminPermissions(userData || {})) {
+            return { success: false, message: 'ليس لديك صلاحية الحذف', errorCode: 'DELETE_ADMIN_ONLY' };
+        }
+        if (!registerId) return { success: false, message: 'معرف السجل القانوني غير محدد' };
+        var sheetName = 'LegalRegister';
+        var data = readFromSheet(sheetName, getSpreadsheetId());
+        var filtered = Array.isArray(data) ? data.filter(function(r) { return r && String(r.id) !== String(registerId); }) : [];
+        if (filtered.length === data.length) return { success: false, message: 'السجل القانوني غير موجود' };
+        return saveToSheet(sheetName, filtered, getSpreadsheetId());
+    } catch (error) {
+        Logger.log('Error in deleteLegalRegister: ' + error.toString());
+        return { success: false, message: 'خطأ في حذف السجل القانوني: ' + error.toString() };
+    }
+}
+
+function getLegalRegisterStatistics(filters) {
+    try {
+        var data = readFromSheet('LegalRegister', getSpreadsheetId());
+        if (!Array.isArray(data)) data = [];
+        if (filters && filters.category) data = data.filter(function(r) { return r.category === filters.category; });
+        var total = data.length;
+        var applicable = 0, amended = 0, repealed = 0, pending = 0;
+        var high = 0, medium = 0, low = 0;
+        data.forEach(function(r) {
+            var s = r.status || '';
+            if (s === 'applicable') applicable++;
+            else if (s === 'amended') amended++;
+            else if (s === 'repealed') repealed++;
+            else if (s === 'pending') pending++;
+            var p = r.priority || '';
+            if (p === 'high') high++;
+            else if (p === 'medium') medium++;
+            else if (p === 'low') low++;
+        });
+        var withAmendments = data.filter(function(r) {
+            var a = r.amendments;
+            if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) {} }
+            return Array.isArray(a) && a.length > 0;
+        }).length;
+        return { success: true, total: total, applicable: applicable, amended: amended, repealed: repealed, pending: pending, high: high, medium: medium, low: low, withAmendments: withAmendments };
+    } catch (error) {
+        Logger.log('Error in getLegalRegisterStatistics: ' + error.toString());
+        return { success: true, total: 0, applicable: 0, amended: 0, repealed: 0, pending: 0, high: 0, medium: 0, low: 0, withAmendments: 0 };
+    }
+}
+

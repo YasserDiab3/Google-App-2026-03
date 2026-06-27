@@ -3533,7 +3533,6 @@ const Contractors = {
 
         document.body.appendChild(modal);
         this.applyModuleI18n(modal);
-        this.applyModuleI18n(modal);
 
         const form = modal.querySelector('#approved-contractor-form');
         form?.addEventListener('submit', (event) => {
@@ -3881,7 +3880,6 @@ const Contractors = {
         `;
 
         document.body.appendChild(modal);
-        this.applyModuleI18n(modal);
         this.applyModuleI18n(modal);
         modal.addEventListener('click', (event) => {
             if (event.target === modal) modal.remove();

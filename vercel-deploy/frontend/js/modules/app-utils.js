@@ -4049,7 +4049,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.380',
+    appVersion: '1.0.382',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -9308,9 +9308,18 @@ const PPEMatrix = {
     }
 };
 
+/** توليد كود ISO موحّد للنماذج (prefix-YYYYMM-0001) */
+function generateISOCode(prefix, dataArray) {
+    const year = new Date().getFullYear();
+    const month = String(new Date().getMonth() + 1).padStart(2, '0');
+    const count = (dataArray || []).length + 1;
+    return `${prefix}-${year}${month}-${String(count).padStart(4, '0')}`;
+}
+
 // Export to global scope
 if (typeof window !== 'undefined') {
     window.Utils = Utils;
+    window.generateISOCode = generateISOCode;
     window.Notification = Notification;
     window.Loading = Loading;
     window.QRCode = QRCode;

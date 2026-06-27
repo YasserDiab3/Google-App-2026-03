@@ -106,14 +106,6 @@ const GHS_PICTOGRAMS = [
     }
 ];
 
-// ===== Helper Functions =====
-function generateISOCode(prefix, dataArray) {
-    const year = new Date().getFullYear();
-    const month = String(new Date().getMonth() + 1).padStart(2, '0');
-    const count = (dataArray || []).length + 1;
-    return `${prefix}-${year}${month}-${String(count).padStart(4, '0')}`;
-}
-
 // ===== Chemical Safety Module =====
 const ChemicalSafety = {
     currentEditId: null,
