@@ -4995,7 +4995,7 @@ const Clinic = {
             const { success, doc } = await this._createClinicPdfWithFont({
                 orientation: 'landscape',
                 format: 'a4',
-                fontUrl: 'https://fonts.gstatic.com/s/amiri/v17/J7aRnpd8CGxBHpUut6k6.ttf',
+                fontUrl: 'https://fonts.gstatic.com/s/amiri/v30/J7aRnpd8CGxBHqUp.ttf',
                 fontFamily: 'Amiri'
             });
             if (!success || !doc) throw new Error('فشل تحميل مكتبة PDF أو الخط العربي');
@@ -5158,17 +5158,39 @@ const Clinic = {
             : (window.jspdf?.jsPDF || window.jsPDF?.jsPDF || window.jsPDF || null);
         if (!JsPDF) return { success: false };
 
+        const fontUrls = [
+            fontUrl,
+            'https://fonts.gstatic.com/s/amiri/v30/J7aRnpd8CGxBHqUp.ttf',
+            'https://fonts.googleapis.com/css2?family=Amiri&display=swap'
+        ].filter(Boolean);
+
         try {
-            // Use cached font if available
             if (!this._arabicFontBase64) {
-                const resp = await fetch(fontUrl, { cache: 'force-cache' });
-                if (!resp.ok) throw new Error('خطأ في تحميل الخط: ' + resp.status);
-                const blob = await resp.blob();
-                this._arabicFontBase64 = await new Promise(resolve => {
-                    const r = new FileReader();
-                    r.onload = () => resolve(r.result.split(',')[1]);
-                    r.readAsDataURL(blob);
-                });
+                let loaded = false;
+                for (const url of fontUrls) {
+                    try {
+                        const resp = await fetch(url, { cache: 'force-cache' });
+                        if (!resp.ok) continue;
+                        if (resp.headers.get('content-type')?.includes('text/css')) {
+                            const css = await resp.text();
+                            const match = css.match(/url\(([^)]+\.ttf)\)/);
+                            if (!match) continue;
+                            const ttfResp = await fetch(match[1], { cache: 'force-cache' });
+                            if (!ttfResp.ok) continue;
+                            this._arabicFontBase64 = await ttfResp.blob().then(b => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result.split(',')[1]); fr.readAsDataURL(b); }));
+                        } else {
+                            const blob = await resp.blob();
+                            this._arabicFontBase64 = await new Promise(resolve => {
+                                const r = new FileReader();
+                                r.onload = () => resolve(r.result.split(',')[1]);
+                                r.readAsDataURL(blob);
+                            });
+                        }
+                        loaded = true;
+                        break;
+                    } catch { continue; }
+                }
+                if (!loaded) return { success: false };
             }
 
             const doc = new JsPDF(orientation, 'mm', format);
@@ -5177,7 +5199,7 @@ const Clinic = {
             doc.setFont(fontFamily);
             return { success: true, doc };
         } catch (e) {
-            Utils.safeWarn('⚠️ فشل تحميل الخط العربي:', e);
+            Utils.safeWarn('⚠️ فشل إنشاء PDF:', e);
             return { success: false, error: e };
         }
     },
@@ -18005,7 +18027,7 @@ const Clinic = {
             const { success, doc } = await this._createClinicPdfWithFont({
                 orientation: 'landscape',
                 format: 'a4',
-                fontUrl: 'https://fonts.gstatic.com/s/amiri/v17/J7aRnpd8CGxBHpUut6k6.ttf',
+                fontUrl: 'https://fonts.gstatic.com/s/amiri/v30/J7aRnpd8CGxBHqUp.ttf',
                 fontFamily: 'Amiri'
             });
             if (!success || !doc) throw new Error('فشل تحميل مكتبة PDF أو الخط العربي');
