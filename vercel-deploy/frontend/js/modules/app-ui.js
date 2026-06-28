@@ -3903,9 +3903,17 @@ window.UI = {
         if (toggleBtn) {
             toggleBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
             // تحديث أيقونة الزر
-            const icon = toggleBtn.querySelector('i');
-            if (icon) {
-                icon.className = shouldOpen ? 'fas fa-times' : 'fas fa-bars';
+            const icon = toggleBtn.querySelector('i, svg');
+            if (icon && icon.tagName === 'I') {
+                // استبدال <i> القديم بأيقونة Home SVG (يعمل حتى على الصفحات المخبأة القديمة)
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('width', '22');
+                svg.setAttribute('height', '22');
+                svg.setAttribute('viewBox', '0 0 24 24');
+                svg.setAttribute('aria-hidden', 'true');
+                svg.style.cssText = 'display:block;flex-shrink:0';
+                svg.innerHTML = '<rect x="0" y="0" width="24" height="24" rx="5" fill="#4A90E2"/><path d="M 12,4 L 19,10 L 18,10 L 18,17 L 24,23 L 24,24 L 0,24 L 0,17 L 6,17 L 6,10 L 5,10 Z" fill="rgba(0,0,55,0.15)"/><polygon points="12,4 5,10 19,10" fill="white"/><rect x="6" y="10" width="12" height="7" rx="0.5" fill="white"/>';
+                icon.replaceWith(svg);
             }
         }
 
