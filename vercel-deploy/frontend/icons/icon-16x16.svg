@@ -1,7 +1,19 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-  <rect width="16" height="16" fill="#2563eb"/>
-  <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" 
-        font-size="10" fill="white" 
-        font-family="Arial, sans-serif" font-weight="bold">HSE</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#003865"/>
+      <stop offset="100%" stop-color="#1e40af"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield -->
+  <path d="M256 16 L460 82 L460 240 C460 380 340 470 256 496 C172 470 52 380 52 240 L52 82 Z" fill="url(#g)"/>
+  <!-- Shield border highlight -->
+  <path d="M256 26 L445 87 L445 240 C445 370 332 455 256 478 C180 455 67 370 67 240 L67 87 Z" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+  <!-- Cross vertical -->
+  <rect x="228" y="160" width="56" height="180" rx="8" fill="white"/>
+  <!-- Cross horizontal -->
+  <rect x="158" y="210" width="196" height="56" rx="8" fill="white"/>
+  <!-- Cross inner shadow for depth -->
+  <rect x="240" y="172" width="32" height="156" rx="4" fill="rgba(0,0,0,0.06)"/>
+  <rect x="170" y="222" width="172" height="32" rx="4" fill="rgba(0,0,0,0.06)"/>
 </svg>
