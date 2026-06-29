@@ -7500,7 +7500,7 @@ window.UI = {
         homeIcon.className = 'main-menu-icon';
         homeIcon.setAttribute('aria-label', isRTL ? 'القائمة الرئيسية' : 'Main Menu');
         homeIcon.setAttribute('title', isRTL ? 'القائمة الرئيسية' : 'Main Menu');
-        homeIcon.innerHTML = '<i class="fas fa-th-large"></i>';
+        homeIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="display:block;flex-shrink:0"><rect x="0" y="0" width="24" height="24" rx="5" fill="#4A90E2"/><path d="M 12,4 L 19,10 L 18,10 L 18,17 L 24,23 L 24,24 L 0,24 L 0,17 L 6,17 L 6,10 L 5,10 Z" fill="rgba(0,0,55,0.15)"/><polygon points="12,4 5,10 19,10" fill="white"/><rect x="6" y="10" width="12" height="7" rx="0.5" fill="white"/></svg>';
         homeIcon.style.cssText = 'width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: var(--primary-color); color: white; border-radius: 12px; cursor: pointer; transition: all 0.3s ease; box-shadow: var(--shadow-md); border: none; font-size: 1.25rem; flex-shrink: 0;';
 
         // إضافة معالج الأحداث لأيقونة القائمة الرئيسية
