@@ -1,0 +1,2733 @@
+function generateDailyObservationId(e){const t=/^DOB-(\d+)$/i,s=/^OBS-\d{6}-(\d+)$/i,a=/(\d+)$/;let i=0;e&&Array.isArray(e)&&e.forEach(function(r){if(!r||!r.id)return;const n=String(r.id).trim();let c=0;const d=n.match(t);if(d)c=parseInt(d[1],10);else{const l=n.match(s);if(l)c=parseInt(l[1],10);else{const p=n.match(a);p&&(c=parseInt(p[1],10))}}!isNaN(c)&&c>i&&(i=c)});const o=i+1;return"DOB-"+String(o).padStart(4,"0")}function getObservationIsoCodeFromId(e){if(!e||typeof e!="string")return"OBS-"+new Date().getFullYear()+String(new Date().getMonth()+1).padStart(2,"0")+"-0000";const t=e.trim(),s=t.match(/^DOB-(\d+)$/i);if(s){const o=new Date,r=o.getFullYear(),n=String(o.getMonth()+1).padStart(2,"0"),c=s[1];return"OBS-"+r+n+"-"+c}if(t.match(/^OBS-\d{6}-(\d+)$/i))return t;const i=t.match(/(\d+)$/);if(i){const o=new Date,r=o.getFullYear(),n=String(o.getMonth()+1).padStart(2,"0");return"OBS-"+r+n+"-"+i[1]}return"OBS-"+new Date().getFullYear()+String(new Date().getMonth()+1).padStart(2,"0")+"-0000"}const DailyObservations={getCurrentLanguage(){return localStorage.getItem("language")||AppState?.currentLanguage||"ar"},_t(e,t){const s=String(e||"").startsWith("module.")?e:`module.dailyobs.${e}`;if(window.AppI18n&&typeof window.AppI18n.t=="function"){const a=window.AppI18n.t(s,t);if(a&&a!==s)return a}if(window.I18n&&typeof window.I18n.t=="function"){const a=window.I18n.t(s,t);if(a&&a!==s)return a}return t??s.replace("module.dailyobs.","")},_tf(e,t,s){let a=this._t(e,s);return t&&typeof t=="object"&&Object.keys(t).forEach(i=>{a=String(a).replace(new RegExp(`\\{${i}\\}`,"g"),String(t[i]))}),a},applyModuleI18n(e){const t=e&&e.nodeType?e:document.getElementById("daily-observations-section");if(!t)return;const s=window.AppI18n&&typeof window.AppI18n.applyModuleI18n=="function"?window.AppI18n:window.I18n&&typeof window.I18n.applyModuleI18n=="function"?window.I18n:null;s&&s.applyModuleI18n(t)},getTranslations(){const e=this.getCurrentLanguage(),t=e==="ar",s={"title.observationsRegistry":"module.dailyobs.registry.title","btn.registerNew":"module.dailyobs.btn.registerNew","btn.reset":"module.dailyobs.btn.reset","btn.refresh":"module.dailyobs.btn.refresh","filter.search":"module.dailyobs.filter.search","filter.site":"module.dailyobs.filter.site","filter.location":"module.dailyobs.filter.location","filter.type":"module.dailyobs.filter.type","filter.shift":"module.dailyobs.filter.shift","filter.risk":"module.dailyobs.filter.risk","filter.status":"module.dailyobs.filter.status","filter.observer":"module.dailyobs.filter.observer","filter.responsible":"module.dailyobs.filter.responsible","filter.all":"module.dailyobs.filter.all","filter.searchPlaceholder":"module.dailyobs.filter.searchPlaceholder","filter.dateFrom":"module.dailyobs.filter.dateFrom","filter.dateTo":"module.dailyobs.filter.dateTo","empty.noObservations":"module.dailyobs.empty.noObservations","empty.noMatching":"module.dailyobs.empty.noMatching"};return{t:i=>{const o=s[i]||(String(i).startsWith("module.")?i:`module.dailyobs.${i}`);return this._t(o,i)},isRTL:t,lang:e}},getObservationTypeLabel(e){const s={"\u0645\u0644\u0627\u062D\u0638\u0629 \u0633\u0644\u0648\u0643\u064A\u0629":"module.dailyobs.type.behavioral","\u0645\u0644\u0627\u062D\u0638\u0629 \u0634\u0631\u0637 \u0639\u0645\u0644":"module.dailyobs.type.workCondition","\u0645\u0644\u0627\u062D\u0638\u0629 \u0623\u062F\u0627\u0629":"module.dailyobs.type.tool","\u0645\u0644\u0627\u062D\u0638\u0629 \u0645\u0639\u062F\u0627\u062A":"module.dailyobs.type.equipment","\u0645\u0644\u0627\u062D\u0638\u0629 \u0628\u064A\u0626\u0629 \u0639\u0645\u0644":"module.dailyobs.type.environment","\u0645\u0644\u0627\u062D\u0638\u0629 \u0623\u062E\u0631\u0649":"module.dailyobs.type.other"}[String(e||"").trim()];return s?this._t(s,e):e||this._t("module.dailyobs.common.notSpecified","\u063A\u064A\u0631 \u0645\u062D\u062F\u062F")},_getTop10ChartFieldLabel(e){const t={riskCategory:"module.dailyobs.top10.chart.field.riskCategory",riskLevel:"module.dailyobs.top10.chart.field.riskLevel",status:"module.dailyobs.top10.chart.field.status",observationType:"module.dailyobs.top10.chart.field.observationType",siteName:"module.dailyobs.top10.chart.field.siteName",locationName:"module.dailyobs.top10.chart.field.locationName",shift:"module.dailyobs.top10.chart.field.shift",responsibleDepartment:"module.dailyobs.top10.chart.field.responsibleDepartment",observerName:"module.dailyobs.top10.chart.field.observerName"};return this._t(t[e]||e,e)},_getTop10ChartTypeLabel(e){const t={doughnut:"module.dailyobs.top10.chart.type.doughnut",pie:"module.dailyobs.top10.chart.type.pie",bar:"module.dailyobs.top10.chart.type.bar",line:"module.dailyobs.top10.chart.type.line"};return this._t(t[e]||e,e)},_renderTop10ChartFieldOptions(e){return["riskCategory","riskLevel","status","observationType","siteName","locationName","shift","responsibleDepartment","observerName"].map(s=>`<option value="${s}" ${e===s?"selected":""}>${Utils.escapeHTML(this._getTop10ChartFieldLabel(s))}</option>`).join("")},_renderTop10ChartTypeOptions(e){return["doughnut","pie","bar","line"].map(t=>`<option value="${t}" ${e===t?"selected":""}>${Utils.escapeHTML(this._getTop10ChartTypeLabel(t))}</option>`).join("")},hasTabAccess(e){const t=AppState.currentUser;return t?t.role==="admin"?!0:typeof Permissions<"u"?Permissions.hasDetailedPermission("daily-observations",e):!0:!1},buildObservationsRequestContext(){const e=AppState.currentUser;if(!e)return null;let t={};if(typeof Permissions<"u"&&typeof Permissions.getEffectivePermissions=="function")try{t=(Permissions.getEffectivePermissions(e)||{})["daily-observationsPermissions"]||{}}catch{t={}}return{role:e.role||"",email:(e.email||"").trim(),name:(e.name||"").trim(),department:(e.department||"").trim(),id:e.id||"",dailyObservationsPermissions:{"observations-specialist-review":t["observations-specialist-review"]===!0,"observations-manager-approve":t["observations-manager-approve"]===!0,"observations-view-all":t["observations-view-all"]===!0,"observations-view-department":t["observations-view-department"]!==!1}}},async yieldToMain(){if(typeof scheduler<"u"&&typeof scheduler.yield=="function")try{await scheduler.yield();return}catch{}await new Promise(e=>setTimeout(e,0))},getWorkflowStageLabel(e){const t=String(e||"").trim();return t?(this.WORKFLOW_STAGES||{})[t]||t:"\u2014 (\u0633\u062C\u0644 \u0642\u062F\u064A\u0645)"},_isAdminRole(e){if(!e)return!1;const t=String(e.role||"").trim(),s=t.toLowerCase();return s==="admin"||s==="system_admin"||t==="\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"||t==="\u0645\u062F\u064A\u0631"},canDailyObservationsFullAdminUi(){return this._isAdminRole(AppState.currentUser)?!0:typeof Permissions<"u"&&typeof Permissions.isCurrentUserAdmin=="function"?Permissions.isCurrentUserAdmin():!1},_isSafetyOfficerRole(e){if(!e)return!1;const t=String(e.role||"").trim();return t.toLowerCase()==="safety_officer"||t==="\u0645\u0633\u0626\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629"||t==="\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629"},canViewAllObservationsWorkflow(){const e=AppState.currentUser;return e?!!(this._isAdminRole(e)||this._isSafetyOfficerRole(e)||typeof Permissions<"u"&&Permissions.hasDetailedPermission&&(Permissions.hasDetailedPermission("daily-observations","observations-specialist-review")||Permissions.hasDetailedPermission("daily-observations","observations-manager-approve")||Permissions.hasDetailedPermission("daily-observations","observations-view-all"))):!1},hasSpecialistWorkflowPermission(){const e=AppState.currentUser;return e?this._isAdminRole(e)||this._isSafetyOfficerRole(e)?!0:typeof Permissions<"u"&&Permissions.hasDetailedPermission&&Permissions.hasDetailedPermission("daily-observations","observations-specialist-review"):!1},hasManagerWorkflowPermission(){const e=AppState.currentUser;return e?this._isAdminRole(e)?!0:typeof Permissions<"u"&&Permissions.hasDetailedPermission&&Permissions.hasDetailedPermission("daily-observations","observations-manager-approve"):!1},_isSafetyManager(){const e=AppState.currentUser;return e?this._isAdminRole(e)?!0:this.hasManagerWorkflowPermission():!1},_isSafetyOfficer(){const e=AppState.currentUser;return e?this._isSafetyOfficerRole(e)||this.hasSpecialistWorkflowPermission():!1},_buildAfterExecutionPhotosHtml(e){return!e||!Array.isArray(e)||e.length===0?`<p class="text-sm text-gray-500 italic" style="font-family: 'Cairo', sans-serif;"><i class="fas fa-camera ml-1"></i>\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0648\u0631 \u0628\u0639\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630</p>`:`
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                ${e.map((t,s)=>`
+                    <div class="relative group border-2 border-emerald-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all">
+                        <img src="${t.url||t}" alt="\u0635\u0648\u0631\u0629 \u0628\u0639\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630 ${s+1}" 
+                             class="w-full h-40 object-cover cursor-pointer" 
+                             onclick="window.open('${t.url||t}', '_blank')"
+                             style="font-family: 'Cairo', sans-serif;" />
+                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex items-center justify-center">
+                            <a href="${t.url||t}" target="_blank" class="opacity-0 group-hover:opacity-100 transition-opacity btn-sm bg-white text-emerald-600 rounded-lg px-4 py-2 font-semibold" style="font-family: 'Cairo', sans-serif;">
+                                <i class="fas fa-eye ml-1"></i>\u0639\u0631\u0636
+                            </a>
+                        </div>
+                        ${t.uploadedAt?`
+                        <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs px-2 py-1" style="font-family: 'Cairo', sans-serif;">
+                            <i class="fas fa-user ml-1"></i>${Utils.escapeHTML(t.uploadedBy||"Unknown")} | 
+                            <i class="fas fa-calendar ml-1"></i>${Utils.formatDate(t.uploadedAt)}
+                        </div>
+                        `:""}
+                    </div>
+                `).join("")}
+            </div>
+        `},async handleAfterExecutionPhotoUpload(e,t){if(!t||!t.files||t.files.length===0)return;const s=t.files[0];if(!s.type.startsWith("image/")){Notification?.error?.("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0645\u0644\u0641 \u0635\u0648\u0631\u0629 \u0635\u0627\u0644\u062D",5e3);return}const a=5*1024*1024;if(s.size>a){Notification?.error?.("\u062D\u062C\u0645 \u0627\u0644\u0635\u0648\u0631\u0629 \u064A\u062C\u0628 \u0623\u0646 \u0644\u0627 \u064A\u062A\u062C\u0627\u0648\u0632 5 \u0645\u064A\u062C\u0627\u0628\u0627\u064A\u062A",5e3);return}const i=document.getElementById(`after-execution-preview-container-${e}`),o=document.getElementById(`after-execution-preview-${e}`);if(i&&o){const r=new FileReader;r.onload=n=>{o.src=n.target.result,o.style.display="block",i.style.display="block",this._autoUploadAfterExecutionPhoto(e,s)},r.readAsDataURL(s)}},async _autoUploadAfterExecutionPhoto(e,t){try{Loading?.show?.();const s=await this._fileToBase64(t),a={afterExecutionImages:[],updatedBy:AppState.currentUser?.email||AppState.currentUser?.name||"System"},i=AppState.appData.dailyObservations.find(o=>o.id===e);i&&Array.isArray(i.afterExecutionImages)&&(a.afterExecutionImages=i.afterExecutionImages),a.afterExecutionImages.push(s),GoogleIntegration.sendRequest({action:"updateObservation",data:{observationId:e,updateData:a}}).then(o=>{Loading?.hide?.();const r=AppState.appData.dailyObservations.findIndex(n=>n.id===e);if(r!==-1&&(AppState.appData.dailyObservations[r].afterExecutionImages=a.afterExecutionImages,AppState.appData.dailyObservations[r].updatedAt=new Date().toISOString()),o&&o.success){Notification?.success?.("\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0635\u0648\u0631\u0629 \u0628\u0646\u062C\u0627\u062D",3e3);const n=document.getElementById(`after-execution-photos-container-${e}`);n&&(n.innerHTML=this._buildAfterExecutionPhotosHtml(a.afterExecutionImages));const c=document.getElementById(`after-execution-preview-container-${e}`);c&&(c.style.display="none");const d=document.getElementById(`after-execution-photo-input-${e}`);d&&(d.value="")}else{Notification?.success?.("\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0635\u0648\u0631\u0629 \u0645\u062D\u0644\u064A\u0627\u064B",3e3);const n=document.getElementById(`after-execution-photos-container-${e}`);n&&(n.innerHTML=this._buildAfterExecutionPhotosHtml(a.afterExecutionImages))}}).catch(o=>{Loading?.hide?.(),Utils?.safeWarn?.("\u062E\u0637\u0623 \u0641\u064A \u0631\u0641\u0639 \u0635\u0648\u0631\u0629 \u0628\u0639\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630:",o),Notification?.success?.("\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0635\u0648\u0631\u0629 \u0645\u062D\u0644\u064A\u0627\u064B",3e3);const r=document.getElementById(`after-execution-photos-container-${e}`);r&&(r.innerHTML=this._buildAfterExecutionPhotosHtml(a.afterExecutionImages))})}catch(s){Loading?.hide?.(),Utils?.safeError?.("\u062E\u0637\u0623 \u0641\u064A \u0631\u0641\u0639 \u0635\u0648\u0631\u0629 \u0628\u0639\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630:",s),Notification?.error?.("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0631\u0641\u0639 \u0627\u0644\u0635\u0648\u0631\u0629: "+(s.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"),8e3)}},async uploadAfterExecutionPhoto(e){Notification?.info?.("\u0633\u064A\u062A\u0645 \u0631\u0641\u0639 \u0627\u0644\u0635\u0648\u0631\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0639\u0646\u062F \u0627\u0644\u0627\u062E\u062A\u064A\u0627\u0631",3e3)},_fileToBase64(e){return new Promise((t,s)=>{const a=new FileReader;a.onload=()=>t(a.result),a.onerror=s,a.readAsDataURL(e)})},async _getObservationData(e){try{const t=await GoogleIntegration.sendRequest({action:"getObservation",data:{observationId:e}});return t?.success?t.data:null}catch(t){return Utils?.safeError?.("\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629:",t),null}},canShowAssignResponsiblePanel(e){const t=String(e?.workflowStage||"").trim(),s=AppState.currentUser,a=this._isAdminRole(s),i=typeof Permissions<"u"&&Permissions.hasDetailedPermission&&Permissions.hasDetailedPermission("daily-observations","observations-specialist-review"),o=typeof Permissions<"u"&&Permissions.hasDetailedPermission&&Permissions.hasDetailedPermission("daily-observations","observations-manager-approve"),r=a||this._isSafetyOfficerRole(s)||i,n=a||o,c=t==="pending_specialist"||t==="returned_specialist"||t==="pending_manager",d=t==="pending_department"||t==="in_progress";return!!(a||(r||n)&&c||this.isUserInResponsibleDepartment(e)&&d)},readAssignFieldsFromDetailModal(e){const t=String(e||"").replace(/"/g,""),s=document.querySelector('.modal-overlay[data-observation-id="'+t+'"]');if(!s)return{assignedToName:"",assignedToEmail:""};const a=s.querySelector('.obs-assign-name[data-oid="'+t+'"]'),i=s.querySelector('.obs-assign-email[data-oid="'+t+'"]');return{assignedToName:(a&&a.value?a.value:"").trim(),assignedToEmail:(i&&i.value?i.value:"").trim()}},getObservationAssignableUsers(){const e=Array.isArray(AppState.appData.users)?AppState.appData.users:[],t=new Set,s=[];return e.forEach(a=>{if(!a||typeof a!="object"||a.isActive===!1)return;const i=String(a.status||"").toLowerCase();if(i==="inactive"||i==="\u0645\u0639\u0637\u0644"||i==="disabled")return;const o=String(a.email||"").trim(),r=String(a.name||a.fullName||o||"").trim();if(!r&&!o)return;const n=(o||r).toLowerCase();t.has(n)||(t.add(n),s.push({name:r||o,email:o,department:String(a.department||"").trim()}))}),s.sort((a,i)=>String(a.name).localeCompare(String(i.name),"ar")),s},formatAssigneePublicDisplay(e){let t=String(e?.assignedToName||"").trim();t&&(t=t.replace(/\s*[—–\-]\s*[^\s@]+@[^\s@]+\.[^\s@]+$/i,"").trim());const s=String(e?.assignedToEmail||"").trim().toLowerCase();if(!t&&!s)return"";const a=this.getObservationAssignableUsers();let i="";const o=a.find(r=>String(r.email||"").trim().toLowerCase()===s);if(o&&o.department&&(i=String(o.department).trim()),t&&i)return`${t} (${i})`;if(t)return t;if(s&&o){const r=String(o.name||"").trim();if(r&&i)return`${r} (${i})`;if(r)return r}return"\u2014"},getWorkflowCommentFieldsVisibility(e){const t=String(e?.workflowStage||"").trim()||"pending_specialist",s=AppState.currentUser,a=this._isAdminRole(s),i=typeof Permissions<"u"&&Permissions.hasDetailedPermission&&Permissions.hasDetailedPermission("daily-observations","observations-specialist-review"),o=typeof Permissions<"u"&&Permissions.hasDetailedPermission&&Permissions.hasDetailedPermission("daily-observations","observations-manager-approve"),r=a||this._isSafetyOfficerRole(s)||i,n=a||o,c=r&&(t==="pending_specialist"||t==="returned_specialist"),d=n&&t==="pending_manager";return{showOptional:c||d,showReject:d||a&&t==="pending_manager"}},readWorkflowCommentsFromDetailModal(e){const t=String(e||"").replace(/"/g,""),s=document.querySelector('.modal-overlay[data-observation-id="'+t+'"]');if(!s)return{comments:"",rejectionReason:""};const a=s.querySelector('.obs-wf-optional-comment[data-oid="'+t+'"]'),i=s.querySelector('.obs-wf-reject-reason[data-oid="'+t+'"]');return{comments:(a&&a.value?a.value:"").trim(),rejectionReason:(i&&i.value?i.value:"").trim()}},buildWorkflowInlineCommentFieldsHtml(e){const t=this.getWorkflowCommentFieldsVisibility(e);if(!t.showOptional&&!t.showReject)return"";const s=String(e.id||"").replace(/"/g,"");let a='<div class="obs-wf-inline-fields" style="margin-top:0.85rem;display:flex;flex-direction:column;gap:0.45rem;">';return t.showOptional&&(a+=`
+            <label style="font-size:0.8rem;opacity:0.95;">\u062A\u0639\u0644\u064A\u0642 \u0627\u062E\u062A\u064A\u0627\u0631\u064A \u0645\u0639 \u0627\u0644\u0625\u062C\u0631\u0627\u0621</label>
+            <textarea class="form-input obs-wf-optional-comment" data-oid="${s}" rows="2" placeholder="\u064A\u064F\u0631\u0633\u0644 \u0645\u0639 \xAB\u0625\u0631\u0633\u0627\u0644 \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0633\u0644\u0627\u0645\u0629\xBB \u0623\u0648 \xAB\u0627\u0639\u062A\u0645\u0627\u062F \u0648\u0625\u0631\u0633\u0627\u0644 \u0644\u0644\u0625\u062F\u0627\u0631\u0629\xBB\u2026" style="width:100%;max-width:100%;color:#111;resize:vertical;"></textarea>`),t.showReject&&(a+=`
+            <label style="font-size:0.8rem;opacity:0.95;">\u0633\u0628\u0628 \u0627\u0644\u0631\u0641\u0636 \u0623\u0648 \u0627\u0644\u0625\u0631\u062C\u0627\u0639</label>
+            <textarea class="form-input obs-wf-reject-reason" data-oid="${s}" rows="2" placeholder="\u0627\u0645\u0644\u0623\u0647 \u0642\u0628\u0644 \u0627\u0644\u0636\u063A\u0637 \u0639\u0644\u0649 \u0631\u0641\u0636 \u0623\u0648 \u0625\u0631\u062C\u0627\u0639\u2026" style="width:100%;max-width:100%;color:#111;resize:vertical;"></textarea>`),a+="</div>",a},buildAssignResponsibleHtml(e){if(!this.canShowAssignResponsiblePanel(e))return"";const t=String(e.id||"").replace(/"/g,""),s=Utils.escapeHTML(String(e.assignedToName||"")),a=Utils.escapeHTML(String(e.assignedToEmail||"")),i=this.getObservationAssignableUsers(),o=String(e.assignedToEmail||"").trim().toLowerCase(),r=['<option value="">\u2014 \u0627\u062E\u062A\u0631 \u0645\u0633\u062A\u062E\u062F\u0645\u0627\u064B \u0645\u0646 \u0627\u0644\u0646\u0638\u0627\u0645 \u2014</option>'].concat(i.map(c=>{const d=encodeURIComponent(JSON.stringify({name:c.name,email:c.email})),l=c.department?` (${c.department})`:"",p=Utils.escapeHTML(String(c.name||"").trim()+l),m=o&&String(c.email||"").trim().toLowerCase()===o?" selected":"";return`<option value="${d}"${m}>${p}</option>`}));return`
+        <div class="obs-assign-box" style="margin-top: 1rem; padding: 0.85rem; background: rgba(255,255,255,0.14); border-radius: 12px; border: 1px solid rgba(255,255,255,0.28);">
+            <div style="font-weight: 600; margin-bottom: 0.45rem;"><i class="fas fa-user-tag ml-2"></i>\u062A\u0639\u064A\u064A\u0646 \u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629</div>
+            <div style="font-size: 0.78rem; opacity: 0.9; margin-bottom: 0.5rem;">\u064A\u062D\u062F\u062F\u0647 \u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 (\u0623\u062E\u0635\u0627\u0626\u064A) \u0623\u0648 \u0645\u062F\u064A\u0631 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 (\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645) \u0623\u0648 \u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0639\u0646\u064A\u0629.</div>
+            ${i.length===0?'<div style="font-size:0.72rem;opacity:0.85;margin-bottom:0.35rem;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u0645\u062D\u0645\u0651\u0644\u0629\u061B \u064A\u0645\u0643\u0646 \u0627\u0644\u0625\u062F\u062E\u0627\u0644 \u064A\u062F\u0648\u064A\u0627\u064B \u0623\u0648 \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u0645\u0646 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A.</div>':""}
+            <label style="display:block;font-size:0.8rem;opacity:0.9;margin-bottom:0.25rem;">\u0645\u0633\u062A\u062E\u062F\u0645\u0648 \u0627\u0644\u0646\u0638\u0627\u0645 <span style="opacity:0.75;font-size:0.72rem;">(\u0627\u0644\u0627\u0633\u0645 \u0648\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u2014 \u062F\u0648\u0646 \u0639\u0631\u0636 \u0627\u0644\u0628\u0631\u064A\u062F)</span></label>
+            <select class="form-input obs-assign-user-select" data-oid="${t}" style="width:100%;max-width:420px;color:#111;margin-bottom:0.5rem;display:block;">
+                ${r.join("")}
+            </select>
+            <div style="font-size:0.75rem;opacity:0.85;margin-bottom:0.35rem;">\u0623\u0648 \u0627\u0644\u0627\u0633\u0645 \u064A\u062F\u0648\u064A\u0627\u064B:</div>
+            <input type="text" class="form-input obs-assign-name" data-oid="${t}" placeholder="\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0643\u0627\u0645\u0644" value="${s}" style="width:100%;max-width:340px;color:#111;margin-bottom:0.35rem;display:block;" />
+            <input type="hidden" class="obs-assign-email" data-oid="${t}" value="${a}" autocomplete="off" />
+            <p style="font-size:0.72rem;opacity:0.82;margin:0 0 0.5rem;line-height:1.45;">\u064A\u064F\u0631\u0628\u064E\u0637 \u0627\u0644\u0628\u0631\u064A\u062F \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0639\u0646\u062F \u0627\u0644\u0627\u062E\u062A\u064A\u0627\u0631 \u0645\u0646 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0648\u064A\u064F\u0633\u062A\u062E\u062F\u0645 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629 \u062F\u0648\u0646 \u0639\u0631\u0636\u0647.</p>
+            <button type="button" class="btn-secondary btn-sm obs-wf-assign-save" data-oid="${t}" style="background: rgba(255,255,255,0.22); color: #fff; border: 1px solid rgba(255,255,255,0.45);">
+                <i class="fas fa-save ml-1"></i>\u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u064A\u064A\u0646
+            </button>
+        </div>`},replaceObservationDetailModal(e,t){const s=String(e||"").replace(/"/g,""),a=document.querySelector('.modal-overlay[data-observation-id="'+s+'"]');if(!a||!t)return;const i=this.normalizeRecord(t),o=this.createObservationModal(i);a.replaceWith(o),this.attachWorkflowPanelListeners(o)},closeObservationDetailModalIfOpen(e){const t=String(e||"").replace(/"/g,""),s=document.querySelector('.modal-overlay[data-observation-id="'+t+'"]');s&&s.remove()},getObservationDetailInlineAlertsEl(e){const t=String(e||"").replace(/"/g,""),s=document.querySelector('.modal-overlay[data-observation-id="'+t+'"]');return s?s.querySelector("[data-obs-inline-alerts]"):null},showObservationDetailInlineAlert(e,t,s){const a=this.getObservationDetailInlineAlertsEl(e);if(!a||s==null||String(s).trim()==="")return!1;const i=Utils.escapeHTML(String(s)),o=t==="success"?"obs-inline-alert obs-inline-alert-success":t==="warning"?"obs-inline-alert obs-inline-alert-warning":t==="error"?"obs-inline-alert obs-inline-alert-error":"obs-inline-alert obs-inline-alert-info";a.innerHTML=`<div class="${o}"><button type="button" class="obs-inline-alert-close" aria-label="\u0625\u063A\u0644\u0627\u0642">&times;</button><span class="obs-inline-alert-msg">${i}</span></div>`;const r=a.querySelector(".obs-inline-alert-close");r&&r.addEventListener("click",()=>{a.innerHTML=""});try{a.scrollIntoView({behavior:"smooth",block:"nearest"})}catch{}return!0},clearObservationDetailInlineAlert(e){const t=this.getObservationDetailInlineAlertsEl(e);t&&(t.innerHTML="")},normalizeTimeLogArray(e){let t=[];try{if(e==null)return[];Array.isArray(e)?t=e.slice():typeof e=="string"&&e&&(t=JSON.parse(e))}catch{t=[]}return Array.isArray(t)||(t=[]),t.sort((s,a)=>{const i=new Date(a.timestamp||0).getTime(),o=new Date(s.timestamp||0).getTime();return i-o})},formatTimelineDetailLine(e){if(!e||typeof e!="object")return"\u2014";const t=String(e.roleLabel||"").trim(),s=String(e.actionDetail||"").trim();return t&&s?t+": "+s:String(e.note||"").trim()||"\u2014"},formatTimelineDate(e){if(!e)return"";try{const t=new Date(e);return Number.isNaN(t.getTime())?"":t.toLocaleDateString("ar-EG",{year:"numeric",month:"long",day:"numeric",calendar:"gregory"})}catch{return typeof Utils<"u"&&Utils.formatDate?Utils.formatDate(e):""}},buildObservationTimelineHtml(e){const t=this.normalizeTimeLogArray(e);return t.length?`
+            <div class="obs-timeline-list space-y-2">
+                ${t.map(s=>`
+                    <div class="obs-timeline-item">
+                        <div class="obs-timeline-meta">
+                            <div class="obs-timeline-body">
+                                <div class="obs-timeline-user-row">
+                                    <span class="obs-timeline-name">${Utils.escapeHTML(s.user||"")}</span>
+                                    <span class="obs-timeline-dot" aria-hidden="true"></span>
+                                </div>
+                                <p class="obs-timeline-detail">${Utils.escapeHTML(this.formatTimelineDetailLine(s))}</p>
+                                ${s.action==="status_changed"&&s.oldStatus!=null&&s.newStatus!=null?`
+                                    <p class="obs-timeline-status-hint text-xs text-gray-500 mt-1">
+                                        \u0645\u0646 <span class="font-medium">${Utils.escapeHTML(String(s.oldStatus))}</span>
+                                        \u0625\u0644\u0649 <span class="font-medium">${Utils.escapeHTML(String(s.newStatus))}</span>
+                                    </p>
+                                `:""}
+                            </div>
+                            <time class="obs-timeline-date" datetime="${Utils.escapeHTML(String(s.timestamp||""))}">${Utils.escapeHTML(this.formatTimelineDate(s.timestamp))}</time>
+                        </div>
+                    </div>
+                `).join("")}
+            </div>
+        `:'<p class="text-gray-500 text-sm">\u0644\u0627 \u064A\u0648\u062C\u062F \u0633\u062C\u0644 \u0632\u0645\u0646\u064A</p>'},formatResponsibleTableCell(e){const t=Utils.escapeHTML(e.responsibleDepartment||"-"),s=(e.assignedToName||"").trim();return s?`<div class="text-sm text-gray-800">${t}</div><div class="text-xs text-gray-500">${Utils.escapeHTML(s)}</div>`:t},normalizeObservationDepartment(e){return String(e||"").trim().toLowerCase().replace(/\s+/g," ")},isUserInResponsibleDepartment(e){const t=this.normalizeObservationDepartment(AppState.currentUser?.department),s=this.normalizeObservationDepartment(e?.responsibleDepartment);return!!(t&&s&&t===s)},filterDailyObservationsForCurrentUserScope(e){const t=Array.isArray(e)?e:[];if(this.canViewAllObservationsWorkflow())return t.slice();const s=typeof this.buildObservationsRequestContext=="function"?this.buildObservationsRequestContext():null;if(!s)return t.slice();const a=d=>this.normalizeObservationDepartment(d),i=a(s.department),o=String(s.email||"").trim().toLowerCase(),r=String(s.name||"").trim().toLowerCase(),c=(s.dailyObservationsPermissions||{})["observations-view-department"]!==!1;return t.filter(d=>{if(!d)return!1;const l=this.normalizeRecord(d),p=String(l.workflowStage||"").trim(),m=a(l.responsibleDepartment),u=String(l.submittedByEmail||"").trim().toLowerCase(),f=String(l.observerName||"").trim().toLowerCase(),y=o&&u&&o===u||r&&f&&r===f;return p?y?!0:p==="pending_specialist"||p==="pending_manager"||p==="returned_specialist"?!1:c&&i&&m&&i===m?p==="pending_department"||p==="in_progress"||p==="closed"||p==="rejected":!1:!!(y||c&&i&&m&&i===m)})},getDailyObservationsVisibleToCurrentUser(){const e=Array.isArray(AppState.appData.dailyObservations)?AppState.appData.dailyObservations:[];return this.filterDailyObservationsForCurrentUserScope(e)},isDailyObservationVisibleToCurrentUser(e){if(!e)return!1;if(this.canViewAllObservationsWorkflow())return!0;const t=this.normalizeRecord(e);return this.filterDailyObservationsForCurrentUserScope([t]).length===1},canEditObservationStatusInDetail(){return this.canViewAllObservationsWorkflow()||this.isSystemManager()},canEditObservationFieldsInDetail(e){const t=AppState.currentUser;return t?this._isAdminRole(t)||this.hasManagerWorkflowPermission()||this.hasSpecialistWorkflowPermission()?!0:typeof Permissions<"u"&&Permissions.hasDetailedPermission?Permissions.hasDetailedPermission("daily-observations","observations-edit-fields"):!1:!1},getObservationTypes(){const e=["\u0645\u0644\u0627\u062D\u0638\u0629 \u0633\u0644\u0648\u0643\u064A\u0629","\u0645\u0644\u0627\u062D\u0638\u0629 \u0634\u0631\u0637 \u0639\u0645\u0644","\u0645\u0644\u0627\u062D\u0638\u0629 \u0623\u062F\u0627\u0629","\u0645\u0644\u0627\u062D\u0638\u0629 \u0645\u0639\u062F\u0627\u062A","\u0645\u0644\u0627\u062D\u0638\u0629 \u0628\u064A\u0626\u0629 \u0639\u0645\u0644","\u0645\u0644\u0627\u062D\u0638\u0629 \u0623\u062E\u0631\u0649"],t=this._ensureRiskCategoryConfig(),s=Array.isArray(t.customObservationTypes)?t.customObservationTypes:[],a=(AppState.appData?.dailyObservations||[]).map(i=>i.observationType).filter(Boolean);return[...new Set([...e,...s,...a])].sort()},getRiskLevels(){return["\u0645\u0646\u062E\u0641\u0636","\u0645\u062A\u0648\u0633\u0637","\u0645\u0631\u062A\u0641\u0639","\u0634\u062F\u064A\u062F"]},getDepartments(){const e=(AppState.appData?.users||[]).map(t=>t.department).filter(Boolean);return[...new Set(e)].sort()},async handleFieldChange(e,t,s,a){try{const i=AppState.appData.dailyObservations.find(n=>n.id===e);if(!i){Notification.error("\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}i[t]=s,i.updatedAt=new Date().toISOString();const o={observationType:"\u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629",riskLevel:"\u0645\u0639\u062F\u0644 \u0627\u0644\u062E\u0637\u0648\u0631\u0629",responsibleDepartment:"\u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u0639\u0646 \u0627\u0644\u062A\u0646\u0641\u064A\u0630",expectedCompletionDate:"\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062A\u0648\u0642\u0639 \u0644\u0644\u062A\u0646\u0641\u064A\u0630",details:"\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629",correctiveAction:"\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A / \u0627\u0644\u0648\u0642\u0627\u0626\u064A"};Notification.success(`\u062A\u0645 \u062A\u062D\u062F\u064A\u062B ${o[t]||t} \u0628\u0646\u062C\u0627\u062D`);const r={[t]:s,updatedAt:i.updatedAt};GoogleIntegration.sendRequest({action:"updateObservation",data:{observationId:e,updateData:r}}).catch(n=>{Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u062A\u062D\u062F\u064A\u062B \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629:",n)})}catch(i){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u0642\u0644:",i),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062A\u062D\u062F\u064A\u062B: "+i.message)}},openEditFromDetailModal(e){if(!this.canDailyObservationsFullAdminUi()){typeof Notification<"u"&&Notification.error&&Notification.error("\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0645\u062A\u0627\u062D \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u0642\u0637");return}const t=document.querySelector('.modal-overlay[data-observation-id="'+e+'"]')||document.querySelector(".modal-overlay");t&&t.remove();const s=(AppState.appData.dailyObservations||[]).find(a=>a.id===e);if(!s){Notification.error("\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}if(typeof this.isDailyObservationVisibleToCurrentUser=="function"&&!this.isDailyObservationVisibleToCurrentUser(s)){Notification.error("\u0644\u0627 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u062A\u0639\u062F\u064A\u0644 \u0647\u0630\u0647 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629");return}this.showForm(this.normalizeRecord(s))},buildWorkflowActionButtonsHtml(e){const t=e.id,s=String(t||"").replace(/"/g,""),a=(e.workflowStage||"").trim()||"pending_specialist",i=[],o=AppState.currentUser,r=this._isAdminRole(o),n=typeof Permissions<"u"&&Permissions.hasDetailedPermission&&Permissions.hasDetailedPermission("daily-observations","observations-specialist-review"),c=typeof Permissions<"u"&&Permissions.hasDetailedPermission&&Permissions.hasDetailedPermission("daily-observations","observations-manager-approve"),d=r||this._isSafetyOfficerRole(o)||n,l=r||c;if(d&&(a==="pending_specialist"||a==="returned_specialist")&&i.push(`<button type="button" class="btn-primary btn-sm obs-wf-action" data-oid="${s}" data-wfa="specialist_forward" style="background: #22c55e; border: none;"><i class="fas fa-share ml-1"></i>\u0625\u0631\u0633\u0627\u0644 \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0633\u0644\u0627\u0645\u0629</button>`),l&&a==="pending_manager"&&(i.push(`<button type="button" class="btn-primary btn-sm obs-wf-action" data-oid="${s}" data-wfa="manager_approve" style="background: #0ea5e9; border: none;"><i class="fas fa-check ml-1"></i>\u0627\u0639\u062A\u0645\u0627\u062F \u0648\u0625\u0631\u0633\u0627\u0644 \u0644\u0644\u0625\u062F\u0627\u0631\u0629</button>`),i.push(`<button type="button" class="btn-secondary btn-sm obs-wf-action" data-oid="${s}" data-wfa="manager_return_specialist" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4);"><i class="fas fa-undo ml-1"></i>\u0625\u0631\u062C\u0627\u0639 \u0644\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 (\u0623\u062E\u0635\u0627\u0626\u064A)</button>`),i.push(`<button type="button" class="btn-secondary btn-sm obs-wf-action" data-oid="${s}" data-wfa="manager_reject" style="background: #b91c1c; color: white; border: none;"><i class="fas fa-times ml-1"></i>\u0631\u0641\u0636</button>`)),r&&a==="pending_manager"&&(i.push(`<button type="button" class="btn-secondary btn-sm obs-wf-action" data-oid="${s}" data-wfa="admin_return_specialist" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.35);"><i class="fas fa-user-shield ml-1"></i>\u0625\u0631\u062C\u0627\u0639 \u0645\u0646 \u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0644\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629</button>`),i.push(`<button type="button" class="btn-secondary btn-sm obs-wf-action" data-oid="${s}" data-wfa="admin_reject" style="background: #7f1d1d; color: white; border: none;"><i class="fas fa-ban ml-1"></i>\u0631\u0641\u0636 \u0625\u062F\u0627\u0631\u064A</button>`)),a==="in_progress"||a==="pending_department"){const p=this.isUserInResponsibleDepartment(e);(r||l||d||p)&&i.push(`<button type="button" class="btn-primary btn-sm obs-wf-action" data-oid="${s}" data-wfa="close_observation" style="background: #6366f1; border: none;"><i class="fas fa-flag-checkered ml-1"></i>\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629</button>`)}return i.join("")},buildDepartmentWorkflowFormHtml(e){const t=(e.workflowStage||"").trim();if(t!=="pending_department"&&t!=="in_progress")return"";const s=this.isUserInResponsibleDepartment(e),a=this._isAdminRole(AppState.currentUser);if(!s&&!a)return"";const i=String(e.id||"").replace(/"/g,""),o=Utils.escapeHTML(String(e.correctiveAction||"")),r=e.expectedCompletionDate?String(e.expectedCompletionDate).slice(0,10):"";return`
+        <div class="obs-dept-workflow" style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.12); border-radius: 12px; border: 1px solid rgba(255,255,255,0.25);">
+            <div style="font-weight: 600; margin-bottom: 0.5rem;"><i class="fas fa-building ml-2"></i>\u0625\u062F\u062E\u0627\u0644 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u0624\u0648\u0644\u0629</div>
+            <label style="display:block;font-size:0.85rem;opacity:0.9;">\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A</label>
+            <textarea class="form-input obs-dept-corrective-input" data-oid="${i}" rows="3" style="width:100%;margin:0.35rem 0 0.75rem;color:#111;">${o}</textarea>
+            <label style="display:block;font-size:0.85rem;opacity:0.9;">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0645\u062A\u0648\u0642\u0639</label>
+            <input type="date" class="form-input obs-dept-expected-input" data-oid="${i}" value="${r.replace(/"/g,"")}" style="width:100%;max-width:280px;margin:0.35rem 0;color:#111;" />
+            <div style="margin-top:0.75rem;">
+                <button type="button" class="btn-primary btn-sm obs-wf-dept-save" data-oid="${i}"><i class="fas fa-save ml-1"></i>\u062D\u0641\u0638 \u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0625\u062F\u0627\u0631\u0629</button>
+            </div>
+        </div>`},buildWorkflowBannerHtml(e){const t=[],s=(c,d)=>{const l=String(d??"").trim();l&&t.push(`<div class="obs-wf-meta-line" style="display:flex;flex-wrap:wrap;gap:0.35rem 0.5rem;align-items:baseline;direction:rtl;text-align:right;"><span style="opacity:0.88;">${Utils.escapeHTML(c)}</span><strong style="font-weight:700;opacity:1;">${Utils.escapeHTML(l)}</strong></div>`)};s("\u0627\u0644\u0645\u064F\u0633\u062C\u0651\u0650\u0644:",e.submittedBy),s("\u0645\u0631\u0627\u062C\u0639\u0629 \u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 (\u0623\u062E\u0635\u0627\u0626\u064A):",e.specialistReviewedBy),s("\u0627\u0639\u062A\u0645\u0627\u062F \u0645\u062F\u064A\u0631 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 (\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645):",e.managerApprovedBy),s("\u0645\u0644\u0627\u062D\u0638\u0629:",e.rejectionReason);const a=this.buildWorkflowActionButtonsHtml(e),i=this.buildDepartmentWorkflowFormHtml(e),o=this.buildAssignResponsibleHtml(e),r=this.buildWorkflowInlineCommentFieldsHtml(e);if(e.assignedToName||e.assignedToEmail){const c=this.formatAssigneePublicDisplay(e);c&&c!=="\u2014"&&s("\u0645\u0639\u064A\u0651\u0646:",c)}return`
+        <div class="obs-workflow-panel" style="background: linear-gradient(135deg, #312e81 0%, #5b21b6 100%); color: white; padding: 1.25rem; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+            ${t.length?`<div class="obs-wf-meta" style="font-size: 0.8rem; line-height: 1.55; margin-bottom: 0.35rem; display: flex; flex-direction: column; gap: 0.4rem; direction: rtl; text-align: right;">${t.join("")}</div>`:""}
+            ${r}
+            ${o}
+            ${a?`<div style="margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">${a}</div>`:""}
+            ${i}
+        </div>`},attachWorkflowPanelListeners(e){e&&(e.querySelectorAll(".obs-wf-action").forEach(t=>{t.addEventListener("click",()=>{const s=t.getAttribute("data-oid"),a=t.getAttribute("data-wfa");!s||!a||requestAnimationFrame(()=>{this.promptAndRunWorkflowTransition(s,a).catch(i=>{Utils.safeWarn("promptAndRunWorkflowTransition",i)})})})}),e.querySelectorAll(".obs-wf-dept-save").forEach(t=>{t.addEventListener("click",()=>{const s=t.getAttribute("data-oid");if(!s)return;const a=e.querySelector('.obs-dept-corrective-input[data-oid="'+s.replace(/"/g,"")+'"]'),i=e.querySelector('.obs-dept-expected-input[data-oid="'+s.replace(/"/g,"")+'"]'),o={correctiveAction:(a?.value||"").trim(),expectedCompletionDate:i?.value?new Date(i.value).toISOString():""};requestAnimationFrame(()=>{this.runWorkflowTransition(s,"department_update",o).catch(r=>{Utils.safeWarn("runWorkflowTransition department_update",r)})})})}),e.querySelectorAll(".obs-wf-assign-save").forEach(t=>{t.addEventListener("click",()=>{const s=t.getAttribute("data-oid");if(!s)return;const{assignedToName:a,assignedToEmail:i}=this.readAssignFieldsFromDetailModal(s);if(!a){typeof Notification<"u"&&Notification.warning&&Notification.warning("\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0645\u0639\u064A\u0651\u0646");return}requestAnimationFrame(()=>{this.runWorkflowTransition(s,"assign_responsible",{assignedToName:a,assignedToEmail:i}).catch(o=>{Utils.safeWarn("runWorkflowTransition assign_responsible",o)})})})}),e.querySelectorAll(".obs-assign-user-select").forEach(t=>{t.addEventListener("change",()=>{const s=t.getAttribute("data-oid");if(!s)return;let a="",i="";try{const d=t.value;if(d){const l=JSON.parse(decodeURIComponent(d));a=String(l.name||"").trim(),i=String(l.email||"").trim()}}catch{}const o=t.closest(".modal-overlay");if(!o)return;const r=s.replace(/"/g,""),n=o.querySelector('.obs-assign-name[data-oid="'+r+'"]'),c=o.querySelector('.obs-assign-email[data-oid="'+r+'"]');n&&(n.value=a),c&&(c.value=i)})}))},async promptAndRunWorkflowTransition(e,t){const s=t==="manager_reject"||t==="admin_reject"||t==="manager_return_specialist"||t==="admin_return_specialist",{comments:a,rejectionReason:i}=this.readWorkflowCommentsFromDetailModal(e);if(s&&!i.trim()){this.showObservationDetailInlineAlert(e,"warning","\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0633\u0628\u0628 \u0627\u0644\u0631\u0641\u0636 \u0623\u0648 \u0627\u0644\u0625\u0631\u062C\u0627\u0639 \u0641\u064A \u0627\u0644\u062D\u0642\u0644 \u0627\u0644\u0645\u062E\u0635\u0635 \u062F\u0627\u062E\u0644 \u0628\u0637\u0627\u0642\u0629 \u0633\u064A\u0631 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F."),typeof Notification<"u"&&Notification.warning&&Notification.warning("\u0627\u0644\u0633\u0628\u0628 \u0645\u0637\u0644\u0648\u0628");return}const o=t==="specialist_forward"||t==="manager_approve"?this.readAssignFieldsFromDetailModal(e):{};await this.runWorkflowTransition(e,t,{comments:s?"":a,rejectionReason:s?i:"",...o})},pushObservationInAppNotification(e,t,s){try{const a="hse_obs_workflow_notifications",i=localStorage.getItem(a);let o=[];try{o=i?JSON.parse(i):[]}catch{o=[]}Array.isArray(o)||(o=[]),o.unshift({title:e||"",body:t||"",observationId:s||"",at:new Date().toISOString()}),o=o.slice(0,40),localStorage.setItem(a,JSON.stringify(o))}catch(a){Utils.safeWarn("pushObservationInAppNotification",a)}},async runWorkflowTransition(e,t,s={}){const a=AppState.currentUser||{},i={name:(a.name||"").trim()||"\u0645\u0633\u062A\u062E\u062F\u0645",email:(a.email||"").trim(),role:a.role||"",department:(a.department||"").trim(),dailyObservationsPermissions:{}};if(typeof Permissions<"u"&&typeof Permissions.getEffectivePermissions=="function")try{const o=Permissions.getEffectivePermissions(a)||{};i.dailyObservationsPermissions=o["daily-observationsPermissions"]||{}}catch{}this.closeObservationDetailModalIfOpen(e),typeof Notification<"u"&&Notification.info&&Notification.info("\u062C\u0627\u0631\u064A \u062A\u0646\u0641\u064A\u0630 \u0637\u0644\u0628 \u0633\u064A\u0631 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629...");try{const o=await GoogleIntegration.callBackend("transitionObservationWorkflow",{observationId:e,action:t,comments:s.comments||"",rejectionReason:s.rejectionReason||"",correctiveAction:s.correctiveAction,expectedCompletionDate:s.expectedCompletionDate,assignedToName:s.assignedToName,assignedToEmail:s.assignedToEmail,actor:i,__timeoutMs:12e4});if(o&&o.success){const r=o.message||"\u062A\u0645 \u0627\u0644\u062A\u062D\u062F\u064A\u062B",n=AppState.appData.dailyObservations.findIndex(c=>c.id===e);n!==-1&&o.data&&(AppState.appData.dailyObservations[n]=this.normalizeRecord(o.data));try{typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save()}catch{}this.pushObservationInAppNotification("\u0633\u064A\u0631 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A",o.message||"\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629",e),await this.yieldToMain();try{this.loadObservationsList(this.currentFilter?.filter||null)}catch(c){Utils.safeWarn("loadObservationsList \u0628\u0639\u062F \u0633\u064A\u0631 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629",c)}await this.yieldToMain(),Notification.success(r)}else{const r=o?.message||"\u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u062F\u064A\u062B";Notification.error(r)}}catch(o){const r=o&&o.message?o.message:String(o);Notification.error(r)}},runObservationDueDateReminders(){try{const e=typeof this.getDailyObservationsVisibleToCurrentUser=="function"?this.getDailyObservationsVisibleToCurrentUser():AppState.appData.dailyObservations||[],t=new Date,s=AppState.currentUser&&AppState.currentUser.id?String(AppState.currentUser.id):"anon";e.forEach(a=>{const i=this.normalizeRecord(a);if(i.workflowStage!=="in_progress"||!i.expectedCompletionDate)return;const o=new Date(i.expectedCompletionDate);if(Number.isNaN(o.getTime()))return;const r=o.getTime()-t.getTime(),n=Math.ceil(r/864e5);if(n<0||n>2)return;const c=this.isUserInResponsibleDepartment(i);if(!(this.canViewAllObservationsWorkflow()||c))return;const l=`obs_due_${s}_${i.id}_${o.toISOString().slice(0,10)}`;if(sessionStorage.getItem(l))return;sessionStorage.setItem(l,"1");const p=n<0?`\u062A\u062C\u0627\u0648\u0632 \u0645\u0648\u0639\u062F \u0627\u0644\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0645\u062A\u0648\u0642\u0639 \u0644\u0644\u0645\u0644\u0627\u062D\u0638\u0629 ${i.isoCode||i.id}`:`\u062A\u0646\u0628\u064A\u0647: \u0645\u0648\u0639\u062F \u0627\u0644\u0625\u063A\u0644\u0627\u0642 \u062E\u0644\u0627\u0644 ${n} \u064A\u0648\u0645 \u0644\u0644\u0645\u0644\u0627\u062D\u0638\u0629 ${i.isoCode||i.id}`;typeof Notification<"u"&&Notification.warning&&Notification.warning(p)})}catch(e){Utils.safeWarn("runObservationDueDateReminders",e)}},getObservationInboxNotifications(e){const t=Array.isArray(e)?e:[],s=[];if(!AppState?.appData?.dailyObservations||typeof this.getDailyObservationsVisibleToCurrentUser!="function")return s;const a=AppState.currentUser;if(!a)return s;const i=this._isAdminRole(a),o=typeof Permissions<"u"&&Permissions.hasDetailedPermission&&Permissions.hasDetailedPermission("daily-observations","observations-specialist-review"),r=typeof Permissions<"u"&&Permissions.hasDetailedPermission&&Permissions.hasDetailedPermission("daily-observations","observations-manager-approve"),n=i||this._isSafetyOfficerRole(a)||o,c=i||r,d=p=>()=>{try{const m=document.querySelector('a[data-section="daily-observations"]');m&&m.click()}catch{}setTimeout(()=>{typeof this.viewObservation=="function"&&this.viewObservation(p)},320)};return this.getDailyObservationsVisibleToCurrentUser().forEach(p=>{const m=this.normalizeRecord(p),u=String(m.isoCode||m.id||"").trim(),f=m.id,y=String(m.workflowStage||"").trim(),h=this.isUserInResponsibleDepartment(m),k=this.canViewAllObservationsWorkflow();if(y==="in_progress"&&m.expectedCompletionDate){const b=new Date(m.expectedCompletionDate);if(Number.isNaN(b.getTime()))return;const S=new Date;S.setHours(0,0,0,0);const v=new Date(b.getFullYear(),b.getMonth(),b.getDate());if(v<S&&(k||h)){const g=Math.floor((S-v)/864e5),T=`obs-delay-${f}`;if(!t.includes(T)){const L=g===1?"\u064A\u0648\u0645\u0627\u064B":`${g} \u0623\u064A\u0627\u0645`;s.push({id:T,variant:"observation",type:"warning",title:"\u062A\u0623\u062E\u064A\u0631 \u0645\u0648\u0639\u062F \u062A\u0646\u0641\u064A\u0630 \u0645\u0644\u0627\u062D\u0638\u0629",message:`\u062A\u062C\u0627\u0648\u0632 \u0645\u0648\u0639\u062F \u0627\u0644\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0645\u062A\u0648\u0642\u0639 \u0644\u0644\u0645\u0644\u0627\u062D\u0638\u0629 ${u} (${L})`,time:m.updatedAt||m.expectedCompletionDate||new Date,icon:"fa-clock",observationId:f,onClick:d(f)})}}}if(y==="pending_manager"&&c){const b=`obs-pending-mgr-${f}`;t.includes(b)||s.push({id:b,variant:"observation",type:"info",title:"\u0645\u0644\u0627\u062D\u0638\u0629 \u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0645\u062F\u064A\u0631 \u0627\u0644\u0633\u0644\u0627\u0645\u0629",message:`\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 ${u} \u2014 \u0631\u0627\u062C\u0639\u0647\u0627 \u0648\u0627\u0639\u062A\u0645\u062F\u0647\u0627 \u0644\u0625\u0631\u0633\u0627\u0644\u0647\u0627 \u0644\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0639\u0646\u064A\u0629`,time:m.managerApprovedAt||m.updatedAt||new Date,icon:"fa-user-shield",observationId:f,onClick:d(f)})}if((y==="pending_specialist"||y==="returned_specialist")&&n){const b=`obs-pending-spec-${f}`;t.includes(b)||s.push({id:b,variant:"observation",type:"info",title:"\u0645\u0644\u0627\u062D\u0638\u0629 \u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0645\u0631\u0627\u062C\u0639\u0629 \u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629",message:`\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 ${u} \u2014 \u0631\u0627\u062C\u0639\u0647\u0627 \u0648\u0623\u0631\u0633\u0644\u0647\u0627 \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0633\u0644\u0627\u0645\u0629`,time:m.updatedAt||new Date,icon:"fa-clipboard-check",observationId:f,onClick:d(f)})}if(y==="pending_department"&&(h||k)){const b=`obs-approved-dept-${f}`;if(!t.includes(b)){const S=String(m.details||"").trim().slice(0,120),v=S?`\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 ${u} \u2014 ${S}${S.length>=120?"\u2026":""}`:`\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 ${u} \u0623\u0631\u0633\u0644\u062A \u0644\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u0624\u0648\u0644\u0629 (${m.responsibleDepartment||""}) \u0644\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A`;s.push({id:b,variant:"observation",type:"success",title:"\u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F \u0645\u0644\u0627\u062D\u0638\u0629 \u0648\u0625\u0631\u0633\u0627\u0644\u0647\u0627 \u0644\u0644\u0625\u062F\u0627\u0631\u0629",message:v,time:m.managerApprovedAt||m.updatedAt||new Date,icon:"fa-check-circle",observationId:f,onClick:d(f)})}}}),s},DEFAULT_SITES:[{id:"factory-1",name:"\u0645\u0635\u0646\u0639 1"},{id:"factory-2",name:"\u0645\u0635\u0646\u0639 2"},{id:"warehouse-1",name:"\u0645\u062E\u0632\u0646 1"}],OBSERVATION_TYPES:[{value:"\u0648\u0636\u0639 \u063A\u064A\u0631 \u0622\u0645\u0646",label:"\u0648\u0636\u0639 \u063A\u064A\u0631 \u0622\u0645\u0646"},{value:"\u062A\u0635\u0631\u0641 \u063A\u064A\u0631 \u0622\u0645\u0646",label:"\u062A\u0635\u0631\u0641 \u063A\u064A\u0631 \u0622\u0645\u0646"},{value:"\u0645\u0642\u062A\u0631\u062D",label:"\u0645\u0642\u062A\u0631\u062D"},{value:"\u0623\u062E\u0631\u0649",label:"\u0623\u062E\u0631\u0649"}],SHIFTS:["\u0627\u0644\u0623\u0648\u0644\u0649","\u0627\u0644\u062B\u0627\u0646\u064A\u0629","\u0627\u0644\u062B\u0627\u0644\u062B\u0629"],RISK_LEVELS:["\u0645\u0646\u062E\u0641\u0636","\u0645\u062A\u0648\u0633\u0637","\u0639\u0627\u0644\u064A"],STATUS_OPTIONS:["\u0645\u0641\u062A\u0648\u062D","\u062C\u0627\u0631\u064A","\u0645\u063A\u0644\u0642"],WORKFLOW_STAGES:{pending_specialist:"\u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0645\u0631\u0627\u062C\u0639\u0629 \u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 (\u0623\u062E\u0635\u0627\u0626\u064A)",pending_manager:"\u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0639\u062A\u0645\u0627\u062F \u0645\u062F\u064A\u0631 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 (\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645)",pending_department:"\u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0625\u062F\u062E\u0627\u0644 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0645\u0646 \u0627\u0644\u0625\u062F\u0627\u0631\u0629",returned_specialist:"\u0645\u0639\u0627\u062F\u0629 \u0644\u0645\u0631\u0627\u062C\u0639\u0629 \u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 (\u0623\u062E\u0635\u0627\u0626\u064A)",in_progress:"\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u0646\u0641\u064A\u0630",closed:"\u0645\u0643\u062A\u0645\u0644\u0629 (\u0645\u063A\u0644\u0642\u0629)",rejected:"\u0645\u0631\u0641\u0648\u0636\u0629"},WORKFLOW_PATH_STEPS:[{title:"\u0623\u062E\u0635\u0627\u0626\u064A \u0627\u0644\u0633\u0644\u0627\u0645\u0629"},{title:"\u0645\u062F\u064A\u0631 \u0627\u0644\u0633\u0644\u0627\u0645\u0629"},{title:"\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062A\u0646\u0641\u064A\u0630"},{title:"\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u0646\u0641\u064A\u0630"},{title:"\u0645\u063A\u0644\u0642\u0629"}],getWorkflowPathVisualState(e){const t=String(e||"").trim()||"pending_specialist";if(t==="rejected")return{mode:"rejected",activeIndex:-1};if(t==="closed")return{mode:"closed",activeIndex:4};let s=0;return t==="pending_specialist"||t==="returned_specialist"?s=0:t==="pending_manager"?s=1:t==="pending_department"?s=2:t==="in_progress"?s=3:s=0,{mode:"progress",activeIndex:s}},getWorkflowCurrentStageLine(e){const t=String(e?.workflowStage||"").trim();let s=this.getWorkflowStageLabel(t);if(t==="in_progress"&&e&&e.responsibleDepartment){const a=String(e.responsibleDepartment).trim();a&&(s+=` (${a})`)}return s},buildWorkflowPathHtml(e){const t=(e.workflowStage||"").trim(),s=this.getWorkflowPathVisualState(t),a=this.WORKFLOW_PATH_STEPS||[],i="display:inline-flex;align-items:center;gap:0.25rem;padding:0.4rem 0.85rem;border-radius:9999px;font-size:0.8rem;font-weight:600;white-space:nowrap;border:1px solid transparent;",o=a.map((c,d)=>{const p=`${d+1}. ${c.title}`;let m="";return s.mode==="closed"?m=`${i}background:#dcfce7;color:#166534;border-color:#bbf7d0;`:s.mode==="rejected"?m=`${i}background:#f3f4f6;color:#9ca3af;border-color:#e5e7eb;`:s.mode==="progress"?d<s.activeIndex?m=`${i}background:#dcfce7;color:#166534;border-color:#bbf7d0;`:d===s.activeIndex?m=`${i}background:#7c3aed;color:#fff;border-color:#6d28d9;box-shadow:0 2px 8px rgba(124,58,237,0.35);`:m=`${i}background:#f3f4f6;color:#6b7280;border-color:#e5e7eb;`:m=`${i}background:#f3f4f6;color:#6b7280;`,`<span class="obs-workflow-path-badge" style="${m}">${Utils.escapeHTML(p)}</span>`}).join(""),r=s.mode==="rejected"?`<span style="color:#b91c1c;font-weight:600;">\u0627\u0644\u0645\u0631\u062D\u0644\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629: \u0645\u0631\u0641\u0648\u0636\u0629</span>${e.rejectionReason?` \u2014 ${Utils.escapeHTML(String(e.rejectionReason).slice(0,120))}${String(e.rejectionReason).length>120?"\u2026":""}`:""}`:`<span style="color:#374151;"><strong style="font-weight:700;">\u0627\u0644\u0645\u0631\u062D\u0644\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629:</strong> ${Utils.escapeHTML(this.getWorkflowCurrentStageLine(e))}</span>`;return`
+        <div class="obs-workflow-path-card" dir="rtl" style="background:#fff;color:#111827;border-radius:14px;padding:1rem 1.15rem;border:1px solid #e5e7eb;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+            ${s.mode==="rejected"?'<div style="margin-bottom:0.65rem;padding:0.45rem 0.65rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:0.8rem;color:#991b1b;"><i class="fas fa-ban ml-1"></i>\u0633\u064A\u0631 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u0645\u062A\u0648\u0642\u0641 \u2014 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0645\u0631\u0641\u0648\u0636\u0629</div>':""}
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap;">
+                <span style="display:inline-flex;align-items:center;justify-content:center;width:2rem;height:2rem;border-radius:10px;background:linear-gradient(135deg,#ede9fe,#ddd6fe);color:#5b21b6;">
+                    <i class="fas fa-project-diagram" style="font-size:0.95rem;"></i>
+                </span>
+                <span style="font-weight:800;font-size:1.05rem;color:#111827;letter-spacing:-0.02em;">\u0645\u0633\u0627\u0631 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F</span>
+            </div>
+            <div class="obs-workflow-path-steps" style="display:flex;flex-wrap:wrap;gap:0.45rem;align-items:center;justify-content:flex-start;direction:rtl;">
+                ${o}
+            </div>
+            <div style="margin-top:0.85rem;padding-top:0.75rem;border-top:1px solid #f3f4f6;font-size:0.9rem;line-height:1.5;">
+                ${r}
+            </div>
+        </div>`},MAX_ATTACHMENT_SIZE:10*1024*1024,OBSERVATIONS_THRESHOLD:10,state:{selectedSiteId:"",selectedSiteName:"",availablePlaces:[],selectedPlaceId:"",isCustomLocationSelected:!1,customLocationName:"",currentAttachments:[],editingId:null,activeModal:null,isLoadingPlaces:!1,activeTab:"observations-registry"},currentFilter:null,_topRiskCategoryFilter:"",sheetJsPromise:null,_dailyObsLoadPromise:null,_dailyObsBackendFetchOk:!1,async ensureDailyObservationsDataLoaded({force:e=!1}={}){return this._dailyObsLoadPromise&&!e?this._dailyObsLoadPromise:(this._dailyObsLoadPromise=(async()=>{if(typeof GoogleIntegration>"u"||!GoogleIntegration.readFromSheets)return;if(!(AppState?.googleConfig?.appsScript?.enabled&&AppState?.googleConfig?.appsScript?.scriptUrl)){this._dailyObsBackendFetchOk=!0;return}const s=typeof this.buildObservationsRequestContext=="function"?this.buildObservationsRequestContext():null,a=await GoogleIntegration.readFromSheets("DailyObservations",{timeout:15e3,observationsRequestContext:s}).catch(()=>null);if(Array.isArray(a)){const i=AppState.appData.dailyObservations||[];typeof this.canViewAllObservationsWorkflow=="function"&&this.canViewAllObservationsWorkflow()&&a.length===0&&i.length>0?Utils?.safeLog?.("\u26A0\uFE0F DailyObservations: \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062C\u062F\u064A\u062F\u0629 \u0641\u0627\u0631\u063A\u0629 - \u0627\u0644\u0627\u062D\u062A\u0641\u0627\u0638 \u0628\u0627\u0644\u0645\u062D\u0644\u064A"):AppState.appData.dailyObservations=a}try{localStorage.setItem("daily_observations_last_sync",String(Date.now()))}catch{}if(typeof window.DataManager<"u"&&window.DataManager.save)try{window.DataManager.save()}catch{}this._dailyObsBackendFetchOk=!0})().finally(()=>{this._dailyObsLoadPromise=null}),this._dailyObsLoadPromise)},saveUIState(){const e=document.querySelector(".tab-btn.active[data-tab]");if(e){const t=e.getAttribute("data-tab");this.state.activeTab=t}this.state.activeModal},restoreUIState(){this.state.activeTab&&setTimeout(()=>{const e=document.querySelector(`.tab-btn[data-tab="${this.state.activeTab}"]`);e&&e.click()},150)},refreshOnLanguageChange(){this.state&&this.state.activeTab&&this.renderList()},async load(){this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{this.refreshOnLanguageChange()}),window.addEventListener("storage",p=>{p.key==="language"&&p.newValue!==p.oldValue&&this.refreshOnLanguageChange()}),this._languageChangeListenerAdded=!0);let e=!1;const t=10,s=200;for(let p=0;p<t;p++){if(typeof window<"u"&&(typeof window.DataManager<"u"||typeof DataManager<"u")){e=!0;break}p<t-1&&await new Promise(m=>setTimeout(m,s))}if(!e){const p="\u26A0\uFE0F DailyObservations: DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0642\u062F \u0644\u0627 \u062A\u0639\u0645\u0644 \u0628\u0639\u0636 \u0627\u0644\u0648\u0638\u0627\u0626\u0641 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D";Utils?.safeWarn?.(p)||typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn(p)}let a=document.getElementById("daily-observations-section");if(a||(a=document.getElementById("dailyobservations-section")),!a){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F DailyObservations: \u0642\u0633\u0645 daily-observations-section \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}if(typeof AppState>"u"){a.innerHTML=`
+                <div class="content-card">
+                    <div class="card-body">
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
+                            <p class="text-gray-500 mb-2">\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629</p>
+                            <p class="text-sm text-gray-400">AppState \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 \u062D\u0627\u0644\u064A\u0627\u064B. \u062C\u0631\u0651\u0628 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629.</p>
+                            <button onclick="location.reload()" class="btn-primary mt-4">
+                                <i class="fas fa-redo ml-2"></i>
+                                \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;return}const i=this.hasTabAccess("observations-registry"),o=this.hasTabAccess("top-10-observations"),r=this.hasTabAccess("data-analysis"),n=i?"observations-registry":o?"top-10-observations":r?"data-analysis":"";if(!n){a.innerHTML=`
+                <div class="content-card">
+                    <div class="card-body">
+                        <div class="empty-state">
+                            <i class="fas fa-lock text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629</p>
+                        </div>
+                    </div>
+                </div>
+            `;return}this.state.activeTab=n,this.saveUIState(),AppState.appData||(AppState.appData={}),AppState.appData.dailyObservations||(AppState.appData.dailyObservations=[]);const c=this.isCurrentUserAdmin(),d=c&&this.hasTabAccess("executive-dashboard");let l="";if(d)try{l=this.renderExecutiveDashboard()}catch{l=""}try{const p=Array.isArray(AppState.appData.dailyObservations)&&AppState.appData.dailyObservations.length>0;let m=null;try{m=localStorage.getItem("daily_observations_last_sync")}catch{}const u=m?Date.now()-parseInt(m,10):1/0,f=600*1e3,y=u>=f;(!p||y)&&typeof GoogleIntegration<"u"&&GoogleIntegration.readFromSheets?this.ensureDailyObservationsDataLoaded({force:y&&p}).catch(()=>{}).finally(()=>{try{const w=document.getElementById("observations-table-container"),E=document.getElementById("observations-stats-cards");if(!w&&!E)return;w&&typeof this.loadObservationsList=="function"&&this.loadObservationsList(),E&&typeof this.renderStatsCards=="function"&&this.renderStatsCards()}catch{}}):p&&(this._dailyObsBackendFetchOk=!0),(typeof GoogleIntegration>"u"||!GoogleIntegration.readFromSheets)&&(this._dailyObsBackendFetchOk=!0),await this.yieldToMain();const h=1e4,k=(w,E)=>{const x=new Promise(($,M)=>setTimeout(()=>M(new Error("\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u062A\u062D\u0645\u064A\u0644")),h));return Promise.race([w,x]).catch($=>(Utils?.safeWarn?.("\u26A0\uFE0F \u062A\u062D\u0645\u064A\u0644 \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629:",$?.message||$),E))},b=`
+                <div class="content-card"><div class="card-body"><div class="empty-state">
+                    <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
+                    <p class="text-gray-500">${Utils.escapeHTML(this._t("module.dailyobs.error.timeout","\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0623\u0648 \u0627\u0646\u062A\u0647\u062A \u0627\u0644\u0645\u0647\u0644\u0629"))}</p>
+                    <button onclick="DailyObservations.load()" class="btn-primary mt-4"><i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t("module.dailyobs.error.retry","\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629"))}</button>
+                </div></div></div>`,S=`
+                <div class="content-card"><div class="card-body"><div class="empty-state">
+                    <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
+                    <p class="text-gray-500">${Utils.escapeHTML(this._t("module.dailyobs.error.analysis","\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"))}</p>
+                    <button onclick="DailyObservations.load()" class="btn-primary mt-4"><i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t("module.dailyobs.error.retry","\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629"))}</button>
+                </div></div></div>`,v=`
+                <div class="content-card"><div class="card-body"><div class="empty-state">
+                    <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
+                    <p class="text-gray-500">${Utils.escapeHTML(this._t("module.dailyobs.error.top10","\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 Top 10"))}</p>
+                    <button onclick="DailyObservations.load()" class="btn-primary mt-4"><i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t("module.dailyobs.error.retry","\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629"))}</button>
+                </div></div></div>`,[g,T,L]=await Promise.all([k(this.renderList(),b),c?k(this.renderDataAnalysis(),S):Promise.resolve(""),k(this.renderTop10Observations(),v)]);let D=g||b,O=c?T||S:"",N=L||v;a.innerHTML=`
+                <div class="section-header">
+                    <div class="flex items-center justify-between gap-4 flex-wrap">
+                        <div>
+                            <h1 class="section-title">
+                                <i class="fas fa-clipboard-check ml-3"></i>
+                                <span data-i18n="module.dailyobs.title">\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629</span>
+                            </h1>
+                            <p class="section-subtitle" data-i18n="module.dailyobs.subtitle">\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629 \u0648\u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629</p>
+                        </div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            ${this.canDailyObservationsFullAdminUi()?`
+                            <button id="import-observations-excel-btn" class="btn-secondary">
+                                <i class="fas fa-file-import ml-2"></i>
+                                <span data-i18n="module.dailyobs.btn.importExcel">\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0645\u0646 Excel</span>
+                            </button>
+                            `:""}
+                            <button id="export-observations-excel-btn" class="btn-success">
+                                <i class="fas fa-file-excel ml-2"></i>
+                                <span data-i18n="module.dailyobs.btn.exportExcel">\u062A\u0635\u062F\u064A\u0631 Excel</span>
+                            </button>
+                            ${this.canDailyObservationsFullAdminUi()?`
+                            <button id="export-observations-ppt-btn" class="btn-secondary">
+                                <i class="fas fa-file-powerpoint ml-2"></i>
+                                <span data-i18n="module.dailyobs.btn.exportPpt">\u062A\u0635\u062F\u064A\u0631 PPT</span>
+                            </button>
+                            `:""}
+                            <button id="add-observation-btn" class="btn-primary">
+                                <i class="fas fa-plus ml-2"></i>
+                                <span data-i18n="module.dailyobs.btn.addObservation">\u0625\u0636\u0627\u0641\u0629 \u0645\u0644\u0627\u062D\u0638\u0629 \u062C\u062F\u064A\u062F\u0629</span>
+                            </button>
+                            ${this.canDailyObservationsFullAdminUi()?`
+                            <button id="delete-all-observations-btn" class="btn-secondary" style="background-color: #dc3545; color: white; border-color: #dc3545;">
+                                <i class="fas fa-trash-alt ml-2"></i>
+                                <span data-i18n="module.dailyobs.btn.deleteAll">\u062D\u0630\u0641 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A</span>
+                            </button>
+                            `:""}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tabs Navigation -->
+                <div class="tabs-container mt-6" style="border-bottom: 2px solid var(--border-color);">
+                    <div class="tabs-nav" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        ${i?`
+                        <button class="tab-btn ${this.state.activeTab==="observations-registry"?"active":""}" data-tab="observations-registry" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid ${this.state.activeTab==="observations-registry"?"var(--primary-color)":"transparent"}; color: ${this.state.activeTab==="observations-registry"?"var(--primary-color)":"var(--text-secondary)"}; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                            <i class="fas fa-list ml-2"></i>
+                            <span data-i18n="module.dailyobs.tab.registry">\u0633\u062C\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A</span>
+                        </button>
+                        `:""}
+                        ${o?`
+                        <button class="tab-btn ${this.state.activeTab==="top-10-observations"?"active":""}" data-tab="top-10-observations" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid ${this.state.activeTab==="top-10-observations"?"var(--primary-color)":"transparent"}; color: ${this.state.activeTab==="top-10-observations"?"var(--primary-color)":"var(--text-secondary)"}; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                            <i class="fas fa-ranking-star ml-2"></i>
+                            <span data-i18n="module.dailyobs.tab.top10">Top 10</span>
+                        </button>
+                        `:""}
+                        ${r?`
+                        <button class="tab-btn ${this.state.activeTab==="data-analysis"?"active":""}" data-tab="data-analysis" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid ${this.state.activeTab==="data-analysis"?"var(--primary-color)":"transparent"}; color: ${this.state.activeTab==="data-analysis"?"var(--primary-color)":"var(--text-secondary)"}; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                            <i class="fas fa-chart-line ml-2"></i>
+                            <span data-i18n="module.dailyobs.tab.analysis">\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</span>
+                        </button>
+                        `:""}
+                        ${d?`
+                        <button class="tab-btn ${this.state.activeTab==="executive-dashboard"?"active":""}" data-tab="executive-dashboard" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid ${this.state.activeTab==="executive-dashboard"?"var(--primary-color)":"transparent"}; color: ${this.state.activeTab==="executive-dashboard"?"var(--primary-color)":"var(--text-secondary)"}; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                            <i class="fas fa-gauge-high ml-2"></i>
+                            <span data-i18n="module.dailyobs.tab.executive">\u0627\u0644\u0645\u0624\u0634\u0631\u0627\u062A \u0627\u0644\u062A\u0646\u0641\u064A\u0630\u064A\u0629</span>
+                        </button>
+                        `:""}
+                        <button type="button" id="daily-observations-refresh-btn" class="tab-btn" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid transparent; color: var(--text-secondary); font-weight: 600; cursor: pointer; transition: all 0.3s;" data-i18n-title="module.dailyobs.btn.refreshTitle" title="\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u062F\u064A\u0648\u0644">
+                            <i class="fas fa-sync-alt ml-2"></i>
+                            <span data-i18n="module.dailyobs.btn.refresh">\u062A\u062D\u062F\u064A\u062B</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab Content -->
+                <div id="observations-content" class="mt-6">
+                    ${i?`
+                    <div id="tab-observations-registry" class="tab-content ${this.state.activeTab==="observations-registry"?"active":""}" style="${this.state.activeTab==="observations-registry"?"":"display: none;"}">
+                        ${D}
+                    </div>
+                    `:""}
+                    ${o?`
+                    <div id="tab-top-10-observations" class="tab-content ${this.state.activeTab==="top-10-observations"?"active":""}" style="${this.state.activeTab==="top-10-observations"?"":"display: none;"}">
+                        ${N}
+                    </div>
+                    `:""}
+                    ${r?`
+                    <div id="tab-data-analysis" class="tab-content ${this.state.activeTab==="data-analysis"?"active":""}" style="${this.state.activeTab==="data-analysis"?"":"display: none;"}">
+                        ${O}
+                    </div>
+                    `:""}
+                    ${d?`
+                    <div id="tab-executive-dashboard" class="tab-content ${this.state.activeTab==="executive-dashboard"?"active":""}" style="${this.state.activeTab==="executive-dashboard"?"":"display: none;"}">
+                        ${l}
+                    </div>
+                    `:""}
+                </div>
+            `,this.applyModuleI18n(a),this.setupEventListeners(),this.currentFilter=null;try{this.setupTabs()}catch{}this.restoreUIState();try{requestAnimationFrame(()=>{const w=()=>{try{if(this.state&&this.state.activeTab==="observations-registry"){this.loadObservationsList();try{this.runObservationDueDateReminders()}catch(E){Utils.safeWarn("\u26A0\uFE0F \u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0645\u0648\u0627\u0639\u064A\u062F \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A:",E)}}else this.state&&this.state.activeTab==="top-10-observations"&&this.loadTop10Observations()}catch(E){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0623\u0648\u0644\u064A:",E)}};typeof requestIdleCallback<"u"?requestIdleCallback(w,{timeout:2500}):setTimeout(w,0)})}catch(w){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0623\u0648\u0644\u064A:",w)}}catch(p){typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u062E\u0637\u0623 \u0639\u0627\u0645 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 DailyObservations:",p),a.innerHTML=`
+                <div class="section-header">
+                    <div>
+                        <h1 class="section-title">
+                            <i class="fas fa-clipboard-check ml-3"></i>
+                            <span data-i18n="module.dailyobs.title">\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629</span>
+                        </h1>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <div class="content-card">
+                        <div class="card-body">
+                            <div class="empty-state">
+                                <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
+                                <p class="text-gray-500 mb-2">${Utils.escapeHTML(this._t("module.dailyobs.error.load","\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"))}</p>
+                                <p class="text-sm text-gray-400 mb-4">${p&&p.message?Utils.escapeHTML(p.message):Utils.escapeHTML(this._t("module.dailyobs.error.unknown","\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}</p>
+                                <button onclick="DailyObservations.load()" class="btn-primary">
+                                    <i class="fas fa-redo ml-2"></i>
+                                    ${Utils.escapeHTML(this._t("module.dailyobs.error.retry","\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629"))}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `}},async renderList(){const t=(typeof this.getDailyObservationsVisibleToCurrentUser=="function"?this.getDailyObservationsVisibleToCurrentUser():Array.isArray(AppState.appData.dailyObservations)?AppState.appData.dailyObservations:[]).map(f=>this.normalizeRecord(f)),s=[...new Set(t.map(f=>f.siteName).filter(Boolean))].sort(),a=[...new Set(t.map(f=>f.locationName).filter(Boolean))].sort(),i=[...new Set(t.map(f=>f.observationType).filter(Boolean))].sort(),o=[...new Set(t.map(f=>f.shift).filter(Boolean))].sort(),r=[...new Set(t.map(f=>f.riskLevel).filter(Boolean))].sort(),n=[...new Set(t.map(f=>f.status).filter(Boolean))].sort(),c=[...new Set(t.map(f=>f.observerName).filter(Boolean))].sort(),d=[...new Set(t.map(f=>f.responsibleDepartment).filter(Boolean))].sort(),{t:l,isRTL:p}=this.getTranslations(),m=p?"ml-1":"mr-1";return`
+            <!-- \u0627\u0644\u0643\u0631\u0648\u062A \u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0629 -->
+            <div id="observations-stats-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <!-- \u0633\u064A\u062A\u0645 \u0645\u0644\u0624\u0647\u0627 \u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u0627\u064B -->
+            </div>
+
+            <!-- \u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A -->
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="flex items-center justify-between gap-4 mb-4 flex-wrap" style="direction: ${p?"rtl":"ltr"};">
+                        <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; flex: 1;">
+                            <h2 class="card-title" style="text-align: ${p?"right":"left"}; margin: 0; white-space: nowrap;">
+                                <i class="fas fa-list ${p?"ml-2":"mr-2"}"></i>
+                                ${l("title.observationsRegistry")}
+                            </h2>
+                            <!-- \u0634\u0631\u064A\u0637 \u0627\u0644\u062A\u0627\u0631\u064A\u062E - \u0639\u0644\u0649 \u0627\u0644\u064A\u0645\u064A\u0646 \u0628\u062C\u0627\u0646\u0628 \u0627\u0644\u0639\u0646\u0648\u0627\u0646 -->
+                            <div class="date-range-bar" style="background: linear-gradient(135deg, #f0f4ff 0%, #e8edff 100%); padding: 8px 16px; border-radius: 12px; display: flex; align-items: center; gap: 12px; border: 1px solid #e0e7ff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <label style="font-size: 12px; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+                                        <i class="fas fa-calendar-alt" style="color: #6366f1;"></i>
+                                        ${l("filter.dateFrom")}
+                                    </label>
+                                    <input type="date" id="observation-date-from" class="date-range-input" style="padding: 6px 10px; border: 1px solid #c7d2fe; border-radius: 6px; background: white; font-size: 12px; color: #1e293b; min-width: 120px; direction: ${p?"rtl":"ltr"};">
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <label style="font-size: 12px; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+                                        <i class="fas fa-calendar-check" style="color: #10b981;"></i>
+                                        ${l("filter.dateTo")}
+                                    </label>
+                                    <input type="date" id="observation-date-to" class="date-range-input" style="padding: 6px 10px; border: 1px solid #c7d2fe; border-radius: 6px; background: white; font-size: 12px; color: #1e293b; min-width: 120px; direction: ${p?"rtl":"ltr"};">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- \u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u0641\u064A \u0635\u0641 \u0648\u0627\u062D\u062F \u0627\u062D\u062A\u0631\u0627\u0641\u064A -->
+                <div class="observations-filters-row" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 16px 20px; margin: 0 -20px 0 -20px; width: calc(100% + 40px); direction: ${p?"rtl":"ltr"};">
+                    <div class="filters-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; align-items: end;">
+                        <!-- \u062D\u0642\u0644 \u0627\u0644\u0628\u062D\u062B -->
+                        <div class="filter-field">
+                            <label class="filter-label" style="text-align: ${p?"right":"left"};">
+                                <i class="fas fa-search ${m}"></i>${l("filter.search")}
+                            </label>
+                            <input type="text" id="observation-search" class="filter-input" placeholder="${l("filter.searchPlaceholder")}" style="direction: ${p?"rtl":"ltr"}; text-align: ${p?"right":"left"};">
+                        </div>
+
+                        <!-- \u0641\u0644\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 -->
+                        <div class="filter-field">
+                            <label class="filter-label" style="text-align: ${p?"right":"left"};">
+                                <i class="fas fa-map-marker-alt ${m}"></i>${l("filter.site")}
+                            </label>
+                            <select id="observation-filter-site" class="filter-input" style="direction: ${p?"rtl":"ltr"};">
+                                <option value="">${l("filter.all")}</option>
+                                ${s.map(f=>`<option value="${Utils.escapeHTML(f)}">${Utils.escapeHTML(f)}</option>`).join("")}
+                            </select>
+                        </div>
+
+                        <!-- \u0641\u0644\u062A\u0631 \u0627\u0644\u0645\u0643\u0627\u0646 -->
+                        <div class="filter-field">
+                            <label class="filter-label" style="text-align: ${p?"right":"left"};">
+                                <i class="fas fa-location-dot ${m}"></i>${l("filter.location")}
+                            </label>
+                            <select id="observation-filter-location" class="filter-input" style="direction: ${p?"rtl":"ltr"};">
+                                <option value="">${l("filter.all")}</option>
+                                ${a.map(f=>`<option value="${Utils.escapeHTML(f)}">${Utils.escapeHTML(f)}</option>`).join("")}
+                            </select>
+                        </div>
+
+                        <!-- \u0641\u0644\u062A\u0631 \u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 -->
+                        <div class="filter-field">
+                            <label class="filter-label" style="text-align: ${p?"right":"left"};">
+                                <i class="fas fa-tag ${m}"></i>${l("filter.type")}
+                            </label>
+                            <select id="observation-filter-type" class="filter-input" style="direction: ${p?"rtl":"ltr"};">
+                                <option value="">${l("filter.all")}</option>
+                                ${i.map(f=>`<option value="${Utils.escapeHTML(f)}">${Utils.escapeHTML(f)}</option>`).join("")}
+                            </select>
+                        </div>
+
+                        <!-- \u0641\u0644\u062A\u0631 \u0627\u0644\u0648\u0631\u062F\u064A\u0629 -->
+                        <div class="filter-field">
+                            <label class="filter-label" style="text-align: ${p?"right":"left"};">
+                                <i class="fas fa-clock ${m}"></i>${l("filter.shift")}
+                            </label>
+                            <select id="observation-filter-shift" class="filter-input" style="direction: ${p?"rtl":"ltr"};">
+                                <option value="">${l("filter.all")}</option>
+                                ${o.map(f=>`<option value="${Utils.escapeHTML(f)}">${Utils.escapeHTML(f)}</option>`).join("")}
+                            </select>
+                        </div>
+
+                        <!-- \u0641\u0644\u062A\u0631 \u0645\u0639\u062F\u0644 \u0627\u0644\u062E\u0637\u0648\u0631\u0629 -->
+                        <div class="filter-field">
+                            <label class="filter-label" style="text-align: ${p?"right":"left"};">
+                                <i class="fas fa-exclamation-triangle ${m}"></i>${l("filter.risk")}
+                            </label>
+                            <select id="observation-filter-risk" class="filter-input" style="direction: ${p?"rtl":"ltr"};">
+                                <option value="">${l("filter.all")}</option>
+                                ${r.map(f=>`<option value="${Utils.escapeHTML(f)}">${Utils.escapeHTML(f)}</option>`).join("")}
+                            </select>
+                        </div>
+
+                        <!-- \u0641\u0644\u062A\u0631 \u0627\u0644\u062D\u0627\u0644\u0629 -->
+                        <div class="filter-field">
+                            <label class="filter-label" style="text-align: ${p?"right":"left"};">
+                                <i class="fas fa-info-circle ${m}"></i>${l("filter.status")}
+                            </label>
+                            <select id="observation-filter-status" class="filter-input" style="direction: ${p?"rtl":"ltr"};">
+                                <option value="">${l("filter.all")}</option>
+                                ${n.map(f=>`<option value="${Utils.escapeHTML(f)}">${Utils.escapeHTML(f)}</option>`).join("")}
+                            </select>
+                        </div>
+
+                        <!-- \u0641\u0644\u062A\u0631 \u0635\u0627\u062D\u0628 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 -->
+                        <div class="filter-field">
+                            <label class="filter-label" style="text-align: ${p?"right":"left"};">
+                                <i class="fas fa-user ${m}"></i>${l("filter.observer")}
+                            </label>
+                            <select id="observation-filter-observer" class="filter-input" style="direction: ${p?"rtl":"ltr"};">
+                                <option value="">${l("filter.all")}</option>
+                                ${c.map(f=>`<option value="${Utils.escapeHTML(f)}">${Utils.escapeHTML(f)}</option>`).join("")}
+                            </select>
+                        </div>
+
+                        <!-- \u0641\u0644\u062A\u0631 \u0627\u0644\u0645\u0633\u0624\u0648\u0644 -->
+                        <div class="filter-field">
+                            <label class="filter-label" style="text-align: ${p?"right":"left"};">
+                                <i class="fas fa-user-tie ${m}"></i>${l("filter.responsible")}
+                            </label>
+                            <select id="observation-filter-responsible" class="filter-input" style="direction: ${p?"rtl":"ltr"};">
+                                <option value="">${l("filter.all")}</option>
+                                ${d.map(f=>`<option value="${Utils.escapeHTML(f)}">${Utils.escapeHTML(f)}</option>`).join("")}
+                            </select>
+                        </div>
+
+                        <!-- \u0632\u0631 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0639\u064A\u064A\u0646 \u0648\u0632\u0631 \u0627\u0644\u062A\u062D\u062F\u064A\u062B -->
+                        <div class="filter-field">
+                            <button id="observation-reset-filters" class="filter-reset-btn" type="button">
+                                <i class="fas fa-redo ${m}"></i>${l("btn.reset")}
+                            </button>
+                        </div>
+                        <div class="filter-field">
+                            <button id="observation-refresh-btn" class="filter-reset-btn" type="button" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                                <i class="fas fa-sync-alt ${m}"></i>${l("btn.refresh")}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body" style="padding-top: 20px;">
+                    <div id="observations-table-container">
+                        <div class="empty-state" style="direction: ${p?"rtl":"ltr"}; text-align: ${p?"right":"left"};">
+                            <p class="text-gray-500">${l("empty.noObservations")}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `},renderStatsCards(e=null,t=null){const s=document.getElementById("observations-stats-cards");if(!s)return;e||(e=(typeof this.getDailyObservationsVisibleToCurrentUser=="function"?this.getDailyObservationsVisibleToCurrentUser():Array.isArray(AppState.appData.dailyObservations)?AppState.appData.dailyObservations:[]).map(T=>this.normalizeRecord(T)));const a=e.length,i=e.filter(g=>g.status==="\u0645\u0641\u062A\u0648\u062D"||g.status==="\u062C\u062F\u064A\u062F").length,o=e.filter(g=>g.status==="\u0645\u063A\u0644\u0642").length,r=e.filter(g=>g.riskLevel==="\u0639\u0627\u0644\u064A"||g.riskLevel==="\u0639\u0627\u0644\u064A\u0629").length,n=e.filter(g=>g.riskLevel==="\u0645\u062A\u0648\u0633\u0637"||g.riskLevel==="\u0645\u062A\u0648\u0633\u0637\u0629").length,c=e.filter(g=>g.riskLevel==="\u0645\u0646\u062E\u0641\u0636"||g.riskLevel==="\u0628\u0633\u064A\u0637\u0629"||g.riskLevel==="\u0628\u0633\u064A\u0637").length,d={},l=new Set;e.forEach(g=>{const T=g.siteName||"";T&&(l.add(T),d[T]=(d[T]||0)+1)});let p=0,m="";Object.keys(d).forEach(g=>{const T=d[g];T>p&&(p=T,m=g)});const u=p,f=m||this._t("module.dailyobs.stats.none","\u0644\u0627 \u064A\u0648\u062C\u062F"),y=Object.keys(d).filter(g=>d[g]>=this.OBSERVATIONS_THRESHOLD),h=y.length>0,k=new Set;e.forEach(g=>{const T=g.observationType||"";T&&k.add(T)});const b=k.size,S=Array.from(k)[0]?this.getObservationTypeLabel(Array.from(k)[0]):this._t("module.dailyobs.stats.none","\u0644\u0627 \u064A\u0648\u062C\u062F"),v=[{id:"notes-status",title:this._t("module.dailyobs.stats.total.title","\u0639\u062F\u062F \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A"),value:a,subtitle:this._tf("module.dailyobs.stats.total.subtitle",{open:i,closed:o},`\u0645\u0641\u062A\u0648\u062D: ${i} | \u0645\u063A\u0644\u0642: ${o}`),icon:"fas fa-clipboard-list",color:"blue",gradient:"from-blue-500 to-blue-600",bgGradient:"from-blue-50 to-blue-100",borderColor:"border-blue-200",textColor:"text-blue-700",iconBg:"bg-blue-100",filter:null,description:this._t("module.dailyobs.stats.total.desc","\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A")},{id:"risk-levels",title:this._t("module.dailyobs.stats.risk.title","\u0645\u0639\u062F\u0644 \u0627\u0644\u062E\u0637\u0648\u0631\u0629"),value:r+n+c,subtitle:this._tf("module.dailyobs.stats.risk.subtitle",{high:r,medium:n,low:c},`\u0639\u0627\u0644\u064A: ${r} | \u0645\u062A\u0648\u0633\u0637: ${n} | \u0628\u0633\u064A\u0637: ${c}`),icon:"fas fa-exclamation-triangle",color:"red",gradient:"from-red-500 to-red-600",bgGradient:"from-red-50 to-red-100",borderColor:"border-red-200",textColor:"text-red-700",iconBg:"bg-red-100",filter:null,description:this._t("module.dailyobs.stats.risk.desc","\u062A\u0648\u0632\u064A\u0639 \u0645\u0639\u062F\u0644\u0627\u062A \u0627\u0644\u062E\u0637\u0648\u0631\u0629")},{id:"locations",title:this._t("module.dailyobs.stats.location.title","\u0627\u0644\u0645\u0648\u0642\u0639 / \u0627\u0644\u0645\u0643\u0627\u0646"),value:u,subtitle:f.length>30?f.substring(0,30)+"...":f,icon:"fas fa-map-marker-alt",color:h?"red":"green",gradient:h?"from-red-500 to-red-600":"from-green-500 to-green-600",bgGradient:h?"from-red-50 to-red-100":"from-green-50 to-green-100",borderColor:h?"border-red-300":"border-green-200",textColor:h?"text-red-700":"text-green-700",iconBg:h?"bg-red-100":"bg-green-100",filter:null,description:h?this._tf("module.dailyobs.stats.location.alert",{n:y.length},`\u062A\u0646\u0628\u064A\u0647: ${y.length} \u0645\u0648\u0642\u0639`):this._t("module.dailyobs.stats.location.desc","\u0639\u062F\u062F \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0641\u064A \u0627\u0644\u0645\u0635\u0646\u0639"),isHighRisk:h,highRiskSites:y},{id:"note-types",title:this._t("module.dailyobs.stats.type.title","\u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629"),value:b,subtitle:S.length>30?S.substring(0,30)+"...":S,icon:"fas fa-tags",color:"purple",gradient:"from-purple-500 to-purple-600",bgGradient:"from-purple-50 to-purple-100",borderColor:"border-purple-200",textColor:"text-purple-700",iconBg:"bg-purple-100",filter:null,description:this._t("module.dailyobs.stats.type.desc","\u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0645\u0633\u062C\u0644\u0629")}];s.innerHTML=v.map(g=>{const T=t&&g.filter&&JSON.stringify(t)===JSON.stringify(g.filter),L=T?"ring-4 ring-offset-2 ring-opacity-50":"",D=T?`ring-${g.color}-300`:"",O=g.filter?"cursor-pointer":"",N=g.filter?`onclick="DailyObservations.filterByCard('${g.id}', ${JSON.stringify(g.filter||{})})"`:"",w=g.isHighRisk?"box-shadow: 0 0 20px rgba(239, 68, 68, 0.5), 0 4px 6px -1px rgba(0, 0, 0, 0.1); animation: pulse-red 2s ease-in-out infinite;":"";return`
+                <div class="stats-card content-card ${O} transform transition-all duration-300 hover:scale-105 hover:shadow-xl ${L} ${D} border-2 ${g.borderColor} bg-gradient-to-br ${g.bgGradient}" 
+                     ${g.filter?`data-filter='${JSON.stringify(g.filter||{})}'`:""} 
+                     ${N}
+                     style="position: relative; overflow: hidden; ${w}">
+                    <!-- Pattern overlay -->
+                    <div class="absolute top-0 right-0 w-32 h-32 opacity-10" style="background: radial-gradient(circle, rgba(0,0,0,0.1) 1px, transparent 1px); background-size: 20px 20px;"></div>
+                    ${g.isHighRisk?`
+                    <!-- Warning overlay for high-risk sites -->
+                    <div class="absolute top-0 right-0 w-full h-full bg-red-500 opacity-5 pointer-events-none"></div>
+                    `:""}
+                    
+                    <div class="relative z-10">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="${g.iconBg} p-3 rounded-xl shadow-md">
+                                <i class="${g.icon} text-${g.color}-600 text-2xl"></i>
+                            </div>
+                            ${T?`
+                                <div class="flex items-center gap-2 ${g.textColor}">
+                                    <i class="fas fa-filter text-sm"></i>
+                                    <span class="text-xs font-semibold">\u0645\u0641\u0639\u0644</span>
+                                </div>
+                            `:""}
+                            ${g.isHighRisk?`
+                                <div class="flex items-center gap-2 text-red-600 animate-pulse">
+                                    <i class="fas fa-exclamation-triangle text-sm"></i>
+                                    <span class="text-xs font-bold">\u062A\u0646\u0628\u064A\u0647</span>
+                                </div>
+                            `:""}
+                        </div>
+                        
+                        <div class="mb-2">
+                            <h3 class="text-sm font-semibold ${g.textColor} mb-1">${g.title}</h3>
+                            <p class="text-xs text-gray-600">${g.description}</p>
+                        </div>
+                        
+                        <div class="flex items-end justify-between mt-4">
+                            <div>
+                                <div class="text-3xl font-bold ${g.textColor}">
+                                    ${g.value.toLocaleString("en-US")}
+                                </div>
+                                ${g.subtitle?`
+                                    <div class="text-xs ${g.textColor} opacity-80 mt-2 font-medium">
+                                        ${g.subtitle}
+                                    </div>
+                                `:""}
+                            </div>
+                            ${a>0&&g.value!==a?`
+                                <div class="text-xs ${g.textColor} opacity-75">
+                                    ${(g.value/a*100).toFixed(1)}%
+                                </div>
+                            `:""}
+                        </div>
+                        
+                        ${g.value>0&&g.filter?`
+                            <div class="mt-4 pt-3 border-t ${g.borderColor} border-opacity-30">
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="text-gray-600">\u0627\u0646\u0642\u0631 \u0644\u0644\u0641\u0644\u062A\u0631\u0629</span>
+                                    <i class="fas fa-arrow-left text-${g.color}-500"></i>
+                                </div>
+                            </div>
+                        `:""}
+                    </div>
+                    
+                    <!-- Progress bar at bottom -->
+                    ${a>0&&g.value>0?`
+                        <div class="absolute bottom-0 right-0 left-0 h-1 bg-gray-200">
+                            <div class="h-full bg-gradient-to-r ${g.gradient}" style="width: ${g.value/a*100}%"></div>
+                        </div>
+                    `:""}
+                </div>
+            `}).join(""),this.injectStatsCardsStyles(),this.injectTableScrollbarStyles(),h&&this.notifyAdminAboutHighRiskSites(y,d).catch(g=>{Utils?.safeWarn?.("\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u062A\u0646\u0628\u064A\u0647 \u0644\u0644\u0645\u062F\u064A\u0631:",g)})},async notifyAdminAboutHighRiskSites(e,t){try{const s="lastHighRiskSitesNotification",a=localStorage.getItem(s),i=Date.now(),o=3600*1e3;if(a){const p=parseInt(a,10);if(i-p<o)return}const n=(AppState?.appData?.users||[]).filter(p=>p&&p.active!==!1&&(p.role==="admin"||p.role==="\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"||p.permissions&&(p.permissions.isAdmin===!0||p.permissions.admin===!0)));if(n.length===0){Utils?.safeLog?.("\u26A0\uFE0F \u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u062F\u064A\u0631\u064A \u0646\u0638\u0627\u0645 \u0644\u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u062A\u0646\u0628\u064A\u0647 \u0644\u0647\u0645");return}const c=e.map(p=>{const m=t[p]||0;return`  - ${p}: ${m} \u0645\u0644\u0627\u062D\u0638\u0629`}).join(`
+`),d="\u062A\u0646\u0628\u064A\u0647: \u0632\u064A\u0627\u062F\u0629 \u0639\u062F\u062F \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0641\u064A \u0645\u0648\u0627\u0642\u0639 \u0645\u0639\u064A\u0646\u0629",l=`\u062A\u0645 \u0627\u0643\u062A\u0634\u0627\u0641 \u0645\u0648\u0627\u0642\u0639 \u062A\u062D\u062A\u0648\u064A \u0639\u0644\u0649 \u0639\u062F\u062F \u0643\u0628\u064A\u0631 \u0645\u0646 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A (\u0623\u0643\u062B\u0631 \u0645\u0646 ${this.OBSERVATIONS_THRESHOLD} \u0645\u0644\u0627\u062D\u0638\u0629):
+
+${c}
+
+\u064A\u0631\u062C\u0649 \u0645\u0631\u0627\u062C\u0639\u0629 \u0647\u0630\u0647 \u0627\u0644\u0645\u0648\u0627\u0642\u0639 \u0648\u0625\u062A\u062E\u0627\u0630 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u0644\u0627\u0632\u0645\u0629.`;if(typeof GoogleIntegration<"u"&&GoogleIntegration.sendRequest&&AppState?.googleConfig?.appsScript?.enabled)n.forEach(p=>{const m=p.id||p.email||p.userId;m&&GoogleIntegration.sendRequest({action:"addNotification",data:{userId:m,title:d,message:l,type:"observations_high_risk_site",priority:"high",link:"#daily-observations-section",data:{module:"daily-observations",action:"high_risk_sites",highRiskSites:e,threshold:this.OBSERVATIONS_THRESHOLD}}}).catch(()=>{})}),localStorage.setItem(s,i.toString()),Utils?.safeLog?.("\u2705 \u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0644\u0644\u0645\u062F\u064A\u0631\u064A\u0646 \u0628\u062E\u0635\u0648\u0635 \u0627\u0644\u0645\u0648\u0627\u0642\u0639 \u0627\u0644\u062E\u0637\u0631\u0629");else{const p=AppState?.currentUser;p&&(p.role==="admin"||p.role==="\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"||p.permissions&&(p.permissions.isAdmin===!0||p.permissions.admin===!0))&&typeof Notification<"u"&&Notification.warning(l,1e4)}}catch(s){Utils?.safeLog?.("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0625\u0631\u0633\u0627\u0644 \u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0627\u0644\u0645\u0648\u0627\u0642\u0639 \u0627\u0644\u062E\u0637\u0631\u0629 (\u063A\u064A\u0631 \u062D\u0631\u062C):",s)}},injectStatsCardsStyles(){const e="daily-observations-stats-cards-styles";if(document.getElementById(e))return;const t=document.createElement("style");t.id=e,t.textContent=`
+            @keyframes pulse-red {
+                0%, 100% {
+                    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                }
+                50% {
+                    box-shadow: 0 0 30px rgba(239, 68, 68, 0.6), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                }
+            }
+            .stats-card {
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                position: relative;
+            }
+            .stats-card:hover {
+                transform: translateY(-4px) scale(1.02);
+            }
+            .stats-card:active {
+                transform: translateY(-2px) scale(1.01);
+            }
+            .stats-card.ring-4 {
+                animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+            @keyframes pulse-ring {
+                0%, 100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.5;
+                }
+            }
+            /* \u0623\u0646\u0645\u0627\u0637 \u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0641\u064A\u0629 */
+            .observations-filters-row {
+                position: relative;
+            }
+            .filters-grid {
+                width: 100%;
+            }
+            .filter-field {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                min-width: 140px;
+            }
+            .filter-label {
+                font-size: 12px;
+                font-weight: 600;
+                color: #4a5568;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                display: flex;
+                align-items: center;
+            }
+            .filter-label i {
+                font-size: 11px;
+                color: #667eea;
+            }
+            .filter-input {
+                width: 100%;
+                padding: 10px 12px;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                background: white;
+                font-size: 14px;
+                color: #2d3748;
+                transition: all 0.2s ease;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            }
+            .filter-input:focus {
+                outline: none;
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }
+            .filter-input:hover {
+                border-color: #cbd5e0;
+            }
+            input[type="date"].filter-input {
+                appearance: none;
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                min-height: 42px;
+                line-height: 1.4;
+                padding-top: 9px;
+                padding-bottom: 9px;
+                color: #2d3748;
+                color-scheme: light;
+                background-color: white;
+            }
+            input[type="date"].filter-input::-webkit-calendar-picker-indicator {
+                cursor: pointer;
+                opacity: 0.75;
+                filter: grayscale(1);
+            }
+            .filter-reset-btn {
+                width: 100%;
+                padding: 10px 16px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .filter-reset-btn:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+            }
+            .filter-reset-btn:active {
+                transform: translateY(0);
+            }
+            @media (max-width: 1200px) {
+                .filters-grid {
+                    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                }
+            }
+            @media (max-width: 768px) {
+                .filters-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                .observations-filters-row {
+                    padding: 12px 16px;
+                    margin: 0 -16px 0 -16px;
+                    width: calc(100% + 32px);
+                }
+            }
+        `,document.head.appendChild(t)},injectTableScrollbarStyles(){const e="daily-observations-table-scrollbar-styles";if(document.getElementById(e))return;const t=document.createElement("style");t.id=e,t.textContent=`
+            /* \u0634\u0631\u064A\u0637 \u0627\u0644\u062A\u0645\u0631\u064A\u0631 \u0644\u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A */
+            .observations-table-wrapper {
+                position: relative;
+                overflow-x: auto;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                scroll-behavior: smooth;
+                max-height: 70vh;
+                width: 100%;
+            }
+
+            /* \u062A\u062E\u0635\u064A\u0635 \u0634\u0631\u064A\u0637 \u0627\u0644\u062A\u0645\u0631\u064A\u0631 \u0627\u0644\u0623\u0641\u0642\u064A (\u0627\u0644\u0623\u0633\u0641\u0644) */
+            .observations-table-wrapper::-webkit-scrollbar:horizontal {
+                height: 12px;
+            }
+
+            .observations-table-wrapper::-webkit-scrollbar-track:horizontal {
+                background: var(--bg-secondary, #f3f4f6);
+                border-radius: 6px;
+                margin: 0 10px;
+            }
+
+            .observations-table-wrapper::-webkit-scrollbar-thumb:horizontal {
+                background: var(--primary-color, #3b82f6);
+                border-radius: 6px;
+                border: 2px solid var(--bg-secondary, #f3f4f6);
+            }
+
+            .observations-table-wrapper::-webkit-scrollbar-thumb:horizontal:hover {
+                background: var(--primary-color-dark, #2563eb);
+            }
+
+            /* \u062A\u062E\u0635\u064A\u0635 \u0634\u0631\u064A\u0637 \u0627\u0644\u062A\u0645\u0631\u064A\u0631 \u0627\u0644\u0639\u0645\u0648\u062F\u064A (\u0627\u0644\u062C\u0627\u0646\u0628\u064A) */
+            .observations-table-wrapper::-webkit-scrollbar:vertical {
+                width: 12px;
+            }
+
+            .observations-table-wrapper::-webkit-scrollbar-track:vertical {
+                background: var(--bg-secondary, #f3f4f6);
+                border-radius: 6px;
+                margin: 10px 0;
+            }
+
+            .observations-table-wrapper::-webkit-scrollbar-thumb:vertical {
+                background: var(--primary-color, #3b82f6);
+                border-radius: 6px;
+                border: 2px solid var(--bg-secondary, #f3f4f6);
+            }
+
+            .observations-table-wrapper::-webkit-scrollbar-thumb:vertical:hover {
+                background: var(--primary-color-dark, #2563eb);
+            }
+
+            /* \u0634\u0631\u064A\u0637 \u0627\u0644\u062A\u0645\u0631\u064A\u0631 \u0627\u0644\u0639\u0627\u0645 (\u0644\u0644\u062A\u0648\u0627\u0641\u0642 \u0645\u0639 \u0627\u0644\u0645\u062A\u0635\u0641\u062D\u0627\u062A) */
+            .observations-table-wrapper::-webkit-scrollbar {
+                width: 12px;
+                height: 12px;
+            }
+
+            .observations-table-wrapper::-webkit-scrollbar-track {
+                background: var(--bg-secondary, #f3f4f6);
+                border-radius: 6px;
+            }
+
+            .observations-table-wrapper::-webkit-scrollbar-thumb {
+                background: var(--primary-color, #3b82f6);
+                border-radius: 6px;
+                border: 2px solid var(--bg-secondary, #f3f4f6);
+            }
+
+            .observations-table-wrapper::-webkit-scrollbar-thumb:hover {
+                background: var(--primary-color-dark, #2563eb);
+            }
+
+            /* \u0644\u0644\u0648\u0636\u0639 \u0627\u0644\u062F\u0627\u0643\u0646 */
+            [data-theme="dark"] .observations-table-wrapper::-webkit-scrollbar-track {
+                background: var(--bg-secondary, #1f2937);
+            }
+
+            [data-theme="dark"] .observations-table-wrapper::-webkit-scrollbar-thumb {
+                background: var(--primary-color, #60a5fa);
+                border-color: var(--bg-secondary, #1f2937);
+            }
+
+            [data-theme="dark"] .observations-table-wrapper::-webkit-scrollbar-thumb:hover {
+                background: var(--primary-color-dark, #3b82f6);
+            }
+
+            /* \u062A\u062D\u0633\u064A\u0646\u0627\u062A \u0644\u0644\u062C\u0648\u0627\u0644 */
+            @media (max-width: 768px) {
+                .observations-table-wrapper {
+                    max-height: 60vh;
+                }
+
+                .observations-table-wrapper::-webkit-scrollbar {
+                    width: 8px;
+                    height: 8px;
+                }
+
+                .observations-table-wrapper::-webkit-scrollbar-thumb {
+                    border-width: 1px;
+                }
+            }
+
+            /* \u0625\u0636\u0627\u0641\u0629 \u0638\u0644\u0627\u0644 \u0639\u0646\u062F \u0627\u0644\u062A\u0645\u0631\u064A\u0631 */
+            .observations-table-wrapper {
+                position: relative;
+            }
+
+            .observations-table-wrapper::before,
+            .observations-table-wrapper::after {
+                content: '';
+                position: sticky;
+                pointer-events: none;
+                z-index: 10;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+
+            .observations-table-wrapper::before {
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 20px;
+                background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1), transparent);
+            }
+
+            .observations-table-wrapper::after {
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 20px;
+                background: linear-gradient(to top, rgba(0, 0, 0, 0.1), transparent);
+            }
+
+            .observations-table-wrapper.scrolled-top::before {
+                opacity: 0;
+            }
+
+            .observations-table-wrapper:not(.scrolled-top)::before {
+                opacity: 1;
+            }
+
+            .observations-table-wrapper.scrolled-bottom::after {
+                opacity: 0;
+            }
+
+            .observations-table-wrapper:not(.scrolled-bottom)::after {
+                opacity: 1;
+            }
+            
+            /* \u2705 \u0634\u0627\u0631\u0629 \u0627\u0644\u0639\u062F\u062F \u0639\u0644\u0649 \u0627\u0644\u0641\u0644\u0627\u062A\u0631 */
+            .filter-count-badge {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 24px;
+                height: 20px;
+                padding: 2px 8px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border-radius: 12px;
+                font-size: 11px;
+                font-weight: 700;
+                margin-right: 4px;
+                margin-left: 4px;
+                box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+            }
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+        `,document.head.appendChild(t)},setupTableScrollListeners(e){if(!e)return;const t=()=>{const s=e.scrollTop,a=e.scrollLeft,i=e.scrollHeight,o=e.scrollWidth,r=e.clientHeight,n=e.clientWidth;s===0?e.classList.add("scrolled-top"):e.classList.remove("scrolled-top"),s+r>=i-1?e.classList.add("scrolled-bottom"):e.classList.remove("scrolled-bottom"),a===0?e.classList.add("scrolled-left"):e.classList.remove("scrolled-left"),a+n>=o-1?e.classList.add("scrolled-right"):e.classList.remove("scrolled-right")};e.addEventListener("scroll",t),typeof ResizeObserver<"u"&&new ResizeObserver(()=>{t()}).observe(e),t()},filterByCard(e,t){if(!t||Object.keys(t).length===0){this.currentFilter=null,this.loadObservationsList();const i=document.getElementById("clear-filters-btn"),o=document.getElementById("filter-indicator");i&&(i.style.display="none"),o&&(o.style.display="none");return}this.currentFilter={cardId:e,filter:t},this.loadObservationsList(t),this.renderStatsCards(null,t);const s=document.getElementById("clear-filters-btn"),a=document.getElementById("filter-indicator");if(s&&(s.style.display="inline-flex",s.onclick=()=>{this.currentFilter=null,this.loadObservationsList(),this.renderStatsCards(),s.style.display="none",a&&(a.style.display="none")}),a){a.style.display="block";const i=document.querySelector(`[data-filter='${JSON.stringify(t)}']`)?.querySelector("h3")?.textContent||"\u0627\u0644\u0641\u0644\u062A\u0631";a.textContent=`\u0627\u0644\u0641\u0644\u062A\u0631 \u0627\u0644\u0646\u0634\u0637: ${i}`}},isCurrentUserAdmin(){if(typeof Permissions<"u"&&typeof Permissions.isCurrentUserAdmin=="function")return Permissions.isCurrentUserAdmin();const e=(AppState.currentUser?.role||"").toLowerCase();return e==="admin"||e==="\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"},ensureDataManagerAndSave(){try{return typeof window<"u"&&window.DataManager&&typeof window.DataManager.save=="function"?(window.DataManager.save(),!0):typeof DataManager<"u"&&typeof DataManager.save=="function"?(DataManager.save(),!0):(Utils.safeWarn("\u26A0\uFE0F DailyObservations: DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),!1)}catch(e){return Utils.safeError("DailyObservations: \u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A:",e),!1}},setupTabs(){setTimeout(()=>{const e=document.querySelectorAll(".tab-btn[data-tab]");e.forEach(t=>{t.addEventListener("click",()=>{const s=t.getAttribute("data-tab");e.forEach(i=>{i.classList.remove("active"),i.style.borderBottomColor="transparent",i.style.color="var(--text-secondary)"}),document.querySelectorAll(".tab-content").forEach(i=>{i.classList.remove("active"),i.style.display="none"}),t.classList.add("active"),t.style.borderBottomColor="var(--primary-color)",t.style.color="var(--primary-color)";const a=document.getElementById(`tab-${s}`);if(a){if(a.classList.add("active"),a.style.display="block",s==="data-analysis"){if(!(typeof Permissions<"u"?Permissions.hasDetailedPermission("daily-observations","data-analysis"):this.isCurrentUserAdmin())){Notification.error("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u062A\u0628\u0648\u064A\u0628 \u0627\u0644\u062A\u062D\u0644\u064A\u0644");const o=document.querySelector('.tab-btn[data-tab="observations-registry"]');o&&o.click();return}this.loadDataAnalysis()}if(s==="top-10-observations"&&this.loadTop10Observations(),s==="executive-dashboard")try{this.loadExecutiveDashboard()}catch(i){Utils?.safeWarn?.("\u26A0\uFE0F \u0644\u0648\u062D\u0629 \u0627\u0644\u0645\u0624\u0634\u0631\u0627\u062A \u0627\u0644\u062A\u0646\u0641\u064A\u0630\u064A\u0629:",i?.message||i)}}})})},100)},async renderDataAnalysis(){return this.ensureChartJSLoaded().catch(()=>{}),`
+        <div id="obs-analytics-root" style="font-family: inherit;">
+
+            <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+                 \u0634\u0631\u064A\u0637 \u0627\u0644\u0623\u062F\u0648\u0627\u062A \u0627\u0644\u0631\u0626\u064A\u0633\u064A
+            \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding:16px 20px;background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%);border-radius:14px;color:#fff;box-shadow:0 4px 20px rgba(37,99,235,0.3);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:44px;height:44px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-chart-line" style="font-size:20px;"></i>
+                    </div>
+                    <div>
+                        <h2 style="margin:0;font-size:1.15rem;font-weight:700;">\u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0641\u064A\u0629</h2>
+                        <p style="margin:0;font-size:0.75rem;opacity:0.85;">\u062A\u062D\u0644\u064A\u0644 \u0634\u0627\u0645\u0644 \u0648\u0641\u0648\u0631\u064A \u2022 \u0641\u0644\u0627\u062A\u0631 \u062A\u0641\u0627\u0639\u0644\u064A\u0629 \u2022 \u062A\u0635\u062F\u064A\u0631 PDF</p>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <!-- \u0641\u0644\u062A\u0631 \u0627\u0644\u0641\u062A\u0631\u0629 -->
+                    <span style="font-size:0.72rem;opacity:0.85;margin-left:2px;">\u0627\u0644\u0641\u062A\u0631\u0629:</span>
+                    <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                        ${["30","90","180","365","0"].map((e,t)=>{const s=["30 \u064A\u0648\u0645","3 \u0623\u0634\u0647\u0631","6 \u0623\u0634\u0647\u0631","\u0633\u0646\u0629","\u0627\u0644\u0643\u0644"],a=(this._analysisPeriod||"0")===e;return`<button class="obs-period-btn" data-period="${e}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${a?"#fff":"rgba(255,255,255,0.15)"};color:${a?"#1e40af":"#fff"};">${s[t]}</button>`}).join("")}
+                    </div>
+                    <!-- \u0632\u0631 \u0627\u0644\u0641\u0644\u0627\u062A\u0631 -->
+                    <button id="obs-toggle-filters-btn" title="\u0641\u0644\u0627\u062A\u0631 \u062A\u0641\u0627\u0639\u0644\u064A\u0629" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
+                        <i class="fas fa-sliders-h"></i><span>\u0641\u0644\u0627\u062A\u0631</span><span id="obs-filter-active-badge" style="display:none;background:#ef4444;color:#fff;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-right:2px;">\u2022</span>
+                    </button>
+                    <!-- \u0632\u0631 \u062A\u0635\u062F\u064A\u0631 PDF -->
+                    <button id="obs-export-pdf-btn" title="\u062A\u0635\u062F\u064A\u0631 PDF" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(239,68,68,0.85);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(239,68,68,1)'" onmouseout="this.style.background='rgba(239,68,68,0.85)'">
+                        <i class="fas fa-file-pdf"></i><span>PDF</span>
+                    </button>
+                    <!-- \u0632\u0631 \u062A\u062D\u062F\u064A\u062B -->
+                    <button id="obs-analytics-refresh" title="\u062A\u062D\u062F\u064A\u062B" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+                 \u0644\u0648\u062D\u0629 \u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A\u0629 (\u0645\u062E\u0641\u064A\u0629 \u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0627\u064B)
+            \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+            <div id="obs-filter-panel" style="display:none;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin-bottom:16px;animation:fadeIn .2s ease;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-sliders-h" style="color:#2563eb;font-size:14px;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;color:#1e3a8a;">\u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A\u0629</span>
+                        <span id="obs-filter-results-count" style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
+                    </div>
+                    <button id="obs-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='#fef2f2';this.style.color='#ef4444';this.style.borderColor='#fecaca'" onmouseout="this.style.background='#fff';this.style.color='#64748b';this.style.borderColor='#e2e8f0'">
+                        <i class="fas fa-times ml-1"></i>\u0645\u0633\u062D \u0627\u0644\u0643\u0644
+                    </button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;">
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-industry" style="color:#3b82f6;margin-left:4px;"></i>\u0627\u0644\u0645\u0648\u0642\u0639 / \u0627\u0644\u0645\u0635\u0646\u0639
+                        </label>
+                        <select id="obs-af-site" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                            <option value="">\u0627\u0644\u0643\u0644</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-hard-hat" style="color:#f59e0b;margin-left:4px;"></i>\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629
+                        </label>
+                        <select id="obs-af-observer" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                            <option value="">\u0627\u0644\u0643\u0644</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-tag" style="color:#10b981;margin-left:4px;"></i>\u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629
+                        </label>
+                        <select id="obs-af-type" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                            <option value="">\u0627\u0644\u0643\u0644</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-exclamation-triangle" style="color:#ef4444;margin-left:4px;"></i>\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0637\u0648\u0631\u0629
+                        </label>
+                        <select id="obs-af-risk" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                            <option value="">\u0627\u0644\u0643\u0644</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-circle" style="color:#8b5cf6;margin-left:4px;font-size:10px;"></i>\u0627\u0644\u062D\u0627\u0644\u0629
+                        </label>
+                        <select id="obs-af-status" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                            <option value="">\u0627\u0644\u0643\u0644</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-sun" style="color:#f97316;margin-left:4px;"></i>\u0627\u0644\u0648\u0631\u062F\u064A\u0629
+                        </label>
+                        <select id="obs-af-shift" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                            <option value="">\u0627\u0644\u0643\u0644</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-building" style="color:#0ea5e9;margin-left:4px;"></i>\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u0624\u0648\u0644\u0629
+                        </label>
+                        <select id="obs-af-dept" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                            <option value="">\u0627\u0644\u0643\u0644</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+                 KPI Cards
+            \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+            <div id="obs-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:20px;">
+                <div style="text-align:center;padding:8px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
+            </div>
+
+            <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+                 Row 1: \u0627\u0644\u062D\u0627\u0644\u0629 + \u0627\u0644\u062E\u0637\u0648\u0631\u0629
+            \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-circle-notch" style="color:#3b82f6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">\u0627\u0644\u062A\u0648\u0632\u064A\u0639 \u062D\u0633\u0628 \u0627\u0644\u062D\u0627\u0644\u0629</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:240px;">
+                        <canvas id="obs-chart-status"></canvas>
+                        <div id="obs-chart-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-exclamation-triangle" style="color:#ef4444;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">\u0627\u0644\u062A\u0648\u0632\u064A\u0639 \u062D\u0633\u0628 \u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0637\u0648\u0631\u0629</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:240px;">
+                        <canvas id="obs-chart-risk"></canvas>
+                        <div id="obs-chart-risk-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+                 \u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0627\u0644\u0632\u0645\u0646\u064A
+            \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-chart-area" style="color:#8b5cf6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">\u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0627\u0644\u0632\u0645\u0646\u064A \u0644\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A (\u0622\u062E\u0631 12 \u0634\u0647\u0631)</span>
+                    </div>
+                </div>
+                <div style="padding:12px;position:relative;height:260px;">
+                    <canvas id="obs-chart-trend"></canvas>
+                    <div id="obs-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A</div>
+                </div>
+            </div>
+
+            <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+                 Row 2: \u0627\u0644\u0646\u0648\u0639 + \u0627\u0644\u0645\u0648\u0642\u0639
+            \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-tag" style="color:#10b981;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">\u062D\u0633\u0628 \u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 (\u0623\u0639\u0644\u0649 10)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="obs-chart-type"></canvas>
+                        <div id="obs-chart-type-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-map-marker-alt" style="color:#f59e0b;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">\u062D\u0633\u0628 \u0627\u0644\u0645\u0648\u0642\u0639 / \u0627\u0644\u0645\u0635\u0646\u0639 (\u0623\u0639\u0644\u0649 8)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="obs-chart-location"></canvas>
+                        <div id="obs-chart-location-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+                 Row 3: \u0627\u0644\u0625\u062F\u0627\u0631\u0629 + \u0627\u0644\u0648\u0631\u062F\u064A\u0629
+            \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-building" style="color:#0ea5e9;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">\u062D\u0633\u0628 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u0624\u0648\u0644\u0629 (\u0623\u0639\u0644\u0649 8)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="obs-chart-dept"></canvas>
+                        <div id="obs-chart-dept-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-sun" style="color:#f97316;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">\u062D\u0633\u0628 \u0627\u0644\u0648\u0631\u062F\u064A\u0629</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="obs-chart-shift"></canvas>
+                        <div id="obs-chart-shift-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+                 \u0645\u062E\u0637\u0637 \u0645\u062A\u0648\u0633\u0637 \u0623\u064A\u0627\u0645 \u0627\u0644\u0625\u063A\u0644\u0627\u0642 \u062D\u0633\u0628 \u0627\u0644\u0646\u0648\u0639
+            \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-stopwatch" style="color:#6366f1;"></i>
+                    <span style="font-weight:700;font-size:0.88rem;">\u0645\u062A\u0648\u0633\u0637 \u0623\u064A\u0627\u0645 \u0627\u0644\u0625\u063A\u0644\u0627\u0642 \u062D\u0633\u0628 \u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629</span>
+                    <span style="font-size:0.72rem;color:#94a3b8;margin-right:auto;">(\u0623\u0642\u0644 = \u0623\u0641\u0636\u0644 \u0627\u0633\u062A\u062C\u0627\u0628\u0629)</span>
+                </div>
+                <div style="padding:12px;position:relative;height:260px;">
+                    <canvas id="obs-chart-closetime"></canvas>
+                    <div id="obs-chart-closetime-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0645\u063A\u0644\u0642\u0629</div>
+                </div>
+            </div>
+
+            <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+                 \u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u062D\u0631\u062C\u0629 \u0627\u0644\u0645\u0641\u062A\u0648\u062D\u0629
+            \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+            <div class="content-card" style="padding:0;overflow:hidden;">
+                <div style="padding:13px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-fire" style="color:#ef4444;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u062D\u0631\u062C\u0629 \u0627\u0644\u0645\u0641\u062A\u0648\u062D\u0629 (\u0639\u0627\u0644\u064A\u0629 \u0627\u0644\u062E\u0637\u0648\u0631\u0629)</span>
+                    </div>
+                    <span id="obs-critical-count" style="background:#fef2f2;color:#b91c1c;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table id="obs-critical-table" style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                        <thead>
+                            <tr style="background:#fafafa;border-bottom:2px solid #f1f5f9;">
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">\u0631\u0642\u0645 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">\u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">\u0627\u0644\u0645\u0648\u0642\u0639 / \u0627\u0644\u0645\u0635\u0646\u0639</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u0624\u0648\u0644\u0629</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">\u0627\u0644\u062D\u0627\u0644\u0629</th>
+                                <th style="padding:10px 12px;text-align:center;font-weight:700;color:#374151;white-space:nowrap;">\u0627\u0644\u0623\u064A\u0627\u0645 \u0627\u0644\u0645\u0646\u0642\u0636\u064A\u0629</th>
+                            </tr>
+                        </thead>
+                        <tbody id="obs-critical-tbody">
+                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#94a3b8;">\u062C\u0627\u0631\u064D \u0627\u0644\u062A\u062D\u0645\u064A\u0644\u2026</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>`},_filterObsByPeriod(e,t){if(!t||t===0)return e;const s=new Date;return s.setDate(s.getDate()-t),e.filter(a=>{if(!a.date)return!0;const i=new Date(a.date);return!isNaN(i.getTime())&&i>=s})},_groupBy(e,t,s=0){const a={};e.forEach(o=>{const r=String(o[t]||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F").trim()||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";a[r]=(a[r]||0)+1});let i=Object.entries(a).sort((o,r)=>r[1]-o[1]);return s>0&&(i=i.slice(0,s)),{labels:i.map(o=>o[0]),data:i.map(o=>o[1])}},_drawDoughnut(e,t,s,a){const i=document.getElementById(e),o=document.getElementById(e+"-empty");if(!i)return;if(!s.length||s.reduce((d,l)=>d+l,0)===0){i.style.display="none",o&&(o.style.display="flex");return}o&&(o.style.display="none");const r=s.reduce((d,l)=>d+l,0),n=this.analysisCharts&&this.analysisCharts[e];if(n)try{n.destroy()}catch{}const c=new Chart(i,{type:"doughnut",data:{labels:t,datasets:[{data:s,backgroundColor:a||this._chartColors(s.length),borderWidth:2,borderColor:"#fff",hoverOffset:6}]},options:{responsive:!0,maintainAspectRatio:!1,cutout:"62%",plugins:{legend:{position:"bottom",labels:{padding:10,font:{size:11},usePointStyle:!0,boxWidth:9}},tooltip:{callbacks:{label:d=>` ${d.label}: ${d.parsed} (${r>0?(d.parsed/r*100).toFixed(1):0}%)`}}}}});this.analysisCharts||(this.analysisCharts={}),this.analysisCharts[e]=c},_drawHBar(e,t,s,a){const i=document.getElementById(e),o=document.getElementById(e+"-empty");if(!i)return;if(!s.length||s.reduce((c,d)=>c+d,0)===0){i.style.display="none",o&&(o.style.display="flex");return}o&&(o.style.display="none");const r=this.analysisCharts&&this.analysisCharts[e];if(r)try{r.destroy()}catch{}const n=new Chart(i,{type:"bar",data:{labels:t,datasets:[{data:s,backgroundColor:a||"rgba(59,130,246,0.75)",borderRadius:5,borderSkipped:!1}]},options:{indexAxis:"y",responsive:!0,maintainAspectRatio:!1,plugins:{legend:{display:!1},tooltip:{callbacks:{label:c=>` ${c.parsed.x}`}}},scales:{x:{beginAtZero:!0,ticks:{precision:0,font:{size:11}},grid:{color:"#f1f5f9"}},y:{ticks:{font:{size:11},callback:c=>String(t[c]).length>18?String(t[c]).slice(0,17)+"\u2026":t[c]}}}}});this.analysisCharts||(this.analysisCharts={}),this.analysisCharts[e]=n},_drawTrend(e,t){const s=document.getElementById(e),a=document.getElementById(e+"-empty");if(!s)return;const i=new Date,o=[],r=["\u064A\u0646\u0627\u064A\u0631","\u0641\u0628\u0631\u0627\u064A\u0631","\u0645\u0627\u0631\u0633","\u0623\u0628\u0631\u064A\u0644","\u0645\u0627\u064A\u0648","\u064A\u0648\u0646\u064A\u0648","\u064A\u0648\u0644\u064A\u0648","\u0623\u063A\u0633\u0637\u0633","\u0633\u0628\u062A\u0645\u0628\u0631","\u0623\u0643\u062A\u0648\u0628\u0631","\u0646\u0648\u0641\u0645\u0628\u0631","\u062F\u064A\u0633\u0645\u0628\u0631"];for(let l=11;l>=0;l--){const p=new Date(i.getFullYear(),i.getMonth()-l,1);o.push({year:p.getFullYear(),month:p.getMonth(),label:`${r[p.getMonth()]} ${p.getFullYear()}`})}const n=o.map(l=>t.filter(p=>{if(!p.date)return!1;const m=new Date(p.date);return!isNaN(m.getTime())&&m.getFullYear()===l.year&&m.getMonth()===l.month}).length);if(n.reduce((l,p)=>l+p,0)===0){s.style.display="none",a&&(a.style.display="flex");return}a&&(a.style.display="none");const c=this.analysisCharts&&this.analysisCharts[e];if(c)try{c.destroy()}catch{}const d=new Chart(s,{type:"bar",data:{labels:o.map(l=>l.label),datasets:[{label:"\u0639\u062F\u062F \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A",data:n,backgroundColor:n.map(l=>l===Math.max(...n)?"rgba(239,68,68,0.8)":"rgba(59,130,246,0.65)"),borderRadius:6,borderSkipped:!1,order:1},{label:"\u0627\u0644\u0627\u062A\u062C\u0627\u0647",data:n,type:"line",borderColor:"rgba(139,92,246,0.9)",backgroundColor:"rgba(139,92,246,0.08)",borderWidth:2.5,pointRadius:4,pointBackgroundColor:"#8b5cf6",tension:.4,fill:!0,order:0}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{position:"top",labels:{usePointStyle:!0,font:{size:11}}},tooltip:{mode:"index",intersect:!1}},scales:{x:{grid:{display:!1},ticks:{font:{size:10},maxRotation:45}},y:{beginAtZero:!0,ticks:{precision:0,font:{size:11}},grid:{color:"#f8fafc"}}}}});this.analysisCharts||(this.analysisCharts={}),this.analysisCharts[e]=d},_chartColors(e){const t=["rgba(59,130,246,0.8)","rgba(16,185,129,0.8)","rgba(245,158,11,0.8)","rgba(239,68,68,0.8)","rgba(139,92,246,0.8)","rgba(236,72,153,0.8)","rgba(20,184,166,0.8)","rgba(251,146,60,0.8)","rgba(99,102,241,0.8)","rgba(168,85,247,0.8)"];return Array.from({length:e},(s,a)=>t[a%t.length])},OBS_EXEC_HIGH_RISK_THRESHOLD:5,_execGetObservations(){let e=[];try{e=typeof this.getDailyObservationsVisibleToCurrentUser=="function"?this.getDailyObservationsVisibleToCurrentUser():AppState?.appData?.dailyObservations||[]}catch{e=AppState?.appData?.dailyObservations||[]}return Array.isArray(e)||(e=[]),e.map(t=>{try{return this.normalizeRecord(t)}catch{return t}})},_execGetFilters(){const e=s=>{const a=document.getElementById(s);return a?a.value:""},t=s=>{const a=document.getElementById(s);return a&&a.selectedIndex>=0?a.options[a.selectedIndex].text:""};return{site:e("obs-exec-filter-site"),siteLabel:t("obs-exec-filter-site"),period:e("obs-exec-filter-period"),periodLabel:t("obs-exec-filter-period"),dept:e("obs-exec-filter-dept"),deptLabel:t("obs-exec-filter-dept"),category:e("obs-exec-filter-category"),categoryLabel:t("obs-exec-filter-category"),risk:e("obs-exec-filter-risk"),riskLabel:t("obs-exec-filter-risk"),status:e("obs-exec-filter-status"),statusLabel:t("obs-exec-filter-status")}},_execApplyFilters(e){const t=this._execGetFilters();let s=e||[];if(t.site&&(s=s.filter(a=>String(a.siteName||"")===t.site)),t.dept&&(s=s.filter(a=>String(a.responsibleDepartment||"")===t.dept)),t.category&&(s=s.filter(a=>this._execCategoryOf(a)===t.category)),t.risk&&(s=s.filter(a=>String(a.riskLevel||"")===t.risk)),t.status==="open"?s=s.filter(a=>!this._execIsClosed(a)):t.status==="overdue"?s=s.filter(a=>this._execIsOverdue(a)):t.status==="closed"&&(s=s.filter(a=>this._execIsClosed(a))),t.period){const a=parseInt(t.period,10);if(a>0){const i=new Date;i.setMonth(i.getMonth()-a),s=s.filter(o=>{const r=new Date(o.date);return!isNaN(r.getTime())&&r>=i})}}return s},_execIsClosed(e){return String(e.status||"").includes("\u0645\u063A\u0644\u0642")},_execIsOverdue(e){if(this._execIsClosed(e)||!e.expectedCompletionDate)return!1;const t=new Date(e.expectedCompletionDate);return!isNaN(t.getTime())&&t.getTime()<Date.now()},_execIsHighRisk(e){const t=String(e.riskLevel||"");return t.includes("\u0639\u0627\u0644\u064A")||t.includes("\u0639\u0627\u0644\u064A\u0629")||t.includes("\u0645\u0631\u062A\u0641\u0639")||t.includes("\u0634\u062F\u064A\u062F")||t.includes("\u062D\u0631\u062C")},_execIsCritical(e){const t=String(e.riskLevel||"").toLowerCase();return t.includes("\u0634\u062F\u064A\u062F")||t.includes("\u062D\u0631\u062C")||t.includes("critical")},_execIsNearMiss(e){const t=(String(e.observationType||"")+" "+String(e.details||"")).toLowerCase();return t.includes("\u0648\u0634\u064A\u0643")||t.includes("\u0643\u0627\u062F")||t.includes("\u062A\u062C\u0646\u0628")||t.includes("near miss")||t.includes("nearmiss")},_execCategoryOf(e){if(this._execIsNearMiss(e))return"\u062D\u0648\u0627\u062F\u062B \u0648\u0634\u064A\u0643\u0629";const t=(String(e.observationType||"")+" "+String(e.details||"")).toLowerCase();return t.includes("\u0628\u064A\u0626\u0629")||t.includes("\u0628\u064A\u0626\u064A")||t.includes("\u062A\u0644\u0648\u062B")||t.includes("\u0646\u0641\u0627\u064A\u0627\u062A")?"\u0645\u0644\u0627\u062D\u0638\u0629 \u0628\u064A\u0626\u064A\u0629":t.includes("\u062C\u0648\u062F\u0629")||t.includes("\u0645\u0637\u0627\u0628\u0642\u0629")?"\u0645\u0644\u0627\u062D\u0638\u0629 \u062C\u0648\u062F\u0629":t.includes("\u0625\u064A\u062C\u0627\u0628\u064A")||t.includes("\u0627\u064A\u062C\u0627\u0628\u064A")||t.includes("\u0645\u0642\u062A\u0631\u062D")||t.includes("\u0634\u0643\u0631")?"\u0645\u0644\u0627\u062D\u0638\u0629 \u0625\u064A\u062C\u0627\u0628\u064A\u0629":t.includes("\u062A\u0635\u0631\u0641")||t.includes("\u0633\u0644\u0648\u0643")||t.includes("\u0641\u0639\u0644")?"\u062A\u0635\u0631\u0641 \u063A\u064A\u0631 \u0622\u0645\u0646":(t.includes("\u0648\u0636\u0639")||t.includes("\u0634\u0631\u0637")||t.includes("\u062D\u0627\u0644\u0629")||t.includes("\u0645\u0639\u062F\u0629")||t.includes("\u0645\u0639\u062F\u0627\u062A")||t.includes("\u0623\u062F\u0627\u0629"),"\u0648\u0636\u0639 \u063A\u064A\u0631 \u0622\u0645\u0646")},_execDescTokens(e){const t=String(e||"").toLowerCase().replace(/[^\u0621-\u064aa-z0-9\s]/g," ");return new Set(t.split(/\s+/).filter(s=>s.length>=3))},_execJaccard(e,t){if(!e.size&&!t.size)return 1;if(!e.size||!t.size)return 0;let s=0;return e.forEach(a=>{t.has(a)&&s++}),s/(e.size+t.size-s)},_detectRepeatObservations(e){const t={};(e||[]).forEach(a=>{const i=[a.siteName||"-",a.locationName||"-",a.observationType||"-"].join(" | ");(t[i]=t[i]||[]).push(a)});const s=[];return Object.entries(t).forEach(([a,i])=>{const o=[];i.forEach(r=>{const n=this._execDescTokens(r.details);let c=!1;for(const d of o)if(this._execJaccard(n,d.sig)>=.5){d.items.push(r),c=!0;break}c||o.push({sig:n,items:[r]})}),o.forEach(r=>{if(r.items.length>=2){const n=r.items.map(y=>new Date(y.date)).filter(y=>!isNaN(y.getTime())).sort((y,h)=>y-h),c=n.length?n[n.length-1]:null,d=Date.now(),l=720*60*60*1e3,p=n.filter(y=>d-y.getTime()<=l).length,m=n.filter(y=>d-y.getTime()>l&&d-y.getTime()<=2*l).length,u=p>m?"up":p<m?"down":"flat",f=r.items[0].details||r.items[0].observationType||"\u2014";s.push({key:a,sample:String(f).slice(0,80),count:r.items.length,last:c,trend:u})}})}),s.sort((a,i)=>i.count-a.count),s},_computeExecKpis(e){const t=e.length,s=e.filter(L=>this._execIsClosed(L)),a=e.filter(L=>!this._execIsClosed(L)),i=e.filter(L=>this._execIsOverdue(L)),o=e.filter(L=>this._execIsNearMiss(L)),r=e.filter(L=>this._execIsHighRisk(L)&&!this._execIsClosed(L)),n=e.filter(L=>this._execIsCritical(L)&&this._execIsOverdue(L)),c=e.filter(L=>{if(!L.expectedCompletionDate)return!1;const D=new Date(L.expectedCompletionDate);return!isNaN(D.getTime())&&D.getTime()<=Date.now()}),d=c.filter(L=>this._execIsClosed(L)),l=c.length?d.length/c.length*100:t?s.length/t*100:0,p=s.map(L=>Number(L.overdays)||0).filter(L=>L>0),m=p.length?p.reduce((L,D)=>L+D,0)/p.length:0,u=this._detectRepeatObservations(e),f=u.reduce((L,D)=>L+D.count,0),y=t?f/t*100:0,h=new Date,k=(L,D,O)=>L.filter(N=>{const w=new Date(N.date);return!isNaN(w.getTime())&&w.getFullYear()===D&&w.getMonth()===O}).length,b=k(o,h.getFullYear(),h.getMonth()),S=new Date(h.getFullYear(),h.getMonth()-1,1),v=k(o,S.getFullYear(),S.getMonth()),g=b-v,T=t?o.length/t*100:0;return{total:t,nearMiss:o.length,nearMissRate:T,nearMissTrend:g,openActions:a.length,overdue:i.length,closureRate:l,avgDaysToClose:m,repeatRate:y,repeatIssues:u,highRiskOpen:r.length,criticalOverdue:n.length}},_runInsightsEngine(e){const t=[];return e.nearMissTrend>0&&e.closureRate>90&&t.push({type:"good",icon:"fa-circle-check",text:"\u062B\u0642\u0627\u0641\u0629 \u062A\u0628\u0644\u064A\u063A \u0623\u0645\u0627\u0646 \u0625\u064A\u062C\u0627\u0628\u064A\u0629 \u0645\u0639 \u0625\u062F\u0627\u0631\u0629 \u0641\u0639\u0651\u0627\u0644\u0629 \u0644\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629."}),e.nearMissTrend>0&&e.closureRate<75&&t.push({type:"warn",icon:"fa-triangle-exclamation",text:"\u062A\u062D\u0630\u064A\u0631: \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u062A\u064F\u0628\u0644\u064E\u0651\u063A \u0644\u0643\u0646 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629 \u0644\u0627 \u062A\u064F\u063A\u0644\u0642 \u0628\u0641\u0639\u0627\u0644\u064A\u0629."}),e.repeatRate>20&&t.push({type:"danger",icon:"fa-rotate",text:"\u0645\u0634\u0643\u0644\u0627\u062A \u0623\u0645\u0627\u0646 \u0645\u062A\u0643\u0631\u0631\u0629. \u064A\u064F\u0648\u0635\u0649 \u0628\u0625\u062C\u0631\u0627\u0621 \u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062C\u0630\u0631\u064A (RCA)."}),e.highRiskOpen>this.OBS_EXEC_HIGH_RISK_THRESHOLD&&t.push({type:"danger",icon:"fa-bolt",text:`\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0639\u0627\u0644\u064A\u0629 \u0627\u0644\u062E\u0637\u0648\u0631\u0629 \u0645\u0641\u062A\u0648\u062D\u0629 (${e.highRiskOpen}) \u2014 \u064A\u062A\u0637\u0644\u0628 \u0627\u0646\u062A\u0628\u0627\u0647 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0641\u0648\u0631\u064A.`}),t.length||t.push({type:"info",icon:"fa-circle-info",text:"\u0627\u0644\u0623\u062F\u0627\u0621 \u0636\u0645\u0646 \u0627\u0644\u0646\u0637\u0627\u0642 \u0627\u0644\u0637\u0628\u064A\u0639\u064A. \u0648\u0627\u0635\u0644 \u0627\u0644\u062A\u0628\u0644\u064A\u063A \u0648\u0645\u062A\u0627\u0628\u0639\u0629 \u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A."}),t},_injectExecStyles(){const e="obs-exec-dashboard-styles-v2",t=document.getElementById("obs-exec-dashboard-styles");if(t&&t.remove(),document.getElementById(e))return;const s=document.createElement("style");s.id=e,s.textContent=`
+        .obs-exec-wrap{direction:rtl;width:100%;max-width:100%;box-sizing:border-box;}
+        .obs-exec-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;width:100%;}
+        .obs-exec-filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:14px 16px;margin-bottom:16px;box-shadow:var(--shadow-sm);width:100%;box-sizing:border-box;}
+        .obs-exec-filter{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1 1 140px;}
+        .obs-exec-filter label{font-size:11px;font-weight:600;color:var(--text-secondary);}
+        .obs-exec-filter select{width:100%;padding:8px 10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);color:var(--text-primary);font-size:13px;cursor:pointer;}
+        .obs-exec-kpi-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px;width:100%;}
+        @media (min-width:640px){.obs-exec-kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}}
+        @media (min-width:960px){.obs-exec-kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr));}}
+        @media (min-width:1280px){.obs-exec-kpi-grid{grid-template-columns:repeat(5,minmax(0,1fr));}}
+        .obs-exec-kpi{position:relative;background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow-sm);overflow:hidden;transition:var(--transition);min-width:0;}
+        .obs-exec-kpi:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
+        .obs-exec-kpi__accent{position:absolute;inset-inline-start:0;top:0;bottom:0;width:5px;}
+        .obs-exec-kpi__icon{position:absolute;top:12px;inset-inline-end:12px;font-size:18px;opacity:.85;}
+        .obs-exec-kpi__label{font-size:clamp(10px,1.7vw,12px);color:var(--text-secondary);font-weight:600;margin-bottom:6px;padding-inline-end:24px;line-height:1.35;}
+        .obs-exec-kpi__value{font-size:clamp(1.15rem,2.4vw,1.65rem);font-weight:800;color:var(--text-primary);line-height:1.1;word-break:break-word;}
+        .obs-exec-kpi__sub{font-size:10px;color:var(--text-tertiary);margin-top:6px;line-height:1.35;}
+        .obs-exec-progress{height:6px;background:var(--bg-tertiary);border-radius:99px;margin-top:10px;overflow:hidden;}
+        .obs-exec-progress__bar{height:100%;border-radius:99px;transition:width .6s ease;}
+        .obs-exec-insights{display:flex;flex-direction:column;gap:10px;margin-bottom:18px;width:100%;}
+        .obs-exec-insight{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:12px;border:1px solid;font-weight:600;font-size:13px;line-height:1.45;}
+        .obs-exec-insight i{font-size:18px;margin-top:1px;flex-shrink:0;}
+        .obs-exec-insight--good{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.35);color:#047857;}
+        .obs-exec-insight--warn{background:rgba(245,158,11,.10);border-color:rgba(245,158,11,.40);color:#b45309;}
+        .obs-exec-insight--danger{background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.40);color:#b91c1c;}
+        .obs-exec-insight--info{background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.35);color:#1d4ed8;}
+        .obs-exec-charts{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-top:6px;width:100%;}
+        @media (min-width:768px){.obs-exec-charts{grid-template-columns:repeat(2,minmax(0,1fr));}}
+        @media (min-width:1280px){.obs-exec-charts{grid-template-columns:repeat(3,minmax(0,1fr));}}
+        .obs-exec-card{background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:16px;box-shadow:var(--shadow-sm);min-width:0;box-sizing:border-box;}
+        .obs-exec-card--wide{grid-column:1/-1;}
+        .obs-exec-card--span-lg{grid-column:1/-1;}
+        @media (min-width:768px){.obs-exec-card--span-lg{grid-column:span 2;}}
+        .obs-exec-card__title{font-size:clamp(12px,1.9vw,14px);font-weight:700;color:var(--text-primary);margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+        .obs-exec-chart-box{position:relative;height:clamp(220px,30vw,300px);min-height:220px;width:100%;}
+        .obs-exec-card--chart-tall .obs-exec-chart-box{height:auto;min-height:260px;}
+        .obs-exec-empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:var(--text-tertiary);font-size:13px;text-align:center;padding:12px;}
+        .obs-exec-table{width:100%;min-width:520px;border-collapse:collapse;font-size:13px;}
+        .obs-exec-table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+        .obs-exec-table th,.obs-exec-table td{padding:10px 12px;text-align:right;border-bottom:1px solid var(--border-color);color:var(--text-primary);vertical-align:top;}
+        .obs-exec-table th{color:var(--text-secondary);font-weight:700;background:var(--bg-secondary);white-space:nowrap;}
+        .obs-exec-badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;}
+        .obs-exec-heat-grid{display:grid;gap:4px;overflow-x:auto;width:100%;min-width:0;}
+        .obs-exec-heat-cell{padding:9px 4px;text-align:center;border-radius:6px;font-size:11px;font-weight:700;}
+        .obs-exec-heat-head{font-size:11px;font-weight:700;color:var(--text-secondary);text-align:center;padding:6px 2px;white-space:nowrap;}
+        .obs-exec-heat-row-label{font-size:12px;color:var(--text-primary);font-weight:600;display:flex;align-items:center;padding-inline-end:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        #tab-executive-dashboard{width:100%;max-width:100%;box-sizing:border-box;}
+        [data-theme="dark"] .obs-exec-insight--good{color:#34d399;}
+        [data-theme="dark"] .obs-exec-insight--warn{color:#fbbf24;}
+        [data-theme="dark"] .obs-exec-insight--danger{color:#f87171;}
+        [data-theme="dark"] .obs-exec-insight--info{color:#60a5fa;}
+        @media (max-width:639px){
+            .obs-exec-header .btn-success,.obs-exec-header .btn-secondary{width:100%;justify-content:center;}
+            .obs-exec-kpi{padding:12px 14px;}
+            .obs-exec-card{padding:12px;}
+        }
+        `,document.head.appendChild(s)},renderExecutiveDashboard(){this._injectExecStyles();let e="";try{e=(this.getAllSites()||[]).map(n=>`<option value="${Utils?.escapeHTML?Utils.escapeHTML(n.name):n.name}">${Utils?.escapeHTML?Utils.escapeHTML(n.name):n.name}</option>`).join("")}catch{}let t="";try{t=(this.getDepartmentOptions()||[]).map(n=>`<option value="${Utils?.escapeHTML?Utils.escapeHTML(n):n}">${Utils?.escapeHTML?Utils.escapeHTML(n):n}</option>`).join("")}catch{}let s="";try{s=(this.getRiskLevels()||[]).map(n=>`<option value="${n}">${n}</option>`).join("")}catch{}const i=["\u062D\u0648\u0627\u062F\u062B \u0648\u0634\u064A\u0643\u0629","\u062A\u0635\u0631\u0641 \u063A\u064A\u0631 \u0622\u0645\u0646","\u0648\u0636\u0639 \u063A\u064A\u0631 \u0622\u0645\u0646","\u0645\u0644\u0627\u062D\u0638\u0629 \u0625\u064A\u062C\u0627\u0628\u064A\u0629","\u0645\u0644\u0627\u062D\u0638\u0629 \u0628\u064A\u0626\u064A\u0629","\u0645\u0644\u0627\u062D\u0638\u0629 \u062C\u0648\u062F\u0629"].map(n=>`<option value="${n}">${n}</option>`).join(""),o=`
+            <div class="obs-exec-filters">
+                <div class="obs-exec-filter">
+                    <label><i class="fas fa-industry ml-1"></i>\u0627\u0644\u0645\u0635\u0646\u0639 / \u0627\u0644\u0645\u0648\u0642\u0639</label>
+                    <select id="obs-exec-filter-site"><option value="">\u0643\u0644 \u0627\u0644\u0645\u0648\u0627\u0642\u0639</option>${e}</select>
+                </div>
+                <div class="obs-exec-filter">
+                    <label><i class="fas fa-calendar ml-1"></i>\u0627\u0644\u0641\u062A\u0631\u0629</label>
+                    <select id="obs-exec-filter-period"><option value="">\u0643\u0644 \u0627\u0644\u0641\u062A\u0631\u0627\u062A</option><option value="3">\u0622\u062E\u0631 3 \u0623\u0634\u0647\u0631</option><option value="6">\u0622\u062E\u0631 6 \u0623\u0634\u0647\u0631</option><option value="12">\u0622\u062E\u0631 12 \u0634\u0647\u0631</option></select>
+                </div>
+                <div class="obs-exec-filter">
+                    <label><i class="fas fa-building ml-1"></i>\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u0624\u0648\u0644\u0629</label>
+                    <select id="obs-exec-filter-dept"><option value="">\u0643\u0644 \u0627\u0644\u0625\u062F\u0627\u0631\u0627\u062A</option>${t}</select>
+                </div>
+                <div class="obs-exec-filter">
+                    <label><i class="fas fa-shapes ml-1"></i>\u0627\u0644\u062A\u0635\u0646\u064A\u0641</label>
+                    <select id="obs-exec-filter-category"><option value="">\u0643\u0644 \u0627\u0644\u062A\u0635\u0646\u064A\u0641\u0627\u062A</option>${i}</select>
+                </div>
+                <div class="obs-exec-filter">
+                    <label><i class="fas fa-gauge ml-1"></i>\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0637\u0648\u0631\u0629</label>
+                    <select id="obs-exec-filter-risk"><option value="">\u0643\u0644 \u0627\u0644\u0645\u0633\u062A\u0648\u064A\u0627\u062A</option>${s}</select>
+                </div>
+                <div class="obs-exec-filter">
+                    <label><i class="fas fa-flag ml-1"></i>\u0627\u0644\u062D\u0627\u0644\u0629</label>
+                    <select id="obs-exec-filter-status"><option value="">\u0643\u0644 \u0627\u0644\u062D\u0627\u0644\u0627\u062A</option><option value="open">\u0645\u0641\u062A\u0648\u062D\u0629</option><option value="overdue">\u0645\u062A\u0623\u062E\u0631\u0629</option><option value="closed">\u0645\u063A\u0644\u0642\u0629</option></select>
+                </div>
+            </div>`,r=(n,c,d,l={})=>`
+            <div class="obs-exec-card ${[l.wide?"obs-exec-card--wide":"",l.spanLg?"obs-exec-card--span-lg":"",l.tall?"obs-exec-card--chart-tall":""].filter(Boolean).join(" ")}">
+                <div class="obs-exec-card__title"><i class="fas ${d}" style="color:var(--primary-color);"></i>${c}</div>
+                <div class="obs-exec-chart-box">
+                    <canvas id="${n}"></canvas>
+                    <div id="${n}-empty" class="obs-exec-empty"><i class="fas fa-inbox ml-2"></i>\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0643\u0627\u0641\u064A\u0629</div>
+                </div>
+            </div>`;return`
+        <div class="obs-exec-wrap" id="obs-exec-root">
+            <div class="obs-exec-header">
+                <div>
+                    <h2 style="font-size:18px;font-weight:800;color:var(--text-primary);margin:0;"><i class="fas fa-gauge-high ml-2" style="color:var(--primary-color);"></i>\u0644\u0648\u062D\u0629 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0648\u0642\u0627\u0626\u064A \u0627\u0644\u062A\u0646\u0641\u064A\u0630\u064A\u0629</h2>
+                    <p style="font-size:13px;color:var(--text-secondary);margin:4px 0 0;">\u0645\u0624\u0634\u0631\u0627\u062A \u0623\u062F\u0627\u0621 \u0623\u0645\u0646\u064A\u0629 \u0631\u0627\u0626\u062F\u0629 \u2014 \u062A\u0628\u0644\u064A\u063A \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629 \u0648\u0623\u062F\u0627\u0621 \u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629</p>
+                </div>
+                <div id="obs-exec-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button type="button" id="obs-exec-export-btn" class="btn-success"><i class="fas fa-file-pdf ml-2"></i>\u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u062A\u0642\u0631\u064A\u0631 PDF</button>
+                    <button type="button" id="obs-exec-refresh-btn" class="btn-secondary"><i class="fas fa-sync-alt ml-2"></i>\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0624\u0634\u0631\u0627\u062A</button>
+                </div>
+            </div>
+            ${o}
+            <div id="obs-exec-insights" class="obs-exec-insights"></div>
+            <div id="obs-exec-kpi-strip" class="obs-exec-kpi-grid"></div>
+            <div class="obs-exec-charts">
+                ${r("obs-exec-chart-nearmiss","\u0627\u062A\u062C\u0627\u0647 \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629 \u0627\u0644\u0634\u0647\u0631\u064A","fa-chart-line",{spanLg:!0})}
+                ${r("obs-exec-chart-closure","\u0627\u062A\u062C\u0627\u0647 \u0645\u0639\u062F\u0644 \u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A","fa-chart-area",{spanLg:!0})}
+                ${r("obs-exec-chart-category","\u062A\u0648\u0632\u064A\u0639 \u062A\u0635\u0646\u064A\u0641 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A","fa-shapes")}
+                ${r("obs-exec-chart-risk","\u062A\u0648\u0632\u064A\u0639 \u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0637\u0648\u0631\u0629","fa-gauge")}
+                ${r("obs-exec-chart-dept","\u0645\u0642\u0627\u0631\u0646\u0629 \u0623\u062F\u0627\u0621 \u0627\u0644\u0625\u062F\u0627\u0631\u0627\u062A (\u0645\u0639\u062F\u0644 \u0627\u0644\u0625\u063A\u0644\u0627\u0642 %)","fa-building",{tall:!0})}
+                ${r("obs-exec-chart-repeat","\u0623\u0628\u0631\u0632 \u0627\u0644\u0645\u0634\u0643\u0644\u0627\u062A \u0627\u0644\u0645\u062A\u0643\u0631\u0631\u0629","fa-rotate",{tall:!0})}
+                <div class="obs-exec-card obs-exec-card--wide">
+                    <div class="obs-exec-card__title"><i class="fas fa-fire" style="color:var(--danger-color);"></i>\u062E\u0631\u064A\u0637\u0629 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u0645\u062A\u0623\u062E\u0631\u0629 (\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \xD7 \u0627\u0644\u0634\u0647\u0631)</div>
+                    <div id="obs-exec-heatmap"></div>
+                </div>
+                <div class="obs-exec-card obs-exec-card--wide">
+                    <div class="obs-exec-card__title"><i class="fas fa-list-ol" style="color:var(--primary-color);"></i>\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0634\u0643\u0644\u0627\u062A \u0627\u0644\u0645\u062A\u0643\u0631\u0631\u0629</div>
+                    <div class="obs-exec-table-wrap"><table class="obs-exec-table"><thead><tr><th>\u0627\u0644\u0645\u0634\u0643\u0644\u0629</th><th>\u0627\u0644\u0645\u0648\u0642\u0639 / \u0627\u0644\u0645\u0643\u0627\u0646 / \u0627\u0644\u0646\u0648\u0639</th><th>\u0639\u062F\u062F \u0627\u0644\u062A\u0643\u0631\u0627\u0631</th><th>\u0622\u062E\u0631 \u062D\u062F\u0648\u062B</th><th>\u0627\u0644\u0627\u062A\u062C\u0627\u0647</th></tr></thead><tbody id="obs-exec-repeat-table"></tbody></table></div>
+                </div>
+            </div>
+        </div>`},async loadExecutiveDashboard(){if(!this._execLoading){this._execLoading=!0;try{try{await this.ensureChartJSLoaded()}catch{}const e=this._execApplyFilters(this._execGetObservations()),t=this._computeExecKpis(e);this._renderExecInsights(this._runInsightsEngine(t)),this._renderExecKpiCards(t),this._renderRepeatTable(t.repeatIssues),this._renderOverdueHeatmap(e),typeof Chart<"u"&&this._drawExecCharts(e,t);const s=document.getElementById("obs-exec-refresh-btn");s&&!s._execBound&&(s._execBound=!0,s.addEventListener("click",()=>{try{this.loadExecutiveDashboard()}catch{}}));const a=document.getElementById("obs-exec-export-btn");if(a&&!a._execBound&&(a._execBound=!0,a.addEventListener("click",()=>{try{this._exportExecutivePDF()}catch{}})),["obs-exec-filter-site","obs-exec-filter-period","obs-exec-filter-dept","obs-exec-filter-category","obs-exec-filter-risk","obs-exec-filter-status"].forEach(i=>{const o=document.getElementById(i);o&&!o._execBound&&(o._execBound=!0,o.addEventListener("change",()=>{try{this.loadExecutiveDashboard()}catch{}}))}),!this._execResizeBound){this._execResizeBound=!0;let i=null;window.addEventListener("resize",()=>{this.state?.activeTab==="executive-dashboard"&&(clearTimeout(i),i=setTimeout(()=>{try{this.loadExecutiveDashboard()}catch{}},350))})}}catch(e){Utils?.safeWarn?.("\u26A0\uFE0F loadExecutiveDashboard:",e?.message||e)}finally{this._execLoading=!1}}},_renderExecInsights(e){const t=document.getElementById("obs-exec-insights");t&&(t.innerHTML=(e||[]).map(s=>`<div class="obs-exec-insight obs-exec-insight--${s.type}"><i class="fas ${s.icon}"></i><span>${s.text}</span></div>`).join(""))},_renderExecKpiCards(e){const t=document.getElementById("obs-exec-kpi-strip");if(!t)return;const s=o=>o>0?`<span style="color:#dc2626;"><i class="fas fa-arrow-trend-up"></i> +${o}</span>`:o<0?`<span style="color:#059669;"><i class="fas fa-arrow-trend-down"></i> ${o}</span>`:'<span style="color:var(--text-tertiary);"><i class="fas fa-minus"></i> \u062B\u0627\u0628\u062A</span>',a=o=>Math.max(0,Math.min(100,Math.round(o))),i=[{label:"\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A",value:e.total,icon:"fa-clipboard-list",color:"#3b82f6",sub:"\u0643\u0644 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u0631\u0626\u064A\u0629"},{label:"\u0628\u0644\u0627\u063A\u0627\u062A \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629",value:e.nearMiss,icon:"fa-bolt",color:"#f59e0b",sub:`\u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0627\u0644\u0634\u0647\u0631\u064A: ${s(e.nearMissTrend)}`},{label:"\u0645\u0639\u062F\u0644 \u0627\u0644\u062A\u0628\u0644\u064A\u063A \u0639\u0646 \u0627\u0644\u0648\u0634\u064A\u0643\u0629",value:e.nearMissRate.toFixed(1)+"%",icon:"fa-bullhorn",color:"#8b5cf6",progress:a(e.nearMissRate),pcolor:"#8b5cf6"},{label:"\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0645\u0641\u062A\u0648\u062D\u0629",value:e.openActions,icon:"fa-folder-open",color:"#06b6d4",sub:"\u0644\u0645 \u062A\u064F\u063A\u0644\u0642 \u0628\u0639\u062F"},{label:"\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0645\u062A\u0623\u062E\u0631\u0629",value:e.overdue,icon:"fa-clock",color:"#ef4444",sub:"\u062A\u062C\u0627\u0648\u0632\u062A \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u063A\u0644\u0627\u0642"},{label:"\u0645\u0639\u062F\u0644 \u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A",value:e.closureRate.toFixed(1)+"%",icon:"fa-circle-check",color:e.closureRate>=90?"#10b981":e.closureRate>=75?"#f59e0b":"#ef4444",progress:a(e.closureRate),pcolor:e.closureRate>=90?"#10b981":e.closureRate>=75?"#f59e0b":"#ef4444"},{label:"\u0645\u062A\u0648\u0633\u0637 \u0623\u064A\u0627\u0645 \u0627\u0644\u0625\u063A\u0644\u0627\u0642",value:Math.round(e.avgDaysToClose),icon:"fa-hourglass-half",color:"#6366f1",sub:"\u064A\u0648\u0645 \u0644\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u0645\u063A\u0644\u0642\u0629"},{label:"\u0645\u0639\u062F\u0644 \u0627\u0644\u062A\u0643\u0631\u0627\u0631",value:e.repeatRate.toFixed(1)+"%",icon:"fa-rotate",color:e.repeatRate>20?"#ef4444":"#10b981",progress:a(e.repeatRate),pcolor:e.repeatRate>20?"#ef4444":"#10b981"},{label:"\u0639\u0627\u0644\u064A\u0629 \u0627\u0644\u062E\u0637\u0648\u0631\u0629 \u0645\u0641\u062A\u0648\u062D\u0629",value:e.highRiskOpen,icon:"fa-triangle-exclamation",color:e.highRiskOpen>this.OBS_EXEC_HIGH_RISK_THRESHOLD?"#ef4444":"#f59e0b",sub:"\u062A\u062D\u062A\u0627\u062C \u0645\u062A\u0627\u0628\u0639\u0629"},{label:"\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u062D\u0631\u062C\u0629 \u0645\u062A\u0623\u062E\u0631\u0629",value:e.criticalOverdue,icon:"fa-fire",color:"#b91c1c",sub:"\u0623\u0648\u0644\u0648\u064A\u0629 \u0642\u0635\u0648\u0649"}];t.innerHTML=i.map(o=>`
+            <div class="obs-exec-kpi">
+                <div class="obs-exec-kpi__accent" style="background:${o.color};"></div>
+                <i class="fas ${o.icon} obs-exec-kpi__icon" style="color:${o.color};"></i>
+                <div class="obs-exec-kpi__label">${o.label}</div>
+                <div class="obs-exec-kpi__value">${o.value}</div>
+                ${o.progress!=null?`<div class="obs-exec-progress"><div class="obs-exec-progress__bar" style="width:${o.progress}%;background:${o.pcolor};"></div></div>`:`<div class="obs-exec-kpi__sub">${o.sub||""}</div>`}
+            </div>`).join("")},_renderRepeatTable(e){const t=document.getElementById("obs-exec-repeat-table");if(!t)return;if(!e||!e.length){t.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);padding:18px;"><i class="fas fa-check-circle ml-2" style="color:#10b981;"></i>\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0634\u0643\u0644\u0627\u062A \u0645\u062A\u0643\u0631\u0631\u0629</td></tr>';return}const s=a=>a==="up"?'<span style="color:#dc2626;"><i class="fas fa-arrow-trend-up"></i> \u0645\u062A\u0635\u0627\u0639\u062F</span>':a==="down"?'<span style="color:#059669;"><i class="fas fa-arrow-trend-down"></i> \u0645\u062A\u0646\u0627\u0642\u0635</span>':'<span style="color:var(--text-tertiary);"><i class="fas fa-minus"></i> \u062B\u0627\u0628\u062A</span>';t.innerHTML=e.slice(0,15).map(a=>{const i=a.last?new Date(a.last).toLocaleDateString("ar-EG"):"\u2014",o=a.count>=5?"#b91c1c":a.count>=3?"#f59e0b":"#3b82f6";return`<tr>
+                <td>${Utils?.escapeHTML?Utils.escapeHTML(a.sample):a.sample}</td>
+                <td style="color:var(--text-secondary);">${Utils?.escapeHTML?Utils.escapeHTML(a.key):a.key}</td>
+                <td><span class="obs-exec-badge" style="background:${o}1a;color:${o};">${a.count}</span></td>
+                <td>${i}</td>
+                <td>${s(a.trend)}</td>
+            </tr>`}).join("")},_renderOverdueHeatmap(e){const t=document.getElementById("obs-exec-heatmap");if(!t)return;const s=(e||[]).filter(m=>this._execIsOverdue(m));if(!s.length){t.innerHTML='<div style="text-align:center;color:var(--text-tertiary);padding:18px;"><i class="fas fa-check-circle ml-2" style="color:#10b981;"></i>\u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0645\u062A\u0623\u062E\u0631\u0629</div>';return}const a=new Date,i=["\u064A\u0646\u0627\u064A\u0631","\u0641\u0628\u0631\u0627\u064A\u0631","\u0645\u0627\u0631\u0633","\u0623\u0628\u0631\u064A\u0644","\u0645\u0627\u064A\u0648","\u064A\u0648\u0646\u064A\u0648","\u064A\u0648\u0644\u064A\u0648","\u0623\u063A\u0633\u0637\u0633","\u0633\u0628\u062A\u0645\u0628\u0631","\u0623\u0643\u062A\u0648\u0628\u0631","\u0646\u0648\u0641\u0645\u0628\u0631","\u062F\u064A\u0633\u0645\u0628\u0631"],o=[];for(let m=5;m>=0;m--){const u=new Date(a.getFullYear(),a.getMonth()-m,1);o.push({y:u.getFullYear(),m:u.getMonth(),label:`${i[u.getMonth()]} ${String(u.getFullYear()).slice(2)}`})}const r={};s.forEach(m=>{const u=m.responsibleDepartment||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";r[u]=(r[u]||0)+1});const n=Object.entries(r).sort((m,u)=>u[1]-m[1]).slice(0,7).map(m=>m[0]),c=(m,u)=>s.filter(f=>{if((f.responsibleDepartment||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F")!==m)return!1;const y=new Date(f.expectedCompletionDate||f.date);return!isNaN(y.getTime())&&y.getFullYear()===u.y&&y.getMonth()===u.m}).length;let d=1;n.forEach(m=>o.forEach(u=>{d=Math.max(d,c(m,u))}));let p=`<div class="obs-exec-heat-grid" style="grid-template-columns:${`minmax(120px,160px) repeat(${o.length}, minmax(64px,1fr))`};">`;p+='<div class="obs-exec-heat-head"></div>'+o.map(m=>`<div class="obs-exec-heat-head">${m.label}</div>`).join(""),n.forEach(m=>{p+=`<div class="obs-exec-heat-row-label" title="${m}">${m}</div>`,o.forEach(u=>{const f=c(m,u),y=f===0?0:.15+.75*(f/d),h=f===0?"var(--bg-tertiary)":`rgba(239,68,68,${y.toFixed(2)})`,k=f===0?"var(--text-tertiary)":y>.5?"#fff":"#7f1d1d";p+=`<div class="obs-exec-heat-cell" style="background:${h};color:${k};">${f||""}</div>`})}),p+="</div>",t.innerHTML=p},_execChartImg(e){const t=this.analysisCharts&&this.analysisCharts[e];if(!t)return"";try{return t.toBase64Image("image/png",1)}catch{return""}},_buildExecReportNode(e,t,s){const a=x=>Utils?.escapeHTML?Utils.escapeHTML(String(x??"")):String(x??""),i=typeof AppState<"u"&&AppState.companySettings?AppState.companySettings:{},o=i.name||(typeof DEFAULT_COMPANY_NAME<"u"?DEFAULT_COMPANY_NAME:"QHSSE-GLOBAL"),r=i.secondaryName||"",n=typeof AppState<"u"&&AppState.companyLogo?AppState.companyLogo:i.logo||"",c=[i.address,i.phone,i.email].filter(Boolean).join("  |  "),d=new Date,l=d.toLocaleString("ar-EG",{year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit"}),p="OBS-EXEC-"+d.getFullYear()+String(d.getMonth()+1).padStart(2,"0"),m=String(o).trim().slice(0,2)||"HS",f=`
+            <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #1e3a8a;padding-bottom:12px;margin-bottom:14px;">
+                ${n?`<img src="${a(n)}" style="width:58px;height:58px;object-fit:contain;border-radius:8px;background:#fff;border:1px solid #e2e8f0;"/>`:`<div style="width:58px;height:58px;border-radius:8px;background:#1e3a8a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;">${a(m)}</div>`}
+                <div style="flex:1;">
+                    <div style="font-size:20px;font-weight:800;color:#0f172a;white-space:nowrap;word-break:keep-all;">${a(o)}</div>
+                    ${r?`<div style="font-size:13px;color:#6b7280;margin-top:2px;">${a(r)}</div>`:""}
+                </div>
+                <div style="text-align:left;font-size:11px;color:#374151;line-height:1.9;">
+                    <div><b>\u0643\u0648\u062F \u0627\u0644\u062A\u0642\u0631\u064A\u0631:</b> ${a(p)}</div>
+                    <div><b>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631:</b> ${a(l)}</div>
+                </div>
+            </div>
+            <div style="text-align:center;background:#1e3a8a;color:#fff;padding:9px;border-radius:8px;font-size:16px;font-weight:700;margin-bottom:12px;">\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0624\u0634\u0631\u0627\u062A \u0627\u0644\u062A\u0646\u0641\u064A\u0630\u064A\u0629 \u0644\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629</div>`,h=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;font-size:11px;color:#334155;">${[["\u0627\u0644\u0645\u0648\u0642\u0639",s.siteLabel||"\u0627\u0644\u0643\u0644"],["\u0627\u0644\u0641\u062A\u0631\u0629",s.periodLabel||"\u0627\u0644\u0643\u0644"],["\u0627\u0644\u0625\u062F\u0627\u0631\u0629",s.deptLabel||"\u0627\u0644\u0643\u0644"],["\u0627\u0644\u062A\u0635\u0646\u064A\u0641",s.categoryLabel||"\u0627\u0644\u0643\u0644"],["\u0627\u0644\u062E\u0637\u0648\u0631\u0629",s.riskLabel||"\u0627\u0644\u0643\u0644"],["\u0627\u0644\u062D\u0627\u0644\u0629",s.statusLabel||"\u0627\u0644\u0643\u0644"]].map(([x,$])=>`<span style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:99px;padding:3px 10px;"><b>${a(x)}:</b> ${a($)}</span>`).join("")}</div>`,k={good:["#ecfdf5","#10b981","#047857"],warn:["#fffbeb","#f59e0b","#b45309"],danger:["#fef2f2","#ef4444","#b91c1c"],info:["#eff6ff","#3b82f6","#1d4ed8"]},b='<div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px;">'+this._runInsightsEngine(t).map(x=>{const $=k[x.type]||k.info;return`<div style="background:${$[0]};border:1px solid ${$[1]}55;border-right:4px solid ${$[1]};border-radius:8px;padding:9px 12px;font-size:12px;font-weight:600;color:${$[2]};">${a(x.text)}</div>`}).join("")+"</div>",v='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;">'+[["\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A",t.total,"#3b82f6"],["\u0628\u0644\u0627\u063A\u0627\u062A \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629",t.nearMiss,"#f59e0b"],["\u0645\u0639\u062F\u0644 \u0627\u0644\u062A\u0628\u0644\u064A\u063A \u0639\u0646 \u0627\u0644\u0648\u0634\u064A\u0643\u0629",t.nearMissRate.toFixed(1)+"%","#8b5cf6"],["\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0645\u0641\u062A\u0648\u062D\u0629",t.openActions,"#06b6d4"],["\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0645\u062A\u0623\u062E\u0631\u0629",t.overdue,"#ef4444"],["\u0645\u0639\u062F\u0644 \u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A",t.closureRate.toFixed(1)+"%","#10b981"],["\u0645\u062A\u0648\u0633\u0637 \u0623\u064A\u0627\u0645 \u0627\u0644\u0625\u063A\u0644\u0627\u0642",Math.round(t.avgDaysToClose),"#6366f1"],["\u0645\u0639\u062F\u0644 \u0627\u0644\u062A\u0643\u0631\u0627\u0631",t.repeatRate.toFixed(1)+"%",t.repeatRate>20?"#ef4444":"#10b981"],["\u0639\u0627\u0644\u064A\u0629 \u0627\u0644\u062E\u0637\u0648\u0631\u0629 \u0645\u0641\u062A\u0648\u062D\u0629",t.highRiskOpen,"#f59e0b"],["\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u062D\u0631\u062C\u0629 \u0645\u062A\u0623\u062E\u0631\u0629",t.criticalOverdue,"#b91c1c"]].map(x=>`<div style="border:1px solid #e2e8f0;border-top:3px solid ${x[2]};border-radius:9px;padding:9px;background:#f8fafc;"><div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:6px;min-height:26px;">${a(x[0])}</div><div style="font-size:19px;font-weight:800;color:#0f172a;">${a(x[1])}</div></div>`).join("")+"</div>",T='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">'+[["obs-exec-chart-nearmiss","\u0627\u062A\u062C\u0627\u0647 \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629 \u0627\u0644\u0634\u0647\u0631\u064A"],["obs-exec-chart-closure","\u0627\u062A\u062C\u0627\u0647 \u0645\u0639\u062F\u0644 \u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"],["obs-exec-chart-category","\u062A\u0648\u0632\u064A\u0639 \u062A\u0635\u0646\u064A\u0641 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A"],["obs-exec-chart-risk","\u062A\u0648\u0632\u064A\u0639 \u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0637\u0648\u0631\u0629"],["obs-exec-chart-dept","\u0645\u0642\u0627\u0631\u0646\u0629 \u0623\u062F\u0627\u0621 \u0627\u0644\u0625\u062F\u0627\u0631\u0627\u062A (\u0645\u0639\u062F\u0644 \u0627\u0644\u0625\u063A\u0644\u0627\u0642 %)"],["obs-exec-chart-repeat","\u0623\u0628\u0631\u0632 \u0627\u0644\u0645\u0634\u0643\u0644\u0627\u062A \u0627\u0644\u0645\u062A\u0643\u0631\u0631\u0629"]].map(([x,$])=>{const M=this._execChartImg(x);return M?`<div style="border:1px solid #e2e8f0;border-radius:9px;padding:9px;background:#fff;"><div style="font-size:12px;font-weight:700;color:#0f172a;margin-bottom:6px;">${a($)}</div><img src="${M}" style="width:100%;height:auto;display:block;"/></div>`:""}).filter(Boolean).join("")+"</div>";let L="";const D=(e||[]).filter(x=>this._execIsOverdue(x));if(D.length){const x=["\u064A\u0646\u0627\u064A\u0631","\u0641\u0628\u0631\u0627\u064A\u0631","\u0645\u0627\u0631\u0633","\u0623\u0628\u0631\u064A\u0644","\u0645\u0627\u064A\u0648","\u064A\u0648\u0646\u064A\u0648","\u064A\u0648\u0644\u064A\u0648","\u0623\u063A\u0633\u0637\u0633","\u0633\u0628\u062A\u0645\u0628\u0631","\u0623\u0643\u062A\u0648\u0628\u0631","\u0646\u0648\u0641\u0645\u0628\u0631","\u062F\u064A\u0633\u0645\u0628\u0631"],$=[];for(let C=5;C>=0;C--){const U=new Date(d.getFullYear(),d.getMonth()-C,1);$.push({y:U.getFullYear(),m:U.getMonth(),label:`${x[U.getMonth()]} ${String(U.getFullYear()).slice(2)}`})}const M={};D.forEach(C=>{const U=C.responsibleDepartment||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";M[U]=(M[U]||0)+1});const q=Object.entries(M).sort((C,U)=>U[1]-C[1]).slice(0,7).map(C=>C[0]),W=(C,U)=>D.filter(j=>{if((j.responsibleDepartment||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F")!==C)return!1;const z=new Date(j.expectedCompletionDate||j.date);return!isNaN(z.getTime())&&z.getFullYear()===U.y&&z.getMonth()===U.m}).length;let P=1;q.forEach(C=>$.forEach(U=>{P=Math.max(P,W(C,U))})),L=`<div style="font-size:13px;font-weight:700;color:#0f172a;margin:6px 0 8px;">\u062E\u0631\u064A\u0637\u0629 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u0645\u062A\u0623\u062E\u0631\u0629 (\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \xD7 \u0627\u0644\u0634\u0647\u0631)</div>
+                <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:14px;"><thead><tr><th style="border:1px solid #e2e8f0;padding:6px;background:#f1f5f9;text-align:right;">\u0627\u0644\u0625\u062F\u0627\u0631\u0629</th>${$.map(C=>`<th style="border:1px solid #e2e8f0;padding:6px;background:#f1f5f9;">${a(C.label)}</th>`).join("")}</tr></thead><tbody>`+q.map(C=>`<tr><td style="border:1px solid #e2e8f0;padding:6px;text-align:right;font-weight:600;">${a(C)}</td>${$.map(U=>{const j=W(C,U),z=j===0?0:.15+.75*(j/P),A=j===0?"#f8fafc":`rgba(239,68,68,${z.toFixed(2)})`,R=j===0?"#94a3b8":z>.5?"#fff":"#7f1d1d";return`<td style="border:1px solid #e2e8f0;padding:6px;text-align:center;font-weight:700;background:${A};color:${R};">${j||""}</td>`}).join("")}</tr>`).join("")+"</tbody></table>"}let O="";const N=(t.repeatIssues||[]).slice(0,15);if(N.length){const x=$=>$==="up"?"\u0645\u062A\u0635\u0627\u0639\u062F":$==="down"?"\u0645\u062A\u0646\u0627\u0642\u0635":"\u062B\u0627\u0628\u062A";O=`<div style="font-size:13px;font-weight:700;color:#0f172a;margin:6px 0 8px;">\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0634\u0643\u0644\u0627\u062A \u0627\u0644\u0645\u062A\u0643\u0631\u0631\u0629</div>
+                <table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr>
+                <th style="border:1px solid #e2e8f0;padding:6px;background:#f1f5f9;text-align:right;">\u0627\u0644\u0645\u0634\u0643\u0644\u0629</th>
+                <th style="border:1px solid #e2e8f0;padding:6px;background:#f1f5f9;text-align:right;">\u0627\u0644\u0645\u0648\u0642\u0639 / \u0627\u0644\u0645\u0643\u0627\u0646 / \u0627\u0644\u0646\u0648\u0639</th>
+                <th style="border:1px solid #e2e8f0;padding:6px;background:#f1f5f9;">\u0627\u0644\u062A\u0643\u0631\u0627\u0631</th>
+                <th style="border:1px solid #e2e8f0;padding:6px;background:#f1f5f9;">\u0622\u062E\u0631 \u062D\u062F\u0648\u062B</th>
+                <th style="border:1px solid #e2e8f0;padding:6px;background:#f1f5f9;">\u0627\u0644\u0627\u062A\u062C\u0627\u0647</th>
+                </tr></thead><tbody>`+N.map($=>`<tr><td style="border:1px solid #e2e8f0;padding:6px;text-align:right;">${a($.sample)}</td><td style="border:1px solid #e2e8f0;padding:6px;text-align:right;color:#475569;">${a($.key)}</td><td style="border:1px solid #e2e8f0;padding:6px;text-align:center;font-weight:700;">${$.count}</td><td style="border:1px solid #e2e8f0;padding:6px;text-align:center;">${$.last?a(new Date($.last).toLocaleDateString("ar-EG")):"\u2014"}</td><td style="border:1px solid #e2e8f0;padding:6px;text-align:center;">${a(x($.trend))}</td></tr>`).join("")+"</tbody></table>"}const w=`<div style="margin-top:18px;border-top:1px solid #e2e8f0;padding-top:8px;font-size:10px;color:#64748b;display:flex;justify-content:space-between;gap:10px;">
+                <span>${a(c)}</span>
+                <span>${a(o)} \u2014 \u0646\u0638\u0627\u0645 \u0625\u062F\u0627\u0631\u0629 QHSSE</span>
+            </div>`,E=document.createElement("div");return E.style.cssText="position:fixed;left:-99999px;top:0;width:794px;background:#ffffff;color:#0f172a;font-family:Tahoma,Arial,sans-serif;padding:24px;box-sizing:border-box;direction:rtl;z-index:-1;",E.innerHTML=f+h+b+v+T+L+O+w,E},async _exportExecutivePDF(){const e=document.getElementById("obs-exec-export-btn"),t=e?e.innerHTML:"";e&&(e.disabled=!0,e.innerHTML='<i class="fas fa-spinner fa-spin"></i> \u062C\u0627\u0631\u064D \u0627\u0644\u062A\u062C\u0647\u064A\u0632...');let s=null;try{await this._loadAnalyticsLib("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",()=>typeof html2canvas<"u"),await this._loadAnalyticsLib("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",()=>typeof window.jspdf<"u");const a=this._execApplyFilters(this._execGetObservations()),i=this._computeExecKpis(a),o=this._execGetFilters();s=this._buildExecReportNode(a,i,o),document.body.appendChild(s),await new Promise(v=>setTimeout(v,120));const r=await html2canvas(s,{scale:2,useCORS:!0,backgroundColor:"#ffffff",logging:!1}),{jsPDF:n}=window.jspdf,c=new n({orientation:"portrait",unit:"mm",format:"a4"}),d=c.internal.pageSize.getWidth(),l=c.internal.pageSize.getHeight(),p=8,m=8,u=d-p*2,f=u/r.width,y=r.height*f,h=l-p-m,k=Math.max(1,Math.ceil(y/h)),b=h/f;for(let v=0;v<k;v++){v>0&&c.addPage();const g=document.createElement("canvas"),T=Math.min(b,r.height-v*b);g.width=r.width,g.height=T,g.getContext("2d").drawImage(r,0,v*b,r.width,T,0,0,r.width,T);const D=g.toDataURL("image/jpeg",.92);c.addImage(D,"JPEG",p,p,u,T*f),c.setDrawColor(226,232,240),c.line(p,l-m,d-p,l-m),c.setTextColor(120,120,120),c.setFontSize(8),c.setFont("helvetica","normal"),c.text("Daily Observations - Confidential",p,l-3),c.text(`Page ${v+1} / ${k}`,d-p,l-3,{align:"right"})}const S=new Date().toISOString().slice(0,10);c.save(`\u062A\u0642\u0631\u064A\u0631-\u0627\u0644\u0645\u0624\u0634\u0631\u0627\u062A-\u0627\u0644\u062A\u0646\u0641\u064A\u0630\u064A\u0629-${S}.pdf`),typeof Notification<"u"&&Notification.success&&Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u062A\u0642\u0631\u064A\u0631 PDF \u0628\u0646\u062C\u0627\u062D")}catch{typeof Notification<"u"&&Notification.error&&Notification.error("\u062A\u0639\u0630\u0651\u0631 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u2014 \u062A\u0623\u0643\u062F \u0645\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A \u0648\u0623\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629")}finally{s&&s.parentNode&&s.parentNode.removeChild(s),e&&(e.disabled=!1,e.innerHTML=t)}},_execToggleEmpty(e,t){const s=document.getElementById(e),a=document.getElementById(e+"-empty");return s&&(s.style.display=t?"none":"block"),a&&(a.style.display=t?"flex":"none"),!t},_execDestroyChart(e){if(this.analysisCharts&&this.analysisCharts[e])try{this.analysisCharts[e].destroy()}catch{}},_execShortLabel(e,t=34){const s=String(e||"").trim();return s?s.length>t?s.slice(0,t-1)+"\u2026":s:"\u2014"},_setExecChartBoxHeight(e,t,s=260){const a=document.getElementById(e),i=a&&a.closest(".obs-exec-chart-box");if(!i)return;const o=Math.max(1,Number(t)||1);i.style.minHeight=Math.max(s,o*36+72)+"px",i.style.height="auto"},_drawExecHBar(e,t,s){const a=document.getElementById(e);if(!a)return;const i=Array.isArray(t)?t:[],o=i.map(d=>d.short||d.label||"\u2014"),r=i.map(d=>d.value),n=i.map(d=>d.full||d.short||d.label||"\u2014");if(!this._execToggleEmpty(e,r.length===0||r.reduce((d,l)=>d+l,0)===0))return;this._setExecChartBoxHeight(e,o.length,280),this._execDestroyChart(e);const c=new Chart(a,{type:"bar",data:{labels:o,datasets:[{data:r,backgroundColor:s||"rgba(239,68,68,0.7)",borderRadius:5,borderSkipped:!1}]},options:{indexAxis:"y",responsive:!0,maintainAspectRatio:!1,layout:{padding:{left:4,right:8}},plugins:{legend:{display:!1},tooltip:{callbacks:{title:d=>n[d[0]?.dataIndex]||"",label:d=>` \u0627\u0644\u062A\u0643\u0631\u0627\u0631: ${d.parsed.x}`}}},scales:{x:{beginAtZero:!0,ticks:{precision:0,font:{size:11}},grid:{color:"#f1f5f9"}},y:{ticks:{autoSkip:!1,font:{size:10},callback:d=>this._execShortLabel(o[d],36)}}}}});this.analysisCharts||(this.analysisCharts={}),this.analysisCharts[e]=c},_drawExecCharts(e,t){try{this._drawExecMonthlySeries("obs-exec-chart-nearmiss",e,s=>this._execIsNearMiss(s),"\u0628\u0644\u0627\u063A\u0627\u062A \u0648\u0634\u064A\u0643\u0629","rgba(245,158,11,0.75)")}catch{}try{this._drawExecClosureTrend("obs-exec-chart-closure",e)}catch{}try{const s={};e.forEach(i=>{const o=this._execCategoryOf(i);s[o]=(s[o]||0)+1});const a=Object.entries(s).sort((i,o)=>o[1]-i[1]);this._drawDoughnut("obs-exec-chart-category",a.map(i=>i[0]),a.map(i=>i[1]))}catch{}try{const s=this._groupBy(e,"riskLevel");this._drawDoughnut("obs-exec-chart-risk",s.labels,s.data,["rgba(16,185,129,0.8)","rgba(245,158,11,0.8)","rgba(239,68,68,0.8)","rgba(127,29,29,0.85)","rgba(148,163,184,0.7)"])}catch{}try{this._drawExecDeptPerformance("obs-exec-chart-dept",e)}catch{}try{const a=(t.repeatIssues||[]).slice(0,8).map(i=>{const o=String(i.sample||i.key||"\u2014").trim();return{short:this._execShortLabel(o,40),full:o,value:i.count}});this._drawExecHBar("obs-exec-chart-repeat",a,"rgba(239,68,68,0.7)")}catch{}},_drawExecMonthlySeries(e,t,s,a,i){const o=document.getElementById(e);if(!o)return;const r=new Date,n=["\u064A\u0646\u0627\u064A\u0631","\u0641\u0628\u0631\u0627\u064A\u0631","\u0645\u0627\u0631\u0633","\u0623\u0628\u0631\u064A\u0644","\u0645\u0627\u064A\u0648","\u064A\u0648\u0646\u064A\u0648","\u064A\u0648\u0644\u064A\u0648","\u0623\u063A\u0633\u0637\u0633","\u0633\u0628\u062A\u0645\u0628\u0631","\u0623\u0643\u062A\u0648\u0628\u0631","\u0646\u0648\u0641\u0645\u0628\u0631","\u062F\u064A\u0633\u0645\u0628\u0631"],c=[];for(let m=11;m>=0;m--){const u=new Date(r.getFullYear(),r.getMonth()-m,1);c.push({y:u.getFullYear(),m:u.getMonth(),label:`${n[u.getMonth()]} ${u.getFullYear()}`})}const d=t.filter(s),l=c.map(m=>d.filter(u=>{const f=new Date(u.date);return!isNaN(f.getTime())&&f.getFullYear()===m.y&&f.getMonth()===m.m}).length);if(!this._execToggleEmpty(e,l.reduce((m,u)=>m+u,0)===0))return;this._execDestroyChart(e);const p=new Chart(o,{type:"bar",data:{labels:c.map(m=>m.label),datasets:[{label:a,data:l,backgroundColor:i,borderRadius:6,borderSkipped:!1,order:1},{label:"\u0627\u0644\u0627\u062A\u062C\u0627\u0647",data:l,type:"line",borderColor:"rgba(139,92,246,0.9)",backgroundColor:"rgba(139,92,246,0.08)",borderWidth:2.5,pointRadius:3,tension:.4,fill:!0,order:0}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{position:"top",labels:{usePointStyle:!0,font:{size:11}}},tooltip:{mode:"index",intersect:!1}},scales:{x:{grid:{display:!1},ticks:{font:{size:10},maxRotation:45}},y:{beginAtZero:!0,ticks:{precision:0,font:{size:11}}}}}});this.analysisCharts||(this.analysisCharts={}),this.analysisCharts[e]=p},_drawExecClosureTrend(e,t){const s=document.getElementById(e);if(!s)return;const a=new Date,i=["\u064A\u0646\u0627\u064A\u0631","\u0641\u0628\u0631\u0627\u064A\u0631","\u0645\u0627\u0631\u0633","\u0623\u0628\u0631\u064A\u0644","\u0645\u0627\u064A\u0648","\u064A\u0648\u0646\u064A\u0648","\u064A\u0648\u0644\u064A\u0648","\u0623\u063A\u0633\u0637\u0633","\u0633\u0628\u062A\u0645\u0628\u0631","\u0623\u0643\u062A\u0648\u0628\u0631","\u0646\u0648\u0641\u0645\u0628\u0631","\u062F\u064A\u0633\u0645\u0628\u0631"],o=[];for(let c=11;c>=0;c--){const d=new Date(a.getFullYear(),a.getMonth()-c,1);o.push({y:d.getFullYear(),m:d.getMonth(),label:`${i[d.getMonth()]} ${d.getFullYear()}`})}const r=o.map(c=>{const d=t.filter(p=>{const m=new Date(p.expectedCompletionDate);return!isNaN(m.getTime())&&m.getFullYear()===c.y&&m.getMonth()===c.m});if(!d.length)return null;const l=d.filter(p=>this._execIsClosed(p)).length;return Math.round(l/d.length*100)});if(!this._execToggleEmpty(e,r.every(c=>c===null)))return;this._execDestroyChart(e);const n=new Chart(s,{type:"line",data:{labels:o.map(c=>c.label),datasets:[{label:"\u0645\u0639\u062F\u0644 \u0627\u0644\u0625\u063A\u0644\u0627\u0642 %",data:r,borderColor:"rgba(16,185,129,0.9)",backgroundColor:"rgba(16,185,129,0.12)",borderWidth:2.5,pointRadius:3,tension:.4,fill:!0,spanGaps:!0}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{position:"top",labels:{usePointStyle:!0,font:{size:11}}},tooltip:{callbacks:{label:c=>` ${c.parsed.y}%`}}},scales:{x:{grid:{display:!1},ticks:{font:{size:10},maxRotation:45}},y:{beginAtZero:!0,max:100,ticks:{callback:c=>c+"%",font:{size:11}}}}}});this.analysisCharts||(this.analysisCharts={}),this.analysisCharts[e]=n},_drawExecDeptPerformance(e,t){const s=document.getElementById(e);if(!s)return;const a={};t.forEach(l=>{const p=l.responsibleDepartment||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";a[p]=a[p]||{c:0,t:0},a[p].t++,this._execIsClosed(l)&&a[p].c++});const i=Object.entries(a).map(l=>[l[0],Math.round(l[1].c/l[1].t*100),l[1].t]).sort((l,p)=>p[1]-l[1]).slice(0,8);if(!this._execToggleEmpty(e,i.length===0))return;const o=i.map(l=>({short:this._execShortLabel(l[0],34),full:l[0],value:l[1]})),r=o.map(l=>l.value>=90?"rgba(16,185,129,0.8)":l.value>=75?"rgba(245,158,11,0.8)":"rgba(239,68,68,0.8)");this._setExecChartBoxHeight(e,o.length,280),this._execDestroyChart(e);const n=o.map(l=>l.short),c=o.map(l=>l.value),d=new Chart(s,{type:"bar",data:{labels:n,datasets:[{data:c,backgroundColor:r,borderRadius:5,borderSkipped:!1}]},options:{indexAxis:"y",responsive:!0,maintainAspectRatio:!1,layout:{padding:{left:4,right:8}},plugins:{legend:{display:!1},tooltip:{callbacks:{title:l=>o[l[0]?.dataIndex]?.full||"",label:l=>` \u0645\u0639\u062F\u0644 \u0627\u0644\u0625\u063A\u0644\u0627\u0642: ${l.parsed.x}%`}}},scales:{x:{beginAtZero:!0,max:100,ticks:{callback:l=>l+"%",font:{size:11}},grid:{color:"#f1f5f9"}},y:{ticks:{autoSkip:!1,font:{size:10},callback:l=>n[l]||""}}}}});this.analysisCharts||(this.analysisCharts={}),this.analysisCharts[e]=d},_applyAnalysisFilters(e){const t=p=>{const m=document.getElementById(p);return m?m.value.trim():""},s=t("obs-af-site"),a=t("obs-af-observer"),i=t("obs-af-type"),o=t("obs-af-risk"),r=t("obs-af-status"),n=t("obs-af-shift"),c=t("obs-af-dept"),d=[s,a,i,o,r,n,c].some(p=>p!==""),l=document.getElementById("obs-filter-active-badge");return l&&(l.style.display=d?"inline":"none"),e.filter(p=>!(s&&String(p.siteName||"").trim()!==s||a&&String(p.observerName||"").trim()!==a||i&&String(p.observationType||"").trim()!==i||o&&String(p.riskLevel||"").trim()!==o||r&&String(p.status||"").trim()!==r||n&&String(p.shift||"").trim()!==n||c&&String(p.responsibleDepartment||"").trim()!==c))},_populateAnalysisFilterOptions(e){const t=a=>[...new Set(e.map(i=>String(i[a]||"").trim()).filter(Boolean))].sort(),s=(a,i)=>{const o=document.getElementById(a);if(!o)return;const r=o.value;o.innerHTML='<option value="">\u0627\u0644\u0643\u0644</option>'+i.map(n=>`<option value="${n}"${n===r?" selected":""}>${n}</option>`).join("")};s("obs-af-site",t("siteName")),s("obs-af-observer",t("observerName")),s("obs-af-type",t("observationType")),s("obs-af-risk",t("riskLevel")),s("obs-af-status",t("status")),s("obs-af-shift",t("shift")),s("obs-af-dept",t("responsibleDepartment"))},_drawCloseTimeByType(e,t){const s=document.getElementById(e),a=document.getElementById(e+"-empty");if(!s)return;const i=t.filter(u=>u.status==="\u0645\u063A\u0644\u0642"&&(u.overdays||0)>0);if(!i.length){s.style.display="none",a&&(a.style.display="flex");return}a&&(a.style.display="none");const o={};i.forEach(u=>{const f=String(u.observationType||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F").trim();o[f]||(o[f]=[]),o[f].push(u.overdays||0)});const r=Object.entries(o).map(([u,f])=>({label:u,avg:Math.round(f.reduce((y,h)=>y+h,0)/f.length),count:f.length})).sort((u,f)=>f.avg-u.avg).slice(0,10),n=r.map(u=>u.label),c=r.map(u=>u.avg),d=Math.max(...c),l=c.map(u=>u>30?"rgba(239,68,68,0.75)":u>14?"rgba(245,158,11,0.75)":"rgba(16,185,129,0.75)"),p=this.analysisCharts&&this.analysisCharts[e];if(p)try{p.destroy()}catch{}const m=new Chart(s,{type:"bar",data:{labels:n,datasets:[{data:c,backgroundColor:l,borderRadius:5,borderSkipped:!1}]},options:{indexAxis:"y",responsive:!0,maintainAspectRatio:!1,plugins:{legend:{display:!1},tooltip:{callbacks:{label:u=>` \u0645\u062A\u0648\u0633\u0637 ${u.parsed.x} \u064A\u0648\u0645 (${r[u.dataIndex].count} \u0645\u0644\u0627\u062D\u0638\u0629)`}}},scales:{x:{beginAtZero:!0,ticks:{precision:0,font:{size:11}},grid:{color:"#f1f5f9"},title:{display:!0,text:"\u0645\u062A\u0648\u0633\u0637 \u0627\u0644\u0623\u064A\u0627\u0645",font:{size:11}}},y:{ticks:{font:{size:10},callback:u=>String(n[u]).length>18?String(n[u]).slice(0,17)+"\u2026":n[u]}}}}});this.analysisCharts||(this.analysisCharts={}),this.analysisCharts[e]=m},async _exportAnalyticsPDF(){const e=document.getElementById("obs-analytics-root");if(!e)return;const t=document.getElementById("obs-export-pdf-btn"),s=t?t.innerHTML:"";t&&(t.disabled=!0,t.innerHTML='<i class="fas fa-spinner fa-spin"></i>');try{await this._loadAnalyticsLib("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",()=>typeof html2canvas<"u"),await this._loadAnalyticsLib("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",()=>typeof window.jspdf<"u");const a=document.getElementById("obs-filter-panel"),i=a&&a.style.display!=="none";i&&(a.style.display="none");const o=await html2canvas(e,{scale:1.8,useCORS:!0,backgroundColor:"#f8fafc",scrollX:0,scrollY:-window.scrollY,logging:!1});i&&(a.style.display="");const r=o.toDataURL("image/jpeg",.9),{jsPDF:n}=window.jspdf,c=new n({orientation:"portrait",unit:"mm",format:"a4"}),d=c.internal.pageSize.getWidth(),l=c.internal.pageSize.getHeight(),p=10,m=d-p*2,u=m/o.width,f=o.height*u,y=(v,g)=>{c.setFillColor(30,58,138),c.rect(0,0,d,14,"F"),c.setTextColor(255,255,255),c.setFontSize(9),c.setFont("helvetica","bold"),c.text("Daily Observations - Analytics Report",p,9,{align:"left"});const T=new Date().toLocaleDateString("ar-SA");c.text(`${T}  |  ${v}/${g}`,d-p,9,{align:"right"}),c.setTextColor(0,0,0)},h=l-14-p,k=Math.ceil(f/h),b=h/u;for(let v=0;v<k;v++){v>0&&c.addPage(),y(v+1,k);const g=document.createElement("canvas"),T=Math.min(b,o.height-v*b);g.width=o.width,g.height=T,g.getContext("2d").drawImage(o,0,v*b,o.width,T,0,0,o.width,T);const D=g.toDataURL("image/jpeg",.9);c.addImage(D,"JPEG",p,14,m,T*u)}const S=new Date().toISOString().slice(0,10);c.save(`\u062A\u0642\u0631\u064A\u0631-\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A-\u0627\u0644\u064A\u0648\u0645\u064A\u0629-${S}.pdf`),typeof Notification<"u"&&Notification.success&&Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u062A\u0642\u0631\u064A\u0631 PDF \u0628\u0646\u062C\u0627\u062D")}catch{typeof Notification<"u"&&Notification.error&&Notification.error("\u062A\u0639\u0630\u0651\u0631 \u062A\u0635\u062F\u064A\u0631 PDF \u2014 \u062A\u0623\u0643\u062F \u0645\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A \u0648\u0623\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629")}finally{t&&(t.disabled=!1,t.innerHTML=s)}},_loadAnalyticsLib(e,t){return new Promise((s,a)=>{if(t())return s();const i=document.createElement("script");i.src=e,i.onload=()=>s(),i.onerror=()=>a(new Error("Failed to load: "+e)),document.head.appendChild(i)})},async updateAnalysisResults(){const e=document.getElementById("obs-analytics-root");if(!e)return;const t=parseInt(this._analysisPeriod||"0",10),a=(typeof this.getDailyObservationsVisibleToCurrentUser=="function"?this.getDailyObservationsVisibleToCurrentUser():Array.isArray(AppState.appData.dailyObservations)?AppState.appData.dailyObservations:[]).map(x=>this.normalizeRecord(x)),i=this._filterObsByPeriod(a,t);this._populateAnalysisFilterOptions(i);const o=this._applyAnalysisFilters(i),r=o.length,n=document.getElementById("obs-filter-results-count");n&&(n.textContent=`${r} \u0645\u0644\u0627\u062D\u0638\u0629`);const c=o.filter(x=>x.status==="\u0645\u0641\u062A\u0648\u062D"||x.status==="\u062C\u062F\u064A\u062F").length,d=o.filter(x=>x.status==="\u0645\u063A\u0644\u0642").length,l=o.filter(x=>x.status==="\u062C\u0627\u0631\u064A"||x.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630").length,p=o.filter(x=>x.riskLevel==="\u0639\u0627\u0644\u064A"||x.riskLevel==="\u0639\u0627\u0644\u064A\u0629").length,m=o.filter(x=>{if(!x.date)return!1;const $=new Date(x.date),M=new Date;return $.getFullYear()===M.getFullYear()&&$.getMonth()===M.getMonth()}).length,u=r>0?Math.round(d/r*100):0,f=o.filter(x=>x.status==="\u0645\u063A\u0644\u0642"&&x.overdays>0),y=f.length>0?Math.round(f.reduce((x,$)=>x+($.overdays||0),0)/f.length):0,h=document.getElementById("obs-kpi-strip");if(h){const x=[{label:"\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A",value:r,icon:"fas fa-clipboard-list",color:"#3b82f6",bg:"#eff6ff",border:"#bfdbfe"},{label:"\u0645\u0641\u062A\u0648\u062D\u0629",value:c,icon:"fas fa-folder-open",color:"#f59e0b",bg:"#fffbeb",border:"#fde68a"},{label:"\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",value:l,icon:"fas fa-spinner",color:"#8b5cf6",bg:"#f5f3ff",border:"#ddd6fe"},{label:"\u0645\u063A\u0644\u0642\u0629",value:d,icon:"fas fa-check-circle",color:"#10b981",bg:"#ecfdf5",border:"#a7f3d0"},{label:"\u0639\u0627\u0644\u064A\u0629 \u0627\u0644\u062E\u0637\u0648\u0631\u0629",value:p,icon:"fas fa-exclamation-triangle",color:"#ef4444",bg:"#fef2f2",border:"#fecaca"},{label:"\u0647\u0630\u0627 \u0627\u0644\u0634\u0647\u0631",value:m,icon:"fas fa-calendar-day",color:"#0ea5e9",bg:"#f0f9ff",border:"#bae6fd"},{label:"\u0645\u0639\u062F\u0644 \u0627\u0644\u0625\u063A\u0644\u0627\u0642",value:u+"%",icon:"fas fa-chart-pie",color:"#6366f1",bg:"#eef2ff",border:"#c7d2fe"},{label:"\u0645\u062A\u0648\u0633\u0637 \u0623\u064A\u0627\u0645 \u0627\u0644\u0625\u063A\u0644\u0627\u0642",value:y?y+" \u064A\u0648\u0645":"\u2014",icon:"fas fa-stopwatch",color:"#0d9488",bg:"#f0fdfa",border:"#99f6e4"}];h.innerHTML=x.map($=>`
+                <div style="background:${$.bg};border:1px solid ${$.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="width:38px;height:38px;background:${$.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="${$.icon}" style="color:#fff;font-size:15px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:1.3rem;font-weight:800;color:${$.color};line-height:1;">${$.value}</div>
+                        <div style="font-size:0.7rem;color:#64748b;margin-top:2px;white-space:nowrap;">${$.label}</div>
+                    </div>
+                </div>`).join("")}if(!await this.ensureChartJSLoaded()||typeof Chart>"u"){e.insertAdjacentHTML("afterbegin",'<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;"><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i><span style="font-size:0.85rem;color:#92400e;">\u062A\u0639\u0630\u0651\u0631 \u062A\u062D\u0645\u064A\u0644 \u0645\u0643\u062A\u0628\u0629 \u0627\u0644\u0631\u0633\u0648\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A\u0629. \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A\u0629 \u0645\u062A\u0627\u062D\u0629 \u0641\u064A \u0627\u0644\u0623\u0631\u0642\u0627\u0645 \u0623\u0639\u0644\u0627\u0647.</span></div>');return}const b=this._groupBy(o,"status"),S={\u0645\u0641\u062A\u0648\u062D:"rgba(245,158,11,0.8)",\u0645\u063A\u0644\u0642:"rgba(16,185,129,0.8)",\u062C\u0627\u0631\u064A:"rgba(139,92,246,0.8)","\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630":"rgba(99,102,241,0.8)",\u062C\u062F\u064A\u062F:"rgba(59,130,246,0.8)"};this._drawDoughnut("obs-chart-status",b.labels,b.data,b.labels.map(x=>S[x]||"rgba(148,163,184,0.8)"));const v=this._groupBy(o,"riskLevel"),g={\u0639\u0627\u0644\u064A:"rgba(239,68,68,0.85)",\u0639\u0627\u0644\u064A\u0629:"rgba(239,68,68,0.85)",\u0645\u062A\u0648\u0633\u0637:"rgba(245,158,11,0.85)",\u0645\u062A\u0648\u0633\u0637\u0629:"rgba(245,158,11,0.85)",\u0645\u0646\u062E\u0641\u0636:"rgba(16,185,129,0.85)",\u0628\u0633\u064A\u0637:"rgba(16,185,129,0.85)",\u0628\u0633\u064A\u0637\u0629:"rgba(16,185,129,0.85)"};this._drawDoughnut("obs-chart-risk",v.labels,v.data,v.labels.map(x=>g[x]||"rgba(148,163,184,0.8)")),this._drawTrend("obs-chart-trend",i);const T=this._groupBy(o,"observationType",10);this._drawHBar("obs-chart-type",T.labels,T.data,"rgba(16,185,129,0.75)");const L=this._groupBy(o,"locationName",8);this._drawHBar("obs-chart-location",L.labels,L.data,"rgba(245,158,11,0.75)");const D=this._groupBy(o,"responsibleDepartment",8);this._drawHBar("obs-chart-dept",D.labels,D.data,"rgba(14,165,233,0.75)");const O=this._groupBy(o,"shift");this._drawHBar("obs-chart-shift",O.labels,O.data,"rgba(249,115,22,0.75)"),this._drawCloseTimeByType("obs-chart-closetime",o);const N=o.filter(x=>(x.riskLevel==="\u0639\u0627\u0644\u064A"||x.riskLevel==="\u0639\u0627\u0644\u064A\u0629")&&x.status!=="\u0645\u063A\u0644\u0642").sort((x,$)=>($.overdays||0)-(x.overdays||0)).slice(0,20),w=document.getElementById("obs-critical-tbody"),E=document.getElementById("obs-critical-count");E&&(E.textContent=`${N.length} \u0645\u0644\u0627\u062D\u0638\u0629`),w&&(N.length===0?w.innerHTML='<tr><td colspan="8" style="padding:24px;text-align:center;color:#10b981;"><i class="fas fa-check-circle ml-2"></i>\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u062D\u0631\u062C\u0629 \u0645\u0641\u062A\u0648\u062D\u0629</td></tr>':w.innerHTML=N.map((x,$)=>{const M=x.overdays||0,q=M>30?"#ef4444":M>14?"#f59e0b":"#64748b",W={\u0645\u0641\u062A\u0648\u062D:"background:#fef3c7;color:#92400e;",\u062C\u0627\u0631\u064A:"background:#ede9fe;color:#5b21b6;","\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630":"background:#ede9fe;color:#5b21b6;",\u062C\u062F\u064A\u062F:"background:#dbeafe;color:#1e40af;"}[x.status]||"background:#f1f5f9;color:#374151;",P=$%2===0?"#fff":"#fafafa";return`<tr style="border-bottom:1px solid #f8fafc;background:${P};" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='${P}'">
+                        <td style="padding:9px 12px;font-weight:600;color:#1e40af;white-space:nowrap;">${Utils.escapeHTML(x.isoCode||x.id||"\u2014")}</td>
+                        <td style="padding:9px 12px;white-space:nowrap;color:#374151;">${x.date?new Date(x.date).toLocaleDateString("ar-SA",{year:"numeric",month:"short",day:"numeric"}):"\u2014"}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(x.observationType||"\u2014")}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(x.locationName||x.siteName||"\u2014")}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(x.observerName||"\u2014")}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(x.responsibleDepartment||"\u2014")}</td>
+                        <td style="padding:9px 12px;"><span style="padding:3px 8px;border-radius:20px;font-size:0.7rem;font-weight:700;${W}">${Utils.escapeHTML(x.status||"\u2014")}</span></td>
+                        <td style="padding:9px 12px;text-align:center;font-weight:700;color:${q};">${M>0?M+" \u064A\u0648\u0645":"\u2014"}</td>
+                    </tr>`}).join(""))},calculateCardValues(){},loadInfoCards(){},async ensureChartJSLoaded(){return typeof Chart<"u"?!0:document.querySelector('script[src*="chart.js"], script[src*="chartjs"]')?new Promise(t=>{const s=setInterval(()=>{typeof Chart<"u"&&(clearInterval(s),t(!0))},100);setTimeout(()=>{clearInterval(s),t(!1)},5e3)}):new Promise(t=>{const s=document.createElement("script");s.type="text/javascript",s.async=!0,s.src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js",s.crossOrigin="anonymous";let a=!1;const i=()=>{!a&&typeof Chart<"u"&&(a=!0,t(!0))},o=()=>{if(a)return;const r=document.createElement("script");r.type="text/javascript",r.async=!0,r.src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js",r.crossOrigin="anonymous";let n=!1;r.onload=()=>{!n&&typeof Chart<"u"&&(n=!0,a=!0,t(!0))},r.onerror=()=>{a||(a=!0,t(!1))},document.head.appendChild(r)};s.onload=()=>{setTimeout(()=>{!a&&typeof Chart<"u"?(a=!0,t(!0)):a||o()},500)},s.onerror=o,setTimeout(()=>{a||(a=!0,t(typeof Chart<"u"))},8e3);try{document&&document.head?document.head.appendChild(s):t(!1)}catch(r){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0625\u0636\u0627\u0641\u0629 script Chart.js:",r),t(!1)}})},loadInfoCards(){const e=document.getElementById("info-cards-container");if(!e)return;const t=JSON.parse(localStorage.getItem("dailyObservations_infoCards")||"[]");if(t.length===0){const a=[{id:"card_1",title:"\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A",icon:"fas fa-clipboard-list",color:"blue",description:"\u0639\u062F\u062F \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645",enabled:!0},{id:"card_2",title:"\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0645\u0641\u062A\u0648\u062D\u0629",icon:"fas fa-folder-open",color:"orange",description:"\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u062A\u064A \u0644\u0645 \u064A\u062A\u0645 \u0625\u063A\u0644\u0627\u0642\u0647\u0627 \u0628\u0639\u062F",enabled:!0},{id:"card_3",title:"\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0639\u0627\u0644\u064A\u0629 \u0627\u0644\u062E\u0637\u0648\u0631\u0629",icon:"fas fa-exclamation-triangle",color:"red",description:"\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0630\u0627\u062A \u0645\u0633\u062A\u0648\u0649 \u062E\u0637\u0648\u0631\u0629 \u0639\u0627\u0644\u064A",enabled:!0}];return localStorage.setItem("dailyObservations_infoCards",JSON.stringify(a)),this.loadInfoCards()}const s=t.filter(a=>a.enabled);if(s.length===0){e.innerHTML='<p class="text-gray-500 text-center py-4">\u0644\u0627 \u062A\u0648\u062C\u062F \u0643\u0631\u0648\u062A \u0645\u0641\u0639\u0644\u0629. \u0627\u0633\u062A\u062E\u062F\u0645 \u0632\u0631 "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0643\u0631\u0648\u062A" \u0644\u0625\u0636\u0627\u0641\u0629 \u0643\u0631\u0648\u062A \u062C\u062F\u064A\u062F\u0629.</p>';return}e.innerHTML=s.map(a=>{const i={blue:"bg-blue-50 border-blue-200 text-blue-800",green:"bg-green-50 border-green-200 text-green-800",red:"bg-red-50 border-red-200 text-red-800",orange:"bg-orange-50 border-orange-200 text-orange-800",purple:"bg-purple-50 border-purple-200 text-purple-800",yellow:"bg-yellow-50 border-yellow-200 text-yellow-800"},o=i[a.color]||i.blue,r=a.color||"blue";return`
+                <div class="content-card border-2 ${o}">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <i class="${a.icon||"fas fa-info-circle"} text-${r}-600 text-xl"></i>
+                            <h4 class="font-semibold">${Utils.escapeHTML(a.title)}</h4>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-2">${Utils.escapeHTML(a.description||"")}</p>
+                    <div class="mt-3 pt-3 border-t border-gray-200">
+                        <div id="card-value-${a.id}" class="text-2xl font-bold text-${r}-700">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                    </div>
+                </div>
+            `}).join(""),this.calculateCardValues()},calculateCardValues(){const t=(typeof this.getDailyObservationsVisibleToCurrentUser=="function"?this.getDailyObservationsVisibleToCurrentUser():Array.isArray(AppState.appData.dailyObservations)?AppState.appData.dailyObservations:[]).map(i=>this.normalizeRecord(i));JSON.parse(localStorage.getItem("dailyObservations_infoCards")||"[]").filter(i=>i.enabled).forEach(i=>{const o=document.getElementById(`card-value-${i.id}`);if(!o)return;let r=0;switch(i.id){case"card_1":r=t.length;break;case"card_2":r=t.filter(n=>n.status==="\u0645\u0641\u062A\u0648\u062D"||n.status==="\u062C\u0627\u0631\u064A").length;break;case"card_3":r=t.filter(n=>n.riskLevel==="\u0639\u0627\u0644\u064A").length;break;default:i.field&&(r=t.filter(n=>{const c=n[i.field];return i.fieldValue?c===i.fieldValue:c&&c!==""&&c!=="\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"}).length)}o.textContent=r.toLocaleString("en-US")})},showManageCardsModal(){if(!this.isCurrentUserAdmin()){Notification.error("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0647\u0630\u0647 \u0627\u0644\u0645\u064A\u0632\u0629");return}const e=JSON.parse(localStorage.getItem("dailyObservations_infoCards")||"[]"),t=document.createElement("div");t.className="modal-overlay",t.innerHTML=`
+            <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+                <div class="modal-header">
+                    <h2 class="modal-title">
+                        <i class="fas fa-edit ml-2"></i>
+                        \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0643\u0631\u0648\u062A \u0627\u0644\u062A\u0648\u0636\u064A\u062D\u064A\u0629
+                    </h2>
+                    <button class="modal-close" title="\u0625\u063A\u0644\u0627\u0642">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <button id="add-new-card-btn" class="btn-primary">
+                            <i class="fas fa-plus ml-2"></i>
+                            \u0625\u0636\u0627\u0641\u0629 \u0643\u0631\u062A \u062C\u062F\u064A\u062F
+                        </button>
+                    </div>
+                    <div id="cards-list-container" class="space-y-3">
+                        ${e.map((a,i)=>this.renderCardEditForm(a,i)).join("")}
+                    </div>
+                    ${e.length===0?'<p class="text-gray-500 text-center py-4">\u0644\u0627 \u062A\u0648\u062C\u062F \u0643\u0631\u0648\u062A. \u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0632\u0631 "\u0625\u0636\u0627\u0641\u0629 \u0643\u0631\u062A \u062C\u062F\u064A\u062F" \u0644\u0625\u0646\u0634\u0627\u0621 \u0643\u0631\u062A.</p>':""}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" data-action="close">\u0625\u063A\u0644\u0627\u0642</button>
+                    <button type="button" id="save-cards-btn" class="btn-primary">
+                        <i class="fas fa-save ml-2"></i>
+                        \u062D\u0641\u0638 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A
+                    </button>
+                </div>
+            </div>
+        `,document.body.appendChild(t);const s=()=>t.remove();t.querySelector(".modal-close")?.addEventListener("click",s),t.querySelector('[data-action="close"]')?.addEventListener("click",s),t.addEventListener("click",a=>{a.target===t&&s()}),t.querySelector("#add-new-card-btn")?.addEventListener("click",()=>{const a={id:`card_${Date.now()}`,title:"\u0643\u0631\u062A \u062C\u062F\u064A\u062F",icon:"fas fa-info-circle",color:"blue",description:"",enabled:!0,field:"",fieldValue:""};e.push(a);const i=t.querySelector("#cards-list-container");i.innerHTML=e.map((o,r)=>this.renderCardEditForm(o,r)).join(""),this.bindCardEditEvents(t)}),t.querySelector("#save-cards-btn")?.addEventListener("click",()=>{const a=[];t.querySelectorAll(".card-edit-form").forEach((i,o)=>{const r={id:i.getAttribute("data-card-id"),title:i.querySelector(".card-title-input")?.value||"",icon:i.querySelector(".card-icon-input")?.value||"fas fa-info-circle",color:i.querySelector(".card-color-input")?.value||"blue",description:i.querySelector(".card-description-input")?.value||"",enabled:i.querySelector(".card-enabled-input")?.checked||!1,field:i.querySelector(".card-field-input")?.value||"",fieldValue:i.querySelector(".card-field-value-input")?.value||""};a.push(r)}),localStorage.setItem("dailyObservations_infoCards",JSON.stringify(a)),Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0643\u0631\u0648\u062A \u0628\u0646\u062C\u0627\u062D"),s(),this.loadInfoCards(),this.updateAnalysisResults()}),this.bindCardEditEvents(t)},renderCardEditForm(e,t){const s=["blue","green","red","orange","purple","yellow"],a=["fas fa-info-circle","fas fa-chart-line","fas fa-chart-bar","fas fa-chart-pie","fas fa-exclamation-triangle","fas fa-check-circle","fas fa-times-circle","fas fa-clipboard-list","fas fa-folder-open","fas fa-flag","fas fa-bell"];return`
+            <div class="card-edit-form border rounded-lg p-4 bg-gray-50" data-card-id="${e.id}">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-2">\u0627\u0644\u0639\u0646\u0648\u0627\u0646 *</label>
+                        <input type="text" class="form-input card-title-input" value="${Utils.escapeHTML(e.title||"")}" placeholder="\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0643\u0631\u062A">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-2">\u0627\u0644\u0623\u064A\u0642\u0648\u0646\u0629</label>
+                        <input type="text" class="form-input card-icon-input" value="${Utils.escapeHTML(e.icon||"fas fa-info-circle")}" placeholder="fas fa-icon">
+                        <p class="text-xs text-gray-500 mt-1">\u0627\u0633\u062A\u062E\u062F\u0645 \u0623\u064A\u0642\u0648\u0646\u0629 Font Awesome</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-2">\u0627\u0644\u0644\u0648\u0646</label>
+                        <select class="form-input card-color-input">
+                            ${s.map(i=>`<option value="${i}" ${e.color===i?"selected":""}>${i}</option>`).join("")}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-2">\u0627\u0644\u062D\u0642\u0644 \u0644\u0644\u062A\u062D\u0644\u064A\u0644 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)</label>
+                        <input type="text" class="form-input card-field-input" value="${Utils.escapeHTML(e.field||"")}" placeholder="\u0627\u0633\u0645 \u0627\u0644\u062D\u0642\u0644 (\u0645\u062B\u0644: status, riskLevel)">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold mb-2">\u0627\u0644\u0648\u0635\u0641</label>
+                        <textarea class="form-input card-description-input" rows="2" placeholder="\u0648\u0635\u0641 \u0627\u0644\u0643\u0631\u062A">${Utils.escapeHTML(e.description||"")}</textarea>
+                    </div>
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" class="card-enabled-input mr-2" ${e.enabled?"checked":""}>
+                            <span class="text-sm">\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0643\u0631\u062A</span>
+                        </label>
+                    </div>
+                    <div class="flex justify-end">
+                        <button class="btn-icon btn-icon-danger remove-card-btn" data-card-id="${e.id}" title="\u062D\u0630\u0641">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `},bindCardEditEvents(e){e.querySelectorAll(".remove-card-btn").forEach(t=>{t.addEventListener("click",()=>{const s=t.getAttribute("data-card-id");confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0643\u0631\u062A\u061F")&&e.querySelector(`.card-edit-form[data-card-id="${s}"]`)?.remove()})})},async loadDataAnalysis(){await this.updateAnalysisResults()},renderAnalysisCharts(){},_getRiskCategoryConfigStorageKey(){return"dailyObs_riskCategoryConfig"},_ensureRiskCategoryConfig(){const e={customCategories:[],observationTypeMap:{},customObservationTypes:[]};if(this._riskCategoryConfigCache)return this._riskCategoryConfigCache;let t=null;try{AppState?.appData?.dailyObsRiskConfig&&typeof AppState.appData.dailyObsRiskConfig=="object"&&(t=AppState.appData.dailyObsRiskConfig)}catch{}if(!t)try{t=JSON.parse(localStorage.getItem(this._getRiskCategoryConfigStorageKey())||"null")}catch{t=null}return this._riskCategoryConfigCache={...e,...t||{}},AppState.appData||(AppState.appData={}),AppState.appData.dailyObsRiskConfig=this._riskCategoryConfigCache,this._riskCategoryConfigCache},_saveRiskCategoryConfig(e){this._riskCategoryConfigCache=e,AppState.appData||(AppState.appData={}),AppState.appData.dailyObsRiskConfig=e;try{localStorage.setItem(this._getRiskCategoryConfigStorageKey(),JSON.stringify(e))}catch{}},_getDefaultObservationTypeRiskMap(){return{"\u0645\u0644\u0627\u062D\u0638\u0629 \u0633\u0644\u0648\u0643\u064A\u0629":"behavioral","\u0645\u0644\u0627\u062D\u0638\u0629 \u0634\u0631\u0637 \u0639\u0645\u0644":"housekeeping","\u0645\u0644\u0627\u062D\u0638\u0629 \u0623\u062F\u0627\u0629":"tools_hand","\u0645\u0644\u0627\u062D\u0638\u0629 \u0645\u0639\u062F\u0627\u062A":"mechanical","\u0645\u0644\u0627\u062D\u0638\u0629 \u0628\u064A\u0626\u0629 \u0639\u0645\u0644":"environmental","\u0645\u0644\u0627\u062D\u0638\u0629 \u0623\u062E\u0631\u0649":"general"}},_getObservationTypeRiskMap(){const e=this._ensureRiskCategoryConfig();return{...this._getDefaultObservationTypeRiskMap(),...e.observationTypeMap||{}}},_getBuiltinTopRiskCategoryDefs(){return[{id:"electricity",labelKey:"module.dailyobs.top10.category.electricity",icon:"fa-bolt",color:"#d97706",bg:"#fffbeb",border:"#fcd34d",keywords:["\u0643\u0647\u0631\u0628\u0627\u0621","\u0643\u0647\u0631\u0628\u0627\u0626\u064A","\u0643\u0627\u0628\u0644\u0627\u062A","\u0643\u0627\u0628\u0644","\u0623\u0633\u0644\u0627\u0643","\u0633\u0644\u0643","\u0644\u0648\u062D\u0629 \u0643\u0647\u0631\u0628","\u0642\u0627\u0637\u0639","\u062C\u0647\u062F","\u062A\u0645\u062F\u064A\u062F\u0627\u062A","\u0645\u0641\u0627\u062A\u064A\u062D","\u0642\u0635\u0648\u0631 \u0639\u0632\u0644","\u0627\u0631\u062A\u062C\u0627\u062C","electric","electrical","cable","wiring","voltage","panel","breaker"]},{id:"mechanical",labelKey:"module.dailyobs.top10.category.mechanical",icon:"fa-cogs",color:"#4f46e5",bg:"#eef2ff",border:"#a5b4fc",keywords:["\u0645\u064A\u0643\u0627\u0646\u064A\u0643","\u0645\u064A\u0643\u0627\u0646\u064A\u0643\u0629","\u0622\u0644\u0629","\u0627\u0644\u0622\u0644\u0627\u062A","\u0645\u0639\u062F\u0627\u062A","\u0645\u0639\u062F\u0629","\u062A\u0631\u0633","\u0633\u0648\u0641\u062A\u064A","\u062D\u0645\u0627\u064A\u0629 \u0645\u0627\u0643\u064A\u0646\u0629","guarding","\u0635\u064A\u0627\u0646\u0629","\u062A\u0634\u062D\u064A\u0645","\u0627\u0647\u062A\u0632\u0627\u0632","mechanical","machine","equipment","conveyor","guard","loto","pinch"]},{id:"smoking",labelKey:"module.dailyobs.top10.category.smoking",icon:"fa-smoking-ban",color:"#dc2626",bg:"#fef2f2",border:"#fca5a5",keywords:["\u062A\u062F\u062E\u064A\u0646","\u0633\u064A\u062C\u0627\u0631\u0629","\u0633\u062C\u0627\u0626\u0631","\u062F\u062E\u0627\u0646","smoking","cigarette","tobacco","vape","no smoking"]},{id:"ppe",labelKey:"module.dailyobs.top10.category.ppe",icon:"fa-hard-hat",color:"#0891b2",bg:"#ecfeff",border:"#67e8f9",keywords:["\u0645\u0647\u0645\u0627\u062A","\u0648\u0642\u0627\u064A\u0629","\u062E\u0648\u0630\u0629","\u0642\u0641\u0627\u0632","\u0646\u0638\u0627\u0631\u0627\u062A","\u062D\u0630\u0627\u0621","\u0633\u062A\u0631\u0629","\u062D\u0632\u0627\u0645","ppe","helmet","gloves","goggles","harness","respirator","ear plug","\u0648\u0627\u0642\u064A"]},{id:"storage",labelKey:"module.dailyobs.top10.category.storage",icon:"fa-warehouse",color:"#059669",bg:"#ecfdf5",border:"#6ee7b7",keywords:["\u062A\u062E\u0632\u064A\u0646","\u0645\u0633\u062A\u0648\u062F\u0639","\u0631\u0641","\u0623\u0631\u0641\u0641","\u062A\u062D\u0645\u064A\u0644","\u062A\u0643\u062F\u0633","\u0645\u0645\u0631","\u0639\u0627\u0626\u0642","\u0645\u0648\u0627\u062F","storage","warehouse","stacking","aisle","blocking","material handling","\u0631\u0627\u0641\u0639\u0629"]},{id:"fire",labelKey:"module.dailyobs.top10.category.fire",icon:"fa-fire-extinguisher",color:"#b91c1c",bg:"#fff1f2",border:"#fda4af",keywords:["\u062D\u0631\u064A\u0642","\u0637\u0641\u0627\u064A\u0629","\u0637\u0641\u0627\u064A\u0627\u062A","\u0625\u0646\u0630\u0627\u0631","\u0627\u0646\u0630\u0627\u0631","\u062E\u0631\u0637\u0648\u0645","\u0631\u0634\u0627\u0634","sprinkler","\u0625\u0637\u0641\u0627\u0621","fire","extinguisher","alarm","hose","smoke detector","fm200"]},{id:"behavioral",labelKey:"module.dailyobs.top10.category.behavioral",icon:"fa-user-shield",color:"#7c3aed",bg:"#f5f3ff",border:"#c4b5fd",keywords:["\u0633\u0644\u0648\u0643","\u0633\u0644\u0648\u0643\u064A\u0629","\u062A\u0635\u0631\u0641","unsafe act","behavior","conduct","shortcut","bypass"]},{id:"chemical",labelKey:"module.dailyobs.top10.category.chemical",icon:"fa-flask",color:"#9333ea",bg:"#faf5ff",border:"#d8b4fe",keywords:["\u0643\u064A\u0645\u064A\u0627\u0626\u064A","\u0643\u064A\u0645\u064A\u0627\u0621","\u0645\u0630\u064A\u0628","\u062D\u0645\u0636","\u0642\u0644\u0648\u064A","\u0633\u0627\u0626\u0644","msds","chemical","solvent","acid","hazmat","spill"]},{id:"height",labelKey:"module.dailyobs.top10.category.height",icon:"fa-person-falling",color:"#ea580c",bg:"#fff7ed",border:"#fdba74",keywords:["\u0627\u0631\u062A\u0641\u0627\u0639","\u0633\u0642\u0627\u0644\u0629","\u0633\u0644\u0645","\u062D\u0628\u0644","\u0633\u0642\u0648\u0637","working at height","scaffold","ladder","fall","harness","roof"]},{id:"confined_space",labelKey:"module.dailyobs.top10.category.confined_space",icon:"fa-dungeon",color:"#57534e",bg:"#fafaf9",border:"#d6d3d1",keywords:["\u0645\u062D\u0635\u0648\u0631","\u062E\u0632\u0627\u0646","\u0628\u0626\u0631","confined","tank","manhole","entry permit"]},{id:"housekeeping",labelKey:"module.dailyobs.top10.category.housekeeping",icon:"fa-broom",color:"#0d9488",bg:"#f0fdfa",border:"#5eead4",keywords:["\u0646\u0638\u0627\u0641\u0629","\u062A\u0631\u062A\u064A\u0628","\u0641\u0648\u0636\u0649","\u0645\u0645\u0631","housekeeping","clutter","walkway","order","5s"]},{id:"ergonomics",labelKey:"module.dailyobs.top10.category.ergonomics",icon:"fa-chair",color:"#6366f1",bg:"#eef2ff",border:"#a5b4fc",keywords:["\u0623\u0631\u062C\u0648\u0646\u0648\u0645\u0643\u0633","\u0648\u0636\u0639\u064A\u0629","\u0638\u0647\u0631","\u062A\u0643\u0631\u0627\u0631","ergonomic","posture","repetitive","manual handling"]},{id:"traffic",labelKey:"module.dailyobs.top10.category.traffic",icon:"fa-truck",color:"#ca8a04",bg:"#fefce8",border:"#fde047",keywords:["\u0645\u0631\u0648\u0631","\u0645\u0631\u0643\u0628\u0629","\u0633\u064A\u0627\u0631\u0629","\u0631\u0627\u0641\u0639\u0629 \u0634\u0648\u0643\u064A\u0629","forklift","vehicle","traffic","pedestrian","route"]},{id:"lifting",labelKey:"module.dailyobs.top10.category.lifting",icon:"fa-dolly",color:"#b45309",bg:"#fffbeb",border:"#fcd34d",keywords:["\u0631\u0641\u0639","\u062D\u0645\u0644","\u0645\u0646\u0627\u0648\u0644\u0629","\u0648\u0632\u0646","lifting","manual handling","load","crane","rigging"]},{id:"hot_work",labelKey:"module.dailyobs.top10.category.hot_work",icon:"fa-fire",color:"#c2410c",bg:"#fff7ed",border:"#fdba74",keywords:["\u0644\u062D\u0627\u0645","\u0642\u0637\u0639","\u0634\u0631\u0631","\u0639\u0645\u0644 \u0633\u0627\u062E\u0646","welding","hot work","grinding","spark"]},{id:"environmental",labelKey:"module.dailyobs.top10.category.environmental",icon:"fa-leaf",color:"#16a34a",bg:"#f0fdf4",border:"#86efac",keywords:["\u0628\u064A\u0626\u0629","\u062A\u0644\u0648\u062B","\u0646\u0641\u0627\u064A\u0627\u062A","\u0625\u0636\u0627\u0621\u0629","\u062A\u0647\u0648\u064A\u0629","environment","waste","ventilation","lighting","temperature"]},{id:"tools_hand",labelKey:"module.dailyobs.top10.category.tools_hand",icon:"fa-screwdriver-wrench",color:"#475569",bg:"#f8fafc",border:"#cbd5e1",keywords:["\u0623\u062F\u0627\u0629","\u0623\u062F\u0648\u0627\u062A","\u0645\u0641\u062A\u0627\u062D","\u0645\u0637\u0631\u0642\u0629","\u0645\u0646\u0634\u0627\u0631","tool","hand tool","power tool"]},{id:"slips_trips",labelKey:"module.dailyobs.top10.category.slips_trips",icon:"fa-shoe-prints",color:"#0284c7",bg:"#f0f9ff",border:"#7dd3fc",keywords:["\u062A\u0632\u062D\u0644\u0642","\u0633\u0642\u0648\u0637","\u0631\u0637\u0648\u0628\u0629","\u0632\u064A\u062A","slip","trip","fall","wet floor"]},{id:"noise",labelKey:"module.dailyobs.top10.category.noise",icon:"fa-volume-high",color:"#be185d",bg:"#fdf2f8",border:"#f9a8d4",keywords:["\u0636\u0648\u0636\u0627\u0621","\u0635\u0648\u062A","\u0633\u0645\u0639","noise","hearing","decibel","ear protection"]}]},getTopRiskCategoryDefs(){const e=this._getBuiltinTopRiskCategoryDefs(),t=(this._ensureRiskCategoryConfig().customCategories||[]).filter(a=>a&&a.id),s=[...e];return t.forEach(a=>{s.some(i=>i.id===a.id)||s.push({id:a.id,label:a.label,icon:a.icon||"fa-tag",color:a.color||"#64748b",bg:a.bg||"#f8fafc",border:a.border||"#cbd5e1",keywords:Array.isArray(a.keywords)?a.keywords:[],isCustom:!0})}),s.map(a=>({...a,label:a.isCustom?a.label||a.id:this._t(a.labelKey,a.id)}))},_normalizeTopRiskCategoryFilter(e){const t=String(e||"").trim();if(!t)return"";const s=this.getTopRiskCategoryDefs();if(s.some(o=>o.id===t))return t;const a=s.find(o=>o.label===t);return a?a.id:{\u0639\u0627\u0645:"general",\u0643\u0647\u0631\u0628\u0627\u0621:"electricity",\u0645\u064A\u0643\u0627\u0646\u064A\u0643\u0629:"mechanical",\u062A\u062F\u062E\u064A\u0646:"smoking","\u0645\u0647\u0645\u0627\u062A \u0648\u0642\u0627\u064A\u0629":"ppe",\u062A\u062E\u0632\u064A\u0646:"storage","\u0623\u062C\u0647\u0632\u0629 \u062D\u0631\u064A\u0642":"fire"}[t]||t},_getTopRiskCategoryLabel(e){return this._getTopRiskCategoryMeta(e).label},_normalizeTopRiskHaystack(e){return String(e||"").toLowerCase().replace(/[أإآ]/g,"\u0627").replace(/ى/g,"\u064A").replace(/ة/g,"\u0647")},_topRiskHaystackOf(e){return this._normalizeTopRiskHaystack([e?.observationType,e?.details,e?.correctiveAction,e?.remarks,e?.locationName,e?.siteName].filter(Boolean).join(" "))},_topRiskCategoryOf(e){const t=String(e?.observationType||"").trim();if(t){const r=this._getObservationTypeRiskMap()[t];if(r&&this.getTopRiskCategoryDefs().some(n=>n.id===r))return r}const s=this._topRiskHaystackOf(e);if(!s.trim())return"general";let a="general",i=0;return this.getTopRiskCategoryDefs().forEach(o=>{let r=0;(o.keywords||[]).forEach(n=>{const c=this._normalizeTopRiskHaystack(n);c&&s.includes(c)&&(r+=Math.max(1,Math.round(c.length/4)))}),r>i&&(i=r,a=o.id)}),a},_getTopRiskCategoryMeta(e){const t=this._normalizeTopRiskCategoryFilter(e)||String(e||"").trim(),a=this.getTopRiskCategoryDefs().find(i=>i.id===t);return a||(t==="general"?{id:"general",label:this._t("module.dailyobs.top10.category.general","\u0639\u0627\u0645"),icon:"fa-exclamation-circle",color:"#64748b",bg:"#f8fafc",border:"#cbd5e1"}:{id:e,label:e||this._t("module.dailyobs.top10.category.general","\u0639\u0627\u0645"),icon:"fa-exclamation-circle",color:"#64748b",bg:"#f8fafc",border:"#cbd5e1"})},_computeObservationRiskScore(e){let t=0;this._execIsCritical(e)?t+=45:this._execIsHighRisk(e)?t+=35:String(e.riskLevel||"").includes("\u0645\u062A\u0648\u0633\u0637")?t+=18:(String(e.riskLevel||"").includes("\u0645\u0646\u062E\u0641\u0636")||String(e.riskLevel||"").includes("\u0628\u0633\u064A\u0637"))&&(t+=6);const s=String(e.status||"");if(s.includes("\u0645\u0641\u062A\u0648\u062D")||s.includes("\u062C\u062F\u064A\u062F")?t+=22:s.includes("\u062C\u0627\u0631\u064A")?t+=12:s.includes("\u0645\u063A\u0644\u0642")&&(t-=18),this._execIsOverdue(e)){const a=Number(e.overdays)||0;t+=Math.min(a>0?a*2:12,30)}if(e.attachments&&e.attachments.length>0&&(t+=Math.min(e.attachments.length*2,8)),e.date){const a=new Date(e.date),i=Math.floor((Date.now()-a.getTime())/(1e3*60*60*24));i<=7?t+=8:i<=30&&(t+=4)}return this._execIsClosed(e)&&(t=Math.round(t*.25)),Math.max(0,Math.round(t))},_buildTopRiskCategoryStats(e){const t={};return this.getTopRiskCategoryDefs().forEach(s=>{t[s.id]={count:0,openHigh:0,maxScore:0}}),t.general={count:0,openHigh:0,maxScore:0},(e||[]).forEach(s=>{const a=s.riskCategoryId||this._topRiskCategoryOf(s);t[a]||(t[a]={count:0,openHigh:0,maxScore:0}),t[a].count+=1;const i=s.riskScore!=null?s.riskScore:this._computeObservationRiskScore(s);i>t[a].maxScore&&(t[a].maxScore=i),!this._execIsClosed(s)&&(this._execIsHighRisk(s)||this._execIsCritical(s))&&(t[a].openHigh+=1)}),t},_bindTopRiskCategoryCards(){document.querySelectorAll(".top-risk-cat-card").forEach(s=>{s.dataset.bound!=="1"&&(s.dataset.bound="1",s.addEventListener("click",()=>{const a=s.getAttribute("data-cat-id")||"";this._topRiskCategoryFilter=this._topRiskCategoryFilter===a?"":a,this.loadTop10Observations()}))});const t=document.getElementById("top-risk-clear-filter-btn");t&&t.dataset.bound!=="1"&&(t.dataset.bound="1",t.addEventListener("click",()=>{this._topRiskCategoryFilter="",this.loadTop10Observations()}))},_injectTop10Styles(){if(document.getElementById("top10-module-styles-v1"))return;const e=document.createElement("style");e.id="top10-module-styles-v1",e.textContent=`
+        .top10-wrap{direction:rtl;width:100%;max-width:100%;box-sizing:border-box;}
+        .top10-hero{position:relative;overflow:hidden;border-radius:18px;padding:22px 24px;margin-bottom:18px;
+            background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 45%,#7f1d1d 100%);color:#fff;box-shadow:0 12px 40px rgba(15,23,42,.22);}
+        .top10-hero__badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;
+            background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);font-size:11px;font-weight:800;letter-spacing:.12em;}
+        .top10-hero__title{font-size:clamp(1.5rem,3vw,2.1rem);font-weight:900;margin:12px 0 8px;line-height:1.15;}
+        .top10-hero__sub{font-size:clamp(.85rem,1.8vw,.95rem);opacity:.88;max-width:720px;line-height:1.55;}
+        .top10-hero__actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
+        .top10-kpi-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px;}
+        @media(min-width:768px){.top10-kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr));}}
+        .top10-kpi{background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow-sm);min-width:0;}
+        .top10-kpi__label{font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:6px;}
+        .top10-kpi__value{font-size:clamp(1.2rem,2.2vw,1.65rem);font-weight:800;color:var(--text-primary);}
+        .top10-kpi__value--danger{color:#dc2626;}
+        .top10-kpi__value--warn{color:#ea580c;}
+        .top10-charts-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin-bottom:20px;}
+        @media(min-width:768px){.top10-charts-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+        .top10-chart-card{background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow-sm);min-width:0;}
+        .top10-chart-card__title{font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+        .top10-chart-card__hint{font-size:10px;color:var(--text-tertiary);margin-bottom:10px;}
+        .top10-chart-box{position:relative;height:clamp(200px,28vw,260px);width:100%;}
+        .top10-cat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-height:420px;overflow-y:auto;padding-inline-end:4px;}
+        @media(min-width:768px){.top10-cat-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
+        @media(min-width:1200px){.top10-cat-grid{grid-template-columns:repeat(4,minmax(0,1fr));}}
+        .top-risk-cat-card{text-align:right;padding:12px 14px;border-radius:12px;cursor:pointer;transition:all .2s;border:2px solid transparent;background:#fff;}
+        .top-risk-cat-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.08);}
+        .top10-table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+        .top10-mobile-cards{display:none;flex-direction:column;gap:12px;}
+        @media(max-width:767px){
+            .top10-table-wrap{display:none;}
+            .top10-mobile-cards{display:flex;}
+        }
+        .top10-mobile-card{border:1px solid var(--border-color);border-radius:14px;padding:14px;background:var(--card-bg);box-shadow:var(--shadow-sm);}
+        .top10-mobile-card__head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+        .top10-mobile-card__rank{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;background:#f1f5f9;color:#0f172a;}
+        .top10-score-pill{font-weight:800;font-size:1.1rem;}
+        .top10-section-title{font-size:1rem;font-weight:800;color:var(--text-primary);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+        #tab-top-10-observations{width:100%;max-width:100%;box-sizing:border-box;}
+        `,document.head.appendChild(e)},_destroyTop10BuiltInCharts(){this.top10BuiltInCharts&&(Object.values(this.top10BuiltInCharts).forEach(e=>{try{e&&typeof e.destroy=="function"&&e.destroy()}catch{}}),this.top10BuiltInCharts={})},async _drawTop10BuiltInCharts(e,t){if(!await this.ensureChartJSLoaded()||typeof Chart>"u")return;this._destroyTop10BuiltInCharts(),this.top10BuiltInCharts||(this.top10BuiltInCharts={});const a=this.getTranslations().isRTL,i=this.getTopRiskCategoryDefs(),o=[...i.map(u=>u.id),"general"],r=o.map(u=>this._getTopRiskCategoryLabel(u)),n=[...i.map(u=>u.color),"#64748b"],c=o.map(u=>(e||[]).filter(f=>(f.riskCategoryId||this._topRiskCategoryOf(f))===u).length),d=document.getElementById("top10-builtin-chart-categories");if(d){const u=this;this.top10BuiltInCharts.categories=new Chart(d,{type:"doughnut",data:{labels:r,datasets:[{data:c,backgroundColor:n.map(f=>f+"cc"),borderColor:"#fff",borderWidth:2,hoverOffset:8}]},options:{responsive:!0,maintainAspectRatio:!1,onClick(f,y){if(!y.length)return;const h=o[y[0].index];u._topRiskCategoryFilter=u._topRiskCategoryFilter===h?"":h,u.loadTop10Observations()},plugins:{legend:{position:"bottom",rtl:a,labels:{boxWidth:12,font:{size:11}}},tooltip:{rtl:a}}}})}const l=document.getElementById("top10-builtin-chart-scores");if(l&&t.length){const u=t.map(b=>this.getObservationTypeLabel(b.observationType)),f=u.map(b=>b.length>32?`${b.slice(0,30)}\u2026`:b),y=t.map(b=>b.riskScore),h=y.map(b=>b>=55?"#dc2626":b>=35?"#ea580c":"#2563eb"),k=t.map(b=>b.isoCode||"");this.top10BuiltInCharts.scores=new Chart(l,{type:"bar",data:{labels:f,datasets:[{label:this._t("module.dailyobs.top10.table.type","\u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629"),data:y,backgroundColor:h,borderRadius:6}]},options:{indexAxis:"y",responsive:!0,maintainAspectRatio:!1,plugins:{legend:{display:!1},tooltip:{rtl:a,callbacks:{title(b){const S=b[0]?.dataIndex??0;return u[S]||""},label(b){const S=b.dataIndex,v=k[S]?` (${k[S]})`:"";return`${b.parsed.x} \u2014 ${u[S]||""}${v}`}}}},scales:{x:{beginAtZero:!0,max:100}}}})}const p=document.getElementById("top10-builtin-chart-risklevel");if(p&&t.length){const u={};t.forEach(f=>{const y=f.riskLevel||this._t("module.dailyobs.common.notSpecified","\u063A\u064A\u0631 \u0645\u062D\u062F\u062F");u[y]=(u[y]||0)+1}),this.top10BuiltInCharts.riskLevel=new Chart(p,{type:"pie",data:{labels:Object.keys(u),datasets:[{data:Object.values(u),backgroundColor:["#dc2626","#ea580c","#eab308","#22c55e","#64748b"],borderWidth:2,borderColor:"#fff"}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{position:"bottom",rtl:a},tooltip:{rtl:a}}}})}const m=document.getElementById("top10-builtin-chart-status");if(m&&t.length){const u=t.filter(y=>!this._execIsClosed(y)).length,f=t.length-u;this.top10BuiltInCharts.status=new Chart(m,{type:"doughnut",data:{labels:[this._t("module.dailyobs.top10.chart.statusOpen","\u0645\u0641\u062A\u0648\u062D\u0629"),this._t("module.dailyobs.top10.chart.statusClosed","\u0645\u063A\u0644\u0642\u0629")],datasets:[{data:[u,f],backgroundColor:["#f59e0b","#10b981"],borderWidth:2,borderColor:"#fff"}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{position:"bottom",rtl:a},tooltip:{rtl:a}}}})}},async renderTop10Observations(){return this._injectTop10Styles(),this.ensureChartJSLoaded().catch(()=>{Utils.safeWarn("Chart.js \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0633\u064A\u062A\u0645 \u0639\u0631\u0636 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0628\u062F\u0648\u0646 \u0631\u0633\u0648\u0645 \u0628\u064A\u0627\u0646\u064A\u0629")}),`
+            <div class="top10-wrap" id="top10-module-root">
+                <div class="top10-hero">
+                    <div class="top10-hero__badge">
+                        <i class="fas fa-ranking-star"></i>
+                        <span data-i18n="module.dailyobs.top10.brand">TOP 10</span>
+                    </div>
+                    <div class="top10-hero__title" data-i18n="module.dailyobs.top10.title">Top 10</div>
+                    <p class="top10-hero__sub" data-i18n="module.dailyobs.top10.subtitle">\u062A\u0631\u062A\u064A\u0628 \u0623\u0639\u0644\u0649 \u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u062D\u0633\u0628 \u0627\u0644\u0641\u0626\u0627\u062A \u0627\u0644\u0645\u0639\u064A\u0627\u0631\u064A\u0629 \u0645\u0639 \u062A\u062D\u0644\u064A\u0644 \u0628\u0635\u0631\u064A \u062A\u0641\u0627\u0639\u0644\u064A \u0648\u0631\u0628\u0637 \u0645\u0628\u0627\u0634\u0631 \u0628\u0633\u062C\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A</p>
+                    <div class="top10-hero__actions">
+                        ${this.canDailyObservationsFullAdminUi()?`
+                        <button id="manage-top10-categories-btn" class="btn-primary" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);">
+                            <i class="fas fa-layer-group ml-2"></i>
+                            <span data-i18n="module.dailyobs.top10.btn.manageCategories">\u0625\u062F\u0627\u0631\u0629 \u0641\u0626\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0637\u0631</span>
+                        </button>
+                        `:""}
+                        <button id="add-top10-chart-btn" class="btn-primary" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);">
+                            <i class="fas fa-plus ml-2"></i>
+                            <span data-i18n="module.dailyobs.top10.btn.addChart">\u0625\u0636\u0627\u0641\u0629 \u0631\u0633\u0645 \u0628\u064A\u0627\u0646\u064A</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="top10-kpi-row" class="top10-kpi-grid"></div>
+
+                <div class="top10-charts-grid" id="top10-builtin-charts">
+                    <div class="top10-chart-card">
+                        <div class="top10-chart-card__title"><i class="fas fa-chart-pie text-amber-600"></i><span data-i18n="module.dailyobs.top10.chart.categories">\u062A\u0648\u0632\u064A\u0639 \u0641\u0626\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0637\u0631</span></div>
+                        <div class="top10-chart-card__hint" data-i18n="module.dailyobs.top10.chart.clickHint">\u0627\u0646\u0642\u0631 \u0639\u0644\u0649 \u0627\u0644\u0642\u0637\u0639\u0629 \u0644\u0644\u062A\u0635\u0641\u064A\u0629 \u062D\u0633\u0628 \u0627\u0644\u0641\u0626\u0629</div>
+                        <div class="top10-chart-box"><canvas id="top10-builtin-chart-categories"></canvas></div>
+                    </div>
+                    <div class="top10-chart-card">
+                        <div class="top10-chart-card__title"><i class="fas fa-chart-bar text-blue-600"></i><span data-i18n="module.dailyobs.top10.chart.scores">\u062F\u0631\u062C\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u2014 Top 10</span></div>
+                        <div class="top10-chart-box"><canvas id="top10-builtin-chart-scores"></canvas></div>
+                    </div>
+                    <div class="top10-chart-card">
+                        <div class="top10-chart-card__title"><i class="fas fa-triangle-exclamation text-red-600"></i><span data-i18n="module.dailyobs.top10.chart.riskLevel">\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0637\u0648\u0631\u0629 (Top 10)</span></div>
+                        <div class="top10-chart-box"><canvas id="top10-builtin-chart-risklevel"></canvas></div>
+                    </div>
+                    <div class="top10-chart-card">
+                        <div class="top10-chart-card__title"><i class="fas fa-circle-half-stroke text-emerald-600"></i><span data-i18n="module.dailyobs.top10.chart.status">\u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A (Top 10)</span></div>
+                        <div class="top10-chart-box"><canvas id="top10-builtin-chart-status"></canvas></div>
+                    </div>
+                </div>
+
+                <div id="top10-observations-list" class="mb-6">
+                    <div class="flex items-center justify-center py-8">
+                        <div class="text-center">
+                            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+                            <p class="text-gray-500" data-i18n="module.dailyobs.top10.loading">\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0637\u0631...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t pt-6 mt-2">
+                    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                        <h3 class="top10-section-title">
+                            <i class="fas fa-chart-line text-blue-600"></i>
+                            <span data-i18n="module.dailyobs.top10.charts.custom">\u062A\u062D\u0644\u064A\u0644 \u0628\u0635\u0631\u064A \u0625\u0636\u0627\u0641\u064A</span>
+                        </h3>
+                        <button id="manage-top10-charts-btn" class="btn-secondary">
+                            <i class="fas fa-cog ml-2"></i>
+                            <span data-i18n="module.dailyobs.top10.btn.manageCharts">\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0631\u0633\u0648\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A\u0629</span>
+                        </button>
+                    </div>
+                    <div id="top10-charts-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6"></div>
+                </div>
+            </div>
+        `},async loadTop10Observations(){const e=document.getElementById("top10-observations-list"),t=document.getElementById("top10-kpi-row");if(!e)return;this._topRiskCategoryFilter=this._normalizeTopRiskCategoryFilter(this._topRiskCategoryFilter);const s=typeof this.getDailyObservationsVisibleToCurrentUser=="function"?this.getDailyObservationsVisibleToCurrentUser():Array.isArray(AppState.appData.dailyObservations)?AppState.appData.dailyObservations:[];if(s.length===0){t&&(t.innerHTML=""),e.innerHTML=`
+                <div class="empty-state">
+                    <i class="fas fa-inbox text-gray-300 text-6xl mb-4"></i>
+                    <p class="text-gray-500 text-lg mb-2">${Utils.escapeHTML(this._t("module.dailyobs.top10.empty.none","\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0645\u0633\u062C\u0644\u0629"))}</p>
+                    <p class="text-sm text-gray-400">${Utils.escapeHTML(this._t("module.dailyobs.top10.empty.noneHint","\u0627\u0628\u062F\u0623 \u0628\u0625\u0636\u0627\u0641\u0629 \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u062C\u062F\u064A\u062F\u0629 \u0644\u0639\u0631\u0636 \u0623\u0639\u0644\u0649 \u0627\u0644\u0645\u062E\u0627\u0637\u0631"))}</p>
+                </div>
+            `,this._destroyTop10BuiltInCharts();return}const a=s.map(b=>{const S=this.normalizeRecord(b),v=this._topRiskCategoryOf(S),g=this._getTopRiskCategoryLabel(v),T=this._computeObservationRiskScore(S);return{...S,riskCategoryId:v,riskCategory:g,riskScore:T}}),i=this._buildTopRiskCategoryStats(a),o=String(this._topRiskCategoryFilter||"").trim();let r=a.slice();o&&(r=r.filter(b=>b.riskCategoryId===o)),r.sort((b,S)=>S.riskScore-b.riskScore);const n=r.slice(0,10),c=a.filter(b=>!this._execIsClosed(b)&&(this._execIsCritical(b)||this._execIsHighRisk(b))).length,d=n.length?Math.round(n.reduce((b,S)=>b+S.riskScore,0)/n.length):0;t&&(t.innerHTML=`
+                <div class="top10-kpi">
+                    <div class="top10-kpi__label">${Utils.escapeHTML(this._t("module.dailyobs.top10.kpi.total","\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A"))}</div>
+                    <div class="top10-kpi__value">${a.length}</div>
+                </div>
+                <div class="top10-kpi">
+                    <div class="top10-kpi__label">${Utils.escapeHTML(this._t("module.dailyobs.top10.kpi.criticalOpen","\u062D\u0631\u062C\u0629/\u0639\u0627\u0644\u064A\u0629 \u0645\u0641\u062A\u0648\u062D\u0629"))}</div>
+                    <div class="top10-kpi__value top10-kpi__value--danger">${c}</div>
+                </div>
+                <div class="top10-kpi">
+                    <div class="top10-kpi__label">${Utils.escapeHTML(this._t("module.dailyobs.top10.kpi.avgScore","\u0645\u062A\u0648\u0633\u0637 \u062F\u0631\u062C\u0629 \u0627\u0644\u0645\u062E\u0627\u0637\u0631"))}</div>
+                    <div class="top10-kpi__value top10-kpi__value--warn">${d}</div>
+                </div>
+                <div class="top10-kpi">
+                    <div class="top10-kpi__label">${Utils.escapeHTML(this._t("module.dailyobs.top10.kpi.inRanking","\u0641\u064A \u0627\u0644\u062A\u0631\u062A\u064A\u0628 \u0627\u0644\u062D\u0627\u0644\u064A"))}</div>
+                    <div class="top10-kpi__value">${n.length}</div>
+                </div>
+            `);const l=this._t("module.dailyobs.top10.categories.openHigh","{n} \u0639\u0627\u0644\u064A\u0629 \u0645\u0641\u062A\u0648\u062D\u0629"),p=this.getTopRiskCategoryDefs().map(b=>{const S=i[b.id]||{count:0,openHigh:0},v=o===b.id,g=l.replace("{n}",String(S.openHigh));return`
+                <button type="button" class="top-risk-cat-card" data-cat-id="${Utils.escapeHTML(b.id)}"
+                    style="border-color:${v?b.color:b.border};background:${v?b.bg:"#fff"};
+                    box-shadow:${v?"0 4px 14px rgba(0,0,0,.08)":"none"};">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+                        <span style="font-size:11px;font-weight:700;color:${b.color};background:${b.bg};padding:3px 8px;border-radius:999px;">${Utils.escapeHTML(g)}</span>
+                        <i class="fas ${b.icon}" style="color:${b.color};font-size:1.1rem;"></i>
+                    </div>
+                    <div style="font-weight:800;font-size:1rem;color:#0f172a;margin-bottom:4px;">${Utils.escapeHTML(b.label)}</div>
+                    <div style="font-size:1.35rem;font-weight:800;color:${b.color};">${S.count}</div>
+                    <div style="font-size:11px;color:#64748b;margin-top:2px;">${Utils.escapeHTML(this._t("module.dailyobs.top10.categories.total","\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A"))}</div>
+                </button>
+            `}).join(""),m=o?this._getTopRiskCategoryLabel(o):"",u=o?`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;padding:10px 12px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;">
+                    <span style="font-size:0.88rem;color:#1e40af;"><i class="fas fa-filter ml-2"></i>${Utils.escapeHTML(this._tf("module.dailyobs.top10.filter.active",{category:m},`\u0639\u0631\u0636 \u0645\u062E\u0627\u0637\u0631 \u0641\u0626\u0629: ${m}`))}</span>
+                    <button type="button" id="top-risk-clear-filter-btn" class="btn-secondary" style="padding:4px 10px;font-size:0.8rem;">${Utils.escapeHTML(this._t("module.dailyobs.top10.filter.clear","\u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0641\u0644\u062A\u0631"))}</button>
+               </div>`:"",f=this._t("module.dailyobs.common.notSpecified","\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"),y=this._t("module.dailyobs.common.viewDetails","\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644"),h=o?`${this._t("module.dailyobs.top10.ranking.title","\u0642\u0627\u0626\u0645\u0629 Top 10")} \u2014 ${m}`:this._t("module.dailyobs.top10.ranking.title","\u0642\u0627\u0626\u0645\u0629 Top 10");e.innerHTML=`
+            <div class="mb-5">
+                <h3 class="top10-section-title">
+                    <i class="fas fa-layer-group text-slate-600"></i>
+                    ${Utils.escapeHTML(this._t("module.dailyobs.top10.categories.title","\u0641\u0626\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629"))}
+                </h3>
+                <div class="top10-cat-grid mb-2" id="top-risk-category-cards">
+                    ${p}
+                </div>
+                <p class="text-xs text-gray-500">${Utils.escapeHTML(this._t("module.dailyobs.top10.categories.hint","\u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0623\u064A \u0641\u0626\u0629 \u0644\u062A\u0635\u0641\u064A\u0629 \u0627\u0644\u0642\u0627\u0626\u0645\u0629"))}</p>
+            </div>
+            ${u}
+            <div class="mb-4">
+                <h3 class="top10-section-title">
+                    <i class="fas fa-ranking-star text-red-500"></i>
+                    ${Utils.escapeHTML(h)}
+                </h3>
+                <p class="text-sm text-gray-500 mb-4">${Utils.escapeHTML(this._t("module.dailyobs.top10.ranking.subtitle","\u0627\u0644\u062A\u0631\u062A\u064A\u0628 \u062D\u0633\u0628 \u062F\u0631\u062C\u0629 \u0627\u0644\u0645\u062E\u0627\u0637\u0631"))}</p>
+            </div>
+            ${n.length===0?`
+                <div class="empty-state">
+                    <i class="fas fa-check-circle text-green-400 text-4xl mb-3"></i>
+                    <p class="text-gray-500">${Utils.escapeHTML(this._t("module.dailyobs.top10.empty.noMatch","\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0644\u0641\u0644\u062A\u0631 \u0627\u0644\u062D\u0627\u0644\u064A"))}</p>
+                </div>
+            `:`
+            <div class="top10-table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>${Utils.escapeHTML(this._t("module.dailyobs.top10.table.rank","#"))}</th>
+                            <th>${Utils.escapeHTML(this._t("module.dailyobs.top10.table.category","\u0641\u0626\u0629 \u0627\u0644\u0645\u062E\u0627\u0637\u0631"))}</th>
+                            <th>${Utils.escapeHTML(this._t("module.dailyobs.top10.table.code","\u0631\u0642\u0645 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629"))}</th>
+                            <th>${Utils.escapeHTML(this._t("module.dailyobs.top10.table.location","\u0627\u0644\u0645\u0648\u0642\u0639 / \u0627\u0644\u0645\u0643\u0627\u0646"))}</th>
+                            <th>${Utils.escapeHTML(this._t("module.dailyobs.top10.table.type","\u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629"))}</th>
+                            <th>${Utils.escapeHTML(this._t("module.dailyobs.top10.table.riskLevel","\u0645\u0639\u062F\u0644 \u0627\u0644\u062E\u0637\u0648\u0631\u0629"))}</th>
+                            <th>${Utils.escapeHTML(this._t("module.dailyobs.top10.table.status","\u0627\u0644\u062D\u0627\u0644\u0629"))}</th>
+                            <th>${Utils.escapeHTML(this._t("module.dailyobs.top10.table.score","\u062F\u0631\u062C\u0629 \u0627\u0644\u0645\u062E\u0627\u0637\u0631"))}</th>
+                            <th>${Utils.escapeHTML(this._t("module.dailyobs.top10.table.actions","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"))}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${n.map((b,S)=>{const v=this._getTopRiskCategoryMeta(b.riskCategoryId),g=b.riskScore>=55?"#dc2626":b.riskScore>=35?"#ea580c":"#2563eb";return`
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td><span class="font-bold text-gray-700">${S+1}</span></td>
+                                <td>
+                                    <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;color:${v.color};background:${v.bg};border:1px solid ${v.border};">
+                                        <i class="fas ${v.icon}"></i>${Utils.escapeHTML(b.riskCategory||f)}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="font-medium text-blue-600 cursor-pointer hover:underline" onclick="DailyObservations.viewObservation('${b.id}')">
+                                        ${Utils.escapeHTML(b.isoCode||f)}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="text-sm font-medium text-gray-800">${Utils.escapeHTML(b.siteName||"-")}</div>
+                                    <div class="text-xs text-gray-500">${Utils.escapeHTML(b.locationName||"")}</div>
+                                </td>
+                                <td>${Utils.escapeHTML(this.getObservationTypeLabel(b.observationType))}</td>
+                                <td>
+                                    <span class="badge badge-${this.getRiskBadgeClass(b.riskLevel)}">
+                                        ${Utils.escapeHTML(b.riskLevel||"-")}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge badge-${this.getStatusBadgeClass(b.status)}">
+                                        ${Utils.escapeHTML(b.status||"-")}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-bold text-lg" style="color:${g};">${b.riskScore}</span>
+                                        <div class="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                            <div class="h-full" style="width:${Math.min(b.riskScore,100)}%;background:${g};"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <button onclick="DailyObservations.viewObservation('${b.id}')"
+                                            class="btn-icon btn-icon-primary" title="${Utils.escapeHTML(y)}">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>`}).join("")}
+                    </tbody>
+                </table>
+            </div>
+            <div class="top10-mobile-cards">
+                ${n.map((b,S)=>{const v=this._getTopRiskCategoryMeta(b.riskCategoryId),g=b.riskScore>=55?"#dc2626":b.riskScore>=35?"#ea580c":"#2563eb";return`
+                    <div class="top10-mobile-card">
+                        <div class="top10-mobile-card__head">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <div class="top10-mobile-card__rank">${S+1}</div>
+                                <div>
+                                    <div class="font-bold text-blue-600" onclick="DailyObservations.viewObservation('${b.id}')" style="cursor:pointer;">${Utils.escapeHTML(b.isoCode||f)}</div>
+                                    <div class="text-xs text-gray-500">${Utils.escapeHTML(b.siteName||"-")}</div>
+                                </div>
+                            </div>
+                            <div class="top10-score-pill" style="color:${g};">${b.riskScore}</div>
+                        </div>
+                        <div style="margin-bottom:8px;">
+                            <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;color:${v.color};background:${v.bg};border:1px solid ${v.border};">
+                                <i class="fas ${v.icon}"></i>${Utils.escapeHTML(b.riskCategory)}
+                            </span>
+                        </div>
+                        <div class="text-sm text-gray-700 mb-2">${Utils.escapeHTML(this.getObservationTypeLabel(b.observationType))}</div>
+                        <div class="flex gap-2 flex-wrap">
+                            <span class="badge badge-${this.getRiskBadgeClass(b.riskLevel)}">${Utils.escapeHTML(b.riskLevel||"-")}</span>
+                            <span class="badge badge-${this.getStatusBadgeClass(b.status)}">${Utils.escapeHTML(b.status||"-")}</span>
+                        </div>
+                    </div>`}).join("")}
+            </div>`}
+        `,this._drawTop10BuiltInCharts(a,n),this.loadTop10Charts(a,n),this._bindTopRiskCategoryCards();const k=document.getElementById("top10-module-root");k&&this.applyModuleI18n(k),setTimeout(()=>{const b=document.getElementById("manage-top10-categories-btn");b&&b.dataset.bound!=="1"&&(b.dataset.bound="1",b.addEventListener("click",()=>this.showManageTop10RiskCategoriesModal()));const S=document.getElementById("add-top10-chart-btn");S&&S.dataset.bound!=="1"&&(S.dataset.bound="1",S.addEventListener("click",()=>this.showAddTop10ChartModal()));const v=document.getElementById("manage-top10-charts-btn");v&&v.dataset.bound!=="1"&&(v.dataset.bound="1",v.addEventListener("click",()=>this.showManageTop10ChartsModal()))},100)},async loadTop10Charts(e,t){const s=document.getElementById("top10-charts-container");if(!s)return;const a="dailyObservations_top10RiskCharts";let i=[];try{if(i=JSON.parse(localStorage.getItem(a)||"[]"),!Array.isArray(i)||i.length===0){const n=JSON.parse(localStorage.getItem("dailyObservations_top10Charts")||"[]");Array.isArray(n)&&n.length>0&&n.some(c=>String(c.title||"").includes("\u0623\u0641\u0636\u0644 10"))&&(i=[])}}catch{i=[]}i.length===0&&(i=[{id:"chart_risk_category_distribution",type:"doughnut",title:this._t("module.dailyobs.top10.chart.categories","\u062A\u0648\u0632\u064A\u0639 \u0641\u0626\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0637\u0631"),field:"riskCategory",enabled:!0,useAllData:!0},{id:"chart_risk_level_top10",type:"bar",title:this._t("module.dailyobs.top10.chart.riskLevel","\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0637\u0648\u0631\u0629 (Top 10)"),field:"riskLevel",enabled:!0},{id:"chart_status_top10",type:"pie",title:this._t("module.dailyobs.top10.chart.status","\u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A (Top 10)"),field:"status",enabled:!0},{id:"chart_site_risk",type:"bar",title:this._t("module.dailyobs.top10.chart.siteRisk","\u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u062D\u0633\u0628 \u0627\u0644\u0645\u0648\u0642\u0639"),field:"siteName",enabled:!1,useAllData:!0}],localStorage.setItem(a,JSON.stringify(i)));const o=i.filter(n=>n.enabled);if(o.length===0){s.innerHTML=`
+                <div class="col-span-2">
+                    <div class="empty-state">
+                        <i class="fas fa-chart-bar text-gray-300 text-4xl mb-4"></i>
+                        <p class="text-gray-500">${Utils.escapeHTML(this._t("module.dailyobs.top10.chart.emptyEnabled","\u0644\u0627 \u062A\u0648\u062C\u062F \u0631\u0633\u0648\u0645 \u0628\u064A\u0627\u0646\u064A\u0629 \u0645\u0641\u0639\u0644\u0629"))}</p>
+                        <button onclick="DailyObservations.showAddTop10ChartModal()" class="btn-primary mt-4">
+                            <i class="fas fa-plus ml-2"></i>
+                            ${Utils.escapeHTML(this._t("module.dailyobs.top10.btn.addChart","\u0625\u0636\u0627\u0641\u0629 \u0631\u0633\u0645 \u0628\u064A\u0627\u0646\u064A"))}
+                        </button>
+                    </div>
+                </div>
+            `;return}let r="";o.forEach((n,c)=>{const d=`top10-chart-${n.id}-${c}`,l=`top10-chart-container-${n.id}-${c}`;r+=`
+                <div class="content-card">
+                    <div class="card-header">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-semibold text-lg">
+                                <i class="fas fa-chart-${n.type==="doughnut"||n.type==="pie"?"pie":"bar"} ml-2"></i>
+                                ${Utils.escapeHTML(n.title)}
+                            </h4>
+                            <div class="flex items-center gap-2">
+                                <button onclick="DailyObservations.editTop10Chart('${n.id}')" 
+                                        class="btn-icon btn-icon-secondary" title="${Utils.escapeHTML(this._t("module.dailyobs.common.edit","\u062A\u0639\u062F\u064A\u0644"))}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="DailyObservations.deleteTop10Chart('${n.id}')" 
+                                        class="btn-icon btn-icon-danger" title="${Utils.escapeHTML(this._t("module.dailyobs.common.delete","\u062D\u0630\u0641"))}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="${l}" style="position: relative; height: 300px;">
+                            <canvas id="${d}"></canvas>
+                        </div>
+                    </div>
+                </div>
+            `}),s.innerHTML=r,setTimeout(async()=>{await this.ensureChartJSLoaded()&&typeof Chart<"u"&&this.renderTop10Charts(o,t,e)},300)},renderTop10Charts(e,t,s){typeof Chart>"u"||(this.top10Charts&&Object.values(this.top10Charts).forEach(a=>{a&&typeof a.destroy=="function"&&a.destroy()}),this.top10Charts={},e.forEach((a,i)=>{const o=`top10-chart-${a.id}-${i}`,r=document.getElementById(o);if(!r)return;const n=this.analyzeTop10ChartData(a,t,s),c={responsive:!0,maintainAspectRatio:!1,plugins:{legend:{position:"bottom",rtl:!0},tooltip:{rtl:!0,callbacks:{label:function(l){const p=l.label||"",m=l.parsed||l.parsed.y||0,u=l.dataset.data.reduce((y,h)=>y+h,0),f=u>0?(m/u*100).toFixed(1):0;return`${p}: ${m} (${f}%)`}}}}};let d;a.type==="doughnut"||a.type==="pie"?d=new Chart(r,{type:a.type,data:{labels:n.labels,datasets:[{data:n.values,backgroundColor:["#ef4444","#f59e0b","#10b981","#3b82f6","#8b5cf6","#ec4899","#06b6d4","#84cc16","#f97316","#6366f1"],borderWidth:2,borderColor:"#ffffff"}]},options:c}):a.type==="bar"?d=new Chart(r,{type:"bar",data:{labels:n.labels,datasets:[{label:a.title,data:n.values,backgroundColor:"#3b82f6",borderColor:"#2563eb",borderWidth:1}]},options:{...c,scales:{y:{beginAtZero:!0}}}}):a.type==="line"&&(d=new Chart(r,{type:"line",data:{labels:n.labels,datasets:[{label:a.title,data:n.values,borderColor:"#3b82f6",backgroundColor:"rgba(59, 130, 246, 0.1)",tension:.4,fill:!0}]},options:c})),d&&(this.top10Charts[a.id]=d)}))},analyzeTop10ChartData(e,t,s){const a=e.field,o=(e.useAllData===!0?s:t)||[],r={};o.forEach(c=>{let d=this._t("module.dailyobs.common.notSpecified","\u063A\u064A\u0631 \u0645\u062D\u062F\u062F");if(a==="riskCategory"){const l=c.riskCategoryId||this._topRiskCategoryOf(c);d=this._getTopRiskCategoryLabel(l)}else a==="observationType"?d=this.getObservationTypeLabel(c.observationType):d=c[a]||d;r[d]=(r[d]||0)+1});const n=Object.entries(r).sort((c,d)=>d[1]-c[1]).slice(0,10);return{labels:n.map(([c])=>c),values:n.map(([,c])=>c)}},showManageTop10RiskCategoriesModal(){if(!this.canDailyObservationsFullAdminUi()){Notification.error(this._t("module.dailyobs.common.unauthorized","\u063A\u064A\u0631 \u0645\u0635\u0631\u062D"));return}const e=this._ensureRiskCategoryConfig(),t=this.getTopRiskCategoryDefs(),s=this.getObservationTypes(),a=this._getObservationTypeRiskMap(),i=t.map(l=>`<option value="${Utils.escapeHTML(l.id)}">${Utils.escapeHTML(l.label)}</option>`).join(""),o=s.map(l=>{const p=a[l]||"";return`
+                <tr>
+                    <td style="padding:8px 10px;font-weight:600;">${Utils.escapeHTML(this.getObservationTypeLabel(l))}</td>
+                    <td style="padding:8px 10px;">
+                        <select class="form-input obs-risk-type-map" data-obs-type="${Utils.escapeHTML(l)}" style="min-width:180px;">
+                            <option value="">${Utils.escapeHTML(this._t("module.dailyobs.top10.categories.unassigned","\u063A\u064A\u0631 \u0645\u064F\u0639\u064A\u0651\u064E\u0646"))}</option>
+                            ${t.map(m=>`<option value="${Utils.escapeHTML(m.id)}" ${p===m.id?"selected":""}>${Utils.escapeHTML(m.label)}</option>`).join("")}
+                        </select>
+                    </td>
+                </tr>`}).join(""),r=(e.customCategories||[]).map((l,p)=>`
+            <tr data-custom-idx="${p}">
+                <td style="padding:8px 10px;">${Utils.escapeHTML(l.label||l.id)}</td>
+                <td style="padding:8px 10px;font-size:12px;color:#64748b;">${Utils.escapeHTML((l.keywords||[]).join("\u060C "))}</td>
+                <td style="padding:8px 10px;">
+                    <button type="button" class="btn-icon btn-icon-danger obs-risk-del-cat" data-idx="${p}" title="${Utils.escapeHTML(this._t("module.dailyobs.common.delete","\u062D\u0630\u0641"))}"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join("")||'<tr><td colspan="3" style="padding:12px;text-align:center;color:#94a3b8;">\u2014</td></tr>',n=document.createElement("div");n.className="modal-overlay",n.innerHTML=`
+            <div class="modal-content" style="max-width:820px;max-height:90vh;overflow:auto;">
+                <div class="modal-header">
+                    <h2 class="modal-title">
+                        <i class="fas fa-layer-group ml-2"></i>
+                        <span data-i18n="module.dailyobs.top10.categories.manageTitle">\u0625\u062F\u0627\u0631\u0629 \u0641\u0626\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u0648\u0631\u0628\u0637 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A</span>
+                    </h2>
+                    <button class="modal-close" type="button"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body" style="display:flex;flex-direction:column;gap:20px;">
+                    <section>
+                        <h3 style="font-weight:700;margin-bottom:8px;">${Utils.escapeHTML(this._t("module.dailyobs.top10.categories.mapHint","\u0627\u0631\u0628\u0637 \u0643\u0644 \u0646\u0648\u0639 \u0645\u0644\u0627\u062D\u0638\u0629 \u0645\u0646 \u0627\u0644\u0633\u062C\u0644 \u0628\u0641\u0626\u0629 \u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u0627\u0644\u0645\u0646\u0627\u0633\u0628\u0629"))}</h3>
+                        <div style="overflow-x:auto;">
+                            <table class="data-table" style="min-width:420px;">
+                                <thead><tr><th>${Utils.escapeHTML(this._t("module.dailyobs.top10.table.type","\u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629"))}</th><th>${Utils.escapeHTML(this._t("module.dailyobs.top10.table.category","\u0641\u0626\u0629 \u0627\u0644\u0645\u062E\u0627\u0637\u0631"))}</th></tr></thead>
+                                <tbody>${o}</tbody>
+                            </table>
+                        </div>
+                    </section>
+                    <section style="border-top:1px solid var(--border-color);padding-top:16px;">
+                        <h3 style="font-weight:700;margin-bottom:10px;">${Utils.escapeHTML(this._t("module.dailyobs.top10.categories.addType","\u0625\u0636\u0627\u0641\u0629 \u0646\u0648\u0639 \u0645\u0644\u0627\u062D\u0638\u0629"))}</h3>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <input type="text" id="obs-risk-new-type" class="form-input" placeholder="${Utils.escapeHTML(this._t("module.dailyobs.top10.categories.typeName","\u0627\u0633\u0645 \u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629"))}" style="flex:1;min-width:200px;">
+                            <select id="obs-risk-new-type-cat" class="form-input" style="min-width:180px;">${i}</select>
+                            <button type="button" id="obs-risk-add-type-btn" class="btn-secondary"><i class="fas fa-plus ml-1"></i>${Utils.escapeHTML(this._t("module.dailyobs.top10.categories.addType","\u0625\u0636\u0627\u0641\u0629 \u0646\u0648\u0639 \u0645\u0644\u0627\u062D\u0638\u0629"))}</button>
+                        </div>
+                    </section>
+                    <section style="border-top:1px solid var(--border-color);padding-top:16px;">
+                        <h3 style="font-weight:700;margin-bottom:10px;">${Utils.escapeHTML(this._t("module.dailyobs.top10.categories.customList","\u0627\u0644\u0641\u0626\u0627\u062A \u0627\u0644\u0645\u062E\u0635\u0635\u0629"))}</h3>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+                            <input type="text" id="obs-risk-new-cat-label" class="form-input" placeholder="${Utils.escapeHTML(this._t("module.dailyobs.top10.categories.label","\u0627\u0633\u0645 \u0627\u0644\u0641\u0626\u0629"))}">
+                            <input type="text" id="obs-risk-new-cat-keywords" class="form-input" placeholder="${Utils.escapeHTML(this._t("module.dailyobs.top10.categories.keywords","\u0643\u0644\u0645\u0627\u062A \u0645\u0641\u062A\u0627\u062D\u064A\u0629"))}">
+                        </div>
+                        <button type="button" id="obs-risk-add-cat-btn" class="btn-secondary mb-3"><i class="fas fa-plus ml-1"></i>${Utils.escapeHTML(this._t("module.dailyobs.top10.categories.addCategory","\u0625\u0636\u0627\u0641\u0629 \u0641\u0626\u0629 \u0645\u062E\u0635\u0635\u0629"))}</button>
+                        <div style="overflow-x:auto;">
+                            <table class="data-table" style="min-width:360px;">
+                                <thead><tr><th>${Utils.escapeHTML(this._t("module.dailyobs.top10.categories.label","\u0627\u0633\u0645 \u0627\u0644\u0641\u0626\u0629"))}</th><th>${Utils.escapeHTML(this._t("module.dailyobs.top10.categories.keywords","\u0643\u0644\u0645\u0627\u062A \u0645\u0641\u062A\u0627\u062D\u064A\u0629"))}</th><th></th></tr></thead>
+                                <tbody id="obs-risk-custom-cats-tbody">${r}</tbody>
+                            </table>
+                        </div>
+                        <p style="font-size:12px;color:#64748b;margin-top:8px;">${Utils.escapeHTML(this._tf("module.dailyobs.top10.categories.builtinSummary",{builtin:t.filter(l=>!l.isCustom).length,custom:(e.customCategories||[]).length},""))}</p>
+                    </section>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary obs-risk-modal-cancel">${Utils.escapeHTML(this._t("module.dailyobs.btn.cancel","\u0625\u0644\u063A\u0627\u0621"))}</button>
+                    <button type="button" id="obs-risk-save-config-btn" class="btn-primary"><i class="fas fa-save ml-2"></i>${Utils.escapeHTML(this._t("module.dailyobs.btn.save","\u062D\u0641\u0638"))}</button>
+                </div>
+            </div>
+        `,document.body.appendChild(n),this.applyModuleI18n(n);const c=()=>n.remove();n.querySelector(".modal-close")?.addEventListener("click",c),n.querySelector(".obs-risk-modal-cancel")?.addEventListener("click",c),n.addEventListener("click",l=>{l.target===n&&c()});const d=JSON.parse(JSON.stringify(e));n.querySelector("#obs-risk-add-type-btn")?.addEventListener("click",()=>{const l=String(n.querySelector("#obs-risk-new-type")?.value||"").trim(),p=String(n.querySelector("#obs-risk-new-type-cat")?.value||"").trim();l&&(d.customObservationTypes.includes(l)||d.customObservationTypes.push(l),p&&(d.observationTypeMap[l]=p),this._saveRiskCategoryConfig(d),c(),this.showManageTop10RiskCategoriesModal())}),n.querySelector("#obs-risk-add-cat-btn")?.addEventListener("click",()=>{const l=String(n.querySelector("#obs-risk-new-cat-label")?.value||"").trim(),p=String(n.querySelector("#obs-risk-new-cat-keywords")?.value||"").trim();if(!l)return;const m=`custom_${Date.now()}`,u=p?p.split(/[,،]/).map(h=>h.trim()).filter(Boolean):[],f=[{color:"#0f766e",bg:"#f0fdfa",border:"#5eead4"},{color:"#be123c",bg:"#fff1f2",border:"#fda4af"},{color:"#4338ca",bg:"#eef2ff",border:"#a5b4fc"}],y=f[(d.customCategories||[]).length%f.length];d.customCategories=d.customCategories||[],d.customCategories.push({id:m,label:l,icon:"fa-tag",...y,keywords:u}),this._saveRiskCategoryConfig(d),c(),this.showManageTop10RiskCategoriesModal()}),n.querySelectorAll(".obs-risk-del-cat").forEach(l=>{l.addEventListener("click",()=>{const p=Number(l.getAttribute("data-idx"));if(!confirm(this._t("module.dailyobs.top10.categories.deleteConfirm","\u062D\u0630\u0641 \u0647\u0630\u0647 \u0627\u0644\u0641\u0626\u0629 \u0627\u0644\u0645\u062E\u0635\u0635\u0629\u061F")))return;const m=d.customCategories.splice(p,1)[0];m?.id&&Object.keys(d.observationTypeMap||{}).forEach(u=>{d.observationTypeMap[u]===m.id&&delete d.observationTypeMap[u]}),this._saveRiskCategoryConfig(d),c(),this.showManageTop10RiskCategoriesModal()})}),n.querySelector("#obs-risk-save-config-btn")?.addEventListener("click",()=>{const l={...d.observationTypeMap||{}};n.querySelectorAll(".obs-risk-type-map").forEach(p=>{const m=p.getAttribute("data-obs-type"),u=String(p.value||"").trim();m&&(u?l[m]=u:delete l[m])}),d.observationTypeMap=l,this._saveRiskCategoryConfig(d),this._riskCategoryConfigCache=null,Notification.success(this._t("module.dailyobs.top10.categories.saved","\u062A\u0645 \u062D\u0641\u0638 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0641\u0626\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0637\u0631")),c(),this.loadTop10Observations()})},showAddTop10ChartModal(){const e=document.createElement("div");e.className="modal-overlay",e.innerHTML=`
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">
+                        <i class="fas fa-plus ml-2"></i>
+                        <span data-i18n="module.dailyobs.top10.chart.modal.addTitle">\u0625\u0636\u0627\u0641\u0629 \u0631\u0633\u0645 \u0628\u064A\u0627\u0646\u064A \u062C\u062F\u064A\u062F</span>
+                    </h2>
+                    <button class="modal-close" type="button"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="module.dailyobs.top10.chart.modal.titleLabel">\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0631\u0633\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A</label>
+                            <input type="text" id="top10-chart-title" class="form-input" data-i18n-placeholder="module.dailyobs.top10.chart.modal.titlePlaceholder" placeholder="\u0645\u062B\u0627\u0644: \u062A\u0648\u0632\u064A\u0639 \u0627\u0644\u062E\u0637\u0648\u0631\u0629">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="module.dailyobs.top10.chart.modal.typeLabel">\u0646\u0648\u0639 \u0627\u0644\u0631\u0633\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A</label>
+                            <select id="top10-chart-type" class="form-input">${this._renderTop10ChartTypeOptions("doughnut")}</select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="module.dailyobs.top10.chart.modal.fieldLabel">\u0627\u0644\u062D\u0642\u0644 \u0627\u0644\u0645\u0631\u0627\u062F \u062A\u062D\u0644\u064A\u0644\u0647</label>
+                            <select id="top10-chart-field" class="form-input">${this._renderTop10ChartFieldOptions("riskCategory")}</select>
+                        </div>
+                        <div>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="top10-chart-use-all-data" class="form-checkbox">
+                                <span class="text-sm text-gray-700" data-i18n="module.dailyobs.top10.chart.modal.useAllData">\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary obs-top10-modal-cancel">${Utils.escapeHTML(this._t("module.dailyobs.btn.cancel","\u0625\u0644\u063A\u0627\u0621"))}</button>
+                    <button id="save-top10-chart-btn" class="btn-primary">
+                        <i class="fas fa-save ml-2"></i>
+                        ${Utils.escapeHTML(this._t("module.dailyobs.btn.save","\u062D\u0641\u0638"))}
+                    </button>
+                </div>
+            </div>
+        `,document.body.appendChild(e),this.applyModuleI18n(e);const t=()=>e.remove();e.querySelector(".modal-close")?.addEventListener("click",t),e.querySelector(".obs-top10-modal-cancel")?.addEventListener("click",t),document.getElementById("save-top10-chart-btn").addEventListener("click",()=>{const a=document.getElementById("top10-chart-title").value.trim(),i=document.getElementById("top10-chart-type").value,o=document.getElementById("top10-chart-field").value,r=document.getElementById("top10-chart-use-all-data").checked;if(!a){Notification.error(this._t("module.dailyobs.notify.chartTitleRequired","\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0639\u0646\u0648\u0627\u0646 \u0644\u0644\u0631\u0633\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A"));return}const n=JSON.parse(localStorage.getItem("dailyObservations_top10RiskCharts")||"[]"),c={id:`chart_${Date.now()}`,type:i,title:a,field:o,useAllData:r,enabled:!0};n.push(c),localStorage.setItem("dailyObservations_top10RiskCharts",JSON.stringify(n)),e.remove(),Notification.success(this._t("module.dailyobs.notify.chartAdded","\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0631\u0633\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A \u0628\u0646\u062C\u0627\u062D")),this.loadTop10Observations()})},showManageTop10ChartsModal(){const e=JSON.parse(localStorage.getItem("dailyObservations_top10RiskCharts")||"[]"),t=document.createElement("div");t.className="modal-overlay",t.innerHTML=`
+            <div class="modal-content" style="max-width: 700px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">
+                        <i class="fas fa-cog ml-2"></i>
+                        <span data-i18n="module.dailyobs.top10.chart.modal.manageTitle">\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0631\u0633\u0648\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A\u0629</span>
+                    </h2>
+                    <button class="modal-close" type="button"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="space-y-2 max-h-96 overflow-y-auto">
+                        ${e.length===0?`
+                            <div class="empty-state py-8">
+                                <p class="text-gray-500" data-i18n="module.dailyobs.top10.chart.empty">\u0644\u0627 \u062A\u0648\u062C\u062F \u0631\u0633\u0648\u0645 \u0628\u064A\u0627\u0646\u064A\u0629 \u0645\u062D\u0641\u0648\u0638\u0629</p>
+                            </div>
+                        `:e.map(a=>`
+                            <div class="flex items-center justify-between p-3 border rounded hover:bg-gray-50">
+                                <div class="flex items-center gap-3 flex-1">
+                                    <input type="checkbox" 
+                                           class="form-checkbox top10-chart-enable" 
+                                           data-chart-id="${a.id}"
+                                           ${a.enabled?"checked":""}>
+                                    <div class="flex-1">
+                                        <div class="font-semibold">${Utils.escapeHTML(a.title)}</div>
+                                        <div class="text-sm text-gray-500">
+                                            ${Utils.escapeHTML(this._tf("module.dailyobs.top10.chart.meta",{type:this._getTop10ChartTypeLabel(a.type),field:this._getTop10ChartFieldLabel(a.field)},""))}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" data-edit-id="${Utils.escapeHTML(a.id)}" 
+                                            class="btn-icon btn-icon-secondary obs-top10-edit-chart" title="${Utils.escapeHTML(this._t("module.dailyobs.common.edit","\u062A\u0639\u062F\u064A\u0644"))}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" data-del-id="${Utils.escapeHTML(a.id)}" 
+                                            class="btn-icon btn-icon-danger obs-top10-del-chart" title="${Utils.escapeHTML(this._t("module.dailyobs.common.delete","\u062D\u0630\u0641"))}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `).join("")}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary obs-top10-manage-close">${Utils.escapeHTML(this._t("module.dailyobs.common.close","\u0625\u063A\u0644\u0627\u0642"))}</button>
+                </div>
+            </div>
+        `,document.body.appendChild(t),this.applyModuleI18n(t);const s=()=>t.remove();t.querySelector(".modal-close")?.addEventListener("click",s),t.querySelector(".obs-top10-manage-close")?.addEventListener("click",s),t.querySelectorAll(".obs-top10-edit-chart").forEach(a=>{a.addEventListener("click",()=>{const i=a.getAttribute("data-edit-id");s(),this.editTop10Chart(i)})}),t.querySelectorAll(".obs-top10-del-chart").forEach(a=>{a.addEventListener("click",()=>{const i=a.getAttribute("data-del-id");this.deleteTop10Chart(i),s()})}),t.querySelectorAll(".top10-chart-enable").forEach(a=>{a.addEventListener("change",i=>{const o=i.target.getAttribute("data-chart-id"),r=JSON.parse(localStorage.getItem("dailyObservations_top10RiskCharts")||"[]"),n=r.find(c=>c.id===o);n&&(n.enabled=i.target.checked,localStorage.setItem("dailyObservations_top10RiskCharts",JSON.stringify(r)),this.loadTop10Observations())})})},editTop10Chart(e){const s=JSON.parse(localStorage.getItem("dailyObservations_top10RiskCharts")||"[]").find(r=>r.id===e);if(!s)return;const a=document.createElement("div");a.className="modal-overlay",a.innerHTML=`
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">
+                        <i class="fas fa-edit ml-2"></i>
+                        <span data-i18n="module.dailyobs.top10.chart.modal.editTitle">\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0631\u0633\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A</span>
+                    </h2>
+                    <button class="modal-close" type="button"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="module.dailyobs.top10.chart.modal.titleLabel">\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0631\u0633\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A</label>
+                            <input type="text" id="edit-top10-chart-title" class="form-input" value="${Utils.escapeHTML(s.title)}">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="module.dailyobs.top10.chart.modal.typeLabel">\u0646\u0648\u0639 \u0627\u0644\u0631\u0633\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A</label>
+                            <select id="edit-top10-chart-type" class="form-input">${this._renderTop10ChartTypeOptions(s.type)}</select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="module.dailyobs.top10.chart.modal.fieldLabel">\u0627\u0644\u062D\u0642\u0644 \u0627\u0644\u0645\u0631\u0627\u062F \u062A\u062D\u0644\u064A\u0644\u0647</label>
+                            <select id="edit-top10-chart-field" class="form-input">${this._renderTop10ChartFieldOptions(s.field)}</select>
+                        </div>
+                        <div>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="edit-top10-chart-use-all-data" class="form-checkbox" ${s.useAllData?"checked":""}>
+                                <span class="text-sm text-gray-700" data-i18n="module.dailyobs.top10.chart.modal.useAllData">\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary obs-top10-edit-cancel">${Utils.escapeHTML(this._t("module.dailyobs.btn.cancel","\u0625\u0644\u063A\u0627\u0621"))}</button>
+                    <button id="update-top10-chart-btn" class="btn-primary">
+                        <i class="fas fa-save ml-2"></i>
+                        ${Utils.escapeHTML(this._t("module.dailyobs.btn.save","\u062D\u0641\u0638"))}
+                    </button>
+                </div>
+            </div>
+        `,document.body.appendChild(a),this.applyModuleI18n(a);const i=()=>a.remove();a.querySelector(".modal-close")?.addEventListener("click",i),a.querySelector(".obs-top10-edit-cancel")?.addEventListener("click",i),document.getElementById("update-top10-chart-btn").addEventListener("click",()=>{const r=document.getElementById("edit-top10-chart-title").value.trim(),n=document.getElementById("edit-top10-chart-type").value,c=document.getElementById("edit-top10-chart-field").value,d=document.getElementById("edit-top10-chart-use-all-data").checked;if(!r){Notification.error(this._t("module.dailyobs.notify.chartTitleRequired","\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0639\u0646\u0648\u0627\u0646 \u0644\u0644\u0631\u0633\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A"));return}const l=JSON.parse(localStorage.getItem("dailyObservations_top10RiskCharts")||"[]"),p=l.findIndex(m=>m.id===e);p!==-1&&(l[p]={...l[p],title:r,type:n,field:c,useAllData:d},localStorage.setItem("dailyObservations_top10RiskCharts",JSON.stringify(l)),i(),Notification.success(this._t("module.dailyobs.notify.chartUpdated","\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0631\u0633\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A \u0628\u0646\u062C\u0627\u062D")),this.loadTop10Observations())})},deleteTop10Chart(e){if(!confirm(this._t("module.dailyobs.notify.chartDeleteConfirm","\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0631\u0633\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A\u061F")))return;const s=JSON.parse(localStorage.getItem("dailyObservations_top10RiskCharts")||"[]").filter(a=>a.id!==e);localStorage.setItem("dailyObservations_top10RiskCharts",JSON.stringify(s)),Notification.success(this._t("module.dailyobs.notify.chartDeleted","\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0631\u0633\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A")),this.loadTop10Observations()},analyzeByItem(e,t){const s={};let a=0;return t.forEach(i=>{let o="";switch(e){case"observationType":case"\u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629":o=i.observationType||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";break;case"riskLevel":case"\u0645\u0639\u062F\u0644 \u0627\u0644\u062E\u0637\u0648\u0631\u0629":case"\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0637\u0648\u0631\u0629":o=i.riskLevel||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";break;case"status":case"\u0627\u0644\u062D\u0627\u0644\u0629":o=i.status||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";break;case"shift":case"\u0627\u0644\u0648\u0631\u062F\u064A\u0629":o=i.shift||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";break;case"site":case"siteName":case"\u0627\u0644\u0645\u0648\u0642\u0639":o=i.siteName||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";break;case"responsibleDepartment":case"\u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u0639\u0646 \u0627\u0644\u062A\u0646\u0641\u064A\u0630":case"\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u0624\u0648\u0644\u0629":o=i.responsibleDepartment||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";break;case"observerName":case"\u0635\u0627\u062D\u0628 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629":o=i.observerName||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";break;case"locationName":case"\u0627\u0644\u0645\u0643\u0627\u0646":case"\u0627\u0644\u0645\u0648\u0642\u0639 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u0648\u0642\u0639":o=i.locationName||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";break;default:if(i[e]!==void 0&&i[e]!==null&&i[e]!=="")o=String(i[e]);else{const r=e.toLowerCase().replace(/\s+/g,""),c=Object.keys(i).find(d=>d.toLowerCase().replace(/\s+/g,"")===r);o=c&&i[c]||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"}}o=String(o).trim(),(!o||o===""||o==="null"||o==="undefined")&&(o="\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"),s[o]=(s[o]||0)+1,a++}),Object.entries(s).map(([i,o])=>({label:i,count:o,percentage:a>0?(o/a*100).toFixed(1):"0.0"})).sort((i,o)=>o.count-i.count)},async addAnalysisItem(){if(!this.isCurrentUserAdmin()){Notification.error("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0625\u0636\u0627\u0641\u0629 \u0628\u0646\u0648\u062F \u0627\u0644\u062A\u062D\u0644\u064A\u0644");return}const e=document.getElementById("new-analysis-item");if(!e)return;const t=e.value.trim();if(!t){Notification.warning("\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0627\u0633\u0645 \u0627\u0644\u0628\u0646\u062F");return}const s=JSON.parse(localStorage.getItem("dailyObservations_analysisItems")||"[]");if(s.some(i=>i.label.toLowerCase()===t.toLowerCase())){Notification.warning("\u064A\u0648\u062C\u062F \u0628\u0646\u062F \u0628\u0646\u0641\u0633 \u0627\u0644\u0627\u0633\u0645 \u0645\u0633\u0628\u0642\u0627\u064B");return}const a=`custom_${Date.now()}`;s.push({id:a,label:t,enabled:!0}),localStorage.setItem("dailyObservations_analysisItems",JSON.stringify(s)),e.value="",await this.loadDataAnalysis(),await this.updateAnalysisResults(),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0628\u0646\u062F \u0628\u0646\u062C\u0627\u062D")},toggleAnalysisItem(e,t){if(!this.isCurrentUserAdmin()){Notification.error("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u062A\u0639\u062F\u064A\u0644 \u0628\u0646\u0648\u062F \u0627\u0644\u062A\u062D\u0644\u064A\u0644");return}const s=JSON.parse(localStorage.getItem("dailyObservations_analysisItems")||"[]"),a=s.find(i=>i.id===e);a&&(a.enabled=t,localStorage.setItem("dailyObservations_analysisItems",JSON.stringify(s)),this.updateAnalysisResults())},removeAnalysisItem(e){if(!this.isCurrentUserAdmin()){Notification.error("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u062D\u0630\u0641 \u0628\u0646\u0648\u062F \u0627\u0644\u062A\u062D\u0644\u064A\u0644");return}if(!confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0628\u0646\u062F\u061F"))return;const s=JSON.parse(localStorage.getItem("dailyObservations_analysisItems")||"[]").filter(a=>a.id!==e);localStorage.setItem("dailyObservations_analysisItems",JSON.stringify(s)),this.loadDataAnalysis(),Notification.success("\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0628\u0646\u062F \u0628\u0646\u062C\u0627\u062D")},getFilters(){return{search:(document.getElementById("observation-search")?.value||"").toLowerCase(),site:document.getElementById("observation-filter-site")?.value||"",location:document.getElementById("observation-filter-location")?.value||"",type:document.getElementById("observation-filter-type")?.value||"",shift:document.getElementById("observation-filter-shift")?.value||"",risk:document.getElementById("observation-filter-risk")?.value||"",status:document.getElementById("observation-filter-status")?.value||"",observer:document.getElementById("observation-filter-observer")?.value||"",responsible:document.getElementById("observation-filter-responsible")?.value||"",dateFrom:document.getElementById("observation-date-from")?.value||"",dateTo:document.getElementById("observation-date-to")?.value||""}},updateFilterBadges(e,t,s){const a=(o,r,n)=>{const c=document.getElementById(o);if(!c)return;const d=c.closest(".filter-field");if(!d)return;const l=d.querySelector(".filter-label");if(!l)return;const p=l.querySelector(".filter-count-badge");if(p&&p.remove(),r&&r.trim()!==""){const m=document.createElement("span");m.className="filter-count-badge",m.title="\u0639\u062F\u062F \u0627\u0644\u0646\u062A\u0627\u0626\u062C \u0627\u0644\u0645\u0641\u0644\u062A\u0631\u0629",m.textContent=n;const u=l.querySelector("i");u?u.insertAdjacentElement("afterend",m):l.insertBefore(m,l.firstChild)}},i=(o,r)=>{if(!r||r.trim()==="")return 0;const n={...s};return n[o]=r,this.filterItems(e,n).length};a("observation-filter-site",s.site,i("site",s.site)),a("observation-filter-location",s.location,i("location",s.location)),a("observation-filter-type",s.type,i("type",s.type)),a("observation-filter-shift",s.shift,i("shift",s.shift)),a("observation-filter-risk",s.risk,i("risk",s.risk)),a("observation-filter-status",s.status,i("status",s.status)),a("observation-filter-observer",s.observer,i("observer",s.observer)),a("observation-filter-responsible",s.responsible,i("responsible",s.responsible))},filterItems(e,t){const s=a=>{if(!a)return"";const i=String(a).trim();if(!i)return"";if(/^\d{4}-\d{2}-\d{2}$/.test(i))return i;const o=new Date(i);if(!Number.isNaN(o.getTime())){const n=o.getFullYear(),c=String(o.getMonth()+1).padStart(2,"0"),d=String(o.getDate()).padStart(2,"0");return`${n}-${c}-${d}`}const r=i.match(/(\d{4}-\d{2}-\d{2})/);return r?r[1]:""};return e.filter(a=>{const i=!t.search||(a.isoCode||"").toLowerCase().includes(t.search)||(a.siteName||"").toLowerCase().includes(t.search)||(a.locationName||"").toLowerCase().includes(t.search)||(a.observationType||"").toLowerCase().includes(t.search)||(a.observerName||"").toLowerCase().includes(t.search)||(a.responsibleDepartment||"").toLowerCase().includes(t.search)||(a.description||"").toLowerCase().includes(t.search),o=!t.site||String(a.siteName||"").trim()===String(t.site||"").trim(),r=!t.location||String(a.locationName||"").trim()===String(t.location||"").trim(),n=!t.type||String(a.observationType||"").trim()===String(t.type||"").trim(),c=!t.shift||String(a.shift||"").trim()===String(t.shift||"").trim(),d=!t.risk||String(a.riskLevel||"").trim()===String(t.risk||"").trim(),l=!t.status||String(a.status||"").trim()===String(t.status||"").trim(),p=!t.observer||String(a.observerName||"").trim()===String(t.observer||"").trim(),m=!t.responsible||String(a.responsibleDepartment||"").trim()===String(t.responsible||"").trim(),u=s(a.date),f=!t.dateFrom||!u||u>=s(t.dateFrom),y=!t.dateTo||!u||u<=s(t.dateTo);return i&&o&&r&&n&&c&&d&&l&&p&&m&&(f&&y)})},async loadObservationsList(){const e=document.getElementById("observations-table-container");if(!e){setTimeout(()=>this.loadObservationsList(),100);return}const t=typeof this.getDailyObservationsVisibleToCurrentUser=="function"?this.getDailyObservationsVisibleToCurrentUser():Array.isArray(AppState.appData.dailyObservations)?AppState.appData.dailyObservations:[];if(this.updateFilterOptions(),this.renderStatsCards(),t.length===0){const{t:l,isRTL:p}=this.getTranslations();e.innerHTML=`<div class="empty-state" style="direction: ${p?"rtl":"ltr"}; text-align: ${p?"right":"left"};"><p class="text-gray-500">${Utils.escapeHTML(l("empty.noObservations"))}</p></div>`;return}const s={code:this._t("module.dailyobs.registry.table.code","\u0631\u0642\u0645 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629"),location:this._t("module.dailyobs.registry.table.location","\u0627\u0644\u0645\u0648\u0642\u0639 / \u0627\u0644\u0645\u0643\u0627\u0646"),datetime:this._t("module.dailyobs.registry.table.datetime","\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0648\u0627\u0644\u0648\u0642\u062A"),type:this._t("module.dailyobs.registry.table.type","\u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629"),shift:this._t("module.dailyobs.registry.table.shift","\u0627\u0644\u0648\u0631\u062F\u064A\u0629"),risk:this._t("module.dailyobs.registry.table.risk","\u0645\u0639\u062F\u0644 \u0627\u0644\u062E\u0637\u0648\u0631\u0629"),status:this._t("module.dailyobs.registry.table.status","\u0627\u0644\u062D\u0627\u0644\u0629"),observer:this._t("module.dailyobs.registry.table.observer","\u0635\u0627\u062D\u0628 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629"),responsible:this._t("module.dailyobs.registry.table.responsible","\u0627\u0644\u0645\u0633\u0624\u0648\u0644"),attachments:this._t("module.dailyobs.registry.table.attachments","\u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A"),actions:this._t("module.dailyobs.registry.table.actions","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"),emptySearch:this._t("module.dailyobs.registry.emptySearch","\u0644\u0627 \u062A\u0648\u062C\u062F \u0646\u062A\u0627\u0626\u062C \u0644\u0644\u0628\u062D\u062B"),view:this._t("module.dailyobs.common.view","\u0639\u0631\u0636")},a=l=>`
+                <tr>
+                    <td>${Utils.escapeHTML(l.isoCode||"")}</td>
+                    <td>
+                        <div class="text-sm font-medium text-gray-800">${Utils.escapeHTML(l.siteName||"-")}</div>
+                        <div class="text-xs text-gray-500">${Utils.escapeHTML(l.locationName||"")}</div>
+                    </td>
+                    <td>${l.date?Utils.formatDateTime(l.date):"-"}</td>
+                    <td>${Utils.escapeHTML(this.getObservationTypeLabel(l.observationType))}</td>
+                    <td>${Utils.escapeHTML(l.shift||"-")}</td>
+                    <td>
+                        <span class="badge badge-${this.getRiskBadgeClass(l.riskLevel)}">${Utils.escapeHTML(l.riskLevel||"-")}</span>
+                    </td>
+                    <td>
+                        <span class="badge badge-${this.getStatusBadgeClass(l.status)}">${Utils.escapeHTML(l.status||"-")}</span>
+                    </td>
+                    <td>${Utils.escapeHTML(l.observerName||"-")}</td>
+                    <td>${this.formatResponsibleTableCell(l)}</td>
+                    <td>${l.attachments&&l.attachments.length>0?`<i class="fas fa-paperclip text-blue-500" title="${Utils.escapeHTML(this._tf("module.dailyobs.registry.attachments.count",{n:l.attachments.length},`${l.attachments.length} \u0645\u0644\u0641`))}"></i>`:"-"}</td>
+                    <td>
+                        <button onclick="DailyObservations.viewObservation('${l.id}')" class="btn-icon btn-icon-primary" title="${Utils.escapeHTML(s.view)}">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>`,i=l=>{if(!l)return 0;const p=String(l).match(/(\d+)$/);return p?parseInt(p[1],10):0},o=t.map(l=>this.normalizeRecord(l)).sort((l,p)=>{const m=i(l.isoCode),u=i(p.isoCode);return m-u}),r=this.getFilters(),n=this.filterItems(o,r);this.updateFilterBadges(o,n,r);const d=e.querySelector("table")?.querySelector("tbody");if(d){if(n.length===0){d.innerHTML=`
+                    <tr>
+                        <td colspan="11" style="text-align: center; padding: 40px;">
+                            <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">${Utils.escapeHTML(s.emptySearch)}</p>
+                        </td>
+                    </tr>
+                `;return}d.innerHTML=n.map(l=>a(l)).join("");return}e.innerHTML=`
+            <div class="table-wrapper observations-table-wrapper" style="overflow-x: auto; overflow-y: auto; max-height: 70vh;" dir="rtl">
+                <table class="data-table" style="font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+                    <thead>
+                        <tr>
+                            <th>${Utils.escapeHTML(s.code)}</th>
+                            <th>${Utils.escapeHTML(s.location)}</th>
+                            <th>${Utils.escapeHTML(s.datetime)}</th>
+                            <th>${Utils.escapeHTML(s.type)}</th>
+                            <th>${Utils.escapeHTML(s.shift)}</th>
+                            <th>${Utils.escapeHTML(s.risk)}</th>
+                            <th>${Utils.escapeHTML(s.status)}</th>
+                            <th>${Utils.escapeHTML(s.observer)}</th>
+                            <th>${Utils.escapeHTML(s.responsible)}</th>
+                            <th>${Utils.escapeHTML(s.attachments)}</th>
+                            <th>${Utils.escapeHTML(s.actions)}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${n.length===0?`
+                            <tr>
+                                <td colspan="11" style="text-align: center; padding: 40px;">
+                                    <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
+                                    <p class="text-gray-500" style="font-family: 'Cairo', sans-serif;">${Utils.escapeHTML(s.emptySearch)}</p>
+                                </td>
+                            </tr>
+                        `:n.map(l=>a(l)).join("")}
+                    </tbody>
+                </table>
+            </div>
+        `,setTimeout(()=>{const l=e.querySelector(".observations-table-wrapper");l&&this.setupTableScrollListeners(l)},100)},setupEventListeners(){setTimeout(()=>{const e=document.getElementById("add-observation-btn");e&&(e.replaceWith(e.cloneNode(!0)),document.getElementById("add-observation-btn").addEventListener("click",()=>this.showForm()));const t=document.getElementById("export-observations-excel-btn");t&&(t.replaceWith(t.cloneNode(!0)),document.getElementById("export-observations-excel-btn").addEventListener("click",()=>this.exportExcel()));const s=document.getElementById("export-observations-ppt-btn");s&&(s.replaceWith(s.cloneNode(!0)),document.getElementById("export-observations-ppt-btn").addEventListener("click",()=>this.showExportPptModal()));const a=document.getElementById("import-observations-excel-btn");a&&(a.replaceWith(a.cloneNode(!0)),document.getElementById("import-observations-excel-btn").addEventListener("click",()=>this.showImportExcelModal()));const i=document.getElementById("delete-all-observations-btn");i&&(i.replaceWith(i.cloneNode(!0)),document.getElementById("delete-all-observations-btn").addEventListener("click",()=>this.deleteAllObservations()));const o=document.getElementById("daily-observations-refresh-btn");o&&(o.replaceWith(o.cloneNode(!0)),document.getElementById("daily-observations-refresh-btn").addEventListener("click",()=>this.load()));const r=document.getElementById("observation-search");if(r){r.replaceWith(r.cloneNode(!0));const y=document.getElementById("observation-search");y.addEventListener("input",()=>{clearTimeout(this.searchTimeout),this.searchTimeout=setTimeout(()=>{this.loadObservationsList()},300)}),y.addEventListener("keypress",h=>{h.key==="Enter"&&(clearTimeout(this.searchTimeout),this.loadObservationsList())})}["observation-filter-site","observation-filter-location","observation-filter-type","observation-filter-shift","observation-filter-risk","observation-filter-status","observation-filter-observer","observation-filter-responsible"].forEach(y=>{const h=document.getElementById(y);h&&(h.replaceWith(h.cloneNode(!0)),document.getElementById(y).addEventListener("change",()=>{this.loadObservationsList()}))});const c=document.getElementById("observation-date-from"),d=document.getElementById("observation-date-to");c&&(c.replaceWith(c.cloneNode(!0)),document.getElementById("observation-date-from").addEventListener("change",()=>{this.loadObservationsList()})),d&&(d.replaceWith(d.cloneNode(!0)),document.getElementById("observation-date-to").addEventListener("change",()=>{this.loadObservationsList()}));const l=document.getElementById("observation-reset-filters");l&&(l.replaceWith(l.cloneNode(!0)),document.getElementById("observation-reset-filters").addEventListener("click",y=>{y.preventDefault(),y.stopPropagation(),this.resetFilters()}));const p=document.getElementById("observation-filter-date");p&&p.addEventListener("change",()=>{this.loadObservationsList()});const m=document.getElementById("add-analysis-item-btn");m&&m.addEventListener("click",()=>this.addAnalysisItem());const u=document.getElementById("new-analysis-item");u&&u.addEventListener("keypress",y=>{y.key==="Enter"&&this.addAnalysisItem()});const f=document.getElementById("obs-analytics-root");if(f){f.querySelectorAll(".obs-period-btn").forEach(v=>{v.addEventListener("click",()=>{this._analysisPeriod=v.getAttribute("data-period"),f.querySelectorAll(".obs-period-btn").forEach(g=>{const T=g===v;g.style.background=T?"#fff":"rgba(255,255,255,0.15)",g.style.color=T?"#1e40af":"#fff"}),this.updateAnalysisResults()})});const y=document.getElementById("obs-analytics-refresh");y&&y.addEventListener("click",()=>this.updateAnalysisResults());const h=document.getElementById("obs-toggle-filters-btn"),k=document.getElementById("obs-filter-panel");h&&k&&h.addEventListener("click",()=>{const v=k.style.display!=="none";k.style.display=v?"none":"block",h.style.background=v?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.35)"});const b=document.getElementById("obs-filter-reset-btn");b&&b.addEventListener("click",()=>{["obs-af-site","obs-af-observer","obs-af-type","obs-af-risk","obs-af-status","obs-af-shift","obs-af-dept"].forEach(v=>{const g=document.getElementById(v);g&&(g.value="")}),this.updateAnalysisResults()}),["obs-af-site","obs-af-observer","obs-af-type","obs-af-risk","obs-af-status","obs-af-shift","obs-af-dept"].forEach(v=>{const g=document.getElementById(v);g&&g.addEventListener("change",()=>this.updateAnalysisResults())});const S=document.getElementById("obs-export-pdf-btn");S&&S.addEventListener("click",()=>this._exportAnalyticsPDF())}},200)},updateFilterOptions(){const t=(typeof this.getDailyObservationsVisibleToCurrentUser=="function"?this.getDailyObservationsVisibleToCurrentUser():Array.isArray(AppState.appData.dailyObservations)?AppState.appData.dailyObservations:[]).map(w=>this.normalizeRecord(w)),s=[...new Set(t.map(w=>w.siteName).filter(Boolean))].sort(),a=document.getElementById("observation-filter-site")?.value||"",i=document.getElementById("observation-filter-location")?.value||"",o=a?t.filter(w=>String(w.siteName||"").trim()===String(a).trim()):t,r=[...new Set(o.map(w=>w.locationName).filter(Boolean))].sort(),n=[...new Set(t.map(w=>w.observationType).filter(Boolean))].sort(),c=[...new Set(t.map(w=>w.shift).filter(Boolean))].sort(),d=[...new Set(t.map(w=>w.riskLevel).filter(Boolean))].sort(),l=[...new Set(t.map(w=>w.status).filter(Boolean))].sort(),p=[...new Set(t.map(w=>w.observerName).filter(Boolean))].sort(),m=[...new Set(t.map(w=>w.responsibleDepartment).filter(Boolean))].sort(),u=document.getElementById("observation-filter-type")?.value||"",f=document.getElementById("observation-filter-shift")?.value||"",y=document.getElementById("observation-filter-risk")?.value||"",h=document.getElementById("observation-filter-status")?.value||"",k=document.getElementById("observation-filter-observer")?.value||"",b=document.getElementById("observation-filter-responsible")?.value||"",S=document.getElementById("observation-filter-site");S&&(S.innerHTML='<option value="">\u0627\u0644\u0643\u0644</option>'+s.map(w=>`<option value="${Utils.escapeHTML(w)}">${Utils.escapeHTML(w)}</option>`).join(""),a&&s.includes(a)&&(S.value=a));const v=document.getElementById("observation-filter-location");v&&(v.innerHTML='<option value="">\u0627\u0644\u0643\u0644</option>'+r.map(w=>`<option value="${Utils.escapeHTML(w)}">${Utils.escapeHTML(w)}</option>`).join(""),i&&r.includes(i)?v.value=i:v.value="");const g=document.getElementById("observation-filter-type");g&&(g.innerHTML='<option value="">\u0627\u0644\u0643\u0644</option>'+n.map(w=>`<option value="${Utils.escapeHTML(w)}">${Utils.escapeHTML(w)}</option>`).join(""),u&&n.includes(u)&&(g.value=u));const T=document.getElementById("observation-filter-shift");T&&(T.innerHTML='<option value="">\u0627\u0644\u0643\u0644</option>'+c.map(w=>`<option value="${Utils.escapeHTML(w)}">${Utils.escapeHTML(w)}</option>`).join(""),f&&c.includes(f)&&(T.value=f));const L=document.getElementById("observation-filter-risk");L&&(L.innerHTML='<option value="">\u0627\u0644\u0643\u0644</option>'+d.map(w=>`<option value="${Utils.escapeHTML(w)}">${Utils.escapeHTML(w)}</option>`).join(""),y&&d.includes(y)&&(L.value=y));const D=document.getElementById("observation-filter-status");D&&(D.innerHTML='<option value="">\u0627\u0644\u0643\u0644</option>'+l.map(w=>`<option value="${Utils.escapeHTML(w)}">${Utils.escapeHTML(w)}</option>`).join(""),h&&l.includes(h)&&(D.value=h));const O=document.getElementById("observation-filter-observer");O&&(O.innerHTML='<option value="">\u0627\u0644\u0643\u0644</option>'+p.map(w=>`<option value="${Utils.escapeHTML(w)}">${Utils.escapeHTML(w)}</option>`).join(""),k&&p.includes(k)&&(O.value=k));const N=document.getElementById("observation-filter-responsible");N&&(N.innerHTML='<option value="">\u0627\u0644\u0643\u0644</option>'+m.map(w=>`<option value="${Utils.escapeHTML(w)}">${Utils.escapeHTML(w)}</option>`).join(""),b&&m.includes(b)&&(N.value=b))},resetFilters(){const e=document.getElementById("observation-search");e&&(e.value=""),["observation-filter-site","observation-filter-location","observation-filter-type","observation-filter-shift","observation-filter-risk","observation-filter-status","observation-filter-observer","observation-filter-responsible"].forEach(i=>{const o=document.getElementById(i);o&&(o.value="")});const s=document.getElementById("observation-date-from"),a=document.getElementById("observation-date-to");s&&(s.value=""),a&&(a.value=""),document.querySelectorAll(".filter-count-badge").forEach(i=>{i.remove()}),this.loadObservationsList(),typeof Notification<"u"&&Notification.success&&Notification.success("\u062A\u0645 \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u062C\u0645\u064A\u0639 \u0627\u0644\u0641\u0644\u0627\u062A\u0631")},async showExportPptModal(){if(!this.canDailyObservationsFullAdminUi()){typeof Notification<"u"&&Notification.error&&Notification.error("\u062A\u0635\u062F\u064A\u0631 PPT \u0645\u062A\u0627\u062D \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u0642\u0637");return}const e=document.createElement("div");e.className="modal-overlay";const t=this.getDepartmentOptions(),a=new Date().toISOString().slice(0,10);e.innerHTML=`
+            <div class="modal-content" style="max-width: 720px;">
+                <div class="modal-header">
+                    <h2 class="modal-title"><i class="fas fa-file-powerpoint ml-2"></i>\u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 PPT</h2>
+                    <button class="modal-close" aria-label="\u0625\u063A\u0644\u0627\u0642">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body space-y-4">
+                    <div class="bg-blue-50 border border-blue-200 rounded p-4">
+                        <div class="flex items-start justify-between">
+                            <p class="text-sm text-blue-800">
+                                \u0633\u064A\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u062A\u0642\u0631\u064A\u0631 <strong>\u062D\u0633\u0628 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u062E\u062A\u0627\u0631\u0629</strong> \u0648\u0628\u0646\u0641\u0633 \u062A\u0635\u0645\u064A\u0645 \u0627\u0644\u0634\u0631\u0627\u0626\u062D (Template) \u0641\u064A Google Slides \u062B\u0645 \u062A\u0646\u0632\u064A\u0644\u0647 \u0628\u0635\u064A\u063A\u0629 PPT.
+                            </p>
+                            <button type="button" class="btn-secondary text-xs ml-2" id="ppt-template-id-settings-btn">
+                                <i class="fas fa-cog ml-1"></i>
+                                \u0625\u0639\u062F\u0627\u062F\u0627\u062A Template
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0625\u062F\u0627\u0631\u0629 *</label>
+                            <select id="dailyobs-ppt-department" class="form-input">
+                                <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0625\u062F\u0627\u0631\u0629</option>
+                                ${t.map(o=>`<option value="${Utils.escapeHTML(o)}">${Utils.escapeHTML(o)}</option>`).join("")}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0642\u0631\u064A\u0631</label>
+                            <input id="dailyobs-ppt-report-date" type="date" class="form-input" value="${a}">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u0645\u0646 \u062A\u0627\u0631\u064A\u062E (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)</label>
+                            <input id="dailyobs-ppt-from-date" type="date" class="form-input" value="">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)</label>
+                            <input id="dailyobs-ppt-to-date" type="date" class="form-input" value="">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="dailyobs-ppt-cancel-btn">\u0625\u0644\u063A\u0627\u0621</button>
+                    <button type="button" class="btn-primary" id="dailyobs-ppt-export-btn">
+                        <i class="fas fa-download ml-2"></i>
+                        \u062A\u0635\u062F\u064A\u0631
+                    </button>
+                </div>
+            </div>
+        `,document.body.appendChild(e);const i=()=>e.remove();e.querySelector(".modal-close")?.addEventListener("click",i),e.querySelector("#dailyobs-ppt-cancel-btn")?.addEventListener("click",i),e.addEventListener("click",o=>{o.target===e&&i()}),e.querySelector("#ppt-template-id-settings-btn")?.addEventListener("click",async()=>{i(),await this.showPptTemplateIdSetupModal()}),e.querySelector("#dailyobs-ppt-export-btn")?.addEventListener("click",async()=>{const o=(e.querySelector("#dailyobs-ppt-department")?.value||"").trim();if(!o){Notification.warning("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0623\u0648\u0644\u0627\u064B.");return}const r=e.querySelector("#dailyobs-ppt-report-date")?.value||"",n=e.querySelector("#dailyobs-ppt-from-date")?.value||"",c=e.querySelector("#dailyobs-ppt-to-date")?.value||"";await this.exportPptReport({department:o,reportDate:r,fromDate:n,toDate:c}),i()})},_getObservationPrimaryImageUrl(e){const s=(Array.isArray(e?.attachments)?e.attachments:[]).find(a=>{const i=String(a?.type||"").toLowerCase(),o=String(a?.name||"").toLowerCase();return i.startsWith("image/")||/\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(o)?!!(a?.directLink||a?.shareableLink||a?.cloudLink?.url||a?.data):!1});return s&&(s.directLink||s.shareableLink||s.cloudLink?.url||s.data)||""},async exportPptReport({department:e,reportDate:t,fromDate:s,toDate:a}){try{if(!this.canDailyObservationsFullAdminUi()){typeof Notification<"u"&&Notification.error&&Notification.error("\u062A\u0635\u062F\u064A\u0631 PPT \u0645\u062A\u0627\u062D \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u0642\u0637");return}if(!AppState.googleConfig?.appsScript?.enabled||!AppState.googleConfig?.appsScript?.scriptUrl){Notification.error("Google Apps Script \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644. \u064A\u0631\u062C\u0649 \u062A\u0641\u0639\u064A\u0644\u0647 \u0641\u064A \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0623\u0648\u0644\u0627\u064B.");return}const i=Array.isArray(AppState.appData.dailyObservations)?AppState.appData.dailyObservations:[];if(i.length===0){Notification.info("\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u064A\u0648\u0645\u064A\u0629 \u0644\u0644\u062A\u0635\u062F\u064A\u0631.");return}const o=i.map(f=>this.normalizeRecord(f)),r=String(e||"").trim(),n=s?new Date(s):null,c=a?new Date(a):null,d=o.filter(f=>{if(!(String(f.responsibleDepartment||"").trim()===r))return!1;if(!n&&!c)return!0;const h=f.date?new Date(f.date):null;return!(!h||Number.isNaN(h.getTime())||n&&h<new Date(n.getFullYear(),n.getMonth(),n.getDate())||c&&h>new Date(c.getFullYear(),c.getMonth(),c.getDate(),23,59,59,999))});if(d.length===0){Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0644\u0625\u062F\u0627\u0631\u0629/\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062D\u062F\u062F.");return}let l=null;try{const f=await GoogleIntegration.sendToAppsScript("getDailyObservationsPptTemplateId",{});f&&f.success&&f.templateId&&(l=f.templateId)}catch{}const p={department:r,reportDate:t?new Date(t).toISOString():new Date().toISOString(),fromDate:s?new Date(s).toISOString():"",toDate:a?new Date(a).toISOString():"",observations:d.map(f=>({id:f.id||"",isoCode:f.isoCode||"",siteName:f.siteName||"",locationName:f.locationName||"",date:f.date||"",observationType:f.observationType||"",shift:f.shift||"",riskLevel:f.riskLevel||"",status:f.status||"",observerName:f.observerName||"",responsibleDepartment:f.responsibleDepartment||"",expectedCompletionDate:f.expectedCompletionDate||"",details:f.details||"",correctiveAction:f.correctiveAction||"",imageUrl:this._getObservationPrimaryImageUrl(f)}))};l&&(p.templateId=l),Loading.show("\u062C\u0627\u0631\u064A \u0625\u0646\u0634\u0627\u0621 \u062A\u0642\u0631\u064A\u0631 PPT...");const m=await GoogleIntegration.sendToAppsScript("exportDailyObservationsPptReport",p);if(Loading.hide(),!m||m.success===!1){const f=m?.message||"\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u062A\u0642\u0631\u064A\u0631 PPT";if(f.includes("Template ID")||f.includes("DAILY_OBSERVATIONS_PPT_TEMPLATE_ID")){Notification.warning("\u064A\u062C\u0628 \u0625\u0639\u062F\u0627\u062F Template ID \u0623\u0648\u0644\u0627\u064B"),await this.showPptTemplateIdSetupModal();return}Notification.error(f);return}const u=m.downloadUrl||m.url||m.viewUrl||"";if(u&&!window.open(u,"_blank")){const y=document.createElement("a");y.href=u,y.target="_blank",y.rel="noopener noreferrer",document.body.appendChild(y),y.click(),y.remove()}Notification.success("\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u062A\u0642\u0631\u064A\u0631 PPT \u0628\u0646\u062C\u0627\u062D.")}catch(i){Loading.hide(),Utils.safeError("\u0641\u0634\u0644 \u062A\u0635\u062F\u064A\u0631 PPT:",i);const o=i?.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641";o.includes("Template ID")||o.includes("DAILY_OBSERVATIONS_PPT_TEMPLATE_ID")?(Notification.warning("\u064A\u062C\u0628 \u0625\u0639\u062F\u0627\u062F Template ID \u0623\u0648\u0644\u0627\u064B"),await this.showPptTemplateIdSetupModal()):Notification.error("\u0641\u0634\u0644 \u062A\u0635\u062F\u064A\u0631 PPT: "+o)}},async showPptTemplateIdSetupModal(){if(!this.canDailyObservationsFullAdminUi()){typeof Notification<"u"&&Notification.error&&Notification.error("\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0642\u0627\u0644\u0628 PPT \u0645\u062A\u0627\u062D\u0629 \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u0642\u0637");return}let e=null,t=null;try{const i=await GoogleIntegration.sendToAppsScript("getDailyObservationsPptTemplateId",{});i&&i.success&&(e=i.templateId,t={fileName:i.fileName||"",fileUrl:i.fileUrl||""})}catch{}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
+            <div class="modal-content" style="max-width: 700px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">
+                        <i class="fas fa-file-powerpoint ml-2"></i>
+                        \u0625\u0639\u062F\u0627\u062F Template ID \u0644\u062A\u0635\u062F\u064A\u0631 PPT
+                    </h2>
+                    <button class="modal-close" aria-label="\u0625\u063A\u0644\u0627\u0642">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body space-y-4">
+                    <div class="bg-yellow-50 border border-yellow-200 rounded p-4">
+                        <p class="text-sm text-yellow-800 mb-2">
+                            <strong>\u0645\u0644\u0627\u062D\u0638\u0629 \u0645\u0647\u0645\u0629:</strong> \u064A\u062C\u0628 \u0625\u0639\u062F\u0627\u062F \u0645\u0644\u0641 Google Slides Template \u0642\u0628\u0644 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631.
+                        </p>
+                        <p class="text-sm text-yellow-700">
+                            \u064A\u062C\u0628 \u0623\u0646 \u064A\u062D\u062A\u0648\u064A Template \u0639\u0644\u0649 3 \u0634\u0631\u0627\u0626\u062D \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644: \u0634\u0631\u064A\u062D\u0629 \u0627\u0644\u063A\u0644\u0627\u0641\u060C \u0634\u0631\u064A\u062D\u0629 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 (\u0633\u064A\u062A\u0645 \u062A\u0643\u0631\u0627\u0631\u0647\u0627)\u060C \u0648\u0634\u0631\u064A\u062D\u0629 \u062B\u0627\u0628\u062A\u0629.
+                        </p>
+                    </div>
+
+                    ${e?`
+                        <div class="bg-green-50 border border-green-200 rounded p-4">
+                            <p class="text-sm text-green-800 mb-2">
+                                <strong>Template ID \u0627\u0644\u062D\u0627\u0644\u064A:</strong>
+                            </p>
+                            <p class="text-sm font-mono text-green-700 mb-2">${Utils.escapeHTML(e)}</p>
+                            ${t.fileName?`<p class="text-sm text-green-700">\u0627\u0644\u0645\u0644\u0641: <strong>${Utils.escapeHTML(t.fileName)}</strong></p>`:""}
+                            ${t.fileUrl?`<p class="text-sm mt-2"><a href="${Utils.escapeHTML(t.fileUrl)}" target="_blank" class="text-blue-600 hover:underline">\u0641\u062A\u062D \u0627\u0644\u0645\u0644\u0641 \u0641\u064A Google Slides</a></p>`:""}
+                        </div>
+                    `:`
+                        <div class="bg-red-50 border border-red-200 rounded p-4">
+                            <p class="text-sm text-red-800">
+                                <strong>\u0644\u0645 \u064A\u062A\u0645 \u0636\u0628\u0637 Template ID \u0628\u0639\u062F.</strong> \u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 File ID \u0644\u0645\u0644\u0641 Google Slides Template \u0623\u062F\u0646\u0627\u0647.
+                            </p>
+                        </div>
+                    `}
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Template ID (File ID) *
+                            <span class="text-xs text-gray-500 font-normal">(\u0645\u0646 \u0631\u0627\u0628\u0637 Google Slides)</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="ppt-template-id-input" 
+                            class="form-input font-mono text-sm" 
+                            placeholder="\u0623\u062F\u062E\u0644 File ID \u0645\u0646 \u0631\u0627\u0628\u0637 Google Slides"
+                            value="${e?Utils.escapeHTML(e):""}"
+                        >
+                        <p class="text-xs text-gray-500 mt-2">
+                            <i class="fas fa-info-circle ml-1"></i>
+                            \u064A\u0645\u0643\u0646\u0643 \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 File ID \u0645\u0646 \u0631\u0627\u0628\u0637 Google Slides:
+                            <code class="text-xs bg-gray-100 px-1 rounded">https://docs.google.com/presentation/d/<strong>FILE_ID_HERE</strong>/edit</code>
+                        </p>
+                    </div>
+
+                    <div class="bg-blue-50 border border-blue-200 rounded p-4">
+                        <h4 class="text-sm font-semibold text-blue-900 mb-2">\u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0625\u0646\u0634\u0627\u0621 Template:</h4>
+                        <ol class="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                            <li>\u0623\u0646\u0634\u0626 \u0645\u0644\u0641 Google Slides \u062C\u062F\u064A\u062F</li>
+                            <li>\u0627\u0644\u0634\u0631\u064A\u062D\u0629 \u0627\u0644\u0623\u0648\u0644\u0649: \u0634\u0631\u064A\u062D\u0629 \u0627\u0644\u063A\u0644\u0627\u0641 \u062A\u062D\u062A\u0648\u064A \u0639\u0644\u0649 {{DEPARTMENT}} \u0648 {{REPORT_DATE}}</li>
+                            <li>\u0627\u0644\u0634\u0631\u064A\u062D\u0629 \u0627\u0644\u062B\u0627\u0646\u064A\u0629: \u0634\u0631\u064A\u062D\u0629 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u062A\u062D\u062A\u0648\u064A \u0639\u0644\u0649 \u062C\u0645\u064A\u0639 Placeholders \u0645\u062B\u0644 {{OBS_NO}}, {{OBS_DATE}}, {{OBS_DETAILS}}, \u0625\u0644\u062E</li>
+                            <li>\u0627\u0644\u0634\u0631\u064A\u062D\u0629 \u0627\u0644\u062B\u0627\u0644\u062B\u0629: \u0634\u0631\u064A\u062D\u0629 \u062B\u0627\u0628\u062A\u0629 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)</li>
+                            <li>\u0627\u0646\u0633\u062E File ID \u0645\u0646 \u0631\u0627\u0628\u0637 \u0627\u0644\u0645\u0644\u0641 \u0648\u0623\u062F\u062E\u0644\u0647 \u0623\u0639\u0644\u0627\u0647</li>
+                        </ol>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="ppt-template-id-cancel-btn">\u0625\u0644\u063A\u0627\u0621</button>
+                    <button type="button" class="btn-primary" id="ppt-template-id-save-btn">
+                        <i class="fas fa-save ml-2"></i>
+                        \u062D\u0641\u0638 Template ID
+                    </button>
+                    ${e?`
+                        <button type="button" class="btn-secondary bg-red-600 hover:bg-red-700" id="ppt-template-id-test-btn">
+                            <i class="fas fa-check ml-2"></i>
+                            \u0627\u062E\u062A\u0628\u0627\u0631 Template
+                        </button>
+                    `:""}
+                </div>
+            </div>
+        `,document.body.appendChild(s);const a=()=>s.remove();s.querySelector(".modal-close")?.addEventListener("click",a),s.querySelector("#ppt-template-id-cancel-btn")?.addEventListener("click",a),s.addEventListener("click",i=>{i.target===s&&a()}),s.querySelector("#ppt-template-id-save-btn")?.addEventListener("click",async()=>{const o=(s.querySelector("#ppt-template-id-input")?.value||"").trim();if(!o){Notification.warning("\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 Template ID");return}Loading.show("\u062C\u0627\u0631\u064A \u062D\u0641\u0638 Template ID...");try{const r=await GoogleIntegration.sendToAppsScript("setDailyObservationsPptTemplateId",{templateId:o});if(Loading.hide(),r&&r.success){Notification.success("\u062A\u0645 \u062D\u0641\u0638 Template ID \u0628\u0646\u062C\u0627\u062D"),a();const n=document.querySelector(".modal-overlay");!n||n.querySelector("#dailyobs-ppt-export-btn")}else Notification.error(r?.message||"\u0641\u0634\u0644 \u062D\u0641\u0638 Template ID")}catch(r){Loading.hide(),Utils.safeError("\u0641\u0634\u0644 \u062D\u0641\u0638 Template ID:",r),Notification.error("\u0641\u0634\u0644 \u062D\u0641\u0638 Template ID: "+(r?.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}}),e&&s.querySelector("#ppt-template-id-test-btn")?.addEventListener("click",async()=>{Loading.show("\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 Template...");try{const i=await GoogleIntegration.sendToAppsScript("getDailyObservationsPptTemplateId",{});Loading.hide(),i&&i.success?Notification.success(`Template \u0635\u062D\u064A\u062D \u0648\u0645\u062A\u0627\u062D: ${i.fileName||i.templateId}`):Notification.error(i?.message||"Template ID \u063A\u064A\u0631 \u0635\u062D\u064A\u062D")}catch(i){Loading.hide(),Utils.safeError("\u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 Template:",i),Notification.error("\u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 Template: "+(i?.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}})},resetFormState(){this.state.selectedSiteId="",this.state.selectedSiteName="",this.state.availablePlaces=[],this.state.selectedPlaceId="",this.state.isCustomLocationSelected=!1,this.state.customLocationName="",this.state.currentAttachments=[],this.state.editingId=null,this.state.activeModal=null,this.state.isLoadingPlaces=!1},getAllSites(){const t=(Array.isArray(AppState.appData.observationSites)?AppState.appData.observationSites:[]).map((i,o)=>this.normalizeSite(i,o)).filter(Boolean),s=this.DEFAULT_SITES.map((i,o)=>({id:i.id||this.slugify(`${i.name}-${o}`),name:i.name,places:Array.isArray(i.places)?i.places.map((r,n)=>this.normalizePlace(r,n,i.id||i.name)):[]})),a=[...t];return s.forEach(i=>{a.some(o=>o.id===i.id)||a.push(i)}),a},normalizeSite(e,t=0){if(!e)return null;Array.isArray(e.places)||(e.places=[]);const s=e.id||e.siteId||this.slugify(`${e.name||e.title||"site"}-${t}`),a=e.name||e.title||e.label||"";if(!s||!a)return null;const o=(Array.isArray(e.places)?e.places:Array.isArray(e.locations)?e.locations:Array.isArray(e.children)?e.children:Array.isArray(e.areas)?e.areas:[]).map((r,n)=>this.normalizePlace(r,n,s)).filter(Boolean);return{id:s,name:a,places:o}},normalizePlace(e,t=0,s=""){if(!e)return null;const a=e.id||e.value||e.placeId||this.slugify(`${s||"site"}-place-${t}`),i=e.name||e.label||e.title||e.placeName||e.locationName||"";return!a||!i?null:{id:a,name:i}},slugify(e){return e?String(e).toLowerCase().trim().replace(/[^a-z0-9\\u0600-\\u06FF\\s-]+/g,"").replace(/\\s+/g,"-"):""},async ensureSheetJS(){if(!(typeof XLSX<"u")){if(this.sheetJsPromise){await this.sheetJsPromise;return}this.sheetJsPromise=new Promise((e,t)=>{const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",s.onerror=()=>{s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",s.onerror=()=>{Utils.safeError("\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0645\u0643\u062A\u0628\u0629 SheetJS"),Notification?.error?.("\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0645\u0643\u062A\u0628\u0629 Excel. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B."),this.sheetJsPromise=null,t(new Error("Failed to load XLSX library"))}},s.onload=()=>e(),document.head.appendChild(s)}),await this.sheetJsPromise}},normalizeComparisonText(e){return String(e||"").trim().toLowerCase().replace(/\s+/g," ").replace(/[^\u0600-\u06FFA-Za-z0-9\s]/g,"")},findSiteMatch(e){if(!e)return null;const t=this.normalizeComparisonText(e);return this.getAllSites().find(s=>this.normalizeComparisonText(s.name)===t)||null},findPlaceMatch(e,t){if(!e||!t)return null;const s=this.normalizeComparisonText(t);return(e.places||[]).find(a=>this.normalizeComparisonText(a.name)===s)||null},normalizeShiftValue(e){const t=String(e||"").trim();if(!t)return"";const s=t.toLowerCase();return["\u0627\u0644\u0623\u0648\u0644\u0649","\u0627\u0644\u0627\u0648\u0644\u0649","first","shift 1","1","one"].includes(s)?"\u0627\u0644\u0623\u0648\u0644\u0649":["\u0627\u0644\u062B\u0627\u0646\u064A\u0629","second","shift 2","2","two"].includes(s)?"\u0627\u0644\u062B\u0627\u0646\u064A\u0629":["\u0627\u0644\u062B\u0627\u0644\u062B\u0629","third","shift 3","3","three"].includes(s)?"\u0627\u0644\u062B\u0627\u0644\u062B\u0629":t},normalizeRiskLevelValue(e){const t=String(e||"").trim();if(!t)return"";const s=t.toLowerCase();return["\u0645\u0646\u062E\u0641\u0636","\u0645\u0646\u062E\u0641\u0636\u0629","low","l"].includes(s)?"\u0645\u0646\u062E\u0641\u0636":["\u0645\u062A\u0648\u0633\u0637","\u0645\u062A\u0648\u0633\u0637\u0629","medium","moderate","m"].includes(s)?"\u0645\u062A\u0648\u0633\u0637":["\u0639\u0627\u0644\u064A","\u0639\u0627\u0644\u064A\u0629","\u0645\u0631\u062A\u0641\u0639","high","h"].includes(s)?"\u0639\u0627\u0644\u064A":t},normalizeObservationTypeValue(e){const t=String(e||"").trim();if(!t)return"";const s=t.toLowerCase();return["\u0648\u0636\u0639 \u063A\u064A\u0631 \u0622\u0645\u0646","unsafe condition"].includes(s)?"\u0648\u0636\u0639 \u063A\u064A\u0631 \u0622\u0645\u0646":["\u062A\u0635\u0631\u0641 \u063A\u064A\u0631 \u0622\u0645\u0646","unsafe act"].includes(s)?"\u062A\u0635\u0631\u0641 \u063A\u064A\u0631 \u0622\u0645\u0646":["\u0645\u0642\u062A\u0631\u062D","\u0627\u0642\u062A\u0631\u0627\u062D","suggestion","proposal"].includes(s)?"\u0645\u0642\u062A\u0631\u062D":["\u0623\u062E\u0631\u0649","\u0627\u062E\u0631\u0649","other"].includes(s)?"\u0623\u062E\u0631\u0649":t},parseExcelDateValue(e,{isDateOnly:t=!1}={}){if(e==null||e==="")return"";if(e instanceof Date){if(Number.isNaN(e.getTime()))return"";const c=new Date(e);return t&&c.setHours(0,0,0,0),c.toISOString()}const s=c=>String(c||"").replace(/[٠-٩]/g,d=>String("\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669".indexOf(d))),a=c=>{if(typeof c!="number"||Number.isNaN(c)||c<1||c>6e5)return"";const d=Math.floor(c),l=c-d,p=new Date(1899,11,30),m=new Date(p.getTime()+d*24*60*60*1e3);if(l>0){const u=Math.round(l*24*60*60),f=Math.floor(u/3600),y=Math.floor(u%3600/60),h=u%60;m.setHours(f,y,h,0)}return Number.isNaN(m.getTime())?"":(t&&m.setHours(0,0,0,0),m.toISOString())};if(typeof e=="number"){if(typeof XLSX<"u"&&XLSX.SSF?.parse_date_code){const d=XLSX.SSF.parse_date_code(e);if(d){const l=new Date(d.y,d.m-1,d.d,d.H||0,d.M||0,Math.floor(d.S||0));if(!Number.isNaN(l.getTime()))return t&&l.setHours(0,0,0,0),l.toISOString()}}const c=a(e);if(c)return c;if(e>1e11){const d=new Date(e);if(!Number.isNaN(d.getTime()))return t&&d.setHours(0,0,0,0),d.toISOString()}}const i=String(e).trim();if(!i)return"";const o=s(i);if(/^\d+(\.\d+)?$/.test(o)){const c=Number(o),d=a(c);if(d)return d;if(c>1e11){const l=new Date(c);if(!Number.isNaN(l.getTime()))return t&&l.setHours(0,0,0,0),l.toISOString()}}let r=o.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?\s*$/);if(r){const c=Number(r[1]),d=Number(r[2]),l=Number(r[3]),p=Number(r[4]||0),m=Number(r[5]||0),u=Number(r[6]||0),f=new Date(c,d-1,l,p,m,u);if(!Number.isNaN(f.getTime()))return t&&f.setHours(0,0,0,0),f.toISOString()}if(r=o.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?\s*$/),r){const c=Number(r[1]),d=Number(r[2]);let l=Number(r[3]);l<100&&(l+=2e3);let p=c,m=d;c<=12&&d>12&&(m=c,p=d);const u=Number(r[4]||0),f=Number(r[5]||0),y=Number(r[6]||0),h=new Date(l,m-1,p,u,f,y);if(!Number.isNaN(h.getTime()))return t&&h.setHours(0,0,0,0),h.toISOString()}if(r=o.match(/^(\d{1,2})[\s\-\/\.]([A-Za-z]{3,9})[\s\-\/\.](\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?\s*$/),r){const c=Number(r[1]),d=String(r[2]||"").toLowerCase();let l=Number(r[3]);l<100&&(l+=l>=70?1900:2e3);const m={jan:0,january:0,feb:1,february:1,mar:2,march:2,apr:3,april:3,may:4,jun:5,june:5,jul:6,july:6,aug:7,august:7,sep:8,sept:8,september:8,oct:9,october:9,nov:10,november:10,dec:11,december:11}[d];if(m!==void 0){const u=Number(r[4]||0),f=Number(r[5]||0),y=Number(r[6]||0),h=new Date(l,m,c,u,f,y);if(!Number.isNaN(h.getTime()))return t&&h.setHours(0,0,0,0),h.toISOString()}}const n=new Date(o);return Number.isNaN(n.getTime())?"":(t&&n.setHours(0,0,0,0),n.toISOString())},lookupSiteName(e){if(!e)return"";const t=this.getAllSites().find(s=>s.id===e);return t?t.name:""},lookupPlaceName(e,t){if(!e||!t)return"";const s=this.getAllSites().find(i=>i.id===e);if(!s)return"";const a=s.places.find(i=>i.id===t);return a?a.name:""},getPlacesForSiteSync(e){if(!e)return[];const t=this.getAllSites().find(i=>i.id===e);if(t&&Array.isArray(t.places)&&t.places.length>0)return t.places;const a=(Array.isArray(AppState.appData.observationSites)?AppState.appData.observationSites:[]).find(i=>i.id===e||i.siteId===e);return a?(Array.isArray(a.places)?a.places:Array.isArray(a.locations)?a.locations:[]).map((o,r)=>this.normalizePlace(o,r,e)).filter(Boolean):t&&Array.isArray(t.places)?t.places:[]},async fetchPlacesForSite(e){return this.getPlacesForSiteSync(e)},getLoggedInObserverName(){const e=AppState.currentUser||{},t=(e.name||e.fullName||e.displayName||"").toString().trim();if(t)return t;const s=(e.email||"").toString().trim();return s?s.split("@")[0]||s:""},buildObservationOwnerSelectOptionsHtml(e){const t=this.getSafetyTeamMembers(),s=this.getLoggedInObserverName(),a=!e,i=e&&String(e.observerName||"").trim()||"",o=['<option value="">\u2014 \u0627\u062E\u062A\u0631 \u0645\u0646 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u2014</option>'];if(a&&s){const n=Utils.escapeHTML(s);o.push(`<option value="${n}" selected data-observer-account="1">\u062D\u0633\u0627\u0628\u0643 \u0627\u0644\u062D\u0627\u0644\u064A (${n})</option>`)}const r=new Set;if(a&&s&&r.add(s.toLowerCase()),t.forEach(n=>{const c=(n.name||"").trim();if(!c)return;const d=c.toLowerCase();if(r.has(d))return;r.add(d);const l=Utils.escapeHTML(c),p=!a&&i===c?" selected":"";o.push(`<option value="${l}"${p}>${l}</option>`)}),!a&&i&&!t.some(n=>(n.name||"").trim()===i)){const n=Utils.escapeHTML(i);o.splice(1,0,`<option value="${n}" selected>${n}</option>`)}return o.join("")},getDepartmentOptions(){const e=new Set,t=AppState.companySettings||{};return(Array.isArray(t.formDepartments)?t.formDepartments:typeof t.formDepartments=="string"?t.formDepartments.split(/\n|,/).map(i=>i.trim()).filter(Boolean):[]).forEach(i=>{const o=(i||"").toString().trim();o&&e.add(o)}),(Array.isArray(t.departments)?t.departments:typeof t.departments=="string"?t.departments.split(/\n|,/).map(i=>i.trim()).filter(Boolean):[]).forEach(i=>{const o=(i||"").toString().trim();o&&e.add(o)}),Array.isArray(AppState.companySettings?.departments)&&AppState.companySettings.departments.forEach(i=>{const o=(i||"").toString().trim();o&&e.add(o)}),(AppState.appData.employees||[]).forEach(i=>{const o=(i.department||"").trim();o&&e.add(o)}),(AppState.appData.nearmiss||[]).forEach(i=>{const o=(i.department||i.responsibleDepartment||"").trim();o&&e.add(o)}),(AppState.appData.incidents||[]).forEach(i=>{const o=(i.affectedDepartment||i.department||"").trim();o&&e.add(o)}),(AppState.appData.dailyObservations||[]).forEach(i=>{const o=(i.responsibleDepartment||"").trim();o&&e.add(o)}),Array.from(e).filter(Boolean).sort((i,o)=>i.localeCompare(o,"ar"))},getSafetyTeamMembers(){try{if(typeof Training<"u"&&typeof Training.getSafetyTeamMembers=="function")return Training.getSafetyTeamMembers()}catch(e){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A getSafetyTeamMembers:",e)}return[]},isSystemManager(){if(!AppState.currentUser)return!1;const e=(AppState.currentUser.role||"").toLowerCase();return e==="admin"||e==="\u0645\u062F\u064A\u0631"},getSystemManagers(){const e=[];return(AppState.appData.users||[]).forEach(t=>{const s=(t.role||"").toLowerCase();if(s==="admin"||s==="\u0645\u062F\u064A\u0631"){const a=t.name||t.fullName||t.email||"";a&&e.push({id:t.id||t.email||a,name:a})}}),e.length>0?e:[{id:"admin",name:AppState.currentUser?.name||"\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"}]},async handleAttachmentSelection(e,t){if(!(!e||e.length===0)){for(const s of Array.from(e)){if(!this.isSupportedAttachmentType(s.type)){Notification.warning(`\u0635\u064A\u063A\u0629 \u0627\u0644\u0645\u0644\u0641 ${s.name} \u063A\u064A\u0631 \u0645\u062F\u0639\u0648\u0645\u0629. \u064A\u0633\u0645\u062D \u0641\u0642\u0637 \u0628\u0645\u0644\u0641\u0627\u062A JPG \u0648 PNG \u0648 PDF.`);continue}if(s.size>this.MAX_ATTACHMENT_SIZE){Notification.warning(`\u062D\u062C\u0645 \u0627\u0644\u0645\u0644\u0641 ${s.name} \u064A\u062A\u062C\u0627\u0648\u0632 \u0627\u0644\u062D\u062F \u0627\u0644\u0645\u0633\u0645\u0648\u062D \u0628\u0647 (10MB).`);continue}try{const a=await this.convertFileToBase64(s);this.state.currentAttachments.push({id:Utils.generateId("ATT"),name:s.name,type:s.type||this.detectMimeType(s.name),size:s.size,data:a})}catch(a){Utils.safeError("Failed to process attachment:",a),Notification.error(`\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0641 ${s.name}`)}}this.updateAttachmentsPreview(t)}},isSupportedAttachmentType(e=""){return e?["image/jpeg","image/png","application/pdf"].some(t=>e.toLowerCase()===t):!0},updateAttachmentsPreview(e){if(!e)return;if(!Array.isArray(this.state.currentAttachments)||this.state.currentAttachments.length===0){e.innerHTML='<p style="text-align: center; color: var(--text-secondary); font-size: 0.9375rem; padding: 1rem;">\u0644\u0645 \u064A\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0645\u0631\u0641\u0642\u0627\u062A.</p>';const s=e.closest("form");if(s){const a=s.querySelector("#observation-image-row");a&&a.classList.add("hidden")}return}e.innerHTML=this.state.currentAttachments.map(s=>this.buildAttachmentPreviewCard(s)).join("");const t=e.closest("form");if(t){const s=t.querySelector("#observation-image-row"),a=t.querySelector("#observation-image-display");if(s&&a){const i=this.state.currentAttachments.filter(o=>(o.type||"").startsWith("image/"));i.length>0?(s.classList.remove("hidden"),a.innerHTML=i.map(o=>`
+                        <div style="display: inline-block; margin: 0.5rem; text-align: center;">
+                            <img src="${o.data}" alt="${Utils.escapeHTML(o.name||"")}" style="max-width: 250px; max-height: 200px; border-radius: 12px; border: 2px solid var(--border-color); cursor: pointer; transition: transform 0.3s ease;" onclick="window.open('${o.data}', '_blank')" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            <p style="font-size: 0.8125rem; color: var(--text-secondary); margin-top: 0.5rem; text-align: center;">${Utils.escapeHTML(o.name||"")}</p>
+                        </div>
+                    `).join("")):s.classList.add("hidden")}}e.querySelectorAll("[data-remove-attachment]").forEach(s=>{s.addEventListener("click",()=>{const a=s.getAttribute("data-remove-attachment");this.state.currentAttachments=this.state.currentAttachments.filter(i=>i.id!==a),this.updateAttachmentsPreview(e)})}),e.querySelectorAll("[data-open-attachment]").forEach(s=>{s.addEventListener("click",()=>{const a=s.getAttribute("data-open-attachment"),i=this.state.currentAttachments.find(o=>o.id===a);i&&i.data&&window.open(i.data,"_blank")})})},buildAttachmentPreviewCard(e){const t=(e.type||"").startsWith("image/"),s=e.size?`${(e.size/(1024*1024)).toFixed(1)} MB`:"",a=Utils.escapeHTML(e.name||"\u0645\u0631\u0641\u0642 \u0628\u062F\u0648\u0646 \u0627\u0633\u0645");return t?`
+                <div class="attachment-item">
+                    <img src="${e.data}" alt="${a}" class="attachment-image">
+                    <button type="button" data-remove-attachment="${e.id}" class="attachment-remove" aria-label="\u062D\u0630\u0641 \u0627\u0644\u0645\u0631\u0641\u0642">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div style="padding: 0.75rem; background: var(--bg-secondary); border-top: 2px solid var(--border-color);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                            <span style="font-size: 0.8125rem; color: var(--text-primary); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${a}</span>
+                            ${s?`<span style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;">${s}</span>`:""}
+                        </div>
+                        <button type="button" data-open-attachment="${e.id}" style="margin-top: 0.5rem; width: 100%; padding: 0.5rem; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-size: 0.8125rem; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.background='#004C8C'" onmouseout="this.style.background='var(--primary-color, #003865)'">
+                            <i class="fas fa-search-plus" style="margin-left: 0.5rem;"></i>\u0639\u0631\u0636 \u0627\u0644\u0635\u0648\u0631\u0629
+                        </button>
+                    </div>
+                </div>
+            `:`
+            <div class="attachment-item" style="display: flex; align-items: flex-start; gap: 1rem; padding: 1rem;">
+                <div style="flex-shrink: 0; width: 48px; height: 48px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem;">
+                    <i class="fas fa-file-pdf"></i>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                    <p style="font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); margin: 0 0 0.25rem 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${a}</p>
+                    ${s?`<p style="font-size: 0.8125rem; color: var(--text-secondary); margin: 0 0 0.75rem 0;">${s}</p>`:'<p style="margin-bottom: 0.75rem;"></p>'}
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button type="button" data-open-attachment="${e.id}" style="flex: 1; padding: 0.625rem; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-size: 0.8125rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.background='#004C8C'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='var(--primary-color, #003865)'; this.style.transform='translateY(0)'">
+                            <i class="fas fa-eye" style="margin-left: 0.5rem;"></i>\u0639\u0631\u0636
+                        </button>
+                        <button type="button" data-remove-attachment="${e.id}" style="flex: 1; padding: 0.625rem; background: #ef4444; color: white; border: none; border-radius: 8px; font-size: 0.8125rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.background='#dc2626'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#ef4444'; this.style.transform='translateY(0)'">
+                            <i class="fas fa-trash" style="margin-left: 0.5rem;"></i>\u062D\u0630\u0641
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `},normalizeRecord(e={}){if(!e||typeof e!="object")return{id:"",isoCode:"",siteId:"",siteName:"",placeId:"",locationName:"",observationType:"",date:"",shift:"",details:"",correctiveAction:"",responsibleDepartment:"",riskLevel:"",observerName:"",expectedCompletionDate:"",status:"\u0645\u0641\u062A\u0648\u062D",overdays:0,timestamp:"",reviewedBy:"",remarks:"",attachments:[],afterExecutionImages:[],createdAt:"",updatedAt:"",workflowStage:"",submittedBy:"",submittedByEmail:"",submittedAt:"",specialistReviewedBy:"",specialistReviewedAt:"",specialistComments:"",managerApprovedBy:"",managerApprovedAt:"",managerComments:"",departmentActionBy:"",departmentActionAt:"",rejectionReason:"",assignedToName:"",assignedToEmail:""};const t=e.siteId||e.site||e.locationSiteId||"",s=e.placeId||e.locationId||e.place||"",a=e.locationName||e.placeName||e.location||e.customLocationName||"",i=e.dateTime||e.date||e.observationDate||"",o=e.expectedCompletionDate||e.targetCompletionDate||e.dueDate||"",r=e.details||e.description||e.observationDetails||"";let n=e.attachments||e.files||e.images;n?typeof n=="string"?n=[n]:Array.isArray(n)||(n=[n]):n=[];const c=this.normalizeObservationTypeValue(e.observationType||e.type||""),d=this.normalizeShiftValue(e.shift||e.workShift||""),l=this.normalizeRiskLevelValue(e.riskLevel||e.risk||""),p=this.normalizeStatus(e.status);let m=e.afterExecutionImages||[];if(typeof m=="string")try{m=JSON.parse(m)}catch{m=[]}else Array.isArray(m)||(m=[m]);const u=this.parseExcelDateValue(i)||"",f=this.parseExcelDateValue(o,{isDateOnly:!0})||"",y=this.parseExcelDateValue(e.createdAt)||"",h=this.parseExcelDateValue(e.updatedAt||e.modifiedAt||e.createdAt)||"",k=this.parseExcelDateValue(e.timestamp||e.createdAt)||y||new Date().toISOString();let b=e.overdays;if(b==null)if(u){const g=new Date(u);Number.isNaN(g.getTime())?b=0:(b=Math.floor((new Date().getTime()-g.getTime())/(1e3*60*60*24)),b<0&&(b=0))}else b=0;const S=e.id||e.observationId||"",v=e.isoCode||e.code||(S?getObservationIsoCodeFromId(S):"");return{id:S,isoCode:v,siteId:t,siteName:e.siteName||this.lookupSiteName(t),placeId:s,locationName:a||this.lookupPlaceName(t,s),observationType:c,date:u,shift:d,details:r,correctiveAction:e.correctiveAction||e.preventiveAction||"",responsibleDepartment:e.responsibleDepartment||e.responsible||e.department||"",riskLevel:l,observerName:e.observerName||e.owner||e.supervisor||"",expectedCompletionDate:f,status:p,overdays:b,timestamp:k,reviewedBy:e.reviewedBy||"",remarks:e.remarks||"",attachments:this.normalizeAttachments(n),afterExecutionImages:m,createdAt:y||k||new Date().toISOString(),updatedAt:h||y||k||new Date().toISOString(),workflowStage:e.workflowStage||"",submittedBy:e.submittedBy||"",submittedByEmail:e.submittedByEmail||"",submittedAt:e.submittedAt||"",specialistReviewedBy:e.specialistReviewedBy||"",specialistReviewedAt:e.specialistReviewedAt||"",specialistComments:e.specialistComments||"",managerApprovedBy:e.managerApprovedBy||"",managerApprovedAt:e.managerApprovedAt||"",managerComments:e.managerComments||"",departmentActionBy:e.departmentActionBy||"",departmentActionAt:e.departmentActionAt||"",rejectionReason:e.rejectionReason||"",assignedToName:e.assignedToName||"",assignedToEmail:e.assignedToEmail||""}},normalizeAttachments(e=[]){return Array.isArray(e)?e.map((t,s)=>this.normalizeAttachment(t,s)).filter(Boolean):e&&typeof e=="object"?[this.normalizeAttachment(e,0)].filter(Boolean):[]},normalizeAttachment(e,t=0){if(!e)return null;let s="",a="",i="",o=0,r="";if(typeof e=="string"){const n=e.match(/^(.+?)\s*-\s*(https?:\/\/.+)$/);n?(a=n[1].trim(),s=n[2].trim()):(s=e,a=`\u0645\u0631\u0641\u0642-${t+1}`),i=this.detectMimeType(a,s),r=Utils.generateId("ATT")}else if(typeof e=="object"){let n=e.data||e.base64||e.url||"";const c=typeof n=="string"?n.match(/^(.+?)\s*-\s*(https?:\/\/.+)$/):null;s=c?c[2].trim():n,a=e.name||(c?c[1].trim():"")||`\u0645\u0631\u0641\u0642-${t+1}`,i=e.type||e.mimeType||this.detectMimeType(a,s),o=e.size||e.fileSize||(s?this.calculateBase64Size(s):0),r=e.id||Utils.generateId("ATT")}return s?{id:r,name:a,type:i,size:o,data:s}:null},detectMimeType(e="",t=""){const s=(e||"").toLowerCase();if(s.endsWith(".pdf"))return"application/pdf";if(s.endsWith(".png"))return"image/png";if(s.endsWith(".jpg")||s.endsWith(".jpeg"))return"image/jpeg";if(this.isDataUrl(t)){const a=t.match(/^data:([^;]+);/);if(a&&a[1])return a[1]}return"application/octet-stream"},calculateBase64Size(e=""){if(!e)return 0;const t=e.split(",")[1]||e,s=(t.match(/=+$/)||[""])[0].length;return t.length*3/4-s},isDataUrl(e=""){return typeof e=="string"&&e.startsWith("data:")},formatDateTimeLocal(e){if(!e)return"";const t=new Date(e);if(Number.isNaN(t.getTime()))return"";const s=t.getTimezoneOffset();return new Date(t.getTime()-s*6e4).toISOString().slice(0,16)},loadPlacesForSite(e,t,s,a,i,o="",r=""){if(t){this.state.isLoadingPlaces=!0;try{const n=this.getPlacesForSiteSync(e);if(this.state.availablePlaces=n,!n||n.length===0){t.innerHTML='<option value="__custom__">\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0645\u0627\u0643\u0646 \u0645\u0633\u062C\u0644\u0629 - \u0623\u062F\u062E\u0644 \u0645\u0643\u0627\u0646\u0627\u064B \u064A\u062F\u0648\u064A\u0627\u064B</option>',t.disabled=!1,t.value="__custom__",this.state.selectedPlaceId="",this.state.isCustomLocationSelected=!0,r&&(a.value=r,this.state.customLocationName=r),s.classList.remove("hidden"),i.classList.remove("hidden");return}const c=['<option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0643\u0627\u0646</option>',...n.map(d=>`
+                    <option value="${Utils.escapeHTML(d.id)}" data-name="${Utils.escapeHTML(d.name)}">${Utils.escapeHTML(d.name)}</option>
+                `),'<option value="__custom__">\u0645\u0643\u0627\u0646 \u0622\u062E\u0631 (\u0625\u062F\u062E\u0627\u0644 \u064A\u062F\u0648\u064A)</option>'];if(t.innerHTML=c.join(""),t.disabled=!1,o&&n.some(d=>d.id===o))t.value=o,this.state.selectedPlaceId=o,i.classList.remove("hidden");else if(!o&&r){const d=n.find(l=>l.name===r);d?(t.value=d.id,this.state.selectedPlaceId=d.id,i.classList.remove("hidden")):(t.value="__custom__",a.value=r,s.classList.remove("hidden"),i.classList.remove("hidden"),this.state.customLocationName=r,this.state.isCustomLocationSelected=!0)}}catch(n){Utils.safeError("Failed to load places:",n),Notification.error("\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0623\u0645\u0627\u0643\u0646 \u0627\u0644\u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u0627\u0644\u0645\u0648\u0642\u0639"),t.innerHTML='<option value="__custom__">\u062D\u062F\u062B \u062E\u0637\u0623 - \u0627\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0625\u062F\u062E\u0627\u0644 \u0627\u0644\u064A\u062F\u0648\u064A</option>',t.disabled=!1,t.value="__custom__",this.state.selectedPlaceId="",this.state.isCustomLocationSelected=!0,s.classList.remove("hidden"),i.classList.remove("hidden")}finally{this.state.isLoadingPlaces=!1}}},getRiskBadgeClass(e=""){switch((this.normalizeRiskLevelValue(e)||"").trim()){case"\u0639\u0627\u0644\u064A":return"danger";case"\u0645\u062A\u0648\u0633\u0637":return"warning";case"\u0645\u0646\u062E\u0641\u0636":return"success";default:return"secondary"}},getStatusBadgeClass(e=""){const s=String(e||"").trim().toLowerCase();return["\u0645\u0641\u062A\u0648\u062D","\u0645\u0641\u062A\u0648\u062D\u0629","\u0645\u062A\u0648\u062D\u0629","open","opened"].includes(s)?"warning":["\u062C\u0627\u0631\u064A","\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u0646\u0641\u064A\u0630","\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630","\u0642\u064A\u062F \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629","in progress","ongoing","progress","active"].includes(s)?"info":["\u0645\u063A\u0644\u0642","\u0645\u062D\u0644\u0648\u0644","\u0645\u062D\u0644\u0648\u0644\u0629","\u0645\u0646\u062C\u0632","\u0645\u0643\u062A\u0645\u0644","closed","done","completed","resolved"].includes(s)?"success":"secondary"},normalizeStatus(e=""){const t=String(e||"").trim();if(!t)return"\u0645\u0641\u062A\u0648\u062D";const s=t.toLowerCase();return["\u0645\u0641\u062A\u0648\u062D","\u0645\u0641\u062A\u0648\u062D\u0629","\u0645\u062A\u0648\u062D\u0629","open","opened"].includes(s)?"\u0645\u0641\u062A\u0648\u062D":["\u062C\u0627\u0631\u064A","\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u0646\u0641\u064A\u0630","\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630","\u0642\u064A\u062F \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629","in progress","ongoing","progress","active"].includes(s)?"\u062C\u0627\u0631\u064A":["\u0645\u063A\u0644\u0642","\u0645\u062D\u0644\u0648\u0644","\u0645\u062D\u0644\u0648\u0644\u0629","\u0645\u0646\u062C\u0632","\u0645\u0643\u062A\u0645\u0644","closed","done","completed","resolved"].includes(s)?"\u0645\u063A\u0644\u0642":t},async showForm(e=null){const t=e?this.normalizeRecord(e):null;this.resetFormState(),t&&(this.state.editingId=t.id,this.state.currentAttachments=Array.isArray(t.attachments)?t.attachments.map(h=>Object.assign({},h)):[]);const s=document.createElement("div");s.className="modal-overlay observation-form-overlay",s.innerHTML=`
+            <div class="modal-content observation-form-modal">
+                <div class="modal-header observation-form-header">
+                    <h2 class="modal-title observation-form-title">${t?"\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0627\u0644\u064A\u0648\u0645\u064A\u0629":"\u0625\u0636\u0627\u0641\u0629 \u0645\u0644\u0627\u062D\u0638\u0629 \u064A\u0648\u0645\u064A\u0629"}</h2>
+                    <button class="modal-close observation-form-close" aria-label="\u0625\u063A\u0644\u0627\u0642">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body observation-form-body">
+                    <form id="observation-form" class="observation-form space-y-6">
+                        <div class="observation-form-step observation-step-1">
+                            <div class="step-header">
+                                <h3 class="step-title">
+                                    <i class="fas fa-map-marker-alt step-icon"></i>
+                                    \u0627\u0644\u062E\u0637\u0648\u0629 1: \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0645\u0648\u0642\u0639
+                                </h3>
+                                <p class="step-description">\u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 \u062B\u0645 \u0627\u0644\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u0631\u062A\u0628\u0637 \u0628\u0647 \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A.</p>
+                            </div>
+                            <div class="form-grid form-grid-2">
+                                <div class="form-group">
+                                    <label for="observation-site" class="form-label required">\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0642\u0639 / \u0627\u0644\u0645\u0643\u0627\u0646</label>
+                                    <select id="observation-site" class="form-input form-select" required>
+                                        <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="observation-place" class="form-label required">\u0627\u0644\u0645\u0643\u0627\u0646 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u0648\u0642\u0639</label>
+                                    <select id="observation-place" class="form-input form-select" required disabled>
+                                        <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 \u0623\u0648\u0644\u0627\u064B</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="custom-location-wrapper" class="form-group hidden">
+                                <label for="custom-location-input" class="form-label">\u0645\u0643\u0627\u0646 \u0622\u062E\u0631 (\u0625\u062F\u062E\u0627\u0644 \u064A\u062F\u0648\u064A)</label>
+                                <input type="text" id="custom-location-input" class="form-input" placeholder="\u0645\u062B\u0627\u0644: \u062E\u0637 \u0627\u0644\u0625\u0646\u062A\u0627\u062C 3">
+                            </div>
+                        </div>
+
+                        <div id="observation-step-2" class="observation-form-step observation-step-2 hidden">
+                            <div class="step-header">
+                                <h3 class="step-title">
+                                    <i class="fas fa-clipboard-list step-icon"></i>
+                                    \u0627\u0644\u062E\u0637\u0648\u0629 2: \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629
+                                </h3>
+                                <p class="step-description">\u0623\u062F\u062E\u0644 \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629\u060C \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629 \u0648\u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0645\u0631\u062A\u0628\u0637\u0629.</p>
+                            </div>
+
+                            <div class="form-grid form-grid-2">
+                                <div class="form-group">
+                                    <label for="observation-type" class="form-label required">\u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629</label>
+                                    <select id="observation-type" class="form-input form-select" required>
+                                        <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0646\u0648\u0639</option>
+                                        ${this.OBSERVATION_TYPES.map(h=>`
+                                            <option value="${Utils.escapeHTML(h.value)}">${Utils.escapeHTML(h.label)}</option>
+                                        `).join("")}
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="observation-date" class="form-label required">\u062A\u0627\u0631\u064A\u062E \u0648\u0648\u0642\u062A \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629</label>
+                                    <input type="datetime-local" id="observation-date" class="form-input form-datetime" required>
+                                </div>
+                            </div>
+
+                            <div class="form-grid form-grid-2">
+                                <div class="form-group">
+                                    <label class="form-label">\u0627\u0644\u0648\u0631\u062F\u064A\u0629</label>
+                                    <select id="observation-shift" class="form-input form-select">
+                                        <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0648\u0631\u062F\u064A\u0629</option>
+                                        ${this.SHIFTS.map(h=>`
+                                            <option value="${Utils.escapeHTML(h)}">${Utils.escapeHTML(h)}</option>
+                                        `).join("")}
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label required">\u0645\u0639\u062F\u0644 \u0627\u0644\u062E\u0637\u0648\u0631\u0629</label>
+                                    <select id="observation-risk" class="form-input form-select" required>
+                                        <option value="">\u0627\u062E\u062A\u0631 \u0645\u0639\u062F\u0644 \u0627\u0644\u062E\u0637\u0648\u0631\u0629</option>
+                                        ${this.RISK_LEVELS.map(h=>`
+                                            <option value="${Utils.escapeHTML(h)}">${Utils.escapeHTML(h)}</option>
+                                        `).join("")}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-grid form-grid-2">
+                                <div class="form-group">
+                                    <label class="form-label required">\u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u0639\u0646 \u0627\u0644\u062A\u0646\u0641\u064A\u0630</label>
+                                    <select id="observation-responsible" class="form-input form-select" required>
+                                        <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0625\u062F\u0627\u0631\u0629</option>
+                                        ${this.getDepartmentOptions().map(h=>`
+                                            <option value="${Utils.escapeHTML(h)}">${Utils.escapeHTML(h)}</option>
+                                        `).join("")}
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label required">\u0627\u0644\u062D\u0627\u0644\u0629</label>
+                                    <select id="observation-status" class="form-input form-select" required>
+                                        <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u062D\u0627\u0644\u0629</option>
+                                        ${this.STATUS_OPTIONS.map(h=>`
+                                            <option value="${Utils.escapeHTML(h)}">${Utils.escapeHTML(h)}</option>
+                                        `).join("")}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-grid form-grid-2">
+                                <div class="form-group">
+                                    <label class="form-label" for="observation-owner">\u0627\u0633\u0645 \u0635\u0627\u062D\u0628 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629</label>
+                                    <select id="observation-owner" class="form-input form-select" aria-describedby="observation-owner-hint">
+                                        ${this.buildObservationOwnerSelectOptionsHtml(t)}
+                                    </select>
+                                    <p id="observation-owner-hint" class="text-xs opacity-80 mt-1" style="color: var(--text-secondary, #64748b);">
+                                        ${t?"\u064A\u0645\u0643\u0646\u0643 \u062A\u063A\u064A\u064A\u0631 \u0627\u0644\u0627\u0633\u0645 \u0645\u0646 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0625\u0646 \u0644\u0632\u0645.":"\u064A\u064F\u0639\u0631\u0636 \u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0627\u064B \u0627\u0633\u0645 \u062D\u0633\u0627\u0628\u0643 \u0627\u0644\u062D\u0627\u0644\u064A\u061B \u0627\u062E\u062A\u0631 \u0627\u0633\u0645\u0627\u064B \u0622\u062E\u0631 \u0645\u0646 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0625\u0630\u0627 \u0633\u062C\u0651\u0644\u062A \u0646\u064A\u0627\u0628\u0629 \u0639\u0646 \u0632\u0645\u064A\u0644."}
+                                    </p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="observation-expected-date" class="form-label">\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062A\u0648\u0642\u0639 \u0644\u0644\u062A\u0646\u0641\u064A\u0630</label>
+                                    <input type="date" id="observation-expected-date" class="form-input form-date">
+                                </div>
+                            </div>
+
+                            <div class="form-grid form-grid-2">
+                                <div class="form-group">
+                                    <label class="form-label">Overdays</label>
+                                    <input type="text" id="observation-overdays" class="form-input form-readonly" readonly placeholder="\u0633\u064A\u062A\u0645 \u0627\u0644\u062D\u0633\u0627\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Timestamp</label>
+                                    <input type="text" id="observation-timestamp" class="form-input form-readonly" readonly placeholder="\u0633\u064A\u062A\u0645 \u0627\u0644\u062A\u0639\u0628\u0626\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label required">\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 / \u0627\u0644\u062A\u0635\u0631\u0641 \u063A\u064A\u0631 \u0627\u0644\u0622\u0645\u0646</label>
+                                <textarea id="observation-details" class="form-input form-textarea" rows="5" required placeholder="\u0623\u062F\u062E\u0644 \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0628\u0627\u0644\u0643\u0627\u0645\u0644...">${t?Utils.escapeHTML(t.details||""):""}</textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A / \u0627\u0644\u0648\u0642\u0627\u0626\u064A</label>
+                                <textarea id="observation-corrective" class="form-input form-textarea" rows="5" placeholder="\u0635\u0641 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u0637\u0644\u0648\u0628 \u0623\u0648 \u0627\u0644\u0645\u0646\u0641\u0630...">${t?Utils.escapeHTML(t.correctiveAction||""):""}</textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="observation-attachments" class="form-label form-label-file">
+                                    <i class="fas fa-paperclip form-label-icon"></i>
+                                    \u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u062A\u0648\u0636\u064A\u062D\u064A\u0629 \u0644\u0644\u0645\u0644\u0627\u062D\u0638\u0629 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)
+                                </label>
+                                <div class="file-input-wrapper">
+                                    <input type="file" id="observation-attachments" class="form-input form-file" accept=".jpg,.jpeg,.png,.pdf" multiple>
+                                    <div class="file-input-hint">
+                                        <i class="fas fa-info-circle"></i>
+                                        \u064A\u0645\u0643\u0646 \u0631\u0641\u0639 \u0623\u0643\u062B\u0631 \u0645\u0646 \u0645\u0644\u0641 \u0628\u0635\u064A\u063A JPG \u0623\u0648 PNG \u0623\u0648 PDF (\u0628\u062D\u062F \u0623\u0642\u0635\u0649 10MB \u0644\u0643\u0644 \u0645\u0644\u0641)
+                                    </div>
+                                </div>
+                                <div id="observation-attachments-preview" class="attachments-preview"></div>
+                            </div>
+
+                            <div id="observation-image-row" class="form-group hidden">
+                                <label class="form-label">\u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u0631\u0641\u0648\u0639\u0629</label>
+                                <div id="observation-image-display" class="image-display-container">
+                                    <p class="image-display-placeholder">\u0644\u0645 \u064A\u062A\u0645 \u0631\u0641\u0639 \u0623\u064A \u0635\u0648\u0631\u0629 \u0628\u0639\u062F</p>
+                                </div>
+                            </div>
+
+                            ${this.isSystemManager()?`
+                            <div class="form-grid form-grid-2">
+                                <div class="form-group">
+                                    <label class="form-label required">Reviewed by</label>
+                                    <select id="observation-reviewed-by" class="form-input form-select" required>
+                                        <option value="">\u0627\u062E\u062A\u0631 \u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645</option>
+                                        ${this.getSystemManagers().map(h=>`
+                                            <option value="${Utils.escapeHTML(h.name||h)}">${Utils.escapeHTML(h.name||h)}</option>
+                                        `).join("")}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Remarks (\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u0642\u0637)</label>
+                                <textarea id="observation-remarks" class="form-input form-textarea" rows="4" placeholder="\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0645\u062F\u064A\u0631...">${t?Utils.escapeHTML(t.remarks||""):""}</textarea>
+                            </div>
+                            `:""}
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer observation-form-footer">
+                    <button type="button" class="btn-secondary observation-btn-cancel" id="cancel-observation-btn">\u0625\u0644\u063A\u0627\u0621</button>
+                    <button type="button" id="save-observation-btn" class="btn-primary observation-btn-save">
+                        <i class="fas fa-save ml-2"></i>
+                        \u062D\u0641\u0638
+                    </button>
+                </div>
+            </div>
+        `,document.body.appendChild(s),this.state.activeModal=s;const a=s.querySelector("#observation-form"),i=a.querySelector("#observation-site"),o=a.querySelector("#observation-place"),r=a.querySelector("#custom-location-wrapper"),n=a.querySelector("#custom-location-input"),c=a.querySelector("#observation-attachments"),d=a.querySelector("#observation-attachments-preview"),l=a.querySelector("#observation-step-2"),p=this.getAllSites();if(p.length===0?(i.innerHTML='<option value="">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0648\u0627\u0642\u0639 \u0645\u062A\u0627\u062D\u0629</option>',i.disabled=!0,Notification.warning("\u0644\u0645 \u064A\u062A\u0645 \u0625\u0639\u062F\u0627\u062F \u0627\u0644\u0645\u0648\u0627\u0642\u0639 \u0628\u0639\u062F. \u064A\u0631\u062C\u0649 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0645\u0648\u0627\u0642\u0639 \u0645\u0646 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A.")):(i.innerHTML=['<option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639</option>',...p.map(h=>`
+                <option value="${Utils.escapeHTML(h.id)}">${Utils.escapeHTML(h.name)}</option>
+            `)].join(""),i.disabled=!1),!t){const h=a.querySelector("#observation-timestamp");h&&(h.value=Utils.formatDateTime(new Date().toISOString()))}const m=()=>{const h=a.querySelector("#observation-date"),k=a.querySelector("#observation-overdays");if(h&&k&&h.value){const b=new Date(h.value),v=Math.floor((new Date().getTime()-b.getTime())/(1e3*60*60*24));k.value=v>0?`${v} \u064A\u0648\u0645`:"0 \u064A\u0648\u0645"}};if(t){p.some(g=>g.id===t.siteId)&&(i.value=t.siteId,this.state.selectedSiteId=t.siteId,this.state.selectedSiteName=this.lookupSiteName(t.siteId));const h=a.querySelector("#observation-date");h&&t.date&&(h.value=this.formatDateTimeLocal(t.date),m()),a.querySelector("#observation-type").value=t.observationType||"",a.querySelector("#observation-shift").value=t.shift||"",a.querySelector("#observation-risk").value=t.riskLevel||"",a.querySelector("#observation-responsible").value=t.responsibleDepartment||"",a.querySelector("#observation-status").value=t.status||"";const k=a.querySelector("#observation-owner"),b=String(t.observerName||"").trim();if(k&&b){if(!Array.from(k.options).some(g=>g.value===b)){const g=document.createElement("option");g.value=b,g.textContent=b,k.insertBefore(g,k.children[1]||null)}k.value=b}const S=a.querySelector("#observation-overdays");S&&t.overdays!==void 0&&(S.value=`${t.overdays} \u064A\u0648\u0645`);const v=a.querySelector("#observation-timestamp");if(v&&(v.value=t.timestamp?Utils.formatDateTime(t.timestamp):Utils.formatDateTime(t.createdAt||new Date().toISOString())),this.isSystemManager()){const g=a.querySelector("#observation-reviewed-by");g&&t.reviewedBy&&(g.value=t.reviewedBy);const T=a.querySelector("#observation-remarks");T&&t.remarks&&(T.value=t.remarks)}if(t.expectedCompletionDate){const g=a.querySelector("#observation-expected-date");g&&(g.value=t.expectedCompletionDate.slice(0,10))}if(Array.isArray(t.attachments)&&t.attachments.length>0){this.updateAttachmentsPreview(d);const g=a.querySelector("#observation-image-row"),T=a.querySelector("#observation-image-display");if(g&&T){const L=t.attachments.filter(D=>(D.type||"").startsWith("image/"));L.length>0&&(g.classList.remove("hidden"),T.innerHTML=L.map(D=>`
+                            <div class="inline-block m-2">
+                                <img src="${D.data}" alt="${Utils.escapeHTML(D.name||"")}" class="max-w-xs max-h-48 rounded border cursor-pointer" onclick="window.open('${D.data}', '_blank')">
+                            </div>
+                        `).join(""))}}else d.innerHTML='<p class="text-sm text-gray-500">\u0644\u0645 \u064A\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0645\u0631\u0641\u0642\u0627\u062A.</p>'}else d.innerHTML='<p class="text-sm text-gray-500">\u0644\u0645 \u064A\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0645\u0631\u0641\u0642\u0627\u062A \u0628\u0639\u062F.</p>';const u=a.querySelector("#observation-date");u&&(u.addEventListener("change",m),u.addEventListener("input",m)),i.addEventListener("change",h=>{const k=h.target.value;if(this.state.selectedSiteId=k,this.state.selectedSiteName=this.lookupSiteName(k),this.state.selectedPlaceId="",this.state.customLocationName="",this.state.isCustomLocationSelected=!1,n.value="",r.classList.add("hidden"),l.classList.add("hidden"),!k){o.innerHTML='<option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 \u0623\u0648\u0644\u0627\u064B</option>',o.disabled=!0;return}this.loadPlacesForSite(k,o,r,n,l)}),o.addEventListener("change",h=>{const k=h.target.value;if(!k){this.state.selectedPlaceId="",this.state.isCustomLocationSelected=!1,r.classList.add("hidden"),n.value="",l.classList.add("hidden");return}if(k==="__custom__"){this.state.selectedPlaceId="",this.state.isCustomLocationSelected=!0,this.state.customLocationName=n.value.trim(),r.classList.remove("hidden"),l.classList.remove("hidden"),n.focus();return}const b=h.target.selectedOptions[0];this.state.selectedPlaceId=k,this.state.isCustomLocationSelected=!1,this.state.customLocationName=b?b.getAttribute("data-name")||b.textContent.trim():"",r.classList.add("hidden"),n.value="",l.classList.remove("hidden")}),c&&c.addEventListener("change",async h=>{await this.handleAttachmentSelection(h.target.files,d),c.value=""});const f=()=>{s.remove(),this.resetFormState()};s.querySelector(".modal-close").addEventListener("click",f),s.querySelector("#cancel-observation-btn").addEventListener("click",f);const y=s.querySelector("#save-observation-btn");y.addEventListener("click",async()=>{if(y&&y.disabled){Notification.warning("\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638... \u0627\u0644\u0631\u062C\u0627\u0621 \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631");return}let h="";y&&(h=y.innerHTML,y.disabled=!0,y.innerHTML='<i class="fas fa-spinner fa-spin ml-2"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638...');try{await this.handleSubmit(a,t?.id||null,s),y&&(y.disabled=!1,y.innerHTML=h)}catch(k){throw y&&(y.disabled=!1,y.innerHTML=h),k}}),s.addEventListener("click",h=>{h.target===s&&f()}),t&&t.siteId&&(this.loadPlacesForSite(t.siteId,o,r,n,l,t.placeId,t.locationName),t.placeId?(o.value=t.placeId,o.dispatchEvent(new Event("change"))):t.locationName&&(o.value="__custom__",r.classList.remove("hidden"),n.value=t.locationName,this.state.customLocationName=t.locationName,this.state.isCustomLocationSelected=!0,l.classList.remove("hidden")))},async handleSubmit(e,t=null,s){if(!e)return;const a=e.querySelector("#observation-site"),i=e.querySelector("#observation-place"),o=e.querySelector("#custom-location-input"),r=e.querySelector("#observation-type"),n=e.querySelector("#observation-date"),c=e.querySelector("#observation-shift"),d=e.querySelector("#observation-risk"),l=e.querySelector("#observation-responsible"),p=e.querySelector("#observation-status"),m=e.querySelector("#observation-owner"),u=e.querySelector("#observation-expected-date"),f=e.querySelector("#observation-details"),y=e.querySelector("#observation-corrective"),h=e.querySelector("#observation-overdays"),k=e.querySelector("#observation-timestamp"),b=e.querySelector("#observation-reviewed-by"),S=e.querySelector("#observation-remarks"),v=a?.value||"";if(!v){Notification.warning("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0645\u0648\u0642\u0639.");return}let g="",T="";if(!i){Notification.warning("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0645\u0643\u0627\u0646 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u0648\u0642\u0639.");return}const L=i.value;if(!L){Notification.warning("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0645\u0643\u0627\u0646 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u0648\u0642\u0639.");return}if(L==="__custom__"){if(g=(o?.value||"").trim(),!g){Notification.warning("\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0627\u0633\u0645 \u0627\u0644\u0645\u0643\u0627\u0646."),o?.focus();return}T=""}else{T=L;const H=i.selectedOptions[0];g=H?H.getAttribute("data-name")||H.textContent.trim():""}const D=r?.value||"";if(!D){Notification.warning("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629.");return}const O=(f?.value||"").trim();if(!O){Notification.warning("\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629.");return}const N=l?.value||"";if(!N){Notification.warning("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u0639\u0646 \u0627\u0644\u062A\u0646\u0641\u064A\u0630.");return}const w=d?.value||"";if(!w){Notification.warning("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0645\u0639\u062F\u0644 \u0627\u0644\u062E\u0637\u0648\u0631\u0629.");return}let E=(p?.value||"").trim();if(!t)E="\u0645\u0641\u062A\u0648\u062D";else if(!E){Notification.warning("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u062D\u0627\u0644\u0629.");return}const x=n?.value||"";if(!x){Notification.warning("\u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062F \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0648\u0648\u0642\u062A\u0647\u0627.");return}const $=Utils.dateTimeLocalToISO(x),M=$?new Date($):new Date(x);if(Number.isNaN(M.getTime())){Notification.warning("\u062A\u0646\u0633\u064A\u0642 \u0627\u0644\u062A\u0627\u0631\u064A\u062E \u063A\u064A\u0631 \u0635\u062D\u064A\u062D.");return}const q=u?.value||"";let W="";if(q){const H=new Date(q);if(Number.isNaN(H.getTime())){Notification.warning("\u062A\u0646\u0633\u064A\u0642 \u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062A\u0648\u0642\u0639 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D.");return}W=new Date(q).toISOString()}const P=new Date().toISOString(),C=t?AppState.appData.dailyObservations.find(H=>H.id===t):null,U=AppState.currentUser||{},z=(m?.value||"").trim()||(t?String(C?.observerName||"").trim():"")||this.getLoggedInObserverName()||"";if(!z){Notification.warning("\u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062F \u0627\u0633\u0645 \u0635\u0627\u062D\u0628 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 (\u0645\u0646 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0623\u0648 \u0645\u0646 \u0628\u064A\u0627\u0646\u0627\u062A \u062D\u0633\u0627\u0628\u0643).");return}const A=t||generateDailyObservationId(AppState.appData.dailyObservations||[]),R=t&&C?.isoCode||getObservationIsoCodeFromId(A),I=M,_=Math.floor((new Date().getTime()-I.getTime())/(1e3*60*60*24)),B=_>0?_:0,G=C?.timestamp||P,K=this.isSystemManager()&&b?b.value||"":C?.reviewedBy||"",X=this.isSystemManager()&&S?(S.value||"").trim():C?.remarks||"";let Z=(this.state.currentAttachments||[]).map(H=>({id:H.id,name:H.name,type:H.type,size:H.size||this.calculateBase64Size(H.data),data:H.data}));const Y={id:A,isoCode:R,siteId:v,siteName:this.lookupSiteName(v),placeId:T,locationName:g,observationType:D,date:M.toISOString(),shift:c?.value||"",details:O,correctiveAction:(y?.value||"").trim(),responsibleDepartment:N,riskLevel:w,observerName:z,expectedCompletionDate:W,status:E,overdays:B,timestamp:G,reviewedBy:K,remarks:X,attachments:Z,createdAt:C?.createdAt||P,updatedAt:P,workflowStage:t&&C?.workflowStage||"pending_specialist",submittedBy:t?C?.submittedBy||"":(U.name||"").trim()||z,submittedByEmail:t?C?.submittedByEmail||"":(U.email||"").trim(),submittedAt:t&&C?.submittedAt||P,specialistReviewedBy:t&&C?.specialistReviewedBy||"",specialistReviewedAt:t&&C?.specialistReviewedAt||"",specialistComments:t&&C?.specialistComments||"",managerApprovedBy:t&&C?.managerApprovedBy||"",managerApprovedAt:t&&C?.managerApprovedAt||"",managerComments:t&&C?.managerComments||"",departmentActionBy:t&&C?.departmentActionBy||"",departmentActionAt:t&&C?.departmentActionAt||"",rejectionReason:t&&C?.rejectionReason||""},J=s.querySelector("#save-observation-btn");J&&(J.disabled=!0,J.innerHTML='<i class="fas fa-spinner fa-spin ml-2"></i>\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638...');try{const H=this.normalizeRecord(Y);if(t){const V=AppState.appData.dailyObservations.findIndex(ee=>ee.id===t);V!==-1&&(AppState.appData.dailyObservations[V]=H)}else AppState.appData.dailyObservations.push(H);s.remove(),this.resetFormState(),Notification.success(t?"\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0628\u0646\u062C\u0627\u062D":"\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0628\u0646\u062C\u0627\u062D");const Q=this.currentFilter?.filter||null;if(this.loadObservationsList(Q),this.isCurrentUserAdmin()){const V=document.getElementById("tab-data-analysis");V&&V.style.display!=="none"&&(this.calculateCardValues(),this.updateAnalysisResults())}this.saveInBackground(Y,H,t).catch(V=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A \u0627\u0644\u062E\u0644\u0641\u064A\u0629:",V),Notification.warning("\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0645\u062D\u0644\u064A\u0627\u064B\u060C \u0644\u0643\u0646 \u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629")})}catch(H){J&&(J.disabled=!1,J.innerHTML="\u062D\u0641\u0638"),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629:",H),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0641\u0638 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629: "+H.message)}},async saveInBackground(e,t,s){try{let a=!1;if(e.attachments&&Array.isArray(e.attachments)&&e.attachments.length>0){Loading.show("\u062C\u0627\u0631\u064A \u0631\u0641\u0639 \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A \u0625\u0644\u0649 Google Drive...");try{Utils.safeLog("DailyObservations: \u0642\u0628\u0644 processAttachments - \u0639\u062F\u062F \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A: "+e.attachments.length),e.attachments.length>0&&Utils.safeLog("DailyObservations: \u0623\u0648\u0644 \u0645\u0631\u0641\u0642 \u0642\u0628\u0644 \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629:",{name:e.attachments[0].name,hasData:!!e.attachments[0].data,hasDirectLink:!!e.attachments[0].directLink});const i=await GoogleIntegration.processAttachments?.(e.attachments,"DailyObservations");if(i&&i.length>0){t.attachments=i;const o=AppState.appData.dailyObservations.findIndex(r=>r.id===t.id);o!==-1&&(AppState.appData.dailyObservations[o].attachments=i,a=!0,Utils.safeLog("DailyObservations: \u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A \u0641\u064A \u0627\u0644\u0633\u062C\u0644 - \u0639\u062F\u062F \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A: "+i.length),i.forEach((r,n)=>{const c=r.directLink||r.shareableLink;Utils.safeLog(`DailyObservations: \u0627\u0644\u0645\u0631\u0641\u0642 ${n+1}: ${r.name} - \u0631\u0627\u0628\u0637: ${c?c.substring(0,60)+"...":"\u0644\u0627 \u064A\u0648\u062C\u062F \u0631\u0627\u0628\u0637!"}`)}))}Utils.safeLog("DailyObservations: \u0628\u0639\u062F processAttachments - \u0639\u062F\u062F \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A: "+(i?.length||0))}catch(i){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0631\u0641\u0639 \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A:",i),Notification.warning("\u0641\u0634\u0644 \u0631\u0641\u0639 \u0628\u0639\u0636 \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A - \u0633\u064A\u062A\u0645 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B")}finally{Loading.hide()}}try{typeof window<"u"&&window.DataManager&&typeof window.DataManager.save=="function"?window.DataManager.save():typeof DataManager<"u"&&typeof DataManager.save=="function"?DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062D\u0644\u064A\u0627\u064B")}catch(i){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062D\u0644\u064A\u0627\u064B:",i)}Loading.show("\u062C\u0627\u0631\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 \u0627\u0644\u0633\u062D\u0627\u0628\u0629...");try{await GoogleIntegration.autoSave("DailyObservations",AppState.appData.dailyObservations),!s&&t?.id&&GoogleIntegration.callBackend("notifyObservationWorkflowEvent",{event:"new_pending_specialist",observationId:t.id}).catch(function(){}),a&&(Utils.safeLog("DailyObservations: \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u0639 \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A \u0627\u0644\u0645\u062D\u062F\u062B\u0629 \u0625\u0644\u0649 Google Sheets"),Notification.success("\u062A\u0645 \u0631\u0641\u0639 \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A \u0648\u0645\u0632\u0627\u0645\u0646\u062A\u0647\u0627 \u0628\u0646\u062C\u0627\u062D"))}catch(i){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629:",i),Notification.warning("\u0641\u0634\u0644\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 Google Sheets - \u0633\u064A\u062A\u0645 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B")}finally{Loading.hide()}if(!s&&AppState.notificationEmails&&AppState.notificationEmails.length>0)try{this.sendEmailNotifications({type:"\u0645\u0644\u0627\u062D\u0638\u0629 \u064A\u0648\u0645\u064A\u0629",title:`\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u0645\u0644\u0627\u062D\u0638\u0629 \u062C\u062F\u064A\u062F\u0629: ${t.observationType}`,message:`\u0627\u0644\u0645\u0648\u0642\u0639: ${t.siteName}
+\u0627\u0644\u0645\u0643\u0627\u0646: ${t.locationName}
+\u0627\u0644\u0646\u0648\u0639: ${t.observationType}
+\u0627\u0644\u062E\u0637\u0648\u0631\u0629: ${t.riskLevel}
+\u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644: ${t.details?.substring(0,120)}...`,date:Utils.formatDateTime(t.date)})}catch(i){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",i)}}catch(a){throw Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A \u0627\u0644\u062E\u0644\u0641\u064A\u0629:",a),a}},async viewObservation(e){const t=AppState.appData.dailyObservations.find(i=>i.id===e);if(!t){Notification.error("\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}if(typeof this.isDailyObservationVisibleToCurrentUser=="function"&&!this.isDailyObservationVisibleToCurrentUser(t)){Notification.error("\u0644\u0627 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0639\u0631\u0636 \u0647\u0630\u0647 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629");return}const s=this.normalizeRecord(t);Utils.safeLog("\u{1F4CE} viewObservation: \u0639\u062F\u062F \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 = "+(s.attachments?.length||0)),Utils.safeLog("\u{1F4CE} viewObservation: \u0639\u062F\u062F \u0635\u0648\u0631 \u0628\u0639\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630 = "+(s.afterExecutionImages?.length||0));const a=this.createObservationModal(s);document.body.appendChild(a),this.attachWorkflowPanelListeners(a),this.updateObservationDataFromBackend(e,a).catch(i=>{Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0645\u0646 Backend:",i)})},createObservationModal(e){let t=[],s=[],a=[];try{e.timeLog&&(t=typeof e.timeLog=="string"?JSON.parse(e.timeLog):e.timeLog)}catch{t=[]}try{e.updates&&(s=typeof e.updates=="string"?JSON.parse(e.updates):e.updates)}catch{s=[]}try{e.comments&&(a=typeof e.comments=="string"?JSON.parse(e.comments):e.comments)}catch{a=[]}const i=this.buildWorkflowPathHtml(e),o=this.buildWorkflowBannerHtml(e),r=document.createElement("div");return r.className="modal-overlay",r.setAttribute("data-observation-id",e.id),r.setAttribute("dir","rtl"),r.innerHTML=`
+            <div class="modal-content" style="max-width: 900px; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+                <div class="modal-header modal-header-centered" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px 30px; border-radius: 20px 20px 0 0;">
+                    <h2 class="modal-title" style="color: white; font-size: 24px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; font-family: 'Cairo', sans-serif;">
+                        <i class="fas fa-clipboard-check" style="font-size: 28px;"></i>
+                        \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629
+                    </h2>
+                    <button class="modal-close" aria-label="\u0625\u063A\u0644\u0627\u0642" style="color: white; font-size: 24px;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 30px; background: #f8f9fa; max-height: calc(90vh - 200px); overflow-y: auto; direction: rtl; text-align: right;">
+                    <div class="space-y-5">
+                        <div class="obs-detail-inline-alerts" data-obs-inline-alerts="" role="region" aria-label="\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629"></div>
+                        ${i}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                <strong class="text-gray-700 block mb-1">\u0631\u0642\u0645 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629:</strong>
+                                <span class="text-gray-900">${Utils.escapeHTML(e.isoCode||"-")}</span>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                <strong class="text-gray-700 block mb-1">\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0648\u0627\u0644\u0648\u0642\u062A:</strong>
+                                <span class="text-gray-900">${e.date?Utils.formatDateTime(e.date):"-"}</span>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                <strong class="text-gray-700 block mb-1">\u0627\u0644\u0645\u0648\u0642\u0639:</strong>
+                                <span class="text-gray-900">${Utils.escapeHTML(e.siteName||"-")}</span>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                <strong class="text-gray-700 block mb-1">\u0627\u0644\u0645\u0643\u0627\u0646:</strong>
+                                <span class="text-gray-900">${Utils.escapeHTML(e.locationName||"-")}</span>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                <strong class="text-gray-700 block mb-1">\u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629:</strong>
+                                ${this.canEditObservationFieldsInDetail(e)?`
+                                <select id="observation-type-select" class="form-input" style="width: 100%; margin-top: 4px;" onchange="DailyObservations.handleFieldChange('${e.id}', 'observationType', this.value, this)">
+                                    <option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0646\u0648\u0639 --</option>
+                                    ${this.getObservationTypes().map(n=>`<option value="${n}" ${e.observationType===n?"selected":""}>${n}</option>`).join("")}
+                                </select>
+                                `:`<span class="text-gray-900">${Utils.escapeHTML(e.observationType||"-")}</span>`}
+                            </div>
+                            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                <strong class="text-gray-700 block mb-1">\u0627\u0644\u0648\u0631\u062F\u064A\u0629:</strong>
+                                <span class="text-gray-900">${Utils.escapeHTML(e.shift||"-")}</span>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                <strong class="text-gray-700 block mb-1">\u0645\u0639\u062F\u0644 \u0627\u0644\u062E\u0637\u0648\u0631\u0629:</strong>
+                                ${this.canEditObservationFieldsInDetail(e)?`
+                                <select id="observation-risk-select" class="form-input" style="width: 100%; margin-top: 4px;" onchange="DailyObservations.handleFieldChange('${e.id}', 'riskLevel', this.value, this)">
+                                    <option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0639\u062F\u0644 --</option>
+                                    ${this.getRiskLevels().map(n=>`<option value="${n}" ${e.riskLevel===n?"selected":""}>${n}</option>`).join("")}
+                                </select>
+                                `:`<span class="text-gray-900">${Utils.escapeHTML(e.riskLevel||"-")}</span>`}
+                            </div>
+                            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                <strong class="text-gray-700 block mb-1">\u0627\u0644\u062D\u0627\u0644\u0629 \u0627\u0644\u062A\u0634\u063A\u064A\u0644\u064A\u0629:</strong>
+                                <div class="flex items-center gap-2 mt-2">
+                                    ${this.canEditObservationStatusInDetail(e)?`
+                                    <select id="observation-status-select" class="form-input" style="flex: 1; min-width: 150px;" onchange="DailyObservations.handleStatusChange('${e.id}', this.value)">
+                                        ${this.STATUS_OPTIONS.map(n=>`<option value="${n}" ${e.status===n?"selected":""}>${n}</option>`).join("")}
+                                    </select>
+                                    `:`<span class="text-gray-900">${Utils.escapeHTML(e.status||"-")}</span>`}
+                                <span class="badge badge-${this.getStatusBadgeClass(e.status)}">${Utils.escapeHTML(e.status||"-")}</span>
+                                </div>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                <strong class="text-gray-700 block mb-1">\u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u0639\u0646 \u0627\u0644\u062A\u0646\u0641\u064A\u0630:</strong>
+                                ${this.canEditObservationFieldsInDetail(e)?`
+                                <select id="observation-responsible-select" class="form-input" style="width: 100%; margin-top: 4px;" onchange="DailyObservations.handleFieldChange('${e.id}', 'responsibleDepartment', this.value, this)">
+                                    <option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0633\u0624\u0648\u0644 --</option>
+                                    ${this.getDepartments().map(n=>`<option value="${n}" ${e.responsibleDepartment===n?"selected":""}>${n}</option>`).join("")}
+                                </select>
+                                `:`<span class="text-gray-900">${Utils.escapeHTML(e.responsibleDepartment||"-")}</span>`}
+                            </div>
+                            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                <strong class="text-gray-700 block mb-1">\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0645\u0639\u064A\u0651\u0646:</strong>
+                                <span class="text-gray-900">${e.assignedToName||e.assignedToEmail?Utils.escapeHTML(this.formatAssigneePublicDisplay(e)):"-"}</span>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                <strong class="text-gray-700 block mb-1">\u0635\u0627\u062D\u0628 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629:</strong>
+                                <span class="text-gray-900">${Utils.escapeHTML(e.observerName||"-")}</span>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                <strong class="text-gray-700 block mb-1">\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062A\u0648\u0642\u0639 \u0644\u0644\u062A\u0646\u0641\u064A\u0630:</strong>
+                                ${this.canEditObservationFieldsInDetail(e)?`
+                                <input type="date" id="observation-expected-date-input" class="form-input" style="width: 100%; margin-top: 4px;" value="${e.expectedCompletionDate?e.expectedCompletionDate.split("T")[0]:""}" onchange="DailyObservations.handleFieldChange('${e.id}', 'expectedCompletionDate', this.value, this)" />
+                                `:`<span class="text-gray-900">${e.expectedCompletionDate?Utils.formatDate(e.expectedCompletionDate):"-"}</span>`}
+                            </div>
+                            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                <strong class="text-gray-700 block mb-1">Overdays:</strong>
+                                <span class="text-gray-900">${e.overdays!==void 0?`${e.overdays} \u064A\u0648\u0645`:"-"}</span>
+                            </div>
+                            ${e.reviewedBy?`
+                            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                <strong class="text-gray-700 block mb-1">Reviewed by:</strong>
+                                <span class="text-gray-900">${Utils.escapeHTML(e.reviewedBy)}</span>
+                            </div>
+                            `:""}
+                        </div>
+
+                        <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                            <strong class="text-gray-700 block mb-3 text-lg">\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629:</strong>
+                            ${this.canEditObservationFieldsInDetail(e)?`
+                            <textarea id="observation-details-textarea" class="form-input" style="width: 100%; min-height: 120px; margin-top: 8px; font-family: 'Cairo', sans-serif;" onchange="DailyObservations.handleFieldChange('${e.id}', 'details', this.value, this)">${Utils.escapeHTML(e.details||"")}</textarea>
+                            `:`<p class="mt-2 leading-7 bg-gray-50 border border-gray-200 rounded-lg p-4 whitespace-pre-wrap text-gray-800">${Utils.escapeHTML(e.details||"")}</p>`}
+                        </div>
+
+                        <div class="bg-white p-5 rounded-lg border border-blue-200 shadow-sm">
+                            <strong class="text-blue-700 block mb-3 text-lg">\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A / \u0627\u0644\u0648\u0642\u0627\u0626\u064A:</strong>
+                            ${this.canEditObservationFieldsInDetail(e)?`
+                            <textarea id="observation-corrective-textarea" class="form-input" style="width: 100%; min-height: 120px; margin-top: 8px; font-family: 'Cairo', sans-serif;" onchange="DailyObservations.handleFieldChange('${e.id}', 'correctiveAction', this.value, this)">${Utils.escapeHTML(e.correctiveAction||"")}</textarea>
+                            `:`<p class="mt-2 leading-7 bg-blue-50 border border-blue-200 rounded-lg p-4 whitespace-pre-wrap text-gray-800">${e.correctiveAction?Utils.escapeHTML(e.correctiveAction):'<span class="text-gray-400 italic">\u0644\u0627 \u064A\u0648\u062C\u062F \u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A \u0645\u0633\u062C\u0644</span>'}</p>`}
+                        </div>
+
+                        ${e.remarks?`
+                        <div class="bg-white p-5 rounded-lg border border-yellow-200 shadow-sm">
+                            <strong class="text-yellow-700 block mb-3 text-lg">Remarks (\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645):</strong>
+                            <p class="mt-2 leading-7 bg-yellow-50 border border-yellow-200 rounded-lg p-4 whitespace-pre-wrap text-gray-800">${Utils.escapeHTML(e.remarks)}</p>
+                        </div>
+                        `:""}
+
+                        ${Array.isArray(e.attachments)&&e.attachments.length>0?`
+                        <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                            <strong class="text-gray-700 block mb-3 text-lg">\u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A:</strong>
+                            <div data-section="attachments" class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                ${e.attachments.map(n=>{const c=(n.type||"").startsWith("image/"),d=Utils.escapeHTML(n.name||"\u0645\u0631\u0641\u0642");return c?`
+                                            <div class="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                                                <img src="${n.data}" alt="${d}" class="w-full h-48 object-cover cursor-pointer" onclick="window.open('${n.data}', '_blank')">
+                                                <div class="px-3 py-2 bg-gray-50 text-xs text-gray-700">${d}</div>
+                                            </div>
+                                        `:`
+                                        <div class="border rounded-lg p-3 bg-gray-50 flex items-start gap-3 shadow-sm hover:shadow-md transition-shadow">
+                                            <i class="fas fa-file-pdf text-2xl text-red-500"></i>
+                                            <div class="flex-1">
+                                                <p class="text-sm font-semibold text-gray-800">${d}</p>
+                                                <button type="button" class="btn-secondary btn-xs mt-2" onclick="window.open('${n.data}', '_blank')">
+                                                    <i class="fas fa-eye ml-1"></i>\u0639\u0631\u0636
+                                                </button>
+                                            </div>
+                                        </div>
+                                    `}).join("")}
+                            </div>
+                        </div>
+                        `:""}
+
+                        <!-- \u2705 \u0642\u0633\u0645 \u0635\u0648\u0631 \u0628\u0639\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630 (\u0625\u0636\u0627\u0641\u0629 \u062C\u062F\u064A\u062F\u0629) -->
+                        ${this._isSafetyManager()||this._isSafetyOfficer()||this.canShowAssignResponsiblePanel(e)?`
+                        <div class="bg-gradient-to-br from-emerald-50 to-teal-50 p-5 rounded-xl border-2 border-emerald-300 shadow-md">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-lg font-semibold text-emerald-800" style="font-family: 'Cairo', sans-serif;">
+                                    <i class="fas fa-camera ml-2 text-emerald-600"></i>
+                                    \u0635\u0648\u0631 \u0628\u0639\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630
+                                </h3>
+                                <span class="text-xs text-emerald-600 bg-emerald-100 px-3 py-1 rounded-full" style="font-family: 'Cairo', sans-serif;">
+                                    <i class="fas fa-shield-alt ml-1"></i>
+                                    \u0645\u062A\u0627\u062D \u0644\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0625\u062F\u0627\u0631\u0629/\u0623\u062E\u0635\u0627\u0626\u064A \u0627\u0644\u0633\u0644\u0627\u0645\u0629/\u0645\u062F\u064A\u0631 \u0627\u0644\u0633\u0644\u0627\u0645\u0629
+                                </span>
+                            </div>
+
+                            <div id="after-execution-photos-container-${e.id}" class="mb-4">
+                                ${this._buildAfterExecutionPhotosHtml(e.afterExecutionImages)}
+                            </div>
+
+                            <div class="border-t-2 border-emerald-200 pt-4">
+                                <label class="block text-sm font-medium text-emerald-800 mb-2" style="font-family: 'Cairo', sans-serif;">
+                                    <i class="fas fa-upload ml-1"></i>
+                                    \u0631\u0641\u0639 \u0635\u0648\u0631\u0629 \u062C\u062F\u064A\u062F\u0629 \u0628\u0639\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630
+                                </label>
+                                <!-- \u0645\u0639\u0627\u064A\u0646\u0629 \u0627\u0644\u0635\u0648\u0631\u0629 -->
+                                <div id="after-execution-preview-container-${e.id}" class="mb-3" style="display: none;">
+                                    <div class="relative inline-block">
+                                        <img id="after-execution-preview-${e.id}" class="max-w-full h-48 object-contain rounded-lg border-2 border-emerald-300 shadow-sm" style="display: none;" />
+                                        <button type="button" class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600" onclick="document.getElementById('after-execution-preview-container-${e.id}').style.display='none'">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- \u062D\u0642\u0644 \u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641 - \u0631\u0641\u0639 \u062A\u0644\u0642\u0627\u0626\u064A \u0639\u0646\u062F \u0627\u0644\u0627\u062E\u062A\u064A\u0627\u0631 -->
+                                <input type="file"
+                                       id="after-execution-photo-input-${e.id}"
+                                       accept="image/*"
+                                       capture="environment"
+                                       class="form-input w-full"
+                                       style="font-family: 'Cairo', sans-serif;"
+                                       onchange="DailyObservations.handleAfterExecutionPhotoUpload('${e.id}', this)" />
+                                <p class="text-xs text-emerald-600 mt-2" style="font-family: 'Cairo', sans-serif;">
+                                    <i class="fas fa-info-circle ml-1"></i>
+                                    \u0633\u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0635\u0648\u0631\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0639 \u062A\u0627\u0631\u064A\u062E \u0648\u0648\u0642\u062A \u0627\u0644\u0631\u0641\u0639 \u0648\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645
+                                </p>
+                            </div>
+                        </div>
+                        `:""}
+
+                        <!-- \u0627\u0644\u062A\u062D\u062F\u064A\u062B\u0627\u062A -->
+                        <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-lg font-semibold"><i class="fas fa-sync-alt ml-2"></i>\u0627\u0644\u062A\u062D\u062F\u064A\u062B\u0627\u062A (${s.length})</h3>
+                                <button class="btn-primary btn-sm" onclick="DailyObservations.showAddUpdateModal('${e.id}')">
+                                    <i class="fas fa-plus ml-1"></i>\u0625\u0636\u0627\u0641\u0629 \u062A\u062D\u062F\u064A\u062B
+                                </button>
+                            </div>
+                            ${s.length>0?`
+                                <div class="space-y-3">
+                                    ${s.map(n=>`
+                                        <div class="border-l-4 border-blue-500 pl-4 py-2 bg-gray-50 rounded">
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-sm font-semibold">${Utils.escapeHTML(n.user||"")}</span>
+                                                <span class="text-xs text-gray-500">${n.timestamp?Utils.formatDate(n.timestamp):""}</span>
+                                            </div>
+                                            <p class="text-sm text-gray-700 mt-1">${Utils.escapeHTML(n.update||"")}</p>
+                                            ${n.progress!==void 0?`
+                                                <div class="mt-2">
+                                                    <div class="flex items-center justify-between text-xs mb-1">
+                                                        <span>\u0627\u0644\u062A\u0642\u062F\u0645</span>
+                                                        <span>${n.progress}%</span>
+                                                    </div>
+                                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                                        <div class="bg-blue-500 h-2 rounded-full" style="width: ${n.progress}%"></div>
+                                                    </div>
+                                                </div>
+                                            `:""}
+                                        </div>
+                                    `).join("")}
+                                </div>
+                            `:'<p class="text-gray-500 text-sm">\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u062D\u062F\u064A\u062B\u0627\u062A</p>'}
+                        </div>
+                        
+                        <!-- \u0627\u0644\u062A\u0639\u0644\u064A\u0642\u0627\u062A -->
+                        <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-lg font-semibold"><i class="fas fa-comments ml-2"></i>\u0627\u0644\u062A\u0639\u0644\u064A\u0642\u0627\u062A (${a.length})</h3>
+                                <button class="btn-primary btn-sm" onclick="DailyObservations.showAddCommentModal('${e.id}')">
+                                    <i class="fas fa-plus ml-1"></i>\u0625\u0636\u0627\u0641\u0629 \u062A\u0639\u0644\u064A\u0642
+                                </button>
+                            </div>
+                            ${a.length>0?`
+                                <div class="space-y-3">
+                                    ${a.map(n=>`
+                                        <div class="border-l-4 border-green-500 pl-4 py-2 bg-gray-50 rounded">
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-sm font-semibold">${Utils.escapeHTML(n.user||"")}</span>
+                                                <span class="text-xs text-gray-500">${n.timestamp?Utils.formatDate(n.timestamp):""}</span>
+                                            </div>
+                                            <p class="text-sm text-gray-700 mt-1">${Utils.escapeHTML(n.comment||"")}</p>
+                                        </div>
+                                    `).join("")}
+                                </div>
+                            `:'<p class="text-gray-500 text-sm">\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0639\u0644\u064A\u0642\u0627\u062A</p>'}
+                        </div>
+                        
+                        <!-- \u0627\u0644\u0633\u062C\u0644 \u0627\u0644\u0632\u0645\u0646\u064A -->
+                        <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                            <h3 class="text-lg font-semibold mb-4"><i class="fas fa-history ml-2"></i>\u0627\u0644\u0633\u062C\u0644 \u0627\u0644\u0632\u0645\u0646\u064A</h3>
+                            ${this.buildObservationTimelineHtml(t)}
+                        </div>
+                        ${o}
+                    </div>
+                </div>
+                <div class="modal-footer form-actions-centered" style="padding: 20px 30px; background: #f8f9fa; border-top: 1px solid #e5e7eb; border-radius: 0 0 20px 20px;">
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="margin: 0 5px;">
+                        <i class="fas fa-times ml-2"></i>\u0625\u063A\u0644\u0627\u0642
+                    </button>
+                    <button type="button" onclick="DailyObservations.exportPDF('${e.id}');" class="btn-secondary" style="margin: 0 5px;">
+                        <i class="fas fa-file-pdf ml-2"></i>\u062A\u0635\u062F\u064A\u0631 PDF
+                    </button>
+                    ${this.canDailyObservationsFullAdminUi()?`
+                    <button type="button" onclick="DailyObservations.openEditFromDetailModal('${e.id}')" class="btn-primary" style="margin: 0 5px;">
+                        <i class="fas fa-edit ml-2"></i>\u062A\u0639\u062F\u064A\u0644
+                    </button>
+                    <button type="button" onclick="DailyObservations.deleteObservation('${e.id}'); this.closest('.modal-overlay').remove();" class="btn-secondary" style="background-color: #dc3545; color: white; border-color: #dc3545; margin: 0 5px;">
+                        <i class="fas fa-trash ml-2"></i>\u062D\u0630\u0641
+                    </button>
+                    `:""}
+                </div>
+            </div>
+        `,r.querySelector(".modal-close").addEventListener("click",()=>r.remove()),r.addEventListener("click",n=>{n.target===r&&r.remove()}),r},async updateObservationDataFromBackend(e,t){try{const s=typeof this.buildObservationsRequestContext=="function"?this.buildObservationsRequestContext():null,a=await GoogleIntegration.callBackend("getObservation",{observationId:e,observationsRequestContext:s});if(a.success&&a.data){const i=AppState.appData.dailyObservations.findIndex(r=>r.id===e);i!==-1?AppState.appData.dailyObservations[i]=a.data:AppState.appData.dailyObservations.push(a.data);const o=this.normalizeRecord(a.data);Utils.safeLog("\u{1F4CE} updateObservationDataFromBackend: \u0639\u062F\u062F \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A \u0645\u0646 Backend = "+(o.attachments?.length||0)),Utils.safeLog("\u{1F4CE} updateObservationDataFromBackend: \u0639\u062F\u062F \u0635\u0648\u0631 \u0628\u0639\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630 = "+(o.afterExecutionImages?.length||0)),t&&t.getAttribute("data-observation-id")===e&&this.updateObservationModalContent(t,o)}else a&&!a.success&&a.message&&this.showObservationDetailInlineAlert(e,"warning",a.message)}catch(s){Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0645\u0646 Backend:",s);const a=s&&s.message?s.message:String(s);this.showObservationDetailInlineAlert(e,"error",a)}},updateObservationModalContent(e,t){try{const s=(o,r)=>{const n=e.querySelector(o);n&&r!==void 0&&r!==null&&(n.textContent=String(r))};s('[data-field="isoCode"]',t.isoCode),s('[data-field="siteName"]',t.siteName),s('[data-field="locationName"]',t.locationName),s('[data-field="observationType"]',t.observationType),s('[data-field="shift"]',t.shift),s('[data-field="riskLevel"]',t.riskLevel),s('[data-field="status"]',t.status),s('[data-field="responsibleDepartment"]',t.responsibleDepartment),s('[data-field="observerName"]',t.observerName),s('[data-field="expectedCompletionDate"]',t.expectedCompletionDate?Utils.formatDate(t.expectedCompletionDate):"-"),s('[data-field="overdays"]',t.overdays!==void 0?`${t.overdays} \u064A\u0648\u0645`:"-"),s('[data-field="details"]',t.details),s('[data-field="correctiveAction"]',t.correctiveAction);const a=e.querySelector('[data-section="attachments"]'),i=a?a.parentElement:null;if(Utils.safeLog("\u{1F4CE} updateObservationModalContent: \u0639\u062F\u062F \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A = "+(t.attachments?.length||0)),Utils.safeLog("\u{1F4CE} updateObservationModalContent: attachmentsSection \u0645\u0648\u062C\u0648\u062F = "+!!a),Array.isArray(t.attachments)&&t.attachments.length>0?a&&(a.innerHTML=`
+                            <strong class="text-gray-700 block mb-3 text-lg">\u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A:</strong>
+                            <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                ${t.attachments.map(o=>{const r=(o.type||"").startsWith("image/"),n=Utils.escapeHTML(o.name||"\u0645\u0631\u0641\u0642");return r?`
+                                            <div class="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                                                <img src="${o.data}" alt="${n}" class="w-full h-48 object-cover cursor-pointer" onclick="window.open('${o.data}', '_blank')">
+                                                <div class="px-3 py-2 bg-gray-50 text-xs text-gray-700">${n}</div>
+                                            </div>
+                                        `:`
+                                        <div class="border rounded-lg p-3 bg-gray-50 flex items-start gap-3 shadow-sm hover:shadow-md transition-shadow">
+                                            <i class="fas fa-file-pdf text-2xl text-red-500"></i>
+                                            <div class="flex-1">
+                                                <p class="text-sm font-semibold text-gray-800">${n}</p>
+                                                <button type="button" class="btn-secondary btn-xs mt-2" onclick="window.open('${o.data}', '_blank')">
+                                                    <i class="fas fa-eye ml-1"></i>\u0639\u0631\u0636
+                                                </button>
+                                            </div>
+                                        </div>
+                                    `}).join("")}
+                            </div>
+                        `,Utils.safeLog("\u2705 updateObservationModalContent: \u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A \u0628\u0646\u062C\u0627\u062D")):i&&(Utils.safeLog("\u2139\uFE0F updateObservationModalContent: \u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0631\u0641\u0642\u0627\u062A\u060C \u0625\u0632\u0627\u0644\u0629 \u0627\u0644\u0642\u0633\u0645"),i.remove()),t.afterExecutionImages&&Array.isArray(t.afterExecutionImages)){const o=e.querySelector(`#after-execution-photos-container-${t.id}`);o&&(o.innerHTML=this._buildAfterExecutionPhotosHtml(t.afterExecutionImages))}this.updateModalSection(e,"updates",t.updates),this.updateModalSection(e,"comments",t.comments),this.updateModalSection(e,"timeLog",t.timeLog)}catch(s){Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A updateObservationModalContent:",s)}},updateModalSection(e,t,s){},async handleStatusChange(e,t){Loading.show();try{const s=await GoogleIntegration.callBackend("updateObservationStatus",{observationId:e,statusData:{status:t,updatedBy:AppState.currentUser?.name||"System"}});if(s.success){const a=AppState.appData.dailyObservations.findIndex(i=>i.id===e);a!==-1&&(AppState.appData.dailyObservations[a].status=t),typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u0627\u0644\u0629 \u0628\u0646\u062C\u0627\u062D"),await this.viewObservation(e)}else{const a=s.message||"\u062D\u062F\u062B \u062E\u0637\u0623";this.showObservationDetailInlineAlert(e,"error",a)||Notification.error(a)}}catch(s){const a="\u062D\u062F\u062B \u062E\u0637\u0623: "+(s.message||s);this.showObservationDetailInlineAlert(e,"error",a)||Notification.error(a)}finally{Loading.hide()}},refreshUpdatesSection(e){try{const t=document.querySelectorAll(".modal-overlay");let s=null;for(const d of t){const l=d.querySelector(".modal-title");if(l&&l.textContent.includes("\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629")){s=d;break}}if(!s)return;const a=s.querySelectorAll(".bg-white.p-5");let i=null;for(const d of a){const l=d.querySelector("h3");if(l&&l.textContent.includes("\u0627\u0644\u062A\u062D\u062F\u064A\u062B\u0627\u062A")){i=d;break}}if(!i)return;const o=AppState.appData.dailyObservations.find(d=>d.id===e);if(!o)return;let r=[];try{o.updates&&(r=Array.isArray(o.updates)?o.updates:typeof o.updates=="string"?JSON.parse(o.updates):[])}catch{r=[]}const n=i.querySelector("h3");n&&(n.innerHTML=`<i class="fas fa-sync-alt ml-2"></i>\u0627\u0644\u062A\u062D\u062F\u064A\u062B\u0627\u062A (${r.length})`);let c=i.querySelector(".space-y-3");if(c||(c=i.querySelector("p.text-gray-500")),r.length>0){const d=`
+                    <div class="space-y-3">
+                        ${r.map(l=>`
+                            <div class="border-l-4 border-blue-500 pl-4 py-2 bg-gray-50 rounded">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-semibold">${Utils.escapeHTML(l.user||"")}</span>
+                                    <span class="text-xs text-gray-500">${l.timestamp?Utils.formatDate(l.timestamp):""}</span>
+                                </div>
+                                <p class="text-sm text-gray-700 mt-1">${Utils.escapeHTML(l.update||"")}</p>
+                                ${l.progress!==void 0?`
+                                    <div class="mt-2">
+                                        <div class="flex items-center justify-between text-xs mb-1">
+                                            <span>\u0627\u0644\u062A\u0642\u062F\u0645</span>
+                                            <span>${l.progress}%</span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 rounded-full h-2">
+                                            <div class="bg-blue-500 h-2 rounded-full" style="width: ${l.progress}%"></div>
+                                        </div>
+                                    </div>
+                                `:""}
+                            </div>
+                        `).join("")}
+                    </div>
+                `;if(c)c.tagName==="P"?c.outerHTML=d:c.innerHTML=d;else{const l=n?.closest(".flex.items-center.justify-between")||n?.parentElement;if(l){const p=document.createElement("div");p.innerHTML=d,l.insertAdjacentElement("afterend",p)}}}else if(c)c.tagName==="P"?(c.textContent="\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u062D\u062F\u064A\u062B\u0627\u062A",c.className="text-gray-500 text-sm"):c.innerHTML='<p class="text-gray-500 text-sm">\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u062D\u062F\u064A\u062B\u0627\u062A</p>';else{const d=n?.closest(".flex.items-center.justify-between")||n?.parentElement;if(d){const l=document.createElement("p");l.className="text-gray-500 text-sm",l.textContent="\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u062D\u062F\u064A\u062B\u0627\u062A",d.insertAdjacentElement("afterend",l)}}}catch(t){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B \u0642\u0633\u0645 \u0627\u0644\u062A\u062D\u062F\u064A\u062B\u0627\u062A:",t)}},refreshCommentsSection(e){try{const t=document.querySelectorAll(".modal-overlay");let s=null;for(const d of t){const l=d.querySelector(".modal-title");if(l&&l.textContent.includes("\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629")){s=d;break}}if(!s)return;const a=s.querySelectorAll(".bg-white.p-5");let i=null;for(const d of a){const l=d.querySelector("h3");if(l&&l.textContent.includes("\u0627\u0644\u062A\u0639\u0644\u064A\u0642\u0627\u062A")){i=d;break}}if(!i)return;const o=AppState.appData.dailyObservations.find(d=>d.id===e);if(!o)return;let r=[];try{o.comments&&(r=Array.isArray(o.comments)?o.comments:typeof o.comments=="string"?JSON.parse(o.comments):[])}catch{r=[]}const n=i.querySelector("h3");n&&(n.innerHTML=`<i class="fas fa-comments ml-2"></i>\u0627\u0644\u062A\u0639\u0644\u064A\u0642\u0627\u062A (${r.length})`);let c=i.querySelector(".space-y-3");if(c||(c=i.querySelector("p.text-gray-500")),r.length>0){const d=`
+                    <div class="space-y-3">
+                        ${r.map(l=>`
+                            <div class="border-l-4 border-green-500 pl-4 py-2 bg-gray-50 rounded">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-semibold">${Utils.escapeHTML(l.user||"")}</span>
+                                    <span class="text-xs text-gray-500">${l.timestamp?Utils.formatDate(l.timestamp):""}</span>
+                                </div>
+                                <p class="text-sm text-gray-700 mt-1">${Utils.escapeHTML(l.comment||"")}</p>
+                            </div>
+                        `).join("")}
+                    </div>
+                `;if(c)c.tagName==="P"?c.outerHTML=d:c.innerHTML=d;else{const l=n?.closest(".flex.items-center.justify-between")||n?.parentElement;if(l){const p=document.createElement("div");p.innerHTML=d,l.insertAdjacentElement("afterend",p)}}}else if(c)c.tagName==="P"?(c.textContent="\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0639\u0644\u064A\u0642\u0627\u062A",c.className="text-gray-500 text-sm"):c.innerHTML='<p class="text-gray-500 text-sm">\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0639\u0644\u064A\u0642\u0627\u062A</p>';else{const d=n?.closest(".flex.items-center.justify-between")||n?.parentElement;if(d){const l=document.createElement("p");l.className="text-gray-500 text-sm",l.textContent="\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0639\u0644\u064A\u0642\u0627\u062A",d.insertAdjacentElement("afterend",l)}}}catch(t){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B \u0642\u0633\u0645 \u0627\u0644\u062A\u0639\u0644\u064A\u0642\u0627\u062A:",t)}},refreshTimeLogSection(e){try{const t=document.querySelectorAll(".modal-overlay");let s=null;for(const d of t){const l=d.querySelector(".modal-title");if(l&&l.textContent.includes("\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629")){s=d;break}}if(!s)return;const a=s.querySelectorAll(".bg-white.p-5");let i=null;for(const d of a){const l=d.querySelector("h3");if(l&&l.textContent.includes("\u0627\u0644\u0633\u062C\u0644 \u0627\u0644\u0632\u0645\u0646\u064A")){i=d;break}}if(!i)return;const o=AppState.appData.dailyObservations.find(d=>d.id===e);if(!o)return;const r=this.buildObservationTimelineHtml(o.timeLog),n=i.querySelector("h3"),c=n?n.nextElementSibling:null;c?c.outerHTML=r:n&&n.insertAdjacentHTML("afterend",r)}catch(t){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B \u0642\u0633\u0645 \u0627\u0644\u0633\u062C\u0644 \u0627\u0644\u0632\u0645\u0646\u064A:",t)}},async showAddUpdateModal(e){const t=document.createElement("div");t.className="modal-overlay",t.innerHTML=`
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">\u0625\u0636\u0627\u0641\u0629 \u062A\u062D\u062F\u064A\u062B</h2>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="update-form" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u062A\u062D\u062F\u064A\u062B *</label>
+                            <textarea id="update-text" required class="form-input" rows="4" placeholder="\u0627\u0643\u062A\u0628 \u0627\u0644\u062A\u062D\u062F\u064A\u062B..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u0646\u0633\u0628\u0629 \u0627\u0644\u062A\u0642\u062F\u0645 (%)</label>
+                            <input type="number" id="update-progress" class="form-input" min="0" max="100" value="0">
+                        </div>
+                        <div class="flex items-center justify-end gap-4 pt-4 border-t">
+                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u0644\u063A\u0627\u0621</button>
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-save ml-2"></i>\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062A\u062D\u062F\u064A\u062B
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `,document.body.appendChild(t),t.querySelector("#update-form").addEventListener("submit",async s=>{s.preventDefault();const a=t.querySelector("#update-text").value.trim(),i=parseInt(t.querySelector("#update-progress").value)||0;if(!a){Notification.error("\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0627\u0644\u062A\u062D\u062F\u064A\u062B");return}t.remove();const o=AppState.appData.dailyObservations.findIndex(l=>l.id===e);if(o===-1){Notification.error("\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}const r=AppState.appData.dailyObservations[o],n={id:"UPD-"+Date.now().toString(),user:AppState.currentUser?.name||"System",update:a,progress:i,timestamp:new Date().toISOString()};let c=[];try{r.updates&&(c=typeof r.updates=="string"?JSON.parse(r.updates):r.updates)}catch{c=[]}c.push(n),r.updates=c;let d=[];try{r.timeLog&&(d=typeof r.timeLog=="string"?JSON.parse(r.timeLog):r.timeLog)}catch{d=[]}d.push({action:"update_added",user:AppState.currentUser?.name||"System",timestamp:new Date().toISOString(),roleLabel:"\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062A\u0646\u0641\u064A\u0630",actionDetail:"\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u062A\u062D\u062F\u064A\u062B \u0639\u0644\u0649 \u0633\u064A\u0631 \u0627\u0644\u062A\u0646\u0641\u064A\u0630",note:"\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062A\u0646\u0641\u064A\u0630: \u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u062A\u062D\u062F\u064A\u062B \u0639\u0644\u0649 \u0633\u064A\u0631 \u0627\u0644\u062A\u0646\u0641\u064A\u0630"}),r.timeLog=d,r.updatedAt=new Date().toISOString(),this.refreshUpdatesSection(e),this.refreshTimeLogSection(e),typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),GoogleIntegration.callBackend("addObservationUpdate",{observationId:e,user:AppState.currentUser?.name||"System",update:a,progress:i}).catch(l=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u062A\u062D\u062F\u064A\u062B \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629:",l),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0641\u0638 \u0627\u0644\u062A\u062D\u062F\u064A\u062B \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629")}),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062A\u062D\u062F\u064A\u062B \u0628\u0646\u062C\u0627\u062D")}),t.addEventListener("click",s=>{s.target===t&&t.remove()})},async showAddCommentModal(e){const t=document.createElement("div");t.className="modal-overlay",t.innerHTML=`
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">\u0625\u0636\u0627\u0641\u0629 \u062A\u0639\u0644\u064A\u0642</h2>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="comment-form" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u062A\u0639\u0644\u064A\u0642 *</label>
+                            <textarea id="comment-text" required class="form-input" rows="4" placeholder="\u0627\u0643\u062A\u0628 \u0627\u0644\u062A\u0639\u0644\u064A\u0642..."></textarea>
+                        </div>
+                        <div class="flex items-center justify-end gap-4 pt-4 border-t">
+                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u0644\u063A\u0627\u0621</button>
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-save ml-2"></i>\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062A\u0639\u0644\u064A\u0642
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `,document.body.appendChild(t),t.querySelector("#comment-form").addEventListener("submit",async s=>{s.preventDefault();const a=t.querySelector("#comment-text").value.trim();if(!a){Notification.error("\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0627\u0644\u062A\u0639\u0644\u064A\u0642");return}t.remove();const i=AppState.appData.dailyObservations.findIndex(d=>d.id===e);if(i===-1){Notification.error("\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}const o=AppState.appData.dailyObservations[i],r={id:"CMT-"+Date.now().toString(),user:AppState.currentUser?.name||"System",comment:a,timestamp:new Date().toISOString()};let n=[];try{o.comments&&(n=typeof o.comments=="string"?JSON.parse(o.comments):o.comments)}catch{n=[]}n.push(r),o.comments=n;let c=[];try{o.timeLog&&(c=typeof o.timeLog=="string"?JSON.parse(o.timeLog):o.timeLog)}catch{c=[]}c.push({action:"comment_added",user:AppState.currentUser?.name||"System",timestamp:new Date().toISOString(),roleLabel:"\u062A\u0639\u0644\u064A\u0642",actionDetail:"\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u062A\u0639\u0644\u064A\u0642 \u0639\u0644\u0649 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629",note:"\u062A\u0639\u0644\u064A\u0642: \u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u062A\u0639\u0644\u064A\u0642 \u0639\u0644\u0649 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629"}),o.timeLog=c,o.updatedAt=new Date().toISOString(),this.refreshCommentsSection(e),this.refreshTimeLogSection(e),typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),GoogleIntegration.callBackend("addObservationComment",{observationId:e,user:AppState.currentUser?.name||"System",comment:a}).catch(d=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u0644\u064A\u0642 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629:",d),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u0644\u064A\u0642 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629")}),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062A\u0639\u0644\u064A\u0642 \u0628\u0646\u062C\u0627\u062D")}),t.addEventListener("click",s=>{s.target===t&&t.remove()})},async deleteObservation(e){if(!e){Notification.error("\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}if(!this.canDailyObservationsFullAdminUi()){Notification.error("\u062D\u0630\u0641 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0645\u062A\u0627\u062D \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u0642\u0637");return}if(!AppState.appData.dailyObservations.find(a=>a.id===e)){Notification.error("\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}if(confirm(`\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0647 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629\u061F
+
+\u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646\u0647.`))try{if(!AppState.googleConfig?.appsScript?.enabled||!AppState.googleConfig?.appsScript?.scriptUrl){Notification.error("\u064A\u062C\u0628 \u062A\u0641\u0639\u064A\u0644 Google Integration \u0623\u0648\u0644\u0627\u064B");return}const a=await GoogleIntegration.sendRequest({action:"deleteObservation",data:{observationId:e}});a&&a.success?(AppState.appData.dailyObservations=AppState.appData.dailyObservations.filter(i=>i.id!==e),typeof DataManager<"u"&&typeof DataManager.save=="function"&&await DataManager.save(),this.loadObservationsList(),this.renderStatsCards(),Notification.success("\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0628\u0646\u062C\u0627\u062D")):Notification.error(a?.message||"\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629")}catch(a){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0630\u0641 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629:",a);const i=a?.message||a?.toString()||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641";Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0630\u0641 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629: "+i)}},async deleteAllObservations(){if(!this.canDailyObservationsFullAdminUi()){Notification.error("\u0647\u0630\u0647 \u0627\u0644\u0645\u064A\u0632\u0629 \u0645\u062A\u0627\u062D\u0629 \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u0642\u0637");return}const t=(Array.isArray(AppState.appData.dailyObservations)?AppState.appData.dailyObservations:[]).length;if(t===0){Notification.info("\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0644\u0644\u062D\u0630\u0641");return}if(!(!confirm(`\u26A0\uFE0F \u062A\u062D\u0630\u064A\u0631: \u0623\u0646\u062A \u0639\u0644\u0649 \u0648\u0634\u0643 \u062D\u0630\u0641 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A!
+
+\u0639\u062F\u062F \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u062A\u064A \u0633\u064A\u062A\u0645 \u062D\u0630\u0641\u0647\u0627: ${t}
+
+\u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646\u0647.
+
+\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u062A\u0645\u0627\u0645\u0627\u064B \u0645\u0646 \u062D\u0630\u0641 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A\u061F`)||!confirm(`\u26A0\uFE0F \u062A\u0623\u0643\u064A\u062F \u0646\u0647\u0627\u0626\u064A:
+
+\u0633\u064A\u062A\u0645 \u062D\u0630\u0641 ${t} \u0645\u0644\u0627\u062D\u0638\u0629 \u0646\u0647\u0627\u0626\u064A\u0627\u064B.
+
+\u0627\u0636\u063A\u0637 "\u0645\u0648\u0627\u0641\u0642" \u0644\u0644\u0645\u062A\u0627\u0628\u0639\u0629 \u0623\u0648 "\u0625\u0644\u063A\u0627\u0621" \u0644\u0644\u0625\u0644\u063A\u0627\u0621.`)))try{if(!AppState.googleConfig?.appsScript?.enabled||!AppState.googleConfig?.appsScript?.scriptUrl){Notification.error("\u064A\u062C\u0628 \u062A\u0641\u0639\u064A\u0644 Google Integration \u0623\u0648\u0644\u0627\u064B");return}const i=await GoogleIntegration.sendRequest({action:"deleteAllObservations",data:{}});i&&i.success?(AppState.appData.dailyObservations=[],typeof DataManager<"u"&&typeof DataManager.save=="function"&&await DataManager.save(),this.loadObservationsList(),this.renderStatsCards(),Notification.success(`\u062A\u0645 \u062D\u0630\u0641 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0628\u0646\u062C\u0627\u062D (${t} \u0645\u0644\u0627\u062D\u0638\u0629)`)):Notification.error(i?.message||"\u0641\u0634\u0644 \u062D\u0630\u0641 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A")}catch(i){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0630\u0641 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A:",i);const o=i?.message||i?.toString()||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641";Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0630\u0641 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A: "+o)}},async sendEmailNotifications(e){Utils.safeLog("\u0625\u0631\u0633\u0627\u0644 \u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0644\u0625\u064A\u0645\u064A\u0644\u0627\u062A:",AppState.notificationEmails),Utils.safeLog("\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0625\u0634\u0639\u0627\u0631:",e),AppState.notificationEmails&&AppState.notificationEmails.length>0&&Notification.success(`\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0625\u0634\u0639\u0627\u0631 \u0625\u0644\u0649 ${AppState.notificationEmails.length} \u0625\u064A\u0645\u064A\u0644`)},async exportExcel(){const e=typeof this.getDailyObservationsVisibleToCurrentUser=="function"?this.getDailyObservationsVisibleToCurrentUser():Array.isArray(AppState.appData.dailyObservations)?AppState.appData.dailyObservations:[];if(e.length===0){Notification?.info?.("\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u064A\u0648\u0645\u064A\u0629 \u0644\u062A\u0635\u062F\u064A\u0631\u0647\u0627.");return}if(typeof XLSX>"u")try{await this.ensureSheetJS()}catch{return}try{const s=e.map(r=>this.normalizeRecord(r)).map(r=>({"\u0631\u0642\u0645 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629":r.isoCode||"","\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0642\u0639":r.siteName||"","\u0627\u0644\u0645\u0643\u0627\u0646 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u0648\u0642\u0639":r.locationName||"","\u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629":r.observationType||"","\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0648\u0627\u0644\u0648\u0642\u062A":r.date?Utils.formatDateTime(r.date):"",\u0627\u0644\u0648\u0631\u062F\u064A\u0629:r.shift||"","\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629":r.details||"","\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A / \u0627\u0644\u0648\u0642\u0627\u0626\u064A":r.correctiveAction||"","\u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u0639\u0646 \u0627\u0644\u062A\u0646\u0641\u064A\u0630":r.responsibleDepartment||"","\u0645\u0639\u062F\u0644 \u0627\u0644\u062E\u0637\u0648\u0631\u0629":r.riskLevel||"","\u0627\u0633\u0645 \u0635\u0627\u062D\u0628 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629":r.observerName||"","\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062A\u0648\u0642\u0639 \u0644\u0644\u062A\u0646\u0641\u064A\u0630":r.expectedCompletionDate?Utils.formatDate(r.expectedCompletionDate):"",\u0627\u0644\u062D\u0627\u0644\u0629:r.status||"","\u0639\u062F\u062F \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A":Array.isArray(r.attachments)?r.attachments.length:0,"\u0623\u0633\u0645\u0627\u0621 \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A":Array.isArray(r.attachments)?r.attachments.map(n=>n.name).join(", "):""})),a=XLSX.utils.book_new(),i=XLSX.utils.json_to_sheet(s);XLSX.utils.book_append_sheet(a,i,"DailyObservations");const o=`Daily_Observations_${new Date().toISOString().slice(0,10)}.xlsx`;XLSX.writeFile(a,o),Notification?.success?.("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0633\u062C\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629 \u0625\u0644\u0649 Excel \u0628\u0646\u062C\u0627\u062D.")}catch(t){Utils.safeError("\u0641\u0634\u0644 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629 \u0625\u0644\u0649 Excel:",t),Notification?.error?.("\u0641\u0634\u0644 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629: "+t.message)}},async showImportExcelModal(){if(!this.canDailyObservationsFullAdminUi()){typeof Notification<"u"&&Notification.error&&Notification.error("\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0645\u062A\u0627\u062D \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u0642\u0637");return}const e=document.createElement("div");e.className="modal-overlay",e.innerHTML=`
+            <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h2 class="modal-title"><i class="fas fa-file-excel ml-2"></i>\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629 \u0645\u0646 \u0645\u0644\u0641 Excel</h2>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body space-y-4">
+                    <div class="bg-blue-50 border border-blue-200 rounded p-4">
+                        <p class="text-sm text-blue-800 mb-2"><strong>\u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F:</strong></p>
+                        <p class="text-sm text-blue-700">\u064A\u062C\u0628 \u0623\u0646 \u064A\u062D\u062A\u0648\u064A \u0645\u0644\u0641 Excel \u0639\u0644\u0649 \u0627\u0644\u0623\u0639\u0645\u062F\u0629 \u0627\u0644\u062A\u0627\u0644\u064A\u0629 (\u0628\u0627\u0644\u0644\u063A\u0629 \u0627\u0644\u0639\u0631\u0628\u064A\u0629 \u0623\u0648 \u0627\u0644\u0625\u0646\u062C\u0644\u064A\u0632\u064A\u0629):</p>
+                        <ul class="text-sm text-blue-700 list-disc mr-6 mt-2 space-y-1">
+                            <li>\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0642\u0639 / Site Name</li>
+                            <li>\u0627\u0644\u0645\u0643\u0627\u0646 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u0648\u0642\u0639 / Location</li>
+                            <li>\u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 / Observation Type</li>
+                            <li>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 / Observation Date (\u064A\u0645\u0643\u0646 \u0623\u0646 \u064A\u0643\u0648\u0646 \u0645\u0639 \u0627\u0644\u0648\u0642\u062A)</li>
+                            <li>\u0627\u0644\u0648\u0631\u062F\u064A\u0629 / Shift</li>
+                            <li>\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 / Details</li>
+                            <li>\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A / Corrective Action</li>
+                            <li>\u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u0639\u0646 \u0627\u0644\u062A\u0646\u0641\u064A\u0630 / Responsible Department</li>
+                            <li>\u0645\u0639\u062F\u0644 \u0627\u0644\u062E\u0637\u0648\u0631\u0629 / Risk Level</li>
+                            <li>\u0627\u0633\u0645 \u0635\u0627\u062D\u0628 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 / Observer Name</li>
+                            <li>\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062A\u0648\u0642\u0639 \u0644\u0644\u062A\u0646\u0641\u064A\u0630 / Expected Completion Date</li>
+                            <li>\u0627\u0644\u062D\u0627\u0644\u0629 / Status</li>
+                            <li>\u0631\u0642\u0645 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)</li>
+                        </ul>
+                        <p class="text-xs text-blue-700 mt-3">\u0625\u0630\u0627 \u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0623\u0633\u0645\u0627\u0621 \u0645\u0648\u0627\u0642\u0639/\u0623\u0645\u0627\u0643\u0646 \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u0633\u064A\u062A\u0645 \u0631\u0628\u0637\u0647\u0627 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B\u060C \u0648\u0625\u0644\u0627 \u0633\u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0623\u0633\u0645\u0627\u0621 \u0643\u0645\u0627 \u0647\u064A.</p>
+                    </div>
+                    <div>
+                        <label for="observation-excel-file-input" class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-file-excel ml-2"></i>
+                            \u0627\u062E\u062A\u0631 \u0645\u0644\u0641 Excel (.xlsx, .xls)
+                        </label>
+                        <input type="file" id="observation-excel-file-input" accept=".xlsx,.xls" class="form-input">
+                    </div>
+                    <div id="observation-import-preview" class="hidden">
+                        <h3 class="text-sm font-semibold mb-2">\u0645\u0639\u0627\u064A\u0646\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A (\u0623\u0648\u0644 5 \u0635\u0641\u0648\u0641):</h3>
+                        <div class="max-h-60 overflow-auto border rounded">
+                            <table class="data-table text-xs">
+                                <thead id="observation-preview-head"></thead>
+                                <tbody id="observation-preview-body"></tbody>
+                            </table>
+                        </div>
+                        <p id="observation-preview-count" class="text-sm text-gray-600 mt-2"></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u0644\u063A\u0627\u0621</button>
+                    <button id="observation-import-confirm-btn" class="btn-primary" disabled>
+                        <i class="fas fa-upload ml-2"></i>\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A
+                    </button>
+                </div>
+            </div>
+        `,document.body.appendChild(e);const t=e.querySelector("#observation-excel-file-input"),s=e.querySelector("#observation-import-confirm-btn"),a=e.querySelector("#observation-import-preview"),i=e.querySelector("#observation-preview-head"),o=e.querySelector("#observation-preview-body"),r=e.querySelector("#observation-preview-count");let n=[];const c=()=>{n=[],a&&a.classList.add("hidden"),i&&(i.innerHTML=""),o&&(o.innerHTML=""),r&&(r.textContent=""),s&&(s.disabled=!0)};e.addEventListener("click",l=>{l.target===e&&e.remove()});const d=async l=>{const p=l.target.files?.[0];if(c(),!!p){if(typeof XLSX>"u")try{await this.ensureSheetJS()}catch{return}try{Loading.show();const m=await this.readObservationExcelFile(p);n=m,this.renderObservationImportPreview(m,{previewContainer:a,previewHead:i,previewBody:o,previewCount:r,confirmBtn:s}),Loading.hide()}catch(m){Loading.hide(),Utils.safeError("\u0641\u0634\u0644 \u0642\u0631\u0627\u0621\u0629 \u0645\u0644\u0641 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629:",m),Notification?.error?.("\u0641\u0634\u0644 \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0645\u0644\u0641: "+m.message)}}};t&&t.addEventListener("change",d),s?.addEventListener("click",async()=>{if(n.length===0){Notification?.warning?.("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0645\u0644\u0641 \u064A\u062D\u062A\u0648\u064A \u0639\u0644\u0649 \u0628\u064A\u0627\u0646\u0627\u062A \u0642\u0628\u0644 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F.");return}await this.processImportedObservations(n,e)})},async readObservationExcelFile(e){return new Promise((t,s)=>{const a=new FileReader;a.onload=i=>{try{const o=new Uint8Array(i.target.result),r=XLSX.read(o,{type:"array"}),n=r.SheetNames[0],c=r.Sheets[n],d=XLSX.utils.sheet_to_json(c,{defval:""});if(!Array.isArray(d)||d.length===0){s(new Error("\u0627\u0644\u0645\u0644\u0641 \u0641\u0627\u0631\u063A \u0623\u0648 \u0644\u0627 \u064A\u062D\u062A\u0648\u064A \u0639\u0644\u0649 \u0628\u064A\u0627\u0646\u0627\u062A \u0642\u0627\u0628\u0644\u0629 \u0644\u0644\u0645\u0639\u0627\u0644\u062C\u0629."));return}t(d)}catch(o){s(o)}},a.onerror=s,a.readAsArrayBuffer(e)})},renderObservationImportPreview(e,{previewContainer:t,previewHead:s,previewBody:a,previewCount:i,confirmBtn:o}){if(!Array.isArray(e)||e.length===0){Notification?.warning?.("\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0628\u064A\u0627\u0646\u0627\u062A \u0641\u064A \u0627\u0644\u0645\u0644\u0641.");return}const r=Object.keys(e[0]);s&&(s.innerHTML=`<tr>${r.map(n=>`<th class="px-2 py-1">${Utils.escapeHTML(String(n))}</th>`).join("")}</tr>`),a&&(a.innerHTML=e.slice(0,5).map(n=>`
+                <tr>
+                    ${r.map(c=>`<td class="px-2 py-1">${Utils.escapeHTML(String(n[c]??""))}</td>`).join("")}
+                </tr>
+            `).join("")),i&&(i.textContent=`\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0635\u0641\u0648\u0641: ${e.length}`),t?.classList.remove("hidden"),o&&(o.disabled=!1)},async processImportedObservations(e,t){if(!Array.isArray(e)||e.length===0){Notification?.warning?.("\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0628\u064A\u0627\u0646\u0627\u062A \u0635\u0627\u0644\u062D\u0629 \u0644\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F.");return}Array.isArray(AppState.appData.dailyObservations)||(AppState.appData.dailyObservations=[]),Loading.show();let s=0,a=0;const i=[];try{for(let o=0;o<e.length;o+=1){const r=e[o];try{if(!Object.values(r||{}).some(l=>String(l||"").trim().length>0)){a+=1;continue}const c=this.mapImportedObservationRow(r);if(!c){a+=1,i.push(`\u0635\u0641 ${o+2}: \u0641\u0634\u0644 \u0641\u064A \u062A\u062D\u0648\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A`);continue}if(AppState.appData.dailyObservations.find(l=>{const p=this.normalizeRecord(l);return c.isoCode&&p.isoCode&&c.isoCode===p.isoCode?!0:p.id===c.id})){a+=1;continue}AppState.appData.dailyObservations.push(c),s+=1}catch(n){a+=1;const c=n.message||n.toString()||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641";i.push(`\u0635\u0641 ${o+2}: ${c}`),Utils.safeWarn(`\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0635\u0641 ${o+2}:`,n)}}}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0639\u0627\u0645 \u0641\u064A \u0639\u0645\u0644\u064A\u0629 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F:",o),i.push(`\u062E\u0637\u0623 \u0639\u0627\u0645: ${o.message||o.toString()}`)}try{if(s>0){try{typeof window<"u"&&window.DataManager&&typeof window.DataManager.save=="function"?window.DataManager.save():typeof DataManager<"u"&&typeof DataManager.save=="function"?DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062D\u0644\u064A\u0627\u064B")}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062D\u0644\u064A\u0627\u064B:",o)}try{await GoogleIntegration.autoSave("DailyObservations",AppState.appData.dailyObservations)}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 Google Sheets:",o)}}}catch(o){Utils.safeError("\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0639\u062F \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F:",o),typeof Notification<"u"&&Notification.error&&Notification.error("\u062A\u0645 \u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0628\u0639\u0636 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0644\u0643\u0646 \u0641\u0634\u0644 \u062D\u0641\u0638\u0647\u0627: "+(o.message||o.toString()))}if(Loading.hide(),s>0?Notification?.success?.(`\u062A\u0645 \u0627\u0633\u062A\u064A\u0631\u0627\u062F ${s} \u0645\u0644\u0627\u062D\u0638\u0629 \u064A\u0648\u0645\u064A\u0629${a?`\u060C \u0648\u062A\u0645 \u062A\u062C\u0627\u0647\u0644 ${a} \u0635\u0641`:""}.`):a>0&&Notification?.warning?.("\u0644\u0645 \u064A\u062A\u0645 \u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0623\u064A \u0635\u0641 \u0628\u0633\u0628\u0628 \u0623\u062E\u0637\u0627\u0621 \u0641\u064A \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A."),i.length>0){Utils.safeWarn("\u0623\u062E\u0637\u0627\u0621 \u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629:",i);const o=i.slice(0,5).join(`
+`);Notification?.error?.(`\u0623\u062E\u0637\u0627\u0621 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F:
+${o}${i.length>5?`
+...`:""}`)}t.remove(),this.resetFormState(),this.loadObservationsList()},mapImportedObservationRow(e){if(!e||typeof e!="object")return null;const t=new Map,s=new Map;Object.entries(e||{}).forEach(([A,R])=>{if(A==null)return;const I=String(A).trim();I&&(t.set(I,R),s.set(I.toLowerCase(),R))});const a=A=>{for(const R of A){const I=String(R||"").trim();if(!I)continue;if(t.has(I)){const _=t.get(I),B=_==null?"":String(_).trim();if(B)return B}const F=I.toLowerCase();if(s.has(F)){const _=s.get(F),B=_==null?"":String(_).trim();if(B)return B}}return""},i=A=>{for(const R of A){const I=String(R||"").trim();if(!I)continue;if(t.has(I)){const _=t.get(I);if(_!=null&&String(_).trim()!=="")return _}const F=I.toLowerCase();if(s.has(F)){const _=s.get(F);if(_!=null&&String(_).trim()!=="")return _}}return""},o=A=>{if(A==null)return[];if(typeof A=="object"){const B=A?.url||A?.link||A?.href||A?.hyperlink||A?.l?.Target||A?.l?.target||A?.Target||A?.target||A?.v||A?.text||"";return B&&typeof B=="string"?o(B):[]}const R=String(A||"").trim();if(!R)return[];const I=[],F=/https?:\/\/[^\s"'<>]+/gi;let _;for(;(_=F.exec(R))!==null;){const G=_[0].replace(/[)\],.;،؛]+$/g,"").trim();G&&I.push(G)}return Array.from(new Set(I))},r=(A,R="\u0645\u0631\u0641\u0642")=>{const I=o(A);return I.length?I.map((F,_)=>{const B=this.detectMimeType(F,F),G=B==="application/pdf"?".pdf":B==="image/png"?".png":B==="image/jpeg"?".jpg":"";return{id:Utils.generateId("ATT"),name:`${R}-${_+1}${G}`,type:B,size:0,data:F}}):[]},n=a(["\u0631\u0642\u0645 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629","\u0643\u0648\u062F ISO","ISO","ISO Code","Code"]);let c=a(["\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0642\u0639","\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0642\u0639 / \u0627\u0644\u0645\u0643\u0627\u0646","\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0642\u0639/ \u0627\u0644\u0645\u0643\u0627\u0646","\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0642\u0639/\u0627\u0644\u0645\u0643\u0627\u0646","\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0642\u0639 \u0648\u0627\u0644\u0645\u0643\u0627\u0646","\u0627\u0644\u0645\u0648\u0642\u0639","\u0627\u0644\u0645\u0648\u0642\u0639 / \u0627\u0644\u0645\u0643\u0627\u0646","Site","Site Name","Site / Location","Site/Location","Site/Location Name","Site Location","Site Location Name","Location Site","Location/Site"]);const d=a(["\u0627\u0644\u0645\u0643\u0627\u0646","\u0627\u0644\u0645\u0643\u0627\u0646 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u0648\u0642\u0639","\u0627\u0633\u0645 \u0627\u0644\u0645\u0643\u0627\u0646","\u0627\u0644\u0645\u0646\u0637\u0642\u0629","Location","Location Name","Place","Area","Place Name"]),l=a(["\u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629","\u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 / \u0627\u0644\u062A\u0635\u0631\u0641","Observation Type","Observation Type / Category","Type","Observation","Observation Category"]);let p=a(["\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629","\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 / \u0627\u0644\u062A\u0635\u0631\u0641 \u063A\u064A\u0631 \u0627\u0644\u0622\u0645\u0646","\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629/\u0627\u0644\u062A\u0635\u0631\u0641 \u063A\u064A\u0631 \u0627\u0644\u0622\u0645\u0646","\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0648\u0627\u0644\u062A\u0635\u0631\u0641 \u063A\u064A\u0631 \u0627\u0644\u0622\u0645\u0646","\u0627\u0644\u0648\u0635\u0641","\u0648\u0635\u0641 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629","Details","Observation Details","Observation Detail","Observation/Unsafe Act Details","Observation / Unsafe Act Details","Description","Observation Description","Description of Observation","Unsafe Act Details","Observation / Unsafe Act Description"]);const m=a(["\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A","\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A / \u0627\u0644\u0648\u0642\u0627\u0626\u064A","\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A/ \u0627\u0644\u0648\u0642\u0627\u0626\u064A","\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A \u0627\u0644\u0648\u0642\u0627\u0626\u064A","Corrective Action","Preventive Action","Corrective/Preventive Action","Corrective & Preventive Action"]),u=a(["\u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u0639\u0646 \u0627\u0644\u062A\u0646\u0641\u064A\u0630","\u0627\u0644\u062C\u0647\u0629 \u0627\u0644\u0645\u0633\u0624\u0648\u0644\u0629","Responsible Department","Responsible Dept","Department","Responsible","Responsible Person","Responsible for Implementation"]),f=a(["\u0645\u0639\u062F\u0644 \u0627\u0644\u062E\u0637\u0648\u0631\u0629","\u062F\u0631\u062C\u0629 \u0627\u0644\u062E\u0637\u0648\u0631\u0629","\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0637\u0648\u0631\u0629","Risk Level","Risk","Risk Rating","Risk Level Rating"]),y=a(["\u0627\u0633\u0645 \u0635\u0627\u062D\u0628 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629","\u0627\u0644\u0645\u0644\u0627\u062D\u0638","\u0635\u0627\u062D\u0628 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629","Observer Name","Observer","Reporter Name"]),h=a(["\u0627\u0644\u062D\u0627\u0644\u0629","Status","Observation Status"]),k=a(["\u0627\u0644\u0648\u0631\u062F\u064A\u0629","Shift","Shift Name"]),b=i(["\u0637\u0627\u0628\u0639 \u0632\u0645\u0646\u064A","Timestamp","Time Stamp","time stamp","\u062A\u0627\u0631\u064A\u062E \u0648\u0648\u0642\u062A \u0627\u0644\u0625\u062F\u062E\u0627\u0644","Entry Timestamp"]),S=i(["\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629","\u0627\u0644\u062A\u0627\u0631\u064A\u062E","\u062A\u0627\u0631\u064A\u062E \u0648\u0648\u0642\u062A \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629","\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0648\u0627\u0644\u0648\u0642\u062A","Observation Date","Observation DateTime","Date","DateTime"])||b,v=i(["\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062A\u0648\u0642\u0639 \u0644\u0644\u062A\u0646\u0641\u064A\u0630","Expected Completion Date","Due Date","\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062A\u0648\u0642\u0639","Expected Date"]),g=i(["\u0627\u0644\u0635\u0648\u0631\u0647 \u0627\u0644\u062A\u0648\u0636\u064A\u062D\u064A\u0629 \u0644\u0644\u0645\u0644\u0627\u062D\u0638\u0629","\u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u062A\u0648\u0636\u064A\u062D\u064A\u0629 \u0644\u0644\u0645\u0644\u0627\u062D\u0638\u0629","\u0635\u0648\u0631\u0647","\u0635\u0648\u0631\u0629","Image","Image URL","Image Url","Photo","Photo URL","Attachment","Attachments","\u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A","\u0645\u0631\u0641\u0642","\u0627\u0644\u0631\u0627\u0628\u0637","\u0631\u0627\u0628\u0637","Link","URL","Drive Link","Google Drive Link"]);if(!c&&!p){if(!Object.values(e).some(R=>String(R||"").trim().length>3))throw new Error("\u0627\u0644\u0635\u0641 \u064A\u0641\u062A\u0642\u0631 \u0625\u0644\u0649 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629 (\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0642\u0639 \u0623\u0648 \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629).");c||(c="\u0645\u0648\u0642\u0639 \u063A\u064A\u0631 \u0645\u062D\u062F\u062F"),p||(p="\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0641\u0627\u0635\u064A\u0644")}const T=this.findSiteMatch(c),L=T?T.id:"",D=T?T.name:c,O=T?this.findPlaceMatch(T,d):null,N=O?O.id:"",w=O?O.name:d;let E=this.normalizeObservationTypeValue(l);const x=this.normalizeShiftValue(k),$=this.normalizeRiskLevelValue(f);let M=this.normalizeStatus(h);const q=this.parseExcelDateValue(S)||this.parseExcelDateValue(b)||new Date().toISOString(),W=this.parseExcelDateValue(v,{isDateOnly:!0}),P=r(g,"\u0631\u0627\u0628\u0637");p||(p="\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0641\u0627\u0635\u064A\u0644"),E||(E="\u0623\u062E\u0631\u0649"),M||(M="\u0645\u0641\u062A\u0648\u062D");const C=generateDailyObservationId(AppState.appData.dailyObservations||[]),U=n||getObservationIsoCodeFromId(C),j=new Date().toISOString(),z={id:C,isoCode:U,siteId:L,siteName:D,placeId:N,locationName:w,observationType:E,date:q||j,shift:x,details:p,correctiveAction:m,responsibleDepartment:u,riskLevel:$,observerName:y,expectedCompletionDate:W,status:M,attachments:P,createdAt:j,updatedAt:j};return this.normalizeRecord(z)},async exportPDF(e){const t=AppState.appData.dailyObservations.find(a=>a.id===e);if(!t){Notification.error("\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}const s=this.normalizeRecord(t);try{Loading.show();const a=s.isoCode||(s.id?getObservationIsoCodeFromId(s.id):"")||"OBS-UNKNOWN",i="\u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629",o=[],r=[];Array.isArray(s.attachments)&&s.attachments.length>0&&s.attachments.forEach(u=>{const f=(u.type||"").startsWith("image/")||(u.name||"").match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i),y=u.shareableLink||u.directLink||u.cloudLink?.url||u.data||"";f&&y?o.push({src:y,name:Utils.escapeHTML(u.name||"\u0635\u0648\u0631\u0629")}):r.push({name:Utils.escapeHTML(u.name||"\u0645\u0631\u0641\u0642"),link:y||u.data||""})});let n="";o.length>0&&(n=`
+                    <div class="section-title" style="margin-top: 20px; margin-bottom: 15px; font-size: 16px; font-weight: 600;">\u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A (\u0627\u0644\u0635\u0648\u0631):</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                        ${o.map((u,f)=>`
+                            <div style="border: 2px solid #ddd; border-radius: 8px; padding: 10px; background: #f9f9f9; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <img src="${u.src}" alt="${u.name}" style="max-width: 100%; max-height: 250px; width: auto; height: auto; border-radius: 4px; object-fit: contain; display: block; margin: 0 auto;">
+                                <p style="margin-top: 8px; font-size: 12px; color: #666; word-break: break-word;">${u.name}</p>
+                            </div>
+                        `).join("")}
+                    </div>
+                `);let c="";r.length>0&&(c=`
+                    <div class="section-title" style="margin-top: 20px; margin-bottom: 15px; font-size: 16px; font-weight: 600;">\u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A (\u0645\u0644\u0641\u0627\u062A \u0623\u062E\u0631\u0649):</div>
+                    <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+                        ${r.map(u=>`
+                            <div style="border: 1px solid #ddd; padding: 10px; border-radius: 8px; background: #f9f9f9;">
+                                <i class="fas fa-file ml-2"></i>
+                                <span>${u.name}</span>
+                                ${u.link?`<a href="${u.link}" target="_blank" style="margin-right: 10px; color: #3b82f6; text-decoration: none;">\u0639\u0631\u0636</a>`:""}
+                            </div>
+                        `).join("")}
+                    </div>
+                `);const d=n+c,l=`
+                    <table>
+                        <tr><th>\u0631\u0642\u0645 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629</th><td>${Utils.escapeHTML(s.isoCode||"")}</td></tr>
+                    <tr><th>\u0627\u0644\u0645\u0648\u0642\u0639</th><td>${Utils.escapeHTML(s.siteName||"")}</td></tr>
+                    <tr><th>\u0627\u0644\u0645\u0643\u0627\u0646</th><td>${Utils.escapeHTML(s.locationName||"")}</td></tr>
+                    <tr><th>\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0648\u0627\u0644\u0648\u0642\u062A</th><td>${s.date?Utils.formatDateTime(s.date):"-"}</td></tr>
+                        <tr><th>\u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629</th><td>${Utils.escapeHTML(s.observationType||"")}</td></tr>
+                    <tr><th>\u0627\u0644\u0648\u0631\u062F\u064A\u0629</th><td>${Utils.escapeHTML(s.shift||"")}</td></tr>
+                    <tr><th>\u0645\u0639\u062F\u0644 \u0627\u0644\u062E\u0637\u0648\u0631\u0629</th><td>${Utils.escapeHTML(s.riskLevel||"")}</td></tr>
+                        <tr><th>\u0627\u0644\u062D\u0627\u0644\u0629</th><td>${Utils.escapeHTML(s.status||"")}</td></tr>
+                    <tr><th>\u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u0639\u0646 \u0627\u0644\u062A\u0646\u0641\u064A\u0630</th><td>${Utils.escapeHTML(s.responsibleDepartment||"")}</td></tr>
+                    <tr><th>\u0635\u0627\u062D\u0628 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629</th><td>${Utils.escapeHTML(s.observerName||"")}</td></tr>
+                    <tr><th>\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062A\u0648\u0642\u0639 \u0644\u0644\u062A\u0646\u0641\u064A\u0630</th><td>${s.expectedCompletionDate?Utils.formatDate(s.expectedCompletionDate):"-"}</td></tr>
+                    </table>
+                    
+                <div class="section-title">\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629:</div>
+                <div class="description">${Utils.escapeHTML(s.details||"")}</div>
+                    
+                    ${s.correctiveAction?`
+                    <div class="section-title">\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A / \u0627\u0644\u0648\u0642\u0627\u0626\u064A:</div>
+                        <div class="description">${Utils.escapeHTML(s.correctiveAction)}</div>
+                    `:""}
+                    
+                    ${d}
+            `,p=typeof FormHeader<"u"&&FormHeader.generatePDFHTML?FormHeader.generatePDFHTML(a,i,l,!1,!0,{qrData:JSON.stringify({id:s.id,type:"DailyObservation"})},s.createdAt,s.updatedAt):`<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>@page { size: A4 portrait; margin: 1cm; } @media print { @page { size: A4 portrait; margin: 1cm; } body { padding: 0; } }</style><title>\u0645\u0644\u0627\u062D\u0638\u0629 \u064A\u0648\u0645\u064A\u0629</title></head><body dir="rtl" style="font-family: Arial, sans-serif;">${l}</body></html>`,m=window.open("","_blank");m?(m.document.write(p),m.document.close(),m.onload=()=>{setTimeout(()=>{m.print(),Loading.hide()},500)}):(Loading.hide(),Notification.error("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0639\u0631\u0636 \u0627\u0644\u062A\u0642\u0631\u064A\u0631."))}catch(a){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 PDF: "+a.message)}},async convertFileToBase64(e){return new Promise((t,s)=>{const a=new FileReader;a.onload=()=>t(a.result),a.onerror=s,a.readAsDataURL(e)})},async convertImageToBase64(e){return this.convertFileToBase64(e)}};try{typeof window<"u"&&(window.DailyObservations=DailyObservations,AppState?.debugMode&&typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 DailyObservations module loaded and available on window.DailyObservations"))}catch(e){Utils?.safeError?.("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 DailyObservations:",e),typeof window<"u"&&typeof DailyObservations<"u"&&(window.DailyObservations=DailyObservations)}
