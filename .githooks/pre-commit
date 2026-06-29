@@ -47,5 +47,12 @@ git add \
     vercel-deploy/frontend/js/modules/app-utils.js \
     2>/dev/null || true
 
-echo "✅ [pre-commit] تم رفع الإصدار وضمّه للـ commit."
+# بناء dist/ ليتزامن مع الملفات المحدّثة
+echo "🔨 [pre-commit] بناء dist/..."
+if ! (cd Frontend && npm run build 2>/dev/null); then
+    echo "⚠️ [pre-commit] فشل بناء dist/ — تابع مع source فقط."
+fi
+git add -f dist/ 2>/dev/null || true
+
+echo "✅ [pre-commit] تم رفع الإصدار وبناء dist/ وضمّهما للـ commit."
 exit 0
