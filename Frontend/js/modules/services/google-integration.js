@@ -708,7 +708,7 @@ const GoogleIntegration = {
                     errorMsg.includes('رفض قراءة');
 
                 if (!isCircuitBreakerError && !isConfigError && !isTransientNetworkError && !isAuthOrPermissionError) {
-                    // التحقق من هل هو recordFailure
+                    Utils.safeError('❌ خطأ غير معالج في مزامنة Google - هذا السبب الحقيقي لفتح Circuit Breaker:', error);
                     this._recordFailure();
                 }
 
