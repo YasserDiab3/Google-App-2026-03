@@ -164,3 +164,260 @@
     }
 }
 
+/* ============================================
+   Approval Request Form — Premium Design
+   Naval-inspired, refined corporate aesthetic
+   ============================================ */
+@keyframes approvalModalIn {
+    from { opacity: 0; transform: scale(0.96) translateY(12px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes approvalShimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.approval-premium-content {
+    animation: approvalModalIn 0.3s ease;
+    position: relative;
+}
+.approval-premium-content.closing {
+    animation: approvalModalIn 0.2s ease reverse forwards;
+}
+
+/* HEADER: deep navy gradient + dot pattern */
+.approval-premium-header {
+    background: linear-gradient(135deg, #0c1929 0%, #1a365d 50%, #1e40af 100%);
+    position: relative;
+    overflow: hidden;
+}
+.approval-premium-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.07;
+    background-image:
+        radial-gradient(circle at 20% 30%, rgba(255,255,255,0.6) 1px, transparent 1px),
+        radial-gradient(circle at 70% 60%, rgba(255,255,255,0.4) 1px, transparent 1px),
+        radial-gradient(circle at 45% 85%, rgba(255,255,255,0.5) 1px, transparent 1px);
+    background-size: 48px 48px, 64px 64px, 36px 36px;
+    pointer-events: none;
+}
+.approval-premium-header-shine {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+    background-size: 200% 100%;
+    animation: approvalShimmer 4s ease-in-out infinite;
+    pointer-events: none;
+}
+
+/* BODY */
+.approval-premium-body {
+    padding: 28px 28px 20px;
+    background: #f8fafc;
+}
+
+/* SECTION CARDS */
+.approval-premium-section {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 20px 24px;
+    transition: box-shadow 0.25s ease, border-color 0.25s ease;
+    position: relative;
+}
+.approval-premium-section::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, #3b82f6, #8b5cf6);
+    border-radius: 0 14px 14px 0;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+.approval-premium-section:hover {
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.07);
+    border-color: #cbd5e1;
+}
+.approval-premium-section:hover::after { opacity: 1; }
+
+/* SECTION TITLE */
+.approval-premium-section-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0 0 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* LABELS */
+.approval-premium-label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+/* INPUT WRAPPER — icon prefix container */
+.approval-premium-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.approval-premium-input-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 14px;
+    pointer-events: none;
+    transition: color 0.2s ease;
+    z-index: 1;
+}
+
+/* INPUTS */
+.approval-premium-input,
+.approval-premium-select,
+.approval-premium-textarea {
+    width: 100%;
+    padding: 10px 38px 10px 14px;
+    font-size: 0.88rem;
+    color: #0f172a;
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    font-family: 'Cairo', sans-serif;
+    outline: none;
+    box-sizing: border-box;
+}
+.approval-premium-input:focus,
+.approval-premium-select:focus,
+.approval-premium-textarea:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+.approval-premium-input:focus + .approval-premium-input-icon,
+.approval-premium-input-wrapper:focus-within .approval-premium-input-icon {
+    color: #3b82f6;
+}
+.approval-premium-input::placeholder,
+.approval-premium-textarea::placeholder {
+    color: #94a3b8;
+    font-size: 0.82rem;
+}
+.approval-premium-textarea {
+    padding: 12px 14px;
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.6;
+}
+.approval-premium-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left 12px center;
+    padding-left: 36px;
+    padding-right: 14px;
+    cursor: pointer;
+}
+
+/* DROPZONE */
+.approval-premium-dropzone {
+    border: 2px dashed #d1d5db;
+    border-radius: 12px;
+    padding: 28px 20px;
+    text-align: center;
+    background: #f8fafc;
+    transition: border-color 0.2s ease, background 0.2s ease;
+    cursor: pointer;
+}
+.approval-premium-dropzone:hover,
+.approval-premium-dropzone.drag-over {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+/* FILE ITEMS */
+.approval-premium-file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    transition: background 0.15s ease;
+}
+.approval-premium-file-item:hover {
+    background: #f1f5f9;
+}
+
+/* DARK MODE */
+[data-theme="dark"] .approval-premium-body {
+    background: #0f172a;
+}
+[data-theme="dark"] .approval-premium-section {
+    background: #1e293b;
+    border-color: #334155;
+}
+[data-theme="dark"] .approval-premium-section:hover {
+    border-color: #475569;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+}
+[data-theme="dark"] .approval-premium-label {
+    color: #e2e8f0;
+}
+[data-theme="dark"] .approval-premium-input,
+[data-theme="dark"] .approval-premium-select,
+[data-theme="dark"] .approval-premium-textarea {
+    background: #1e293b;
+    border-color: #334155;
+    color: #f1f5f9;
+}
+[data-theme="dark"] .approval-premium-input:focus,
+[data-theme="dark"] .approval-premium-select:focus,
+[data-theme="dark"] .approval-premium-textarea:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+}
+[data-theme="dark"] .approval-premium-input::placeholder,
+[data-theme="dark"] .approval-premium-textarea::placeholder {
+    color: #64748b;
+}
+[data-theme="dark"] .approval-premium-input-icon {
+    color: #64748b;
+}
+[data-theme="dark"] .approval-premium-dropzone {
+    background: #1e293b;
+    border-color: #334155;
+}
+[data-theme="dark"] .approval-premium-dropzone:hover,
+[data-theme="dark"] .approval-premium-dropzone.drag-over {
+    border-color: #60a5fa;
+    background: #1e3a5f;
+}
+[data-theme="dark"] .approval-premium-file-item {
+    background: #1e293b;
+    border-color: #334155;
+}
+[data-theme="dark"] .approval-premium-file-item:hover {
+    background: #334155;
+}
+[data-theme="dark"] .approval-premium-section-title {
+    color: #94a3b8;
+    border-bottom-color: #334155;
+}
+

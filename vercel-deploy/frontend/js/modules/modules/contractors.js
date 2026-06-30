@@ -9872,101 +9872,168 @@ const Contractors = {
         modal.className = 'modal-overlay';
         modal.id = 'contractor-approval-request-modal';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width:860px;border-radius:16px;overflow:hidden;box-shadow:0 24px 48px rgba(15,23,42,0.18);">
-                <div style="background:linear-gradient(135deg,#312e81 0%,#6366f1 100%);color:#fff;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;">
-                            <i class="fas fa-paper-plane" style="font-size:18px;"></i>
+            <div class="approval-premium-content" style="max-width:880px;border-radius:20px;overflow:hidden;box-shadow:0 25px 60px rgba(15,23,42,0.2);background:#f8fafc;">
+
+                <!-- HEADER: Deep navy gradient with micro-pattern -->
+                <div class="approval-premium-header">
+                    <div class="approval-premium-header-shine"></div>
+                    <div style="position:relative;padding:22px 28px;display:flex;align-items:center;justify-content:space-between;gap:16px;">
+                        <div style="display:flex;align-items:center;gap:16px;">
+                            <div style="width:50px;height:50px;border-radius:14px;background:rgba(255,255,255,0.12);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i class="fas fa-paper-plane" style="font-size:20px;color:#fff;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></i>
+                            </div>
+                            <div>
+                                <h2 style="margin:0;font-size:1.2rem;font-weight:700;color:#fff;letter-spacing:0.01em;">طلب اعتماد مقاول / مورد</h2>
+                                <p style="margin:5px 0 0;font-size:0.82rem;color:rgba(255,255,255,0.7);font-weight:400;">يُرفع إلى مدير النظام للمراجعة والاعتماد</p>
+                            </div>
                         </div>
-                        <div>
-                            <h2 style="margin:0;font-size:1.15rem;font-weight:700;">طلب اعتماد مقاول / مورد</h2>
-                            <p style="margin:4px 0 0;font-size:0.78rem;opacity:0.9;">يُراجع من مدير النظام — تحقق من عدم التكرار قبل الإرسال</p>
-                        </div>
+                        <button type="button" class="modal-close" style="color:rgba(255,255,255,0.6);width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);transition:all 0.2s;flex-shrink:0;" onmouseover="this.style.background='rgba(255,255,255,0.18)';this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.6)'" onclick="this.closest('.modal-overlay').remove()">
+                            <i class="fas fa-times" style="font-size:14px;"></i>
+                        </button>
                     </div>
-                    <button type="button" class="modal-close" style="color:#fff;opacity:0.9;" onclick="this.closest('.modal-overlay').remove()">
-                        <i class="fas fa-times"></i>
-                    </button>
                 </div>
-                <div class="modal-body" style="padding:24px;background:#f8fafc;">
-                    <div id="approval-request-validation-hint" style="display:none;margin-bottom:16px;padding:12px 14px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:0.85rem;"></div>
-                    <form id="approval-request-form" class="space-y-5">
-                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;">
-                            <p style="margin:0 0 12px;font-size:0.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;">بيانات الطلب</p>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="md:col-span-2">
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">نوع الطلب *</label>
-                                    <select id="approval-request-type" class="form-input" required>
-                                        <option value="">اختر نوع الطلب</option>
-                                        <option value="contractor">اعتماد مقاول جديد</option>
-                                        <option value="supplier">اعتماد مورد جديد</option>
-                                    </select>
+
+                <!-- BODY -->
+                <div class="approval-premium-body">
+                    <div id="approval-request-validation-hint" style="display:none;margin-bottom:20px;padding:14px 18px;border-radius:12px;background:linear-gradient(135deg,#fef2f2,#fff5f5);border:1px solid #fecaca;color:#b91c1c;font-size:0.85rem;align-items:center;gap:10px;">
+                        <i class="fas fa-exclamation-circle" style="font-size:16px;color:#ef4444;flex-shrink:0;"></i>
+                        <span id="approval-request-validation-message"></span>
+                    </div>
+                    <form id="approval-request-form">
+
+                        <!-- SECTION 1: معلومات الطلب -->
+                        <div class="approval-premium-section" style="margin-bottom:20px;">
+                            <h3 class="approval-premium-section-title">
+                                <i class="fas fa-clipboard-list" style="color:#3b82f6;font-size:14px;"></i>
+                                معلومات الطلب
+                            </h3>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                                <div style="grid-column:1/-1;">
+                                    <label class="approval-premium-label">نوع الطلب *</label>
+                                    <div class="approval-premium-input-wrapper">
+                                        <i class="fas fa-tag approval-premium-input-icon"></i>
+                                        <select id="approval-request-type" class="approval-premium-select" required>
+                                            <option value="">اختر نوع الطلب</option>
+                                            <option value="contractor">اعتماد مقاول جديد</option>
+                                            <option value="supplier">اعتماد مورد جديد</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">اسم الشركة / المقاول *</label>
-                                    <input type="text" id="approval-request-company-name" class="form-input" required placeholder="اسم الشركة أو المقاول" autocomplete="organization">
+                                    <label class="approval-premium-label">اسم الشركة / المقاول *</label>
+                                    <div class="approval-premium-input-wrapper">
+                                        <i class="fas fa-building approval-premium-input-icon"></i>
+                                        <input type="text" id="approval-request-company-name" class="approval-premium-input" required placeholder="اسم الشركة أو المقاول" autocomplete="organization">
+                                    </div>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">رقم السجل التجاري / الترخيص *</label>
-                                    <input type="text" id="approval-request-license" class="form-input" required placeholder="رقم السجل أو الترخيص">
+                                    <label class="approval-premium-label">رقم السجل التجاري / الترخيص *</label>
+                                    <div class="approval-premium-input-wrapper">
+                                        <i class="fas fa-receipt approval-premium-input-icon"></i>
+                                        <input type="text" id="approval-request-license" class="approval-premium-input" required placeholder="رقم السجل أو الترخيص">
+                                    </div>
                                 </div>
-                                <div class="md:col-span-2">
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">نوع الخدمة / النشاط *</label>
-                                    <input type="text" id="approval-request-service-type" class="form-input" required placeholder="نوع الخدمة أو النشاط">
+                                <div style="grid-column:1/-1;">
+                                    <label class="approval-premium-label">نوع الخدمة / النشاط *</label>
+                                    <div class="approval-premium-input-wrapper">
+                                        <i class="fas fa-wrench approval-premium-input-icon"></i>
+                                        <input type="text" id="approval-request-service-type" class="approval-premium-input" required placeholder="نوع الخدمة أو النشاط المطلوب اعتماده">
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;">
-                            <p style="margin:0 0 12px;font-size:0.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;">بيانات التواصل</p>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                        <!-- SECTION 2: بيانات التواصل -->
+                        <div class="approval-premium-section" style="margin-bottom:20px;">
+                            <h3 class="approval-premium-section-title">
+                                <i class="fas fa-address-card" style="color:#8b5cf6;font-size:14px;"></i>
+                                بيانات التواصل
+                            </h3>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">الشخص المسؤول</label>
-                                    <input type="text" id="approval-request-contact-person" class="form-input" placeholder="اسم الشخص المسؤول">
+                                    <label class="approval-premium-label">الشخص المسؤول</label>
+                                    <div class="approval-premium-input-wrapper">
+                                        <i class="fas fa-user approval-premium-input-icon"></i>
+                                        <input type="text" id="approval-request-contact-person" class="approval-premium-input" placeholder="اسم الشخص المسؤول">
+                                    </div>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">رقم الهاتف</label>
-                                    <input type="tel" id="approval-request-phone" class="form-input" placeholder="رقم الهاتف">
+                                    <label class="approval-premium-label">رقم الهاتف</label>
+                                    <div class="approval-premium-input-wrapper">
+                                        <i class="fas fa-phone approval-premium-input-icon"></i>
+                                        <input type="tel" id="approval-request-phone" class="approval-premium-input" placeholder="05X XXX XXXX" dir="ltr">
+                                    </div>
                                 </div>
-                                <div class="md:col-span-2">
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">البريد الإلكتروني</label>
-                                    <input type="email" id="approval-request-email" class="form-input" placeholder="البريد الإلكتروني">
+                                <div style="grid-column:1/-1;">
+                                    <label class="approval-premium-label">البريد الإلكتروني</label>
+                                    <div class="approval-premium-input-wrapper">
+                                        <i class="fas fa-envelope approval-premium-input-icon"></i>
+                                        <input type="email" id="approval-request-email" class="approval-premium-input" placeholder="email@example.com" dir="ltr">
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">ملاحظات إضافية</label>
-                            <textarea id="approval-request-notes" class="form-input" rows="3" placeholder="أي معلومات إضافية تساعد في المراجعة"></textarea>
+
+                        <!-- SECTION 3: ملاحظات إضافية -->
+                        <div class="approval-premium-section" style="margin-bottom:20px;">
+                            <h3 class="approval-premium-section-title">
+                                <i class="fas fa-sticky-note" style="color:#f59e0b;font-size:14px;"></i>
+                                ملاحظات إضافية
+                            </h3>
+                            <div>
+                                <textarea id="approval-request-notes" class="approval-premium-textarea" rows="3" placeholder="أي معلومات إضافية تساعد في عملية المراجعة والاعتماد..."></textarea>
+                            </div>
                         </div>
-                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                <i class="fas fa-paperclip ml-2"></i>
+
+                        <!-- SECTION 4: المرفقات -->
+                        <div class="approval-premium-section" style="margin-bottom:20px;">
+                            <h3 class="approval-premium-section-title">
+                                <i class="fas fa-paperclip" style="color:#10b981;font-size:14px;"></i>
                                 المرفقات
-                            </label>
-                            <input type="file" id="approval-request-attachments" class="form-input" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx">
-                            <p class="text-xs text-gray-500 mt-1">PDF, Word, Excel, صور — حتى 5MB لكل ملف</p>
-                            <div id="approval-request-attachments-list" class="mt-3 space-y-2"></div>
+                            </h3>
+                            <div class="approval-premium-dropzone" id="approval-dropzone">
+                                <i class="fas fa-cloud-upload-alt" style="font-size:32px;color:#94a3b8;margin-bottom:8px;"></i>
+                                <p style="margin:0 0 4px;font-size:0.9rem;font-weight:600;color:#475569;">اسحب وأفلت الملفات هنا</p>
+                                <p style="margin:0 0 12px;font-size:0.78rem;color:#94a3b8;">أو</p>
+                                <button type="button" class="btn-secondary btn-sm" id="approval-upload-btn" style="font-size:0.82rem;">
+                                    <i class="fas fa-folder-open ml-1"></i>
+                                    اختيار ملفات
+                                </button>
+                                <p style="margin:12px 0 0;font-size:0.72rem;color:#94a3b8;">PDF, Word, Excel, صور — حد أقصى 5MB لكل ملف</p>
+                                <input type="file" id="approval-request-attachments" style="display:none;" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx">
+                            </div>
+                            <div id="approval-request-attachments-list" style="margin-top:12px;display:flex;flex-direction:column;gap:8px;"></div>
                         </div>
+
+                        <!-- SECTION 5: Admin Custom Fields -->
                         ${Permissions.isAdmin() ? `
-                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;">
-                            <div class="flex items-center justify-between mb-2">
-                                <label class="block text-sm font-semibold text-gray-700">
-                                    <i class="fas fa-cog ml-2"></i>
-                                    بنود إضافية (للمدير)
-                                </label>
+                        <div class="approval-premium-section" style="margin-bottom:20px;border-color:#e0e7ff;">
+                            <h3 class="approval-premium-section-title">
+                                <i class="fas fa-cog" style="color:#6366f1;font-size:14px;"></i>
+                                بنود إضافية (للمدير)
+                            </h3>
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                                <p style="margin:0;font-size:0.82rem;color:#64748b;">أضف بنوداً إضافية لطلب الاعتماد</p>
                                 <button type="button" id="add-custom-field-btn" class="btn-secondary btn-sm">
                                     <i class="fas fa-plus ml-1"></i>
                                     إضافة بند
                                 </button>
                             </div>
-                            <div id="custom-fields-container" class="space-y-2"></div>
+                            <div id="custom-fields-container" style="display:flex;flex-direction:column;gap:8px;"></div>
                         </div>
                         ` : ''}
-                        <div class="modal-footer" style="padding:0;border:none;background:transparent;display:flex;justify-content:flex-end;gap:10px;">
-                            <button type="button" class="btn-secondary" id="approval-request-cancel-btn">إلغاء</button>
-                            <button type="submit" class="btn-primary" id="approval-request-submit-btn">
+
+                        <!-- FOOTER -->
+                        <div style="display:flex;justify-content:flex-end;align-items:center;gap:12px;padding-top:12px;border-top:1px solid #e2e8f0;">
+                            <button type="button" class="btn-secondary" id="approval-request-cancel-btn" style="padding:10px 24px;border-radius:10px;">
+                                إلغاء
+                            </button>
+                            <button type="submit" class="btn-primary" id="approval-request-submit-btn" style="padding:10px 28px;border-radius:10px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border:none;font-weight:600;">
                                 <i class="fas fa-paper-plane ml-2"></i>
                                 <span class="submit-text">إرسال الطلب</span>
                             </button>
                         </div>
+
                     </form>
                 </div>
             </div>
@@ -9975,44 +10042,67 @@ const Contractors = {
         document.body.appendChild(modal);
         this.applyModuleI18n(modal);
 
-        // إعداد معالجة المرفقات
+        // إعداد معالجة المرفقات مع Drag & Drop
         const attachmentsInput = modal.querySelector('#approval-request-attachments');
         const attachmentsList = modal.querySelector('#approval-request-attachments-list');
+        const uploadBtn = modal.querySelector('#approval-upload-btn');
+        const dropzone = modal.querySelector('#approval-dropzone');
         const attachments = [];
+        const attachmentNames = new Set();
 
-        if (attachmentsInput && attachmentsList) {
+        const addAttachment = (file) => {
+            if (file.size > 5 * 1024 * 1024) {
+                Notification.warning(`الملف ${file.name} يتجاوز الحد الأقصى المسموح (5MB)`);
+                return false;
+            }
+            if (attachmentNames.has(file.name)) return false;
+            attachmentNames.add(file.name);
+            attachments.push(file);
+            const fileItem = document.createElement('div');
+            fileItem.className = 'approval-premium-file-item';
+            fileItem.setAttribute('data-file-name', file.name);
+            const isImage = file.type.startsWith('image/');
+            fileItem.innerHTML = `
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <i class="fas ${isImage ? 'fa-file-image' : 'fa-file'}" style="color:${isImage ? '#10b981' : '#3b82f6'};font-size:16px;"></i>
+                    <div>
+                        <p style="margin:0;font-size:0.84rem;font-weight:500;color:#1e293b;line-height:1.3;">${Utils.escapeHTML(file.name)}</p>
+                        <p style="margin:0;font-size:0.72rem;color:#94a3b8;">${(file.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                </div>
+                <button type="button" class="remove-attachment-btn" style="width:28px;height:28px;border-radius:8px;border:none;background:transparent;color:#94a3b8;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;" onmouseover="this.style.background='#fef2f2';this.style.color='#ef4444'" onmouseout="this.style.background='transparent';this.style.color='#94a3b8'">
+                    <i class="fas fa-times" style="font-size:12px;"></i>
+                </button>
+            `;
+            fileItem.querySelector('.remove-attachment-btn').addEventListener('click', () => {
+                attachmentNames.delete(file.name);
+                const idx = attachments.indexOf(file);
+                if (idx !== -1) attachments.splice(idx, 1);
+                fileItem.remove();
+            });
+            attachmentsList.appendChild(fileItem);
+            return true;
+        };
+
+        if (uploadBtn && attachmentsInput) {
+            uploadBtn.addEventListener('click', () => attachmentsInput.click());
+        }
+
+        if (dropzone) {
+            ['dragenter', 'dragover'].forEach(evt => {
+                dropzone.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); dropzone.classList.add('drag-over'); });
+            });
+            ['dragleave', 'drop'].forEach(evt => {
+                dropzone.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); dropzone.classList.remove('drag-over'); });
+            });
+            dropzone.addEventListener('drop', (e) => {
+                Array.from(e.dataTransfer.files).forEach(f => addAttachment(f));
+            });
+        }
+
+        if (attachmentsInput) {
             attachmentsInput.addEventListener('change', (e) => {
-                const files = Array.from(e.target.files);
-                files.forEach(file => {
-                    if (file.size > 5 * 1024 * 1024) {
-                        Notification.warning(`الملف ${file.name} يتجاوز الحد الأقصى المسموح (5MB)`);
-                        return;
-                    }
-                    attachments.push(file);
-                    const fileItem = document.createElement('div');
-                    fileItem.className = 'flex items-center justify-between p-2 bg-gray-50 rounded border';
-                    fileItem.setAttribute('data-file-name', file.name);
-                    fileItem.innerHTML = `
-                        <div class="flex items-center gap-2">
-                            <i class="fas fa-file text-blue-600"></i>
-                            <span class="text-sm text-gray-700">${Utils.escapeHTML(file.name)}</span>
-                            <span class="text-xs text-gray-500">(${(file.size / 1024 / 1024).toFixed(2)} MB)</span>
-                        </div>
-                        <button type="button" class="text-red-600 hover:text-red-800 remove-attachment-btn">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    `;
-                    const removeBtn = fileItem.querySelector('.remove-attachment-btn');
-                    removeBtn.addEventListener('click', () => {
-                        const fileName = fileItem.getAttribute('data-file-name');
-                        const index = attachments.findIndex(f => f.name === fileName);
-                        if (index !== -1) {
-                            attachments.splice(index, 1);
-                        }
-                        fileItem.remove();
-                    });
-                    attachmentsList.appendChild(fileItem);
-                });
+                Array.from(e.target.files).forEach(f => addAttachment(f));
                 e.target.value = '';
             });
         }
@@ -10027,20 +10117,20 @@ const Contractors = {
                 addCustomFieldBtn.addEventListener('click', () => {
                     const fieldId = `custom-field-${customFieldIndex++}`;
                     const fieldItem = document.createElement('div');
-                    fieldItem.className = 'flex items-center gap-2 p-2 bg-gray-50 rounded border';
+                    fieldItem.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;';
                     fieldItem.innerHTML = `
-                        <input type="text" class="form-input flex-1" placeholder="اسم البند المطلوب" data-field-id="${fieldId}">
-                        <select class="form-input" style="width: 120px;" data-field-type="${fieldId}">
+                        <input type="text" class="approval-premium-input" style="padding-right:14px;flex:1;" placeholder="اسم البند المطلوب" data-field-id="${fieldId}">
+                        <select class="approval-premium-select" style="width:110px;padding-right:14px;" data-field-type="${fieldId}">
                             <option value="text">نص</option>
                             <option value="document">مستند</option>
                             <option value="checkbox">خانة اختيار</option>
                         </select>
-                        <label class="flex items-center gap-1 text-sm">
+                        <label style="display:flex;align-items:center;gap:4px;font-size:0.82rem;color:#64748b;white-space:nowrap;">
                             <input type="checkbox" data-field-required="${fieldId}">
-                            <span>إلزامي</span>
+                            إلزامي
                         </label>
-                        <button type="button" class="text-red-600 hover:text-red-800" onclick="this.parentElement.remove()">
-                            <i class="fas fa-times"></i>
+                        <button type="button" style="width:28px;height:28px;border-radius:8px;border:none;background:transparent;color:#94a3b8;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;" onmouseover="this.style.background='#fef2f2';this.style.color='#ef4444'" onmouseout="this.style.background='transparent';this.style.color='#94a3b8'" onclick="this.parentElement.remove()">
+                            <i class="fas fa-times" style="font-size:12px;"></i>
                         </button>
                     `;
                     customFieldsContainer.appendChild(fieldItem);
@@ -10049,41 +10139,38 @@ const Contractors = {
         }
 
         const form = modal.querySelector('#approval-request-form');
-        const submitBtn = modal.querySelector('#approval-request-submit-btn');
         const cancelBtn = modal.querySelector('#approval-request-cancel-btn');
-        let isSubmitting = false; // ✅ منع التكرار
-        
-        // ✅ التحقق من وجود form قبل إضافة event listener
+        let isSubmitting = false;
+
         if (!form) {
             Utils.safeWarn('⚠️ showApprovalRequestForm: form غير موجود');
             modal.remove();
             return;
         }
-        
+
         if (cancelBtn) {
             cancelBtn.addEventListener('click', () => modal.remove());
         }
 
         form.addEventListener('submit', (e) => {
             e.preventDefault();
-            
-            // ✅ التحقق من أن modal لا يزال موجوداً في DOM
+
             if (!modal || !document.contains(modal)) {
                 Utils.safeWarn('⚠️ submit: modal غير موجود أو تم حذفه');
                 return;
             }
-            
-            // ✅ منع التكرار - التحقق من حالة المعالجة
+
             if (isSubmitting) {
                 Utils.safeLog('⚠️ محاولة إرسال مكررة - تم تجاهلها');
                 return;
             }
-            
+
             isSubmitting = true;
             const hintEl = modal.querySelector('#approval-request-validation-hint');
             if (hintEl) {
                 hintEl.style.display = 'none';
-                hintEl.textContent = '';
+                const msgEl = hintEl.querySelector('#approval-request-validation-message');
+                if (msgEl) msgEl.textContent = '';
             }
 
             this.submitApprovalRequest(modal, attachments).finally(() => {
@@ -10177,8 +10264,13 @@ const Contractors = {
             if (!validation.ok) {
                 const hintEl = modal.querySelector('#approval-request-validation-hint');
                 if (hintEl) {
-                    hintEl.textContent = validation.message;
-                    hintEl.style.display = 'block';
+                    const msgEl = hintEl.querySelector('#approval-request-validation-message');
+                    if (msgEl) {
+                        msgEl.textContent = validation.message;
+                    } else {
+                        hintEl.textContent = validation.message;
+                    }
+                    hintEl.style.display = 'flex';
                 }
                 Notification.error(validation.message);
                 return;
