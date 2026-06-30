@@ -372,7 +372,7 @@ const DataManager = {
                     : item.data;
                 
                 // محاولة المزامنة
-                await GoogleIntegration.sendToAppsScript('saveToSheet', {
+                await GoogleIntegration.sendToAppsScript('appendToSheet', {
                     sheetName: item.sheetName,
                     data: preparedData,
                     spreadsheetId: spreadsheetId

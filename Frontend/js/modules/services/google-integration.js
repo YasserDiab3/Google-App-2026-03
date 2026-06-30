@@ -694,7 +694,8 @@ const GoogleIntegration = {
                     errorMsg.includes('aborterror') ||
                     errorMsg.includes('aborted') ||
                     errorMsg.includes('فشل الاتصال مع google apps script بسبب cors') ||
-                    errorMsg.includes('cors');
+                    errorMsg.includes('cors') ||
+                    errorMsg.includes('ازدحام');
                 const isAuthOrPermissionError =
                     errorMsg.includes('csrf') ||
                     errorMsg.includes('actor_identity') ||

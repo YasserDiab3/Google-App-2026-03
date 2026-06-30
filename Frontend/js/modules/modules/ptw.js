@@ -1208,25 +1208,6 @@ const PTW = {
                 buildPayload(rec)
             );
 
-            const invokeWithTimeoutRetry = async (rec) => {
-                const maxAttempts = 2;
-                let lastErr;
-                for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                    try {
-                        return await invokeOnce(rec);
-                    } catch (err) {
-                        lastErr = err;
-                        const m = String(err?.message || '');
-                        const isTimeout = /مهلة|timeout|abort|انتهت مهلة|AbortError|فقدان الاتصال/i.test(m);
-                        if (!isTimeout || attempt === maxAttempts - 1) {
-                            throw err;
-                        }
-                        await new Promise((resolve) => setTimeout(resolve, 2000));
-                    }
-                }
-                throw lastErr;
-            };
-
             const stripAuditCopy = (rec) => {
                 const base = (typeof GoogleIntegration.prepareSheetPayload === 'function')
                     ? GoogleIntegration.prepareSheetPayload(sheetName, rec)
@@ -1237,24 +1218,24 @@ const PTW = {
             };
 
             try {
-                return await invokeWithTimeoutRetry(record);
+                return await invokeOnce(record);
             } catch (err) {
                 const msg = String(err?.message || '');
                 const looksPayloadReject = /حقل غير مسموح|PAYLOAD_VALIDATION_FAILED/i.test(msg);
                 if (!looksPayloadReject) throw err;
-                try {
-                    return await invokeWithTimeoutRetry(stripAuditCopy(record));
-                } catch (_retryErr) {
-                    throw err;
-                }
+                return await invokeOnce(stripAuditCopy(record));
             }
         };
+
+        let registrySucceeded = false;
+        let permitSucceeded = false;
 
         try {
             const registryResult = await sendSheetRecord('PTWRegistry', entry, isNewRegistryEntry);
             if (!registryResult || registryResult.success !== true) {
                 throw new Error(registryResult?.message || 'فشل حفظ سجل التصريح اليدوي في الخلفية');
             }
+            registrySucceeded = true;
 
             const resolvedReg = registryResult.resolvedPTWRegistry;
             const paperKey = String(entry.paperPermitNumber || permitData.paperPermitNumber || '').trim();
@@ -1311,6 +1292,7 @@ const PTW = {
             if (!permitResult || permitResult.success !== true) {
                 throw new Error(permitResult?.message || 'فشل حفظ التصريح اليدوي في الخلفية');
             }
+            permitSucceeded = true;
 
             if (typeof GoogleIntegration.clearCache === 'function') {
                 GoogleIntegration.clearCache('PTWRegistry');
@@ -1332,8 +1314,8 @@ const PTW = {
             return true;
         } catch (error) {
             if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
-                DataManager.addToPendingSync('PTWRegistry', entry);
-                DataManager.addToPendingSync('PTW', permitData);
+                if (!registrySucceeded) DataManager.addToPendingSync('PTWRegistry', entry);
+                if (!permitSucceeded) DataManager.addToPendingSync('PTW', permitData);
             }
             throw error;
         }
