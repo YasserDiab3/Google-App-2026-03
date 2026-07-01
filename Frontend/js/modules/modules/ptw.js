@@ -2652,7 +2652,9 @@ const PTW = {
 
     /** بدء جلب PTW + السجل من الخادم (طلب واحد مشترك) */
     _startPtwBackendSync() {
-        if (this._ptwBackendLoadPromise) return this._ptwBackendLoadPromise;
+        if (this._backendSyncStarted || this._ptwBackendLoadPromise) return;
+        this._backendSyncStarted = true;
+        // يعاد تعيينه في cleanup() أو عند انتهاء التحميل
 
         const loadDataPromises = [
             this.loadPTWFromBackend().catch(error => {
@@ -2684,6 +2686,7 @@ const PTW = {
             })
             .finally(() => {
                 this._ptwBackendLoadPromise = null;
+                this._backendSyncStarted = false;
             });
 
         return this._ptwBackendLoadPromise;
@@ -3088,13 +3091,9 @@ const PTW = {
             this.formSettingsEventsBound = false;
             this.setupEventListeners();
             
-            // عرض فوري ثم تحميل ثانوي — بدون حجب الواجهة
+            // عرض فوري — يعرض HTML ويجهز البيانات المحلية فقط
             requestAnimationFrame(() => {
                 try { this.initRegistry(true); } catch (_) { /* ignore */ }
-                this._prewarmLeafletLibrary();
-                this._hydrateMapCoordinatesFromLocal();
-                this._scheduleMapCoordinatesBackgroundSync();
-                this._startPtwBackendSync();
                 this._mountPermitsListContent(t);
                 this._mountRegistryShell();
                 const mountMap = () => this._mountMapShell();
@@ -3104,6 +3103,14 @@ const PTW = {
                     setTimeout(mountMap, 50);
                 }
             });
+            // تحميل ثانوي — مزامنة الخلفية بعد 1.5s من أول عرض
+            // Leaflet: فقط عند فتح تبويب الخريطة (موجود أصلاً في switchTab('map'))
+            // إحداثيات الخريطة: فقط عند فتح تبويب الخريطة
+            this._deferredSyncTimer = setTimeout(() => {
+                this._startPtwBackendSync();
+                this._hydrateMapCoordinatesFromLocal();
+                this._scheduleMapCoordinatesBackgroundSync();
+            }, 1500);
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
                 Utils.safeError('❌ خطأ في تحميل مديول PTW:', error);
@@ -18999,6 +19006,13 @@ const PTW = {
             if (typeof Utils !== 'undefined' && Utils.safeLog) {
                 Utils.safeLog('🧹 تنظيف موارد PTW module...');
             }
+
+            // إلغاء المزامنة المؤجلة إذا كان المستخدم غادر القسم
+            if (this._deferredSyncTimer) {
+                clearTimeout(this._deferredSyncTimer);
+                this._deferredSyncTimer = null;
+            }
+            this._backendSyncStarted = false;
 
             // تنظيف tab protection
             this.cleanupTabProtection();
