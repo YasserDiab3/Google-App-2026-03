@@ -2666,7 +2666,7 @@ const PTW = {
                 }
                 return false;
             }).then((loadedFromBackend) => {
-                if (!loadedFromBackend) {
+                if (loadedFromBackend) {
                     return this.syncRegistryWithPermits().catch(error => {
                         if (typeof Utils !== 'undefined' && Utils.safeWarn) {
                             Utils.safeWarn('⚠️ تعذر مزامنة السجل مع التصاريح:', error);
