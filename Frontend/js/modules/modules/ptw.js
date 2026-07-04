@@ -2669,8 +2669,10 @@ const PTW = {
                     Utils.safeWarn('⚠️ تعذر تحميل السجل من Backend:', error);
                 }
                 return false;
-            }).then((loadedFromBackend) => {
-                if (loadedFromBackend) {
+            }).then(() => {
+                // مزامنة أولية فقط إذا السجل فارغ (أول استخدام)
+                // بعد أول تحميل ناجح من Backend، السجل يحتوي على البيانات الصحيحة
+                if (Array.isArray(this.registryData) && this.registryData.length === 0) {
                     return this.syncRegistryWithPermits().catch(error => {
                         if (typeof Utils !== 'undefined' && Utils.safeWarn) {
                             Utils.safeWarn('⚠️ تعذر مزامنة السجل مع التصاريح:', error);
