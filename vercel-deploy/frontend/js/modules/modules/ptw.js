@@ -14,6 +14,7 @@ const PTW = {
     _registrySanitizedCache: null,
     _registryTableMountToken: 0,
     _isSubmitting: false, // منع الحفظ المتكرر
+    _isSavingManualPermit: false, // منع الإرسال المزدوج لنموذج التصريح اليدوي
     _i18nSectionObserver: null,
     _i18nBodyObserver: null,
 
@@ -1208,25 +1209,6 @@ const PTW = {
                 buildPayload(rec)
             );
 
-            const invokeWithTimeoutRetry = async (rec) => {
-                const maxAttempts = 2;
-                let lastErr;
-                for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                    try {
-                        return await invokeOnce(rec);
-                    } catch (err) {
-                        lastErr = err;
-                        const m = String(err?.message || '');
-                        const isTimeout = /مهلة|timeout|abort|انتهت مهلة|AbortError|فقدان الاتصال/i.test(m);
-                        if (!isTimeout || attempt === maxAttempts - 1) {
-                            throw err;
-                        }
-                        await new Promise((resolve) => setTimeout(resolve, 2000));
-                    }
-                }
-                throw lastErr;
-            };
-
             const stripAuditCopy = (rec) => {
                 const base = (typeof GoogleIntegration.prepareSheetPayload === 'function')
                     ? GoogleIntegration.prepareSheetPayload(sheetName, rec)
@@ -1237,24 +1219,24 @@ const PTW = {
             };
 
             try {
-                return await invokeWithTimeoutRetry(record);
+                return await invokeOnce(record);
             } catch (err) {
                 const msg = String(err?.message || '');
                 const looksPayloadReject = /حقل غير مسموح|PAYLOAD_VALIDATION_FAILED/i.test(msg);
                 if (!looksPayloadReject) throw err;
-                try {
-                    return await invokeWithTimeoutRetry(stripAuditCopy(record));
-                } catch (_retryErr) {
-                    throw err;
-                }
+                return await invokeOnce(stripAuditCopy(record));
             }
         };
+
+        let registrySucceeded = false;
+        let permitSucceeded = false;
 
         try {
             const registryResult = await sendSheetRecord('PTWRegistry', entry, isNewRegistryEntry);
             if (!registryResult || registryResult.success !== true) {
                 throw new Error(registryResult?.message || 'فشل حفظ سجل التصريح اليدوي في الخلفية');
             }
+            registrySucceeded = true;
 
             const resolvedReg = registryResult.resolvedPTWRegistry;
             const paperKey = String(entry.paperPermitNumber || permitData.paperPermitNumber || '').trim();
@@ -1311,6 +1293,7 @@ const PTW = {
             if (!permitResult || permitResult.success !== true) {
                 throw new Error(permitResult?.message || 'فشل حفظ التصريح اليدوي في الخلفية');
             }
+            permitSucceeded = true;
 
             if (typeof GoogleIntegration.clearCache === 'function') {
                 GoogleIntegration.clearCache('PTWRegistry');
@@ -1332,8 +1315,8 @@ const PTW = {
             return true;
         } catch (error) {
             if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
-                DataManager.addToPendingSync('PTWRegistry', entry);
-                DataManager.addToPendingSync('PTW', permitData);
+                if (!registrySucceeded) DataManager.addToPendingSync('PTWRegistry', entry);
+                if (!permitSucceeded) DataManager.addToPendingSync('PTW', permitData);
             }
             throw error;
         }
@@ -2601,9 +2584,6 @@ const PTW = {
             if (!existingEntry) {
                 await this.addToRegistry(permit, { skipSave: true });
                 dirty = true;
-            } else {
-                await this.updateRegistryEntry(permit, { skipSave: true });
-                dirty = true;
             }
         }
         if (dirty) await this.saveRegistryData();
@@ -2670,7 +2650,9 @@ const PTW = {
 
     /** بدء جلب PTW + السجل من الخادم (طلب واحد مشترك) */
     _startPtwBackendSync() {
-        if (this._ptwBackendLoadPromise) return this._ptwBackendLoadPromise;
+        if (this._backendSyncStarted || this._ptwBackendLoadPromise) return;
+        this._backendSyncStarted = true;
+        // يعاد تعيينه في cleanup() أو عند انتهاء التحميل
 
         const loadDataPromises = [
             this.loadPTWFromBackend().catch(error => {
@@ -2702,6 +2684,7 @@ const PTW = {
             })
             .finally(() => {
                 this._ptwBackendLoadPromise = null;
+                this._backendSyncStarted = false;
             });
 
         return this._ptwBackendLoadPromise;
@@ -3106,13 +3089,9 @@ const PTW = {
             this.formSettingsEventsBound = false;
             this.setupEventListeners();
             
-            // عرض فوري ثم تحميل ثانوي — بدون حجب الواجهة
+            // عرض فوري — يعرض HTML ويجهز البيانات المحلية فقط
             requestAnimationFrame(() => {
                 try { this.initRegistry(true); } catch (_) { /* ignore */ }
-                this._prewarmLeafletLibrary();
-                this._hydrateMapCoordinatesFromLocal();
-                this._scheduleMapCoordinatesBackgroundSync();
-                this._startPtwBackendSync();
                 this._mountPermitsListContent(t);
                 this._mountRegistryShell();
                 const mountMap = () => this._mountMapShell();
@@ -3122,6 +3101,14 @@ const PTW = {
                     setTimeout(mountMap, 50);
                 }
             });
+            // تحميل ثانوي — مزامنة الخلفية بعد 1.5s من أول عرض
+            // Leaflet: فقط عند فتح تبويب الخريطة (موجود أصلاً في switchTab('map'))
+            // إحداثيات الخريطة: فقط عند فتح تبويب الخريطة
+            this._deferredSyncTimer = setTimeout(() => {
+                this._startPtwBackendSync();
+                this._hydrateMapCoordinatesFromLocal();
+                this._scheduleMapCoordinatesBackgroundSync();
+            }, 1500);
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
                 Utils.safeError('❌ خطأ في تحميل مديول PTW:', error);
@@ -11412,6 +11399,8 @@ const PTW = {
      * حفظ تصريح يدوي
      */
     async saveManualPermitEntry(modal, entryId = null) {
+        if (this._isSavingManualPermit) return;
+        this._isSavingManualPermit = true;
         try {
             const markFieldInvalid = (fieldEl) => {
                 if (!fieldEl) return;
@@ -12051,7 +12040,8 @@ const PTW = {
                         (msg || 'خطأ غير معروف') +
                         ' — يمكن إعادة المحاولة من المزامنة لاحقاً.'
                     );
-                });
+                })
+                .finally(() => { this._isSavingManualPermit = false; });
         } catch (error) {
             Utils.safeError('خطأ في حفظ التصريح اليدوي:', error);
             Notification.error(this._t('module.ptw.notify.savePermitErr', 'حدث خطأ أثناء حفظ التصريح: ') + (error.message || this._t('module.ptw.notify.unknownError', 'خطأ غير معروف')));
@@ -19017,6 +19007,13 @@ const PTW = {
             if (typeof Utils !== 'undefined' && Utils.safeLog) {
                 Utils.safeLog('🧹 تنظيف موارد PTW module...');
             }
+
+            // إلغاء المزامنة المؤجلة إذا كان المستخدم غادر القسم
+            if (this._deferredSyncTimer) {
+                clearTimeout(this._deferredSyncTimer);
+                this._deferredSyncTimer = null;
+            }
+            this._backendSyncStarted = false;
 
             // تنظيف tab protection
             this.cleanupTabProtection();

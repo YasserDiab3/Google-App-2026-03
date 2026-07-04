@@ -694,7 +694,8 @@ const GoogleIntegration = {
                     errorMsg.includes('aborterror') ||
                     errorMsg.includes('aborted') ||
                     errorMsg.includes('فشل الاتصال مع google apps script بسبب cors') ||
-                    errorMsg.includes('cors');
+                    errorMsg.includes('cors') ||
+                    errorMsg.includes('ازدحام');
                 const isAuthOrPermissionError =
                     errorMsg.includes('csrf') ||
                     errorMsg.includes('actor_identity') ||
@@ -708,7 +709,7 @@ const GoogleIntegration = {
                     errorMsg.includes('رفض قراءة');
 
                 if (!isCircuitBreakerError && !isConfigError && !isTransientNetworkError && !isAuthOrPermissionError) {
-                    // التحقق من هل هو recordFailure
+                    Utils.safeError('❌ خطأ غير معالج في مزامنة Google - هذا السبب الحقيقي لفتح Circuit Breaker:', error);
                     this._recordFailure();
                 }
 
@@ -1019,8 +1020,10 @@ const GoogleIntegration = {
                     const isWriteOperation = action === 'saveToSheet' || action === 'appendToSheet' ||
                         action.startsWith('save') || action.startsWith('update') || action.startsWith('add') ||
                         isDeleteOperation;
-                    let maxRetries = isWriteOperation ? 2 : 1;
-                    if (isHeavyOperation && isWriteOperation) {
+                    // appendToSheet غير Idempotent — لا نعيد المحاولة عند timeout لأن الطلب قد نُفذ على الخادم
+                    const isAppend = action === 'appendToSheet';
+                    let maxRetries = (isWriteOperation && !isAppend) ? 2 : 1;
+                    if (isHeavyOperation && isWriteOperation && !isAppend) {
                         maxRetries = 3;
                     }
 
@@ -1105,8 +1108,10 @@ const GoogleIntegration = {
                     const isWriteOperation = action === 'saveToSheet' || action === 'appendToSheet' ||
                         action.startsWith('save') || action.startsWith('update') || action.startsWith('add') ||
                         isDeleteOperation;
-                    let maxRetries = isWriteOperation ? 2 : 1;
-                    if (isHeavyOperation && isWriteOperation) {
+                    // appendToSheet غير Idempotent — لا نعيد المحاولة عند timeout لأن الطلب قد نُفذ على الخادم
+                    const isAppend = action === 'appendToSheet';
+                    let maxRetries = (isWriteOperation && !isAppend) ? 2 : 1;
+                    if (isHeavyOperation && isWriteOperation && !isAppend) {
                         maxRetries = 3;
                     }
 

@@ -14,6 +14,7 @@ const PTW = {
     _registrySanitizedCache: null,
     _registryTableMountToken: 0,
     _isSubmitting: false, // منع الحفظ المتكرر
+    _isSavingManualPermit: false, // منع الإرسال المزدوج لنموذج التصريح اليدوي
     _i18nSectionObserver: null,
     _i18nBodyObserver: null,
 
@@ -2582,9 +2583,6 @@ const PTW = {
             const existingEntry = this.registryData.find(r => r.permitId === permit.id);
             if (!existingEntry) {
                 await this.addToRegistry(permit, { skipSave: true });
-                dirty = true;
-            } else {
-                await this.updateRegistryEntry(permit, { skipSave: true });
                 dirty = true;
             }
         }
@@ -11401,6 +11399,8 @@ const PTW = {
      * حفظ تصريح يدوي
      */
     async saveManualPermitEntry(modal, entryId = null) {
+        if (this._isSavingManualPermit) return;
+        this._isSavingManualPermit = true;
         try {
             const markFieldInvalid = (fieldEl) => {
                 if (!fieldEl) return;
@@ -12040,7 +12040,8 @@ const PTW = {
                         (msg || 'خطأ غير معروف') +
                         ' — يمكن إعادة المحاولة من المزامنة لاحقاً.'
                     );
-                });
+                })
+                .finally(() => { this._isSavingManualPermit = false; });
         } catch (error) {
             Utils.safeError('خطأ في حفظ التصريح اليدوي:', error);
             Notification.error(this._t('module.ptw.notify.savePermitErr', 'حدث خطأ أثناء حفظ التصريح: ') + (error.message || this._t('module.ptw.notify.unknownError', 'خطأ غير معروف')));

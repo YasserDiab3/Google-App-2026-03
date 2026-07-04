@@ -1020,8 +1020,10 @@ const GoogleIntegration = {
                     const isWriteOperation = action === 'saveToSheet' || action === 'appendToSheet' ||
                         action.startsWith('save') || action.startsWith('update') || action.startsWith('add') ||
                         isDeleteOperation;
-                    let maxRetries = isWriteOperation ? 2 : 1;
-                    if (isHeavyOperation && isWriteOperation) {
+                    // appendToSheet غير Idempotent — لا نعيد المحاولة عند timeout لأن الطلب قد نُفذ على الخادم
+                    const isAppend = action === 'appendToSheet';
+                    let maxRetries = (isWriteOperation && !isAppend) ? 2 : 1;
+                    if (isHeavyOperation && isWriteOperation && !isAppend) {
                         maxRetries = 3;
                     }
 
@@ -1106,8 +1108,10 @@ const GoogleIntegration = {
                     const isWriteOperation = action === 'saveToSheet' || action === 'appendToSheet' ||
                         action.startsWith('save') || action.startsWith('update') || action.startsWith('add') ||
                         isDeleteOperation;
-                    let maxRetries = isWriteOperation ? 2 : 1;
-                    if (isHeavyOperation && isWriteOperation) {
+                    // appendToSheet غير Idempotent — لا نعيد المحاولة عند timeout لأن الطلب قد نُفذ على الخادم
+                    const isAppend = action === 'appendToSheet';
+                    let maxRetries = (isWriteOperation && !isAppend) ? 2 : 1;
+                    if (isHeavyOperation && isWriteOperation && !isAppend) {
                         maxRetries = 3;
                     }
 
