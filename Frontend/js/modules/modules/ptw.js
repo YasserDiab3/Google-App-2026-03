@@ -2528,6 +2528,11 @@ const PTW = {
                 return false;
             }
 
+            // مسح cache القديم قبل تحميل بيانات جديدة من Backend
+            // يمنع ظهور بيانات وهمية (من مزامنات سابقة خاطئة) بعد فشل التحميل
+            AppState.appData.ptwRegistry = [];
+            try { localStorage.removeItem('hse_ptw_registry'); } catch (_) {}
+
             // محاولة تحميل من Backend إذا كان متاحاً
             try {
                 const result = await GoogleIntegration.sendRequest({
@@ -2556,9 +2561,8 @@ const PTW = {
                     return true;
                 }
             } catch (error) {
-                // إذا فشل، نستخدم البيانات المحلية
                 if (AppState.debugMode) {
-                    Utils.safeWarn('⚠️ فشل تحميل السجل من Backend، استخدام البيانات المحلية:', error);
+                    Utils.safeWarn('⚠️ فشل تحميل السجل من Backend:', error);
                 }
             }
             return false;
