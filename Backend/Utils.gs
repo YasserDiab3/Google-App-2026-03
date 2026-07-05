@@ -4375,27 +4375,47 @@ function resolveHybridId_(rawValue, prefix, sheetName, idField, spreadsheetId, m
         return normalizeSequentialId_(value, normalizedPrefix);
     }
 
-    if (value && isLegacyTimestampIdForPrefix_(value, normalizedPrefix)) {
-        var mappedId = findMappedId_(sheetName, idField, normalizedPrefix, value, spreadsheetId);
-        if (mappedId) return mappedId;
-        var generatedFromLegacy = generateSequentialId(normalizedPrefix, sheetName, spreadsheetId, idField);
-        upsertIdMapping_(sheetName, idField, normalizedPrefix, value, generatedFromLegacy, spreadsheetId);
-        return generatedFromLegacy;
+    // ✅ استخدام Script Lock لمنع التوليد المتزامن المكرر
+    var lock = LockService.getScriptLock();
+    var hasLock = false;
+    try {
+        lock.waitLock(30000); // الانتظار حتى 30 ثانية
+        hasLock = true;
+    } catch (e) {
+        Logger.log('Lock timeout in resolveHybridId_ for value: ' + value);
     }
 
-    if (value && !isSequentialIdForPrefix_(value, normalizedPrefix)) {
-        if (mapUnknownFormats !== true) {
-            return value;
+    try {
+        if (value && isLegacyTimestampIdForPrefix_(value, normalizedPrefix)) {
+            var mappedId = findMappedId_(sheetName, idField, normalizedPrefix, value, spreadsheetId);
+            if (mappedId) return mappedId;
+            var generatedFromLegacy = generateSequentialId(normalizedPrefix, sheetName, spreadsheetId, idField);
+            upsertIdMapping_(sheetName, idField, normalizedPrefix, value, generatedFromLegacy, spreadsheetId);
+            return generatedFromLegacy;
         }
-        // Unknown format: preserve compatibility by mapping it once.
-        var mappedUnknown = findMappedId_(sheetName, idField, normalizedPrefix, value, spreadsheetId);
-        if (mappedUnknown) return mappedUnknown;
-        var generatedFromUnknown = generateSequentialId(normalizedPrefix, sheetName, spreadsheetId, idField);
-        upsertIdMapping_(sheetName, idField, normalizedPrefix, value, generatedFromUnknown, spreadsheetId);
-        return generatedFromUnknown;
-    }
 
-    return generateSequentialId(normalizedPrefix, sheetName, spreadsheetId, idField);
+        if (value && !isSequentialIdForPrefix_(value, normalizedPrefix)) {
+            if (mapUnknownFormats !== true) {
+                return value;
+            }
+            // Unknown format: preserve compatibility by mapping it once.
+            var mappedUnknown = findMappedId_(sheetName, idField, normalizedPrefix, value, spreadsheetId);
+            if (mappedUnknown) return mappedUnknown;
+            var generatedFromUnknown = generateSequentialId(normalizedPrefix, sheetName, spreadsheetId, idField);
+            upsertIdMapping_(sheetName, idField, normalizedPrefix, value, generatedFromUnknown, spreadsheetId);
+            return generatedFromUnknown;
+        }
+
+        return generateSequentialId(normalizedPrefix, sheetName, spreadsheetId, idField);
+    } finally {
+        if (hasLock) {
+            try {
+                lock.releaseLock();
+            } catch (lockError) {
+                Logger.log('Error releasing lock in resolveHybridId_: ' + lockError.toString());
+            }
+        }
+    }
 }
 
 function isSequentialIdForPrefix_(value, prefix) {
@@ -4484,6 +4504,7 @@ function upsertIdMapping_(sheetName, idField, prefix, oldId, newId, spreadsheetI
             updatedAt: nowIso
         };
         saveToSheet('PTWIdMapping', payload, targetSpreadsheetId);
+        SpreadsheetApp.flush(); // ✅ كتابة البيانات فوراً لمنع تعارض القراءات المتتالية
     } catch (e) {
         Logger.log('Failed to upsert PTW ID mapping: ' + e.toString());
     }
