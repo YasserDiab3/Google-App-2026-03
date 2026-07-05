@@ -3661,10 +3661,10 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
         }
 
         // ✅ CacheService: Save to cache before returning (2 minutes TTL)
-        // Only cache sheets with reasonable size (< 500KB)
+        // Only cache sheets with reasonable size (< 100KB to match Apps Script limit)
         try {
             const dataSize = JSON.stringify(uniqueObjects).length;
-            if (dataSize < 500000) { // 500KB limit for individual sheet cache
+            if (dataSize < 100000) { // 100KB limit for individual sheet cache
                 cache.put(cacheKey, JSON.stringify(uniqueObjects), 120); // 2 minutes
                 Logger.log('Cached readFromSheet: ' + sheetName + ' (' + dataSize + ' bytes, ' + uniqueObjects.length + ' records)');
             } else {
