@@ -144,7 +144,7 @@ function getPublicIP() {
         // Cache for a short period to reduce external calls
         const cache = CacheService.getScriptCache();
         const cacheKey = 'hse_public_ip_ipify_v1';
-        const cached = skipSecurityFilter ? null : cache.get(cacheKey);
+        const cached = cache.get(cacheKey);
         if (cached) {
             return { success: true, data: { ip: cached, source: 'cache' } };
         }
@@ -265,7 +265,7 @@ function validateCSRFToken(requestToken, options) {
     const cache = CacheService.getScriptCache();
 
     try {
-        const cached = skipSecurityFilter ? null : cache.get(cacheKey);
+        const cached = cache.get(cacheKey);
         if (!cached) {
             const payload = {
                 sessionKey: sessionKey,
