@@ -2318,6 +2318,7 @@ const Clinic = {
         const name = record.name || record.medicationName || '';
         const type = record.type || record.medicationType || record.category || '';
         const purchaseDate = record.purchaseDate || record.buyDate || record.createdAt || new Date().toISOString();
+        const productionDate = record.productionDate || '';
         const expiryDate = record.expiryDate || record.endDate || '';
         const quantityAdded = record.quantityAdded !== undefined && record.quantityAdded !== null
             ? toNumber(record.quantityAdded, 0)
@@ -2349,6 +2350,7 @@ const Clinic = {
             type,
             usage,
             purchaseDate,
+            productionDate,
             expiryDate,
             quantityAdded: toNumber(quantityAdded, 0),
             remainingQuantity: toNumber(remainingQuantity, 0),
@@ -12785,11 +12787,16 @@ const Clinic = {
 
         const safeValue = (value = '') => Utils.escapeHTML(value || '');
         const purchaseDateValue = record?.purchaseDate ? new Date(record.purchaseDate).toISOString().slice(0, 10) : '';
+        const productionDateValue = record?.productionDate ? new Date(record.productionDate).toISOString().slice(0, 10) : '';
         const expiryDateValue = record?.expiryDate ? new Date(record.expiryDate).toISOString().slice(0, 10) : '';
         const statusInfo = this.calculateMedicationStatus(record || {});
+        
+        const qAdded = record?.quantityAdded ?? record?.quantity ?? 0;
+        const qRemaining = record?.remainingQuantity ?? record?.quantity ?? 0;
+        const qDispensed = Math.max(0, qAdded - qRemaining);
 
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 780px;">
+            <div class="modal-content" style="max-width: 800px;">
                 <div class="modal-header modal-header-centered">
                     <h2 class="modal-title">${isEdit ? 'تعديل بيانات الدواء' : 'تسجيل دواء جديد'}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
@@ -12805,15 +12812,37 @@ const Clinic = {
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">نوع الدواء *</label>
-                                <input type="text" id="med-type" required class="form-input" placeholder="حبوب، شراب، حقن..." value="${safeValue(record?.type || record?.medicationType)}">
+                                <input type="text" id="med-type" list="med-type-list" required class="form-input" placeholder="اختر أو اكتب..." value="${safeValue(record?.type || record?.medicationType)}">
+                                <datalist id="med-type-list">
+                                    <option value="أقراص"></option>
+                                    <option value="شراب"></option>
+                                    <option value="كبسولات"></option>
+                                    <option value="حقن"></option>
+                                    <option value="مرهم"></option>
+                                    <option value="قطرة"></option>
+                                    <option value="بخاخ"></option>
+                                </datalist>
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">الاستخدام</label>
-                                <input type="text" id="med-usage" class="form-input" placeholder="الاستخدام الطبي للدواء" value="${safeValue(record?.usage || record?.notes || '')}">
+                                <input type="text" id="med-usage" list="med-usage-list" class="form-input" placeholder="اختر أو اكتب..." value="${safeValue(record?.usage || record?.notes || '')}">
+                                <datalist id="med-usage-list">
+                                    <option value="مسكن"></option>
+                                    <option value="مطهر معوي"></option>
+                                    <option value="غيار للجروح"></option>
+                                    <option value="مضاد حيوي"></option>
+                                    <option value="مضاد للحساسية"></option>
+                                    <option value="فيتامين"></option>
+                                    <option value="خافض حرارة"></option>
+                                </datalist>
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الشراء *</label>
                                 <input type="date" id="med-purchase" required class="form-input" value="${purchaseDateValue}">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الانتاج *</label>
+                                <input type="date" id="med-production" required class="form-input" value="${productionDateValue}">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ انتهاء الصلاحية</label>
@@ -12821,28 +12850,38 @@ const Clinic = {
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">الكمية المضافة *</label>
-                                <input type="number" id="med-quantity" required class="form-input" min="0" placeholder="الكمية المضافة" value="${record?.quantityAdded ?? record?.quantity ?? 0}">
-                        </div>
+                                <input type="number" id="med-quantity" required class="form-input" min="0" placeholder="إجمالي الكمية المضافة" value="${qAdded}">
+                            </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">الكمية المتبقية *</label>
-                                <input type="number" id="med-remaining" required class="form-input" min="0" placeholder="الكمية المتاحة" value="${record?.remainingQuantity ?? record?.quantity ?? 0}">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">الكمية - الرصيد *</label>
+                                <input type="number" id="med-remaining" required class="form-input bg-gray-50 font-bold" min="0" placeholder="الرصيد المتاح" value="${qRemaining}">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">الكمية المنصرفة</label>
+                                <input type="number" id="med-dispensed" readonly class="form-input bg-gray-100 text-blue-700 font-bold cursor-not-allowed" value="${qDispensed}">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">موقع التخزين</label>
-                                <input type="text" id="med-location" class="form-input" placeholder="مثال: غرفة الأدوية" value="${safeValue(record?.location)}">
-                            </div>
-                            <div class="flex flex-col justify-center bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
-                                <span class="text-sm font-semibold text-gray-700 mb-1">الحالة الحالية</span>
-                                <span id="med-status-badge" class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${this.getMedicationStatusClasses(statusInfo.status)}">
-                                    <i class="fas fa-info-circle"></i>
-                                    ${statusInfo.status || 'ساري'}
-                                </span>
-                                <span id="med-status-hint" class="text-xs text-gray-500 mt-2">${this.getMedicationStatusHint(statusInfo)}</span>
+                                <input type="text" id="med-location" class="form-input" placeholder="مثال: الغرفة 1 - الرف ب" value="${safeValue(record?.location)}">
                             </div>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">ملاحظات إضافية</label>
-                            <textarea id="med-notes" class="form-input" rows="3" placeholder="أدخل أي ملاحظات أو تعليمات خاصة">${safeValue(record?.notes)}</textarea>
+                            <textarea id="med-notes" class="form-input" rows="2" placeholder="أدخل أي ملاحظات أو تعليمات خاصة">${safeValue(record?.notes)}</textarea>
+                        </div>
+                        <div class="flex flex-col bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+                            <span class="text-sm font-semibold text-gray-700 mb-2">حالة الصنف من التعديل والاضافة واي حركة علي الدواء</span>
+                            <div class="flex items-center gap-3">
+                                <span id="med-status-badge" class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${this.getMedicationStatusClasses(statusInfo.status)}">
+                                    <i class="fas fa-info-circle"></i>
+                                    ${statusInfo.status || 'ساري'}
+                                </span>
+                                <span id="med-status-hint" class="text-xs text-gray-500">${this.getMedicationStatusHint(statusInfo)}</span>
+                            </div>
+                            ${isEdit ? `<div class="text-xs text-gray-500 mt-2">
+                                تم التسجيل: ${Utils.escapeHTML(record?.createdBy?.name || 'النظام')} ${record?.createdAt ? `(${this.formatDate(record.createdAt, true)})` : ''}
+                                ${record?.updatedBy ? `<br>آخر تعديل: ${Utils.escapeHTML(record.updatedBy.name)} ${record.updatedAt ? `(${this.formatDate(record.updatedAt, true)})` : ''}` : ''}
+                            </div>` : ''}
                         </div>
                         <div class="flex items-center justify-end gap-3 pt-4 border-t form-actions-centered">
                             <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
@@ -12862,15 +12901,33 @@ const Clinic = {
         const expiryInput = form.querySelector('#med-expiry');
         const statusBadge = form.querySelector('#med-status-badge');
         const statusHint = form.querySelector('#med-status-hint');
+        const qtyAddedInput = form.querySelector('#med-quantity');
+        const qtyRemainingInput = form.querySelector('#med-remaining');
+        const qtyDispensedInput = form.querySelector('#med-dispensed');
 
+        // تحديث حالة الصلاحية ديناميكيا
         const updateStatusPreview = () => {
             const info = this.calculateMedicationStatus({ expiryDate: expiryInput.value ? new Date(expiryInput.value).toISOString() : null });
             statusBadge.className = `inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${this.getMedicationStatusClasses(info.status)}`;
             statusBadge.innerHTML = `<i class="fas fa-info-circle"></i>${info.status}`;
             statusHint.textContent = this.getMedicationStatusHint(info);
         };
-
         expiryInput?.addEventListener('change', updateStatusPreview);
+
+        // حساب الرصيد والمنصرف ديناميكياً
+        // الرصيد = الكمية المضافة - المنصرف
+        // المنصرف = الكمية المضافة - الرصيد
+        qtyAddedInput.addEventListener('input', () => {
+            const added = parseInt(qtyAddedInput.value) || 0;
+            const dispensed = parseInt(qtyDispensedInput.value) || 0;
+            qtyRemainingInput.value = Math.max(0, added - dispensed);
+        });
+
+        qtyRemainingInput.addEventListener('input', () => {
+            const added = parseInt(qtyAddedInput.value) || 0;
+            const remaining = parseInt(qtyRemainingInput.value) || 0;
+            qtyDispensedInput.value = Math.max(0, added - remaining);
+        });
 
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -12879,6 +12936,7 @@ const Clinic = {
             const type = form.querySelector('#med-type').value.trim();
             const usage = form.querySelector('#med-usage')?.value.trim() || '';
             const purchaseDate = form.querySelector('#med-purchase').value;
+            const productionDate = form.querySelector('#med-production').value;
             const expiry = form.querySelector('#med-expiry').value;
             const quantityAdded = parseInt(form.querySelector('#med-quantity').value, 10) || 0;
             const remainingQuantity = parseInt(form.querySelector('#med-remaining').value, 10) || 0;
@@ -12888,6 +12946,7 @@ const Clinic = {
             const createdBy = record?.createdBy || this.getCurrentUserSummary();
 
             const purchaseISO = purchaseDate ? new Date(purchaseDate).toISOString() : new Date().toISOString();
+            const productionISO = productionDate ? new Date(productionDate).toISOString() : new Date().toISOString();
             const expiryISO = expiry ? new Date(expiry).toISOString() : '';
             const statusInfoLatest = this.calculateMedicationStatus({ expiryDate: expiryISO });
             const currentUser = this.getCurrentUserSummary();
@@ -12898,6 +12957,7 @@ const Clinic = {
                 type,
                 usage: usage,
                 purchaseDate: purchaseISO,
+                productionDate: productionISO,
                 expiryDate: expiryISO,
                 quantityAdded,
                 remainingQuantity,
@@ -13002,8 +13062,8 @@ const Clinic = {
                 if (ok) modal.remove();
             }
         });
-    },
 
+    },
     async viewVisit(id) {
         this.ensureData();
         const visit = AppState.appData.clinicVisits.find(v => v.id === id);
