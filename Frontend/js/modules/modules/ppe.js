@@ -1652,14 +1652,14 @@ const PPE = {
         const stReceived = t('module.ppe.status.received', 'مستلم');
         const stPending = t('module.ppe.status.pending', 'قيد التسليم');
         
-        modal.innerHTML = \`
+        modal.innerHTML = `
             <div class="modal-content w-full max-w-[56rem]" style="border-radius: 12px; overflow: hidden; box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.15); background: #f8fafc;">
                 <div class="modal-header bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
                     <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
                         <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
-                            <i class="fas \${isEdit ? 'fa-edit' : 'fa-plus'}"></i>
+                            <i class="fas ${isEdit ? 'fa-edit' : 'fa-plus'}"></i>
                         </span>
-                        \${isEdit ? ut(t('module.ppe.title.editReceipt', 'تعديل استلام')) : ut(t('module.ppe.title.newReceipt', 'تسجيل استلام جديد'))}
+                        ${isEdit ? ut(t('module.ppe.title.editReceipt', 'تعديل استلام')) : ut(t('module.ppe.title.newReceipt', 'تسجيل استلام جديد'))}
                     </h2>
                     <button type="button" class="modal-close text-slate-400 hover:text-slate-600 transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
@@ -1677,10 +1677,10 @@ const PPE = {
                                     </h3>
                                     <div class="space-y-4">
                                         <div>
-                                            <label class="block text-[11px] font-semibold text-slate-600 mb-1.5">\${ut(t('module.ppe.label.employeeCode', 'الكود الوظيفي *'))}</label>
+                                            <label class="block text-[11px] font-semibold text-slate-600 mb-1.5">${ut(t('module.ppe.label.employeeCode', 'الكود الوظيفي *'))}</label>
                                             <div class="relative">
                                                 <input type="text" id="ppe-employee-code" required class="form-input w-full text-sm py-1.5 rounded-lg border-slate-300 pr-10 focus:ring-blue-500 focus:border-blue-500"
-                                                    value="\${Utils.escapeHTML(ppeData?.employeeCode || ppeData?.employeeNumber || '')}"
+                                                    value="${Utils.escapeHTML(ppeData?.employeeCode || ppeData?.employeeNumber || '')}"
                                                     placeholder="أدخل الكود..." autocomplete="off">
                                                 <button type="button" id="ppe-search-code-btn"
                                                     class="absolute inset-y-0 left-0 flex items-center justify-center w-10 text-slate-400 hover:text-blue-600 transition-colors">
@@ -1689,10 +1689,10 @@ const PPE = {
                                             </div>
                                         </div>
                                         <div>
-                                            <label class="block text-[11px] font-semibold text-slate-600 mb-1.5">\${ut(t('module.ppe.label.employeeName', 'اسم الموظف'))}</label>
+                                            <label class="block text-[11px] font-semibold text-slate-600 mb-1.5">${ut(t('module.ppe.label.employeeName', 'اسم الموظف'))}</label>
                                             <div class="relative">
                                                 <input type="text" id="ppe-employee-name" class="form-input w-full text-sm py-1.5 rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500"
-                                                    value="\${Utils.escapeHTML(ppeData?.employeeName || '')}"
+                                                    value="${Utils.escapeHTML(ppeData?.employeeName || '')}"
                                                     placeholder="البحث بالاسم..." autocomplete="off">
                                                 <div id="ppe-employee-dropdown" class="absolute z-50 hidden w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-auto"></div>
                                             </div>
@@ -1700,10 +1700,10 @@ const PPE = {
                                     </div>
                                 </div>
 
-                                <input type="hidden" id="ppe-employee-department" value="\${Utils.escapeHTML(employeeInfo.department)}">
-                                <input type="hidden" id="ppe-employee-position" value="\${Utils.escapeHTML(employeeInfo.position)}">
-                                <input type="hidden" id="ppe-employee-branch" value="\${Utils.escapeHTML(employeeInfo.branch)}">
-                                <input type="hidden" id="ppe-employee-location" value="\${Utils.escapeHTML(employeeInfo.location)}">
+                                <input type="hidden" id="ppe-employee-department" value="${Utils.escapeHTML(employeeInfo.department)}">
+                                <input type="hidden" id="ppe-employee-position" value="${Utils.escapeHTML(employeeInfo.position)}">
+                                <input type="hidden" id="ppe-employee-branch" value="${Utils.escapeHTML(employeeInfo.branch)}">
+                                <input type="hidden" id="ppe-employee-location" value="${Utils.escapeHTML(employeeInfo.location)}">
 
                                 <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
                                     <div class="space-y-3">
@@ -1711,30 +1711,30 @@ const PPE = {
                                             <div class="w-8 h-8 rounded bg-blue-50 flex items-center justify-center text-blue-600 shrink-0"><i class="fas fa-id-badge text-sm"></i></div>
                                             <div class="min-w-0">
                                                 <div class="text-[10px] font-semibold text-slate-500 mb-0.5">الاسم</div>
-                                                <div id="ppe-employee-info-name" class="text-sm font-bold text-slate-800 truncate">\${formatInfo(employeeInfo.name)}</div>
+                                                <div id="ppe-employee-info-name" class="text-sm font-bold text-slate-800 truncate">${formatInfo(employeeInfo.name)}</div>
                                             </div>
                                         </div>
                                         <div class="flex items-start gap-3">
                                             <div class="w-8 h-8 rounded bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0"><i class="fas fa-building text-sm"></i></div>
                                             <div class="min-w-0">
                                                 <div class="text-[10px] font-semibold text-slate-500 mb-0.5">القسم</div>
-                                                <div id="ppe-employee-info-department" class="text-sm font-bold text-slate-800 truncate">\${formatInfo(employeeInfo.department)}</div>
+                                                <div id="ppe-employee-info-department" class="text-sm font-bold text-slate-800 truncate">${formatInfo(employeeInfo.department)}</div>
                                             </div>
                                         </div>
                                         <div class="flex items-start gap-3">
                                             <div class="w-8 h-8 rounded bg-amber-50 flex items-center justify-center text-amber-600 shrink-0"><i class="fas fa-briefcase text-sm"></i></div>
                                             <div class="min-w-0">
                                                 <div class="text-[10px] font-semibold text-slate-500 mb-0.5">المنصب</div>
-                                                <div id="ppe-employee-info-position" class="text-sm font-bold text-slate-800 truncate">\${formatInfo(employeeInfo.position)}</div>
+                                                <div id="ppe-employee-info-position" class="text-sm font-bold text-slate-800 truncate">${formatInfo(employeeInfo.position)}</div>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-2">
-                                        <span id="ppe-employee-info-branch" class="\${employeeInfo.branch ? '' : 'hidden'} inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-medium">
-                                            \${employeeInfo.branch ? `<i class="fas fa-code-branch text-slate-400"></i> \${Utils.escapeHTML(employeeInfo.branch)}` : ''}
+                                        <span id="ppe-employee-info-branch" class="${employeeInfo.branch ? '' : 'hidden'} inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-medium">
+                                            ${employeeInfo.branch ? `<i class="fas fa-code-branch text-slate-400"></i> ${Utils.escapeHTML(employeeInfo.branch)}` : ''}
                                         </span>
-                                        <span id="ppe-employee-info-location" class="\${employeeInfo.location ? '' : 'hidden'} inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-medium">
-                                            \${employeeInfo.location ? `<i class="fas fa-map-marker-alt text-slate-400"></i> \${Utils.escapeHTML(employeeInfo.location)}` : ''}
+                                        <span id="ppe-employee-info-location" class="${employeeInfo.location ? '' : 'hidden'} inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-medium">
+                                            ${employeeInfo.location ? `<i class="fas fa-map-marker-alt text-slate-400"></i> ${Utils.escapeHTML(employeeInfo.location)}` : ''}
                                         </span>
                                     </div>
                                 </div>
@@ -1766,14 +1766,14 @@ const PPE = {
                                                     <label class="block text-[10px] font-semibold text-slate-600 mb-1">مقاس الحذاء</label>
                                                     <select class="form-input ppe-shoe-size w-full text-sm py-1.5 rounded border-slate-300 focus:border-blue-500 focus:ring-blue-500">
                                                         <option value="">المقاس...</option>
-                                                        \${[38,39,40,41,42,43,44,45,46,47,48].map(s => `<option value="\${s}" \${(ppeData?.shoeSize==s)?'selected':''}>\${s}</option>`).join('')}
+                                                        ${[38,39,40,41,42,43,44,45,46,47,48].map(s => `<option value="${s}" ${(ppeData?.shoeSize==s)?'selected':''}>${s}</option>`).join('')}
                                                     </select>
                                                 </div>
                                                 <div class="w-full sm:w-4/12 flex items-center gap-2">
                                                     <div class="flex-1">
                                                         <label class="block text-[10px] font-semibold text-slate-600 mb-1">الكمية *</label>
                                                         <input type="number" id="ppe-quantity" required class="form-input ppe-quantity w-full text-sm py-1.5 rounded border-slate-300 focus:border-blue-500 focus:ring-blue-500" min="1"
-                                                            value="\${ppeData?.quantity || 1}" placeholder="الكمية">
+                                                            value="${ppeData?.quantity || 1}" placeholder="الكمية">
                                                     </div>
                                                     <button type="button" class="ppe-remove-item hidden mt-4 text-rose-400 hover:text-rose-600 hover:bg-rose-50 w-7 h-7 rounded flex items-center justify-center transition-colors">
                                                         <i class="fas fa-trash-alt text-xs"></i>
@@ -1791,22 +1791,22 @@ const PPE = {
                                     </h3>
                                     <div class="grid grid-cols-2 gap-4 mb-3">
                                         <div>
-                                            <label class="block text-[11px] font-semibold text-slate-600 mb-1.5">\${ut(t('module.ppe.label.receiptDate', 'تاريخ الاستلام *'))}</label>
+                                            <label class="block text-[11px] font-semibold text-slate-600 mb-1.5">${ut(t('module.ppe.label.receiptDate', 'تاريخ الاستلام *'))}</label>
                                             <input type="date" id="ppe-receipt-date" required class="form-input w-full text-sm py-1.5 rounded-lg border-slate-300 focus:border-blue-500"
-                                                value="\${ppeData?.receiptDate ? new Date(ppeData.receiptDate).toISOString().slice(0, 10) : ''}">
+                                                value="${ppeData?.receiptDate ? new Date(ppeData.receiptDate).toISOString().slice(0, 10) : ''}">
                                         </div>
                                         <div>
-                                            <label class="block text-[11px] font-semibold text-slate-600 mb-1.5">\${ut(t('module.ppe.label.status', 'الحالة *'))}</label>
+                                            <label class="block text-[11px] font-semibold text-slate-600 mb-1.5">${ut(t('module.ppe.label.status', 'الحالة *'))}</label>
                                             <select id="ppe-status" required class="form-input w-full text-sm py-1.5 rounded-lg border-slate-300 focus:border-blue-500">
-                                                <option value="مستلم" \${ppeData?.status === 'مستلم' ? 'selected' : ''}>\${ut(stReceived)}</option>
-                                                <option value="قيد التسليم" \${ppeData?.status === 'قيد التسليم' ? 'selected' : ''}>\${ut(stPending)}</option>
+                                                <option value="مستلم" ${ppeData?.status === 'مستلم' ? 'selected' : ''}>${ut(stReceived)}</option>
+                                                <option value="قيد التسليم" ${ppeData?.status === 'قيد التسليم' ? 'selected' : ''}>${ut(stPending)}</option>
                                             </select>
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="block text-[11px] font-semibold text-slate-600 mb-1.5">\${ut(t('module.ppe.label.notes', 'ملاحظات'))}</label>
+                                        <label class="block text-[11px] font-semibold text-slate-600 mb-1.5">${ut(t('module.ppe.label.notes', 'ملاحظات'))}</label>
                                         <textarea id="ppe-notes" class="form-input w-full text-sm rounded-lg border-slate-300 focus:border-blue-500" rows="2"
-                                            placeholder="أضف أي ملاحظات إضافية هنا...">\${Utils.escapeHTML(ppeData?.notes || '')}</textarea>
+                                            placeholder="أضف أي ملاحظات إضافية هنا...">${Utils.escapeHTML(ppeData?.notes || '')}</textarea>
                                     </div>
                                 </div>
 
@@ -1814,15 +1814,15 @@ const PPE = {
                         </div>
                         
                         <div class="bg-slate-50 border-t border-slate-200 px-6 py-3 flex items-center justify-end gap-3 rounded-b-[12px]">
-                            <button type="button" class="px-4 py-1.5 text-sm font-semibold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors" onclick="this.closest('.modal-overlay').remove()">\${ut(t('module.common.cancel', 'إلغاء'))}</button>
+                            <button type="button" class="px-4 py-1.5 text-sm font-semibold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors" onclick="this.closest('.modal-overlay').remove()">${ut(t('module.common.cancel', 'إلغاء'))}</button>
                             <button type="submit" class="px-5 py-1.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm transition-colors flex items-center gap-2">
-                                <i class="fas fa-save"></i> \${isEdit ? ut(t('module.common.saveChanges', 'حفظ التعديلات')) : ut(t('module.ppe.btn.saveReceipt', 'تسجيل الاستلام'))}
+                                <i class="fas fa-save"></i> ${isEdit ? ut(t('module.common.saveChanges', 'حفظ التعديلات')) : ut(t('module.ppe.btn.saveReceipt', 'تسجيل الاستلام'))}
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
-        \`;
+        `;
 
         document.body.appendChild(modal);
         this.applyModuleI18n(modal);
