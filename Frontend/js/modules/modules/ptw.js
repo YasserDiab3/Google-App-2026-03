@@ -1762,13 +1762,27 @@ const PTW = {
         const localReg = this.sanitizePtwRegistryDataset(localRaw, 'metrics.registryData');
         const stateReg = this.sanitizePtwRegistryDataset(stateRaw, 'metrics.AppState.ptwRegistry');
         const useState = stateReg.length > localReg.length;
-        const best = useState ? stateReg : (localReg.length > 0 ? localReg : stateReg);
+        let best = useState ? stateReg : (localReg.length > 0 ? localReg : stateReg);
+
+        // ✅ فلترة السجلات اليتيمة (Orphaned Duplicates):
+        // نحتفظ فقط بالسجلات التي لها تصريح مقابل في قائمة التصاريح (PTW) أو التي أُنشئت يدوياً كـ Manual Entry
+        const ptwList = AppState?.appData?.ptw || [];
+        const ptwIds = new Set(ptwList.map(p => String(p.id || '').trim()).filter(Boolean));
+        
+        best = best.filter(entry => {
+            const pid = String(entry.permitId || '').trim();
+            const id = String(entry.id || '').trim();
+            // إذا كان تصريحاً يدوياً صريحاً، نحتفظ به
+            if (entry.isManualEntry === true || entry.isManualEntry === 'true') return true;
+            // إذا كان معرف التصريح أو معرف السجل موجوداً في قائمة التصاريح الأساسية
+            return ptwIds.has(pid) || ptwIds.has(id);
+        });
 
         if (useState && best.length !== localReg.length) {
             this.registryData = best;
         } else if (!useState && localReg.length > stateReg.length) {
             if (!AppState.appData) AppState.appData = {};
-            AppState.appData.ptwRegistry = [...localReg];
+            AppState.appData.ptwRegistry = [...best];
         }
         this._registrySanitizedCache = best;
         return best;

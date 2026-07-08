@@ -3326,6 +3326,66 @@ function updateSingleRowInSheet(sheetName, recordId, updateData, spreadsheetId =
 }
 
 /**
+ * الحصول على قيمة الكاش المقسمة إلى أجزاء
+ */
+function getChunkedCache_(cache, cacheKey) {
+    try {
+        const chunksInfoStr = cache.get(cacheKey + '_chunks');
+        if (chunksInfoStr) {
+            const chunksInfo = JSON.parse(chunksInfoStr);
+            let jsonStr = '';
+            for (let i = 0; i < chunksInfo.numChunks; i++) {
+                const chunk = cache.get(cacheKey + '_chunk_' + i);
+                if (chunk === null) {
+                    return null; // جزء مفقود، الكاش غير صالح
+                }
+                jsonStr += chunk;
+            }
+            return jsonStr;
+        }
+        return cache.get(cacheKey);
+    } catch (e) {
+        Logger.log('Error in getChunkedCache_: ' + e.toString());
+        return null;
+    }
+}
+
+/**
+ * حفظ قيمة الكاش مع تقسيمها تلقائياً إذا كانت كبيرة
+ */
+function putChunkedCache_(cache, cacheKey, valueString, ttlSec) {
+    try {
+        const size = valueString.length;
+        // إذا كان الحجم أقل من 95 كيلوبايت، حفظ طبيعي
+        if (size < 95000) {
+            cache.put(cacheKey, valueString, ttlSec);
+            cache.remove(cacheKey + '_chunks'); // تنظيف الفضلات المحتملة
+            return true;
+        }
+
+        // حد أقصى للحجم لمنع الضغط الزائد
+        if (size > 900000) {
+            Logger.log('Data too large even for chunked caching: ' + size + ' bytes');
+            return false;
+        }
+
+        const chunkSize = 90000;
+        const numChunks = Math.ceil(size / chunkSize);
+        
+        cache.put(cacheKey + '_chunks', JSON.stringify({ numChunks: numChunks }), ttlSec);
+        
+        for (let i = 0; i < numChunks; i++) {
+            const chunk = valueString.substring(i * chunkSize, (i + 1) * chunkSize);
+            cache.put(cacheKey + '_chunk_' + i, chunk, ttlSec);
+        }
+        return true;
+    } catch (e) {
+        Logger.log('Error in putChunkedCache_: ' + e.toString());
+        return false;
+    }
+}
+
+/**
  * إبطال كاش قراءة الورقة ونسخة batchReadSheets لنفس الاسم (توحيد الإبطال بعد الكتابة).
  */
 function invalidateHseSheetCaches(sheetName) {
@@ -3333,9 +3393,27 @@ function invalidateHseSheetCaches(sheetName) {
         const sn = String(sheetName || '').trim();
         if (!sn) return;
         const cache = CacheService.getScriptCache();
+        
+        // مسح المفاتيح العادية
         cache.remove('hse_read_' + sn + '_v2');
         cache.remove('hse_read_' + sn + '_raw');
         cache.remove('batch_' + sn + '_v2');
+
+        // مسح المفاتيح المجزأة
+        const cleanSuffixes = ['_v2', '_raw'];
+        cleanSuffixes.forEach(function(suffix) {
+            const key = 'hse_read_' + sn + suffix;
+            const chunksInfoStr = cache.get(key + '_chunks');
+            if (chunksInfoStr) {
+                try {
+                    const chunksInfo = JSON.parse(chunksInfoStr);
+                    for (let i = 0; i < chunksInfo.numChunks; i++) {
+                        cache.remove(key + '_chunk_' + i);
+                    }
+                } catch(e) {}
+                cache.remove(key + '_chunks');
+            }
+        });
     } catch (e) {
         Logger.log('invalidateHseSheetCaches: ' + e.toString());
     }
@@ -3349,7 +3427,7 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
         // ✅ CacheService: Check cache first for frequently-read sheets
         const cache = CacheService.getScriptCache();
         const cacheKey = 'hse_read_' + sheetName + (skipSecurityFilter ? '_raw' : '_v2');
-        const cached = skipSecurityFilter ? null : cache.get(cacheKey);
+        const cached = skipSecurityFilter ? null : getChunkedCache_(cache, cacheKey);
         
         if (cached) {
             try {
@@ -3660,15 +3738,14 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
             });
         }
 
-        // ✅ CacheService: Save to cache before returning (2 minutes TTL)
-        // Only cache sheets with reasonable size (< 100KB to match Apps Script limit)
+        // ✅ CacheService: Save to cache before returning (2 minutes TTL) using chunked cache
         try {
-            const dataSize = JSON.stringify(uniqueObjects).length;
-            if (dataSize < 100000 && !skipSecurityFilter) { // 100KB limit for individual sheet cache
-                cache.put(cacheKey, JSON.stringify(uniqueObjects), 120); // 2 minutes
-                Logger.log('Cached readFromSheet: ' + sheetName + ' (' + dataSize + ' bytes, ' + uniqueObjects.length + ' records)');
-            } else {
-                Logger.log('Sheet ' + sheetName + ' too large for caching (' + dataSize + ' bytes)');
+            if (!skipSecurityFilter) {
+                const serialized = JSON.stringify(uniqueObjects);
+                const cachedOk = putChunkedCache_(cache, cacheKey, serialized, 120); // 2 minutes TTL
+                if (cachedOk) {
+                    Logger.log('Cached readFromSheet (chunked/normal): ' + sheetName + ' (' + serialized.length + ' bytes, ' + uniqueObjects.length + ' records)');
+                }
             }
         } catch (cacheError) {
             Logger.log('Cache write failed for ' + sheetName + ': ' + cacheError.toString());
