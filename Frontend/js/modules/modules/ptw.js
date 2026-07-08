@@ -1762,14 +1762,29 @@ const PTW = {
         const localReg = this.sanitizePtwRegistryDataset(localRaw, 'metrics.registryData');
         const stateReg = this.sanitizePtwRegistryDataset(stateRaw, 'metrics.AppState.ptwRegistry');
         const useState = stateReg.length > localReg.length;
-        let best = useState ? stateReg : (localReg.length > 0 ? localReg : stateReg);
+        const best = useState ? stateReg : (localReg.length > 0 ? localReg : stateReg);
 
-        // ✅ فلترة السجلات اليتيمة (Orphaned Duplicates):
-        // نحتفظ فقط بالسجلات التي لها تصريح مقابل في قائمة التصاريح (PTW) أو التي أُنشئت يدوياً كـ Manual Entry
-        const ptwList = AppState?.appData?.ptw || [];
-        const ptwIds = new Set(ptwList.map(p => String(p.id || '').trim()).filter(Boolean));
+        // المزامنة بين local و state بناءً على البيانات غير المفلترة لضمان عدم ضياع السجلات
+        if (useState && best.length !== localReg.length) {
+            this.registryData = best;
+        } else if (!useState && localReg.length > stateReg.length) {
+            if (!AppState.appData) AppState.appData = {};
+            AppState.appData.ptwRegistry = [...best];
+        }
+
+        // ✅ فلترة السجلات اليتيمة (Orphaned Duplicates) للعرض فقط دون تعديل الكاش الرئيسي في الذاكرة
+        const ptwList = Array.isArray(AppState?.appData?.ptw) ? AppState.appData.ptw : [];
         
-        best = best.filter(entry => {
+        // إذا لم يتم تحميل قائمة التصاريح الأساسية بعد، نرجع البيانات كما هي مؤقتاً لتجنب تصفير السجل
+        if (ptwList.length === 0) {
+            this._registrySanitizedCache = best;
+            return best;
+        }
+
+        const ptwIds = new Set(ptwList.filter(p => p && typeof p === 'object').map(p => String(p.id || '').trim()).filter(Boolean));
+        
+        const filtered = best.filter(entry => {
+            if (!entry) return false;
             const pid = String(entry.permitId || '').trim();
             const id = String(entry.id || '').trim();
             // إذا كان تصريحاً يدوياً صريحاً، نحتفظ به
@@ -1778,14 +1793,8 @@ const PTW = {
             return ptwIds.has(pid) || ptwIds.has(id);
         });
 
-        if (useState && best.length !== localReg.length) {
-            this.registryData = best;
-        } else if (!useState && localReg.length > stateReg.length) {
-            if (!AppState.appData) AppState.appData = {};
-            AppState.appData.ptwRegistry = [...best];
-        }
-        this._registrySanitizedCache = best;
-        return best;
+        this._registrySanitizedCache = filtered;
+        return filtered;
     },
 
     _getRegistryRowsCached(force = false) {
