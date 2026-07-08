@@ -22,3 +22,4 @@ Boundaries: code/commits/PRs written normal.
   3. `syncRegistryWithPermits()` MUST always use `skipSync: true` — local save only, no Backend sync.
   4. Backend `resolveHybridId_()` MUST reject any value containing `_TMP_` — generate new sequential ID without creating a PTWIdMapping entry.
   5. Only user-initiated actions (create/edit/delete permit) should trigger Backend writes to PTWRegistry.
+  6. In case of duplicate/orphaned records accumulation in PTWRegistry, run the backend function `cleanupPtwRegistryDatabase_()` to safely prune and deduplicate the sheet.
