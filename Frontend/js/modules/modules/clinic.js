@@ -3092,21 +3092,37 @@ const Clinic = {
             const dispensed = Math.max(0, quantityAdded - remainingQuantity);
             const usage = item.usage || item.notes || '—';
 
-            // ✅ إظهار أزرار التعديل والحذف فقط لمدير النظام
-            const actionButtons = isAdmin ? `
-                <button type="button" class="btn-icon btn-icon-primary" data-action="view-medication" data-id="${Utils.escapeHTML(item.id || '')}">
+            // ✅ إظهار أزرار الإجراءات
+            let approveBtn = '';
+            let rejectBtn = '';
+            
+            if (isAdmin && (status === 'قيد الاعتماد' || item.pendingUpdate)) {
+                approveBtn = `
+                    <button type="button" class="btn-icon btn-icon-success" data-action="approve-medication" data-id="${Utils.escapeHTML(item.id || '')}" title="اعتماد">
+                        <i class="fas fa-check"></i>
+                    </button>
+                `;
+                rejectBtn = `
+                    <button type="button" class="btn-icon btn-icon-danger" data-action="reject-medication" data-id="${Utils.escapeHTML(item.id || '')}" title="رفض">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+            }
+
+            const actionButtons = `
+                ${approveBtn}
+                ${rejectBtn}
+                <button type="button" class="btn-icon btn-icon-primary" data-action="view-medication" data-id="${Utils.escapeHTML(item.id || '')}" title="عرض">
                     <i class="fas fa-eye"></i>
                 </button>
-                <button type="button" class="btn-icon btn-icon-warning" data-action="edit-medication" data-id="${Utils.escapeHTML(item.id || '')}">
+                <button type="button" class="btn-icon btn-icon-warning" data-action="edit-medication" data-id="${Utils.escapeHTML(item.id || '')}" title="تعديل">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button type="button" class="btn-icon btn-icon-danger" data-action="delete-medication" data-id="${Utils.escapeHTML(item.id || '')}">
+                ${isAdmin ? `
+                <button type="button" class="btn-icon btn-icon-danger" data-action="delete-medication" data-id="${Utils.escapeHTML(item.id || '')}" title="حذف">
                     <i class="fas fa-trash"></i>
                 </button>
-            ` : `
-                <button type="button" class="btn-icon btn-icon-primary" data-action="view-medication" data-id="${Utils.escapeHTML(item.id || '')}">
-                    <i class="fas fa-eye"></i>
-                </button>
+                ` : ''}
             `;
 
             return `
@@ -3118,6 +3134,7 @@ const Clinic = {
                     <td>${expiry}</td>
                     <td>
                         <span class="badge ${this.getMedicationBadgeClass(status)}">${Utils.escapeHTML(status)}</span>
+                        ${item.pendingUpdate ? '<br><span class="badge badge-warning" style="margin-top: 4px; font-size: 0.7rem;">تعديل قيد الاعتماد</span>' : ''}
                     </td>
                     <td>${days}</td>
                     <td class="text-center font-semibold">${quantityAdded}</td>
@@ -3176,11 +3193,9 @@ const Clinic = {
                     <button type="button" class="btn-success" id="medications-export-excel-btn">
                         <i class="fas fa-file-excel ml-2"></i>تصدير Excel
                     </button>
-                    ${isAdmin ? `
                     <button type="button" class="btn-primary" id="medications-add-btn">
                         <i class="fas fa-plus ml-2"></i>إضافة جديد
                     </button>
-                    ` : ''}
                 </div>
             </div>
 
@@ -3326,6 +3341,13 @@ const Clinic = {
             exportExcelBtn.addEventListener('click', () => this.exportMedicationsToExcel());
         }
 
+        panel.querySelectorAll('[data-action="approve-medication"]').forEach((btn) => {
+            btn.addEventListener('click', () => this.approveMedicationRequest(btn.getAttribute('data-id')));
+        });
+        panel.querySelectorAll('[data-action="reject-medication"]').forEach((btn) => {
+            btn.addEventListener('click', () => this.rejectMedicationRequest(btn.getAttribute('data-id')));
+        });
+        
         panel.querySelectorAll('[data-action="view-medication"]').forEach((btn) => {
             btn.addEventListener('click', () => this.viewMedication(btn.getAttribute('data-id')));
         });
@@ -3335,6 +3357,102 @@ const Clinic = {
         panel.querySelectorAll('[data-action="delete-medication"]').forEach((btn) => {
             btn.addEventListener('click', () => this.deleteMedication(btn.getAttribute('data-id')));
         });
+    },
+
+    async approveMedicationRequest(id) {
+        const record = this.getMedications().find((item) => item.id === id);
+        if (!record) return;
+
+        const confirmed = confirm(`هل أنت متأكد من اعتماد التعديلات للدواء "${Utils.escapeHTML(record.name)}"؟`);
+        if (!confirmed) return;
+
+        Loading.show();
+        try {
+            let updatedRecord = { ...record };
+            
+            if (record.pendingUpdate) {
+                // Apply pending updates
+                Object.assign(updatedRecord, record.pendingUpdate);
+                delete updatedRecord.pendingUpdate;
+                
+                // Recalculate status
+                const statusInfo = this.calculateMedicationStatus(updatedRecord);
+                updatedRecord.status = statusInfo.status;
+                updatedRecord.daysRemaining = statusInfo.daysRemaining;
+                updatedRecord.updatedAt = new Date().toISOString();
+                updatedRecord.updatedBy = this.getCurrentUserSummary();
+            } else if (record.status === 'قيد الاعتماد') {
+                const statusInfo = this.calculateMedicationStatus(updatedRecord);
+                updatedRecord.status = statusInfo.status;
+            }
+
+            updatedRecord = this.normalizeMedicationRecord(updatedRecord);
+
+            const index = AppState.appData.medications.findIndex(m => m.id === id);
+            if (index !== -1) AppState.appData.medications[index] = updatedRecord;
+            
+            this.ensureData();
+            this.renderMedicationsTab();
+
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+
+            await GoogleIntegration.sendRequest({
+                action: 'updateMedication',
+                data: { medicationId: id, updateData: updatedRecord }
+            });
+
+            Loading.hide();
+            Notification.success('تم الاعتماد بنجاح');
+        } catch (error) {
+            Loading.hide();
+            Notification.error('حدث خطأ أثناء الاعتماد: ' + error.message);
+        }
+    },
+
+    async rejectMedicationRequest(id) {
+        const record = this.getMedications().find((item) => item.id === id);
+        if (!record) return;
+
+        const confirmed = confirm(`هل أنت متأكد من رفض التعديلات للدواء "${Utils.escapeHTML(record.name)}"؟
+
+لن يتم تطبيق التغييرات المقترحة.`);
+        if (!confirmed) return;
+
+        Loading.show();
+        try {
+            if (record.status === 'قيد الاعتماد') {
+                // Delete if it was a new medication request
+                AppState.appData.medications = AppState.appData.medications.filter(m => m.id !== id);
+                
+                await GoogleIntegration.sendRequest({
+                    action: 'deleteMedication',
+                    data: { medicationId: id }
+                });
+            } else if (record.pendingUpdate) {
+                // Revert to original by deleting pendingUpdate
+                let updatedRecord = { ...record };
+                delete updatedRecord.pendingUpdate;
+                
+                const index = AppState.appData.medications.findIndex(m => m.id === id);
+                if (index !== -1) AppState.appData.medications[index] = updatedRecord;
+
+                await GoogleIntegration.sendRequest({
+                    action: 'updateMedication',
+                    data: { medicationId: id, updateData: updatedRecord }
+                });
+            }
+
+            this.ensureData();
+            this.renderMedicationsTab();
+
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+
+            Loading.hide();
+            Notification.success('تم رفض الطلب بنجاح');
+        } catch (error) {
+            Loading.hide();
+            Notification.error('حدث خطأ أثناء الرفض: ' + error.message);
+        }
     },
 
     viewMedication(id) {
@@ -11178,28 +11296,46 @@ const Clinic = {
             const createdAt = record?.createdAt || new Date().toISOString();
             const createdBy = record?.createdBy || this.getCurrentUserSummary();
             const currentUser = this.getCurrentUserSummary();
+            const isAdmin = this.isCurrentUserAdmin();
 
-            const payload = this.normalizeSickLeaveRecord({
-                id: record?.id || Utils.generateId('SICK_LEAVE'),
-                personType: currentType,
-                employeeName: isEmployee ? nameInput.value.trim() : null,
-                employeeCode: isEmployee ? (codeInput?.value.trim() || '') : null,
-                employeeNumber: isEmployee ? (codeInput?.value.trim() || '') : null,
-                employeePosition: isEmployee ? (positionInput?.value.trim() || '') : null,
-                employeeDepartment: isEmployee ? (departmentInput?.value.trim() || '') : null,
-                personName: !isEmployee ? nameInput.value.trim() : null,
-                startDate: startISO,
-                endDate: endISO,
-                daysCount,
-                reason: form.querySelector('#sick-leave-reason').value.trim(),
-                medicalNotes: form.querySelector('#sick-leave-notes').value.trim(),
-                treatingDoctor: form.querySelector('#sick-leave-doctor').value.trim(),
-                createdAt,
-                createdBy,
-                createdById: createdBy?.id || AppState.currentUser?.id || '',
-                updatedAt: new Date().toISOString(),
-                updatedBy: currentUser
-            });
+            let payload;
+            let pendingNotification = false;
+
+            if (isEdit) {
+                // If not admin, put changes in pendingUpdate
+                if (!isAdmin) {
+                    payload = { ...record }; // Keep original
+                    payload.pendingUpdate = {
+                        name, type, usage, purchaseDate: purchaseISO, productionDate: productionISO, expiryDate: expiryISO,
+                        quantityAdded, remainingQuantity, location, notes,
+                        requestedBy: currentUser, requestedAt: new Date().toISOString()
+                    };
+                    pendingNotification = true;
+                } else {
+                    payload = this.normalizeMedicationRecord({
+                        id: record?.id || Utils.generateId('MED'),
+                        name, type, usage, purchaseDate: purchaseISO, productionDate: productionISO, expiryDate: expiryISO,
+                        quantityAdded, remainingQuantity, location, notes,
+                        createdAt, createdBy, createdById: createdBy?.id || AppState.currentUser?.id || '',
+                        updatedAt: new Date().toISOString(), updatedBy: currentUser,
+                        status: statusInfoLatest.status, daysRemaining: statusInfoLatest.daysRemaining
+                    });
+                    delete payload.pendingUpdate; // Clear any pending updates
+                }
+            } else {
+                // New medication
+                const newStatus = isAdmin ? statusInfoLatest.status : 'قيد الاعتماد';
+                if (!isAdmin) pendingNotification = true;
+                
+                payload = this.normalizeMedicationRecord({
+                    id: Utils.generateId('MED'),
+                    name, type, usage, purchaseDate: purchaseISO, productionDate: productionISO, expiryDate: expiryISO,
+                    quantityAdded, remainingQuantity, location, notes,
+                    createdAt, createdBy, createdById: createdBy?.id || AppState.currentUser?.id || '',
+                    updatedAt: new Date().toISOString(), updatedBy: currentUser,
+                    status: newStatus, daysRemaining: statusInfoLatest.daysRemaining
+                });
+            }
 
             Loading.show();
             try {
@@ -13038,6 +13174,24 @@ const Clinic = {
                             await GoogleIntegration.sendRequest({
                                 action: 'addMedication',
                                 data: payload
+                            });
+                        }
+
+                        
+                        // إرسال إشعار للمدير إذا كان هناك طلب قيد الاعتماد
+                        if (pendingNotification && typeof GoogleIntegration !== 'undefined') {
+                            await GoogleIntegration.sendRequest({
+                                action: 'addNotification',
+                                data: {
+                                    id: Utils.generateId('NOTIF'),
+                                    title: isEdit ? 'طلب تعديل دواء' : 'طلب إضافة دواء جديد',
+                                    message: `قام ${currentUser.name} بإرسال طلب ${isEdit ? 'تعديل' : 'إضافة'} للدواء: ${payload.name}`,
+                                    type: 'alert',
+                                    targetRoles: ['admin', 'manager'],
+                                    createdAt: new Date().toISOString(),
+                                    readBy: [],
+                                    link: '#clinic-medications'
+                                }
                             });
                         }
 
