@@ -4375,6 +4375,14 @@ function resolveHybridId_(rawValue, prefix, sheetName, idField, spreadsheetId, m
         return normalizeSequentialId_(value, normalizedPrefix);
     }
 
+    // ✅ حماية: رفض المعرفات المؤقتة (TMP) — لا تُسجّل في PTWIdMapping
+    // المعرفات المؤقتة تُولّد عند كل تحميل للصفحة وتتغير في كل مرة
+    // تسجيلها يسبب نمو لا نهائي في جدول PTWIdMapping
+    if (value && value.indexOf('_TMP_') >= 0) {
+        Logger.log('⚠️ resolveHybridId_: رفض معرف مؤقت (TMP) — سيتم توليد معرف تسلسلي جديد بدلاً منه: ' + value);
+        return generateSequentialId(normalizedPrefix, sheetName, spreadsheetId, idField);
+    }
+
     // ✅ استخدام Script Lock لمنع التوليد المتزامن المكرر
     var lock = LockService.getScriptLock();
     var hasLock = false;

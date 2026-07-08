@@ -1127,11 +1127,26 @@ const PTW = {
             // تحديث عرض السجل إذا كان مرئياً
             this.refreshRegistryViewIfVisible();
 
-            // المزامنة مع Google Sheets (فقط إذا لم يتم تخطي المزامنة)
-            
-            // المزامنة مع Google Sheets (فقط إذا لم يتم تخطي المزامنة)
+            // ✅ حماية: لا ترسل بيانات تحتوي على معرفات مؤقتة (TMP) إلى Backend
+            // هذا يمنع إنشاء صفوف في PTWIdMapping عند كل تحميل للصفحة
             if (!skipSync && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
-                const saveResult = await GoogleIntegration.autoSave('PTWRegistry', this.registryData);
+                // فلترة السجلات التي تحتوي على TMP IDs — لا ترسل إلى Backend
+                const hasTmpId = (record) => {
+                    const id = String(record?.id || '').trim();
+                    const permitId = String(record?.permitId || '').trim();
+                    return id.includes('_TMP_') || permitId.includes('_TMP_');
+                };
+                const cleanData = Array.isArray(this.registryData)
+                    ? this.registryData.filter(r => !hasTmpId(r))
+                    : this.registryData;
+                
+                // لا ترسل إذا كل البيانات مؤقتة
+                if (Array.isArray(cleanData) && cleanData.length === 0 && Array.isArray(this.registryData) && this.registryData.length > 0) {
+                    Utils.safeLog('⚠️ saveRegistryData: تم تخطي المزامنة — جميع السجلات تحتوي على معرفات مؤقتة');
+                    return true;
+                }
+                
+                const saveResult = await GoogleIntegration.autoSave('PTWRegistry', cleanData);
                 if (saveResult && saveResult.resolvedPTWRegistry) {
                     const resolvedReg = saveResult.resolvedPTWRegistry;
                     const applyResolvedPermitIds = (newPermitId, registryRow) => {
@@ -2607,6 +2622,8 @@ const PTW = {
 
     /**
      * مزامنة السجل مع التصاريح الموجودة
+     * ✅ هذه الدالة لا تُستدعى تلقائياً عند فتح المديول — فقط يدوياً
+     * لمنع إنشاء صفوف PTWIdMapping عند كل تحميل
      */
     async syncRegistryWithPermits() {
         const permits = AppState.appData.ptw || [];
@@ -2621,7 +2638,8 @@ const PTW = {
                 dirty = true;
             }
         }
-        if (dirty) await this.saveRegistryData();
+        // ✅ skipSync=true: حفظ محلي فقط، لا ترسل TMP IDs إلى Backend
+        if (dirty) await this.saveRegistryData({ skipSync: true });
     },
 
     /** هل توجد بيانات محلية لعرض فوري دون انتظار الخادم؟ */
@@ -2700,17 +2718,11 @@ const PTW = {
                     Utils.safeWarn('⚠️ تعذر تحميل السجل من Backend:', error);
                 }
                 return false;
-            }).then(() => {
-                // مزامنة أولية فقط إذا السجل فارغ (أول استخدام)
-                // بعد أول تحميل ناجح من Backend، السجل يحتوي على البيانات الصحيحة
-                if (Array.isArray(this.registryData) && this.registryData.length === 0) {
-                    return this.syncRegistryWithPermits().catch(error => {
-                        if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                            Utils.safeWarn('⚠️ تعذر مزامنة السجل مع التصاريح:', error);
-                        }
-                    });
-                }
             })
+            // ✅ إصلاح جذري: لا نستدعي syncRegistryWithPermits تلقائياً عند التحميل
+            // السبب: syncRegistryWithPermits تولّد معرفات مؤقتة (TMP) وترسلها للـ Backend
+            // مما يسبب إنشاء صفوف في PTWIdMapping عند كل تحميل للصفحة
+            // المزامنة يجب أن تحدث فقط عند إنشاء/تعديل تصريح يدوياً
         ];
 
         this._ptwBackendLoadPromise = Promise.all(loadDataPromises)
