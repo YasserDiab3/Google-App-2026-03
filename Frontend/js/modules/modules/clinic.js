@@ -15635,7 +15635,7 @@ const Clinic = {
 
     canAccessAttendanceTab() {
         if (this.isCurrentUserAdmin()) return true;
-        if (typeof Permissions !== 'undefined' && !Permissions.hasDetailedPermission('clinic', 'attendance')) return false;
+        if (typeof Permissions !== 'undefined' && Permissions.hasDetailedPermission('clinic', 'attendance')) return true;
         return this.isActiveClinicStaffMember();
     },
 
@@ -17716,12 +17716,12 @@ const Clinic = {
 
         if (this.isCurrentUserAdmin()) return true;
 
-        if (typeof Permissions !== 'undefined') {
-            if (!Permissions.hasDetailedPermission('clinic', tabName)) return false;
-        }
-
         if (tabName === 'attendance') {
             return this.canAccessAttendanceTab();
+        }
+
+        if (typeof Permissions !== 'undefined') {
+            if (!Permissions.hasDetailedPermission('clinic', tabName)) return false;
         }
 
         return true;
