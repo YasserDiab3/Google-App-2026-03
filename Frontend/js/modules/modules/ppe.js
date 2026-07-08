@@ -2469,7 +2469,7 @@ const PPE = {
                 });
             }
         }, 200);
-    },,
+    },
 
     async loadPPEItemsForDropdown(selectedValue = null) {
         const equipmentTypeSelect = document.getElementById('ppe-equipment-type') 
