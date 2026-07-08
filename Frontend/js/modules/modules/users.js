@@ -591,7 +591,7 @@ const Users = {
                                         <span>${Utils.escapeHTML(user.name || '')}</span>
                                     </div>
                                 </td>
-                                <td>${Utils.escapeHTML(user.email || '')}${(String(user.mfaEnabled).toLowerCase() === 'true') ? ' <span class="badge badge-info text-xs" title="مصادقة ثنائية"><i class="fas fa-shield-halved"></i> MFA</span>' : ''}</td>
+                                <td>${Utils.escapeHTML(user.email || '')}${(typeof Auth !== 'undefined' && Auth._isMfaEnabledForUser && Auth._isMfaEnabledForUser(user)) ? ' <span class="badge badge-info text-xs" title="مصادقة ثنائية"><i class="fas fa-shield-halved"></i> MFA</span>' : ''}</td>
                                 <td>
                                     <div class="flex items-center gap-2">
                                         <i class="fas fa-lock text-gray-400 text-sm"></i>
@@ -642,7 +642,7 @@ const Users = {
                                         >
                                             <i class="fas fa-key"></i>
                                         </button>
-                                        ${(String(user.mfaEnabled).toLowerCase() === 'true') ? `
+                                        ${(typeof Auth !== 'undefined' && Auth._isMfaEnabledForUser && Auth._isMfaEnabledForUser(user)) ? `
                                         <button 
                                             onclick="Users.disableUserMfa('${user.id}', '${user.email}')" 
                                             class="btn-icon btn-icon-secondary"
