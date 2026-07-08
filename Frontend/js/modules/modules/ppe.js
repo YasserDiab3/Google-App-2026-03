@@ -1652,170 +1652,171 @@ const PPE = {
         const stReceived = t('module.ppe.status.received', 'مستلم');
         const stPending = t('module.ppe.status.pending', 'قيد التسليم');
         
+        
         modal.innerHTML = `
-            <div class="modal-content w-full max-w-[56rem]" style="border-radius: 12px; overflow: hidden; box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.15); background: #f8fafc;">
-                <div class="modal-header bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-                    <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
-                        <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
+            <div class="modal-content w-full max-w-3xl" style="border-radius: 0.75rem; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+                
+                <!-- Header with color -->
+                <div class="modal-header bg-gradient-to-r from-blue-700 to-blue-500 px-5 py-4 flex items-center justify-between">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2 m-0">
+                        <span class="flex items-center justify-center w-8 h-8 rounded bg-white/20 text-white">
                             <i class="fas ${isEdit ? 'fa-edit' : 'fa-plus'}"></i>
                         </span>
                         ${isEdit ? ut(t('module.ppe.title.editReceipt', 'تعديل استلام')) : ut(t('module.ppe.title.newReceipt', 'تسجيل استلام جديد'))}
                     </h2>
-                    <button type="button" class="modal-close text-slate-400 hover:text-slate-600 transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100" onclick="this.closest('.modal-overlay').remove()">
-                        <i class="fas fa-times"></i>
+                    <button type="button" class="modal-close text-white hover:text-blue-100 transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10" onclick="this.closest('.modal-overlay').remove()">
+                        <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
-                <div class="modal-body p-0">
+                
+                <div class="modal-body p-0 bg-gray-50">
                     <form id="ppe-form">
-                        <div class="grid grid-cols-1 lg:grid-cols-12">
+                        <div class="p-5 space-y-5">
                             
-                            <!-- Left Panel: Employee Data -->
-                            <div class="lg:col-span-4 bg-slate-50 border-b lg:border-b-0 lg:border-l border-slate-200 p-5 space-y-5">
-                                <div>
-                                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                                        <i class="fas fa-user-circle"></i> بيانات الموظف
-                                    </h3>
-                                    <div class="space-y-4">
+                            <!-- Employee Section -->
+                            <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                                <div class="bg-blue-50 px-4 py-2 border-b border-blue-100 flex items-center gap-2 text-blue-800">
+                                    <i class="fas fa-user-circle text-lg"></i>
+                                    <h3 class="font-bold text-sm m-0">بيانات الموظف</h3>
+                                </div>
+                                <div class="p-4 space-y-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <label class="block text-[11px] font-semibold text-slate-600 mb-1.5">${ut(t('module.ppe.label.employeeCode', 'الكود الوظيفي *'))}</label>
+                                            <label class="block text-xs font-bold text-gray-700 mb-1">${ut(t('module.ppe.label.employeeCode', 'الكود الوظيفي *'))}</label>
                                             <div class="relative">
-                                                <input type="text" id="ppe-employee-code" required class="form-input w-full text-sm py-1.5 rounded-lg border-slate-300 pr-10 focus:ring-blue-500 focus:border-blue-500"
+                                                <input type="text" id="ppe-employee-code" required class="form-input w-full text-sm rounded border-gray-300 pr-10 focus:ring-blue-500 focus:border-blue-500"
                                                     value="${Utils.escapeHTML(ppeData?.employeeCode || ppeData?.employeeNumber || '')}"
                                                     placeholder="أدخل الكود..." autocomplete="off">
                                                 <button type="button" id="ppe-search-code-btn"
-                                                    class="absolute inset-y-0 left-0 flex items-center justify-center w-10 text-slate-400 hover:text-blue-600 transition-colors">
+                                                    class="absolute inset-y-0 left-0 flex items-center justify-center w-10 text-gray-400 hover:text-blue-600">
                                                     <i class="fas fa-search"></i>
                                                 </button>
                                             </div>
                                         </div>
                                         <div>
-                                            <label class="block text-[11px] font-semibold text-slate-600 mb-1.5">${ut(t('module.ppe.label.employeeName', 'اسم الموظف'))}</label>
+                                            <label class="block text-xs font-bold text-gray-700 mb-1">${ut(t('module.ppe.label.employeeName', 'اسم الموظف'))}</label>
                                             <div class="relative">
-                                                <input type="text" id="ppe-employee-name" class="form-input w-full text-sm py-1.5 rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500"
+                                                <input type="text" id="ppe-employee-name" class="form-input w-full text-sm rounded border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                                                     value="${Utils.escapeHTML(ppeData?.employeeName || '')}"
                                                     placeholder="البحث بالاسم..." autocomplete="off">
-                                                <div id="ppe-employee-dropdown" class="absolute z-50 hidden w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-auto"></div>
+                                                <div id="ppe-employee-dropdown" class="absolute z-50 hidden w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-60 overflow-auto"></div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <input type="hidden" id="ppe-employee-department" value="${Utils.escapeHTML(employeeInfo.department)}">
-                                <input type="hidden" id="ppe-employee-position" value="${Utils.escapeHTML(employeeInfo.position)}">
-                                <input type="hidden" id="ppe-employee-branch" value="${Utils.escapeHTML(employeeInfo.branch)}">
-                                <input type="hidden" id="ppe-employee-location" value="${Utils.escapeHTML(employeeInfo.location)}">
+                                    <!-- Hidden Inputs -->
+                                    <input type="hidden" id="ppe-employee-department" value="${Utils.escapeHTML(employeeInfo.department)}">
+                                    <input type="hidden" id="ppe-employee-position" value="${Utils.escapeHTML(employeeInfo.position)}">
+                                    <input type="hidden" id="ppe-employee-branch" value="${Utils.escapeHTML(employeeInfo.branch)}">
+                                    <input type="hidden" id="ppe-employee-location" value="${Utils.escapeHTML(employeeInfo.location)}">
 
-                                <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-                                    <div class="space-y-3">
-                                        <div class="flex items-start gap-3">
-                                            <div class="w-8 h-8 rounded bg-blue-50 flex items-center justify-center text-blue-600 shrink-0"><i class="fas fa-id-badge text-sm"></i></div>
-                                            <div class="min-w-0">
-                                                <div class="text-[10px] font-semibold text-slate-500 mb-0.5">الاسم</div>
-                                                <div id="ppe-employee-info-name" class="text-sm font-bold text-slate-800 truncate">${formatInfo(employeeInfo.name)}</div>
+                                    <!-- Summary Info Box -->
+                                    <div class="bg-gray-50 rounded border border-gray-200 p-3 flex flex-wrap gap-4 items-center">
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-7 h-7 rounded bg-blue-100 text-blue-600 flex items-center justify-center"><i class="fas fa-id-badge text-sm"></i></span>
+                                            <div>
+                                                <div class="text-[10px] text-gray-500">الاسم</div>
+                                                <div id="ppe-employee-info-name" class="text-sm font-bold text-gray-800">${formatInfo(employeeInfo.name)}</div>
                                             </div>
                                         </div>
-                                        <div class="flex items-start gap-3">
-                                            <div class="w-8 h-8 rounded bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0"><i class="fas fa-building text-sm"></i></div>
-                                            <div class="min-w-0">
-                                                <div class="text-[10px] font-semibold text-slate-500 mb-0.5">القسم</div>
-                                                <div id="ppe-employee-info-department" class="text-sm font-bold text-slate-800 truncate">${formatInfo(employeeInfo.department)}</div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-7 h-7 rounded bg-teal-100 text-teal-600 flex items-center justify-center"><i class="fas fa-building text-sm"></i></span>
+                                            <div>
+                                                <div class="text-[10px] text-gray-500">القسم</div>
+                                                <div id="ppe-employee-info-department" class="text-sm font-bold text-gray-800">${formatInfo(employeeInfo.department)}</div>
                                             </div>
                                         </div>
-                                        <div class="flex items-start gap-3">
-                                            <div class="w-8 h-8 rounded bg-amber-50 flex items-center justify-center text-amber-600 shrink-0"><i class="fas fa-briefcase text-sm"></i></div>
-                                            <div class="min-w-0">
-                                                <div class="text-[10px] font-semibold text-slate-500 mb-0.5">المنصب</div>
-                                                <div id="ppe-employee-info-position" class="text-sm font-bold text-slate-800 truncate">${formatInfo(employeeInfo.position)}</div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-7 h-7 rounded bg-amber-100 text-amber-600 flex items-center justify-center"><i class="fas fa-briefcase text-sm"></i></span>
+                                            <div>
+                                                <div class="text-[10px] text-gray-500">المنصب</div>
+                                                <div id="ppe-employee-info-position" class="text-sm font-bold text-gray-800">${formatInfo(employeeInfo.position)}</div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div class="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-2">
-                                        <span id="ppe-employee-info-branch" class="${employeeInfo.branch ? '' : 'hidden'} inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-medium">
-                                            ${employeeInfo.branch ? `<i class="fas fa-code-branch text-slate-400"></i> ${Utils.escapeHTML(employeeInfo.branch)}` : ''}
-                                        </span>
-                                        <span id="ppe-employee-info-location" class="${employeeInfo.location ? '' : 'hidden'} inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-medium">
-                                            ${employeeInfo.location ? `<i class="fas fa-map-marker-alt text-slate-400"></i> ${Utils.escapeHTML(employeeInfo.location)}` : ''}
-                                        </span>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Right Panel: Items & Details -->
-                            <div class="lg:col-span-8 bg-white p-5 space-y-6 flex flex-col">
-                                
-                                <div>
-                                    <div class="flex items-center justify-between mb-3">
-                                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                                            <i class="fas fa-boxes"></i> الأصناف المستلمة *
-                                        </h3>
-                                        <button type="button" id="ppe-add-item-btn" class="text-[11px] font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors">
-                                            <i class="fas fa-plus-circle"></i> إضافة صنف آخر
-                                        </button>
+                            <!-- Items Section -->
+                            <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                                <div class="bg-teal-50 px-4 py-2 border-b border-teal-100 flex items-center justify-between">
+                                    <div class="flex items-center gap-2 text-teal-800">
+                                        <i class="fas fa-boxes text-lg"></i>
+                                        <h3 class="font-bold text-sm m-0">الأصناف المستلمة *</h3>
                                     </div>
-                                    
+                                    <button type="button" id="ppe-add-item-btn" class="text-xs font-bold bg-white text-teal-700 border border-teal-200 hover:bg-teal-100 px-3 py-1 rounded shadow-sm transition-colors">
+                                        <i class="fas fa-plus ml-1"></i> صنف آخر
+                                    </button>
+                                </div>
+                                <div class="p-4">
                                     <div id="ppe-items-container" class="space-y-3">
-                                        <div class="ppe-item-row bg-slate-50 rounded-lg border border-slate-200 overflow-hidden transition-all hover:border-blue-300">
-                                            <div class="p-3 flex flex-wrap sm:flex-nowrap gap-3 items-end">
-                                                <div class="w-full sm:w-5/12">
-                                                    <label class="block text-[10px] font-semibold text-slate-600 mb-1">نوع المعدة *</label>
-                                                    <select id="ppe-equipment-type" required class="form-input ppe-equipment-type w-full text-sm py-1.5 rounded border-slate-300 focus:border-blue-500 focus:ring-blue-500">
+                                        <div class="ppe-item-row bg-gray-50 rounded border border-gray-200 p-3">
+                                            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                                                <div class="md:col-span-5">
+                                                    <label class="block text-xs font-bold text-gray-700 mb-1">نوع المعدة *</label>
+                                                    <select id="ppe-equipment-type" required class="form-input ppe-equipment-type w-full text-sm rounded border-gray-300 focus:border-teal-500 focus:ring-teal-500">
                                                         <option value="">جاري التحميل...</option>
                                                     </select>
                                                 </div>
-                                                <div class="w-full sm:w-3/12">
-                                                    <label class="block text-[10px] font-semibold text-slate-600 mb-1">مقاس الحذاء</label>
-                                                    <select class="form-input ppe-shoe-size w-full text-sm py-1.5 rounded border-slate-300 focus:border-blue-500 focus:ring-blue-500">
+                                                <div class="md:col-span-3">
+                                                    <label class="block text-xs font-bold text-gray-700 mb-1">المقاس</label>
+                                                    <select class="form-input ppe-shoe-size w-full text-sm rounded border-gray-300 focus:border-teal-500 focus:ring-teal-500">
                                                         <option value="">المقاس...</option>
                                                         ${[38,39,40,41,42,43,44,45,46,47,48].map(s => `<option value="${s}" ${(ppeData?.shoeSize==s)?'selected':''}>${s}</option>`).join('')}
                                                     </select>
                                                 </div>
-                                                <div class="w-full sm:w-4/12 flex items-center gap-2">
+                                                <div class="md:col-span-4 flex items-center gap-2">
                                                     <div class="flex-1">
-                                                        <label class="block text-[10px] font-semibold text-slate-600 mb-1">الكمية *</label>
-                                                        <input type="number" id="ppe-quantity" required class="form-input ppe-quantity w-full text-sm py-1.5 rounded border-slate-300 focus:border-blue-500 focus:ring-blue-500" min="1"
+                                                        <label class="block text-xs font-bold text-gray-700 mb-1">الكمية *</label>
+                                                        <input type="number" id="ppe-quantity" required class="form-input ppe-quantity w-full text-sm rounded border-gray-300 focus:border-teal-500 focus:ring-teal-500" min="1"
                                                             value="${ppeData?.quantity || 1}" placeholder="الكمية">
                                                     </div>
-                                                    <button type="button" class="ppe-remove-item hidden mt-4 text-rose-400 hover:text-rose-600 hover:bg-rose-50 w-7 h-7 rounded flex items-center justify-center transition-colors">
-                                                        <i class="fas fa-trash-alt text-xs"></i>
+                                                    <button type="button" class="ppe-remove-item hidden mt-5 text-red-500 hover:text-white hover:bg-red-500 border border-red-200 w-9 h-9 rounded flex items-center justify-center transition-colors">
+                                                        <i class="fas fa-trash-alt"></i>
                                                     </button>
                                                 </div>
                                             </div>
-                                            <div class="ppe-eligibility-info hidden border-t border-slate-200 p-3 bg-white text-xs"></div>
+                                            <div class="ppe-eligibility-info hidden mt-3 pt-2 border-t border-gray-200 text-xs"></div>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div class="pt-4 border-t border-slate-100">
-                                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                        <i class="fas fa-file-invoice"></i> تفاصيل الاستلام
-                                    </h3>
-                                    <div class="grid grid-cols-2 gap-4 mb-3">
+                            <!-- Details Section -->
+                            <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                                <div class="bg-amber-50 px-4 py-2 border-b border-amber-100 flex items-center gap-2 text-amber-800">
+                                    <i class="fas fa-file-invoice text-lg"></i>
+                                    <h3 class="font-bold text-sm m-0">تفاصيل الاستلام</h3>
+                                </div>
+                                <div class="p-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                         <div>
-                                            <label class="block text-[11px] font-semibold text-slate-600 mb-1.5">${ut(t('module.ppe.label.receiptDate', 'تاريخ الاستلام *'))}</label>
-                                            <input type="date" id="ppe-receipt-date" required class="form-input w-full text-sm py-1.5 rounded-lg border-slate-300 focus:border-blue-500"
+                                            <label class="block text-xs font-bold text-gray-700 mb-1">${ut(t('module.ppe.label.receiptDate', 'تاريخ الاستلام *'))}</label>
+                                            <input type="date" id="ppe-receipt-date" required class="form-input w-full text-sm rounded border-gray-300 focus:border-amber-500"
                                                 value="${ppeData?.receiptDate ? new Date(ppeData.receiptDate).toISOString().slice(0, 10) : ''}">
                                         </div>
                                         <div>
-                                            <label class="block text-[11px] font-semibold text-slate-600 mb-1.5">${ut(t('module.ppe.label.status', 'الحالة *'))}</label>
-                                            <select id="ppe-status" required class="form-input w-full text-sm py-1.5 rounded-lg border-slate-300 focus:border-blue-500">
+                                            <label class="block text-xs font-bold text-gray-700 mb-1">${ut(t('module.ppe.label.status', 'الحالة *'))}</label>
+                                            <select id="ppe-status" required class="form-input w-full text-sm rounded border-gray-300 focus:border-amber-500">
                                                 <option value="مستلم" ${ppeData?.status === 'مستلم' ? 'selected' : ''}>${ut(stReceived)}</option>
                                                 <option value="قيد التسليم" ${ppeData?.status === 'قيد التسليم' ? 'selected' : ''}>${ut(stPending)}</option>
                                             </select>
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="block text-[11px] font-semibold text-slate-600 mb-1.5">${ut(t('module.ppe.label.notes', 'ملاحظات'))}</label>
-                                        <textarea id="ppe-notes" class="form-input w-full text-sm rounded-lg border-slate-300 focus:border-blue-500" rows="2"
+                                        <label class="block text-xs font-bold text-gray-700 mb-1">${ut(t('module.ppe.label.notes', 'ملاحظات'))}</label>
+                                        <textarea id="ppe-notes" class="form-input w-full text-sm rounded border-gray-300 focus:border-amber-500" rows="2"
                                             placeholder="أضف أي ملاحظات إضافية هنا...">${Utils.escapeHTML(ppeData?.notes || '')}</textarea>
                                     </div>
                                 </div>
-
                             </div>
+
                         </div>
                         
-                        <div class="bg-slate-50 border-t border-slate-200 px-6 py-3 flex items-center justify-end gap-3 rounded-b-[12px]">
-                            <button type="button" class="px-4 py-1.5 text-sm font-semibold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors" onclick="this.closest('.modal-overlay').remove()">${ut(t('module.common.cancel', 'إلغاء'))}</button>
-                            <button type="submit" class="px-5 py-1.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm transition-colors flex items-center gap-2">
+                        <!-- Footer -->
+                        <div class="bg-white border-t border-gray-200 px-5 py-4 flex items-center justify-end gap-3 rounded-b-xl">
+                            <button type="button" class="px-5 py-2 text-sm font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded transition-colors" onclick="this.closest('.modal-overlay').remove()">${ut(t('module.common.cancel', 'إلغاء'))}</button>
+                            <button type="submit" class="px-6 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded shadow transition-colors flex items-center gap-2">
                                 <i class="fas fa-save"></i> ${isEdit ? ut(t('module.common.saveChanges', 'حفظ التعديلات')) : ut(t('module.ppe.btn.saveReceipt', 'تسجيل الاستلام'))}
                             </button>
                         </div>
@@ -1823,6 +1824,7 @@ const PPE = {
                 </div>
             </div>
         `;
+
 
         document.body.appendChild(modal);
         this.applyModuleI18n(modal);
