@@ -13,3 +13,6 @@ Stop: "stop caveman" or "normal mode"
 Auto-Clarity: drop caveman for security warnings, irreversible actions, user confused. Resume after.
 
 Boundaries: code/commits/PRs written normal.
+
+- STRICT RULE: Do not modify any module other than the requested one. ALWAYS execute `clasp pull` before making changes to the Backend to avoid overwriting recent updates on Apps Script.
+
