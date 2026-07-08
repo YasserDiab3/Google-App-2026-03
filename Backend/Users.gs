@@ -496,7 +496,7 @@ function deleteUserFromSheet(userId, userData) {
 function sanitizeUserRecordForClient_(user, isAdmin, actorEmail) {
     if (!user || typeof user !== 'object') return null;
     var out = {};
-    var safeFields = ['id', 'name', 'email', 'department', 'active', 'role', 'jobTitle', 'phone', 'photo', 'isOnline', 'lastLogin', 'passwordChanged', 'forcePasswordChange', 'updatedAt', 'createdAt'];
+    var safeFields = ['id', 'name', 'email', 'department', 'active', 'role', 'jobTitle', 'phone', 'photo', 'isOnline', 'lastLogin', 'passwordChanged', 'forcePasswordChange', 'updatedAt', 'createdAt', 'mfaEnabled'];
     for (var i = 0; i < safeFields.length; i++) {
         var f = safeFields[i];
         if (user[f] !== undefined) out[f] = user[f];
