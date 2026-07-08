@@ -547,10 +547,8 @@ const PPE = {
                 }
             }
 
-            // تحميل بيانات المخزون (فقط إذا كان التبويب النشط هو stock-control)
-            if (this.state.activeTab === 'stock-control') {
-                await this.loadStockItems(true); // forceRefresh = true
-            }
+            // تحميل بيانات المخزون (تحميل مسبق دائماً لتسريع العرض)
+            this.loadStockItems(true).catch(e => Utils.safeWarn('⚠️ خطأ في تحميل المخزون مسبقاً:', e));
         } catch (error) {
             Utils.safeError('❌ خطأ في preloadData:', error);
         }
@@ -1654,8 +1652,8 @@ const PPE = {
         const stReceived = t('module.ppe.status.received', 'مستلم');
         const stPending = t('module.ppe.status.pending', 'قيد التسليم');
         modal.innerHTML = `
-            <div class="modal-content w-[min(100%,52rem)] max-w-[min(94vw,52rem)]" style="border-radius: 1rem; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
-                <div class="modal-header" style="background: linear-gradient(135deg, #2563eb, #0d9488); color: #ffffff; text-align: center; position: relative; padding: 1.25rem 1.5rem;">
+            <div class="modal-content w-full max-w-2xl" style="border-radius: 0.75rem; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+                <div class="modal-header" style="background: linear-gradient(135deg, #2563eb, #0d9488); color: #ffffff; text-align: center; position: relative; padding: 1rem 1.25rem;">
                     <h2 class="modal-title" style="margin: 0 auto; font-weight: 700; letter-spacing: 0.03em;">
                         ${isEdit ? ut(t('module.ppe.title.editReceipt', 'تعديل استلام')) : ut(t('module.ppe.title.newReceipt', 'تسجيل استلام جديد'))}
                     </h2>
@@ -1664,15 +1662,15 @@ const PPE = {
                     </button>
                 </div>
                 <div class="modal-body bg-gradient-to-b from-slate-50/70 to-white">
-                    <form id="ppe-form" class="space-y-5">
-                        <section class="rounded-xl border border-blue-200/70 bg-gradient-to-br from-blue-50/70 via-white to-cyan-50/50 p-4 shadow-sm">
-                            <div class="flex items-center gap-2 mb-3 text-blue-900">
-                                <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white"><i class="fas fa-user"></i></span>
+                    <form id="ppe-form" class="space-y-3">
+                        <section class="rounded-xl border border-blue-200/70 bg-gradient-to-br from-blue-50/70 via-white to-cyan-50/50 p-3 shadow-sm">
+                            <div class="flex items-center gap-2 mb-2 text-blue-900">
+                                <span class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white text-xs"><i class="fas fa-user"></i></span>
                                 <h3 class="text-sm font-extrabold">بيانات الموظف</h3>
                             </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="md:col-span-2">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.label.employeeCode', 'الكود الوظيفي *'))}</label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="md:col-span-1">
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">${ut(t('module.ppe.label.employeeCode', 'الكود الوظيفي *'))}</label>
                                 <div class="relative">
                                     <input type="text" id="ppe-employee-code" required class="form-input pr-12"
                                         value="${Utils.escapeHTML(ppeData?.employeeCode || ppeData?.employeeNumber || '')}"
@@ -1687,8 +1685,8 @@ const PPE = {
                                     ${ut(t('module.ppe.hint.employeeCode', ''))}
                                 </p>
                                 </div>
-                            <div class="md:col-span-2">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.label.employeeName', 'اسم الموظف'))}</label>
+                            <div class="md:col-span-1">
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">${ut(t('module.ppe.label.employeeName', 'اسم الموظف'))}</label>
                                 <div class="relative">
                                     <input type="text" id="ppe-employee-name" class="form-input"
                                         value="${Utils.escapeHTML(ppeData?.employeeName || '')}"
@@ -1704,8 +1702,8 @@ const PPE = {
                         <input type="hidden" id="ppe-employee-branch" value="${Utils.escapeHTML(employeeInfo.branch)}">
                         <input type="hidden" id="ppe-employee-location" value="${Utils.escapeHTML(employeeInfo.location)}">
 
-                        <div class="rounded-xl border border-blue-100 bg-blue-50/30 p-4 shadow-sm">
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                        <div class="rounded-xl border border-blue-100 bg-blue-50/30 p-3 shadow-sm">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                                 <div class="bg-white/90 p-3 rounded-lg border border-blue-50/50 shadow-sm flex items-center gap-3">
                                     <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600"><i class="fas fa-signature text-sm"></i></span>
                                     <div class="min-w-0">
@@ -1738,12 +1736,12 @@ const PPE = {
                             </div>
                         </div>
 
-                        <section class="rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/50 p-4 shadow-sm space-y-4">
+                        <section class="rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/50 p-3 shadow-sm space-y-3">
                             <div class="flex items-center gap-2 mb-1 text-emerald-900">
-                                <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white"><i class="fas fa-boxes"></i></span>
+                                <span class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white text-xs"><i class="fas fa-boxes"></i></span>
                                 <h3 class="text-sm font-extrabold">الأصناف المستلمة</h3>
                             </div>
-                        <div class="space-y-4">
+                        <div class="space-y-3">
                             <div>
                                 <div class="flex items-center justify-between mb-2">
                                     <h3 class="text-sm font-semibold text-gray-800">${ut(t('module.ppe.items.title', 'الأصناف المستلمة *'))}</h3>
@@ -1751,9 +1749,9 @@ const PPE = {
                                         <i class="fas fa-plus ml-1"></i>${ut(t('module.ppe.items.addRow', 'إضافة صنف آخر'))}
                                     </button>
                                 </div>
-                                <div id="ppe-items-container" class="space-y-4">
+                                <div id="ppe-items-container" class="space-y-3">
                                     <div class="ppe-item-row w-full rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/[0.04] overflow-hidden">
-                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 items-end bg-slate-50/50">
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 items-end bg-slate-50/50">
                                             <div class="min-w-0">
                                                 <label class="block text-xs font-semibold text-gray-700 mb-1">
                                                     <i class="fas fa-shield-alt text-emerald-600 ml-1"></i>${ut(t('module.ppe.label.equipmentType', 'نوع المعدة *'))}
@@ -1807,17 +1805,17 @@ const PPE = {
 
                             <div class="pt-1 border-t border-emerald-100"></div>
                             <div class="flex items-center gap-2 text-amber-900 mt-1">
-                                <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500 text-white"><i class="fas fa-calendar-check"></i></span>
+                                <span class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500 text-white text-xs"><i class="fas fa-calendar-check"></i></span>
                                 <h3 class="text-sm font-extrabold">تفاصيل الاستلام</h3>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 rounded-xl border border-amber-200/70 bg-gradient-to-br from-amber-50/70 to-white">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 rounded-xl border border-amber-200/70 bg-gradient-to-br from-amber-50/70 to-white">
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.label.receiptDate', 'تاريخ الاستلام *'))}</label>
+                                    <label class="block text-xs font-semibold text-gray-700 mb-1">${ut(t('module.ppe.label.receiptDate', 'تاريخ الاستلام *'))}</label>
                                     <input type="date" id="ppe-receipt-date" required class="form-input"
                                         value="${ppeData?.receiptDate ? new Date(ppeData.receiptDate).toISOString().slice(0, 10) : ''}">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.label.status', 'الحالة *'))}</label>
+                                    <label class="block text-xs font-semibold text-gray-700 mb-1">${ut(t('module.ppe.label.status', 'الحالة *'))}</label>
                                     <select id="ppe-status" required class="form-input">
                                         <option value="مستلم" ${ppeData?.status === 'مستلم' ? 'selected' : ''}>${ut(stReceived)}</option>
                                         <option value="قيد التسليم" ${ppeData?.status === 'قيد التسليم' ? 'selected' : ''}>${ut(stPending)}</option>
@@ -1826,13 +1824,13 @@ const PPE = {
                             </div>
 
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.label.notes', 'ملاحظات'))}</label>
-                                <textarea id="ppe-notes" class="form-input" rows="3"
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">${ut(t('module.ppe.label.notes', 'ملاحظات'))}</label>
+                                <textarea id="ppe-notes" class="form-input text-sm" rows="2"
                                     placeholder="${ut(t('module.ppe.placeholder.notes', ''))}">${Utils.escapeHTML(ppeData?.notes || '')}</textarea>
                             </div>
                         </div>
                         </section>
-                        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+                        <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
                             <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${ut(t('module.common.cancel', 'إلغاء'))}</button>
                             <button type="submit" class="btn-primary">
                                 <i class="fas fa-save ml-2"></i>${isEdit ? ut(t('module.common.saveChanges', 'حفظ التعديلات')) : ut(t('module.ppe.btn.saveReceipt', 'تسجيل الاستلام'))}
