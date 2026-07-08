@@ -1128,8 +1128,39 @@ const PTW = {
             this.refreshRegistryViewIfVisible();
 
             // المزامنة مع Google Sheets (فقط إذا لم يتم تخطي المزامنة)
+            
+            // المزامنة مع Google Sheets (فقط إذا لم يتم تخطي المزامنة)
             if (!skipSync && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
-                await GoogleIntegration.autoSave('PTWRegistry', this.registryData);
+                const saveResult = await GoogleIntegration.autoSave('PTWRegistry', this.registryData);
+                if (saveResult && saveResult.resolvedPTWRegistry) {
+                    const resolvedReg = saveResult.resolvedPTWRegistry;
+                    const applyResolvedPermitIds = (newPermitId, registryRow) => {
+                        const pid = String(newPermitId || '').trim();
+                        if (!pid) return;
+                        if (registryRow && registryRow.id && Array.isArray(this.registryData)) {
+                            const index = this.registryData.findIndex(r => String(r.paperPermitNumber || '').trim() === String(registryRow.paperPermitNumber || '').trim());
+                            if (index !== -1) {
+                                this.registryData[index] = { ...this.registryData[index], id: registryRow.id, permitId: pid };
+                            }
+                        }
+                        if (typeof AppState !== 'undefined' && AppState.appData && Array.isArray(AppState.appData.ptw)) {
+                            const paperKey = String(registryRow?.paperPermitNumber || '').trim();
+                            if (paperKey) {
+                                const pi = AppState.appData.ptw.findIndex(p => String(p.paperPermitNumber || '').trim() === paperKey);
+                                if (pi !== -1) {
+                                    AppState.appData.ptw[pi] = { ...AppState.appData.ptw[pi], id: pid };
+                                }
+                            }
+                        }
+                    };
+                    
+                    if (Array.isArray(resolvedReg)) {
+                        resolvedReg.forEach(r => applyResolvedPermitIds(r.permitId, r));
+                    } else if (resolvedReg.permitId) {
+                        applyResolvedPermitIds(resolvedReg.permitId, resolvedReg);
+                    }
+                    this.setPtwRegistryState(this.registryData, 'saveRegistryData_resolved');
+                }
             }
             return true;
         } catch (error) {

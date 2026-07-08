@@ -1,0 +1,425 @@
+function saveToSheet(sheetName, data, spreadsheetId = null) {
+    try {
+        if (!spreadsheetId) spreadsheetId = getSpreadsheetId();
+        
+        // التحقق من صحة spreadsheetId
+        if (!spreadsheetId || (typeof spreadsheetId === 'string' && spreadsheetId.trim() === '')) {
+            return { success: false, message: 'معرف Google Sheets غير محدد. يرجى إدخال معرف الجدول في الإعدادات.' };
+        }
+        
+        if (!sheetName || (typeof sheetName === 'string' && sheetName.trim() === '')) {
+            return { success: false, message: 'اسم الورقة غير محدد.' };
+        }
+        
+        // فتح الجدول
+        let spreadsheet;
+        try {
+            spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+        } catch (error) {
+            return { success: false, message: 'فشل فتح الجدول. يرجى التحقق من معرف الجدول: ' + error.toString() };
+        }
+        
+        // إنشاء الورقة مع الرؤوس إذا لم تكن موجودة
+        let sheet;
+        try {
+            sheet = createSheetWithHeaders(spreadsheet, sheetName, data);
+        } catch (error) {
+            return { success: false, message: 'فشل إنشاء/فتح الورقة: ' + error.toString() };
+        }
+        
+        // إذا كانت البيانات مصفوفة فارغة أو غير موجودة
+        if (!data || (Array.isArray(data) && data.length === 0)) {
+            ensureSheetHeaders(sheet, sheetName, [{}]);
+            return { success: true, message: 'تم حفظ البيانات بنجاح (لا توجد بيانات للحفظ)' };
+        }
+
+        // الحصول على الرؤوس من البيانات الفعلية
+        const headers = getHeaders(sheetName, data);
+        if (!headers || headers.length === 0) {
+            return { success: false, message: 'لا يمكن استخراج الرؤوس من البيانات المرسلة.' };
+        }
+        
+        // التأكد من تحديث الرؤوس إذا لزم الأمر
+        ensureSheetHeaders(sheet, sheetName, data);
+
+        var _ptwRegistryScriptLock = null;
+        if (sheetName === 'PTWRegistry') {
+            _ptwRegistryScriptLock = LockService.getScriptLock();
+            try {
+                _ptwRegistryScriptLock.waitLock(45000);
+            } catch (lockEx) {
+                Logger.log('PTWRegistry saveToSheet lock timeout: ' + lockEx.toString());
+                return { success: false, message: 'ازدحام على توليد رقم التصريح. أعد المحاولة بعد لحظات.' };
+            }
+        }
+        var resolvedPTWRegistryForResponse = null;
+        try {
+
+        // معالجة attachments و image/photo قبل الحفظ
+        const processDataItem = function(item) {
+            if (!item || typeof item !== 'object') return item;
+            
+            let processed = {};
+            for (var key in item) {
+                if (item.hasOwnProperty(key)) {
+                    processed[key] = item[key];
+                }
+            }
+
+            // ✅ تطبيع خاص بورقة Employees لضمان ترتيب وصحة البيانات
+            if (sheetName === 'Employees') {
+                processed.employeeNumber = normalizeTextValue(processed.employeeNumber);
+                processed.sapId = normalizeTextValue(processed.sapId);
+                processed.nationalId = normalizeTextValue(processed.nationalId);
+                processed.birthDate = normalizeDateOnlyValue(processed.birthDate);
+                processed.hireDate = normalizeDateOnlyValue(processed.hireDate);
+                processed.job = normalizeTextValue(processed.job || processed.position);
+                processed.position = normalizeTextValue(processed.position || processed.job);
+                
+                // ✅ تطبيع حقل النوع (gender) لضمان التطابق الصحيح
+                processed.gender = normalizeGenderValue(processed.gender);
+
+                // ✅ السن (age) محسوب مثل الواجهة الأمامية
+                processed.age = calculateAgeYears(processed.birthDate);
+
+                // ✅ تطبيع حقل status (active/inactive) - افتراضي: active
+                if (!processed.status || (processed.status !== 'active' && processed.status !== 'inactive')) {
+                    processed.status = 'active'; // قيمة افتراضية آمنة
+                }
+                
+                // ✅ تطبيع تاريخ الاستقالة
+                processed.resignationDate = normalizeDateOnlyValue(processed.resignationDate || '');
+
+                // مطلوب: id = employeeNumber
+                const normalizedEmpNo = normalizeTextValue(processed.employeeNumber);
+                processed.id = normalizedEmpNo || normalizeTextValue(processed.id);
+            }
+            
+            // ✅ تطبيع خاص بورقة PTWRegistry لضمان تخزين نص أو رقم فقط (لا JSON ولا objects)
+            if (sheetName === 'PTWRegistry') {
+                processed = resolvePTWRegistryIdsForWrite_(processed, spreadsheetId);
+                processed = resolvePTWRegistryByPaperPermitNumber_(processed, spreadsheetId);
+                // permitType: string فقط
+                if (processed.permitType !== undefined) {
+                    if (Array.isArray(processed.permitType)) {
+                        processed.permitType = processed.permitType.join('، ');
+                    } else if (typeof processed.permitType === 'object' && processed.permitType !== null) {
+                        processed.permitType = String(processed.permitType);
+                    } else {
+                        processed.permitType = normalizeTextValue(processed.permitType);
+                    }
+                }
+                if (processed.permitTypeDisplay !== undefined) {
+                    processed.permitTypeDisplay = normalizeTextValue(processed.permitTypeDisplay);
+                }
+                // حقول نصية بسيطة
+                const textFields = ['requestingParty', 'location', 'sublocation', 'authorizedParty', 'workDescription', 'supervisor1', 'supervisor2', 'status', 'closureReason', 'paperPermitNumber', 'equipment', 'tools', 'toolsList', 'hotWorkOther', 'confinedSpaceOther', 'heightWorkOther', 'electricalWorkType', 'coldWorkType', 'otherWorkType', 'excavationLength', 'excavationWidth', 'excavationDepth', 'soilType', 'ppeNotes', 'riskLikelihood', 'riskConsequence', 'riskLevel', 'riskNotes', 'manualApprovalsText', 'manualClosureApprovalsText', 'approvalCircuitOwnerId', 'approvalCircuitName', 'skipApprovalFlow'];
+                textFields.forEach(field => {
+                    if (processed[field] !== undefined && processed[field] !== null) {
+                        if (typeof processed[field] === 'object') {
+                            processed[field] = processed[field].name || processed[field].email || processed[field].id || String(processed[field]);
+                        } else {
+                            processed[field] = normalizeTextValue(processed[field]);
+                        }
+                    }
+                });
+                // locationId, sublocationId: string أو فارغ
+                if (processed.locationId !== undefined && processed.locationId !== null) {
+                    processed.locationId = String(processed.locationId).trim() || '';
+                }
+                if (processed.sublocationId !== undefined && processed.sublocationId !== null) {
+                    processed.sublocationId = String(processed.sublocationId).trim() || '';
+                }
+                // totalTime: نص
+                if (processed.totalTime !== undefined && processed.totalTime !== null) {
+                    processed.totalTime = typeof processed.totalTime === 'object' ? String(processed.totalTime) : String(processed.totalTime).trim();
+                }
+                // teamMembers (array) -> teamMembersText فقط (لا نخزن المصفوفة)
+                if (Array.isArray(processed.teamMembers) && processed.teamMembers.length > 0) {
+                    processed.teamMembersText = processed.teamMembers.map(function(m) {
+                        if (m && typeof m === 'object') {
+                            var name = m.name || m.employeeName || '';
+                            var sig = m.signature || m.id || '';
+                            return sig ? name + ' (' + sig + ')' : name;
+                        }
+                        return String(m || '').trim();
+                    }).filter(Boolean).join('، ');
+                }
+                if (processed.teamMembersText !== undefined && processed.teamMembersText !== null && typeof processed.teamMembersText !== 'string') {
+                    processed.teamMembersText = String(processed.teamMembersText);
+                }
+                // مصفوفات طبيعة الأعمال -> نص
+                if (Array.isArray(processed.hotWorkDetails)) {
+                    processed.hotWorkDetails = processed.hotWorkDetails.join('، ');
+                } else if (processed.hotWorkDetails !== undefined && typeof processed.hotWorkDetails !== 'string') {
+                    processed.hotWorkDetails = normalizeTextValue(processed.hotWorkDetails);
+                }
+                if (Array.isArray(processed.confinedSpaceDetails)) {
+                    processed.confinedSpaceDetails = processed.confinedSpaceDetails.join('، ');
+                } else if (processed.confinedSpaceDetails !== undefined && typeof processed.confinedSpaceDetails !== 'string') {
+                    processed.confinedSpaceDetails = normalizeTextValue(processed.confinedSpaceDetails);
+                }
+                if (Array.isArray(processed.heightWorkDetails)) {
+                    processed.heightWorkDetails = processed.heightWorkDetails.join('، ');
+                } else if (processed.heightWorkDetails !== undefined && typeof processed.heightWorkDetails !== 'string') {
+                    processed.heightWorkDetails = normalizeTextValue(processed.heightWorkDetails);
+                }
+                if (Array.isArray(processed.requiredPPE)) {
+                    processed.requiredPPE = processed.requiredPPE.join('، ');
+                } else if (processed.requiredPPE !== undefined && typeof processed.requiredPPE !== 'string') {
+                    processed.requiredPPE = normalizeTextValue(processed.requiredPPE);
+                }
+                // riskScore: رقم
+                if (processed.riskScore !== undefined && processed.riskScore !== null && processed.riskScore !== '') {
+                    var rs = processed.riskScore;
+                    processed.riskScore = (typeof rs === 'number' && !isNaN(rs)) ? rs : (parseFloat(String(rs).trim()) || '');
+                }
+                // قيم منطقية: نبقيه boolean (Sheets يقبلها)
+                ['preStartChecklist', 'lotoApplied', 'governmentPermits', 'riskAssessmentAttached', 'gasTesting', 'mocRequest', 'isManualEntry'].forEach(function(f) {
+                    if (processed[f] !== undefined) {
+                        processed[f] = processed[f] === true || processed[f] === 'true' || processed[f] === 1;
+                    }
+                });
+                resolvedPTWRegistryForResponse = processed;
+            }
+            
+            // ✅ Attachments: store as plain text (NO JSON)
+            if (processed.attachments !== undefined) {
+                processed.attachments = formatAttachmentsText_(processed.attachments);
+            }
+            
+            // معالجة image - إذا كانت Base64، نرفعها إلى Google Drive
+            if (processed.image && typeof processed.image === 'string' && processed.image.startsWith('data:')) {
+                try {
+                    const moduleName = sheetName === 'Incidents' ? 'Incidents' : 
+                                     sheetName === 'NearMiss' ? 'NearMiss' :
+                                     sheetName === 'Violations' ? 'Violations' :
+                                     sheetName === 'DailyObservations' ? 'DailyObservations' : sheetName;
+                    const uploadResult = uploadFileToDrive(
+                        processed.image,
+                        (moduleName.toLowerCase() + '_' + (processed.id || Utilities.getUuid()) + '_' + Date.now() + '.jpg'),
+                        'image/jpeg',
+                        moduleName
+                    );
+                    if (uploadResult && uploadResult.success) {
+                        processed.image = uploadResult.directLink || uploadResult.shareableLink || processed.image;
+                    }
+                } catch (imageError) {
+                    Logger.log('خطأ في رفع صورة في saveToSheet: ' + imageError.toString());
+                }
+            }
+            
+            // معالجة photo - إذا كانت Base64، نرفعها إلى Google Drive
+            if (processed.photo && typeof processed.photo === 'string' && processed.photo.startsWith('data:')) {
+                try {
+                    const moduleName = sheetName === 'Violations' ? 'Violations' : 
+                                     sheetName === 'Blacklist_Register' ? 'Blacklist_Register' : sheetName;
+                    const uploadResult = uploadFileToDrive(
+                        processed.photo,
+                        (moduleName.toLowerCase() + '_' + (processed.id || Utilities.getUuid()) + '_' + Date.now() + '.jpg'),
+                        'image/jpeg',
+                        moduleName
+                    );
+                    if (uploadResult && uploadResult.success) {
+                        processed.photo = uploadResult.directLink || uploadResult.shareableLink || processed.photo;
+                    }
+                } catch (photoError) {
+                    Logger.log('خطأ في رفع صورة photo في saveToSheet: ' + photoError.toString());
+                }
+            }
+            
+            // معالجة images - إذا كانت Array من Base64
+            if (processed.images && Array.isArray(processed.images)) {
+                const processedImages = [];
+                for (let i = 0; i < processed.images.length; i++) {
+                    const image = processed.images[i];
+                    if (typeof image === 'string' && image.startsWith('data:')) {
+                        try {
+                            const moduleName = sheetName === 'DailyObservations' ? 'DailyObservations' : sheetName;
+                            const uploadResult = uploadFileToDrive(
+                                image,
+                                (moduleName.toLowerCase() + '_' + (processed.id || Utilities.getUuid()) + '_' + Date.now() + '_' + i + '.jpg'),
+                                'image/jpeg',
+                                moduleName
+                            );
+                            if (uploadResult && uploadResult.success) {
+                                processedImages.push(uploadResult.directLink || uploadResult.shareableLink);
+                            } else {
+                                processedImages.push(image);
+                            }
+                        } catch (imageError) {
+                            Logger.log('خطأ في رفع صورة images في saveToSheet: ' + imageError.toString());
+                            processedImages.push(image);
+                        }
+                    } else {
+                        processedImages.push(image);
+                    }
+                }
+                // ✅ Store images as plain text (NO JSON)
+                processed.images = processedImages.filter(Boolean).map(v => String(v)).join('\n');
+            }
+            
+            // ✅ معالجة logo - نحفظه دائماً كـ base64 string (لا نرفعه إلى Drive)
+            // Google Sheets له حد أقصى 50,000 حرف للخلية الواحدة
+            // للشعار، نحفظه مباشرة كـ base64 string دائماً
+            // ملاحظة: إذا كان الشعار أكبر من 50,000 حرف، قد يتم قطعه بواسطة Google Sheets
+            if (processed.logo && typeof processed.logo === 'string' && processed.logo.trim() !== '') {
+                try {
+                    const logoLength = processed.logo.length;
+                    // ✅ تم تعطيل الرفع التلقائي إلى Drive - نحفظ الشعار كـ base64 دائماً
+                    // إذا كان الشعار أكبر من 50,000 حرف، قد يتم قطعه بواسطة Google Sheets
+                    if (logoLength > 50000) {
+                        Logger.log('⚠️ Warning: Logo is very large (' + logoLength + ' chars). Google Sheets cell limit is 50,000 chars. Logo may be truncated.');
+                    } else if (logoLength > 45000) {
+                        Logger.log('⚠️ Warning: Logo is large (' + logoLength + ' chars). Close to Google Sheets cell limit (50,000 chars).');
+                    } else {
+                        Logger.log('✅ Logo saved as base64 string (length: ' + logoLength + ' chars, within Google Sheets limit)');
+                    }
+                    // نحفظ الشعار كـ base64 string مباشرة (لا نرفعه إلى Drive)
+                } catch (logoError) {
+                    Logger.log('❌ خطأ في معالجة الشعار في saveToSheet: ' + logoError.toString());
+                }
+            }
+
+            if (sheetName === 'PTW') {
+                processed = normalizePTWRowForSheet_(processed);
+            }
+            
+            return processed;
+        };
+        
+        // ✅ IMPORTANT: Do NOT clear rows here.
+        // We preserve existing sheet data and only upsert/update what we receive.
+
+        // ✅ مسح الcache بعد الاستيراد/الحفظ لضمان قراءة البيانات المحدثة
+        invalidateHseSheetCaches(sheetName);
+
+        // تحضير البيانات للكتابة (UPSERT: update existing rows by id, append new ones)
+        if (Array.isArray(data) && data.length > 0) {
+            const lastCol = sheet.getLastColumn();
+            const headerRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => (h === null || h === undefined) ? '' : String(h).trim());
+            const idCol = headerRow.indexOf('id');
+            // ✅ PPE_Stock يستخدم itemId وليس id — بدون هذا كل الصفوف تُضاف كصفوف جديدة إذا استُدعي saveToSheet بمصفوفة كاملة
+            let keyCol = idCol;
+            if (sheetName === 'PPE_Stock') {
+                const itemIdCol = headerRow.indexOf('itemId');
+                if (itemIdCol >= 0) {
+                    keyCol = itemIdCol;
+                }
+            }
+            const dataRange = sheet.getDataRange();
+            const values = dataRange ? dataRange.getValues() : [];
+            const idToRow = {};
+            if (keyCol >= 0 && values.length > 1) {
+                for (let r = 1; r < values.length; r++) {
+                    const rid = values[r][keyCol];
+                    if (rid !== null && rid !== undefined && String(rid).trim() !== '') {
+                        idToRow[String(rid).trim()] = r + 1; // sheet row
+                    }
+                }
+            }
+
+            data.forEach((item) => {
+                if (!item || typeof item !== 'object') return;
+                const processedItem = processDataItem(item);
+                let recordId = '';
+                if (sheetName === 'PPE_Stock') {
+                    if (processedItem.itemId !== null && processedItem.itemId !== undefined && String(processedItem.itemId).trim() !== '') {
+                        recordId = String(processedItem.itemId).trim();
+                    }
+                } else if (processedItem.id) {
+                    recordId = String(processedItem.id).trim();
+                }
+                const existingRow = recordId && idToRow[recordId] ? idToRow[recordId] : null;
+
+                if (existingRow) {
+                    // Partial update: only keys present in processedItem
+                    const rowVals = sheet.getRange(existingRow, 1, 1, headerRow.length).getValues()[0];
+                    headerRow.forEach((h, idx) => {
+                        if (!h) return;
+                        if (processedItem.hasOwnProperty(h)) {
+                            // ✅ حماية ورقة Users: لا نكتب passwordHash إلا إذا كان SHA-256 صالحاً
+                            // يمنع مسح الهاش عند autoSave أو أي مزامنة ترسل '***' من الـ frontend
+                            if (sheetName === 'Users' && h === 'passwordHash') {
+                                const newHash = String(processedItem[h] || '').trim();
+                                if (!newHash || newHash === '***' || !isSha256Hash(newHash)) {
+                                    return; // الاحتفاظ بالقيمة الحالية في الشيت
+                                }
+                            }
+                            rowVals[idx] = toSheetCellValue_(h, processedItem[h], sheetName);
+                        }
+                    });
+                    sheet.getRange(existingRow, 1, 1, headerRow.length).setValues([rowVals]);
+                } else {
+                    // Append new row
+                    const rowValues = headerRow.map(h => {
+                        if (!h) return '';
+                        // ✅ حماية ورقة Users: لا نكتب passwordHash غير صالح حتى للصفوف الجديدة
+                        if (sheetName === 'Users' && h === 'passwordHash') {
+                            const newHash = String(processedItem[h] || '').trim();
+                            if (!newHash || newHash === '***' || !isSha256Hash(newHash)) {
+                                return '';
+                            }
+                        }
+                        return toSheetCellValue_(h, processedItem[h], sheetName);
+                    });
+                    sheet.appendRow(rowValues);
+                }
+            });
+
+            SpreadsheetApp.flush();
+        } else if (typeof data === 'object' && data !== null) {
+            const processedData = processDataItem(data);
+            const recordId = processedData.id ? String(processedData.id).trim() : '';
+            if (recordId) {
+                // ✅ PTW: تجنّب updateSingleRowInSheet الذي يقرأ الورقة كاملاً عبر readFromSheet — مسار يدوي بطيء جداً مع آلاف الصفوف ويسبب مهلة العميل قبل إكمال الكتابة.
+                if (sheetName === 'PTW') {
+                    const existingRowNum = findSheetRowNumberByIdColumn_(sheet, recordId);
+                    if (existingRowNum) {
+                        mergeUpdateExistingSheetRow_(sheet, sheetName, existingRowNum, processedData);
+                    } else {
+                        const lastColPTW = sheet.getLastColumn();
+                        const headerRowPTW = sheet.getRange(1, 1, 1, lastColPTW).getValues()[0].map(h => (h === null || h === undefined) ? '' : String(h).trim());
+                        const rowValuesPTW = headerRowPTW.map(h => (h ? toSheetCellValue_(h, processedData[h], sheetName) : ''));
+                        sheet.appendRow(rowValuesPTW);
+                    }
+                } else {
+                    const upd = updateSingleRowInSheet(sheetName, recordId, processedData, spreadsheetId);
+                    if (!upd || !upd.success) {
+                        const lastCol = sheet.getLastColumn();
+                        const headerRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => (h === null || h === undefined) ? '' : String(h).trim());
+                        const rowValues = headerRow.map(h => (h ? toSheetCellValue_(h, processedData[h], sheetName) : ''));
+                        sheet.appendRow(rowValues);
+                    }
+                }
+            } else {
+                // No id => append as new row
+                const lastCol = sheet.getLastColumn();
+                const headerRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => (h === null || h === undefined) ? '' : String(h).trim());
+                const rowValues = headerRow.map(h => (h ? toSheetCellValue_(h, processedData[h], sheetName) : ''));
+                sheet.appendRow(rowValues);
+            }
+        }
+
+        // ✅ مسح الcache بعد الحفظ لضمان قراءة البيانات المحدثة (يشمل batch_*)
+        invalidateHseSheetCaches(sheetName);
+
+        const saveResult = { success: true, message: 'تم حفظ البيانات بنجاح' };
+        if (sheetName === 'PTWRegistry' && resolvedPTWRegistryForResponse) {
+            saveResult.resolvedPTWRegistry = resolvedPTWRegistryForResponse;
+        }
+        return saveResult;
+        } finally {
+            if (_ptwRegistryScriptLock) {
+                try {
+                    _ptwRegistryScriptLock.releaseLock();
+                } catch (relEx) {
+                    Logger.log('saveToSheet releaseLock: ' + relEx.toString());
+                }
+            }
+        }
+    } catch (error) {
+        Logger.log('Error in saveToSheet: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء حفظ البيانات: ' + error.toString() };
+    }
+}

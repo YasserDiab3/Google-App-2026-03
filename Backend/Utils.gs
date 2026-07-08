@@ -144,7 +144,7 @@ function getPublicIP() {
         // Cache for a short period to reduce external calls
         const cache = CacheService.getScriptCache();
         const cacheKey = 'hse_public_ip_ipify_v1';
-        const cached = cache.get(cacheKey);
+        const cached = skipSecurityFilter ? null : cache.get(cacheKey);
         if (cached) {
             return { success: true, data: { ip: cached, source: 'cache' } };
         }
@@ -265,7 +265,7 @@ function validateCSRFToken(requestToken, options) {
     const cache = CacheService.getScriptCache();
 
     try {
-        const cached = cache.get(cacheKey);
+        const cached = skipSecurityFilter ? null : cache.get(cacheKey);
         if (!cached) {
             const payload = {
                 sessionKey: sessionKey,
@@ -3349,7 +3349,7 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
         // ✅ CacheService: Check cache first for frequently-read sheets
         const cache = CacheService.getScriptCache();
         const cacheKey = 'hse_read_' + sheetName + (skipSecurityFilter ? '_raw' : '_v2');
-        const cached = cache.get(cacheKey);
+        const cached = skipSecurityFilter ? null : cache.get(cacheKey);
         
         if (cached) {
             try {
@@ -3664,7 +3664,7 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
         // Only cache sheets with reasonable size (< 100KB to match Apps Script limit)
         try {
             const dataSize = JSON.stringify(uniqueObjects).length;
-            if (dataSize < 100000) { // 100KB limit for individual sheet cache
+            if (dataSize < 100000 && !skipSecurityFilter) { // 100KB limit for individual sheet cache
                 cache.put(cacheKey, JSON.stringify(uniqueObjects), 120); // 2 minutes
                 Logger.log('Cached readFromSheet: ' + sheetName + ' (' + dataSize + ' bytes, ' + uniqueObjects.length + ' records)');
             } else {

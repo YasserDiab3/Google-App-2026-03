@@ -4103,7 +4103,7 @@ const GoogleIntegration = {
                             Utils.safeLog(`✅ تم حفظ ${sheetName} في Google Sheets بنجاح`);
                         }
 
-                        return { success: true, message: 'تم الحفظ بنجاح' };
+                        return Object.assign({ message: 'تم الحفظ بنجاح' }, result);
                     } else {
                         lastError = result?.message || 'خطأ غير معروف';
 
