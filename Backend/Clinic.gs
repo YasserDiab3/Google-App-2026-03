@@ -1311,18 +1311,7 @@ function getAllClinicVisits(filters = {}) {
     try {
         const spreadsheetId = getSpreadsheetId();
 
-        // ✅ تأكد من وجود الشيتات وتحديث رؤوسها (بدون تغيير البيانات)
-        try {
-            const ss = SpreadsheetApp.openById(spreadsheetId);
-            const empSheet = createSheetWithHeaders(ss, 'ClinicVisits', {});
-            ensureSheetHeaders(empSheet, 'ClinicVisits', {});
 
-            const conSheet = createSheetWithHeaders(ss, 'ClinicContractorVisits', {});
-            ensureSheetHeaders(conSheet, 'ClinicContractorVisits', {});
-        } catch (e) {
-            // لا نفشل القراءة إذا لم نقدر نهيئ الرؤوس لأي سبب
-            Logger.log('Warning ensuring clinic sheets headers: ' + e.toString());
-        }
 
         // ✅ تشخيص: قراءة آمنة لكل ورقة على حدة + تسجيل العدد للتأكد من اكتمال تحميل المقاولين
         let employeeData = [];
