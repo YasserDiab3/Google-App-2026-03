@@ -1654,6 +1654,7 @@ const PPE = {
         
         
         
+        
         modal.innerHTML = `
             <div class="modal-content" style="width: 100%; max-width: 800px; background: #f8fafc; border-radius: 12px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
                 
@@ -1820,6 +1821,7 @@ const PPE = {
                 </div>
             </div>
         `;
+
 
 
 

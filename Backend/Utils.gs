@@ -4452,6 +4452,17 @@ function findMappedId_(sheetName, idField, prefix, oldId, spreadsheetId) {
 
         var expectedEntity = getIdMappingEntityType_(sheetName, idField, prefix);
         var oldValue = String(oldId || '').trim();
+        
+        try {
+            var cache = CacheService.getScriptCache();
+            var cacheKey = 'idmap_' + expectedEntity + '_' + oldValue;
+            var cachedNewId = cache.get(cacheKey);
+            if (cachedNewId) {
+                return cachedNewId;
+            }
+        } catch (e) {
+            // Ignore cache errors
+        }
 
         for (var i = 0; i < mapData.length; i++) {
             var row = mapData[i];
@@ -4505,6 +4516,14 @@ function upsertIdMapping_(sheetName, idField, prefix, oldId, newId, spreadsheetI
         };
         saveToSheet('PTWIdMapping', payload, targetSpreadsheetId);
         SpreadsheetApp.flush(); // ✅ كتابة البيانات فوراً لمنع تعارض القراءات المتتالية
+        
+        try {
+            var cache = CacheService.getScriptCache();
+            var cacheKey = 'idmap_' + entityType + '_' + oldValue;
+            cache.put(cacheKey, newValue, 21600); // 6 hours
+        } catch (e) {
+            // Ignore cache errors
+        }
     } catch (e) {
         Logger.log('Failed to upsert PTW ID mapping: ' + e.toString());
     }
