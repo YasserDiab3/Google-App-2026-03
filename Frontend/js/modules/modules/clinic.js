@@ -10942,6 +10942,7 @@ const Clinic = {
     async showSickLeaveForm(record = null) {
         this.ensureData();
         const isEdit = !!record;
+        if (record) record = this.normalizeMedicationRecord(record);
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
 
@@ -12781,6 +12782,9 @@ const Clinic = {
 
     async showMedicationForm(record = null) {
         this.ensureData();
+        if (record) {
+            record = this.normalizeMedicationRecord(record);
+        }
         const isEdit = !!record;
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
