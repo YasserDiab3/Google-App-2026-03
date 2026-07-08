@@ -695,7 +695,12 @@ const GoogleIntegration = {
                     errorMsg.includes('aborted') ||
                     errorMsg.includes('فشل الاتصال مع google apps script بسبب cors') ||
                     errorMsg.includes('cors') ||
-                    errorMsg.includes('ازدحام');
+                    errorMsg.includes('ازدحام') ||
+                    errorMsg.includes('too many concurrent') ||
+                    errorMsg.includes('service invoked too many times') ||
+                    errorMsg.includes('server error') ||
+                    errorMsg.includes('limit exceeded') ||
+                    errorMsg.includes('rate limit');
                 const isAuthOrPermissionError =
                     errorMsg.includes('csrf') ||
                     errorMsg.includes('actor_identity') ||
@@ -708,7 +713,8 @@ const GoogleIntegration = {
                     errorMsg.includes('غير مسجل') ||
                     errorMsg.includes('رفض قراءة');
 
-                if (!isCircuitBreakerError && !isConfigError && !isTransientNetworkError && !isAuthOrPermissionError) {
+                const isAppError = error && error.isAppError === true;
+                if (!isAppError && !isCircuitBreakerError && !isConfigError && !isTransientNetworkError && !isAuthOrPermissionError) {
                     Utils.safeError('❌ خطأ غير معالج في مزامنة Google - هذا السبب الحقيقي لفتح Circuit Breaker:', error);
                     this._recordFailure();
                 }
@@ -1265,9 +1271,13 @@ const GoogleIntegration = {
                     // التحقق من هل هو fallback
                     Utils.safeWarn('فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو spreadsheetId');
                     // التحقق من هل هو console
-                    throw new Error(errorMessage);
+                    const err = new Error(errorMessage);
+                    err.isAppError = true;
+                    throw err;
                 }
-                throw new Error(errorMessage);
+                const err = new Error(errorMessage);
+                err.isAppError = true;
+                throw err;
             }
 
             return result;
