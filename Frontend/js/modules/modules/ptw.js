@@ -17339,26 +17339,43 @@ const PTW = {
         </div>`;
     },
 
-    /**
-     * جلب قائمة التصاريح المدمجة (القائمة + السجل) للتحليل
-     */
     getAnalysisPermits() {
-        const permitsFromList = AppState.appData && AppState.appData.ptw ? AppState.appData.ptw : [];
-        const permitsFromRegistry = (this.registryData || []).map(registryEntry => ({
-            id: registryEntry.permitId || registryEntry.id,
-            workType: Array.isArray(registryEntry.permitType) ? (registryEntry.permitTypeDisplay || registryEntry.permitType.join('، ')) : (registryEntry.permitType || registryEntry.permitTypeDisplay),
-            location: registryEntry.location,
-            siteName: registryEntry.location,
-            sublocation: registryEntry.sublocation,
-            startDate: registryEntry.openDate,
-            endDate: registryEntry.timeTo,
-            status: registryEntry.status,
-            requestingParty: registryEntry.requestingParty,
-            authorizedParty: registryEntry.authorizedParty,
-            workDescription: registryEntry.workDescription,
-            createdAt: registryEntry.createdAt,
-            updatedAt: registryEntry.updatedAt
-        }));
+        const cleanPermit = (p) => {
+            if (!p) return p;
+            const rawLoc = p.location || p.siteName || '';
+            const locParts = rawLoc.split(' - ');
+            const factory = locParts[0]?.trim() || 'غير محدد';
+            const sub = p.sublocation?.trim() || locParts[1]?.trim() || 'غير محدد';
+            return {
+                ...p,
+                location: factory,
+                siteName: factory,
+                sublocation: sub
+            };
+        };
+
+        const permitsFromList = (AppState.appData && AppState.appData.ptw ? AppState.appData.ptw : []).map(cleanPermit);
+        const permitsFromRegistry = (this.registryData || []).map(registryEntry => {
+            const rawLoc = registryEntry.location || '';
+            const locParts = rawLoc.split(' - ');
+            const factory = locParts[0]?.trim() || 'غير محدد';
+            const sub = registryEntry.sublocation?.trim() || locParts[1]?.trim() || 'غير محدد';
+            return {
+                id: registryEntry.permitId || registryEntry.id,
+                workType: Array.isArray(registryEntry.permitType) ? (registryEntry.permitTypeDisplay || registryEntry.permitType.join('، ')) : (registryEntry.permitType || registryEntry.permitTypeDisplay),
+                location: factory,
+                siteName: factory,
+                sublocation: sub,
+                startDate: registryEntry.openDate,
+                endDate: registryEntry.timeTo,
+                status: registryEntry.status,
+                requestingParty: registryEntry.requestingParty,
+                authorizedParty: registryEntry.authorizedParty,
+                workDescription: registryEntry.workDescription,
+                createdAt: registryEntry.createdAt,
+                updatedAt: registryEntry.updatedAt
+            };
+        });
         return this.mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry);
     },
 
