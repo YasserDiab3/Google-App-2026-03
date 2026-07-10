@@ -17340,12 +17340,34 @@ const PTW = {
     },
 
     getAnalysisPermits() {
+        const sites = this.getSiteOptions();
         const cleanPermit = (p) => {
             if (!p) return p;
-            const rawLoc = p.location || p.siteName || '';
+            const rawLoc = String(p.location || p.siteName || '').trim();
             const locParts = rawLoc.split(' - ');
-            const factory = locParts[0]?.trim() || 'غير محدد';
-            const sub = p.sublocation?.trim() || locParts[1]?.trim() || 'غير محدد';
+            const firstPart = locParts[0]?.trim() || '';
+            
+            // Try to find matching official site
+            let factory = 'غير محدد';
+            const matchedSite = sites.find(s => 
+                s.name.trim() === rawLoc || 
+                s.id === rawLoc || 
+                (p.siteId && s.id === p.siteId) ||
+                (firstPart && s.name.trim() === firstPart) ||
+                (firstPart && s.id === firstPart)
+            );
+            
+            if (matchedSite) {
+                factory = matchedSite.name.trim();
+            } else if (firstPart && firstPart !== '—' && firstPart !== 'undefined') {
+                factory = firstPart;
+            }
+            
+            let sub = p.sublocation?.trim() || locParts[1]?.trim() || '';
+            if (!sub || sub === '—' || sub === 'undefined' || sub === 'غير محدد') {
+                sub = 'موقع عام / غير محدد';
+            }
+            
             return {
                 ...p,
                 location: factory,
@@ -17360,7 +17382,7 @@ const PTW = {
             const locParts = rawLoc.split(' - ');
             const factory = locParts[0]?.trim() || 'غير محدد';
             const sub = registryEntry.sublocation?.trim() || locParts[1]?.trim() || 'غير محدد';
-            return {
+            return cleanPermit({
                 id: registryEntry.permitId || registryEntry.id,
                 workType: Array.isArray(registryEntry.permitType) ? (registryEntry.permitTypeDisplay || registryEntry.permitType.join('، ')) : (registryEntry.permitType || registryEntry.permitTypeDisplay),
                 location: factory,
@@ -17374,7 +17396,7 @@ const PTW = {
                 workDescription: registryEntry.workDescription,
                 createdAt: registryEntry.createdAt,
                 updatedAt: registryEntry.updatedAt
-            };
+            });
         });
         return this.mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry);
     },
@@ -17969,33 +17991,34 @@ const PTW = {
         this._ptwDrawHBar('ptw-chart-requesting', reqG.labels, reqG.data, 'rgba(139,92,246,0.75)');
 
         // حساب الموقع والموقع الفرعي الأكثر
-        const locCounts = {};
-        const locSubCounts = {}; // loc -> { subloc: count }
+        const combCounts = {};
+        const officialSiteNames = this.getSiteOptions().map(s => s.name.trim());
         t.forEach(p => {
             const loc = String(p.location || p.siteName || 'غير محدد').trim() || 'غير محدد';
-            const sub = String(p.sublocation || 'غير محدد').trim() || 'غير محدد';
-            locCounts[loc] = (locCounts[loc] || 0) + 1;
-            if (!locSubCounts[loc]) locSubCounts[loc] = {};
-            locSubCounts[loc][sub] = (locSubCounts[loc][sub] || 0) + 1;
+            // Only group if the factory is one of the official ones
+            if (officialSiteNames.includes(loc)) {
+                const sub = String(p.sublocation || 'موقع عام / غير محدد').trim() || 'موقع عام / غير محدد';
+                const key = `${loc} - ${sub}`;
+                combCounts[key] = (combCounts[key] || 0) + 1;
+            }
         });
 
-        const sortedLocs = Object.entries(locCounts).sort((a,b) => b[1] - a[1]).slice(0, 10);
-        const locLabels = sortedLocs.map(([loc]) => {
-            const subs = locSubCounts[loc] || {};
-            let topSub = '';
-            let topSubCount = 0;
-            Object.entries(subs).forEach(([sub, c]) => {
-                if (sub && sub !== 'غير محدد' && sub !== '—' && c > topSubCount) {
-                    topSub = sub;
-                    topSubCount = c;
-                }
-            });
-            if (topSub) {
-                return `${loc} (${topSub})`;
+        let sortedCombs = Object.entries(combCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10);
+
+        // Sort by Factory name first, so that they are grouped together on the chart
+        sortedCombs.sort((a, b) => {
+            const factoryA = a[0].split(' - ')[0];
+            const factoryB = b[0].split(' - ')[0];
+            if (factoryA !== factoryB) {
+                return factoryA.localeCompare(factoryB, 'ar');
             }
-            return loc;
+            return b[1] - a[1];
         });
-        const locData = sortedLocs.map(([, count]) => count);
+
+        const locLabels = sortedCombs.map(([k]) => k);
+        const locData = sortedCombs.map(([, count]) => count);
         this._ptwDrawHBar('ptw-chart-location', locLabels, locData, 'rgba(59,130,246,0.75)');
 
         // ملء قائمة تفاصيل توزيع التصاريح حسب الإدارات
@@ -18119,7 +18142,10 @@ const PTW = {
         fill('ptw-af-work-type', unique(x => Array.isArray(x.workType) ? x.workType.map(w=>(w||'').trim()) : [(x.workType||'').trim()]));
         fill('ptw-af-authorized',unique(x => [String(x.authorizedParty||'').trim()]));
         fill('ptw-af-requesting',unique(x => [String(x.requestingParty||'').trim()]));
-        fill('ptw-af-location',  unique(x => [String(x.location||x.siteName||'').trim()]));
+        
+        const officialSiteNames = this.getSiteOptions().map(s => s.name.trim());
+        const locs = unique(x => [String(x.location||x.siteName||'').trim()]).filter(v => officialSiteNames.includes(v));
+        fill('ptw-af-location',  locs);
     },
 
     // ── مساعد: تطبيق الفلاتر ──
