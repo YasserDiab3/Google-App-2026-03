@@ -17257,6 +17257,20 @@ const PTW = {
                 </div>
             </div>
 
+            <!-- ── Row: تحليل المصانع الرئيسية ── -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-industry" style="color:#0284c7;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">توزيع ونسب التصاريح حسب المصانع الرئيسية</span>
+                    </div>
+                    <span style="font-size:0.72rem;color:#64748b;">انقر على أي مصنع لتصفية لوحة التحكم تلقائياً</span>
+                </div>
+                <div id="ptw-factories-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;padding:16px;background:#f8fafc;">
+                    <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">جارٍ التحميل…</div>
+                </div>
+            </div>
+
             <!-- ── Row 2: الجهة المصرح لها + الجهة الطالبة ── -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
@@ -18061,6 +18075,68 @@ const PTW = {
                             </div>
                             <div style="width:100%;height:8px;background:#e5e7eb;border-radius:9999px;overflow:hidden;">
                                 <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);border-radius:9999px;transition:width 0.5s ease-in-out;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // ملء كروت المصانع الرئيسية التفاعلية
+        const factoriesCardsEl = document.getElementById('ptw-factories-cards');
+        if (factoriesCardsEl) {
+            if (total === 0) {
+                factoriesCardsEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">لا توجد بيانات</div>`;
+            } else {
+                const officialSites = this.getSiteOptions();
+                factoriesCardsEl.innerHTML = officialSites.map((site, index) => {
+                    const siteName = site.name.trim();
+                    const sitePermits = t.filter(p => (p.location || p.siteName || '').trim() === siteName);
+                    const siteTotal = sitePermits.length;
+                    const sitePct = Math.round((siteTotal / total) * 100) || 0;
+                    const siteOpen = sitePermits.filter(p => this.isPermitOpenStatus(p?.status)).length;
+                    const siteClosed = sitePermits.filter(p => this.isPermitClosedStatus(p?.status)).length;
+                    
+                    const colors = [
+                        { primary: '#0284c7', light: '#e0f2fe', progress: 'linear-gradient(90deg, #38bdf8 0%, #0284c7 100%)' },
+                        { primary: '#059669', light: '#ecfdf5', progress: 'linear-gradient(90deg, #34d399 0%, #059669 100%)' },
+                        { primary: '#7c3aed', light: '#f5f3ff', progress: 'linear-gradient(90deg, #a78bfa 0%, #7c3aed 100%)' }
+                    ];
+                    const theme = colors[index % colors.length];
+                    
+                    return `
+                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);transition:all .2s;cursor:pointer;" 
+                             onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.08)';this.style.borderColor='${theme.primary}'" 
+                             onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)';this.style.borderColor='#e2e8f0'"
+                             onclick="const el = document.getElementById('ptw-af-location'); if(el){el.value='${siteName}'; el.dispatchEvent(new Event('change'));}">
+                            
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div style="width:36px;height:36px;background:${theme.light};border-radius:8px;display:flex;align-items:center;justify-content:center;color:${theme.primary};">
+                                        <i class="fas fa-industry" style="font-size:16px;"></i>
+                                    </div>
+                                    <span style="font-size:0.9rem;font-weight:800;color:#1e293b;">${Utils.escapeHTML(siteName)}</span>
+                                </div>
+                                <span style="font-size:1.15rem;font-weight:900;color:${theme.primary};">${sitePct}%</span>
+                            </div>
+                            
+                            <div style="width:100%;height:8px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${sitePct}%;height:100%;background:${theme.progress};border-radius:9999px;"></div>
+                            </div>
+                            
+                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px;border-top:1px solid #f1f5f9;padding-top:12px;">
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.65rem;color:#64748b;margin-bottom:2px;">التصاريح</div>
+                                    <div style="font-size:0.85rem;font-weight:800;color:#1e293b;">${siteTotal}</div>
+                                </div>
+                                <div style="text-align:center;border-left:1px solid #f1f5f9;border-right:1px solid #f1f5f9;">
+                                    <div style="font-size:0.65rem;color:#d97706;margin-bottom:2px;">مفتوحة</div>
+                                    <div style="font-size:0.85rem;font-weight:800;color:#d97706;">${siteOpen}</div>
+                                </div>
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.65rem;color:#059669;margin-bottom:2px;">مغلقة</div>
+                                    <div style="font-size:0.85rem;font-weight:800;color:#059669;">${siteClosed}</div>
+                                </div>
                             </div>
                         </div>
                     `;
