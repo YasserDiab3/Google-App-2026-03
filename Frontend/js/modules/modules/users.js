@@ -2111,6 +2111,15 @@ const Users = {
             Object.assign(permissions, this.currentDetailedPermissions);
         }
 
+        // تنظيف الصلاحيات التفصيلية للموديولات غير المحددة
+        if (typeof MODULE_PERMISSIONS_CONFIG !== 'undefined') {
+            MODULE_PERMISSIONS_CONFIG.forEach(module => {
+                if (!permissions[module.key]) {
+                    delete permissions[`${module.key}Permissions`];
+                }
+            });
+        }
+
         // ✅ إصلاح: التأكد من إرجاع كائن حتى لو كان فارغاً (وليس undefined)
         // هذا يضمن عدم فقدان الصلاحيات عند الحفظ
         return Object.keys(permissions).length > 0 ? permissions : {};
