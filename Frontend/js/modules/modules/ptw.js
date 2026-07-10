@@ -17203,8 +17203,8 @@ const PTW = {
                         {id:'ptw-af-status',    icon:'fas fa-circle',         color:'#10b981', label:'الحالة'},
                         {id:'ptw-af-work-type', icon:'fas fa-fire',            color:'#ef4444', label:'نوع التصريح'},
                         {id:'ptw-af-authorized',icon:'fas fa-user-tie',        color:'#f59e0b', label:'الجهة المصرح لها'},
-                        {id:'ptw-af-requesting',icon:'fas fa-building',        color:'#6366f1', label:'الجهة الطالبة'},
-                        {id:'ptw-af-location',  icon:'fas fa-map-marker-alt', color:'#3b82f6', label:'الموقع'},
+                        {id:'ptw-af-requesting',icon:'fas fa-building',        color:'#6366f1', label:'الإدارة (الجهة الطالبة)'},
+                        {id:'ptw-af-location',  icon:'fas fa-map-marker-alt', color:'#3b82f6', label:'المصنع'},
                     ].map(f => `
                         <div>
                             <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;"><i class="${f.icon}" style="color:${f.color};margin-left:4px;"></i>${f.label}</label>
@@ -17272,7 +17272,7 @@ const PTW = {
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-building" style="color:#8b5cf6;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">أكثر الجهات الطالبة (أعلى 10)</span>
+                        <span style="font-weight:700;font-size:0.88rem;">أكثر الإدارات طلباً للتصاريح (أعلى 10)</span>
                     </div>
                     <div style="padding:12px;position:relative;height:280px;">
                         <canvas id="ptw-chart-requesting"></canvas>
@@ -17281,15 +17281,26 @@ const PTW = {
                 </div>
             </div>
 
-            <!-- ── Row 3: الموقع ── -->
-            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
-                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                    <i class="fas fa-map-marker-alt" style="color:#3b82f6;"></i>
-                    <span style="font-weight:700;font-size:0.88rem;">حسب الموقع (أعلى 10)</span>
+            <!-- ── Row 3: المصنع + الإدارات ── -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-map-marker-alt" style="color:#3b82f6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">المصنع (الموقع الفرعي الأكثر نشاطاً - أعلى 10)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="ptw-chart-location"></canvas>
+                        <div id="ptw-chart-location-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
                 </div>
-                <div style="padding:12px;position:relative;height:280px;">
-                    <canvas id="ptw-chart-location"></canvas>
-                    <div id="ptw-chart-location-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-hotel" style="color:#2563eb;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">تفاصيل توزيع التصاريح حسب الإدارات</span>
+                    </div>
+                    <div id="ptw-depts-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
+                    </div>
                 </div>
             </div>
 
@@ -17313,8 +17324,8 @@ const PTW = {
                                 <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">وصف العمل</th>
                                 <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">نوع التصريح</th>
                                 <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الجهة المصرح لها</th>
-                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الجهة الطالبة</th>
-                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الموقع</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الإدارة (الجهة الطالبة)</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">المصنع</th>
                                 <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">التاريخ</th>
                                 <th style="padding:10px 12px;text-align:center;font-weight:700;color:#374151;white-space:nowrap;">الحالة</th>
                             </tr>
@@ -17607,9 +17618,9 @@ const PTW = {
         const workTypeStr = (p) => Array.isArray(p.workType) ? (p.workType || []).join(sep) : (p.workType || '-');
         const kSeq = t('module.ptw.excelColSeq', 'م');
         const kType = t('module.ptw.excelColPermitType', 'نوع التصريح');
-        const kReq = t('module.ptw.excelColReq', 'الجهة الطالبة');
+        const kReq = t('module.ptw.excelColReq', 'الإدارة (الجهة الطالبة)');
         const kAuth = t('module.ptw.excelColAuth', 'الجهة المصرح لها');
-        const kLoc = t('module.ptw.excelColLoc', 'الموقع');
+        const kLoc = t('module.ptw.excelColLoc', 'المصنع');
         const kDate = t('module.ptw.excelColDate', 'التاريخ');
         const kSt = t('module.ptw.excelColStatus', 'الحالة');
         const kDesc = t('module.ptw.excelColWorkDesc', 'وصف العمل');
@@ -17680,9 +17691,9 @@ const PTW = {
             const closedCount = list.filter(p => { const s = (p.status || '').trim(); return s === 'مغلق' || s === 'اكتمل العمل بشكل آمن' || s === 'إغلاق جبري'; }).length;
             const kSeq = t('module.ptw.excelColSeq', 'م');
             const kType = t('module.ptw.excelColPermitType', 'نوع التصريح');
-            const kReq = t('module.ptw.excelColReq', 'الجهة الطالبة');
+            const kReq = t('module.ptw.excelColReq', 'الإدارة (الجهة الطالبة)');
             const kAuth = t('module.ptw.excelColAuth', 'الجهة المصرح لها');
-            const kLoc = t('module.ptw.excelColLoc', 'الموقع');
+            const kLoc = t('module.ptw.excelColLoc', 'المصنع');
             const kDate = t('module.ptw.excelColDate', 'التاريخ');
             const kSt = t('module.ptw.excelColStatus', 'الحالة');
             const kDesc = t('module.ptw.excelColWorkDesc', 'وصف العمل');
@@ -17876,6 +17887,19 @@ const PTW = {
             return !isNaN(d) && d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth();
         }).length;
 
+        // حساب الإدارة الأكثر نشاطاً
+        const reqCounts = {};
+        t.forEach(p => {
+            const k = (p.requestingParty || '').trim() || 'غير محدد';
+            if (k !== 'غير محدد' && k !== '—') {
+                reqCounts[k] = (reqCounts[k] || 0) + 1;
+            }
+        });
+        const sortedDepts = Object.entries(reqCounts).sort((a,b) => b[1] - a[1]);
+        const topReqEntry = sortedDepts[0];
+        const topReqDept = topReqEntry ? topReqEntry[0] : 'لا يوجد';
+        const topReqCount = topReqEntry ? topReqEntry[1] : 0;
+
         const kpiEl = document.getElementById('ptw-kpi-strip');
         if (kpiEl) {
             const kpis = [
@@ -17886,16 +17910,18 @@ const PTW = {
                 { label:'قيد المراجعة',            value:pending,                         icon:'fas fa-clock',           color:'#b45309', bg:'#fffbeb', border:'#fde68a' },
                 { label:'مرفوضة',                  value:rejected,                        icon:'fas fa-times-circle',    color:'#dc2626', bg:'#fef2f2', border:'#fecaca' },
                 { label:'نسبة الإغلاق',            value:closureRate+'%',                 icon:'fas fa-chart-pie',       color:'#0891b2', bg:'#ecfeff', border:'#a5f3fc' },
+                { label:'الإدارة الأكثر طلباً',    value:topReqCount > 0 ? topReqDept : '—', icon:'fas fa-hotel', color:'#2563eb', bg:'#eff6ff', border:'#bfdbfe', subText: topReqCount > 0 ? `${topReqCount} تصريح` : '' },
                 { label:'هذا الشهر',               value:thisMonth,                       icon:'fas fa-calendar-day',    color:'#db2777', bg:'#fdf2f8', border:'#fbcfe8' },
             ];
             kpiEl.innerHTML = kpis.map(k => `
-                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;min-width:0;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
                     <div style="width:38px;height:38px;background:${k.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                         <i class="${k.icon}" style="color:#fff;font-size:15px;"></i>
                     </div>
-                    <div>
-                        <div style="font-size:1.2rem;font-weight:800;color:${k.color};line-height:1;">${k.value}</div>
-                        <div style="font-size:0.68rem;color:#64748b;margin-top:2px;white-space:nowrap;">${k.label}</div>
+                    <div style="min-width:0;flex:1;">
+                        <div style="font-size:1.1rem;font-weight:800;color:${k.color};line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${k.value}">${k.value}</div>
+                        <div style="font-size:0.68rem;color:#64748b;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${k.label}</div>
+                        ${k.subText ? `<div style="font-size:0.62rem;color:${k.color};opacity:0.8;font-weight:700;">${k.subText}</div>` : ''}
                     </div>
                 </div>`).join('');
         }
@@ -17925,8 +17951,58 @@ const PTW = {
         const reqG = this._ptwGroupBy(t, 'requestingParty', 10);
         this._ptwDrawHBar('ptw-chart-requesting', reqG.labels, reqG.data, 'rgba(139,92,246,0.75)');
 
-        const locG = this._ptwGroupBy(t, 'location', 10);
-        this._ptwDrawHBar('ptw-chart-location', locG.labels, locG.data, 'rgba(59,130,246,0.75)');
+        // حساب الموقع والموقع الفرعي الأكثر
+        const locCounts = {};
+        const locSubCounts = {}; // loc -> { subloc: count }
+        t.forEach(p => {
+            const loc = String(p.location || p.siteName || 'غير محدد').trim() || 'غير محدد';
+            const sub = String(p.sublocation || 'غير محدد').trim() || 'غير محدد';
+            locCounts[loc] = (locCounts[loc] || 0) + 1;
+            if (!locSubCounts[loc]) locSubCounts[loc] = {};
+            locSubCounts[loc][sub] = (locSubCounts[loc][sub] || 0) + 1;
+        });
+
+        const sortedLocs = Object.entries(locCounts).sort((a,b) => b[1] - a[1]).slice(0, 10);
+        const locLabels = sortedLocs.map(([loc]) => {
+            const subs = locSubCounts[loc] || {};
+            let topSub = '';
+            let topSubCount = 0;
+            Object.entries(subs).forEach(([sub, c]) => {
+                if (sub && sub !== 'غير محدد' && sub !== '—' && c > topSubCount) {
+                    topSub = sub;
+                    topSubCount = c;
+                }
+            });
+            if (topSub) {
+                return `${loc} (${topSub})`;
+            }
+            return loc;
+        });
+        const locData = sortedLocs.map(([, count]) => count);
+        this._ptwDrawHBar('ptw-chart-location', locLabels, locData, 'rgba(59,130,246,0.75)');
+
+        // ملء قائمة تفاصيل توزيع التصاريح حسب الإدارات
+        const deptsListEl = document.getElementById('ptw-depts-list');
+        if (deptsListEl) {
+            if (total === 0) {
+                deptsListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
+            } else {
+                deptsListEl.innerHTML = sortedDepts.map(([dept, count]) => {
+                    const pct = Math.round((count / total) * 100);
+                    return `
+                        <div>
+                            <div style="display:flex;justify-content:space-between;font-size:0.8rem;font-weight:700;color:#374151;margin-bottom:4px;">
+                                <span>${Utils.escapeHTML(dept)}</span>
+                                <span style="color:#2563eb;">${count} تصريح (${pct}%)</span>
+                            </div>
+                            <div style="width:100%;height:8px;background:#e5e7eb;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);border-radius:9999px;transition:width 0.5s ease-in-out;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
 
         // ── جدول أحدث التصاريح ──
         const topT = t.slice().sort((a,b) => {
