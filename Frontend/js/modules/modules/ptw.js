@@ -17288,9 +17288,8 @@ const PTW = {
                         <i class="fas fa-map-marker-alt" style="color:#3b82f6;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">المصنع (الموقع الفرعي الأكثر نشاطاً - أعلى 10)</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="ptw-chart-location"></canvas>
-                        <div id="ptw-chart-location-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    <div id="ptw-locs-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
@@ -18017,9 +18016,34 @@ const PTW = {
             return b[1] - a[1];
         });
 
-        const locLabels = sortedCombs.map(([k]) => k);
-        const locData = sortedCombs.map(([, count]) => count);
-        this._ptwDrawHBar('ptw-chart-location', locLabels, locData, 'rgba(59,130,246,0.75)');
+        // ملء قائمة تفاصيل توزيع التصاريح حسب المصنع والموقع الفرعي
+        const locsListEl = document.getElementById('ptw-locs-list');
+        if (locsListEl) {
+            if (total === 0) {
+                locsListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
+            } else {
+                locsListEl.innerHTML = sortedCombs.map(([comb, count]) => {
+                    const parts = comb.split(' - ');
+                    const factory = parts[0] || 'غير محدد';
+                    const sub = parts[1] || 'موقع عام';
+                    const pct = Math.round((count / total) * 100);
+                    return `
+                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
+                                    <span style="background:#e0f2fe;color:#0369a1;font-size:0.68rem;padding:2px 8px;border-radius:6px;font-weight:700;white-space:nowrap;flex-shrink:0;">${Utils.escapeHTML(factory)}</span>
+                                    <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${Utils.escapeHTML(sub)}">${Utils.escapeHTML(sub)}</span>
+                                </div>
+                                <span style="font-size:0.75rem;font-weight:700;color:#0369a1;flex-shrink:0;margin-right:8px;">${count} تصريح (${pct}%)</span>
+                            </div>
+                            <div style="width:100%;height:6px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #38bdf8 0%, #0284c7 100%);border-radius:9999px;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
 
         // ملء قائمة تفاصيل توزيع التصاريح حسب الإدارات
         const deptsListEl = document.getElementById('ptw-depts-list');
