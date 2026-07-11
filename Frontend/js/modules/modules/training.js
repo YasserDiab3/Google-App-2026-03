@@ -9350,6 +9350,20 @@ const Training = {
                 </div>
             </div>
 
+            <!-- ── Row: تحليل المصانع الرئيسية ── -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-industry" style="color:#0284c7;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">توزيع ونسب البرامج التدريبية حسب المصانع الرئيسية</span>
+                    </div>
+                    <span style="font-size:0.72rem;color:#64748b;">انقر على أي مصنع لتصفية لوحة التحكم تلقائياً</span>
+                </div>
+                <div id="train-factories-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;padding:16px;background:#f8fafc;">
+                    <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">جارٍ التحميل…</div>
+                </div>
+            </div>
+
             <!-- ── Row 2: المدربون + المواضيع ── -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
@@ -9374,26 +9388,24 @@ const Training = {
                 </div>
             </div>
 
-            <!-- ── Row 3: المصنع + الموقع ── -->
+            <!-- ── Row 3: المصنع + توزيع المتدربين حسب الإدارات ── -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-industry" style="color:#6366f1;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">حسب المصنع (أعلى 8)</span>
+                        <i class="fas fa-map-marker-alt" style="color:#3b82f6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">المصنع (الموقع الفرعي الأكثر نشاطاً - أعلى 10)</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="train-chart-factory"></canvas>
-                        <div id="train-chart-factory-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    <div id="train-locs-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-map-marker-alt" style="color:#3b82f6;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">حسب الموقع (أعلى 8)</span>
+                        <i class="fas fa-users-cog" style="color:#4f46e5;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">تفاصيل توزيع المتدربين حسب الإدارات</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="train-chart-location"></canvas>
-                        <div id="train-chart-location-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    <div id="train-depts-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
                     </div>
                 </div>
             </div>
@@ -13740,12 +13752,55 @@ const Training = {
         try { this.ensureData(); } catch(e) {}
         const period  = parseInt(this._trainPeriod || '0', 10);
         // دمج برامج الموظفين والمقاولين مع تطبيع حقول العرض
-        const _norm = x => ({
-            ...x,
-            _locationDisplay: x.locationName || (x.location && x.factory ? (this.getPlaceName ? this.getPlaceName(x.location, x.factory) : x.location) : x.location) || 'غير محدد',
-            _factoryDisplay:  x.factoryName  || x.factory || 'غير محدد',
-            _trainer:         x.trainer || x.conductedBy || 'غير محدد',
-        });
+        const sites = this.getSiteOptions();
+        const _norm = x => {
+            const rawFactory = String(x.factoryName || x.factory || '').trim();
+            const rawLoc = String(x.locationName || x.location || '').trim();
+            
+            let factory = 'غير محدد';
+            const locParts = rawLoc.split(' - ');
+            const factoryParts = rawFactory.split(' - ');
+            const firstPartFactory = factoryParts[0]?.trim() || '';
+            const firstPartLoc = locParts[0]?.trim() || '';
+            
+            const matchedSite = sites.find(s => 
+                s.name.trim() === rawFactory || 
+                s.id === rawFactory || 
+                s.name.trim() === rawLoc ||
+                s.id === rawLoc ||
+                (firstPartFactory && s.name.trim() === firstPartFactory) ||
+                (firstPartFactory && s.id === firstPartFactory) ||
+                (firstPartLoc && s.name.trim() === firstPartLoc) ||
+                (firstPartLoc && s.id === firstPartLoc)
+            );
+            
+            if (matchedSite) {
+                factory = matchedSite.name.trim();
+            } else if (firstPartFactory && firstPartFactory !== '—' && firstPartFactory !== 'undefined' && firstPartFactory !== 'غير محدد') {
+                factory = firstPartFactory;
+            } else if (firstPartLoc && firstPartLoc !== '—' && firstPartLoc !== 'undefined' && firstPartLoc !== 'غير محدد') {
+                const matchedSiteLoc = sites.find(s => s.name.trim() === firstPartLoc || s.id === firstPartLoc);
+                if (matchedSiteLoc) {
+                    factory = matchedSiteLoc.name.trim();
+                } else {
+                    factory = firstPartLoc;
+                }
+            }
+            
+            let sub = x.locationName || x.location || '';
+            const subParts = sub.split(' - ');
+            let sublocation = subParts[1]?.trim() || subParts[0]?.trim() || '';
+            if (sublocation === factory || !sublocation || sublocation === '—' || sublocation === 'undefined' || sublocation === 'غير محدد') {
+                sublocation = 'موقع عام / غير محدد';
+            }
+            
+            return {
+                ...x,
+                _factoryDisplay: factory,
+                _locationDisplay: sublocation,
+                _trainer: x.trainer || x.conductedBy || 'غير محدد',
+            };
+        };
         const allT    = (AppState.appData?.training || []).concat(AppState.appData?.contractorTrainings || []).concat(
             (AppState.appData?.legalTrainings || []).map(lt => ({
                 ...lt,
@@ -13839,11 +13894,158 @@ const Training = {
         const topicG = this._tGroupBy(t, 'topic', 10);
         this._tDrawHBar('train-chart-topic', topicG.labels, topicG.data, 'rgba(16,185,129,0.75)');
 
-        const factG = this._tGroupBy(t, '_factoryDisplay', 8);
-        this._tDrawHBar('train-chart-factory', factG.labels, factG.data, 'rgba(99,102,241,0.75)');
+        // ملء كروت المصانع الرئيسية التفاعلية للتدريب
+        const factoriesCardsEl = document.getElementById('train-factories-cards');
+        if (factoriesCardsEl) {
+            if (total === 0) {
+                factoriesCardsEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">لا توجد بيانات</div>`;
+            } else {
+                const officialSites = this.getSiteOptions();
+                factoriesCardsEl.innerHTML = officialSites.map((site, index) => {
+                    const siteName = site.name.trim();
+                    const sitePermits = t.filter(p => (p._factoryDisplay || '').trim() === siteName);
+                    const siteTotal = sitePermits.length;
+                    const sitePct = Math.round((siteTotal / total) * 100) || 0;
+                    const siteCompleted = sitePermits.filter(p => p.status === 'مكتمل').length;
+                    const sitePlanned = sitePermits.filter(p => p.status === 'مخطط' || p.status === 'قادم').length;
+                    
+                    const colors = [
+                        { primary: '#4f46e5', light: '#eef2ff', progress: 'linear-gradient(90deg, #818cf8 0%, #4f46e5 100%)' },
+                        { primary: '#10b981', light: '#ecfdf5', progress: 'linear-gradient(90deg, #34d399 0%, #10b981 100%)' },
+                        { primary: '#f59e0b', light: '#fffbeb', progress: 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)' }
+                    ];
+                    const theme = colors[index % colors.length];
+                    
+                    return `
+                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);transition:all .2s;cursor:pointer;" 
+                             onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.08)';this.style.borderColor='${theme.primary}'" 
+                             onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)';this.style.borderColor='#e2e8f0'"
+                             onclick="const el = document.getElementById('train-af-factory'); if(el){el.value='${siteName}'; el.dispatchEvent(new Event('change'));}">
+                            
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div style="width:36px;height:36px;background:${theme.light};border-radius:8px;display:flex;align-items:center;justify-content:center;color:${theme.primary};">
+                                        <i class="fas fa-industry" style="font-size:16px;"></i>
+                                    </div>
+                                    <span style="font-size:0.9rem;font-weight:800;color:#1e293b;">${Utils.escapeHTML(siteName)}</span>
+                                </div>
+                                <span style="font-size:1.15rem;font-weight:900;color:${theme.primary};">${sitePct}%</span>
+                            </div>
+                            
+                            <div style="width:100%;height:8px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${sitePct}%;height:100%;background:${theme.progress};border-radius:9999px;"></div>
+                            </div>
+                            
+                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px;border-top:1px solid #f1f5f9;padding-top:12px;">
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.65rem;color:#64748b;margin-bottom:2px;">البرامج</div>
+                                    <div style="font-size:0.85rem;font-weight:800;color:#1e293b;">${siteTotal}</div>
+                                </div>
+                                <div style="text-align:center;border-left:1px solid #f1f5f9;border-right:1px solid #f1f5f9;">
+                                    <div style="font-size:0.65rem;color:#10b981;margin-bottom:2px;">مكتملة</div>
+                                    <div style="font-size:0.85rem;font-weight:800;color:#10b981;">${siteCompleted}</div>
+                                </div>
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.65rem;color:#f59e0b;margin-bottom:2px;">مخططة</div>
+                                    <div style="font-size:0.85rem;font-weight:800;color:#f59e0b;">${sitePlanned}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
 
-        const locG = this._tGroupBy(t, '_locationDisplay', 8);
-        this._tDrawHBar('train-chart-location', locG.labels, locG.data, 'rgba(59,130,246,0.75)');
+        // حساب الموقع والموقع الفرعي الأكثر نشاطاً في التدريب
+        const combCounts = {};
+        const officialSiteNames = this.getSiteOptions().map(s => s.name.trim());
+        t.forEach(p => {
+            const loc = String(p._factoryDisplay || 'غير محدد').trim() || 'غير محدد';
+            if (officialSiteNames.includes(loc)) {
+                const sub = String(p._locationDisplay || 'موقع عام / غير محدد').trim() || 'موقع عام / غير محدد';
+                const key = `${loc} - ${sub}`;
+                combCounts[key] = (combCounts[key] || 0) + 1;
+            }
+        });
+
+        let sortedCombs = Object.entries(combCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10);
+
+        sortedCombs.sort((a, b) => {
+            const factoryA = a[0].split(' - ')[0];
+            const factoryB = b[0].split(' - ')[0];
+            if (factoryA !== factoryB) {
+                return factoryA.localeCompare(factoryB, 'ar');
+            }
+            return b[1] - a[1];
+        });
+
+        const locsListEl = document.getElementById('train-locs-list');
+        if (locsListEl) {
+            if (total === 0) {
+                locsListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
+            } else {
+                locsListEl.innerHTML = sortedCombs.map(([comb, count]) => {
+                    const parts = comb.split(' - ');
+                    const factory = parts[0] || 'غير محدد';
+                    const sub = parts[1] || 'موقع عام';
+                    const pct = Math.round((count / total) * 100);
+                    return `
+                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
+                                    <span style="background:#e0f2fe;color:#0369a1;font-size:0.68rem;padding:2px 8px;border-radius:6px;font-weight:700;white-space:nowrap;flex-shrink:0;">${Utils.escapeHTML(factory)}</span>
+                                    <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${Utils.escapeHTML(sub)}">${Utils.escapeHTML(sub)}</span>
+                                </div>
+                                <span style="font-size:0.75rem;font-weight:700;color:#0369a1;flex-shrink:0;margin-right:8px;">${count} برنامج (${pct}%)</span>
+                            </div>
+                            <div style="width:100%;height:6px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #38bdf8 0%, #0284c7 100%);border-radius:9999px;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // حساب المتدربين حسب الإدارات
+        const deptCounts = {};
+        let totalTrainees = 0;
+        t.forEach(x => {
+            const participants = x.participants || [];
+            participants.forEach(p => {
+                const dept = String(p.department || 'غير محدد').trim() || 'غير محدد';
+                deptCounts[dept] = (deptCounts[dept] || 0) + 1;
+                totalTrainees++;
+            });
+        });
+
+        const sortedDepts = Object.entries(deptCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10);
+
+        const deptsListEl = document.getElementById('train-depts-list');
+        if (deptsListEl) {
+            if (totalTrainees === 0) {
+                deptsListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات حضور</div>`;
+            } else {
+                deptsListEl.innerHTML = sortedDepts.map(([dept, count]) => {
+                    const pct = Math.round((count / totalTrainees) * 100);
+                    return `
+                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${Utils.escapeHTML(dept)}">${Utils.escapeHTML(dept)}</span>
+                                <span style="font-size:0.75rem;font-weight:700;color:#4f46e5;flex-shrink:0;">${count} متدرب (${pct}%)</span>
+                            </div>
+                            <div style="width:100%;height:6px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #818cf8 0%, #4f46e5 100%);border-radius:9999px;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
 
         this._tDrawParticipants('train-chart-participants', t);
 
@@ -13956,7 +14158,11 @@ const Training = {
         fill('train-af-status',   unique(x => String(x.status||'').trim()));
         fill('train-af-type',     unique(x => String(x.trainingType||'').trim()));
         fill('train-af-trainer',  unique(x => String(x._trainer||'').trim()));
-        fill('train-af-factory',  unique(x => String(x._factoryDisplay||'').trim()));
+        
+        const officialSiteNames = this.getSiteOptions().map(s => s.name.trim());
+        const locs = unique(x => String(x._factoryDisplay||'').trim()).filter(v => officialSiteNames.includes(v));
+        fill('train-af-factory',  locs);
+        
         fill('train-af-location', unique(x => String(x._locationDisplay||'').trim()));
     },
 
