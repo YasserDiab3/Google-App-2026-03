@@ -9371,9 +9371,8 @@ const Training = {
                         <i class="fas fa-chalkboard-teacher" style="color:#f59e0b;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">أكثر المدربين (أعلى 10)</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="train-chart-trainer"></canvas>
-                        <div id="train-chart-trainer-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    <div id="train-trainers-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
@@ -9381,9 +9380,8 @@ const Training = {
                         <i class="fas fa-book" style="color:#10b981;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">أكثر المواضيع (أعلى 10)</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="train-chart-topic"></canvas>
-                        <div id="train-chart-topic-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    <div id="train-topics-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
                     </div>
                 </div>
             </div>
@@ -13888,11 +13886,55 @@ const Training = {
 
         this._tDrawTrend('train-chart-trend', t);
 
-        const trainerG = this._tGroupBy(t, '_trainer', 10);
-        this._tDrawHBar('train-chart-trainer', trainerG.labels, trainerG.data, 'rgba(245,158,11,0.75)');
+        // ملء قائمة أكثر المدربين
+        const trainersListEl = document.getElementById('train-trainers-list');
+        if (trainersListEl) {
+            if (total === 0) {
+                trainersListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
+            } else {
+                const trainerG = this._tGroupBy(t, '_trainer', 10);
+                trainersListEl.innerHTML = trainerG.labels.map((label, idx) => {
+                    const count = trainerG.data[idx];
+                    const pct = Math.round((count / total) * 100);
+                    return `
+                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${Utils.escapeHTML(label)}">${Utils.escapeHTML(label)}</span>
+                                <span style="font-size:0.75rem;font-weight:700;color:#f59e0b;flex-shrink:0;">${count} برنامج (${pct}%)</span>
+                            </div>
+                            <div style="width:100%;height:6px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #fcd34d 0%, #f59e0b 100%);border-radius:9999px;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
 
-        const topicG = this._tGroupBy(t, 'topic', 10);
-        this._tDrawHBar('train-chart-topic', topicG.labels, topicG.data, 'rgba(16,185,129,0.75)');
+        // ملء قائمة أكثر المواضيع
+        const topicsListEl = document.getElementById('train-topics-list');
+        if (topicsListEl) {
+            if (total === 0) {
+                topicsListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
+            } else {
+                const topicG = this._tGroupBy(t, 'topic', 10);
+                topicsListEl.innerHTML = topicG.labels.map((label, idx) => {
+                    const count = topicG.data[idx];
+                    const pct = Math.round((count / total) * 100);
+                    return `
+                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${Utils.escapeHTML(label)}">${Utils.escapeHTML(label)}</span>
+                                <span style="font-size:0.75rem;font-weight:700;color:#10b981;flex-shrink:0;">${count} برنامج (${pct}%)</span>
+                            </div>
+                            <div style="width:100%;height:6px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #6ee7b7 0%, #10b981 100%);border-radius:9999px;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
 
         // ملء كروت المصانع الرئيسية التفاعلية للتدريب
         const factoriesCardsEl = document.getElementById('train-factories-cards');
