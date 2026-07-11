@@ -9291,13 +9291,14 @@ const Training = {
                         <i class="fas fa-times ml-1"></i>مسح الكل
                     </button>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
                     ${[
                         {id:'train-af-status',   icon:'fas fa-circle',            color:'#10b981', label:'الحالة'},
                         {id:'train-af-type',     icon:'fas fa-tag',               color:'#4f46e5', label:'نوع التدريب'},
                         {id:'train-af-trainer',  icon:'fas fa-chalkboard-teacher', color:'#f59e0b', label:'المدرب'},
                         {id:'train-af-factory',  icon:'fas fa-industry',           color:'#6366f1', label:'المصنع'},
                         {id:'train-af-location', icon:'fas fa-map-marker-alt',    color:'#3b82f6', label:'الموقع'},
+                        {id:'train-af-dept',     icon:'fas fa-users-cog',          color:'#ec4899', label:'الإدارة'},
                     ].map(f => `
                         <div>
                             <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;"><i class="${f.icon}" style="color:${f.color};margin-left:4px;"></i>${f.label}</label>
@@ -13792,11 +13793,15 @@ const Training = {
                 sublocation = 'موقع عام / غير محدد';
             }
             
+            const rawTopic = String(x.topic || x.name || x.subject || '').trim();
+            const cleanTopic = (rawTopic === '' || rawTopic === '—' || rawTopic === 'undefined' || rawTopic === 'null') ? 'غير محدد' : rawTopic;
+
             return {
                 ...x,
                 _factoryDisplay: factory,
                 _locationDisplay: sublocation,
                 _trainer: x.trainer || x.conductedBy || 'غير محدد',
+                _topicDisplay: cleanTopic
             };
         };
         const allT    = (AppState.appData?.training || []).concat(AppState.appData?.contractorTrainings || []).concat(
@@ -13886,7 +13891,7 @@ const Training = {
 
         this._tDrawTrend('train-chart-trend', t);
 
-        // ملء قائمة أكثر المدربين
+        // ملء قائمة أكثر المدربين (تفاعلية)
         const trainersListEl = document.getElementById('train-trainers-list');
         if (trainersListEl) {
             if (total === 0) {
@@ -13897,7 +13902,10 @@ const Training = {
                     const count = trainerG.data[idx];
                     const pct = Math.round((count / total) * 100);
                     return `
-                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">
+                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;cursor:pointer;transition:all .2s;" 
+                             onmouseover="this.style.transform='translateX(-2px)';" onmouseout="this.style.transform='';"
+                             data-value="${Utils.escapeHTML(label)}"
+                             onclick="const el = document.getElementById('train-af-trainer'); if(el){el.value=this.getAttribute('data-value'); el.dispatchEvent(new Event('change'));}">
                             <div style="display:flex;justify-content:space-between;align-items:center;">
                                 <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${Utils.escapeHTML(label)}">${Utils.escapeHTML(label)}</span>
                                 <span style="font-size:0.75rem;font-weight:700;color:#f59e0b;flex-shrink:0;">${count} برنامج (${pct}%)</span>
@@ -13911,18 +13919,22 @@ const Training = {
             }
         }
 
-        // ملء قائمة أكثر المواضيع
+        // ملء قائمة أكثر المواضيع (تفاعلية)
         const topicsListEl = document.getElementById('train-topics-list');
         if (topicsListEl) {
             if (total === 0) {
                 topicsListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
             } else {
-                const topicG = this._tGroupBy(t, 'topic', 10);
+                // تصفية أي مواضيع "غير محدد" من الظهور
+                const topicG = this._tGroupBy(t.filter(x => x._topicDisplay !== 'غير محدد'), '_topicDisplay', 10);
                 topicsListEl.innerHTML = topicG.labels.map((label, idx) => {
                     const count = topicG.data[idx];
                     const pct = Math.round((count / total) * 100);
                     return `
-                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">
+                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;cursor:pointer;transition:all .2s;" 
+                             onmouseover="this.style.transform='translateX(-2px)';" onmouseout="this.style.transform='';"
+                             data-value="${Utils.escapeHTML(label)}"
+                             onclick="const searchInput = document.getElementById('training-search-input'); if(searchInput){searchInput.value=this.getAttribute('data-value'); searchInput.dispatchEvent(new Event('input'));}">
                             <div style="display:flex;justify-content:space-between;align-items:center;">
                                 <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${Utils.escapeHTML(label)}">${Utils.escapeHTML(label)}</span>
                                 <span style="font-size:0.75rem;font-weight:700;color:#10b981;flex-shrink:0;">${count} برنامج (${pct}%)</span>
@@ -14034,7 +14046,10 @@ const Training = {
                     const sub = parts[1] || 'موقع عام';
                     const pct = Math.round((count / total) * 100);
                     return `
-                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">
+                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;cursor:pointer;transition:all .2s;" 
+                             onmouseover="this.style.transform='translateX(-2px)';" onmouseout="this.style.transform='';"
+                             data-value="${Utils.escapeHTML(sub)}"
+                             onclick="const el = document.getElementById('train-af-location'); if(el){el.value=this.getAttribute('data-value'); el.dispatchEvent(new Event('change'));}">
                             <div style="display:flex;justify-content:space-between;align-items:center;">
                                 <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
                                     <span style="background:#e0f2fe;color:#0369a1;font-size:0.68rem;padding:2px 8px;border-radius:6px;font-weight:700;white-space:nowrap;flex-shrink:0;">${Utils.escapeHTML(factory)}</span>
@@ -14051,17 +14066,42 @@ const Training = {
             }
         }
 
-        // حساب المتدربين حسب الإدارات
+        // حساب المتدربين حسب الإدارات من سجل الحضور الفعلي والبيانات المحلية
         const deptCounts = {};
         let totalTrainees = 0;
+
+        const filteredTrainIds = new Set(t.map(x => String(x.id).trim()));
+        const filteredTrainTopics = new Set(t.map(x => String(x.topic || x.name || '').trim().toLowerCase()));
+
+        const allAttendance = AppState.appData.trainingAttendance || [];
+        const matchedAttendance = allAttendance.filter(r => 
+            (r.trainingId && filteredTrainIds.has(String(r.trainingId).trim())) ||
+            (r.topic && filteredTrainTopics.has(String(r.topic).trim().toLowerCase()))
+        );
+
+        // 1. حساب من سجل الحضور الفعلي الموثق
+        matchedAttendance.forEach(r => {
+            const dept = String(r.department || 'غير محدد').trim() || 'غير محدد';
+            const cleanDept = (dept === 'undefined' || dept === 'null' || dept === '—' || dept === '') ? 'غير محدد' : dept;
+            deptCounts[cleanDept] = (deptCounts[cleanDept] || 0) + 1;
+            totalTrainees++;
+        });
+
+        // 2. حساب الحضور المخزن محلياً في الجلسة لتفادي النقص
         t.forEach(x => {
-            const participants = this.getParticipantsArray(x);
-            participants.forEach(p => {
+            const localParts = this.getParticipantsArray(x);
+            localParts.forEach(p => {
                 if (p && typeof p === 'object') {
-                    const dept = String(p.department || p.dept || 'غير محدد').trim() || 'غير محدد';
-                    const cleanDept = (dept === 'undefined' || dept === 'null' || dept === '—' || dept === '' || dept === 'غير حدد') ? 'غير محدد' : dept;
-                    deptCounts[cleanDept] = (deptCounts[cleanDept] || 0) + 1;
-                    totalTrainees++;
+                    const isAlreadyCounted = matchedAttendance.some(r => 
+                        (r.trainingId === x.id || r.topic === x.name) && 
+                        (r.employeeName === p.name || r.employeeCode === p.code)
+                    );
+                    if (!isAlreadyCounted) {
+                        const dept = String(p.department || p.dept || 'غير محدد').trim() || 'غير محدد';
+                        const cleanDept = (dept === 'undefined' || dept === 'null' || dept === '—' || dept === '' || dept === 'غير حدد') ? 'غير محدد' : dept;
+                        deptCounts[cleanDept] = (deptCounts[cleanDept] || 0) + 1;
+                        totalTrainees++;
+                    }
                 }
             });
         });
@@ -14078,7 +14118,10 @@ const Training = {
                 deptsListEl.innerHTML = sortedDepts.map(([dept, count]) => {
                     const pct = Math.round((count / totalTrainees) * 100);
                     return `
-                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">
+                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;cursor:pointer;transition:all .2s;" 
+                             onmouseover="this.style.transform='translateX(-2px)';" onmouseout="this.style.transform='';"
+                             data-value="${Utils.escapeHTML(dept)}"
+                             onclick="const el = document.getElementById('train-af-dept'); if(el){el.value=this.getAttribute('data-value'); el.dispatchEvent(new Event('change'));}">
                             <div style="display:flex;justify-content:space-between;align-items:center;">
                                 <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${Utils.escapeHTML(dept)}">${Utils.escapeHTML(dept)}</span>
                                 <span style="font-size:0.75rem;font-weight:700;color:#4f46e5;flex-shrink:0;">${count} متدرب (${pct}%)</span>
@@ -14209,6 +14252,11 @@ const Training = {
         fill('train-af-factory',  locs);
         
         fill('train-af-location', unique(x => String(x._locationDisplay||'').trim()));
+
+        // ملء مرشح الإدارة
+        const allAttendance = AppState.appData.trainingAttendance || [];
+        const depts = [...new Set(allAttendance.map(r => String(r.department || '').trim()).filter(v => v && v !== 'غير محدد' && v !== '—'))].sort();
+        fill('train-af-dept', depts);
     },
 
     // ── مساعد: تطبيق الفلاتر ──
@@ -14219,7 +14267,8 @@ const Training = {
         const fTrainer  = get('train-af-trainer');
         const fFactory  = get('train-af-factory');
         const fLocation = get('train-af-location');
-        const hasAny    = [fStatus, fType, fTrainer, fFactory, fLocation].some(v => v !== '');
+        const fDept     = get('train-af-dept');
+        const hasAny    = [fStatus, fType, fTrainer, fFactory, fLocation, fDept].some(v => v !== '');
         const badge = document.getElementById('train-filter-badge');
         if (badge) badge.style.display = hasAny ? 'inline' : 'none';
         return records.filter(x => {
@@ -14228,6 +14277,16 @@ const Training = {
             if (fTrainer  && String(x._trainer||'').trim()           !== fTrainer)  return false;
             if (fFactory  && String(x._factoryDisplay||'').trim()    !== fFactory)  return false;
             if (fLocation && String(x._locationDisplay||'').trim()   !== fLocation) return false;
+            if (fDept) {
+                const parts = this.getParticipantsArray(x);
+                const hasDeptLocal = parts.some(p => p && String(p.department || p.dept || '').trim() === fDept);
+                const allAttendance = AppState.appData.trainingAttendance || [];
+                const hasDeptAttendance = allAttendance.some(r => 
+                    (r.trainingId === x.id || r.topic === x.name) && 
+                    String(r.department || '').trim() === fDept
+                );
+                if (!hasDeptLocal && !hasDeptAttendance) return false;
+            }
             return true;
         });
     },
@@ -14327,6 +14386,15 @@ const Training = {
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
+                onClick: (event, elements) => {
+                    if (elements && elements.length > 0) {
+                        const index = elements[0].index;
+                        const clickedMonth = months[index];
+                        const mStr = `${clickedMonth.year}-${String(clickedMonth.month + 1).padStart(2, '0')}`;
+                        this._trainMonthFilter = this._trainMonthFilter === mStr ? '' : mStr;
+                        this.updateTrainingAnalyticsDashboard();
+                    }
+                },
                 plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } },
                 scales: { x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45 } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f8fafc' } } }
             }
@@ -14363,11 +14431,23 @@ const Training = {
             type: 'bar',
             data: {
                 labels: months.map(m => m.label),
-                datasets: [{ label: 'المشاركون', data: counts, backgroundColor: 'rgba(236,72,153,0.7)', borderRadius: 6, borderSkipped: false }]
+                datasets: [
+                    { label: 'المشاركون', data: counts, backgroundColor: counts.map(c => c === Math.max(...counts) ? 'rgba(236,72,153,0.85)' : 'rgba(236,72,153,0.5)'), borderRadius: 6, borderSkipped: false, order: 1 },
+                    { label: 'الاتجاه', data: counts, type: 'line', borderColor: 'rgba(236,72,153,0.95)', backgroundColor: 'rgba(236,72,153,0.08)', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#ec4899', tension: 0.4, fill: true, order: 0 }
+                ]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} متدرب` } } },
+                onClick: (event, elements) => {
+                    if (elements && elements.length > 0) {
+                        const index = elements[0].index;
+                        const clickedMonth = months[index];
+                        const mStr = `${clickedMonth.year}-${String(clickedMonth.month + 1).padStart(2, '0')}`;
+                        this._trainMonthFilter = this._trainMonthFilter === mStr ? '' : mStr;
+                        this.updateTrainingAnalyticsDashboard();
+                    }
+                },
+                plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } },
                 scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f8fafc' } } }
             }
         });
@@ -14556,16 +14636,17 @@ const Training = {
         const resetBtn = document.getElementById('train-filter-reset-btn');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
-                ['train-af-status','train-af-type','train-af-trainer','train-af-factory','train-af-location'].forEach(id => {
+                ['train-af-status','train-af-type','train-af-trainer','train-af-factory','train-af-location','train-af-dept'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.value = '';
                 });
+                this._trainMonthFilter = '';
                 this.updateTrainingAnalyticsDashboard();
             });
         }
 
         // قوائم الفلاتر
-        ['train-af-status','train-af-type','train-af-trainer','train-af-factory','train-af-location'].forEach(id => {
+        ['train-af-status','train-af-type','train-af-trainer','train-af-factory','train-af-location','train-af-dept'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', () => this.updateTrainingAnalyticsDashboard());
         });
