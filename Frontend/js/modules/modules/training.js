@@ -14013,10 +14013,11 @@ const Training = {
         const deptCounts = {};
         let totalTrainees = 0;
         t.forEach(x => {
-            const participants = x.participants || [];
+            const participants = this.getParticipantsArray(x);
             participants.forEach(p => {
-                const dept = String(p.department || 'غير محدد').trim() || 'غير محدد';
-                deptCounts[dept] = (deptCounts[dept] || 0) + 1;
+                const dept = String(p.department || 'غير حدد').trim() || 'غير حدد';
+                const cleanDept = dept === 'غير حدد' ? 'غير محدد' : dept;
+                deptCounts[cleanDept] = (deptCounts[cleanDept] || 0) + 1;
                 totalTrainees++;
             });
         });
