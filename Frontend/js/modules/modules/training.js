@@ -14057,10 +14057,12 @@ const Training = {
         t.forEach(x => {
             const participants = this.getParticipantsArray(x);
             participants.forEach(p => {
-                const dept = String(p.department || 'غير حدد').trim() || 'غير حدد';
-                const cleanDept = dept === 'غير حدد' ? 'غير محدد' : dept;
-                deptCounts[cleanDept] = (deptCounts[cleanDept] || 0) + 1;
-                totalTrainees++;
+                if (p && typeof p === 'object') {
+                    const dept = String(p.department || p.dept || 'غير محدد').trim() || 'غير محدد';
+                    const cleanDept = (dept === 'undefined' || dept === 'null' || dept === '—' || dept === '' || dept === 'غير حدد') ? 'غير محدد' : dept;
+                    deptCounts[cleanDept] = (deptCounts[cleanDept] || 0) + 1;
+                    totalTrainees++;
+                }
             });
         });
 
