@@ -5630,7 +5630,7 @@ const PPE = {
                     </div>
                     <div>
                         <h2 style="margin:0;font-size:1.15rem;font-weight:700;">لوحة تحليل مهمات الوقاية</h2>
-                        <p style="margin:0;font-size:0.75rem;opacity:0.9;">تحليل شامل • الاستلامات • المخزون • الفئات • الإدارات • تصدير PDF</p>
+                        <p style="margin:0;font-size:0.75rem;opacity:0.9;">تحليل شامل • الاستلامات • المخزون • المصانع • الإدارات • تصدير PDF</p>
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
@@ -5666,13 +5666,15 @@ const PPE = {
                         <i class="fas fa-times me-1"></i>مسح الكل
                     </button>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
                     ${[
-                        {id:'ppe-af-type',     icon:'fas fa-hard-hat',   color:'#0F766E', label:'نوع المعدة'},
-                        {id:'ppe-af-dept',     icon:'fas fa-building',   color:'#f59e0b', label:'الإدارة'},
-                        {id:'ppe-af-category', icon:'fas fa-tags',       color:'#6366f1', label:'الفئة'},
-                        {id:'ppe-af-status',   icon:'fas fa-flag',       color:'#0891b2', label:'الحالة'},
-                        {id:'ppe-af-supplier', icon:'fas fa-truck',      color:'#8b5cf6', label:'المورد'},
+                        {id:'ppe-af-status',   icon:'fas fa-flag',         color:'#0891b2', label:'الحالة'},
+                        {id:'ppe-af-type',     icon:'fas fa-hard-hat',     color:'#0F766E', label:'نوع المعدة'},
+                        {id:'ppe-af-dept',     icon:'fas fa-building',     color:'#f59e0b', label:'الإدارة'},
+                        {id:'ppe-af-category', icon:'fas fa-tags',         color:'#6366f1', label:'الفئة'},
+                        {id:'ppe-af-supplier', icon:'fas fa-truck',        color:'#8b5cf6', label:'المورد'},
+                        {id:'ppe-af-factory',  icon:'fas fa-industry',     color:'#0284c7', label:'المصنع'},
+                        {id:'ppe-af-location', icon:'fas fa-map-marker-alt', color:'#3b82f6', label:'الموقع'},
                     ].map(f=>`
                         <div>
                             <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
@@ -5691,42 +5693,22 @@ const PPE = {
                 <div style="text-align:center;padding:16px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
             </div>
 
-            <!-- ═══ Row 1: نوع المعدة + الاتجاه الزمني ═══ -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
-                <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-hard-hat" style="color:#0F766E;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">حسب نوع المعدة (أعلى 10)</span>
+            <!-- ═══ Row: توزيع المصانع الرئيسية ═══ -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-industry" style="color:#0284c7;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">توزيع ونسب الاستلامات حسب المصانع الرئيسية</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="ppe-chart-type"></canvas>
-                        <div id="ppe-chart-type-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
-                    </div>
+                    <span style="font-size:0.72rem;color:#64748b;">انقر على أي مصنع لتصفية لوحة التحكم تلقائياً</span>
                 </div>
-                <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-chart-area" style="color:#8b5cf6;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">الاتجاه الزمني للاستلامات (آخر 12 شهر)</span>
-                    </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="ppe-chart-trend"></canvas>
-                        <div id="ppe-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
-                    </div>
+                <div id="ppe-factories-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;padding:16px;background:#f8fafc;">
+                    <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">جارٍ التحميل…</div>
                 </div>
             </div>
 
-            <!-- ═══ Row 2: الإدارة + الحالة ═══ -->
+            <!-- ═══ Row 1: الحالة + الاتجاه الزمني ═══ -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
-                <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-building" style="color:#f59e0b;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">حسب الإدارة (أعلى 8)</span>
-                    </div>
-                    <div style="padding:12px;position:relative;height:260px;">
-                        <canvas id="ppe-chart-dept"></canvas>
-                        <div id="ppe-chart-dept-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
-                    </div>
-                </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-flag" style="color:#0891b2;"></i>
@@ -5737,9 +5719,63 @@ const PPE = {
                         <div id="ppe-chart-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-chart-area" style="color:#8b5cf6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">الاتجاه الزمني للاستلامات (آخر 12 شهر)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:260px;">
+                        <canvas id="ppe-chart-trend"></canvas>
+                        <div id="ppe-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
             </div>
 
-            <!-- ═══ Row 3: المخزون - فئة + مورد ═══ -->
+            <!-- ═══ Row 2: نوع المعدة (قائمة) + الإدارة (قائمة) ═══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-hard-hat" style="color:#0F766E;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">أكثر أنواع المعدات (أعلى 10)</span>
+                    </div>
+                    <div id="ppe-types-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-building" style="color:#f59e0b;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">أكثر الإدارات (أعلى 10)</span>
+                    </div>
+                    <div id="ppe-depts-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ Row 3: المورد (قائمة) + الموقع الفرعي (قائمة) ═══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-truck" style="color:#8b5cf6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">المخزون حسب المورد (أعلى 8)</span>
+                    </div>
+                    <div id="ppe-suppliers-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-map-marker-alt" style="color:#3b82f6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">الموقع الفرعي الأكثر نشاطاً (أعلى 10)</span>
+                    </div>
+                    <div id="ppe-locs-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ Row 4: المخزون حسب الفئة (Doughnut) + المقارنة السنوية ═══ -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
@@ -5753,25 +5789,13 @@ const PPE = {
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-truck" style="color:#8b5cf6;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">المخزون حسب المورد (أعلى 8)</span>
+                        <i class="fas fa-chart-column" style="color:#0F766E;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">المقارنة السنوية للاستلامات (آخر 3 سنوات)</span>
                     </div>
                     <div style="padding:12px;position:relative;height:260px;">
-                        <canvas id="ppe-chart-supplier"></canvas>
-                        <div id="ppe-chart-supplier-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات مخزون</div>
+                        <canvas id="ppe-chart-yearly"></canvas>
+                        <div id="ppe-chart-yearly-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
-                </div>
-            </div>
-
-            <!-- ═══ Row 4: المقارنة السنوية ═══ -->
-            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
-                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                    <i class="fas fa-chart-column" style="color:#0F766E;"></i>
-                    <span style="font-weight:700;font-size:0.88rem;">المقارنة السنوية للاستلامات (آخر 3 سنوات)</span>
-                </div>
-                <div style="padding:12px;position:relative;height:260px;">
-                    <canvas id="ppe-chart-yearly"></canvas>
-                    <div id="ppe-chart-yearly-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                 </div>
             </div>
 
@@ -5794,11 +5818,12 @@ const PPE = {
                                 <th style="padding:9px 12px;text-align:start;font-weight:700;color:#0F766E;">نوع المعدة</th>
                                 <th style="padding:9px 12px;text-align:center;font-weight:700;color:#0F766E;">الكمية</th>
                                 <th style="padding:9px 12px;text-align:start;font-weight:700;color:#0F766E;">الإدارة</th>
+                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#0F766E;">المصنع</th>
                                 <th style="padding:9px 12px;text-align:center;font-weight:700;color:#0F766E;">الحالة</th>
                             </tr>
                         </thead>
                         <tbody id="ppe-recent-tbody">
-                            <tr><td colspan="7" style="padding:24px;text-align:center;color:#94a3b8;">جاري التحميل...</td></tr>
+                            <tr><td colspan="8" style="padding:24px;text-align:center;color:#94a3b8;">جاري التحميل...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -5835,9 +5860,27 @@ const PPE = {
         });
     },
 
-    /** المصدر الموحَّد لبيانات الاستلامات */
+    /** المصدر الموحَّد لبيانات الاستلامات (مع تطبيع المصنع/الموقع) */
     _getPpeReceiptsData() {
-        return Array.isArray(AppState?.appData?.ppe) ? AppState.appData.ppe : [];
+        const raw = Array.isArray(AppState?.appData?.ppe) ? AppState.appData.ppe : [];
+        return raw.map(r => {
+            if (r._factoryDisplay !== undefined) return r; // already normalized
+            const loc = String(r.employeeLocation || r.location || '').trim();
+            let factory = 'غير محدد', subLoc = '';
+            if (loc) {
+                const sep = loc.indexOf(' - ');
+                if (sep > 0) {
+                    factory = loc.substring(0, sep).trim() || 'غير محدد';
+                    subLoc = loc.substring(sep + 3).trim();
+                } else {
+                    factory = loc;
+                }
+            }
+            r._factoryDisplay = factory;
+            r._locationDisplay = subLoc || factory;
+            r._deptDisplay = String(r.employeeDepartment || r.department || r.dept || '').trim() || 'غير محدد';
+            return r;
+        });
     },
 
     /** المصدر الموحَّد لبيانات المخزون */
@@ -5950,17 +5993,6 @@ const PPE = {
         }
 
         // ── 7. الرسوم البيانية ──
-        // نوع المعدة (HBar أعلى 10)
-        const typeMap = this._ppeGroupBy(filtered, r => String(r.equipmentType || r.type || 'غير محدد').trim(), 10);
-        this._ppeHBar('ppe-chart-type', typeMap.labels, typeMap.data, 'rgba(15,118,110,0.78)');
-
-        // الاتجاه الزمني (12 شهر)
-        this._ppeTrend('ppe-chart-trend', allReceipts);
-
-        // الإدارة (HBar أعلى 8)
-        const deptMap = this._ppeGroupBy(filtered, r => String(r.department || r.dept || 'غير محدد').trim(), 8);
-        this._ppeHBar('ppe-chart-dept', deptMap.labels, deptMap.data, 'rgba(245,158,11,0.78)');
-
         // الحالة (Doughnut)
         const statusLabels = { received:'مستلم', pending:'قيد التسليم', other:'غير محدد' };
         const statusMap = {};
@@ -5968,19 +6000,24 @@ const PPE = {
         const statusColors = { 'مستلم':'rgba(5,150,105,0.85)', 'قيد التسليم':'rgba(245,158,11,0.85)', 'غير محدد':'rgba(148,163,184,0.8)' };
         this._ppeDoughnut('ppe-chart-status', Object.keys(statusMap), Object.values(statusMap), Object.keys(statusMap).map(l=>statusColors[l]||'rgba(148,163,184,0.8)'));
 
+        // الاتجاه الزمني (12 شهر)
+        this._ppeTrend('ppe-chart-trend', allReceipts);
+
         // الفئة (Doughnut)
         const categoryMap = this._ppeGroupBy(filteredStock, item => String(item.category || 'بدون فئة').trim(), 8);
         const categoryPalette = ['rgba(99,102,241,0.85)','rgba(15,118,110,0.85)','rgba(245,158,11,0.85)','rgba(244,63,94,0.85)','rgba(139,92,246,0.85)','rgba(8,145,178,0.85)','rgba(5,150,105,0.85)','rgba(217,119,6,0.85)'];
         this._ppeDoughnut('ppe-chart-category', categoryMap.labels, categoryMap.data, categoryMap.labels.map((_,i)=>categoryPalette[i % categoryPalette.length]));
 
-        // المورد (HBar أعلى 8)
-        const supplierMap = this._ppeGroupBy(filteredStock, item => String(item.supplier || 'غير محدد').trim(), 8);
-        this._ppeHBar('ppe-chart-supplier', supplierMap.labels, supplierMap.data, 'rgba(139,92,246,0.78)');
-
         // المقارنة السنوية
         this._ppeYearly('ppe-chart-yearly', allReceipts);
 
-        // ── 8. جدول أحدث الاستلامات ──
+        // ── 8. ملء كروت المصانع الرئيسية ──
+        this._ppePopulateFactoryCards(filtered, total);
+
+        // ── 9. ملء قوائم HTML (نوع المعدة / الإدارة / المورد / الموقع) ──
+        this._ppePopulateAnalyticsLists(filtered, filteredStock, total);
+
+        // ── 10. جدول أحدث الاستلامات ──
         const recent = filtered.slice().sort((a, b) => {
             const da = this._getPpeReceiptDate(a), db = this._getPpeReceiptDate(b);
             return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
@@ -6000,7 +6037,7 @@ const PPE = {
                 return `<span style="background:${bg};color:${c};padding:2px 9px;border-radius:12px;font-size:0.72rem;font-weight:700;">${text}</span>`;
             };
             tbody.innerHTML = recent.length === 0
-                ? '<tr><td colspan="7" style="padding:24px;text-align:center;color:#94a3b8;">لا توجد استلامات في هذه الفترة</td></tr>'
+                ? '<tr><td colspan="8" style="padding:24px;text-align:center;color:#94a3b8;">لا توجد استلامات في هذه الفترة</td></tr>'
                 : recent.map((r, i) => {
                     const d = this._getPpeReceiptDate(r);
                     const dateStr = d ? d.toLocaleDateString('ar-EG', { year:'numeric', month:'short', day:'numeric' }) : '—';
@@ -6011,7 +6048,8 @@ const PPE = {
                         <td style="padding:9px 12px;color:#374151;font-family:monospace;" dir="ltr">${Utils.escapeHTML(r.employeeCode || '—')}</td>
                         <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(r.equipmentType || r.type || '—')}</td>
                         <td style="padding:9px 12px;text-align:center;color:#374151;font-weight:700;" dir="ltr">${parseFloat(r.quantity || 0).toFixed(0)}</td>
-                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(r.department || '—')}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(r._deptDisplay || r.department || '—')}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(r._factoryDisplay || '—')}</td>
                         <td style="padding:9px 12px;text-align:center;">${statusBadge(r.status)}</td>
                     </tr>`;
                 }).join('');
@@ -6035,9 +6073,11 @@ const PPE = {
                 <option value="pending"${cur==='pending'?' selected':''}>قيد التسليم</option>`;
         }
         fill('ppe-af-type',     unique(receipts, r => String(r.equipmentType || r.type || '').trim()));
-        fill('ppe-af-dept',     unique(receipts, r => String(r.department || r.dept || '').trim()));
+        fill('ppe-af-dept',     unique(receipts, r => (r._deptDisplay || '').trim()));
         fill('ppe-af-category', unique(stock,    item => String(item.category || '').trim()));
         fill('ppe-af-supplier', unique(stock,    item => String(item.supplier || '').trim()));
+        fill('ppe-af-factory',  unique(receipts, r => (r._factoryDisplay || '').trim()));
+        fill('ppe-af-location', unique(receipts, r => (r._locationDisplay || '').trim()));
     },
 
     /** تطبيق الفلاتر التفاعلية على الاستلامات والمخزون */
@@ -6048,14 +6088,18 @@ const PPE = {
         const fCategory = get('ppe-af-category');
         const fStatus   = get('ppe-af-status');
         const fSupplier = get('ppe-af-supplier');
-        const hasAny    = [fType, fDept, fCategory, fStatus, fSupplier].some(v => v !== '');
+        const fFactory  = get('ppe-af-factory');
+        const fLocation = get('ppe-af-location');
+        const hasAny    = [fType, fDept, fCategory, fStatus, fSupplier, fFactory, fLocation].some(v => v !== '');
         const badge     = document.getElementById('ppe-filter-badge');
         if (badge) badge.style.display = hasAny ? 'inline' : 'none';
 
         const filteredReceipts = receipts.filter(r => {
-            if (fType   && String(r.equipmentType || r.type || '').trim() !== fType) return false;
-            if (fDept   && String(r.department || r.dept || '').trim() !== fDept) return false;
-            if (fStatus && this._normalizePpeStatus(r?.status) !== fStatus) return false;
+            if (fType    && String(r.equipmentType || r.type || '').trim() !== fType) return false;
+            if (fDept    && (r._deptDisplay || '').trim() !== fDept) return false;
+            if (fStatus  && this._normalizePpeStatus(r?.status) !== fStatus) return false;
+            if (fFactory && (r._factoryDisplay || '').trim() !== fFactory) return false;
+            if (fLocation && (r._locationDisplay || '').trim() !== fLocation) return false;
             return true;
         });
         const filteredStock = stock.filter(item => {
@@ -6160,6 +6204,127 @@ const PPE = {
         });
     },
 
+    /** ملء كروت المصانع الرئيسية (نفس نمط training) */
+    _ppePopulateFactoryCards(filtered, total) {
+        const el = document.getElementById('ppe-factories-cards');
+        if (!el) return;
+        if (total === 0) {
+            el.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">لا توجد بيانات</div>`;
+            return;
+        }
+        const factoryG = this._ppeGroupBy(filtered, r => (r._factoryDisplay || 'غير محدد').trim(), 0);
+        const colors = [
+            { primary: '#0F766E', light: '#f0fdfa', progress: 'linear-gradient(90deg, #5eead4 0%, #0F766E 100%)' },
+            { primary: '#0E7490', light: '#ecfeff', progress: 'linear-gradient(90deg, #67e8f9 0%, #0E7490 100%)' },
+            { primary: '#1E3A8A', light: '#eef2ff', progress: 'linear-gradient(90deg, #93c5fd 0%, #1E3A8A 100%)' },
+            { primary: '#f59e0b', light: '#fffbeb', progress: 'linear-gradient(90deg, #fcd34d 0%, #f59e0b 100%)' },
+            { primary: '#6366f1', light: '#eef2ff', progress: 'linear-gradient(90deg, #a5b4fc 0%, #6366f1 100%)' },
+        ];
+        el.innerHTML = factoryG.labels.map((label, index) => {
+            const count = factoryG.data[index];
+            const pct = Math.round((count / total) * 100) || 0;
+            const received = filtered.filter(r => (r._factoryDisplay || '').trim() === label && this._normalizePpeStatus(r.status) === 'received').length;
+            const pending = filtered.filter(r => (r._factoryDisplay || '').trim() === label && this._normalizePpeStatus(r.status) === 'pending').length;
+            const theme = colors[index % colors.length];
+            return `
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);transition:all .2s;cursor:pointer;" 
+                     onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.08)';this.style.borderColor='${theme.primary}'" 
+                     onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)';this.style.borderColor='#e2e8f0'"
+                     onclick="const el = document.getElementById('ppe-af-factory'); if(el){el.value='${Utils.escapeHTML(label)}'; el.dispatchEvent(new Event('change'));}">
+                    
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div style="width:36px;height:36px;background:${theme.light};border-radius:8px;display:flex;align-items:center;justify-content:center;color:${theme.primary};">
+                                <i class="fas fa-industry" style="font-size:16px;"></i>
+                            </div>
+                            <span style="font-size:0.9rem;font-weight:800;color:#1e293b;">${Utils.escapeHTML(label)}</span>
+                        </div>
+                        <span style="font-size:1.15rem;font-weight:900;color:${theme.primary};">${pct}%</span>
+                    </div>
+                    
+                    <div style="width:100%;height:8px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                        <div style="width:${pct}%;height:100%;background:${theme.progress};border-radius:9999px;"></div>
+                    </div>
+                    
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px;border-top:1px solid #f1f5f9;padding-top:12px;">
+                        <div style="text-align:center;">
+                            <div style="font-size:0.65rem;color:#64748b;margin-bottom:2px;">الاستلامات</div>
+                            <div style="font-size:0.85rem;font-weight:800;color:#1e293b;">${count}</div>
+                        </div>
+                        <div style="text-align:center;border-left:1px solid #f1f5f9;border-right:1px solid #f1f5f9;">
+                            <div style="font-size:0.65rem;color:#047857;margin-bottom:2px;">مستلمة</div>
+                            <div style="font-size:0.85rem;font-weight:800;color:#047857;">${received}</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div style="font-size:0.65rem;color:#f59e0b;margin-bottom:2px;">قيد التسليم</div>
+                            <div style="font-size:0.85rem;font-weight:800;color:#f59e0b;">${pending}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    /** ملء قوائم HTML التفاعلية (نوع المعدة / الإدارة / المورد / الموقع) */
+    _ppePopulateAnalyticsLists(filtered, filteredStock, total) {
+        const esc = v => Utils.escapeHTML(v);
+
+        // مساعد: بناء عناصر قائمة تفاعلية
+        const buildListItems = (entries, total, color, gradientFrom, gradientTo, filterId) => {
+            if (!entries.labels.length) return `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
+            return entries.labels.map((label, idx) => {
+                const count = entries.data[idx];
+                const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                const onclick = filterId
+                    ? `onclick="const el = document.getElementById('${filterId}'); if(el){el.value=this.getAttribute('data-value'); el.dispatchEvent(new Event('change'));}"`
+                    : '';
+                return `
+                    <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;cursor:pointer;transition:all .2s;" 
+                         onmouseover="this.style.transform='translateX(-2px)';" onmouseout="this.style.transform='';"
+                         data-value="${esc(label)}"
+                         ${onclick}>
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(label)}">${esc(label)}</span>
+                            <span style="font-size:0.75rem;font-weight:700;color:${color};flex-shrink:0;">${count} (${pct}%)</span>
+                        </div>
+                        <div style="width:100%;height:6px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                            <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, ${gradientFrom} 0%, ${gradientTo} 100%);border-radius:9999px;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        // نوع المعدة (أعلى 10)
+        const typesEl = document.getElementById('ppe-types-list');
+        if (typesEl) {
+            const typeG = this._ppeGroupBy(filtered, r => String(r.equipmentType || r.type || 'غير محدد').trim(), 10);
+            typesEl.innerHTML = buildListItems(typeG, total, '#0F766E', '#5eead4', '#0F766E', 'ppe-af-type');
+        }
+
+        // الإدارة (أعلى 10)
+        const deptsEl = document.getElementById('ppe-depts-list');
+        if (deptsEl) {
+            const deptG = this._ppeGroupBy(filtered, r => (r._deptDisplay || 'غير محدد').trim(), 10);
+            deptsEl.innerHTML = buildListItems(deptG, total, '#f59e0b', '#fcd34d', '#f59e0b', 'ppe-af-dept');
+        }
+
+        // المورد (أعلى 8 — من المخزون)
+        const suppliersEl = document.getElementById('ppe-suppliers-list');
+        if (suppliersEl) {
+            const supplierG = this._ppeGroupBy(filteredStock, item => String(item.supplier || 'غير محدد').trim(), 8);
+            const stockTotal = filteredStock.length;
+            suppliersEl.innerHTML = buildListItems(supplierG, stockTotal, '#8b5cf6', '#c4b5fd', '#8b5cf6', 'ppe-af-supplier');
+        }
+
+        // الموقع الفرعي (أعلى 10)
+        const locsEl = document.getElementById('ppe-locs-list');
+        if (locsEl) {
+            const locG = this._ppeGroupBy(filtered, r => (r._locationDisplay || 'غير محدد').trim(), 10);
+            locsEl.innerHTML = buildListItems(locG, total, '#3b82f6', '#93c5fd', '#3b82f6', 'ppe-af-location');
+        }
+    },
+
     /** ربط أحداث لوحة التحليل */
     _ppeBindAnalyticsEvents() {
         const root = document.getElementById('ppe-analytics-root');
@@ -6198,7 +6363,7 @@ const PPE = {
         }
 
         // الفلاتر التفاعلية
-        ['ppe-af-type','ppe-af-dept','ppe-af-category','ppe-af-status','ppe-af-supplier'].forEach(id => {
+        ['ppe-af-type','ppe-af-dept','ppe-af-category','ppe-af-status','ppe-af-supplier','ppe-af-factory','ppe-af-location'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', () => this.updatePpeAnalyticsDashboard());
         });
@@ -6207,7 +6372,7 @@ const PPE = {
         const resetBtn = document.getElementById('ppe-filter-reset-btn');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
-                ['ppe-af-type','ppe-af-dept','ppe-af-category','ppe-af-status','ppe-af-supplier'].forEach(id => {
+                ['ppe-af-type','ppe-af-dept','ppe-af-category','ppe-af-status','ppe-af-supplier','ppe-af-factory','ppe-af-location'].forEach(id => {
                     const el = document.getElementById(id); if (el) el.value = '';
                 });
                 this.updatePpeAnalyticsDashboard();
