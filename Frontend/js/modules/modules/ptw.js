@@ -1757,25 +1757,28 @@ const PTW = {
     },
 
     getRegistrySanitizedDataset() {
+        if (Array.isArray(this._registrySanitizedCache)) {
+            return this._registrySanitizedCache;
+        }
+
         const localRaw = Array.isArray(this.registryData) ? this.registryData : [];
         const stateRaw = Array.isArray(AppState?.appData?.ptwRegistry) ? AppState.appData.ptwRegistry : [];
-        const localReg = this.sanitizePtwRegistryDataset(localRaw, 'metrics.registryData');
-        const stateReg = this.sanitizePtwRegistryDataset(stateRaw, 'metrics.AppState.ptwRegistry');
-        const useState = stateReg.length > localReg.length;
-        const best = useState ? stateReg : (localReg.length > 0 ? localReg : stateReg);
+        
+        // localRaw and stateRaw are already sanitized by setPtwRegistryState.
+        const useState = stateRaw.length > localRaw.length;
+        const best = useState ? stateRaw : (localRaw.length > 0 ? localRaw : stateRaw);
 
-        // المزامنة بين local و state بناءً على البيانات غير المفلترة لضمان عدم ضياع السجلات
-        if (useState && best.length !== localReg.length) {
+        // Sync local and state to ensure consistency
+        if (useState && best.length !== localRaw.length) {
             this.registryData = best;
-        } else if (!useState && localReg.length > stateReg.length) {
+        } else if (!useState && localRaw.length > stateRaw.length) {
             if (!AppState.appData) AppState.appData = {};
             AppState.appData.ptwRegistry = [...best];
         }
 
-        // ✅ فلترة السجلات اليتيمة (Orphaned Duplicates) للعرض فقط دون تعديل الكاش الرئيسي في الذاكرة
+        // ✅ Filter out orphaned duplicate entries for UI rendering without altering raw data cache
         const ptwList = Array.isArray(AppState?.appData?.ptw) ? AppState.appData.ptw : [];
         
-        // إذا لم يتم تحميل قائمة التصاريح الأساسية بعد، نرجع البيانات كما هي مؤقتاً لتجنب تصفير السجل
         if (ptwList.length === 0) {
             this._registrySanitizedCache = best;
             return best;
@@ -1787,9 +1790,7 @@ const PTW = {
             if (!entry) return false;
             const pid = String(entry.permitId || '').trim();
             const id = String(entry.id || '').trim();
-            // إذا كان تصريحاً يدوياً صريحاً، نحتفظ به
             if (entry.isManualEntry === true || entry.isManualEntry === 'true') return true;
-            // إذا كان معرف التصريح أو معرف السجل موجوداً في قائمة التصاريح الأساسية
             return ptwIds.has(pid) || ptwIds.has(id);
         });
 
@@ -2386,6 +2387,7 @@ const PTW = {
             const entry = this.createRegistryEntry(permit);
             if (entry) {
                 this.registryData.push(entry);
+                this._registrySanitizedCache = null;
                 if (!skipSave) await this.saveRegistryData();
                 Utils.safeLog(`✅ تم تسجيل التصريح #${entry.sequentialNumber} في السجل (ID: ${entry.id})`);
             } else {
@@ -2494,6 +2496,7 @@ const PTW = {
         }
 
         this.registryData[entryIndex] = entry;
+        this._registrySanitizedCache = null;
         if (!skipSave) await this.saveRegistryData();
     },
 
@@ -2504,6 +2507,7 @@ const PTW = {
         const entryIndex = this.registryData.findIndex(r => r.permitId === permitId);
         if (entryIndex !== -1) {
             this.registryData.splice(entryIndex, 1);
+            this._registrySanitizedCache = null;
             await this.saveRegistryData();
         }
     },
@@ -2687,7 +2691,11 @@ const PTW = {
             if (this.currentTab === 'registry') this.setupRegistryEventListeners();
         }
         this._registrySanitizedCache = null;
-        this._mountRegistryTableRows(true);
+        if (this.currentTab === 'registry') {
+            this._mountRegistryTableRows(true);
+        } else if (mount) {
+            mount.setAttribute('data-registry-table-pending', '1');
+        }
         registryContent.removeAttribute('data-registry-lazy');
     },
 
@@ -2698,11 +2706,15 @@ const PTW = {
         const mount = document.getElementById('ptw-registry-table-mount');
         if (!mount || rebuildShell) {
             registryContent.innerHTML = this.renderRegistryContent({ tableMode: 'shell' });
-            this.setupRegistryEventListeners();
+            if (this.currentTab === 'registry') this.setupRegistryEventListeners();
         } else {
             this._registrySanitizedCache = null;
         }
-        this._mountRegistryTableRows(force);
+        if (this.currentTab === 'registry') {
+            this._mountRegistryTableRows(force);
+        } else if (mount) {
+            mount.setAttribute('data-registry-table-pending', '1');
+        }
     },
 
     /** تحديث التبويب النشط بعد مزامنة الخادم — دون حجب العرض الأولي */
