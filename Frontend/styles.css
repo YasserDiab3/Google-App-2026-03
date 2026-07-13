@@ -424,6 +424,7 @@ body.app-active {
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.75rem;
     margin-bottom: 0.75rem;
 }
@@ -442,6 +443,20 @@ body.app-active {
     border-radius: 6px;
     transition: all 0.2s ease;
     cursor: pointer;
+}
+
+.login-footer-contact-btn:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+[data-theme="dark"] .login-footer-contact-btn:focus-visible {
+    outline-color: var(--primary-light);
+}
+
+[data-theme="dark"] .login-footer-copyright-separator {
+    opacity: 0.7;
+    color: var(--text-secondary);
 }
 
 .login-footer-contact-btn i,
