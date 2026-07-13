@@ -9068,6 +9068,7 @@
                                 id="forgot-password-link"
                                 class="text-sm text-blue-600 hover:text-blue-800"
                                 aria-label="نسيت كلمة المرور"
+                                style="display: none !important;"
                                 ><span id="login-forgot-text"
                                     >نسيت كلمة المرور؟</span
                                 ></a
@@ -9197,6 +9198,7 @@
                         <div class="login-footer-content">
                             <div class="login-footer-copyright-row">
                                 <span class="login-footer-author">Yasser Diab ©</span>
+                                <span class="login-footer-copyright-separator">|</span>
                                 <span id="login-footer-copyright">كل الحقوق محفوظة 2025</span>
                             </div>
                             <div class="login-footer-contact-row">
@@ -9206,7 +9208,7 @@
                                     title="تواصل عبر البريد الإلكتروني"
                                 >
                                     <i class="fas fa-envelope" aria-hidden="true"></i>
-                                    <span>البريد الإلكتروني</span>
+                                    <span id="login-footer-email-btn-text">البريد الإلكتروني</span>
                                 </a>
                                 <a
                                     href="https://teams.microsoft.com/l/chat/0/0?users=Yasser.diab@icapp.com.eg"
@@ -9220,7 +9222,7 @@
                                         <rect x="9" y="3.5" width="14" height="14" rx="2.5" fill="#4B53BC" />
                                         <path d="M14.5 7h4v1.8h-1.3v5.4h-1.4V8.8h-1.3V7z" fill="#ffffff" />
                                     </svg>
-                                    <span>MS Teams</span>
+                                    <span id="login-footer-teams-btn-text">MS Teams</span>
                                 </a>
                             </div>
                             <div class="login-footer-row">
@@ -9272,6 +9274,8 @@
                         footerCountLabel: "عدد تسجيل الدخول للمستخدمين:",
                         footerTrial: "",
                         footerPrivacy: "سياسة الخصوصية",
+                        footerEmail: "البريد الإلكتروني",
+                        footerTeams: "MS Teams",
                         langToggleAria: "تبديل اللغة",
                         langCurrent: "AR",
                         langOther: "EN",
@@ -9297,6 +9301,8 @@
                         footerCountLabel: "User logins count:",
                         footerTrial: "",
                         footerPrivacy: "Privacy Policy",
+                        footerEmail: "Email Support",
+                        footerTeams: "MS Teams",
                         langToggleAria: "Switch language",
                         langCurrent: "EN",
                         langOther: "AR",
@@ -9375,6 +9381,12 @@
                     if (byId("login-footer-privacy"))
                         byId("login-footer-privacy").textContent =
                             t.footerPrivacy;
+                    if (byId("login-footer-email-btn-text"))
+                        byId("login-footer-email-btn-text").textContent =
+                            t.footerEmail;
+                    if (byId("login-footer-teams-btn-text"))
+                        byId("login-footer-teams-btn-text").textContent =
+                            t.footerTeams;
                     if (byId("login-language-toggle-btn"))
                         byId("login-language-toggle-btn").setAttribute(
                             "aria-label",
@@ -12913,7 +12925,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.447-20260713";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.448-20260713";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

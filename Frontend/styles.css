@@ -381,7 +381,8 @@ body.app-active {
 .login-footer-copyright-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    gap: 0.5rem;
     width: 100%;
     font-size: 0.7rem;
     color: var(--text-tertiary);
@@ -391,6 +392,11 @@ body.app-active {
     border-radius: 8px;
     border: 1px solid rgba(0, 0, 0, 0.03);
     direction: ltr !important;
+}
+
+.login-footer-copyright-separator {
+    color: var(--text-tertiary);
+    opacity: 0.5;
 }
 
 [data-theme="dark"] .login-footer-copyright-row {
