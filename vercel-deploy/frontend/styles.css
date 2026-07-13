@@ -232,7 +232,32 @@ body.app-active {
     }
 }
 
+/* Accessibility Skip Link styling */
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
 
+.skip-link:focus {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    width: auto;
+    height: auto;
+    background: var(--brand-primary);
+    color: #ffffff;
+    padding: 8px 16px;
+    z-index: 100000;
+    border-radius: 6px;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
 
 .font-cairo {
     font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, 'Arial', 'Helvetica', sans-serif;
