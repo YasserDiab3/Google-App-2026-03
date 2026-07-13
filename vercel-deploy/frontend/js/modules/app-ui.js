@@ -3694,7 +3694,24 @@ window.UI = {
         });
     },
 
+    translateBrandingText(text, lang) {
+        if (!text) return '';
+        if (lang !== 'en') return text;
+
+        const translations = {
+            'الشركة العالمية للانتاج والتصنيع الزراعي': 'International Company for Agricultural Production & Processing (ICAPP)',
+            'إدارة السلامة والصحة المهنية': 'HSE Department',
+            'إدارة السلامة والصحة المهنية والبيئة': 'HSE Department',
+            'السلامة والصحة المهنية': 'Occupational Safety & Health',
+            'نظام السلامة المهنية': 'Occupational Safety System'
+        };
+
+        const trimmed = String(text).trim();
+        return translations[trimmed] || trimmed;
+    },
+
     updateCompanyBranding() {
+        const lang = localStorage.getItem('language') || 'ar';
         const fallbackName = (typeof DEFAULT_COMPANY_NAME !== 'undefined') ? DEFAULT_COMPANY_NAME : '';
         const rawName = AppState?.companySettings?.name;
         let resolvedName = '';
@@ -3712,6 +3729,10 @@ window.UI = {
             ? String(rawSecondaryName).trim()
             : '';
 
+        // ترجمة النصوص ديناميكياً عند اختيار اللغة الإنجليزية
+        const resolvedNameTranslated = this.translateBrandingText(resolvedName, lang);
+        const resolvedSecondaryNameTranslated = this.translateBrandingText(resolvedSecondaryName, lang);
+
         // الحصول على إعدادات الخط واللون
         const nameFontSize = AppState?.companySettings?.nameFontSize || 16;
         const secondaryNameFontSize = AppState?.companySettings?.secondaryNameFontSize || 14;
@@ -3719,13 +3740,13 @@ window.UI = {
 
         const loginCompanyName = document.getElementById('login-company-name');
         if (loginCompanyName) {
-            loginCompanyName.textContent = resolvedName;
+            loginCompanyName.textContent = resolvedNameTranslated;
             loginCompanyName.style.fontSize = `${nameFontSize}px`;
         }
         const loginCompanySecondary = document.getElementById('login-company-secondary-name');
         if (loginCompanySecondary) {
-            if (resolvedSecondaryName) {
-                loginCompanySecondary.textContent = resolvedSecondaryName;
+            if (resolvedSecondaryNameTranslated) {
+                loginCompanySecondary.textContent = resolvedSecondaryNameTranslated;
                 loginCompanySecondary.style.display = 'block';
                 loginCompanySecondary.style.fontSize = `${secondaryNameFontSize}px`;
                 loginCompanySecondary.style.color = secondaryNameColor;
@@ -3737,14 +3758,14 @@ window.UI = {
 
         const headerCompanyName = document.getElementById('header-company-name-text');
         if (headerCompanyName) {
-            headerCompanyName.textContent = resolvedName;
-            headerCompanyName.style.display = resolvedName ? 'block' : 'none';
+            headerCompanyName.textContent = resolvedNameTranslated;
+            headerCompanyName.style.display = resolvedNameTranslated ? 'block' : 'none';
             headerCompanyName.style.fontSize = `${nameFontSize}px`;
         }
         const headerCompanySecondary = document.getElementById('header-company-secondary-text');
         if (headerCompanySecondary) {
-            if (resolvedSecondaryName) {
-                headerCompanySecondary.textContent = resolvedSecondaryName;
+            if (resolvedSecondaryNameTranslated) {
+                headerCompanySecondary.textContent = resolvedSecondaryNameTranslated;
                 headerCompanySecondary.style.display = 'block';
                 headerCompanySecondary.style.fontSize = `${secondaryNameFontSize}px`;
                 headerCompanySecondary.style.color = secondaryNameColor;
@@ -3756,7 +3777,7 @@ window.UI = {
 
         const mobileCompanyName = document.getElementById('mobile-company-name');
         if (mobileCompanyName) {
-            mobileCompanyName.textContent = resolvedName || 'نظام السلامة المهنية';
+            mobileCompanyName.textContent = resolvedNameTranslated || (lang === 'en' ? 'Safety System' : 'نظام السلامة المهنية');
             mobileCompanyName.style.fontSize = `${nameFontSize}px`;
         }
     },
@@ -10904,6 +10925,9 @@ window.UI = {
 
         // تحديث نصوص تسجيل الدخول إذا كنا في شاشة الدخول
         this.updateLoginScreenTexts(lang);
+
+        // تحديث هوية الشركة والاسم المترجم
+        this.updateCompanyBranding();
 
         // تحديث aria-label للـ navigation
         const navElement = document.querySelector('nav.navigation');
