@@ -210,6 +210,15 @@ body.app-active {
     background: var(--bg-secondary);
 }
 
+/* Disable scroll on login screen for desktops to guarantee perfect centering */
+@media (min-height: 750px) {
+    body:not(.app-active) {
+        overflow: hidden !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+    }
+}
+
 /* Improve text rendering on mobile */
 @media (max-width: 768px) {
     html {
@@ -374,17 +383,34 @@ body.app-active {
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    margin-bottom: 0.5rem;
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    margin-bottom: 0.75rem;
+    padding: 0.35rem 0.6rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.03);
     direction: ltr !important;
 }
 
+[data-theme="dark"] .login-footer-copyright-row {
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.04);
+}
+
 .login-footer-author {
+    font-weight: 700;
+    color: var(--primary-color);
+    letter-spacing: 0.5px;
     text-align: left;
 }
 
+[data-theme="dark"] .login-footer-author {
+    color: var(--primary-light);
+}
+
 #login-footer-copyright {
+    font-weight: 500;
     text-align: right;
 }
 
