@@ -257,8 +257,6 @@ body.app-active {
 @media (max-width: 480px) {
     .login-screen {
         padding: 1rem;
-        align-items: flex-start;
-        padding-top: 2rem;
     }
 
     .login-container {
@@ -344,6 +342,25 @@ body.app-active {
 
 .login-footer-content {
     text-align: center;
+}
+
+.login-footer-copyright-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    direction: ltr !important;
+}
+
+.login-footer-author {
+    text-align: left;
+}
+
+#login-footer-copyright {
+    text-align: right;
 }
 
 .login-footer-row {
