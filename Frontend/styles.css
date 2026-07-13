@@ -438,12 +438,13 @@ body.app-active {
     cursor: pointer;
 }
 
-.login-footer-contact-btn i {
-    font-size: 0.8rem;
+.login-footer-contact-btn i,
+.login-footer-contact-btn svg {
     transition: transform 0.2s ease;
 }
 
-.login-footer-contact-btn:hover i {
+.login-footer-contact-btn:hover i,
+.login-footer-contact-btn:hover svg {
     transform: scale(1.15);
 }
 
