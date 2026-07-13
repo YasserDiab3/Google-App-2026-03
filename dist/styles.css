@@ -383,10 +383,10 @@ body.app-active {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    width: 100%;
+    width: fit-content;
+    margin: 0 auto 0.75rem auto;
     font-size: 0.7rem;
     color: var(--text-tertiary);
-    margin-bottom: 0.75rem;
     padding: 0.35rem 0.6rem;
     background: var(--bg-secondary);
     border-radius: 8px;
