@@ -3696,18 +3696,33 @@ window.UI = {
 
     translateBrandingText(text, lang) {
         if (!text) return '';
-        if (lang !== 'en') return text;
 
-        const translations = {
+        // AR → EN
+        const arToEn = {
             'الشركة العالمية للانتاج والتصنيع الزراعي': 'International Company for Agricultural Production & Processing (ICAPP)',
-            'إدارة السلامة والصحة المهنية': 'HSE Department',
             'إدارة السلامة والصحة المهنية والبيئة': 'HSE Department',
+            'إدارة السلامة والصحة المهنية': 'HSE Department',
+            'السلامة والصحة المهنية والبيئة': 'Health, Safety & Environment (HSE)',
             'السلامة والصحة المهنية': 'Occupational Safety & Health',
-            'نظام السلامة المهنية': 'Occupational Safety System'
+            'نظام السلامة المهنية': 'Occupational Safety System',
+            'نظام إدارة السلامة والصحة المهنية': 'HSE Management System',
+            'نظام إدارة السلامة والصحة المهنية والبيئة': 'HSE Management System',
+        };
+
+        // EN → AR (for when user switches back to Arabic)
+        const enToAr = {
+            'International Company for Agricultural Production & Processing (ICAPP)': 'الشركة العالمية للانتاج والتصنيع الزراعي',
+            'HSE Department': 'إدارة السلامة والصحة المهنية والبيئة',
+            'Health, Safety & Environment (HSE)': 'السلامة والصحة المهنية والبيئة',
+            'Occupational Safety & Health': 'السلامة والصحة المهنية',
+            'Occupational Safety System': 'نظام السلامة المهنية',
+            'HSE Management System': 'نظام إدارة السلامة والصحة المهنية',
         };
 
         const trimmed = String(text).trim();
-        return translations[trimmed] || trimmed;
+        if (lang === 'en') return arToEn[trimmed] || trimmed;
+        if (lang === 'ar') return enToAr[trimmed] || trimmed;
+        return trimmed;
     },
 
     updateCompanyBranding() {
