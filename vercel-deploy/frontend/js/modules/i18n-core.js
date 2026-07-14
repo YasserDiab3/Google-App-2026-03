@@ -4483,7 +4483,6 @@
         'سليم': 'Safe',
         'يوم': 'day',
         'سنة': 'year',
-        ,
         'إدارة التدريبات': 'Training Management',
         'تسجيل ومتابعة برامج التدريب ومصفوفة التدريب للموظين': 'Register and track training programs and training matrix for employees',
         'الخطة التدريبية السنوية': 'Annual Training Plan',
