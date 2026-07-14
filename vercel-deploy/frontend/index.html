@@ -8973,14 +8973,14 @@
                         <h1
                             id="login-title"
                             style="
-                                font-size: clamp(1.05rem, 3.8vw, 1.45rem);
+                                font-size: clamp(0.9rem, 3.2vw, 1.2rem);
                                 font-weight: 800;
-                                white-space: nowrap;
-                                letter-spacing: 0.06em;
+                                letter-spacing: 0.05em;
                                 color: #1e3a8a;
-                                line-height: 1.25;
+                                line-height: 1.35;
                                 margin-bottom: 0.4rem;
                                 text-shadow: 0 1px 2px rgba(30,58,138,0.08);
+                                text-align: center;
                             "
                         >
                             نظام إدارة السلامة والصحة المهنية
@@ -9274,7 +9274,7 @@
                         loginScreenAria: "شاشة تسجيل الدخول",
                         title: "نظام إدارة السلامة والصحة المهنية",
                         companyName: "الشركة العالمية للانتاج والتصنيع الزراعي",
-                        companySecondary: "إدارة السلامة والصحة المهنية",
+                        companySecondary: "إدارة السلامة والصحة المهنية والبيئة",
                         labelEmail: "البريد الإلكتروني",
                         labelPassword: "كلمة المرور",
                         placeholderEmail: "example@americana.com",
@@ -9362,7 +9362,7 @@
                     }
                     if (byId("login-company-secondary-name")) {
                         var cSec = byId("login-company-secondary-name").textContent ? byId("login-company-secondary-name").textContent.trim() : "";
-                        if (!cSec || cSec === "إدارة السلامة والصحة المهنية" || cSec === "HSE Department") {
+                        if (!cSec || cSec === "إدارة السلامة والصحة المهنية" || cSec === "إدارة السلامة والصحة المهنية والبيئة" || cSec === "HSE Department") {
                             byId("login-company-secondary-name").textContent = t.companySecondary;
                             if (t.companySecondary) {
                                 byId("login-company-secondary-name").style.display = "block";
