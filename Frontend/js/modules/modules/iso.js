@@ -48,12 +48,12 @@ const ISO = {
                     <div>
                         <h1 class="section-title">
                             <i class="fas fa-shield-alt ml-3"></i>
-                            نظام إدارة السلامة والصحة المهنية والبيئة
+                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.title', 'نظام إدارة السلامة والصحة المهنية والبيئة') : 'نظام إدارة السلامة والصحة المهنية والبيئة'}
                         </h1>
-                        <p class="section-subtitle">HSE Management System - متوافق مع ISO 45001 & ISO 14001</p>
+                        <p class="section-subtitle">${typeof I18n !== 'undefined' ? I18n.t('module.iso.subtitle', 'HSE Management System - متوافق مع ISO 45001 & ISO 14001') : 'HSE Management System - متوافق مع ISO 45001 & ISO 14001'}</p>
                     </div>
                     <button id="export-compliance-report-btn" class="btn-success">
-                        <i class="fas fa-file-pdf ml-2"></i>تقرير الامتثال PDF
+                        <i class="fas fa-file-pdf ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.btn.exportCompliance', 'تقرير الامتثال PDF') : 'تقرير الامتثال PDF'}
                     </button>
                 </div>
             </div>
@@ -61,47 +61,47 @@ const ISO = {
             <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
                     <div class="text-3xl font-bold text-blue-600 mb-2">${(AppState.appData.isoDocuments || []).length}</div>
-                    <div class="text-sm text-gray-700 font-semibold">الوثائق</div>
+                    <div class="text-sm text-gray-700 font-semibold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.docs', 'الوثائق') : 'الوثائق'}</div>
                 </div>
                 <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
                     <div class="text-3xl font-bold text-green-600 mb-2">${(AppState.appData.isoProcedures || []).length}</div>
-                    <div class="text-sm text-gray-700 font-semibold">الإجراءات</div>
+                    <div class="text-sm text-gray-700 font-semibold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.procedures', 'الإجراءات') : 'الإجراءات'}</div>
                 </div>
                 <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
                     <div class="text-3xl font-bold text-yellow-600 mb-2">${(AppState.appData.isoForms || []).length}</div>
-                    <div class="text-sm text-gray-700 font-semibold">النماذج</div>
+                    <div class="text-sm text-gray-700 font-semibold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.forms', 'النماذج') : 'النماذج'}</div>
                 </div>
                 <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
                     <div class="text-3xl font-bold text-purple-600 mb-2">${this.calculateComplianceRate()}%</div>
-                    <div class="text-sm text-gray-700 font-semibold">معدل الامتثال</div>
+                    <div class="text-sm text-gray-700 font-semibold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.compliance', 'معدل الامتثال') : 'معدل الامتثال'}</div>
                 </div>
             </div>
             
             <div class="mt-6">
-                <div class="flex gap-2 mb-6 border-b">
+                <div class="flex flex-wrap gap-2 mb-6 border-b pb-2">
                     <button class="tab-btn ${this.currentTab === 'overview' ? 'active' : ''}" data-tab="overview">
-                        <i class="fas fa-chart-pie ml-2"></i>نظرة عامة
+                        <i class="fas fa-chart-pie mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.overview', 'نظرة عامة') : 'نظرة عامة'}
                     </button>
                     <button class="tab-btn ${this.currentTab === 'documents' ? 'active' : ''}" data-tab="documents">
-                        <i class="fas fa-file-alt ml-2"></i>الوثائق
+                        <i class="fas fa-file-alt mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.docs', 'الوثائق') : 'الوثائق'}
                     </button>
                     <button class="tab-btn ${this.currentTab === 'procedures' ? 'active' : ''}" data-tab="procedures">
-                        <i class="fas fa-tasks ml-2"></i>الإجراءات
+                        <i class="fas fa-tasks mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.procedures', 'الإجراءات') : 'الإجراءات'}
                     </button>
                     <button class="tab-btn ${this.currentTab === 'forms' ? 'active' : ''}" data-tab="forms">
-                        <i class="fas fa-file-signature ml-2"></i>النماذج
+                        <i class="fas fa-file-signature mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.forms', 'النماذج') : 'النماذج'}
                     </button>
                     <button class="tab-btn ${this.currentTab === 'iso45001' ? 'active' : ''}" data-tab="iso45001">
-                        <i class="fas fa-hard-hat ml-2"></i>ISO 45001
+                        <i class="fas fa-hard-hat mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.iso45001', 'ISO 45001') : 'ISO 45001'}
                     </button>
                     <button class="tab-btn ${this.currentTab === 'iso14001' ? 'active' : ''}" data-tab="iso14001">
-                        <i class="fas fa-leaf ml-2"></i>ISO 14001
+                        <i class="fas fa-leaf mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.iso14001', 'ISO 14001') : 'ISO 14001'}
                     </button>
                     <button class="tab-btn ${this.currentTab === 'audit' ? 'active' : ''}" data-tab="audit">
-                        <i class="fas fa-clipboard-check ml-2"></i>التدقيق والمراجعة
+                        <i class="fas fa-clipboard-check mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.audit', 'التدقيق والمراجعة') : 'التدقيق والمراجعة'}
                     </button>
                     <button class="tab-btn ${this.currentTab === 'coding-center' ? 'active' : ''}" data-tab="coding-center">
-                        <i class="fas fa-code ml-2"></i>مركز التكويد والإصدار
+                        <i class="fas fa-code mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.coding', 'مركز التكويد والإصدار') : 'مركز التكويد والإصدار'}
                     </button>
                 </div>
                 <div id="iso-content">
@@ -113,7 +113,7 @@ const ISO = {
                                         <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                     </div>
                                 </div>
-                                <p class="text-gray-500">جاري تحميل المحتوى...</p>
+                                <p class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.loading', 'جاري تحميل المحتوى...') : 'جاري تحميل المحتوى...'}</p>
                             </div>
                         </div>
                     </div>
@@ -245,7 +245,7 @@ const ISO = {
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                     <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 mb-1">إجمالي الوثائق</p>
+                            <p class="text-sm font-medium text-gray-500 mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.docs', 'إجمالي الوثائق') : 'إجمالي الوثائق'}</p>
                             <h3 class="text-3xl font-bold text-gray-800">${totalDocs}</h3>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
@@ -253,8 +253,8 @@ const ISO = {
                         </div>
                     </div>
                     <div class="mt-4 text-xs text-gray-500 flex items-center">
-                        <span class="text-blue-600 font-semibold ml-1">${procedures.length}</span> إجراءات | 
-                        <span class="text-indigo-600 font-semibold mx-1">${forms.length}</span> نماذج
+                        <span class="text-blue-600 font-semibold ml-1">${procedures.length}</span> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.procedures', 'إجراءات') : 'إجراءات'} | 
+                        <span class="text-indigo-600 font-semibold mx-1">${forms.length}</span> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.forms', 'نماذج') : 'نماذج'}
                     </div>
                 </div>
 
@@ -263,7 +263,7 @@ const ISO = {
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-red-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                     <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 mb-1">حالات عدم المطابقة المفتوحة</p>
+                            <p class="text-sm font-medium text-gray-500 mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.openNc', 'حالات عدم المطابقة المفتوحة') : 'حالات عدم المطابقة المفتوحة'}</p>
                             <h3 class="text-3xl font-bold text-gray-800">${openNCs}</h3>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center text-white shadow-lg shadow-red-200">
@@ -280,7 +280,7 @@ const ISO = {
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-purple-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                     <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 mb-1">عمليات تدقيق قادمة</p>
+                            <p class="text-sm font-medium text-gray-500 mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.auditLogTitle', 'عمليات تدقيق قادمة') : 'عمليات تدقيق قادمة'}</p>
                             <h3 class="text-3xl font-bold text-gray-800">${pendingAudits}</h3>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-purple-200">
@@ -297,7 +297,7 @@ const ISO = {
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-amber-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                     <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 mb-1">إجراءات تصحيحية مفتوحة</p>
+                            <p class="text-sm font-medium text-gray-500 mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.lateCa', 'إجراءات تصحيحية مفتوحة') : 'إجراءات تصحيحية مفتوحة'}</p>
                             <h3 class="text-3xl font-bold text-gray-800">${openActions}</h3>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-amber-200">
@@ -316,7 +316,7 @@ const ISO = {
                 <div class="lg:col-span-2 space-y-6">
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                         <div class="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
-                            <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-shield-check text-blue-600 ml-2"></i>مستوى الامتثال للنظام (QMS Health)</h2>
+                            <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-shield-check text-blue-600 ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.healthTitle', 'مستوى الامتثال للنظام (QMS Health)') : 'مستوى الامتثال للنظام (QMS Health)'}</h2>
                             <span class="text-2xl font-bold ${complianceScore >= 80 ? 'text-green-500' : (complianceScore >= 50 ? 'text-amber-500' : 'text-red-500')}">${complianceScore}%</span>
                         </div>
                         <div class="p-6">
@@ -331,9 +331,9 @@ const ISO = {
                                     <h3 class="font-bold text-blue-800 mb-2 flex items-center">
                                         <i class="fas fa-hard-hat text-blue-500 ml-2"></i> ISO 45001
                                     </h3>
-                                    <p class="text-xs text-gray-600 mb-3">نظام إدارة السلامة والصحة المهنية</p>
+                                    <p class="text-xs text-gray-600 mb-3">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.healthDesc', 'نظام إدارة السلامة والصحة المهنية') : 'نظام إدارة السلامة والصحة المهنية'}</p>
                                     <div class="flex justify-between items-center text-sm">
-                                        <span class="text-gray-500">المتطلبات</span>
+                                        <span class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.excellent', 'المتطلبات') : 'المتطلبات'}</span>
                                         <span class="font-semibold text-blue-700">مغطاة</span>
                                     </div>
                                 </div>
@@ -341,9 +341,9 @@ const ISO = {
                                     <h3 class="font-bold text-green-800 mb-2 flex items-center">
                                         <i class="fas fa-leaf text-green-500 ml-2"></i> ISO 14001
                                     </h3>
-                                    <p class="text-xs text-gray-600 mb-3">نظام الإدارة البيئية</p>
+                                    <p class="text-xs text-gray-600 mb-3">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.healthDesc', 'نظام الإدارة البيئية') : 'نظام الإدارة البيئية'}</p>
                                     <div class="flex justify-between items-center text-sm">
-                                        <span class="text-gray-500">المتطلبات</span>
+                                        <span class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.excellent', 'المتطلبات') : 'المتطلبات'}</span>
                                         <span class="font-semibold text-green-700">مغطاة</span>
                                     </div>
                                 </div>
@@ -356,7 +356,7 @@ const ISO = {
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
                     <div class="p-5 border-b border-gray-50 bg-gradient-to-r from-rose-50 to-orange-50">
                         <h2 class="text-lg font-bold text-gray-800 flex items-center">
-                            <i class="fas fa-bell text-rose-500 ml-2 animate-pulse"></i>مهام تتطلب الانتباه
+                            <i class="fas fa-bell text-rose-500 ml-2 animate-pulse"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.actionItems', 'مهام تتطلب الانتباه') : 'مهام تتطلب الانتباه'}
                         </h2>
                     </div>
                     <div class="p-0 flex-1 overflow-y-auto" style="max-height: 400px;">
@@ -365,7 +365,7 @@ const ISO = {
                             <li class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 cursor-pointer" onclick="ISO.currentTab = 'audit'; ISO.load();">
                                 <div class="mt-0.5 bg-red-100 text-red-600 p-2 rounded-lg"><i class="fas fa-exclamation-circle"></i></div>
                                 <div>
-                                    <p class="text-sm font-semibold text-gray-800">يوجد ${openNCs} حالة عدم مطابقة مفتوحة</p>
+                                    <p class="text-sm font-semibold text-gray-800">يوجد ${openNCs} ${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.openNc', 'حالة عدم مطابقة مفتوحة') : 'حالة عدم مطابقة مفتوحة'}</p>
                                     <p class="text-xs text-gray-500 mt-1">يجب مراجعتها وإغلاقها لتجنب التأثير على مستوى الامتثال.</p>
                                 </div>
                             </li>
@@ -375,7 +375,7 @@ const ISO = {
                             <li class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 cursor-pointer" onclick="ISO.currentTab = 'audit'; ISO.load();">
                                 <div class="mt-0.5 bg-purple-100 text-purple-600 p-2 rounded-lg"><i class="fas fa-calendar-alt"></i></div>
                                 <div>
-                                    <p class="text-sm font-semibold text-gray-800">يوجد ${pendingAudits} عملية تدقيق قادمة</p>
+                                    <p class="text-sm font-semibold text-gray-800">يوجد ${pendingAudits} ${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.auditLogTitle', 'عملية تدقيق قادمة') : 'عملية تدقيق قادمة'}</p>
                                     <p class="text-xs text-gray-500 mt-1">يرجى مراجعة الجدول الزمني وتجهيز الوثائق المطلوبة.</p>
                                 </div>
                             </li>
@@ -385,7 +385,7 @@ const ISO = {
                             <li class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 cursor-pointer" onclick="ISO.currentTab = 'audit'; ISO.load();">
                                 <div class="mt-0.5 bg-amber-100 text-amber-600 p-2 rounded-lg"><i class="fas fa-tools"></i></div>
                                 <div>
-                                    <p class="text-sm font-semibold text-gray-800">يوجد ${openActions} إجراء تصحيحي معلق</p>
+                                    <p class="text-sm font-semibold text-gray-800">يوجد ${openActions} ${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.lateCa', 'إجراء تصحيحي معلق') : 'إجراء تصحيحي معلق'}</p>
                                     <p class="text-xs text-gray-500 mt-1">تابع مع المسؤولين لإغلاق الإجراءات التصحيحية المفتوحة.</p>
                                 </div>
                             </li>
@@ -394,8 +394,8 @@ const ISO = {
                             ${(openNCs === 0 && pendingAudits === 0 && openActions === 0) ? `
                             <li class="p-8 text-center flex flex-col items-center justify-center">
                                 <div class="bg-green-50 text-green-500 p-4 rounded-full mb-3"><i class="fas fa-check-double text-2xl"></i></div>
-                                <p class="text-gray-600 font-semibold text-sm">النظام في حالة ممتازة</p>
-                                <p class="text-gray-400 text-xs mt-1">لا توجد أي مهام متأخرة أو معلقة تتطلب الانتباه حالياً.</p>
+                                <p class="text-gray-600 font-semibold text-sm">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.excellent', 'النظام في حالة ممتازة') : 'النظام في حالة ممتازة'}</p>
+                                <p class="text-gray-400 text-xs mt-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.noActionItems', 'لا توجد أي مهام متأخرة أو معلقة تتطلب الانتباه حالياً.') : 'لا توجد أي مهام متأخرة أو معلقة تتطلب الانتباه حالياً.'}</p>
                             </li>
                             ` : ''}
                         </ul>
@@ -422,19 +422,19 @@ const ISO = {
                             <i class="fas fa-file-alt text-xl text-white"></i>
                         </div>
                         <div>
-                            <h2 class="card-title text-white m-0 text-xl font-bold">إدارة الوثائق (Document Control)</h2>
+                            <h2 class="card-title text-white m-0 text-xl font-bold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.title', 'إدارة الوثائق (Document Control)') : 'إدارة الوثائق (Document Control)'}</h2>
                             <p class="text-blue-100 text-sm m-0 opacity-80">سجل الوثائق المعتمدة في النظام</p>
                         </div>
                     </div>
                     <button id="add-document-btn" class="btn bg-white text-blue-700 hover:bg-blue-50 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all hover:shadow-md">
-                        <i class="fas fa-plus"></i>إضافة وثيقة
+                        <i class="fas fa-plus"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.addBtn', 'إضافة وثيقة') : 'إضافة وثيقة'}
                     </button>
                 </div>
                 <div class="card-body p-0">
                     ${documents.length === 0 ? `
                         <div class="p-12 text-center flex flex-col items-center justify-center bg-gray-50/50">
                             <div class="w-20 h-20 bg-blue-50 text-blue-300 rounded-full flex items-center justify-center mb-4"><i class="fas fa-folder-open text-3xl"></i></div>
-                            <h3 class="text-gray-700 font-bold text-lg mb-1">لا توجد وثائق مسجلة</h3>
+                            <h3 class="text-gray-700 font-bold text-lg mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.noData', 'لا توجد وثائق مسجلة') : 'لا توجد وثائق مسجلة'}</h3>
                             <p class="text-gray-500 text-sm">قم بإضافة أول وثيقة لبدء بناء مكتبة النظام</p>
                         </div>
                     ` : `
@@ -442,12 +442,12 @@ const ISO = {
                             <table class="w-full text-right border-collapse">
                                 <thead>
                                     <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
-                                        <th class="p-3 font-semibold text-right rounded-tr-lg">كود ISO</th>
-                                        <th class="p-3 font-semibold text-right">اسم الوثيقة</th>
-                                        <th class="p-3 font-semibold text-right">النوع</th>
-                                        <th class="p-3 font-semibold text-center">الإصدار</th>
-                                        <th class="p-3 font-semibold text-center">الحالة</th>
-                                        <th class="p-3 font-semibold text-center rounded-tl-lg">الإجراءات</th>
+                                        <th class="p-3 font-semibold text-right rounded-tr-lg">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.code', 'كود ISO') : 'كود ISO'}</th>
+                                        <th class="p-3 font-semibold text-right">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.name', 'اسم الوثيقة') : 'اسم الوثيقة'}</th>
+                                        <th class="p-3 font-semibold text-right">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.type', 'النوع') : 'النوع'}</th>
+                                        <th class="p-3 font-semibold text-center">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.version', 'الإصدار') : 'الإصدار'}</th>
+                                        <th class="p-3 font-semibold text-center">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.status', 'الحالة') : 'الحالة'}</th>
+                                        <th class="p-3 font-semibold text-center rounded-tl-lg">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.actions', 'الإجراءات') : 'الإجراءات'}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -490,19 +490,19 @@ const ISO = {
                             <i class="fas fa-project-diagram text-xl text-white"></i>
                         </div>
                         <div>
-                            <h2 class="card-title text-white m-0 text-xl font-bold">إدارة الإجراءات (Procedures)</h2>
+                            <h2 class="card-title text-white m-0 text-xl font-bold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.title', 'إدارة الإجراءات (Procedures)') : 'إدارة الإجراءات (Procedures)'}</h2>
                             <p class="text-emerald-100 text-sm m-0 opacity-80">إجراءات العمل القياسية (SOPs)</p>
                         </div>
                     </div>
                     <button id="add-procedure-btn" class="btn bg-white text-emerald-700 hover:bg-emerald-50 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all hover:shadow-md">
-                        <i class="fas fa-plus"></i>إضافة إجراء
+                        <i class="fas fa-plus"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.addBtn', 'إضافة إجراء') : 'إضافة إجراء'}
                     </button>
                 </div>
                 <div class="card-body p-0">
                     ${procedures.length === 0 ? `
                         <div class="p-12 text-center flex flex-col items-center justify-center bg-gray-50/50">
                             <div class="w-20 h-20 bg-emerald-50 text-emerald-300 rounded-full flex items-center justify-center mb-4"><i class="fas fa-network-wired text-3xl"></i></div>
-                            <h3 class="text-gray-700 font-bold text-lg mb-1">لا توجد إجراءات مسجلة</h3>
+                            <h3 class="text-gray-700 font-bold text-lg mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.noData', 'لا توجد إجراءات مسجلة') : 'لا توجد إجراءات مسجلة'}</h3>
                             <p class="text-gray-500 text-sm">قم بإضافة أول إجراء (SOP) لتنظيم العمل</p>
                         </div>
                     ` : `
@@ -510,11 +510,11 @@ const ISO = {
                             <table class="w-full text-right border-collapse">
                                 <thead>
                                     <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
-                                        <th class="p-3 font-semibold text-right rounded-tr-lg">كود الإجراء</th>
-                                        <th class="p-3 font-semibold text-right">اسم الإجراء</th>
-                                        <th class="p-3 font-semibold text-right">القسم المالك</th>
-                                        <th class="p-3 font-semibold text-center">المراجعة القادمة</th>
-                                        <th class="p-3 font-semibold text-center rounded-tl-lg">الإجراءات</th>
+                                        <th class="p-3 font-semibold text-right rounded-tr-lg">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.code', 'كود الإجراء') : 'كود الإجراء'}</th>
+                                        <th class="p-3 font-semibold text-right">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.name', 'اسم الإجراء') : 'اسم الإجراء'}</th>
+                                        <th class="p-3 font-semibold text-right">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.dept', 'القسم المالك') : 'القسم المالك'}</th>
+                                        <th class="p-3 font-semibold text-center">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.nextReview', 'المراجعة القادمة') : 'المراجعة القادمة'}</th>
+                                        <th class="p-3 font-semibold text-center rounded-tl-lg">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.actions', 'الإجراءات') : 'الإجراءات'}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -562,19 +562,19 @@ const ISO = {
                             <i class="fas fa-file-signature text-xl text-white"></i>
                         </div>
                         <div>
-                            <h2 class="card-title text-white m-0 text-xl font-bold">النماذج القياسية (Forms)</h2>
+                            <h2 class="card-title text-white m-0 text-xl font-bold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.title', 'النماذج القياسية (Forms)') : 'النماذج القياسية (Forms)'}</h2>
                             <p class="text-amber-100 text-sm m-0 opacity-80">سجل النماذج المعتمدة لجمع البيانات</p>
                         </div>
                     </div>
                     <button id="add-form-btn" class="btn bg-white text-orange-700 hover:bg-orange-50 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all hover:shadow-md">
-                        <i class="fas fa-plus"></i>إضافة نموذج
+                        <i class="fas fa-plus"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.addBtn', 'إضافة نموذج') : 'إضافة نموذج'}
                     </button>
                 </div>
                 <div class="card-body p-0">
                     ${forms.length === 0 ? `
                         <div class="p-12 text-center flex flex-col items-center justify-center bg-gray-50/50">
                             <div class="w-20 h-20 bg-orange-50 text-orange-300 rounded-full flex items-center justify-center mb-4"><i class="fas fa-clipboard-list text-3xl"></i></div>
-                            <h3 class="text-gray-700 font-bold text-lg mb-1">لا توجد نماذج مسجلة</h3>
+                            <h3 class="text-gray-700 font-bold text-lg mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.noData', 'لا توجد نماذج مسجلة') : 'لا توجد نماذج مسجلة'}</h3>
                             <p class="text-gray-500 text-sm">قم بإضافة أول نموذج ليكون متاحاً للطباعة والاستخدام</p>
                         </div>
                     ` : `
@@ -582,10 +582,10 @@ const ISO = {
                             <table class="w-full text-right border-collapse">
                                 <thead>
                                     <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
-                                        <th class="p-3 font-semibold text-right rounded-tr-lg">الكود المرجعي</th>
-                                        <th class="p-3 font-semibold text-right">اسم النموذج</th>
-                                        <th class="p-3 font-semibold text-right">نوع النموذج</th>
-                                        <th class="p-3 font-semibold text-center rounded-tl-lg">الإجراءات</th>
+                                        <th class="p-3 font-semibold text-right rounded-tr-lg">${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.table.code', 'الكود المرجعي') : 'الكود المرجعي'}</th>
+                                        <th class="p-3 font-semibold text-right">${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.table.name', 'اسم النموذج') : 'اسم النموذج'}</th>
+                                        <th class="p-3 font-semibold text-right">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.type', 'نوع النموذج') : 'نوع النموذج'}</th>
+                                        <th class="p-3 font-semibold text-center rounded-tl-lg">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.actions', 'الإجراءات') : 'الإجراءات'}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -652,7 +652,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل وثيقة' : 'إضافة وثيقة جديدة'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.documents.editTitle', 'تعديل وثيقة') : 'تعديل وثيقة') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.documents.addTitle', 'إضافة وثيقة جديدة') : 'إضافة وثيقة جديدة')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -660,10 +660,10 @@ const ISO = {
                 <div class="modal-body">
                     <form id="iso-document-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">كود المستند من المركز *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.docCodeLabel', 'كود المستند من المركز *') : 'كود المستند من المركز *'}</label>
                             <select id="document-code-select" required class="form-input" 
                                 onchange="ISO.loadDocumentCodeVersion('document')">
-                                <option value="">اختر الكود من مركز التكويد والإصدار</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.selectCodeOption', 'اختر الكود من مركز التكويد والإصدار') : 'اختر الكود من مركز التكويد والإصدار'}</option>
                                 ${documentCodes.map(code => `
                                     <option value="${code.code}" 
                                         data-code-id="${code.id}"
@@ -674,50 +674,50 @@ const ISO = {
                             </select>
                             <p class="text-xs text-gray-500 mt-1">
                                 <i class="fas fa-info-circle ml-1"></i>
-                                يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.
+                                ${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.codeHint', 'يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.') : 'يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.'}
                             </p>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">اسم الوثيقة *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.docNameLabel', 'اسم الوثيقة *') : 'اسم الوثيقة *'}</label>
                             <input type="text" id="document-name" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="اسم الوثيقة">
+                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.docNamePlaceholder', 'اسم الوثيقة') : 'اسم الوثيقة'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">النوع *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeLabel', 'النوع *') : 'النوع *'}</label>
                             <select id="document-type" required class="form-input">
-                                <option value="">اختر النوع</option>
-                                <option value="سياسة" ${data?.type === 'سياسة' ? 'selected' : ''}>سياسة</option>
-                                <option value="إجراء" ${data?.type === 'إجراء' ? 'selected' : ''}>إجراء</option>
-                                <option value="تعليمات" ${data?.type === 'تعليمات' ? 'selected' : ''}>تعليمات</option>
-                                <option value="دليل" ${data?.type === 'دليل' ? 'selected' : ''}>دليل</option>
-                                <option value="أخرى" ${data?.type === 'أخرى' ? 'selected' : ''}>أخرى</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.selectTypeOption', 'اختر النوع') : 'اختر النوع'}</option>
+                                <option value="سياسة" ${data?.type === 'سياسة' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typePolicy', 'سياسة') : 'سياسة'}</option>
+                                <option value="إجراء" ${data?.type === 'إجراء' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeProcedure', 'إجراء') : 'إجراء'}</option>
+                                <option value="تعليمات" ${data?.type === 'تعليمات' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeInstructions', 'تعليمات') : 'تعليمات'}</option>
+                                <option value="دليل" ${data?.type === 'دليل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeManual', 'دليل') : 'دليل'}</option>
+                                <option value="أخرى" ${data?.type === 'أخرى' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeOther', 'أخرى') : 'أخرى'}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">رقم الإصدار (يُسحب تلقائياً من المركز)</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.versionLabel', 'رقم الإصدار (يُسحب تلقائياً من المركز)') : 'رقم الإصدار (يُسحب تلقائياً من المركز)'}</label>
                             <input type="text" id="document-version" readonly class="form-input bg-gray-100" 
-                                value="${Utils.escapeHTML(data?.version || '')}" placeholder="سيتم جلب الإصدار تلقائياً">
+                                value="${Utils.escapeHTML(data?.version || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.versionPlaceholder', 'سيتم جلب الإصدار تلقائياً') : 'سيتم جلب الإصدار تلقائياً'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الإصدار</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.issueDateLabel', 'تاريخ الإصدار') : 'تاريخ الإصدار'}</label>
                             <input type="text" id="document-issue-date" readonly class="form-input bg-gray-100" 
-                                value="${data?.issueDate ? Utils.formatDate(data.issueDate) : ''}" placeholder="سيتم جلب تاريخ الإصدار تلقائياً">
+                                value="${data?.issueDate ? Utils.formatDate(data.issueDate) : ''}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.issueDatePlaceholder', 'سيتم جلب تاريخ الإصدار تلقائياً') : 'سيتم جلب تاريخ الإصدار تلقائياً'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ التعديل</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.revisionDateLabel', 'تاريخ التعديل') : 'تاريخ التعديل'}</label>
                             <input type="text" id="document-revision-date" readonly class="form-input bg-gray-100" 
-                                value="${data?.revisionDate ? Utils.formatDate(data.revisionDate) : ''}" placeholder="سيتم جلب تاريخ التعديل تلقائياً">
+                                value="${data?.revisionDate ? Utils.formatDate(data.revisionDate) : ''}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.revisionDatePlaceholder', 'سيتم جلب تاريخ التعديل تلقائياً') : 'سيتم جلب تاريخ التعديل تلقائياً'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">القسم *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.departmentLabel', 'القسم *') : 'القسم *'}</label>
                             <input type="text" id="document-department" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.department || '')}" placeholder="القسم">
+                                value="${Utils.escapeHTML(data?.department || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.departmentPlaceholder', 'القسم') : 'القسم'}">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-document-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-document-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -826,7 +826,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل إجراء' : 'إضافة إجراء جديد'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.editTitle', 'تعديل إجراء') : 'تعديل إجراء') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.addTitle', 'إضافة إجراء جديد') : 'إضافة إجراء جديد')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -834,10 +834,10 @@ const ISO = {
                 <div class="modal-body">
                     <form id="iso-procedure-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">كود الإجراء من المركز *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.procCodeLabel', 'كود الإجراء من المركز *') : 'كود الإجراء من المركز *'}</label>
                             <select id="procedure-code-select" required class="form-input" 
                                 onchange="ISO.loadDocumentCodeVersion('procedure')">
-                                <option value="">اختر الكود من مركز التكويد والإصدار</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.selectCodeOption', 'اختر الكود من مركز التكويد والإصدار') : 'اختر الكود من مركز التكويد والإصدار'}</option>
                                 ${documentCodes.map(code => `
                                     <option value="${code.code}" 
                                         data-code-id="${code.id}"
@@ -848,39 +848,39 @@ const ISO = {
                             </select>
                             <p class="text-xs text-gray-500 mt-1">
                                 <i class="fas fa-info-circle ml-1"></i>
-                                يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.
+                                ${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.codeHint', 'يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.') : 'يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.'}
                             </p>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">اسم الإجراء *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.procNameLabel', 'اسم الإجراء *') : 'اسم الإجراء *'}</label>
                             <input type="text" id="procedure-name" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="اسم الإجراء">
+                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.procNamePlaceholder', 'اسم الإجراء') : 'اسم الإجراء'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">القسم *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.departmentLabel', 'القسم *') : 'القسم *'}</label>
                             <input type="text" id="procedure-department" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.department || '')}" placeholder="القسم">
+                                value="${Utils.escapeHTML(data?.department || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.departmentPlaceholder', 'القسم') : 'القسم'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">رقم الإصدار (يُسحب تلقائياً من المركز)</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.versionLabel', 'رقم الإصدار (يُسحب تلقائياً من المركز)') : 'رقم الإصدار (يُسحب تلقائياً من المركز)'}</label>
                             <input type="text" id="procedure-version" readonly class="form-input bg-gray-100" 
-                                value="${Utils.escapeHTML(data?.version || '')}" placeholder="سيتم جلب الإصدار تلقائياً">
+                                value="${Utils.escapeHTML(data?.version || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.versionPlaceholder', 'سيتم جلب الإصدار تلقائياً') : 'سيتم جلب الإصدار تلقائياً'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الإصدار</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.issueDateLabel', 'تاريخ الإصدار') : 'تاريخ الإصدار'}</label>
                             <input type="text" id="procedure-issue-date" readonly class="form-input bg-gray-100" 
-                                value="${data?.issueDate ? Utils.formatDate(data.issueDate) : ''}" placeholder="سيتم جلب تاريخ الإصدار تلقائياً">
+                                value="${data?.issueDate ? Utils.formatDate(data.issueDate) : ''}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.issueDatePlaceholder', 'سيتم جلب تاريخ الإصدار تلقائياً') : 'سيتم جلب تاريخ الإصدار تلقائياً'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ التعديل</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.revisionDateLabel', 'تاريخ التعديل') : 'تاريخ التعديل'}</label>
                             <input type="text" id="procedure-revision-date" readonly class="form-input bg-gray-100" 
-                                value="${data?.revisionDate ? Utils.formatDate(data.revisionDate) : ''}" placeholder="سيتم جلب تاريخ التعديل تلقائياً">
+                                value="${data?.revisionDate ? Utils.formatDate(data.revisionDate) : ''}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.revisionDatePlaceholder', 'سيتم جلب تاريخ التعديل تلقائياً') : 'سيتم جلب تاريخ التعديل تلقائياً'}">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-procedure-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-procedure-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -975,7 +975,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل نموذج' : 'إضافة نموذج جديد'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.editTitle', 'تعديل نموذج') : 'تعديل نموذج') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.addTitle', 'إضافة نموذج جديد') : 'إضافة نموذج جديد')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -983,10 +983,10 @@ const ISO = {
                 <div class="modal-body">
                     <form id="iso-form-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">كود النموذج من المركز *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.frmCodeLabel', 'كود النموذج من المركز *') : 'كود النموذج من المركز *'}</label>
                             <select id="form-code-select" required class="form-input" 
                                 onchange="ISO.loadDocumentCodeVersion('form')">
-                                <option value="">اختر الكود من مركز التكويد والإصدار</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.selectCodeOption', 'اختر الكود من مركز التكويد والإصدار') : 'اختر الكود من مركز التكويد والإصدار'}</option>
                                 ${documentCodes.map(code => `
                                     <option value="${code.code}" 
                                         data-code-id="${code.id}"
@@ -997,45 +997,45 @@ const ISO = {
                             </select>
                             <p class="text-xs text-gray-500 mt-1">
                                 <i class="fas fa-info-circle ml-1"></i>
-                                يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.
+                                ${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.codeHint', 'يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.') : 'يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.'}
                             </p>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">اسم النموذج *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.frmNameLabel', 'اسم النموذج *') : 'اسم النموذج *'}</label>
                             <input type="text" id="form-name" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="اسم النموذج">
+                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.frmNamePlaceholder', 'اسم النموذج') : 'اسم النموذج'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">النوع *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeLabel', 'النوع *') : 'النوع *'}</label>
                             <select id="form-type" required class="form-input">
-                                <option value="">اختر النوع</option>
-                                <option value="تسجيل" ${data?.type === 'تسجيل' ? 'selected' : ''}>تسجيل</option>
-                                <option value="تقرير" ${data?.type === 'تقرير' ? 'selected' : ''}>تقرير</option>
-                                <option value="حص" ${data?.type === 'حص' ? 'selected' : ''}>حص</option>
-                                <option value="تدريب" ${data?.type === 'تدريب' ? 'selected' : ''}>تدريب</option>
-                                <option value="أخرى" ${data?.type === 'أخرى' ? 'selected' : ''}>أخرى</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.selectTypeOption', 'اختر النوع') : 'اختر النوع'}</option>
+                                <option value="تسجيل" ${data?.type === 'تسجيل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeRecord', 'تسجيل') : 'تسجيل'}</option>
+                                <option value="تقرير" ${data?.type === 'تقرير' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeReport', 'تقرير') : 'تقرير'}</option>
+                                <option value="حص" ${data?.type === 'حص' || data?.type === 'فحص' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeInspection', 'فحص') : 'فحص'}</option>
+                                <option value="تدريب" ${data?.type === 'تدريب' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeTraining', 'تدريب') : 'تدريب'}</option>
+                                <option value="أخرى" ${data?.type === 'أخرى' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeOther', 'أخرى') : 'أخرى'}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">رقم الإصدار (يُسحب تلقائياً من المركز)</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.versionLabel', 'رقم الإصدار (يُسحب تلقائياً من المركز)') : 'رقم الإصدار (يُسحب تلقائياً من المركز)'}</label>
                             <input type="text" id="form-version" readonly class="form-input bg-gray-100" 
-                                value="${Utils.escapeHTML(data?.version || '')}" placeholder="سيتم جلب الإصدار تلقائياً">
+                                value="${Utils.escapeHTML(data?.version || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.versionPlaceholder', 'سيتم جلب الإصدار تلقائياً') : 'سيتم جلب الإصدار تلقائياً'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الإصدار</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.issueDateLabel', 'تاريخ الإصدار') : 'تاريخ الإصدار'}</label>
                             <input type="text" id="form-issue-date" readonly class="form-input bg-gray-100" 
-                                value="${data?.issueDate ? Utils.formatDate(data.issueDate) : ''}" placeholder="سيتم جلب تاريخ الإصدار تلقائياً">
+                                value="${data?.issueDate ? Utils.formatDate(data.issueDate) : ''}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.issueDatePlaceholder', 'سيتم جلب تاريخ الإصدار تلقائياً') : 'سيتم جلب تاريخ الإصدار تلقائياً'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ التعديل</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.revisionDateLabel', 'تاريخ التعديل') : 'تاريخ التعديل'}</label>
                             <input type="text" id="form-revision-date" readonly class="form-input bg-gray-100" 
-                                value="${data?.revisionDate ? Utils.formatDate(data.revisionDate) : ''}" placeholder="سيتم جلب تاريخ التعديل تلقائياً">
+                                value="${data?.revisionDate ? Utils.formatDate(data.revisionDate) : ''}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.revisionDatePlaceholder', 'سيتم جلب تاريخ التعديل تلقائياً') : 'سيتم جلب تاريخ التعديل تلقائياً'}">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-form-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-form-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -1160,7 +1160,7 @@ const ISO = {
     async viewDocument(id) {
         const doc = AppState.appData.isoDocuments.find(d => d.id === id);
         if (!doc) {
-            Notification.error('الوثيقة غير موجودة');
+            Notification.error(typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.notFound', 'الوثيقة غير موجودة') : 'الوثيقة غير موجودة');
             return;
         }
 
@@ -1169,24 +1169,24 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">تفاصيل الوثيقة</h2>
+                    <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.detailsTitle', 'تفاصيل الوثيقة') : 'تفاصيل الوثيقة'}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-3">
-                        <div><strong>كود ISO:</strong> ${Utils.escapeHTML(doc.isoCode || '')}</div>
-                        <div><strong>اسم الوثيقة:</strong> ${Utils.escapeHTML(doc.name || '')}</div>
-                        <div><strong>النوع:</strong> ${Utils.escapeHTML(doc.type || '')}</div>
-                        <div><strong>الإصدار:</strong> ${Utils.escapeHTML(doc.version || '')}</div>
-                        <div><strong>القسم:</strong> ${Utils.escapeHTML(doc.department || '')}</div>
-                        <div><strong>تاريخ الإنشاء:</strong> ${Utils.formatDate(doc.createdAt)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.code', 'كود ISO:') : 'كود ISO:'}</strong> ${Utils.escapeHTML(doc.isoCode || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.name', 'اسم الوثيقة:') : 'اسم الوثيقة:'}</strong> ${Utils.escapeHTML(doc.name || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.type', 'النوع:') : 'النوع:'}</strong> ${Utils.escapeHTML(doc.type || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.version', 'الإصدار:') : 'الإصدار:'}</strong> ${Utils.escapeHTML(doc.version || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.dept', 'القسم:') : 'القسم:'}</strong> ${Utils.escapeHTML(doc.department || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.createdAt', 'تاريخ الإنشاء:') : 'تاريخ الإنشاء:'}</strong> ${Utils.formatDate(doc.createdAt)}</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
-                    <button type="button" onclick="ISO.showDocumentForm(${JSON.stringify(doc).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">تعديل</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
+                    <button type="button" onclick="ISO.showDocumentForm(${JSON.stringify(doc).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}</button>
                 </div>
             </div>
         `;
@@ -1199,7 +1199,7 @@ const ISO = {
     async viewProcedure(id) {
         const procedure = AppState.appData.isoProcedures.find(p => p.id === id);
         if (!procedure) {
-            Notification.error('الإجراء غير موجود');
+            Notification.error(typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.notFound', 'الإجراء غير موجود') : 'الإجراء غير موجود');
             return;
         }
 
@@ -1208,23 +1208,23 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">تفاصيل الإجراء</h2>
+                    <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.detailsTitle', 'تفاصيل الإجراء') : 'تفاصيل الإجراء'}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-3">
-                        <div><strong>كود ISO:</strong> ${Utils.escapeHTML(procedure.isoCode || '')}</div>
-                        <div><strong>اسم الإجراء:</strong> ${Utils.escapeHTML(procedure.name || '')}</div>
-                        <div><strong>القسم:</strong> ${Utils.escapeHTML(procedure.department || '')}</div>
-                        <div><strong>الإصدار:</strong> ${Utils.escapeHTML(procedure.version || '')}</div>
-                        <div><strong>تاريخ الإنشاء:</strong> ${Utils.formatDate(procedure.createdAt)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.code', 'كود ISO:') : 'كود ISO:'}</strong> ${Utils.escapeHTML(procedure.isoCode || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.name', 'اسم الإجراء:') : 'اسم الإجراء:'}</strong> ${Utils.escapeHTML(procedure.name || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.dept', 'القسم:') : 'القسم:'}</strong> ${Utils.escapeHTML(procedure.department || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.version', 'الإصدار:') : 'الإصدار:'}</strong> ${Utils.escapeHTML(procedure.version || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.createdAt', 'تاريخ الإنشاء:') : 'تاريخ الإنشاء:'}</strong> ${Utils.formatDate(procedure.createdAt)}</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
-                    <button type="button" onclick="ISO.showProcedureForm(${JSON.stringify(procedure).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">تعديل</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
+                    <button type="button" onclick="ISO.showProcedureForm(${JSON.stringify(procedure).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}</button>
                 </div>
             </div>
         `;
@@ -1237,7 +1237,7 @@ const ISO = {
     async viewForm(id) {
         const form = AppState.appData.isoForms.find(f => f.id === id);
         if (!form) {
-            Notification.error('النموذج غير موجود');
+            Notification.error(typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.notFound', 'النموذج غير موجود') : 'النموذج غير موجود');
             return;
         }
 
@@ -1246,22 +1246,22 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">تفاصيل النموذج</h2>
+                    <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.detailsTitle', 'تفاصيل النموذج') : 'تفاصيل النموذج'}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-3">
-                        <div><strong>كود ISO:</strong> ${Utils.escapeHTML(form.isoCode || '')}</div>
-                        <div><strong>اسم النموذج:</strong> ${Utils.escapeHTML(form.name || '')}</div>
-                        <div><strong>النوع:</strong> ${Utils.escapeHTML(form.type || '')}</div>
-                        <div><strong>تاريخ الإنشاء:</strong> ${Utils.formatDate(form.createdAt)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.table.code', 'كود ISO:') : 'كود ISO:'}</strong> ${Utils.escapeHTML(form.isoCode || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.table.name', 'اسم النموذج:') : 'اسم النموذج:'}</strong> ${Utils.escapeHTML(form.name || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.type', 'النوع:') : 'النوع:'}</strong> ${Utils.escapeHTML(form.type || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.createdAt', 'تاريخ الإنشاء:') : 'تاريخ الإنشاء:'}</strong> ${Utils.formatDate(form.createdAt)}</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
-                    <button type="button" onclick="ISO.showFormForm(${JSON.stringify(form).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">تعديل</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
+                    <button type="button" onclick="ISO.showFormForm(${JSON.stringify(form).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}</button>
                 </div>
             </div>
         `;
@@ -1278,38 +1278,36 @@ const ISO = {
         return `
             <div class="content-card">
                 <div class="card-header">
-                    <h2 class="card-title"><i class="fas fa-hard-hat ml-2"></i>ISO 45001 - السلامة والصحة المهنية</h2>
+                    <h2 class="card-title"><i class="fas fa-hard-hat ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.compliance.iso45001Title', 'ISO 45001 - السلامة والصحة المهنية') : 'ISO 45001 - السلامة والصحة المهنية'}</h2>
                 </div>
                 <div class="card-body">
                     <div class="space-y-4">
                         <p class="text-gray-700">
-                            يركز هذا القسم على متطلبات نظام إدارة السلامة والصحة المهنية (OH&S) وقًا لمعيار ISO 45001.
-                            يهد إلى تمكين المنظمة من توير أماكن عمل آمنة وصحية، ومنع الإصابات والأمراض المرتبطة بالعمل،
-                            بالإضاة إلى التحسين المستمر لأداء السلامة والصحة المهنية.
+                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.desc', 'يركز هذا القسم على متطلبات نظام إدارة السلامة والصحة المهنية (OH&S) وفقًا لمعيار ISO 45001. يهدف إلى تمكين المنظمة من توفير أماكن عمل آمنة وصحية، ومنع الإصابات والأمراض المرتبطة بالعمل، بالإضافة إلى التحسين المستمر لأداء السلامة والصحة المهنية.') : 'يركز هذا القسم على متطلبات نظام إدارة السلامة والصحة المهنية (OH&S) وفقًا لمعيار ISO 45001. يهدف إلى تمكين المنظمة من توفير أماكن عمل آمنة وصحية، ومنع الإصابات والأمراض المرتبطة بالعمل، بالإضافة إلى التحسين المستمر لأداء السلامة والصحة المهنية.'}
                         </p>
-                        <h3 class="font-semibold text-lg mt-4 mb-2">العناصر الرئيسية:</h3>
+                        <h3 class="font-semibold text-lg mt-4 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.elementsTitle', 'العناصر الرئيسية:') : 'العناصر الرئيسية:'}</h3>
                         <ul class="list-disc list-inside text-gray-700 space-y-2">
-                            <li>السياق التنظيمي</li>
-                            <li>القيادة ومشاركة العاملين</li>
-                            <li>التخطيط (تحديد المخاطر والرص، الأهدا)</li>
-                            <li>الدعم (الموارد، الكاءة، الوعي، الاتصال، المعلومات الموثقة)</li>
-                            <li>التشغيل (التخطيط والتحكم التشغيلي، إدارة التغيير، المشتريات، المقاولون، الاستعداد للطوارئ)</li>
-                            <li>تقييم الأداء (المراقبة والقياس، تقييم الامتثال، التدقيق الداخلي، مراجعة الإدارة)</li>
-                            <li>التحسين (عدم المطابقة والإجراءات التصحيحية، التحسين المستمر)</li>
+                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.el1', 'السياق التنظيمي') : 'السياق التنظيمي'}</li>
+                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.el2', 'القيادة ومشاركة العاملين') : 'القيادة ومشاركة العاملين'}</li>
+                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.el3', 'التخطيط (تحديد المخاطر والفرص، الأهداف)') : 'التخطيط (تحديد المخاطر والفرص، الأهداف)'}</li>
+                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.el4', 'الدعم (الموارد، الكفاءة، الوعي، الاتصال، المعلومات الموثقة)') : 'الدعم (الموارد، الكفاءة، الوعي، الاتصال، المعلومات الموثقة)'}</li>
+                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.el5', 'التشغيل (التخطيط والتحكم التشغيلي، إدارة التغيير، المشتريات، المقاولون، الاستعداد للطوارئ)') : 'التشغيل (التخطيط والتحكم التشغيلي، إدارة التغيير، المشتريات، المقاولون، الاستعداد للطوارئ)'}</li>
+                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.el6', 'تقييم الأداء (المراقبة والقياس، تقييم الامتثال، التدقيق الداخلي، مراجعة الإدارة)') : 'تقييم الأداء (المراقبة والقياس، تقييم الامتثال، التدقيق الداخلي، مراجعة الإدارة)'}</li>
+                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.el7', 'التحسين (عدم المطابقة والإجراءات التصحيحية، التحسين المستمر)') : 'التحسين (عدم المطابقة والإجراءات التصحيحية، التحسين المستمر)'}</li>
                         </ul>
                         <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="bg-blue-50 border border-blue-200 rounded p-4">
-                                <h4 class="font-semibold text-blue-800 mb-2">الأهدا (${objectives.length})</h4>
-                                <p class="text-sm text-gray-700 mb-3">إدارة أهدا السلامة والصحة المهنية</p>
+                                <h4 class="font-semibold text-blue-800 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.objectivesTitle', 'الأهداف') : 'الأهداف'} (${objectives.length})</h4>
+                                <p class="text-sm text-gray-700 mb-3">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.objectivesDesc', 'إدارة أهداف السلامة والصحة المهنية') : 'إدارة أهداف السلامة والصحة المهنية'}</p>
                                 <button class="btn-secondary w-full" onclick="ISO.showHSEObjectiveForm()">
-                                    <i class="fas fa-bullseye ml-2"></i>إدارة الأهدا
+                                    <i class="fas fa-bullseye ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.manageObjectivesBtn', 'إدارة الأهداف') : 'إدارة الأهداف'}
                                 </button>
                             </div>
                             <div class="bg-green-50 border border-green-200 rounded p-4">
-                                <h4 class="font-semibold text-green-800 mb-2">تقييمات المخاطر (${riskAssessments.length})</h4>
-                                <p class="text-sm text-gray-700 mb-3">تقييم مخاطر السلامة والصحة المهنية</p>
+                                <h4 class="font-semibold text-green-800 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.risksTitle', 'تقييمات المخاطر') : 'تقييمات المخاطر'} (${riskAssessments.length})</h4>
+                                <p class="text-sm text-gray-700 mb-3">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.risksDesc', 'تقييم مخاطر السلامة والصحة المهنية') : 'تقييم مخاطر السلامة والصحة المهنية'}</p>
                                 <button class="btn-secondary w-full" onclick="ISO.showHSERiskAssessmentForm()">
-                                    <i class="fas fa-shield-alt ml-2"></i>تقييم المخاطر
+                                    <i class="fas fa-shield-alt ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.manageRisksBtn', 'تقييم المخاطر') : 'تقييم المخاطر'}
                                 </button>
                             </div>
                         </div>
@@ -1326,38 +1324,36 @@ const ISO = {
         return `
             <div class="content-card">
                 <div class="card-header">
-                    <h2 class="card-title"><i class="fas fa-leaf ml-2"></i>ISO 14001 - إدارة البيئة</h2>
+                    <h2 class="card-title"><i class="fas fa-leaf ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.compliance.iso14001Title', 'ISO 14001 - إدارة البيئة') : 'ISO 14001 - إدارة البيئة'}</h2>
                 </div>
                 <div class="card-body">
                     <div class="space-y-4">
                         <p class="text-gray-700">
-                            يحدد هذا القسم متطلبات نظام إدارة البيئة (EMS) وقًا لمعيار ISO 14001.
-                            يهد إلى مساعدة المنظمات على تحسين أدائها البيئي من خلال إدارة مسؤولياتها البيئية
-                            بطريقة منهجية تساهم ي ركيزة الاستدامة.
+                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.desc', 'يحدد هذا القسم متطلبات نظام إدارة البيئة (EMS) وفقًا لمعيار ISO 14001. يهدف إلى مساعدة المنظمات على تحسين أدائها البيئي من خلال إدارة مسؤولياتها البيئية بطريقة منهجية تساهم في ركيزة الاستدامة.') : 'يحدد هذا القسم متطلبات نظام إدارة البيئة (EMS) وفقًا لمعيار ISO 14001. يهدف إلى مساعدة المنظمات على تحسين أدائها البيئي من خلال إدارة مسؤولياتها البيئية بطريقة منهجية تساهم في ركيزة الاستدامة.'}
                         </p>
-                        <h3 class="font-semibold text-lg mt-4 mb-2">العناصر الرئيسية:</h3>
+                        <h3 class="font-semibold text-lg mt-4 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.elementsTitle', 'العناصر الرئيسية:') : 'العناصر الرئيسية:'}</h3>
                         <ul class="list-disc list-inside text-gray-700 space-y-2">
-                            <li>السياق التنظيمي</li>
-                            <li>القيادة</li>
-                            <li>التخطيط (تحديد الجوانب البيئية، الالتزامات الامتثالية، الأهدا البيئية)</li>
-                            <li>الدعم (الموارد، الكاءة، الوعي، الاتصال، المعلومات الموثقة)</li>
-                            <li>التشغيل (التخطيط والتحكم التشغيلي، الاستعداد للطوارئ والاستجابة لها)</li>
-                            <li>تقييم الأداء (المراقبة والقياس، تقييم الامتثال، التدقيق الداخلي، مراجعة الإدارة)</li>
-                            <li>التحسين (عدم المطابقة والإجراءات التصحيحية، التحسين المستمر)</li>
+                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.el1', 'السياق التنظيمي') : 'السياق التنظيمي'}</li>
+                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.el2', 'القيادة') : 'القيادة'}</li>
+                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.el3', 'التخطيط (تحديد الجوانب البيئية، الالتزامات الامتثالية، الأهداف البيئية)') : 'التخطيط (تحديد الجوانب البيئية، الالتزامات الامتثالية، الأهداف البيئية)'}</li>
+                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.el4', 'الدعم (الموارد، الكفاءة، الوعي، الاتصال، المعلومات الموثقة)') : 'الدعم (الموارد، الكفاءة، الوعي، الاتصال، المعلومات الموثقة)'}</li>
+                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.el5', 'التشغيل (التخطيط والتحكم التشغيلي، الاستعداد للطوارئ والاستجابة لها)') : 'التشغيل (التخطيط والتحكم التشغيلي، الاستعداد للطوارئ والاستجابة لها)'}</li>
+                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.el6', 'تقييم الأداء (المراقبة والقياس، تقييم الامتثال، التدقيق الداخلي، مراجعة الإدارة)') : 'تقييم الأداء (المراقبة والقياس، تقييم الامتثال، التدقيق الداخلي، مراجعة الإدارة)'}</li>
+                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.el7', 'التحسين (عدم المطابقة والإجراءات التصحيحية، التحسين المستمر)') : 'التحسين (عدم المطابقة والإجراءات التصحيحية، التحسين المستمر)'}</li>
                         </ul>
                         <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="bg-green-50 border border-green-200 rounded p-4">
-                                <h4 class="font-semibold text-green-800 mb-2">الجوانب البيئية (${aspects.length})</h4>
-                                <p class="text-sm text-gray-700 mb-3">إدارة الجوانب البيئية وتأثيراتها</p>
+                                <h4 class="font-semibold text-green-800 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.aspectsTitle', 'الجوانب البيئية') : 'الجوانب البيئية'} (${aspects.length})</h4>
+                                <p class="text-sm text-gray-700 mb-3">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.aspectsDesc', 'إدارة الجوانب البيئية وتأثيراتها') : 'إدارة الجوانب البيئية وتأثيراتها'}</p>
                                 <button class="btn-secondary w-full" onclick="ISO.showEnvironmentalAspectsForm()">
-                                    <i class="fas fa-globe ml-2"></i>إدارة الجوانب البيئية
+                                    <i class="fas fa-globe ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.manageAspectsBtn', 'إدارة الجوانب البيئية') : 'إدارة الجوانب البيئية'}
                                 </button>
                             </div>
                             <div class="bg-blue-50 border border-blue-200 rounded p-4">
-                                <h4 class="font-semibold text-blue-800 mb-2">المراقبة البيئية (${monitoring.length})</h4>
-                                <p class="text-sm text-gray-700 mb-3">تتبع ومراقبة الأداء البيئي</p>
+                                <h4 class="font-semibold text-blue-800 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.monitoringTitle', 'المراقبة البيئية') : 'المراقبة البيئية'} (${monitoring.length})</h4>
+                                <p class="text-sm text-gray-700 mb-3">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.monitoringDesc', 'تتبع ومراقبة الأداء البيئي') : 'تتبع ومراقبة الأداء البيئي'}</p>
                                 <button class="btn-secondary w-full" onclick="ISO.showEnvironmentalMonitoringForm()">
-                                    <i class="fas fa-chart-line ml-2"></i>المراقبة البيئية
+                                    <i class="fas fa-chart-line ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.manageMonitoringBtn', 'المراقبة البيئية') : 'المراقبة البيئية'}
                                 </button>
                             </div>
                         </div>
@@ -1376,16 +1372,16 @@ const ISO = {
             <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800 flex items-center">
-                        <i class="fas fa-search-plus text-blue-600 ml-3"></i>مركز التدقيق والجودة
+                        <i class="fas fa-search-plus text-blue-600 ml-3"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.headerTitle', 'مركز التدقيق والمراجعة (Audits & CAPA)') : 'مركز التدقيق والمراجعة (Audits & CAPA)'}
                     </h2>
-                    <p class="text-sm text-gray-500 mt-1">إدارة عمليات التدقيق وحالات عدم المطابقة والإجراءات التصحيحية</p>
+                    <p class="text-sm text-gray-500 mt-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.headerDesc', 'إدارة عمليات التدقيق الداخلي والخارجي ومتابعة حالات عدم المطابقة والإجراءات التصحيحية') : 'إدارة عمليات التدقيق الداخلي والخارجي ومتابعة حالات عدم المطابقة والإجراءات التصحيحية'}</p>
                 </div>
                 <div class="flex gap-2">
                     <button class="btn bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all" onclick="ISO.showAuditForm()">
-                        <i class="fas fa-plus text-blue-600"></i>جدولة تدقيق
+                        <i class="fas fa-plus text-blue-600"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.addAuditBtn', 'جدولة تدقيق') : 'جدولة تدقيق'}
                     </button>
                     <button class="btn bg-blue-600 text-white hover:bg-blue-700 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all" onclick="ISO.showNonConformityForm()">
-                        <i class="fas fa-exclamation-triangle"></i>تسجيل حالة عدم مطابقة
+                        <i class="fas fa-exclamation-triangle"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.addNcBtn', 'تسجيل حالة عدم مطابقة') : 'تسجيل حالة عدم مطابقة'}
                     </button>
                 </div>
             </div>
@@ -1398,15 +1394,15 @@ const ISO = {
                             <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center ml-2">
                                 <i class="fas fa-clipboard-check"></i>
                             </div>
-                            سجل عمليات التدقيق
+                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.auditLogTitle', 'سجل عمليات التدقيق') : 'سجل عمليات التدقيق'}
                         </h3>
-                        <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full border border-blue-200">${audits.length} عمليات</span>
+                        <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full border border-blue-200">${audits.length}</span>
                     </div>
                     <div class="card-body p-0 flex-1 overflow-y-auto" style="max-height: 500px;">
                         ${audits.length === 0 ? `
                             <div class="p-12 text-center flex flex-col items-center justify-center h-full">
                                 <div class="w-16 h-16 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mb-3"><i class="fas fa-clipboard text-2xl"></i></div>
-                                <h4 class="text-gray-600 font-bold mb-1">لا توجد سجلات تدقيق</h4>
+                                <h4 class="text-gray-600 font-bold mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.noAudits', 'لا توجد سجلات تدقيق') : 'لا توجد سجلات تدقيق'}</h4>
                                 <p class="text-gray-400 text-xs">قم بجدولة أول عملية تدقيق لتقييم النظام</p>
                             </div>
                         ` : `
@@ -1416,7 +1412,7 @@ const ISO = {
                                     const isScheduled = audit.status === 'مجدول' || audit.status === 'Scheduled';
                                     
                                     let statusColor = isCompleted ? 'green' : (isScheduled ? 'blue' : 'amber');
-                                    let typeIcon = audit.type?.includes('خارجي') ? 'fa-building' : 'fa-users-cog';
+                                    let typeIcon = audit.type?.includes('خارجي') || audit.type?.includes('External') ? 'fa-building' : 'fa-users-cog';
                                     
                                     return `
                                     <div class="p-4 hover:bg-gray-50 transition-colors flex items-start justify-between group">
@@ -1430,8 +1426,8 @@ const ISO = {
                                                     <span class="bg-${statusColor}-100 text-${statusColor}-800 text-[10px] font-bold px-2 py-0.5 rounded border border-${statusColor}-200">${audit.status}</span>
                                                 </div>
                                                 <div class="text-xs text-gray-500 flex items-center gap-3">
-                                                    <span title="تاريخ التدقيق"><i class="far fa-calendar ml-1"></i>${Utils.formatDate(audit.date)}</span>
-                                                    <span title="المدقق"><i class="fas fa-user-tie ml-1"></i>${Utils.escapeHTML(audit.auditor)}</span>
+                                                    <span title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.auditCard.date', 'تاريخ التدقيق') : 'تاريخ التدقيق'}"><i class="far fa-calendar ml-1"></i>${Utils.formatDate(audit.date)}</span>
+                                                    <span title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.auditCard.auditor', 'المدقق') : 'المدقق'}"><i class="fas fa-user-tie ml-1"></i>${Utils.escapeHTML(audit.auditor)}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1453,18 +1449,18 @@ const ISO = {
                             <div class="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center ml-2">
                                 <i class="fas fa-exclamation-triangle"></i>
                             </div>
-                            تتبع إجراءات CAPA
+                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.capaTitle', 'سجل CAPA') : 'سجل CAPA'}
                         </h3>
                         <div class="flex gap-1">
-                            <span class="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-1 rounded-md border border-red-200" title="حالات عدم مطابقة">${nonConformities.length} NC</span>
-                            <span class="bg-orange-100 text-orange-800 text-[10px] font-bold px-2 py-1 rounded-md border border-orange-200" title="إجراءات تصحيحية">${actions.length} CA</span>
+                            <span class="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-1 rounded-md border border-red-200" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.capaCard.ncType', 'حالات عدم مطابقة') : 'حالات عدم مطابقة'}">${nonConformities.length} NC</span>
+                            <span class="bg-orange-100 text-orange-800 text-[10px] font-bold px-2 py-1 rounded-md border border-orange-200" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.capaCard.caType', 'إجراءات تصحيحية') : 'إجراءات تصحيحية'}">${actions.length} CA</span>
                         </div>
                     </div>
                     <div class="card-body p-0 flex-1 overflow-y-auto bg-gray-50/30" style="max-height: 500px;">
                         ${nonConformities.length === 0 && actions.length === 0 ? `
                             <div class="p-12 text-center flex flex-col items-center justify-center h-full">
                                 <div class="w-16 h-16 bg-green-50 text-green-400 rounded-full flex items-center justify-center mb-3"><i class="fas fa-shield-alt text-2xl"></i></div>
-                                <h4 class="text-gray-600 font-bold mb-1">لا توجد حالات مسجلة</h4>
+                                <h4 class="text-gray-600 font-bold mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.noCapa', 'لا توجد سجلات عدم مطابقة أو إجراءات تصحيحية') : 'لا توجد سجلات عدم مطابقة أو إجراءات تصحيحية'}</h4>
                                 <p class="text-gray-400 text-xs">نظام الجودة يعمل بشكل مثالي دون ملاحظات.</p>
                             </div>
                         ` : `
@@ -1472,7 +1468,7 @@ const ISO = {
                                 <!-- Non-Conformities Section -->
                                 ${nonConformities.length > 0 ? `
                                     <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 pb-2 border-b border-gray-200 flex items-center gap-2">
-                                        <i class="fas fa-bug text-red-400"></i> حالات عدم المطابقة (NC)
+                                        <i class="fas fa-bug text-red-400"></i> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.capaCard.ncType', 'حالات عدم مطابقة (NC)') : 'حالات عدم مطابقة (NC)'}
                                     </h4>
                                     <div class="space-y-3 mb-6">
                                         ${nonConformities.map(nc => {
@@ -1496,7 +1492,7 @@ const ISO = {
                                 <!-- Corrective Actions Section -->
                                 ${actions.length > 0 ? `
                                     <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 pb-2 border-b border-gray-200 flex items-center gap-2">
-                                        <i class="fas fa-tools text-orange-400"></i> الإجراءات التصحيحية (CA)
+                                        <i class="fas fa-tools text-orange-400"></i> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.capaCard.caType', 'الإجراءات التصحيحية (CA)') : 'الإجراءات التصحيحية (CA)'}
                                     </h4>
                                     <div class="space-y-3">
                                         ${actions.map(action => {
@@ -1535,7 +1531,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل هد' : 'إضافة هد HSE جديد'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.editTitle', 'تعديل هدف') : 'تعديل هدف') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.addTitle', 'إضافة هدف HSE جديد') : 'إضافة هدف HSE جديد')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1543,30 +1539,30 @@ const ISO = {
                 <div class="modal-body">
                     <form id="hse-objective-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الهد *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.nameLabel', 'الهدف *') : 'الهدف *'}</label>
                             <input type="text" id="objective-name" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="مثال: تقليل الإصابات بنسبة 20%">
+                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.namePlaceholder', 'مثال: تقليل الإصابات بنسبة 20%') : 'مثال: تقليل الإصابات بنسبة 20%'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الوصف *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.descLabel', 'الوصف *') : 'الوصف *'}</label>
                             <textarea id="objective-description" required class="form-input" rows="4" 
-                                placeholder="وصف تفصيلي للحد الهدفي">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.descPlaceholder', 'وصف تفصيلي للهدف') : 'وصف تفصيلي للهدف'}">${Utils.escapeHTML(data?.description || '')}</textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الانتهاء *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.dueDateLabel', 'تاريخ الانتهاء *') : 'تاريخ الانتهاء *'}</label>
                             <input type="date" id="objective-due-date" required class="form-input" 
                                 value="${data?.dueDate ? new Date(data.dueDate).toISOString().slice(0, 10) : ''}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">المسؤول *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.respLabel', 'المسؤول *') : 'المسؤول *'}</label>
                             <input type="text" id="objective-responsible" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.responsible || '')}" placeholder="اسم المسؤول">
+                                value="${Utils.escapeHTML(data?.responsible || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.respPlaceholder', 'اسم المسؤول') : 'اسم المسؤول'}">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-objective-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-objective-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -1658,7 +1654,7 @@ const ISO = {
     },
 
     async showHSERiskAssessmentForm(data = null) {
-        Notification.info('سيتم إضافة نموذج تقييم المخاطر HSE قريباً');
+        Notification.info(typeof I18n !== 'undefined' ? I18n.t('module.iso.risks.comingSoon', 'سيتم إضافة نموذج تقييم المخاطر HSE قريباً') : 'سيتم إضافة نموذج تقييم المخاطر HSE قريباً');
     },
 
     async showEnvironmentalAspectsForm(data = null) {
@@ -1667,7 +1663,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل جانب بيئي' : 'إضافة جانب بيئي جديد'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.editTitle', 'تعديل جانب بيئي') : 'تعديل جانب بيئي') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.addTitle', 'إضافة جانب بيئي جديد') : 'إضافة جانب بيئي جديد')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1675,29 +1671,29 @@ const ISO = {
                 <div class="modal-body">
                     <form id="environmental-aspect-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">اسم الجانب البيئي *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.nameLabel', 'اسم الجانب البيئي *') : 'اسم الجانب البيئي *'}</label>
                             <input type="text" id="aspect-name" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="مثال: استهلاك المياه">
+                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.namePlaceholder', 'مثال: استهلاك المياه') : 'مثال: استهلاك المياه'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الوصف *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.descLabel', 'الوصف *') : 'الوصف *'}</label>
                             <textarea id="aspect-description" required class="form-input" rows="4" 
-                                placeholder="وصف تفصيلي للجانب البيئي">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.descPlaceholder', 'وصف تفصيلي للجانب البيئي') : 'وصف تفصيلي للجانب البيئي'}">${Utils.escapeHTML(data?.description || '')}</textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">التأثير *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.impactLabel', 'التأثير *') : 'التأثير *'}</label>
                             <select id="aspect-impact" required class="form-input">
-                                <option value="">اختر التأثير</option>
-                                <option value="منخض" ${data?.impact === 'منخض' ? 'selected' : ''}>منخض</option>
-                                <option value="متوسط" ${data?.impact === 'متوسط' ? 'selected' : ''}>متوسط</option>
-                                <option value="عالي" ${data?.impact === 'عالي' ? 'selected' : ''}>عالي</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.selectImpactOption', 'اختر التأثير') : 'اختر التأثير'}</option>
+                                <option value="منخض" ${data?.impact === 'منخض' || data?.impact === 'منخفض' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.impactLow', 'منخفض') : 'منخفض'}</option>
+                                <option value="متوسط" ${data?.impact === 'متوسط' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.impactMedium', 'متوسط') : 'متوسط'}</option>
+                                <option value="عالي" ${data?.impact === 'عالي' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.impactHigh', 'عالي') : 'عالي'}</option>
                             </select>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-aspect-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-aspect-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -1786,7 +1782,7 @@ const ISO = {
     },
 
     async showEnvironmentalMonitoringForm(data = null) {
-        Notification.info('سيتم إضافة نموذج المراقبة البيئية قريباً');
+        Notification.info(typeof I18n !== 'undefined' ? I18n.t('module.iso.monitoring.comingSoon', 'سيتم إضافة نموذج المراقبة البيئية قريباً') : 'سيتم إضافة نموذج المراقبة البيئية قريباً');
     },
 
     async showAuditForm(data = null) {
@@ -1795,7 +1791,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل تدقيق' : 'إضاة تدقيق جديد'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.editTitle', 'تعديل تدقيق') : 'تعديل تدقيق') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.addTitle', 'إضافة تدقيق جديد') : 'إضافة تدقيق جديد')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1803,42 +1799,42 @@ const ISO = {
                 <div class="modal-body">
                     <form id="audit-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">نوع التدقيق *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.typeLabel', 'نوع التدقيق *') : 'نوع التدقيق *'}</label>
                             <select id="audit-type" required class="form-input">
-                                <option value="">اختر النوع</option>
-                                <option value="تدقيق داخلي" ${data?.type === 'تدقيق داخلي' ? 'selected' : ''}>تدقيق داخلي</option>
-                                <option value="تدقيق خارجي" ${data?.type === 'تدقيق خارجي' ? 'selected' : ''}>تدقيق خارجي</option>
-                                <option value="مراجعة إدارة" ${data?.type === 'مراجعة إدارة' ? 'selected' : ''}>مراجعة إدارة</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.selectTypeOption', 'اختر النوع') : 'اختر النوع'}</option>
+                                <option value="تدقيق داخلي" ${data?.type === 'تدقيق داخلي' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.typeInternal', 'تدقيق داخلي') : 'تدقيق داخلي'}</option>
+                                <option value="تدقيق خارجي" ${data?.type === 'تدقيق خارجي' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.typeExternal', 'تدقيق خارجي') : 'تدقيق خارجي'}</option>
+                                <option value="مراجعة إدارة" ${data?.type === 'مراجعة إدارة' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.typeManagementReview', 'مراجعة إدارة') : 'مراجعة إدارة'}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ التدقيق *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.dateLabel', 'تاريخ التدقيق *') : 'تاريخ التدقيق *'}</label>
                             <input type="date" id="audit-date" required class="form-input" 
                                 value="${data?.date ? new Date(data.date).toISOString().slice(0, 10) : ''}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">المدقق *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.auditorLabel', 'المدقق *') : 'المدقق *'}</label>
                             <input type="text" id="audit-auditor" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.auditor || '')}" placeholder="اسم المدقق">
+                                value="${Utils.escapeHTML(data?.auditor || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.auditorPlaceholder', 'اسم المدقق') : 'اسم المدقق'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الحالة *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.statusLabel', 'الحالة *') : 'الحالة *'}</label>
                             <select id="audit-status" required class="form-input">
-                                <option value="مخطط" ${data?.status === 'مخطط' ? 'selected' : ''}>مخطط</option>
-                                <option value="قيد التنيذ" ${data?.status === 'قيد التنيذ' ? 'selected' : ''}>قيد التنيذ</option>
-                                <option value="مكتمل" ${data?.status === 'مكتمل' ? 'selected' : ''}>مكتمل</option>
+                                <option value="مخطط" ${data?.status === 'مخطط' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.statusPlanned', 'مخطط') : 'مخطط'}</option>
+                                <option value="قيد التنيذ" ${data?.status === 'قيد التنيذ' || data?.status === 'قيد التنفيذ' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.statusInProgress', 'قيد التنفيذ') : 'قيد التنفيذ'}</option>
+                                <option value="مكتمل" ${data?.status === 'مكتمل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.statusCompleted', 'مكتمل') : 'مكتمل'}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الوص</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.descLabel', 'الوصف') : 'الوصف'}</label>
                             <textarea id="audit-description" class="form-input" rows="4" 
-                                placeholder="وصف تفصيلي للتدقيق">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.descPlaceholder', 'وصف تفصيلي للتدقيق') : 'وصف تفصيلي للتدقيق'}">${Utils.escapeHTML(data?.description || '')}</textarea>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-audit-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-audit-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -1933,7 +1929,7 @@ const ISO = {
     async viewAudit(id) {
         const audit = AppState.appData.hseAudits.find(a => a.id === id);
         if (!audit) {
-            Notification.error('التدقيق غير موجود');
+            Notification.error(typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.notFound', 'التدقيق غير موجود') : 'التدقيق غير موجود');
             return;
         }
 
@@ -1942,22 +1938,22 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">تفاصيل التدقيق</h2>
+                    <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.detailsTitle', 'تفاصيل التدقيق') : 'تفاصيل التدقيق'}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-3">
-                        <div><strong>النوع:</strong> ${Utils.escapeHTML(audit.type)}</div>
-                        <div><strong>التاريخ:</strong> ${Utils.formatDate(audit.date)}</div>
-                        <div><strong>المدقق:</strong> ${Utils.escapeHTML(audit.auditor)}</div>
-                        <div><strong>الحالة:</strong> <span class="badge badge-${audit.status === 'مكتمل' ? 'success' : 'warning'}">${audit.status}</span></div>
-                        <div><strong>الوصف:</strong> ${Utils.escapeHTML(audit.description || '-')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.table.type', 'النوع:') : 'النوع:'}</strong> ${Utils.escapeHTML(audit.type)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.table.date', 'التاريخ:') : 'التاريخ:'}</strong> ${Utils.formatDate(audit.date)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.table.auditor', 'المدقق:') : 'المدقق:'}</strong> ${Utils.escapeHTML(audit.auditor)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.table.status', 'الحالة:') : 'الحالة:'}</strong> <span class="badge badge-${audit.status === 'مكتمل' ? 'success' : 'warning'}">${audit.status}</span></div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.table.desc', 'الوصف:') : 'الوصف:'}</strong> ${Utils.escapeHTML(audit.description || '-')}</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
                 </div>
             </div>
         `;
@@ -1973,7 +1969,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل عدم مطابقة' : 'إضافة عدم مطابقة جديدة'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.editTitle', 'تعديل عدم مطابقة') : 'تعديل عدم مطابقة') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.addTitle', 'إضافة عدم مطابقة جديدة') : 'إضافة عدم مطابقة جديدة')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1981,28 +1977,28 @@ const ISO = {
                 <div class="modal-body">
                     <form id="non-conformity-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ عدم المطابقة *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.date', 'تاريخ عدم المطابقة *') : 'تاريخ عدم المطابقة *'}</label>
                             <input type="date" id="nc-date" required class="form-input" 
                                 value="${data?.date ? new Date(data.date).toISOString().slice(0, 10) : ''}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الوصف *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.desc', 'الوصف *') : 'الوصف *'}</label>
                             <textarea id="nc-description" required class="form-input" rows="4" 
-                                placeholder="وصف تفصيلي لعدم المطابقة">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.descPlaceholder', 'وصف تفصيلي لعدم المطابقة') : 'وصف تفصيلي لعدم المطابقة'}">${Utils.escapeHTML(data?.description || '')}</textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الحالة *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.status', 'الحالة *') : 'الحالة *'}</label>
                             <select id="nc-status" required class="form-input">
-                                <option value="متوحة" ${data?.status === 'متوحة' ? 'selected' : ''}>متوحة</option>
-                                <option value="قيد المعالجة" ${data?.status === 'قيد المعالجة' ? 'selected' : ''}>قيد المعالجة</option>
-                                <option value="مغلق" ${data?.status === 'مغلق' ? 'selected' : ''}>مغلق</option>
+                                <option value="متوحة" ${data?.status === 'متوحة' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.statusOpen', 'متوحة') : 'متوحة'}</option>
+                                <option value="قيد المعالجة" ${data?.status === 'قيد المعالجة' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.statusInProgress', 'قيد المعالجة') : 'قيد المعالجة'}</option>
+                                <option value="مغلق" ${data?.status === 'مغلق' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.statusClosed', 'مغلق') : 'مغلق'}</option>
                             </select>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-nc-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-nc-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -2102,20 +2098,20 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">تفاصيل عدم المطابقة</h2>
+                    <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.detailsTitle', 'تفاصيل عدم المطابقة') : 'تفاصيل عدم المطابقة'}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-3">
-                        <div><strong>التاريخ:</strong> ${Utils.formatDate(nc.date)}</div>
-                        <div><strong>الوصف:</strong> ${Utils.escapeHTML(nc.description)}</div>
-                        <div><strong>الحالة:</strong> <span class="badge badge-${nc.status === 'مغلق' ? 'success' : 'danger'}">${nc.status}</span></div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.table.date', 'التاريخ:') : 'التاريخ:'}</strong> ${Utils.formatDate(nc.date)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.table.desc', 'الوصف:') : 'الوصف:'}</strong> ${Utils.escapeHTML(nc.description)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.table.status', 'الحالة:') : 'الحالة:'}</strong> <span class="badge badge-${nc.status === 'مغلق' ? 'success' : 'danger'}">${nc.status}</span></div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
                 </div>
             </div>
         `;
@@ -2131,7 +2127,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل إجراء تصحيحي' : 'إضافة إجراء تصحيحي جديد'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.editTitle', 'تعديل إجراء تصحيحي') : 'تعديل إجراء تصحيحي') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.addTitle', 'إضافة إجراء تصحيحي جديد') : 'إضافة إجراء تصحيحي جديد')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -2139,32 +2135,32 @@ const ISO = {
                 <div class="modal-body">
                     <form id="corrective-action-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الوصف *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.desc', 'الوصف *') : 'الوصف *'}</label>
                             <textarea id="ca-description" required class="form-input" rows="4" 
-                                placeholder="وصف تفصيلي للإجراء التصحيحي">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.descPlaceholder', 'وصف تفصيلي للإجراء التصحيحي') : 'وصف تفصيلي للإجراء التصحيحي'}">${Utils.escapeHTML(data?.description || '')}</textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">المسؤول *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.responsible', 'المسؤول *') : 'المسؤول *'}</label>
                             <input type="text" id="ca-responsible" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.responsible || '')}" placeholder="اسم المسؤول">
+                                value="${Utils.escapeHTML(data?.responsible || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.respPlaceholder', 'اسم المسؤول') : 'اسم المسؤول'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الانتهاء *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.dueDate', 'تاريخ الانتهاء *') : 'تاريخ الانتهاء *'}</label>
                             <input type="date" id="ca-due-date" required class="form-input" 
                                 value="${data?.dueDate ? new Date(data.dueDate).toISOString().slice(0, 10) : ''}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الحالة *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.status', 'الحالة *') : 'الحالة *'}</label>
                             <select id="ca-status" required class="form-input">
-                                <option value="قيد التنفيذ" ${data?.status === 'قيد التنيذ' ? 'selected' : ''}>قيد التنيذ</option>
-                                <option value="مكتمل" ${data?.status === 'مكتمل' ? 'selected' : ''}>مكتمل</option>
+                                <option value="قيد التنفيذ" ${data?.status === 'قيد التنيذ' || data?.status === 'قيد التنفيذ' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.statusInProgress', 'قيد التنفيذ') : 'قيد التنفيذ'}</option>
+                                <option value="مكتمل" ${data?.status === 'مكتمل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.statusCompleted', 'مكتمل') : 'مكتمل'}</option>
                             </select>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-ca-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-ca-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -2266,21 +2262,21 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">تفاصيل الإجراء التصحيحي</h2>
+                    <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.detailsTitle', 'تفاصيل الإجراء التصحيحي') : 'تفاصيل الإجراء التصحيحي'}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-3">
-                        <div><strong>الوصف:</strong> ${Utils.escapeHTML(ca.description)}</div>
-                        <div><strong>المسؤول:</strong> ${Utils.escapeHTML(ca.responsible)}</div>
-                        <div><strong>تاريخ الانتهاء:</strong> ${Utils.formatDate(ca.dueDate)}</div>
-                        <div><strong>الحالة:</strong> <span class="badge badge-${ca.status === 'مكتمل' ? 'success' : 'warning'}">${ca.status}</span></div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.table.desc', 'الوصف:') : 'الوصف:'}</strong> ${Utils.escapeHTML(ca.description)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.table.responsible', 'المسؤول:') : 'المسؤول:'}</strong> ${Utils.escapeHTML(ca.responsible)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.table.dueDate', 'تاريخ الانتهاء:') : 'تاريخ الانتهاء:'}</strong> ${Utils.formatDate(ca.dueDate)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.table.status', 'الحالة:') : 'الحالة:'}</strong> <span class="badge badge-${ca.status === 'مكتمل' ? 'success' : 'warning'}">${ca.status}</span></div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
                 </div>
             </div>
         `;
@@ -2299,9 +2295,9 @@ const ISO = {
             <div class="card-header bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-6 py-4 border-0">
                 <h2 class="card-title text-white flex items-center text-xl font-bold m-0">
                     <i class="fas fa-layer-group ml-3 text-2xl opacity-90"></i>
-                    دليل نماذج النظام المدمجة
+                    ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.title', 'دليل نماذج النظام المدمجة') : 'دليل نماذج النظام المدمجة'}
                 </h2>
-                <p class="text-blue-100 text-sm mt-1 mb-0 opacity-80">يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد</p>
+                <p class="text-blue-100 text-sm mt-1 mb-0 opacity-80">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.desc', 'يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد') : 'يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد'}</p>
             </div>
             <div class="card-body bg-gray-50/50 p-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -2321,33 +2317,33 @@ const ISO = {
                             <div class="absolute top-0 right-0 w-1.5 h-full ${matchedCode ? 'bg-gradient-to-b from-green-400 to-green-600' : 'bg-gradient-to-b from-red-400 to-red-600'}"></div>
                             
                             <div class="flex justify-between items-start mb-4">
-                                <h3 class="font-bold text-gray-800 text-lg leading-tight">${form.name}</h3>
+                                <h3 class="font-bold text-gray-800 text-lg leading-tight">${typeof I18n !== 'undefined' ? I18n.t(form.i18nKey, form.name) : form.name}</h3>
                                 <span class="badge ${matchedCode ? 'badge-success bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-2.5 py-1 rounded-full font-semibold text-xs shadow-sm flex items-center whitespace-nowrap">
-                                    ${matchedCode ? '<i class="fas fa-check-circle ml-1"></i> مكود' : '<i class="fas fa-times-circle ml-1"></i> غير معرّف'}
+                                    ${matchedCode ? '<i class="fas fa-check-circle ml-1"></i> ' + (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.coded', 'مكود') : 'مكود') : '<i class="fas fa-times-circle ml-1"></i> ' + (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.notCoded', 'غير معرّف') : 'غير معرّف')}
                                 </span>
                             </div>
                             
                             <div class="text-sm text-gray-600 space-y-2.5 mb-5">
-                                <div class="flex items-center bg-gray-50 rounded p-1.5"><i class="fas fa-puzzle-piece text-gray-400 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">الموديول:</span> <span class="font-semibold mr-auto">${form.module}</span></div>
+                                <div class="flex items-center bg-gray-50 rounded p-1.5"><i class="fas fa-puzzle-piece text-gray-400 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.module', 'الموديول:') : 'الموديول:'}</span> <span class="font-semibold mr-auto">${form.module}</span></div>
                                 ${matchedCode ? `
-                                    <div class="flex items-center bg-blue-50/50 rounded p-1.5"><i class="fas fa-hashtag text-blue-500 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">الكود:</span> <span class="font-mono font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded mr-auto text-xs">${Utils.escapeHTML(matchedCode.code || '')}</span></div>
-                                    <div class="flex items-center bg-purple-50/50 rounded p-1.5"><i class="fas fa-code-branch text-purple-500 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">الإصدار:</span> ${activeVersion ? `<span class="font-bold text-purple-700 mr-auto bg-purple-100 px-1.5 py-0.5 rounded text-xs">v${activeVersion.versionNumber}</span>` : '<span class="text-red-500 mr-auto text-xs font-semibold">لا يوجد إصدار نشط</span>'}</div>
+                                    <div class="flex items-center bg-blue-50/50 rounded p-1.5"><i class="fas fa-hashtag text-blue-500 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.code', 'الكود:') : 'الكود:'}</span> <span class="font-mono font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded mr-auto text-xs">${Utils.escapeHTML(matchedCode.code || '')}</span></div>
+                                    <div class="flex items-center bg-purple-50/50 rounded p-1.5"><i class="fas fa-code-branch text-purple-500 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.version', 'الإصدار:') : 'الإصدار:'}</span> ${activeVersion ? `<span class="font-bold text-purple-700 mr-auto bg-purple-100 px-1.5 py-0.5 rounded text-xs">v${activeVersion.versionNumber}</span>` : '<span class="text-red-500 mr-auto text-xs font-semibold">' + (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.noVersion', 'لا يوجد إصدار نشط') : 'لا يوجد إصدار نشط') + '</span>'}</div>
                                 ` : `
                                     <div class="text-red-600 text-xs bg-red-50 p-2.5 rounded border border-red-100 flex flex-col gap-1 items-center text-center mt-3">
                                         <i class="fas fa-exclamation-triangle text-lg mb-1 opacity-80"></i> 
-                                        <span>قم بتعيين كود ليظهر في <br>تذييل هذا النموذج عند الطباعة</span>
+                                        <span>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.warning', 'قم بتعيين كود ليظهر في <br>تذييل هذا النموذج عند الطباعة') : 'قم بتعيين كود ليظهر في <br>تذييل هذا النموذج عند الطباعة'}</span>
                                     </div>
                                 `}
                             </div>
                             
                             <div class="mt-auto pt-4 border-t border-gray-100 flex justify-end">
                                 ${matchedCode ? `
-                                    <button class="btn-secondary btn-sm flex items-center hover:bg-gray-100 transition-colors w-full justify-center py-2 text-gray-700 font-semibold" onclick="ISO.viewDocumentVersions('${matchedCode.id}')" title="سجل التغييرات">
-                                        <i class="fas fa-history ml-2 text-gray-500"></i> سجل التغييرات
+                                    <button class="btn-secondary btn-sm flex items-center hover:bg-gray-100 transition-colors w-full justify-center py-2 text-gray-700 font-semibold" onclick="ISO.viewDocumentVersions('${matchedCode.id}')" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.history', 'سجل التغييرات') : 'سجل التغييرات'}">
+                                        <i class="fas fa-history ml-2 text-gray-500"></i> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.history', 'سجل التغييرات') : 'سجل التغييرات'}
                                     </button>
                                 ` : `
-                                    <button class="btn-primary btn-sm flex items-center shadow-md hover:shadow-lg transition-all w-full justify-center py-2 bg-gradient-to-r from-blue-600 to-blue-700 border-0" onclick="ISO.quickAssignFormCode('${form.name}', '${form.defaultCode}', '${form.type}', '${form.department}')" title="إنشاء كود سريع">
-                                        <i class="fas fa-plus ml-2"></i> تعيين كود الآن
+                                    <button class="btn-primary btn-sm flex items-center shadow-md hover:shadow-lg transition-all w-full justify-center py-2 bg-gradient-to-r from-blue-600 to-blue-700 border-0" onclick="ISO.quickAssignFormCode('${form.name}', '${form.defaultCode}', '${form.type}', '${form.department}')" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.assignCode', 'إنشاء كود سريع') : 'إنشاء كود سريع'}">
+                                        <i class="fas fa-plus ml-2"></i> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.assignNow', 'تعيين كود الآن') : 'تعيين كود الآن'}
                                     </button>
                                 `}
                             </div>
@@ -2372,8 +2368,8 @@ const ISO = {
                     <div class="card-body">
                         <div class="empty-state">
                             <i class="fas fa-lock text-4xl text-gray-400 mb-4"></i>
-                            <p class="text-gray-600">ليس لديك صلاحية للوصول إلى مركز التكويد والإصدار</p>
-                            <p class="text-sm text-gray-500 mt-2">هذا القسم متاح فقط لمدير النظام</p>
+                            <p class="text-gray-600">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.accessDeniedTitle', 'ليس لديك صلاحية للوصول إلى مركز التكويد والإصدار') : 'ليس لديك صلاحية للوصول إلى مركز التكويد والإصدار'}</p>
+                            <p class="text-sm text-gray-500 mt-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.accessDeniedDesc', 'هذا القسم متاح فقط لمدير النظام') : 'هذا القسم متاح فقط لمدير النظام'}</p>
                         </div>
                     </div>
                 </div>
@@ -2423,13 +2419,13 @@ const ISO = {
                 ${timedOut ? `
                 <div class="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 flex items-center gap-2">
                     <i class="fas fa-clock text-amber-600"></i>
-                    <span class="text-sm text-amber-800">لم يتم تحميل البيانات في الوقت المحدد. اضغط <strong>إعادة تحميل</strong> للمحاولة مرة أخرى.</span>
+                    <span class="text-sm text-amber-800">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.timeoutWarning', 'لم يتم تحميل البيانات في الوقت المحدد. اضغط <strong>إعادة تحميل</strong> للمحاولة مرة أخرى.') : 'لم يتم تحميل البيانات في الوقت المحدد. اضغط <strong>إعادة تحميل</strong> للمحاولة مرة أخرى.'}</span>
                 </div>
                 ` : ''}
                 ${showLoadingIndicator ? `
                 <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 flex items-center gap-2">
                     <i class="fas fa-spinner fa-spin text-blue-600"></i>
-                    <span class="text-sm text-blue-800">جاري تحميل البيانات...</span>
+                    <span class="text-sm text-blue-800">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.loadingData', 'جاري تحميل البيانات...') : 'جاري تحميل البيانات...'}</span>
                 </div>
                 ` : ''}
                 <!-- إحصائيات سريعة + زر إعادة التحميل -->
@@ -2437,20 +2433,20 @@ const ISO = {
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
                             <div class="text-3xl font-bold text-blue-600 mb-2">${documentCodes.length}</div>
-                            <div class="text-sm text-gray-700 font-semibold">أكواد المستندات</div>
+                            <div class="text-sm text-gray-700 font-semibold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.stats.codes', 'أكواد المستندات') : 'أكواد المستندات'}</div>
                         </div>
                         <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
                             <div class="text-3xl font-bold text-green-600 mb-2">${documentVersions.length}</div>
-                            <div class="text-sm text-gray-700 font-semibold">إصدارات المستندات</div>
+                            <div class="text-sm text-gray-700 font-semibold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.stats.versions', 'إصدارات المستندات') : 'إصدارات المستندات'}</div>
                         </div>
                         <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
                             <div class="text-3xl font-bold text-purple-600 mb-2">${documentVersions.filter(v => v.isActive === true || v.isActive === 'true').length}</div>
-                            <div class="text-sm text-gray-700 font-semibold">إصدارات نشطة</div>
+                            <div class="text-sm text-gray-700 font-semibold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.stats.activeVersions', 'إصدارات نشطة') : 'إصدارات نشطة'}</div>
                         </div>
                     </div>
-                    <button type="button" onclick="ISO.reloadCodingCenter()" class="btn-secondary flex items-center gap-2 shrink-0" title="إعادة تحميل البيانات">
+                    <button type="button" onclick="ISO.reloadCodingCenter()" class="btn-secondary flex items-center gap-2 shrink-0" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.reload', 'إعادة تحميل') : 'إعادة تحميل'}">
                         <i class="fas fa-sync-alt"></i>
-                        <span>إعادة تحميل</span>
+                        <span>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.reload', 'إعادة تحميل') : 'إعادة تحميل'}</span>
                     </button>
                 </div>
 
@@ -2490,25 +2486,25 @@ const ISO = {
                     <div class="card-body">
                         <div class="mb-4">
                             <input type="text" id="document-code-search" class="form-input" 
-                                placeholder="بحث في أكواد المستندات..." 
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.searchPlaceholder', 'بحث في أكواد المستندات...') : 'بحث في أكواد المستندات...'}" 
                                 onkeyup="ISO.filterDocumentCodes()">
                         </div>
                         ${documentCodes.length === 0 ? `
                             <div class="empty-state">
-                                <p class="text-gray-500">لا توجد أكواد مستندات مسجلة</p>
+                                <p class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.noCodes', 'لا توجد أكواد مستندات مسجلة') : 'لا توجد أكواد مستندات مسجلة'}</p>
                             </div>
                         ` : `
                             <div class="overflow-x-auto">
                                 <table class="data-table">
                                     <thead>
                                         <tr>
-                                            <th>الكود</th>
-                                            <th>اسم المستند</th>
-                                            <th>نوع المستند</th>
-                                            <th>القسم</th>
-                                            <th>الحالة</th>
-                                            <th>تاريخ الإنشاء</th>
-                                            <th>الإجراءات</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.code', 'الكود') : 'الكود'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.name', 'اسم المستند') : 'اسم المستند'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.type', 'نوع المستند') : 'نوع المستند'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.dept', 'القسم') : 'القسم'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.status', 'الحالة') : 'الحالة'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.createdAt', 'تاريخ الإنشاء') : 'تاريخ الإنشاء'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.actions', 'الإجراءات') : 'الإجراءات'}</th>
                                         </tr>
                                     </thead>
                                     <tbody id="document-codes-table-body">
@@ -2518,16 +2514,16 @@ const ISO = {
                                                 <td>${Utils.escapeHTML(code.documentName || '')}</td>
                                                 <td>${Utils.escapeHTML(code.documentType || '')}</td>
                                                 <td>${Utils.escapeHTML(code.department || '')}</td>
-                                                <td><span class="badge badge-${code.status === 'نشط' ? 'success' : 'warning'}">${Utils.escapeHTML(code.status || '')}</span></td>
+                                                <td><span class="badge badge-${code.status === 'نشط' || code.status === 'Active' ? 'success' : 'warning'}">${Utils.escapeHTML(code.status || '')}</span></td>
                                                 <td>${code.createdAt ? Utils.formatDate(code.createdAt) : '-'}</td>
                                                 <td>
-                                                    <button onclick="ISO.editDocumentCode('${code.id}')" class="btn-icon btn-icon-info" title="تعديل">
+                                                    <button onclick="ISO.editDocumentCode('${code.id}')" class="btn-icon btn-icon-info" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
-                                                    <button onclick="ISO.viewDocumentVersions('${code.id}')" class="btn-icon btn-icon-success" title="عرض الإصدارات">
+                                                    <button onclick="ISO.viewDocumentVersions('${code.id}')" class="btn-icon btn-icon-success" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.viewVersions', 'عرض الإصدارات') : 'عرض الإصدارات'}">
                                                         <i class="fas fa-list"></i>
                                                     </button>
-                                                    <button onclick="ISO.deleteDocumentCode('${code.id}')" class="btn-icon btn-icon-danger" title="حذف">
+                                                    <button onclick="ISO.deleteDocumentCode('${code.id}')" class="btn-icon btn-icon-danger" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.delete', 'حذف') : 'حذف'}">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </td>
@@ -2546,17 +2542,17 @@ const ISO = {
                         <div class="flex items-center justify-between">
                             <h2 class="card-title">
                                 <i class="fas fa-file-alt ml-2"></i>
-                                مركز الإصدار (Issuing Center)
+                                ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.issuingCenterTitle', 'مركز الإصدار (Issuing Center)') : 'مركز الإصدار (Issuing Center)'}
                             </h2>
                             <button class="btn-primary" onclick="ISO.showDocumentVersionForm()">
-                                <i class="fas fa-plus ml-2"></i>إضافة إصدار جديد
+                                <i class="fas fa-plus ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.addVersion', 'إضافة إصدار جديد') : 'إضافة إصدار جديد'}
                             </button>
                         </div>
                     </div>
                     <div class="card-body">
                         <div class="mb-4">
                             <select id="version-filter-code" class="form-input" onchange="ISO.filterDocumentVersions()">
-                                <option value="">جميع الأكواد</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.allCodes', 'جميع الأكواد') : 'جميع الأكواد'}</option>
                                 ${documentCodes.map(code => `
                                     <option value="${code.id}">${Utils.escapeHTML(code.code || '')} - ${Utils.escapeHTML(code.documentName || '')}</option>
                                 `).join('')}
@@ -2564,19 +2560,19 @@ const ISO = {
                         </div>
                         ${documentVersions.length === 0 ? `
                             <div class="empty-state">
-                                <p class="text-gray-500">لا توجد إصدارات مسجلة</p>
+                                <p class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.noVersions', 'لا توجد إصدارات مسجلة') : 'لا توجد إصدارات مسجلة'}</p>
                             </div>
                         ` : `
                             <div class="overflow-x-auto">
                                 <table class="data-table">
                                     <thead>
                                         <tr>
-                                            <th>الكود</th>
-                                            <th>رقم الإصدار</th>
-                                            <th>تاريخ الإصدار</th>
-                                            <th>تاريخ التعديل</th>
-                                            <th>الحالة</th>
-                                            <th>الإجراءات</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.code', 'الكود') : 'الكود'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.versionNum', 'رقم الإصدار') : 'رقم الإصدار'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.issueDate', 'تاريخ الإصدار') : 'تاريخ الإصدار'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.revisionDate', 'تاريخ التعديل') : 'تاريخ التعديل'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.status', 'الحالة') : 'الحالة'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.actions', 'الإجراءات') : 'الإجراءات'}</th>
                                         </tr>
                                     </thead>
                                     <tbody id="document-versions-table-body">
@@ -2590,14 +2586,14 @@ const ISO = {
                                                     <td>${version.revisionDate ? Utils.formatDate(version.revisionDate) : '-'}</td>
                                                     <td>
                                                         <span class="badge badge-${version.isActive === true || version.isActive === 'true' ? 'success' : 'secondary'}">
-                                                            ${version.isActive === true || version.isActive === 'true' ? 'نشط' : 'غير نشط'}
+                                                            ${version.isActive === true || version.isActive === 'true' ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.active', 'نشط') : 'نشط') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.inactive', 'غير نشط') : 'غير نشط')}
                                                         </span>
                                                     </td>
                                                     <td>
-                                                        <button onclick="ISO.editDocumentVersion('${version.id}')" class="btn-icon btn-icon-info" title="تعديل">
+                                                        <button onclick="ISO.editDocumentVersion('${version.id}')" class="btn-icon btn-icon-info" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
-                                                        <button onclick="ISO.reissueDocument('${version.id}')" class="btn-icon btn-icon-warning" title="إعادة إصدار">
+                                                        <button onclick="ISO.reissueDocument('${version.id}')" class="btn-icon btn-icon-warning" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.reissue', 'إعادة إصدار') : 'إعادة إصدار'}">
                                                             <i class="fas fa-redo"></i>
                                                         </button>
                                                     </td>
@@ -2958,7 +2954,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل كود المستند' : 'إضافة كود مستند جديد'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.editCodeTitle', 'تعديل كود المستند') : 'تعديل كود المستند') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.addCodeTitle', 'إضافة كود مستند جديد') : 'إضافة كود مستند جديد')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -2966,51 +2962,51 @@ const ISO = {
                 <div class="modal-body">
                     <form id="document-code-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الكود *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.codeLabel', 'الكود *') : 'الكود *'}</label>
                             <input type="text" id="doc-code" required class="form-input" 
                                 value="${Utils.escapeHTML(data?.code || '')}" 
-                                placeholder="مثال: DOC-001, FORM-002">
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.codePlaceholder', 'مثال: DOC-001, FORM-002') : 'مثال: DOC-001, FORM-002'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">اسم المستند / الإجراء *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.nameLabel', 'اسم المستند / الإجراء *') : 'اسم المستند / الإجراء *'}</label>
                             <input type="text" id="doc-name" required class="form-input" 
                                 value="${Utils.escapeHTML(data?.documentName || '')}" 
-                                placeholder="اسم المستند">
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.namePlaceholder', 'اسم المستند') : 'اسم المستند'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">نوع المستند *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.typeLabel', 'نوع المستند *') : 'نوع المستند *'}</label>
                             <select id="doc-type" required class="form-input">
-                                <option value="">اختر النوع</option>
-                                <option value="وثيقة" ${data?.documentType === 'وثيقة' ? 'selected' : ''}>وثيقة</option>
-                                <option value="إجراء" ${data?.documentType === 'إجراء' ? 'selected' : ''}>إجراء</option>
-                                <option value="نموذج" ${data?.documentType === 'نموذج' ? 'selected' : ''}>نموذج</option>
-                                <option value="تقرير" ${data?.documentType === 'تقرير' ? 'selected' : ''}>تقرير</option>
-                                <option value="سجل" ${data?.documentType === 'سجل' ? 'selected' : ''}>سجل</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.selectTypeOption', 'اختر النوع') : 'اختر النوع'}</option>
+                                <option value="وثيقة" ${data?.documentType === 'وثيقة' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.typeDoc', 'وثيقة') : 'وثيقة'}</option>
+                                <option value="إجراء" ${data?.documentType === 'إجراء' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.typeProc', 'إجراء') : 'إجراء'}</option>
+                                <option value="نموذج" ${data?.documentType === 'نموذج' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.typeForm', 'نموذج') : 'نموذج'}</option>
+                                <option value="تقرير" ${data?.documentType === 'تقرير' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.typeReport', 'تقرير') : 'تقرير'}</option>
+                                <option value="سجل" ${data?.documentType === 'سجل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.typeRecord', 'سجل') : 'سجل'}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">القسم *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.departmentLabel', 'القسم *') : 'القسم *'}</label>
                             <input type="text" id="doc-department" required class="form-input" 
                                 value="${Utils.escapeHTML(data?.department || '')}" 
-                                placeholder="القسم التابع له">
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.departmentPlaceholder', 'القسم التابع له') : 'القسم التابع له'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الحالة *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusLabel', 'الحالة *') : 'الحالة *'}</label>
                             <select id="doc-status" required class="form-input">
-                                <option value="نشط" ${data?.status === 'نشط' ? 'selected' : ''}>نشط</option>
-                                <option value="معطل" ${data?.status === 'معطل' ? 'selected' : ''}>معطل</option>
+                                <option value="نشط" ${data?.status === 'نشط' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusActive', 'نشط') : 'نشط'}</option>
+                                <option value="معطل" ${data?.status === 'معطل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusInactive', 'معطل') : 'معطل'}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الوصف</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.descLabel', 'الوصف') : 'الوصف'}</label>
                             <textarea id="doc-description" class="form-input" rows="3" 
-                                placeholder="وصف اختياري للمستند">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.descPlaceholder', 'وصف اختياري للمستند') : 'وصف اختياري للمستند'}">${Utils.escapeHTML(data?.description || '')}</textarea>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-doc-code-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-doc-code-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -3153,7 +3149,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل إصدار المستند' : 'إضافة إصدار جديد'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.editVersionTitle', 'تعديل إصدار المستند') : 'تعديل إصدار المستند') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.addVersionTitle', 'إضافة إصدار جديد') : 'إضافة إصدار جديد')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -3161,9 +3157,9 @@ const ISO = {
                 <div class="modal-body">
                     <form id="document-version-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">كود المستند *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.docCodeLabel', 'كود المستند *') : 'كود المستند *'}</label>
                             <select id="version-code-id" required class="form-input" ${data ? 'disabled' : ''}>
-                                <option value="">اختر الكود</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.selectCodeOption', 'اختر الكود') : 'اختر الكود'}</option>
                                 ${codes.map(code => `
                                     <option value="${code.id}" 
                                         ${(data?.documentCodeId === code.id || documentCodeId === code.id) ? 'selected' : ''}>
@@ -3173,44 +3169,44 @@ const ISO = {
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">رقم الإصدار *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.versionNumLabel', 'رقم الإصدار *') : 'رقم الإصدار *'}</label>
                             <input type="text" id="version-number" required class="form-input" 
                                 value="${Utils.escapeHTML(data?.versionNumber || '')}" 
-                                placeholder="مثال: 1.0, 2.1">
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.versionNumPlaceholder', 'مثال: 1.0, 2.1') : 'مثال: 1.0, 2.1'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الإصدار *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.issueDateLabel', 'تاريخ الإصدار *') : 'تاريخ الإصدار *'}</label>
                             <input type="date" id="version-issue-date" required class="form-input" 
                                 value="${data?.issueDate ? new Date(data.issueDate).toISOString().slice(0, 10) : ''}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ التعديل</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.revDateLabel', 'تاريخ التعديل') : 'تاريخ التعديل'}</label>
                             <input type="date" id="version-revision-date" class="form-input" 
                                 value="${data?.revisionDate ? new Date(data.revisionDate).toISOString().slice(0, 10) : ''}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الحالة</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusLabel', 'الحالة') : 'الحالة'}</label>
                             <select id="version-status" class="form-input">
-                                <option value="نشط" ${data?.status === 'نشط' ? 'selected' : ''}>نشط</option>
-                                <option value="معطل" ${data?.status === 'معطل' ? 'selected' : ''}>معطل</option>
+                                <option value="نشط" ${data?.status === 'نشط' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusActive', 'نشط') : 'نشط'}</option>
+                                <option value="معطل" ${data?.status === 'معطل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusInactive', 'معطل') : 'معطل'}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">ملاحظة الإصدار</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.notesLabel', 'ملاحظة الإصدار') : 'ملاحظة الإصدار'}</label>
                             <textarea id="version-notes" class="form-input" rows="3" 
-                                placeholder="ملاحظات حول هذا الإصدار">${Utils.escapeHTML(data?.notes || '')}</textarea>
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.notesPlaceholder', 'ملاحظات حول هذا الإصدار') : 'ملاحظات حول هذا الإصدار'}">${Utils.escapeHTML(data?.notes || '')}</textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">سبب التعديل (سجل التغييرات)</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.changeReasonLabel', 'سبب التعديل (سجل التغييرات)') : 'سبب التعديل (سجل التغييرات)'}</label>
                             <input type="text" id="version-change-reason" class="form-input" 
                                 value="${Utils.escapeHTML(data?.changeReason || '')}" 
-                                placeholder="مثال: تحديث الإجراء بناءً على المراجعة السنوية">
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.changeReasonPlaceholder', 'مثال: تحديث الإجراء بناءً على المراجعة السنوية') : 'مثال: تحديث الإجراء بناءً على المراجعة السنوية'}">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-version-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-version-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -3307,7 +3303,7 @@ const ISO = {
             Loading.hide();
 
             if (!result.success || !result.data) {
-                Notification.error('فشل جلب الإصدارات');
+                Notification.error(typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.fetchVersionsFailed', 'فشل جلب الإصدارات') : 'فشل جلب الإصدارات');
                 return;
             }
 
@@ -3319,7 +3315,7 @@ const ISO = {
             modal.innerHTML = `
                 <div class="modal-content" style="max-width: 800px;">
                     <div class="modal-header">
-                        <h2 class="modal-title">سجل التغييرات والإصدارات: ${Utils.escapeHTML(code?.code || '')} - ${Utils.escapeHTML(code?.documentName || '')}</h2>
+                        <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.versionsTitle', 'سجل التغييرات والإصدارات:') : 'سجل التغييرات والإصدارات:'} ${Utils.escapeHTML(code?.code || '')} - ${Utils.escapeHTML(code?.documentName || '')}</h2>
                         <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                             <i class="fas fa-times"></i>
                         </button>
@@ -3327,24 +3323,24 @@ const ISO = {
                     <div class="modal-body">
                         <div class="mb-4">
                             <button class="btn-primary" onclick="ISO.showDocumentVersionForm(null, '${documentCodeId}'); this.closest('.modal-overlay').remove();">
-                                <i class="fas fa-plus ml-2"></i>إضافة إصدار جديد
+                                <i class="fas fa-plus ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.actions.addVersion', 'إضافة إصدار جديد') : 'إضافة إصدار جديد'}
                             </button>
                         </div>
                         ${versions.length === 0 ? `
                             <div class="empty-state">
-                                <p class="text-gray-500">لا توجد إصدارات لهذا المستند</p>
+                                <p class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.noVersions', 'لا توجد إصدارات لهذا المستند') : 'لا توجد إصدارات لهذا المستند'}</p>
                             </div>
                         ` : `
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>رقم الإصدار</th>
-                                        <th>تاريخ الإصدار</th>
-                                        <th>تاريخ التعديل</th>
-                                        <th>الحالة</th>
-                                        <th>ملاحظات</th>
-                                        <th>سبب التعديل</th>
-                                        <th>الإجراءات</th>
+                                        <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.versionNumLabel', 'رقم الإصدار') : 'رقم الإصدار'}</th>
+                                        <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.issueDateLabel', 'تاريخ الإصدار') : 'تاريخ الإصدار'}</th>
+                                        <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.revDateLabel', 'تاريخ التعديل') : 'تاريخ التعديل'}</th>
+                                        <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusLabel', 'الحالة') : 'الحالة'}</th>
+                                        <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.notesLabel', 'ملاحظات') : 'ملاحظات'}</th>
+                                        <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.changeReasonLabel', 'سبب التعديل') : 'سبب التعديل'}</th>
+                                        <th>${typeof I18n !== 'undefined' ? I18n.t('core.table.actions', 'الإجراءات') : 'الإجراءات'}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -3355,14 +3351,14 @@ const ISO = {
                                             <td>${v.revisionDate ? Utils.formatDate(v.revisionDate) : '-'}</td>
                                             <td>
                                                 <span class="badge badge-${v.isActive === true || v.isActive === 'true' ? 'success' : 'secondary'}">
-                                                    ${v.isActive === true || v.isActive === 'true' ? 'نشط' : 'غير نشط'}
+                                                    ${v.isActive === true || v.isActive === 'true' ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusActive', 'نشط') : 'نشط') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusInactive', 'غير نشط') : 'غير نشط')}
                                                 </span>
                                             </td>
                                             <td>${Utils.escapeHTML(v.notes || '-')}</td>
                                             <td>${Utils.escapeHTML(v.changeReason || '-')}</td>
                                             <td>
                                                 <button onclick="ISO.editDocumentVersion('${v.id}'); this.closest('.modal-overlay').remove();" 
-                                                    class="btn-icon btn-icon-info" title="تعديل">
+                                                    class="btn-icon btn-icon-info" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                             </td>
@@ -3373,7 +3369,7 @@ const ISO = {
                         `}
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
                     </div>
                 </div>
             `;
