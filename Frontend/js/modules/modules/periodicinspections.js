@@ -271,11 +271,12 @@ const PeriodicInspections = {
     },
 
     _t(key, fallback = '') {
-        try {
-            if (typeof I18n !== 'undefined' && I18n && typeof I18n.t === 'function') {
-                return I18n.t(key, fallback);
-            }
-        } catch (_) {}
+        if (window.AppI18n && typeof window.AppI18n.t === 'function') {
+            return window.AppI18n.t(key, fallback);
+        }
+        if (typeof I18n !== 'undefined' && I18n && typeof I18n.t === 'function') {
+            return I18n.t(key, fallback);
+        }
         return fallback;
     },
 
@@ -826,23 +827,23 @@ const PeriodicInspections = {
                 <div class="tabs-nav">
                     <button class="tab-btn ${this.state.currentTab === 'inspections-list' ? 'active' : ''}" data-tab="inspections-list">
                         <i class="fas fa-list ml-2"></i>
-                        ${this._t('module.periodic.tab.inspectionsList', 'قائمة الفحوصات')}
+                        <span data-i18n="module.periodic.tab.inspectionsList">${this._t('module.periodic.tab.inspectionsList', 'قائمة الفحوصات')}</span>
                     </button>
                     <button class="tab-btn ${this.state.currentTab === 'inspection-records' ? 'active' : ''}" data-tab="inspection-records">
                         <i class="fas fa-history ml-2"></i>
-                        ${this._t('module.periodic.tab.inspectionsRecords', 'سجل الفحوصات الدورية')}
+                        <span data-i18n="module.periodic.tab.inspectionsRecords">${this._t('module.periodic.tab.inspectionsRecords', 'سجل الفحوصات الدورية')}</span>
                     </button>
                     <button class="tab-btn ${this.state.currentTab === 'daily-safety-checklist' ? 'active' : ''}" data-tab="daily-safety-checklist">
                         <i class="fas fa-tasks ml-2"></i>
-                        ${this._t('module.periodic.tab.dailySafety', 'قائمة المرور اليومي للسلامة')}
+                        <span data-i18n="module.periodic.tab.dailySafety">${this._t('module.periodic.tab.dailySafety', 'قائمة المرور اليومي للسلامة')}</span>
                     </button>
                     <button class="tab-btn ${this.state.currentTab === 'daily-safety-analytics' ? 'active' : ''}" data-tab="daily-safety-analytics">
                         <i class="fas fa-chart-line ml-2"></i>
-                        ${this._t('module.periodic.tab.dailySafetyAnalytics', 'تحليل البيانات')}
+                        <span data-i18n="module.periodic.tab.dailySafetyAnalytics">${this._t('module.periodic.tab.dailySafetyAnalytics', 'تحليل البيانات')}</span>
                     </button>
                     <button class="tab-btn ${this.state.currentTab === 'equipment-database' ? 'active' : ''}" data-tab="equipment-database">
                         <i class="fas fa-database ml-2"></i>
-                        ${this._t('module.periodic.tab.equipmentDatabase', 'قاعدة بيانات المعدات')}
+                        <span data-i18n="module.periodic.tab.equipmentDatabase">${this._t('module.periodic.tab.equipmentDatabase', 'قاعدة بيانات المعدات')}</span>
                     </button>
                 </div>
             </div>
@@ -4041,7 +4042,7 @@ const PeriodicInspections = {
             <!-- ════ Action bar ══════════════════════════════════════════════════ -->
             <div class="dsc-action-bar" style="direction:${dscDir};">
                 <div class="dsc-title-block">
-                    <h3><i class="fas fa-tasks" style="margin-${en?'right':'left'}:0.4rem;"></i>${en ? t('module.periodic.tab.dailySafety','Daily Safety Report') : t('module.periodic.dsc.recordTitleAr','سجل المرور اليومي للسلامة')}</h3>
+                    <h3><i class="fas fa-tasks" style="margin-${en?'right':'left'}:0.4rem;"></i>${en ? t('module.periodic.tab.dailySafety','Daily Safety Walk Checklist') : t('module.periodic.dsc.recordTitleAr','سجل المرور اليومي للسلامة')}</h3>
                     <p>${en ? t('module.periodic.dsc.recordTitleAr','سجل المرور اليومي للسلامة') : t('module.periodic.dsc.recordTitleEn','Daily Safety Report')}</p>
                 </div>
                 <div class="dsc-action-btns">

@@ -3462,7 +3462,7 @@
             'module.periodic.addNewInspection': 'Add New Periodic Inspection',
             'module.periodic.tab.inspectionsList': 'Inspections List',
             'module.periodic.tab.inspectionsRecords': 'Periodic Inspection Records',
-            'module.periodic.tab.dailySafety': 'Daily Safety Report',
+            'module.periodic.tab.dailySafety': 'Daily Safety Walk Checklist',
             'module.periodic.tab.dailySafetyAnalytics': 'Data Analytics',
             'module.periodic.tab.equipmentDatabase': 'Equipment Database',
             'module.periodic.equipment.title': 'Equipment Database',

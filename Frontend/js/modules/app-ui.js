@@ -3697,6 +3697,8 @@ window.UI = {
     translateBrandingText(text, lang) {
         if (!text) return '';
 
+        const trimmed = String(text).trim();
+
         // AR → EN
         const arToEn = {
             'الشركة العالمية للانتاج والتصنيع الزراعي': 'International Company for Agricultural Production & Processing (ICAPP)',
@@ -3719,9 +3721,61 @@ window.UI = {
             'HSE Management System': 'نظام إدارة السلامة والصحة المهنية',
         };
 
-        const trimmed = String(text).trim();
-        if (lang === 'en') return arToEn[trimmed] || trimmed;
-        if (lang === 'ar') return enToAr[trimmed] || trimmed;
+        if (lang === 'en') {
+            if (arToEn[trimmed]) return arToEn[trimmed];
+            
+            // Forgiving check
+            const norm = trimmed.replace(/\s+/g, ' ');
+            for (const [key, value] of Object.entries(arToEn)) {
+                if (norm.includes(key) || key.includes(norm)) {
+                    return value;
+                }
+            }
+            if (norm.includes('إدارة السلامة') || norm.includes('ادارة السلامة') || norm.includes('السلامة والصحة')) {
+                return 'HSE Department';
+            }
+            if (norm.includes('الشركة العالمية')) {
+                return 'International Company for Agricultural Production & Processing (ICAPP)';
+            }
+
+            // Fallback to literal translations map from i18n core
+            const i18nCore = window.AppI18n || window.I18n;
+            if (i18nCore && i18nCore.literalArToEn) {
+                if (i18nCore.literalArToEn[trimmed]) return i18nCore.literalArToEn[trimmed];
+                if (i18nCore.literalArToEn[norm]) return i18nCore.literalArToEn[norm];
+            }
+            return trimmed;
+        }
+
+        if (lang === 'ar') {
+            if (enToAr[trimmed]) return enToAr[trimmed];
+            
+            // Forgiving check
+            const norm = trimmed.toLowerCase().replace(/\s+/g, ' ');
+            for (const [key, value] of Object.entries(enToAr)) {
+                if (norm.includes(key.toLowerCase()) || key.toLowerCase().includes(norm)) {
+                    return value;
+                }
+            }
+            if (norm.includes('hse department') || norm.includes('hse dept') || norm.includes('safety department')) {
+                return 'إدارة السلامة والصحة المهنية والبيئة';
+            }
+            if (norm.includes('agricultural production') || norm.includes('icapp')) {
+                return 'الشركة العالمية للانتاج والتصنيع الزراعي';
+            }
+
+            const i18nCore = window.AppI18n || window.I18n;
+            if (i18nCore && i18nCore.literalArToEn) {
+                const entry = Object.entries(i18nCore.literalArToEn).find(([k, v]) => {
+                    const normK = k.toLowerCase().replace(/\s+/g, ' ');
+                    const normV = v.toLowerCase().replace(/\s+/g, ' ');
+                    return normV === norm || normV.includes(norm) || norm.includes(normV);
+                });
+                if (entry) return entry[0];
+            }
+            return trimmed;
+        }
+
         return trimmed;
     },
 

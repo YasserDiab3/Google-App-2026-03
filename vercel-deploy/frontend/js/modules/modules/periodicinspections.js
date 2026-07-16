@@ -272,8 +272,9 @@ const PeriodicInspections = {
 
     _t(key, fallback = '') {
         try {
-            if (typeof I18n !== 'undefined' && I18n && typeof I18n.t === 'function') {
-                return I18n.t(key, fallback);
+            const i18nObj = window.AppI18n || window.I18n;
+            if (i18nObj && typeof i18nObj.t === 'function') {
+                return i18nObj.t(key, fallback);
             }
         } catch (_) {}
         return fallback;
@@ -826,23 +827,23 @@ const PeriodicInspections = {
                 <div class="tabs-nav">
                     <button class="tab-btn ${this.state.currentTab === 'inspections-list' ? 'active' : ''}" data-tab="inspections-list">
                         <i class="fas fa-list ml-2"></i>
-                        ${this._t('module.periodic.tab.inspectionsList', 'قائمة الفحوصات')}
+                        <span data-i18n="module.periodic.tab.inspectionsList">${this._t('module.periodic.tab.inspectionsList', 'قائمة الفحوصات')}</span>
                     </button>
                     <button class="tab-btn ${this.state.currentTab === 'inspection-records' ? 'active' : ''}" data-tab="inspection-records">
                         <i class="fas fa-history ml-2"></i>
-                        ${this._t('module.periodic.tab.inspectionsRecords', 'سجل الفحوصات الدورية')}
+                        <span data-i18n="module.periodic.tab.inspectionsRecords">${this._t('module.periodic.tab.inspectionsRecords', 'سجل الفحوصات الدورية')}</span>
                     </button>
                     <button class="tab-btn ${this.state.currentTab === 'daily-safety-checklist' ? 'active' : ''}" data-tab="daily-safety-checklist">
                         <i class="fas fa-tasks ml-2"></i>
-                        ${this._t('module.periodic.tab.dailySafety', 'قائمة المرور اليومي للسلامة')}
+                        <span data-i18n="module.periodic.tab.dailySafety">${this._t('module.periodic.tab.dailySafety', 'قائمة المرور اليومي للسلامة')}</span>
                     </button>
                     <button class="tab-btn ${this.state.currentTab === 'daily-safety-analytics' ? 'active' : ''}" data-tab="daily-safety-analytics">
                         <i class="fas fa-chart-line ml-2"></i>
-                        ${this._t('module.periodic.tab.dailySafetyAnalytics', 'تحليل البيانات')}
+                        <span data-i18n="module.periodic.tab.dailySafetyAnalytics">${this._t('module.periodic.tab.dailySafetyAnalytics', 'تحليل البيانات')}</span>
                     </button>
                     <button class="tab-btn ${this.state.currentTab === 'equipment-database' ? 'active' : ''}" data-tab="equipment-database">
                         <i class="fas fa-database ml-2"></i>
-                        ${this._t('module.periodic.tab.equipmentDatabase', 'قاعدة بيانات المعدات')}
+                        <span data-i18n="module.periodic.tab.equipmentDatabase">${this._t('module.periodic.tab.equipmentDatabase', 'قاعدة بيانات المعدات')}</span>
                     </button>
                 </div>
             </div>
@@ -852,6 +853,14 @@ const PeriodicInspections = {
                 ${content}
             </div>
         `;
+            try {
+                const i18nObj = window.AppI18n || window.I18n;
+                if (i18nObj) {
+                    if (typeof i18nObj.applyI18n === 'function') i18nObj.applyI18n(section);
+                    if (typeof i18nObj.applyLiteralTranslations === 'function') i18nObj.applyLiteralTranslations(section);
+                }
+            } catch (e) {}
+
             try {
                 this.setupEventListeners();
             } catch (error) {
@@ -4041,7 +4050,7 @@ const PeriodicInspections = {
             <!-- ════ Action bar ══════════════════════════════════════════════════ -->
             <div class="dsc-action-bar" style="direction:${dscDir};">
                 <div class="dsc-title-block">
-                    <h3><i class="fas fa-tasks" style="margin-${en?'right':'left'}:0.4rem;"></i>${en ? t('module.periodic.tab.dailySafety','Daily Safety Report') : t('module.periodic.dsc.recordTitleAr','سجل المرور اليومي للسلامة')}</h3>
+                    <h3><i class="fas fa-tasks" style="margin-${en?'right':'left'}:0.4rem;"></i>${en ? t('module.periodic.tab.dailySafety','Daily Safety Walk Checklist') : t('module.periodic.dsc.recordTitleAr','سجل المرور اليومي للسلامة')}</h3>
                     <p>${en ? t('module.periodic.dsc.recordTitleAr','سجل المرور اليومي للسلامة') : t('module.periodic.dsc.recordTitleEn','Daily Safety Report')}</p>
                 </div>
                 <div class="dsc-action-btns">
@@ -6473,7 +6482,7 @@ const PeriodicInspections = {
                                                 <div style="height:100%;background:linear-gradient(90deg,#3b82f6,#2563eb,#3b82f6);background-size:200% 100%;border-radius:3px;animation:loadingProgress 1.4s ease-in-out infinite;"></div>
                                             </div>
                                         </div>
-                                        <p class="text-gray-500" style="font-size:0.9rem;">جاري تحميل بيانات قائمة المرور اليومي للسلامة...</p>
+                                        <p class="text-gray-500" style="font-size:0.9rem;" data-i18n="module.periodic.dsc.loadingDsc">${this._t('module.periodic.dsc.loadingDsc', 'جاري تحميل بيانات قائمة المرور اليومي للسلامة...')}</p>
                                     </div>
                                 </div>
                             </div>`;
@@ -6490,7 +6499,7 @@ const PeriodicInspections = {
                         contentContainer.innerHTML = `
                             <div class="content-card"><div class="card-body">
                                 <div class="empty-state" style="padding:2.5rem 1rem;text-align:center;">
-                                    <p class="text-gray-500">جاري تحميل قاعدة بيانات المعدات...</p>
+                                    <p class="text-gray-500" data-i18n="module.periodic.tab.equipmentDatabaseLoading">${this._t('module.periodic.tab.equipmentDatabaseLoading', 'جاري تحميل قاعدة بيانات المعدات...')}</p>
                                 </div>
                             </div></div>`;
                     }
@@ -6516,6 +6525,15 @@ const PeriodicInspections = {
             const showingLoader = needsBackgroundDscFetch && !(Array.isArray(dscArrNow) && dscArrNow.length > 0);
             if (html && !showingLoader) {
                 contentContainer.innerHTML = html;
+                
+                try {
+                    const i18nObj = window.AppI18n || window.I18n;
+                    if (i18nObj && typeof i18nObj.applyI18n === 'function') {
+                        const fullSection = document.getElementById('periodic-inspections-section');
+                        i18nObj.applyI18n(fullSection || contentContainer);
+                    }
+                } catch (e) {}
+                
                 this.setupEventListeners();
                 // ✅ رسم مخططات تحليل البيانات بعد inject الـ HTML (نفس نمط clinic/obs)
                 if (this.state.currentTab === 'daily-safety-analytics') {
