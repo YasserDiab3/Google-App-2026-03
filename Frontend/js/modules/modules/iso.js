@@ -6,6 +6,17 @@
 const ISO = {
     currentTab: 'overview',
 
+    SystemFormsManifest: [
+        { id: 'ptw', name: 'تصريح العمل', module: 'PTW', type: 'نموذج', defaultCode: 'Form ICP (F14-26-01)', department: 'HSE' },
+        { id: 'incident', name: 'تقرير الحوادث', module: 'Incidents', type: 'تقرير', defaultCode: 'INC-REP-01', department: 'HSE' },
+        { id: 'nearmiss', name: 'تقرير الحوادث الوشيكة', module: 'NearMiss', type: 'تقرير', defaultCode: 'NM-REP-01', department: 'HSE' },
+        { id: 'clinic', name: 'الزيارات الطبية', module: 'Clinic', type: 'نموذج', defaultCode: 'CLN-FRM-01', department: 'Medical' },
+        { id: 'observation', name: 'الملاحظات اليومية', module: 'Observations', type: 'نموذج', defaultCode: 'OBS-FRM-01', department: 'HSE' },
+        { id: 'risk', name: 'تقييم المخاطر (JHA)', module: 'RiskAssessment', type: 'نموذج', defaultCode: 'JHA-FRM-01', department: 'HSE' },
+        { id: 'violation', name: 'إشعار مخالفة', module: 'Violations', type: 'نموذج', defaultCode: 'VIO-FRM-01', department: 'HSE' },
+        { id: 'inspection', name: 'التفتيش الدوري', module: 'Inspections', type: 'نموذج', defaultCode: 'INSP-FRM-01', department: 'HSE' }
+    ],
+
     async load() {
         // Add language change listener
         if (!this._languageChangeListenerAdded) {
@@ -2044,6 +2055,75 @@ const ISO = {
     },
 
     // ===== مركز التكويد والإصدار (Document Coding & Issuing Center) =====
+    renderSystemFormsDirectory(documentCodes, documentVersions) {
+        if (!this.SystemFormsManifest) return '';
+        
+        return `
+        <div class="content-card mb-6 border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+            <div class="card-header bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-6 py-4 border-0">
+                <h2 class="card-title text-white flex items-center text-xl font-bold m-0">
+                    <i class="fas fa-layer-group ml-3 text-2xl opacity-90"></i>
+                    دليل نماذج النظام المدمجة
+                </h2>
+                <p class="text-blue-100 text-sm mt-1 mb-0 opacity-80">يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد</p>
+            </div>
+            <div class="card-body bg-gray-50/50 p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    ${this.SystemFormsManifest.map(form => {
+                        const matchedCode = documentCodes.find(c => c.code === form.defaultCode || c.documentName === form.name);
+                        let activeVersion = null;
+                        if (matchedCode) {
+                            const versions = documentVersions.filter(v => v.documentCodeId === matchedCode.id && (v.isActive === true || v.isActive === 'true'));
+                            if (versions.length > 0) {
+                                versions.sort((a, b) => new Date(b.issueDate || 0) - new Date(a.issueDate || 0));
+                                activeVersion = versions[0];
+                            }
+                        }
+                        
+                        return \`
+                        <div class="bg-white border \${matchedCode ? 'border-green-200' : 'border-red-200'} rounded-xl p-5 hover:shadow-xl transition-all duration-300 relative overflow-hidden group transform hover:-translate-y-1">
+                            <div class="absolute top-0 right-0 w-1.5 h-full \${matchedCode ? 'bg-gradient-to-b from-green-400 to-green-600' : 'bg-gradient-to-b from-red-400 to-red-600'}"></div>
+                            
+                            <div class="flex justify-between items-start mb-4">
+                                <h3 class="font-bold text-gray-800 text-lg leading-tight">\${form.name}</h3>
+                                <span class="badge \${matchedCode ? 'badge-success bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-2.5 py-1 rounded-full font-semibold text-xs shadow-sm flex items-center whitespace-nowrap">
+                                    \${matchedCode ? '<i class="fas fa-check-circle ml-1"></i> مكود' : '<i class="fas fa-times-circle ml-1"></i> غير معرّف'}
+                                </span>
+                            </div>
+                            
+                            <div class="text-sm text-gray-600 space-y-2.5 mb-5">
+                                <div class="flex items-center bg-gray-50 rounded p-1.5"><i class="fas fa-puzzle-piece text-gray-400 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">الموديول:</span> <span class="font-semibold mr-auto">\${form.module}</span></div>
+                                \${matchedCode ? \`
+                                    <div class="flex items-center bg-blue-50/50 rounded p-1.5"><i class="fas fa-hashtag text-blue-500 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">الكود:</span> <span class="font-mono font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded mr-auto text-xs">\${Utils.escapeHTML(matchedCode.code || '')}</span></div>
+                                    <div class="flex items-center bg-purple-50/50 rounded p-1.5"><i class="fas fa-code-branch text-purple-500 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">الإصدار:</span> \${activeVersion ? \`<span class="font-bold text-purple-700 mr-auto bg-purple-100 px-1.5 py-0.5 rounded text-xs">v\${activeVersion.versionNumber}</span>\` : '<span class="text-red-500 mr-auto text-xs font-semibold">لا يوجد إصدار نشط</span>'}</div>
+                                \` : \`
+                                    <div class="text-red-600 text-xs bg-red-50 p-2.5 rounded border border-red-100 flex flex-col gap-1 items-center text-center mt-3">
+                                        <i class="fas fa-exclamation-triangle text-lg mb-1 opacity-80"></i> 
+                                        <span>قم بتعيين كود ليظهر في <br>تذييل هذا النموذج عند الطباعة</span>
+                                    </div>
+                                \`}
+                            </div>
+                            
+                            <div class="mt-auto pt-4 border-t border-gray-100 flex justify-end">
+                                \${matchedCode ? \`
+                                    <button class="btn-secondary btn-sm flex items-center hover:bg-gray-100 transition-colors w-full justify-center py-2 text-gray-700 font-semibold" onclick="ISO.viewDocumentVersions('\${matchedCode.id}')" title="سجل التغييرات">
+                                        <i class="fas fa-history ml-2 text-gray-500"></i> سجل التغييرات
+                                    </button>
+                                \` : \`
+                                    <button class="btn-primary btn-sm flex items-center shadow-md hover:shadow-lg transition-all w-full justify-center py-2 bg-gradient-to-r from-blue-600 to-blue-700 border-0" onclick="ISO.quickAssignFormCode('\${form.name}', '\${form.defaultCode}', '\${form.type}', '\${form.department}')" title="إنشاء كود سريع">
+                                        <i class="fas fa-plus ml-2"></i> تعيين كود الآن
+                                    </button>
+                                \`}
+                            </div>
+                        </div>
+                        \`;
+                    }).join('')}
+                </div>
+            </div>
+        </div>
+        `;
+    },
+
     async renderCodingCenter(opts = {}) {
         const skipFetch = opts && opts.skipFetch === true;
         const showLoadingIndicator = skipFetch;
@@ -2137,6 +2217,8 @@ const ISO = {
                         <span>إعادة تحميل</span>
                     </button>
                 </div>
+
+                ${this.renderSystemFormsDirectory(documentCodes, documentVersions)}
 
                 <!-- قسم إدارة التكويد -->
                 <div class="content-card">
@@ -2613,6 +2695,16 @@ const ISO = {
         if (typeof Notification !== 'undefined') {
             Notification.warning('استيراد البيانات المنظمة من ملف PDF غير متاح حالياً. يرجى استخدام ملف Excel أو CSV لاستيراد أكواد المستندات.');
         }
+    },
+
+    quickAssignFormCode(name, code, type, department) {
+        this.showDocumentCodeForm({
+            documentName: name,
+            code: code,
+            documentType: type,
+            department: department,
+            status: 'نشط'
+        });
     },
 
     async showDocumentCodeForm(data = null) {
