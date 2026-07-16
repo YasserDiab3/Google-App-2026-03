@@ -75,7 +75,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     </div>
                 </div>
             </div>
-        `,this.setupEventListeners(),setTimeout(async()=>{try{const t=document.getElementById("iso-content");if(!t)return;if(this.currentTab==="coding-center"){t.innerHTML=await this.renderCodingCenter({skipFetch:!0}),this.renderCodingCenter({silentTimeout:!0}).then(a=>{const i=document.getElementById("iso-content");i&&this.currentTab==="coding-center"&&(i.innerHTML=a)}).catch(()=>{});return}const s=await this.renderContent().catch(a=>(Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062A\u0648\u0649:",a),`
+        `,this.setupEventListeners(),setTimeout(async()=>{try{const t=document.getElementById("iso-content");if(!t)return;if(this.currentTab==="coding-center"){t.innerHTML=await this.renderCodingCenter({skipFetch:!0}),this.renderCodingCenter({silentTimeout:!0}).then(a=>{const o=document.getElementById("iso-content");o&&this.currentTab==="coding-center"&&(o.innerHTML=a)}).catch(()=>{});return}const s=await this.renderContent().catch(a=>(Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062A\u0648\u0649:",a),`
                             <div class="content-card">
                                 <div class="card-body">
                                     <div class="empty-state">
@@ -101,196 +101,354 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                             </div>
                         </div>
                     </div>
-                `)}},calculateComplianceRate(){const e=AppState.appData.isoDocuments||[],t=AppState.appData.isoProcedures||[],s=AppState.appData.isoForms||[],a=e.length+t.length+s.length,i=e.length>0?30:0,o=t.length>0?30:0,d=s.length>0?40:0;return Math.min(100,i+o+d)},async renderContent(){switch(this.currentTab){case"overview":return await this.renderOverview();case"documents":return await this.renderDocuments();case"procedures":return await this.renderProcedures();case"forms":return await this.renderForms();case"iso45001":return await this.renderISO45001();case"iso14001":return await this.renderISO14001();case"audit":return await this.renderAudit();case"coding-center":return await this.renderCodingCenter();default:return await this.renderOverview()}},async renderOverview(){const e=AppState.appData.isoDocuments||[],t=AppState.appData.isoProcedures||[],s=AppState.appData.isoForms||[],a=AppState.appData.hseAudits||[],i=AppState.appData.hseNonConformities||[],o=AppState.appData.hseCorrectiveActions||[];return`
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="content-card">
-                    <div class="card-header">
-                        <h2 class="card-title"><i class="fas fa-info-circle ml-2"></i>\u0646\u0638\u0631\u0629 \u0639\u0627\u0645\u0629 \u0639\u0644\u0649 \u0627\u0644\u0646\u0638\u0627\u0645</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="space-y-4">
-                            <div class="bg-blue-50 border border-blue-200 rounded p-4">
-                                <h3 class="font-semibold text-blue-800 mb-3">
-                                    <i class="fas fa-hard-hat ml-2"></i>
-                                    ISO 45001 - \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629
-                                </h3>
-                                <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
-                                    <li>\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u0648\u0627\u0644\u0631\u0635</li>
-                                    <li>\u0627\u0644\u062A\u062E\u0637\u064A\u0637 \u0648\u0627\u0644\u062A\u062D\u0643\u0645 \u0627\u0644\u062A\u0634\u063A\u064A\u0644\u064A</li>
-                                    <li>\u0627\u0644\u0642\u064A\u0627\u0633 \u0648\u0627\u0644\u0645\u0631\u0627\u0642\u0628\u0629</li>
-                                    <li>\u0627\u0644\u062A\u062D\u0633\u064A\u0646 \u0627\u0644\u0645\u0633\u062A\u0645\u0631</li>
-                                </ul>
-                            </div>
-                            <div class="bg-green-50 border border-green-200 rounded p-4">
-                                <h3 class="font-semibold text-green-800 mb-3">
-                                    <i class="fas fa-leaf ml-2"></i>
-                                    ISO 14001 - \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0628\u064A\u0626\u0629
-                                </h3>
-                                <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
-                                    <li>\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062C\u0648\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A\u0629</li>
-                                    <li>\u0627\u0644\u0627\u0645\u062A\u062B\u0627\u0644 \u0644\u0644\u0642\u0648\u0627\u0646\u064A\u0646 \u0627\u0644\u0628\u064A\u0626\u064A\u0629</li>
-                                    <li>\u0627\u0644\u062A\u062E\u0637\u064A\u0637 \u0627\u0644\u0628\u064A\u0626\u064A</li>
-                                    <li>\u062A\u062D\u0633\u064A\u0646 \u0627\u0644\u0623\u062F\u0627\u0621 \u0627\u0644\u0628\u064A\u0626\u064A</li>
-                                </ul>
-                            </div>
+                `)}},calculateComplianceRate(){const e=AppState.appData.isoDocuments||[],t=AppState.appData.isoProcedures||[],s=AppState.appData.isoForms||[],a=e.length+t.length+s.length,o=e.length>0?30:0,i=t.length>0?30:0,r=s.length>0?40:0;return Math.min(100,o+i+r)},async renderContent(){switch(this.currentTab){case"overview":return await this.renderOverview();case"documents":return await this.renderDocuments();case"procedures":return await this.renderProcedures();case"forms":return await this.renderForms();case"iso45001":return await this.renderISO45001();case"iso14001":return await this.renderISO14001();case"audit":return await this.renderAudit();case"coding-center":return await this.renderCodingCenter();default:return await this.renderOverview()}},async renderOverview(){const e=AppState.appData.isoDocuments||[],t=AppState.appData.isoProcedures||[],s=AppState.appData.isoForms||[],a=AppState.appData.hseAudits||[],o=AppState.appData.hseNonConformities||[],i=AppState.appData.hseCorrectiveActions||[],r=e.length+t.length+s.length,l=o.filter(m=>m.status!=="\u0645\u063A\u0644\u0642"&&m.status!=="Closed").length,c=a.filter(m=>m.status==="\u0645\u062C\u062F\u0648\u0644"||m.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"||m.status==="Scheduled").length,n=i.filter(m=>m.status!=="\u0645\u0643\u062A\u0645\u0644"&&m.status!=="Completed").length,d=this.calculateComplianceRate();return`
+            <!-- Top KPIs Row -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <!-- KPI 1 -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-all">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+                    <div class="flex justify-between items-start relative z-10">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 mb-1">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0648\u062B\u0627\u0626\u0642</p>
+                            <h3 class="text-3xl font-bold text-gray-800">${r}</h3>
                         </div>
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                            <i class="fas fa-file-alt text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-xs text-gray-500 flex items-center">
+                        <span class="text-blue-600 font-semibold ml-1">${t.length}</span> \u0625\u062C\u0631\u0627\u0621\u0627\u062A | 
+                        <span class="text-indigo-600 font-semibold mx-1">${s.length}</span> \u0646\u0645\u0627\u0630\u062C
                     </div>
                 </div>
-                
-                <div class="content-card">
-                    <div class="card-header">
-                        <h2 class="card-title"><i class="fas fa-chart-bar ml-2"></i>\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0627\u0644\u0646\u0638\u0627\u0645</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="space-y-4">
-                            <div class="flex items-center justify-between p-3 border rounded">
-                                <span class="font-semibold">\u0627\u0644\u0648\u062B\u0627\u0626\u0642</span>
-                                <span class="badge badge-info">${e.length}</span>
-                            </div>
-                            <div class="flex items-center justify-between p-3 border rounded">
-                                <span class="font-semibold">\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</span>
-                                <span class="badge badge-success">${t.length}</span>
-                            </div>
-                            <div class="flex items-center justify-between p-3 border rounded">
-                                <span class="font-semibold">\u0627\u0644\u0646\u0645\u0627\u0630\u062C</span>
-                                <span class="badge badge-warning">${s.length}</span>
-                            </div>
-                            <div class="flex items-center justify-between p-3 border rounded">
-                                <span class="font-semibold">\u0639\u0645\u0644\u064A\u0627\u062A \u0627\u0644\u062A\u062F\u0642\u064A\u0642</span>
-                                <span class="badge badge-primary">${a.length}</span>
-                            </div>
-                            <div class="flex items-center justify-between p-3 border rounded">
-                                <span class="font-semibold">\u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629</span>
-                                <span class="badge badge-danger">${i.length}</span>
-                            </div>
-                            <div class="flex items-center justify-between p-3 border rounded">
-                                <span class="font-semibold">\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629</span>
-                                <span class="badge badge-info">${o.length}</span>
-                            </div>
+
+                <!-- KPI 2 -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-all">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-red-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+                    <div class="flex justify-between items-start relative z-10">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 mb-1">\u062D\u0627\u0644\u0627\u062A \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0627\u0644\u0645\u0641\u062A\u0648\u062D\u0629</p>
+                            <h3 class="text-3xl font-bold text-gray-800">${l}</h3>
                         </div>
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center text-white shadow-lg shadow-red-200">
+                            <i class="fas fa-exclamation-triangle text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-xs text-gray-500">
+                        \u0645\u0646 \u0625\u062C\u0645\u0627\u0644\u064A <span class="font-bold">${o.length}</span> \u062D\u0627\u0644\u0629 \u0645\u0633\u062C\u0644\u0629
+                    </div>
+                </div>
+
+                <!-- KPI 3 -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-all">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-purple-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+                    <div class="flex justify-between items-start relative z-10">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 mb-1">\u0639\u0645\u0644\u064A\u0627\u062A \u062A\u062F\u0642\u064A\u0642 \u0642\u0627\u062F\u0645\u0629</p>
+                            <h3 class="text-3xl font-bold text-gray-800">${c}</h3>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-purple-200">
+                            <i class="fas fa-search text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-xs text-gray-500">
+                        \u0645\u0646 \u0625\u062C\u0645\u0627\u0644\u064A <span class="font-bold">${a.length}</span> \u0639\u0645\u0644\u064A\u0629 \u062A\u062F\u0642\u064A\u0642
+                    </div>
+                </div>
+
+                <!-- KPI 4 -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-all">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-amber-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+                    <div class="flex justify-between items-start relative z-10">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 mb-1">\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u062A\u0635\u062D\u064A\u062D\u064A\u0629 \u0645\u0641\u062A\u0648\u062D\u0629</p>
+                            <h3 class="text-3xl font-bold text-gray-800">${n}</h3>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-amber-200">
+                            <i class="fas fa-tools text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-xs text-gray-500">
+                        \u0645\u0646 \u0625\u062C\u0645\u0627\u0644\u064A <span class="font-bold">${i.length}</span> \u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A
                     </div>
                 </div>
             </div>
-        `},async renderDocuments(){const e=AppState.appData.isoDocuments||[];return`
-            <div class="content-card">
-                <div class="card-header">
-                    <div class="flex items-center justify-between">
-                        <h2 class="card-title"><i class="fas fa-file-alt ml-2"></i>\u0627\u0644\u0648\u062B\u0627\u0626\u0642</h2>
-                        <button id="add-document-btn" class="btn-primary">
-                            <i class="fas fa-plus ml-2"></i>\u0625\u0636\u0627\u0641\u0629 \u0648\u062B\u064A\u0642\u0629
-                        </button>
+
+            <!-- Main Content Area -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left Column (Compliance & Standards) -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                            <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-shield-check text-blue-600 ml-2"></i>\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u0627\u0645\u062A\u062B\u0627\u0644 \u0644\u0644\u0646\u0638\u0627\u0645 (QMS Health)</h2>
+                            <span class="text-2xl font-bold ${d>=80?"text-green-500":d>=50?"text-amber-500":"text-red-500"}">${d}%</span>
+                        </div>
+                        <div class="p-6">
+                            <div class="w-full bg-gray-100 rounded-full h-4 mb-6 overflow-hidden relative">
+                                <div class="h-4 rounded-full ${d>=80?"bg-gradient-to-r from-green-400 to-green-500":d>=50?"bg-gradient-to-r from-amber-400 to-amber-500":"bg-gradient-to-r from-red-400 to-red-500"} transition-all duration-1000 relative" style="width: ${d}%">
+                                    <div class="absolute top-0 left-0 w-full h-full bg-white opacity-20" style="background-image: linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent); background-size: 1rem 1rem; animation: progress-bar-stripes 1s linear infinite;"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="border border-blue-100 bg-blue-50/30 rounded-xl p-4 hover:shadow-sm transition-all">
+                                    <h3 class="font-bold text-blue-800 mb-2 flex items-center">
+                                        <i class="fas fa-hard-hat text-blue-500 ml-2"></i> ISO 45001
+                                    </h3>
+                                    <p class="text-xs text-gray-600 mb-3">\u0646\u0638\u0627\u0645 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629</p>
+                                    <div class="flex justify-between items-center text-sm">
+                                        <span class="text-gray-500">\u0627\u0644\u0645\u062A\u0637\u0644\u0628\u0627\u062A</span>
+                                        <span class="font-semibold text-blue-700">\u0645\u063A\u0637\u0627\u0629</span>
+                                    </div>
+                                </div>
+                                <div class="border border-green-100 bg-green-50/30 rounded-xl p-4 hover:shadow-sm transition-all">
+                                    <h3 class="font-bold text-green-800 mb-2 flex items-center">
+                                        <i class="fas fa-leaf text-green-500 ml-2"></i> ISO 14001
+                                    </h3>
+                                    <p class="text-xs text-gray-600 mb-3">\u0646\u0638\u0627\u0645 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0628\u064A\u0626\u064A\u0629</p>
+                                    <div class="flex justify-between items-center text-sm">
+                                        <span class="text-gray-500">\u0627\u0644\u0645\u062A\u0637\u0644\u0628\u0627\u062A</span>
+                                        <span class="font-semibold text-green-700">\u0645\u063A\u0637\u0627\u0629</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="card-body">
-                    ${e.length===0?'<div class="empty-state"><p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0648\u062B\u0627\u0626\u0642</p></div>':`
-                        <table class="data-table table-header-purple">
-                            <thead>
-                                <tr>
-                                    <th>\u0643\u0648\u062F ISO</th>
-                                    <th>\u0627\u0633\u0645 \u0627\u0644\u0648\u062B\u064A\u0642\u0629</th>
-                                    <th>\u0627\u0644\u0646\u0648\u0639</th>
-                                    <th>\u0627\u0644\u0625\u0635\u062F\u0627\u0631</th>
-                                    <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${e.map(t=>`
-                                    <tr>
-                                        <td>${Utils.escapeHTML(t.isoCode||"")}</td>
-                                        <td>${Utils.escapeHTML(t.name||"")}</td>
-                                        <td>${Utils.escapeHTML(t.type||"")}</td>
-                                        <td>${t.version||"-"}</td>
-                                        <td>
-                                            <button onclick="ISO.viewDocument('${t.id}')" class="btn-icon btn-icon-primary">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        </td>
+
+                <!-- Right Column (Action Items) -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
+                    <div class="p-5 border-b border-gray-50 bg-gradient-to-r from-rose-50 to-orange-50">
+                        <h2 class="text-lg font-bold text-gray-800 flex items-center">
+                            <i class="fas fa-bell text-rose-500 ml-2 animate-pulse"></i>\u0645\u0647\u0627\u0645 \u062A\u062A\u0637\u0644\u0628 \u0627\u0644\u0627\u0646\u062A\u0628\u0627\u0647
+                        </h2>
+                    </div>
+                    <div class="p-0 flex-1 overflow-y-auto" style="max-height: 400px;">
+                        <ul class="divide-y divide-gray-100">
+                            ${l>0?`
+                            <li class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 cursor-pointer" onclick="ISO.currentTab = 'audit'; ISO.load();">
+                                <div class="mt-0.5 bg-red-100 text-red-600 p-2 rounded-lg"><i class="fas fa-exclamation-circle"></i></div>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-800">\u064A\u0648\u062C\u062F ${l} \u062D\u0627\u0644\u0629 \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629 \u0645\u0641\u062A\u0648\u062D\u0629</p>
+                                    <p class="text-xs text-gray-500 mt-1">\u064A\u062C\u0628 \u0645\u0631\u0627\u062C\u0639\u062A\u0647\u0627 \u0648\u0625\u063A\u0644\u0627\u0642\u0647\u0627 \u0644\u062A\u062C\u0646\u0628 \u0627\u0644\u062A\u0623\u062B\u064A\u0631 \u0639\u0644\u0649 \u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u0627\u0645\u062A\u062B\u0627\u0644.</p>
+                                </div>
+                            </li>
+                            `:""}
+                            
+                            ${c>0?`
+                            <li class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 cursor-pointer" onclick="ISO.currentTab = 'audit'; ISO.load();">
+                                <div class="mt-0.5 bg-purple-100 text-purple-600 p-2 rounded-lg"><i class="fas fa-calendar-alt"></i></div>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-800">\u064A\u0648\u062C\u062F ${c} \u0639\u0645\u0644\u064A\u0629 \u062A\u062F\u0642\u064A\u0642 \u0642\u0627\u062F\u0645\u0629</p>
+                                    <p class="text-xs text-gray-500 mt-1">\u064A\u0631\u062C\u0649 \u0645\u0631\u0627\u062C\u0639\u0629 \u0627\u0644\u062C\u062F\u0648\u0644 \u0627\u0644\u0632\u0645\u0646\u064A \u0648\u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u0648\u062B\u0627\u0626\u0642 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629.</p>
+                                </div>
+                            </li>
+                            `:""}
+                            
+                            ${n>0?`
+                            <li class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 cursor-pointer" onclick="ISO.currentTab = 'audit'; ISO.load();">
+                                <div class="mt-0.5 bg-amber-100 text-amber-600 p-2 rounded-lg"><i class="fas fa-tools"></i></div>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-800">\u064A\u0648\u062C\u062F ${n} \u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A \u0645\u0639\u0644\u0642</p>
+                                    <p class="text-xs text-gray-500 mt-1">\u062A\u0627\u0628\u0639 \u0645\u0639 \u0627\u0644\u0645\u0633\u0624\u0648\u0644\u064A\u0646 \u0644\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629 \u0627\u0644\u0645\u0641\u062A\u0648\u062D\u0629.</p>
+                                </div>
+                            </li>
+                            `:""}
+                            
+                            ${l===0&&c===0&&n===0?`
+                            <li class="p-8 text-center flex flex-col items-center justify-center">
+                                <div class="bg-green-50 text-green-500 p-4 rounded-full mb-3"><i class="fas fa-check-double text-2xl"></i></div>
+                                <p class="text-gray-600 font-semibold text-sm">\u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u064A \u062D\u0627\u0644\u0629 \u0645\u0645\u062A\u0627\u0632\u0629</p>
+                                <p class="text-gray-400 text-xs mt-1">\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u064A \u0645\u0647\u0627\u0645 \u0645\u062A\u0623\u062E\u0631\u0629 \u0623\u0648 \u0645\u0639\u0644\u0642\u0629 \u062A\u062A\u0637\u0644\u0628 \u0627\u0644\u0627\u0646\u062A\u0628\u0627\u0647 \u062D\u0627\u0644\u064A\u0627\u064B.</p>
+                            </li>
+                            `:""}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <style>
+                @keyframes progress-bar-stripes {
+                    from { background-position: 1rem 0; }
+                    to { background-position: 0 0; }
+                }
+            </style>
+        `},async renderDocuments(){const e=AppState.appData.isoDocuments||[];return`
+            <div class="content-card shadow-lg border-0 rounded-2xl overflow-hidden bg-white">
+                <div class="card-header bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-5 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                            <i class="fas fa-file-alt text-xl text-white"></i>
+                        </div>
+                        <div>
+                            <h2 class="card-title text-white m-0 text-xl font-bold">\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0648\u062B\u0627\u0626\u0642 (Document Control)</h2>
+                            <p class="text-blue-100 text-sm m-0 opacity-80">\u0633\u062C\u0644 \u0627\u0644\u0648\u062B\u0627\u0626\u0642 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629 \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645</p>
+                        </div>
+                    </div>
+                    <button id="add-document-btn" class="btn bg-white text-blue-700 hover:bg-blue-50 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all hover:shadow-md">
+                        <i class="fas fa-plus"></i>\u0625\u0636\u0627\u0641\u0629 \u0648\u062B\u064A\u0642\u0629
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    ${e.length===0?`
+                        <div class="p-12 text-center flex flex-col items-center justify-center bg-gray-50/50">
+                            <div class="w-20 h-20 bg-blue-50 text-blue-300 rounded-full flex items-center justify-center mb-4"><i class="fas fa-folder-open text-3xl"></i></div>
+                            <h3 class="text-gray-700 font-bold text-lg mb-1">\u0644\u0627 \u062A\u0648\u062C\u062F \u0648\u062B\u0627\u0626\u0642 \u0645\u0633\u062C\u0644\u0629</h3>
+                            <p class="text-gray-500 text-sm">\u0642\u0645 \u0628\u0625\u0636\u0627\u0641\u0629 \u0623\u0648\u0644 \u0648\u062B\u064A\u0642\u0629 \u0644\u0628\u062F\u0621 \u0628\u0646\u0627\u0621 \u0645\u0643\u062A\u0628\u0629 \u0627\u0644\u0646\u0638\u0627\u0645</p>
+                        </div>
+                    `:`
+                        <div class="overflow-x-auto p-4">
+                            <table class="w-full text-right border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
+                                        <th class="p-3 font-semibold text-right rounded-tr-lg">\u0643\u0648\u062F ISO</th>
+                                        <th class="p-3 font-semibold text-right">\u0627\u0633\u0645 \u0627\u0644\u0648\u062B\u064A\u0642\u0629</th>
+                                        <th class="p-3 font-semibold text-right">\u0627\u0644\u0646\u0648\u0639</th>
+                                        <th class="p-3 font-semibold text-center">\u0627\u0644\u0625\u0635\u062F\u0627\u0631</th>
+                                        <th class="p-3 font-semibold text-center">\u0627\u0644\u062D\u0627\u0644\u0629</th>
+                                        <th class="p-3 font-semibold text-center rounded-tl-lg">\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
                                     </tr>
-                                `).join("")}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    ${e.map(t=>{const s=t.status||"\u0645\u0639\u062A\u0645\u062F";let a="bg-green-100 text-green-800 border-green-200";return s==="\u0645\u0633\u0648\u062F\u0629"||s==="Draft"?a="bg-gray-100 text-gray-800 border-gray-200":(s==="\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629"||s==="Under Review")&&(a="bg-amber-100 text-amber-800 border-amber-200"),`
+                                        <tr class="border-b border-gray-100 hover:bg-blue-50/30 transition-colors group">
+                                            <td class="p-3"><span class="font-mono text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-100 text-sm font-bold">${Utils.escapeHTML(t.isoCode||"---")}</span></td>
+                                            <td class="p-3 font-medium text-gray-800">${Utils.escapeHTML(t.name||"")}</td>
+                                            <td class="p-3 text-sm text-gray-600">${Utils.escapeHTML(t.type||"")}</td>
+                                            <td class="p-3 text-center"><span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-bold text-xs border border-gray-200">v${t.version||"1.0"}</span></td>
+                                            <td class="p-3 text-center"><span class="px-2.5 py-1 text-xs rounded-full border ${a} font-semibold">${s}</span></td>
+                                            <td class="p-3 text-center">
+                                                <button onclick="ISO.viewDocument('${t.id}')" class="text-gray-400 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `}).join("")}
+                                </tbody>
+                            </table>
+                        </div>
                     `}
                 </div>
             </div>
         `},async renderProcedures(){const e=AppState.appData.isoProcedures||[];return`
-            <div class="content-card">
-                <div class="card-header">
-                    <div class="flex items-center justify-between">
-                        <h2 class="card-title"><i class="fas fa-tasks ml-2"></i>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</h2>
-                        <button id="add-procedure-btn" class="btn-primary">
-                            <i class="fas fa-plus ml-2"></i>\u0625\u0636\u0627\u0641\u0629 \u0625\u062C\u0631\u0627\u0621
-                        </button>
+            <div class="content-card shadow-lg border-0 rounded-2xl overflow-hidden bg-white">
+                <div class="card-header bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-5 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                            <i class="fas fa-project-diagram text-xl text-white"></i>
+                        </div>
+                        <div>
+                            <h2 class="card-title text-white m-0 text-xl font-bold">\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A (Procedures)</h2>
+                            <p class="text-emerald-100 text-sm m-0 opacity-80">\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u0639\u0645\u0644 \u0627\u0644\u0642\u064A\u0627\u0633\u064A\u0629 (SOPs)</p>
+                        </div>
                     </div>
+                    <button id="add-procedure-btn" class="btn bg-white text-emerald-700 hover:bg-emerald-50 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all hover:shadow-md">
+                        <i class="fas fa-plus"></i>\u0625\u0636\u0627\u0641\u0629 \u0625\u062C\u0631\u0627\u0621
+                    </button>
                 </div>
-                <div class="card-body">
-                    ${e.length===0?'<div class="empty-state"><p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u062C\u0631\u0627\u0621\u0627\u062A</p></div>':`
-                        <table class="data-table table-header-purple">
-                            <thead>
-                                <tr>
-                                    <th>\u0643\u0648\u062F ISO</th>
-                                    <th>\u0627\u0633\u0645 \u0627\u0644\u0625\u062C\u0631\u0627\u0621</th>
-                                    <th>\u0627\u0644\u0642\u0633\u0645</th>
-                                    <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${e.map(t=>`
-                                    <tr>
-                                        <td>${Utils.escapeHTML(t.isoCode||"")}</td>
-                                        <td>${Utils.escapeHTML(t.name||"")}</td>
-                                        <td>${Utils.escapeHTML(t.department||"")}</td>
-                                        <td>
-                                            <button onclick="ISO.viewProcedure('${t.id}')" class="btn-icon btn-icon-primary">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        </td>
+                <div class="card-body p-0">
+                    ${e.length===0?`
+                        <div class="p-12 text-center flex flex-col items-center justify-center bg-gray-50/50">
+                            <div class="w-20 h-20 bg-emerald-50 text-emerald-300 rounded-full flex items-center justify-center mb-4"><i class="fas fa-network-wired text-3xl"></i></div>
+                            <h3 class="text-gray-700 font-bold text-lg mb-1">\u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0645\u0633\u062C\u0644\u0629</h3>
+                            <p class="text-gray-500 text-sm">\u0642\u0645 \u0628\u0625\u0636\u0627\u0641\u0629 \u0623\u0648\u0644 \u0625\u062C\u0631\u0627\u0621 (SOP) \u0644\u062A\u0646\u0638\u064A\u0645 \u0627\u0644\u0639\u0645\u0644</p>
+                        </div>
+                    `:`
+                        <div class="overflow-x-auto p-4">
+                            <table class="w-full text-right border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
+                                        <th class="p-3 font-semibold text-right rounded-tr-lg">\u0643\u0648\u062F \u0627\u0644\u0625\u062C\u0631\u0627\u0621</th>
+                                        <th class="p-3 font-semibold text-right">\u0627\u0633\u0645 \u0627\u0644\u0625\u062C\u0631\u0627\u0621</th>
+                                        <th class="p-3 font-semibold text-right">\u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0645\u0627\u0644\u0643</th>
+                                        <th class="p-3 font-semibold text-center">\u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629 \u0627\u0644\u0642\u0627\u062F\u0645\u0629</th>
+                                        <th class="p-3 font-semibold text-center rounded-tl-lg">\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
                                     </tr>
-                                `).join("")}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    ${e.map(t=>{const s=t.issueDate||new Date().toISOString(),a=new Date(s);a.setFullYear(a.getFullYear()+1);const o=a<new Date;return`
+                                        <tr class="border-b border-gray-100 hover:bg-emerald-50/30 transition-colors group">
+                                            <td class="p-3"><span class="font-mono text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 text-sm font-bold">${Utils.escapeHTML(t.isoCode||"---")}</span></td>
+                                            <td class="p-3 font-medium text-gray-800">${Utils.escapeHTML(t.name||"")}</td>
+                                            <td class="p-3"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200"><i class="fas fa-building text-gray-400"></i> ${Utils.escapeHTML(t.department||"\u0639\u0627\u0645")}</span></td>
+                                            <td class="p-3 text-center">
+                                                <div class="flex items-center justify-center gap-1.5 ${o?"text-red-600 font-bold":"text-gray-600"}">
+                                                    <i class="fas ${o?"fa-exclamation-circle":"fa-calendar-alt"}"></i>
+                                                    <span class="text-sm">${a.toLocaleDateString("ar-EG")}</span>
+                                                </div>
+                                            </td>
+                                            <td class="p-3 text-center">
+                                                <button onclick="ISO.viewProcedure('${t.id}')" class="text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 p-2 rounded-lg transition-colors" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `}).join("")}
+                                </tbody>
+                            </table>
+                        </div>
                     `}
                 </div>
             </div>
         `},async renderForms(){const e=AppState.appData.isoForms||[];return`
-            <div class="content-card">
-                <div class="card-header">
-                    <div class="flex items-center justify-between">
-                        <h2 class="card-title"><i class="fas fa-file-signature ml-2"></i>\u0627\u0644\u0646\u0645\u0627\u0630\u062C</h2>
-                        <button id="add-form-btn" class="btn-primary">
-                            <i class="fas fa-plus ml-2"></i>\u0625\u0636\u0627\u0641\u0629 \u0646\u0645\u0648\u0630\u062C
-                        </button>
+            <div class="content-card shadow-lg border-0 rounded-2xl overflow-hidden bg-white">
+                <div class="card-header bg-gradient-to-r from-amber-500 to-orange-600 text-white p-5 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                            <i class="fas fa-file-signature text-xl text-white"></i>
+                        </div>
+                        <div>
+                            <h2 class="card-title text-white m-0 text-xl font-bold">\u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0642\u064A\u0627\u0633\u064A\u0629 (Forms)</h2>
+                            <p class="text-amber-100 text-sm m-0 opacity-80">\u0633\u062C\u0644 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629 \u0644\u062C\u0645\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p>
+                        </div>
                     </div>
+                    <button id="add-form-btn" class="btn bg-white text-orange-700 hover:bg-orange-50 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all hover:shadow-md">
+                        <i class="fas fa-plus"></i>\u0625\u0636\u0627\u0641\u0629 \u0646\u0645\u0648\u0630\u062C
+                    </button>
                 </div>
-                <div class="card-body">
-                    ${e.length===0?'<div class="empty-state"><p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0646\u0645\u0627\u0630\u062C</p></div>':`
-                        <table class="data-table table-header-purple">
-                            <thead>
-                                <tr>
-                                    <th>\u0643\u0648\u062F ISO</th>
-                                    <th>\u0627\u0633\u0645 \u0627\u0644\u0646\u0645\u0648\u0630\u062C</th>
-                                    <th>\u0627\u0644\u0646\u0648\u0639</th>
-                                    <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${e.map(t=>`
-                                    <tr>
-                                        <td>${Utils.escapeHTML(t.isoCode||"")}</td>
-                                        <td>${Utils.escapeHTML(t.name||"")}</td>
-                                        <td>${Utils.escapeHTML(t.type||"")}</td>
-                                        <td>
-                                            <button onclick="ISO.viewForm('${t.id}')" class="btn-icon btn-icon-primary">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        </td>
+                <div class="card-body p-0">
+                    ${e.length===0?`
+                        <div class="p-12 text-center flex flex-col items-center justify-center bg-gray-50/50">
+                            <div class="w-20 h-20 bg-orange-50 text-orange-300 rounded-full flex items-center justify-center mb-4"><i class="fas fa-clipboard-list text-3xl"></i></div>
+                            <h3 class="text-gray-700 font-bold text-lg mb-1">\u0644\u0627 \u062A\u0648\u062C\u062F \u0646\u0645\u0627\u0630\u062C \u0645\u0633\u062C\u0644\u0629</h3>
+                            <p class="text-gray-500 text-sm">\u0642\u0645 \u0628\u0625\u0636\u0627\u0641\u0629 \u0623\u0648\u0644 \u0646\u0645\u0648\u0630\u062C \u0644\u064A\u0643\u0648\u0646 \u0645\u062A\u0627\u062D\u0627\u064B \u0644\u0644\u0637\u0628\u0627\u0639\u0629 \u0648\u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645</p>
+                        </div>
+                    `:`
+                        <div class="overflow-x-auto p-4">
+                            <table class="w-full text-right border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
+                                        <th class="p-3 font-semibold text-right rounded-tr-lg">\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0645\u0631\u062C\u0639\u064A</th>
+                                        <th class="p-3 font-semibold text-right">\u0627\u0633\u0645 \u0627\u0644\u0646\u0645\u0648\u0630\u062C</th>
+                                        <th class="p-3 font-semibold text-right">\u0646\u0648\u0639 \u0627\u0644\u0646\u0645\u0648\u0630\u062C</th>
+                                        <th class="p-3 font-semibold text-center rounded-tl-lg">\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
                                     </tr>
-                                `).join("")}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    ${e.map(t=>`
+                                        <tr class="border-b border-gray-100 hover:bg-orange-50/30 transition-colors group">
+                                            <td class="p-3"><span class="font-mono text-orange-700 bg-orange-50 px-2 py-1 rounded border border-orange-100 text-sm font-bold">${Utils.escapeHTML(t.isoCode||"---")}</span></td>
+                                            <td class="p-3 font-medium text-gray-800">${Utils.escapeHTML(t.name||"")}</td>
+                                            <td class="p-3 text-sm text-gray-600">
+                                                <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                                                    <i class="fas ${t.type?.includes("\u0633\u062C\u0644")?"fa-book":"fa-clipboard"}"></i>
+                                                    ${Utils.escapeHTML(t.type||"\u0646\u0645\u0648\u0630\u062C \u0625\u062F\u062E\u0627\u0644")}
+                                                </span>
+                                            </td>
+                                            <td class="p-3 text-center">
+                                                <button onclick="ISO.viewForm('${t.id}')" class="text-gray-400 hover:text-orange-600 hover:bg-orange-50 p-2 rounded-lg transition-colors" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `).join("")}
+                                </tbody>
+                            </table>
+                        </div>
                     `}
                 </div>
             </div>
-        `},setupEventListeners(){setTimeout(()=>{document.querySelectorAll(".tab-btn").forEach(i=>{i.addEventListener("click",()=>{this.currentTab=i.getAttribute("data-tab"),this.load()})});const t=document.getElementById("add-document-btn"),s=document.getElementById("add-procedure-btn"),a=document.getElementById("add-form-btn");t&&t.addEventListener("click",()=>this.showDocumentForm()),s&&s.addEventListener("click",()=>this.showProcedureForm()),a&&a.addEventListener("click",()=>this.showFormForm())},100)},async showDocumentForm(e=null){let t=[];try{const i=await GoogleIntegration.fetchData("getDocumentCodes",{});i.success&&i.data&&(t=i.data.filter(o=>o.documentType==="\u0648\u062B\u064A\u0642\u0629"&&o.status==="\u0646\u0634\u0637"))}catch(i){Utils.safeError("Error loading document codes:",i)}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
+        `},setupEventListeners(){setTimeout(()=>{document.querySelectorAll(".tab-btn").forEach(o=>{o.addEventListener("click",()=>{this.currentTab=o.getAttribute("data-tab"),this.load()})});const t=document.getElementById("add-document-btn"),s=document.getElementById("add-procedure-btn"),a=document.getElementById("add-form-btn");t&&t.addEventListener("click",()=>this.showDocumentForm()),s&&s.addEventListener("click",()=>this.showProcedureForm()),a&&a.addEventListener("click",()=>this.showFormForm())},100)},async showDocumentForm(e=null){let t=[];try{const o=await GoogleIntegration.fetchData("getDocumentCodes",{});o.success&&o.data&&(t=o.data.filter(i=>i.documentType==="\u0648\u062B\u064A\u0642\u0629"&&i.status==="\u0646\u0634\u0637"))}catch(o){Utils.safeError("Error loading document codes:",o)}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
                     <h2 class="modal-title">${e?"\u062A\u0639\u062F\u064A\u0644 \u0648\u062B\u064A\u0642\u0629":"\u0625\u0636\u0627\u0641\u0629 \u0648\u062B\u064A\u0642\u0629 \u062C\u062F\u064A\u062F\u0629"}</h2>
@@ -305,11 +463,11 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                             <select id="document-code-select" required class="form-input" 
                                 onchange="ISO.loadDocumentCodeVersion('document')">
                                 <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631</option>
-                                ${t.map(i=>`
-                                    <option value="${i.code}" 
-                                        data-code-id="${i.id}"
-                                        ${e?.isoCode===i.code?"selected":""}>
-                                        ${Utils.escapeHTML(i.code||"")} - ${Utils.escapeHTML(i.documentName||"")}
+                                ${t.map(o=>`
+                                    <option value="${o.code}" 
+                                        data-code-id="${o.id}"
+                                        ${e?.isoCode===o.code?"selected":""}>
+                                        ${Utils.escapeHTML(o.code||"")} - ${Utils.escapeHTML(o.documentName||"")}
                                     </option>
                                 `).join("")}
                             </select>
@@ -361,7 +519,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <button type="button" id="save-document-btn" class="btn-primary">\u062D\u0641\u0638</button>
                 </div>
             </div>
-        `,document.body.appendChild(s),e?.isoCode&&await this.loadDocumentCodeVersion("document",e.isoCode),s.querySelector("#save-document-btn").addEventListener("click",()=>this.handleDocumentSubmit(e?.id,s)),s.addEventListener("click",i=>{i.target===s&&s.remove()})},async handleDocumentSubmit(e=null,t){const a=document.getElementById("document-code-select")?.value||"";if(!a){Notification.error("\u064A\u062C\u0628 \u0627\u062E\u062A\u064A\u0627\u0631 \u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631");return}const i=document.getElementById("document-name"),o=document.getElementById("document-type"),d=document.getElementById("document-version"),l=document.getElementById("document-issue-date"),c=document.getElementById("document-revision-date"),n=document.getElementById("document-department");if(!i||!o||!d||!n){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const r={id:e||Utils.generateId("ISO_DOC"),isoCode:a,name:i.value.trim(),type:o.value,version:d.value.trim()||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",issueDate:l?.value||null,revisionDate:c?.value||null,department:n.value.trim(),createdAt:e?AppState.appData.isoDocuments.find(m=>m.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};Loading.show();try{if(e){const m=AppState.appData.isoDocuments.findIndex(u=>u.id===e);m!==-1&&(AppState.appData.isoDocuments[m]=r),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0648\u062B\u064A\u0642\u0629 \u0628\u0646\u062C\u0627\u062D")}else AppState.appData.isoDocuments.push(r),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0648\u062B\u064A\u0642\u0629 \u0628\u0646\u062C\u0627\u062D");typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),Loading.hide();try{t&&t.parentNode&&t.remove()}catch(m){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0625\u063A\u0644\u0627\u0642 \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0648\u062B\u064A\u0642\u0629:",m)}this.load(),GoogleIntegration.autoSave("ISODocuments",AppState.appData.isoDocuments).catch(m=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 Google Sheets (\u0648\u062B\u0627\u0626\u0642 ISO):",m),typeof Notification<"u"&&Notification.warning&&Notification.warning("\u062A\u0645 \u0627\u0644\u062D\u0641\u0638 \u0645\u062D\u0644\u064A\u0627\u064B. \u062A\u0639\u0630\u0651\u0631\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0641\u0648\u0631\u064A\u0629 \u0645\u0639 \u0627\u0644\u0634\u064A\u062A.")})}catch(m){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+m.message)}},async showProcedureForm(e=null){let t=[];try{const i=await GoogleIntegration.fetchData("getDocumentCodes",{});i.success&&i.data&&(t=i.data.filter(o=>o.documentType==="\u0625\u062C\u0631\u0627\u0621"&&o.status==="\u0646\u0634\u0637"))}catch(i){Utils.safeError("Error loading document codes:",i)}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
+        `,document.body.appendChild(s),e?.isoCode&&await this.loadDocumentCodeVersion("document",e.isoCode),s.querySelector("#save-document-btn").addEventListener("click",()=>this.handleDocumentSubmit(e?.id,s)),s.addEventListener("click",o=>{o.target===s&&s.remove()})},async handleDocumentSubmit(e=null,t){const a=document.getElementById("document-code-select")?.value||"";if(!a){Notification.error("\u064A\u062C\u0628 \u0627\u062E\u062A\u064A\u0627\u0631 \u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631");return}const o=document.getElementById("document-name"),i=document.getElementById("document-type"),r=document.getElementById("document-version"),l=document.getElementById("document-issue-date"),c=document.getElementById("document-revision-date"),n=document.getElementById("document-department");if(!o||!i||!r||!n){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const d={id:e||Utils.generateId("ISO_DOC"),isoCode:a,name:o.value.trim(),type:i.value,version:r.value.trim()||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",issueDate:l?.value||null,revisionDate:c?.value||null,department:n.value.trim(),createdAt:e?AppState.appData.isoDocuments.find(m=>m.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};Loading.show();try{if(e){const m=AppState.appData.isoDocuments.findIndex(u=>u.id===e);m!==-1&&(AppState.appData.isoDocuments[m]=d),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0648\u062B\u064A\u0642\u0629 \u0628\u0646\u062C\u0627\u062D")}else AppState.appData.isoDocuments.push(d),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0648\u062B\u064A\u0642\u0629 \u0628\u0646\u062C\u0627\u062D");typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),Loading.hide();try{t&&t.parentNode&&t.remove()}catch(m){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0625\u063A\u0644\u0627\u0642 \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0648\u062B\u064A\u0642\u0629:",m)}this.load(),GoogleIntegration.autoSave("ISODocuments",AppState.appData.isoDocuments).catch(m=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 Google Sheets (\u0648\u062B\u0627\u0626\u0642 ISO):",m),typeof Notification<"u"&&Notification.warning&&Notification.warning("\u062A\u0645 \u0627\u0644\u062D\u0641\u0638 \u0645\u062D\u0644\u064A\u0627\u064B. \u062A\u0639\u0630\u0651\u0631\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0641\u0648\u0631\u064A\u0629 \u0645\u0639 \u0627\u0644\u0634\u064A\u062A.")})}catch(m){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+m.message)}},async showProcedureForm(e=null){let t=[];try{const o=await GoogleIntegration.fetchData("getDocumentCodes",{});o.success&&o.data&&(t=o.data.filter(i=>i.documentType==="\u0625\u062C\u0631\u0627\u0621"&&i.status==="\u0646\u0634\u0637"))}catch(o){Utils.safeError("Error loading document codes:",o)}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
                     <h2 class="modal-title">${e?"\u062A\u0639\u062F\u064A\u0644 \u0625\u062C\u0631\u0627\u0621":"\u0625\u0636\u0627\u0641\u0629 \u0625\u062C\u0631\u0627\u0621 \u062C\u062F\u064A\u062F"}</h2>
@@ -376,11 +534,11 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                             <select id="procedure-code-select" required class="form-input" 
                                 onchange="ISO.loadDocumentCodeVersion('procedure')">
                                 <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631</option>
-                                ${t.map(i=>`
-                                    <option value="${i.code}" 
-                                        data-code-id="${i.id}"
-                                        ${e?.isoCode===i.code?"selected":""}>
-                                        ${Utils.escapeHTML(i.code||"")} - ${Utils.escapeHTML(i.documentName||"")}
+                                ${t.map(o=>`
+                                    <option value="${o.code}" 
+                                        data-code-id="${o.id}"
+                                        ${e?.isoCode===o.code?"selected":""}>
+                                        ${Utils.escapeHTML(o.code||"")} - ${Utils.escapeHTML(o.documentName||"")}
                                     </option>
                                 `).join("")}
                             </select>
@@ -421,7 +579,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <button type="button" id="save-procedure-btn" class="btn-primary">\u062D\u0641\u0638</button>
                 </div>
             </div>
-        `,document.body.appendChild(s),e?.isoCode&&await this.loadDocumentCodeVersion("procedure",e.isoCode),s.querySelector("#save-procedure-btn").addEventListener("click",()=>this.handleProcedureSubmit(e?.id,s)),s.addEventListener("click",i=>{i.target===s&&s.remove()})},async handleProcedureSubmit(e=null,t){const a=document.getElementById("procedure-code-select")?.value||"";if(!a){Notification.error("\u064A\u062C\u0628 \u0627\u062E\u062A\u064A\u0627\u0631 \u0643\u0648\u062F \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631");return}const i={id:e||Utils.generateId("ISO_PROC"),isoCode:a,name:document.getElementById("procedure-name").value.trim(),department:document.getElementById("procedure-department").value.trim(),version:document.getElementById("procedure-version").value.trim()||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",issueDate:document.getElementById("procedure-issue-date").value||null,revisionDate:document.getElementById("procedure-revision-date").value||null,createdAt:e?AppState.appData.isoProcedures.find(o=>o.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};Loading.show();try{if(e){const o=AppState.appData.isoProcedures.findIndex(d=>d.id===e);o!==-1&&(AppState.appData.isoProcedures[o]=i),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0628\u0646\u062C\u0627\u062D")}else AppState.appData.isoProcedures.push(i),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0628\u0646\u062C\u0627\u062D");typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),Loading.hide();try{t&&t.parentNode&&t.remove()}catch(o){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0625\u063A\u0644\u0627\u0642 \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0625\u062C\u0631\u0627\u0621:",o)}this.load(),GoogleIntegration.autoSave("ISOProcedures",AppState.appData.isoProcedures).catch(o=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 Google Sheets (\u0625\u062C\u0631\u0627\u0621\u0627\u062A ISO):",o),typeof Notification<"u"&&Notification.warning&&Notification.warning("\u062A\u0645 \u0627\u0644\u062D\u0641\u0638 \u0645\u062D\u0644\u064A\u0627\u064B. \u062A\u0639\u0630\u0651\u0631\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0641\u0648\u0631\u064A\u0629 \u0645\u0639 \u0627\u0644\u0634\u064A\u062A.")})}catch(o){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+o.message)}},async showFormForm(e=null){let t=[];try{const i=await GoogleIntegration.fetchData("getDocumentCodes",{});i.success&&i.data&&(t=i.data.filter(o=>o.documentType==="\u0646\u0645\u0648\u0630\u062C"&&o.status==="\u0646\u0634\u0637"))}catch(i){Utils.safeError("Error loading document codes:",i)}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
+        `,document.body.appendChild(s),e?.isoCode&&await this.loadDocumentCodeVersion("procedure",e.isoCode),s.querySelector("#save-procedure-btn").addEventListener("click",()=>this.handleProcedureSubmit(e?.id,s)),s.addEventListener("click",o=>{o.target===s&&s.remove()})},async handleProcedureSubmit(e=null,t){const a=document.getElementById("procedure-code-select")?.value||"";if(!a){Notification.error("\u064A\u062C\u0628 \u0627\u062E\u062A\u064A\u0627\u0631 \u0643\u0648\u062F \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631");return}const o={id:e||Utils.generateId("ISO_PROC"),isoCode:a,name:document.getElementById("procedure-name").value.trim(),department:document.getElementById("procedure-department").value.trim(),version:document.getElementById("procedure-version").value.trim()||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",issueDate:document.getElementById("procedure-issue-date").value||null,revisionDate:document.getElementById("procedure-revision-date").value||null,createdAt:e?AppState.appData.isoProcedures.find(i=>i.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};Loading.show();try{if(e){const i=AppState.appData.isoProcedures.findIndex(r=>r.id===e);i!==-1&&(AppState.appData.isoProcedures[i]=o),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0628\u0646\u062C\u0627\u062D")}else AppState.appData.isoProcedures.push(o),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0628\u0646\u062C\u0627\u062D");typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),Loading.hide();try{t&&t.parentNode&&t.remove()}catch(i){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0625\u063A\u0644\u0627\u0642 \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0625\u062C\u0631\u0627\u0621:",i)}this.load(),GoogleIntegration.autoSave("ISOProcedures",AppState.appData.isoProcedures).catch(i=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 Google Sheets (\u0625\u062C\u0631\u0627\u0621\u0627\u062A ISO):",i),typeof Notification<"u"&&Notification.warning&&Notification.warning("\u062A\u0645 \u0627\u0644\u062D\u0641\u0638 \u0645\u062D\u0644\u064A\u0627\u064B. \u062A\u0639\u0630\u0651\u0631\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0641\u0648\u0631\u064A\u0629 \u0645\u0639 \u0627\u0644\u0634\u064A\u062A.")})}catch(i){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+i.message)}},async showFormForm(e=null){let t=[];try{const o=await GoogleIntegration.fetchData("getDocumentCodes",{});o.success&&o.data&&(t=o.data.filter(i=>i.documentType==="\u0646\u0645\u0648\u0630\u062C"&&i.status==="\u0646\u0634\u0637"))}catch(o){Utils.safeError("Error loading document codes:",o)}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
                     <h2 class="modal-title">${e?"\u062A\u0639\u062F\u064A\u0644 \u0646\u0645\u0648\u0630\u062C":"\u0625\u0636\u0627\u0641\u0629 \u0646\u0645\u0648\u0630\u062C \u062C\u062F\u064A\u062F"}</h2>
@@ -436,11 +594,11 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                             <select id="form-code-select" required class="form-input" 
                                 onchange="ISO.loadDocumentCodeVersion('form')">
                                 <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631</option>
-                                ${t.map(i=>`
-                                    <option value="${i.code}" 
-                                        data-code-id="${i.id}"
-                                        ${e?.isoCode===i.code?"selected":""}>
-                                        ${Utils.escapeHTML(i.code||"")} - ${Utils.escapeHTML(i.documentName||"")}
+                                ${t.map(o=>`
+                                    <option value="${o.code}" 
+                                        data-code-id="${o.id}"
+                                        ${e?.isoCode===o.code?"selected":""}>
+                                        ${Utils.escapeHTML(o.code||"")} - ${Utils.escapeHTML(o.documentName||"")}
                                     </option>
                                 `).join("")}
                             </select>
@@ -487,7 +645,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <button type="button" id="save-form-btn" class="btn-primary">\u062D\u0641\u0638</button>
                 </div>
             </div>
-        `,document.body.appendChild(s),e?.isoCode&&await this.loadDocumentCodeVersion("form",e.isoCode),s.querySelector("#save-form-btn").addEventListener("click",()=>this.handleFormSubmit(e?.id,s)),s.addEventListener("click",i=>{i.target===s&&s.remove()})},async handleFormSubmit(e=null,t){const s=t?.querySelector('button[type="submit"]')||document.querySelector('.modal-overlay button[type="submit"]');if(s&&s.disabled)return;let a="";s&&(a=s.innerHTML,s.disabled=!0,s.innerHTML='<i class="fas fa-spinner fa-spin ml-2"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638...');const o=document.getElementById("form-code-select")?.value||"";if(!o){Notification.error("\u064A\u062C\u0628 \u0627\u062E\u062A\u064A\u0627\u0631 \u0643\u0648\u062F \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"),s&&(s.disabled=!1,s.innerHTML=a);return}const d=document.getElementById("form-name"),l=document.getElementById("form-type"),c=document.getElementById("form-version"),n=document.getElementById("form-issue-date"),r=document.getElementById("form-revision-date");if(!d||!l||!c){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."),s&&(s.disabled=!1,s.innerHTML=a);return}const m={id:e||Utils.generateId("ISO_FORM"),isoCode:o,name:d.value.trim(),type:l.value,version:c.value.trim()||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",issueDate:n?.value||null,revisionDate:r?.value||null,createdAt:e?AppState.appData.isoForms.find(u=>u.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};try{if(e){const u=AppState.appData.isoForms.findIndex(v=>v.id===e);u!==-1&&(AppState.appData.isoForms[u]=m),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0628\u0646\u062C\u0627\u062D")}else AppState.appData.isoForms.push(m),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0628\u0646\u062C\u0627\u062D");typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),t.remove(),s&&(s.disabled=!1,s.innerHTML=a),this.load(),GoogleIntegration.autoSave("ISOForms",AppState.appData.isoForms).catch(u=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 Google Sheets:",u)})}catch(u){Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+u.message),s&&(s.disabled=!1,s.innerHTML=a)}},async viewDocument(e){const t=AppState.appData.isoDocuments.find(a=>a.id===e);if(!t){Notification.error("\u0627\u0644\u0648\u062B\u064A\u0642\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
+        `,document.body.appendChild(s),e?.isoCode&&await this.loadDocumentCodeVersion("form",e.isoCode),s.querySelector("#save-form-btn").addEventListener("click",()=>this.handleFormSubmit(e?.id,s)),s.addEventListener("click",o=>{o.target===s&&s.remove()})},async handleFormSubmit(e=null,t){const s=t?.querySelector('button[type="submit"]')||document.querySelector('.modal-overlay button[type="submit"]');if(s&&s.disabled)return;let a="";s&&(a=s.innerHTML,s.disabled=!0,s.innerHTML='<i class="fas fa-spinner fa-spin ml-2"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638...');const i=document.getElementById("form-code-select")?.value||"";if(!i){Notification.error("\u064A\u062C\u0628 \u0627\u062E\u062A\u064A\u0627\u0631 \u0643\u0648\u062F \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"),s&&(s.disabled=!1,s.innerHTML=a);return}const r=document.getElementById("form-name"),l=document.getElementById("form-type"),c=document.getElementById("form-version"),n=document.getElementById("form-issue-date"),d=document.getElementById("form-revision-date");if(!r||!l||!c){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."),s&&(s.disabled=!1,s.innerHTML=a);return}const m={id:e||Utils.generateId("ISO_FORM"),isoCode:i,name:r.value.trim(),type:l.value,version:c.value.trim()||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",issueDate:n?.value||null,revisionDate:d?.value||null,createdAt:e?AppState.appData.isoForms.find(u=>u.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};try{if(e){const u=AppState.appData.isoForms.findIndex(f=>f.id===e);u!==-1&&(AppState.appData.isoForms[u]=m),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0628\u0646\u062C\u0627\u062D")}else AppState.appData.isoForms.push(m),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0628\u0646\u062C\u0627\u062D");typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),t.remove(),s&&(s.disabled=!1,s.innerHTML=a),this.load(),GoogleIntegration.autoSave("ISOForms",AppState.appData.isoForms).catch(u=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 Google Sheets:",u)})}catch(u){Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+u.message),s&&(s.disabled=!1,s.innerHTML=a)}},async viewDocument(e){const t=AppState.appData.isoDocuments.find(a=>a.id===e);if(!t){Notification.error("\u0627\u0644\u0648\u062B\u064A\u0642\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
                     <h2 class="modal-title">\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0648\u062B\u064A\u0642\u0629</h2>
@@ -636,110 +794,138 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                 </div>
             </div>
         `},async renderAudit(){const e=AppState.appData.hseAudits||[],t=AppState.appData.hseNonConformities||[],s=AppState.appData.hseCorrectiveActions||[];return`
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="content-card">
-                    <div class="card-header">
-                        <div class="flex items-center justify-between">
-                            <h2 class="card-title"><i class="fas fa-clipboard-check ml-2"></i>\u0639\u0645\u0644\u064A\u0627\u062A \u0627\u0644\u062A\u062F\u0642\u064A\u0642</h2>
-                            <button class="btn-primary" onclick="ISO.showAuditForm()">
-                                <i class="fas fa-plus ml-2"></i>\u0625\u0636\u0627\u0641\u0629 \u062A\u062F\u0642\u064A\u0642
-                            </button>
-                        </div>
+            <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                        <i class="fas fa-search-plus text-blue-600 ml-3"></i>\u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0648\u0627\u0644\u062C\u0648\u062F\u0629
+                    </h2>
+                    <p class="text-sm text-gray-500 mt-1">\u0625\u062F\u0627\u0631\u0629 \u0639\u0645\u0644\u064A\u0627\u062A \u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0648\u062D\u0627\u0644\u0627\u062A \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0648\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629</p>
+                </div>
+                <div class="flex gap-2">
+                    <button class="btn bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all" onclick="ISO.showAuditForm()">
+                        <i class="fas fa-plus text-blue-600"></i>\u062C\u062F\u0648\u0644\u0629 \u062A\u062F\u0642\u064A\u0642
+                    </button>
+                    <button class="btn bg-blue-600 text-white hover:bg-blue-700 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all" onclick="ISO.showNonConformityForm()">
+                        <i class="fas fa-exclamation-triangle"></i>\u062A\u0633\u062C\u064A\u0644 \u062D\u0627\u0644\u0629 \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Audits Card -->
+                <div class="content-card shadow-lg border-0 rounded-2xl overflow-hidden bg-white flex flex-col">
+                    <div class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 p-5 border-b border-blue-100 flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-blue-900 m-0 flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center ml-2">
+                                <i class="fas fa-clipboard-check"></i>
+                            </div>
+                            \u0633\u062C\u0644 \u0639\u0645\u0644\u064A\u0627\u062A \u0627\u0644\u062A\u062F\u0642\u064A\u0642
+                        </h3>
+                        <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full border border-blue-200">${e.length} \u0639\u0645\u0644\u064A\u0627\u062A</span>
                     </div>
-                    <div class="card-body">
-                        ${e.length===0?'<div class="empty-state"><p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0639\u0645\u0644\u064A\u0627\u062A \u062A\u062F\u0642\u064A\u0642 \u0645\u0633\u062C\u0644\u0629</p></div>':`
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
-                                        <th>\u0627\u0644\u0646\u0648\u0639</th>
-                                        <th>\u0627\u0644\u0645\u062F\u0642\u0642</th>
-                                        <th>\u0627\u0644\u062D\u0627\u0644\u0629</th>
-                                        <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${e.map(a=>`
-                                        <tr>
-                                            <td>${Utils.formatDate(a.date)}</td>
-                                            <td>${Utils.escapeHTML(a.type)}</td>
-                                            <td>${Utils.escapeHTML(a.auditor)}</td>
-                                            <td><span class="badge badge-${a.status==="\u0645\u0643\u062A\u0645\u0644"?"success":"warning"}">${a.status}</span></td>
-                                            <td>
-                                                <button onclick="ISO.viewAudit('${a.id}')" class="btn-icon btn-icon-info"><i class="fas fa-eye"></i></button>
-                                            </td>
-                                        </tr>
-                                    `).join("")}
-                                </tbody>
-                            </table>
+                    <div class="card-body p-0 flex-1 overflow-y-auto" style="max-height: 500px;">
+                        ${e.length===0?`
+                            <div class="p-12 text-center flex flex-col items-center justify-center h-full">
+                                <div class="w-16 h-16 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mb-3"><i class="fas fa-clipboard text-2xl"></i></div>
+                                <h4 class="text-gray-600 font-bold mb-1">\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u062A\u062F\u0642\u064A\u0642</h4>
+                                <p class="text-gray-400 text-xs">\u0642\u0645 \u0628\u062C\u062F\u0648\u0644\u0629 \u0623\u0648\u0644 \u0639\u0645\u0644\u064A\u0629 \u062A\u062F\u0642\u064A\u0642 \u0644\u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0646\u0638\u0627\u0645</p>
+                            </div>
+                        `:`
+                            <div class="divide-y divide-gray-100">
+                                ${e.map(a=>{const o=a.status==="\u0645\u0643\u062A\u0645\u0644"||a.status==="Completed",i=a.status==="\u0645\u062C\u062F\u0648\u0644"||a.status==="Scheduled";let r=o?"green":i?"blue":"amber",l=a.type?.includes("\u062E\u0627\u0631\u062C\u064A")?"fa-building":"fa-users-cog";return`
+                                    <div class="p-4 hover:bg-gray-50 transition-colors flex items-start justify-between group">
+                                        <div class="flex items-start gap-4">
+                                            <div class="mt-1 w-10 h-10 rounded-xl bg-${r}-50 text-${r}-600 flex items-center justify-center border border-${r}-100">
+                                                <i class="fas ${o?"fa-check":"fa-calendar-alt"}"></i>
+                                            </div>
+                                            <div>
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    <h4 class="font-bold text-gray-800 text-sm m-0">${Utils.escapeHTML(a.type)}</h4>
+                                                    <span class="bg-${r}-100 text-${r}-800 text-[10px] font-bold px-2 py-0.5 rounded border border-${r}-200">${a.status}</span>
+                                                </div>
+                                                <div class="text-xs text-gray-500 flex items-center gap-3">
+                                                    <span title="\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u062F\u0642\u064A\u0642"><i class="far fa-calendar ml-1"></i>${Utils.formatDate(a.date)}</span>
+                                                    <span title="\u0627\u0644\u0645\u062F\u0642\u0642"><i class="fas fa-user-tie ml-1"></i>${Utils.escapeHTML(a.auditor)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button onclick="ISO.viewAudit('${a.id}')" class="text-gray-400 hover:text-blue-600 bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-200 w-8 h-8 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 focus:opacity-100" title="\u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
+                                            <i class="fas fa-chevron-left text-xs"></i>
+                                        </button>
+                                    </div>
+                                    `}).join("")}
+                            </div>
                         `}
                     </div>
                 </div>
                 
-                <div class="content-card">
-                    <div class="card-header">
-                        <div class="flex items-center justify-between">
-                            <h2 class="card-title"><i class="fas fa-times-circle ml-2"></i>\u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0648\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629</h2>
-                            <button class="btn-primary" onclick="ISO.showNonConformityForm()">
-                                <i class="fas fa-plus ml-2"></i>\u0625\u0636\u0627\u0641\u0629 \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629
-                            </button>
+                <!-- CAPA Card -->
+                <div class="content-card shadow-lg border-0 rounded-2xl overflow-hidden bg-white flex flex-col">
+                    <div class="card-header bg-gradient-to-r from-red-50 to-orange-50 p-5 border-b border-red-100 flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-red-900 m-0 flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center ml-2">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            \u062A\u062A\u0628\u0639 \u0625\u062C\u0631\u0627\u0621\u0627\u062A CAPA
+                        </h3>
+                        <div class="flex gap-1">
+                            <span class="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-1 rounded-md border border-red-200" title="\u062D\u0627\u0644\u0627\u062A \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629">${t.length} NC</span>
+                            <span class="bg-orange-100 text-orange-800 text-[10px] font-bold px-2 py-1 rounded-md border border-orange-200" title="\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u062A\u0635\u062D\u064A\u062D\u064A\u0629">${s.length} CA</span>
                         </div>
                     </div>
-                    <div class="card-body">
-                        ${t.length===0&&s.length===0?'<div class="empty-state"><p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629 \u0623\u0648 \u0625\u062C\u0631\u0627\u0621\u0627\u062A \u062A\u0635\u062D\u064A\u062D\u064A\u0629</p></div>':`
-                            <h3 class="font-semibold text-md mb-2">\u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 (${t.length})</h3>
-                            ${t.length===0?'<p class="text-gray-500 text-sm">\u0644\u0627 \u062A\u0648\u062C\u062F \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629 \u0645\u0633\u062C\u0644\u0629</p>':`
-                                <table class="data-table mb-4">
-                                    <thead>
-                                        <tr>
-                                            <th>\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
-                                            <th>\u0627\u0644\u0648\u0635\u0641</th>
-                                            <th>\u0627\u0644\u062D\u0627\u0644\u0629</th>
-                                            <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${t.map(a=>`
-                                            <tr>
-                                                <td>${Utils.formatDate(a.date)}</td>
-                                                <td>${Utils.escapeHTML(a.description.substring(0,50))}...</td>
-                                                <td><span class="badge badge-${a.status==="\u0645\u063A\u0644\u0642"?"success":"danger"}">${a.status}</span></td>
-                                                <td>
-                                                    <button onclick="ISO.viewNonConformity('${a.id}')" class="btn-icon btn-icon-info"><i class="fas fa-eye"></i></button>
-                                                </td>
-                                            </tr>
-                                        `).join("")}
-                                    </tbody>
-                                </table>
-                            `}
+                    <div class="card-body p-0 flex-1 overflow-y-auto bg-gray-50/30" style="max-height: 500px;">
+                        ${t.length===0&&s.length===0?`
+                            <div class="p-12 text-center flex flex-col items-center justify-center h-full">
+                                <div class="w-16 h-16 bg-green-50 text-green-400 rounded-full flex items-center justify-center mb-3"><i class="fas fa-shield-alt text-2xl"></i></div>
+                                <h4 class="text-gray-600 font-bold mb-1">\u0644\u0627 \u062A\u0648\u062C\u062F \u062D\u0627\u0644\u0627\u062A \u0645\u0633\u062C\u0644\u0629</h4>
+                                <p class="text-gray-400 text-xs">\u0646\u0638\u0627\u0645 \u0627\u0644\u062C\u0648\u062F\u0629 \u064A\u0639\u0645\u0644 \u0628\u0634\u0643\u0644 \u0645\u062B\u0627\u0644\u064A \u062F\u0648\u0646 \u0645\u0644\u0627\u062D\u0638\u0627\u062A.</p>
+                            </div>
+                        `:`
+                            <div class="p-4">
+                                <!-- Non-Conformities Section -->
+                                ${t.length>0?`
+                                    <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 pb-2 border-b border-gray-200 flex items-center gap-2">
+                                        <i class="fas fa-bug text-red-400"></i> \u062D\u0627\u0644\u0627\u062A \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 (NC)
+                                    </h4>
+                                    <div class="space-y-3 mb-6">
+                                        ${t.map(a=>{const o=a.status==="\u0645\u063A\u0644\u0642"||a.status==="Closed";return`
+                                                <div class="bg-white border ${o?"border-gray-200":"border-red-200 shadow-sm"} rounded-xl p-3 hover:border-red-300 transition-colors cursor-pointer group" onclick="ISO.viewNonConformity('${a.id}')">
+                                                    <div class="flex justify-between items-start mb-2">
+                                                        <span class="text-xs font-bold ${o?"text-gray-500 bg-gray-100":"text-red-700 bg-red-100"} px-2 py-0.5 rounded border ${o?"border-gray-200":"border-red-200"}">${a.status}</span>
+                                                        <span class="text-[10px] text-gray-400"><i class="far fa-clock ml-1"></i>${Utils.formatDate(a.date)}</span>
+                                                    </div>
+                                                    <p class="text-sm text-gray-800 font-medium line-clamp-2 leading-snug">${Utils.escapeHTML(a.description)}</p>
+                                                    <div class="mt-2 text-[10px] text-gray-500 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <span class="text-blue-600">\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644 &larr;</span>
+                                                    </div>
+                                                </div>
+                                            `}).join("")}
+                                    </div>
+                                `:""}
 
-                            <h3 class="font-semibold text-md mb-2 mt-6">\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629 (${s.length})</h3>
-                            ${s.length===0?'<p class="text-gray-500 text-sm">\u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u062C\u0631\u0627\u0621\u0627\u062A \u062A\u0635\u062D\u064A\u062D\u064A\u0629 \u0645\u0633\u062C\u0644\u0629</p>':`
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>\u0627\u0644\u0648\u0635</th>
-                                            <th>\u0627\u0644\u0645\u0633\u0624\u0648\u0644</th>
-                                            <th>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621</th>
-                                            <th>\u0627\u0644\u062D\u0627\u0644\u0629</th>
-                                            <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${s.map(a=>`
-                                            <tr>
-                                                <td>${Utils.escapeHTML(a.description.substring(0,50))}...</td>
-                                                <td>${Utils.escapeHTML(a.responsible)}</td>
-                                                <td>${Utils.formatDate(a.dueDate)}</td>
-                                                <td><span class="badge badge-${a.status==="\u0645\u0643\u062A\u0645\u0644"?"success":"warning"}">${a.status}</span></td>
-                                                <td>
-                                                    <button onclick="ISO.viewCorrectiveAction('${a.id}')" class="btn-icon btn-icon-info"><i class="fas fa-eye"></i></button>
-                                                </td>
-                                            </tr>
-                                        `).join("")}
-                                    </tbody>
-                                </table>
-                            `}
+                                <!-- Corrective Actions Section -->
+                                ${s.length>0?`
+                                    <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 pb-2 border-b border-gray-200 flex items-center gap-2">
+                                        <i class="fas fa-tools text-orange-400"></i> \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629 (CA)
+                                    </h4>
+                                    <div class="space-y-3">
+                                        ${s.map(a=>{const o=a.status==="\u0645\u0643\u062A\u0645\u0644"||a.status==="Completed",i=new Date(a.dueDate),r=!o&&i<new Date;return`
+                                                <div class="bg-white border ${o?"border-gray-200":r?"border-red-300 shadow-sm":"border-orange-200 shadow-sm"} rounded-xl p-3 hover:shadow-md transition-shadow cursor-pointer group relative overflow-hidden" onclick="ISO.viewCorrectiveAction('${a.id}')">
+                                                    ${r?'<div class="absolute top-0 right-0 w-1 h-full bg-red-500"></div>':""}
+                                                    <div class="flex justify-between items-start mb-2">
+                                                        <span class="text-xs font-bold ${o?"text-green-700 bg-green-100 border-green-200":"text-orange-700 bg-orange-100 border-orange-200"} px-2 py-0.5 rounded border">${a.status}</span>
+                                                        <span class="text-[10px] ${r?"text-red-600 font-bold":"text-gray-500"}"><i class="far fa-calendar-times ml-1"></i>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642: ${Utils.formatDate(a.dueDate)}</span>
+                                                    </div>
+                                                    <p class="text-sm text-gray-800 line-clamp-2 leading-snug mb-2">${Utils.escapeHTML(a.description)}</p>
+                                                    <div class="flex items-center gap-1.5 text-xs bg-gray-50 w-fit px-2 py-1 rounded text-gray-600 border border-gray-100">
+                                                        <i class="fas fa-user-hard-hat text-gray-400"></i>
+                                                        <span class="font-medium">${Utils.escapeHTML(a.responsible)}</span>
+                                                    </div>
+                                                </div>
+                                            `}).join("")}
+                                    </div>
+                                `:""}
+                            </div>
                         `}
                     </div>
                 </div>
@@ -781,7 +967,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <button type="button" id="save-objective-btn" class="btn-primary">\u062D\u0641\u0638</button>
                 </div>
             </div>
-        `,document.body.appendChild(t),t.querySelector("#save-objective-btn").addEventListener("click",()=>this.handleHSEObjectiveSubmit(e?.id,t)),t.addEventListener("click",a=>{a.target===t&&t.remove()})},async handleHSEObjectiveSubmit(e=null,t){const s=document.getElementById("objective-name"),a=document.getElementById("objective-description"),i=document.getElementById("objective-due-date"),o=document.getElementById("objective-responsible");if(!s||!a||!i||!o){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const d={id:e||Utils.generateId("HSE_OBJ"),name:s.value.trim(),description:a.value.trim(),dueDate:new Date(i.value).toISOString(),responsible:o.value.trim(),status:e&&AppState.appData.hseObjectives.find(l=>l.id===e)?.status||"\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u064A\u0630",createdAt:e?AppState.appData.hseObjectives.find(l=>l.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};AppState.appData.hseObjectives||(AppState.appData.hseObjectives=[]),Loading.show();try{if(e){const l=AppState.appData.hseObjectives.findIndex(c=>c.id===e);l!==-1&&(AppState.appData.hseObjectives[l]=d),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0647\u062F \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("HSEObjectives",AppState.appData.hseObjectives)}else if(AppState.appData.hseObjectives.push(d),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0647\u062F \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig.appsScript.enabled&&AppState.googleConfig.appsScript.scriptUrl)try{await GoogleIntegration.sendToAppsScript("addHSEObjective",d),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0647\u062F\u0641 \u0645\u0628\u0627\u0634\u0631\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629")}catch(l){Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u060C \u0633\u064A\u062A\u0645 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0644\u0627\u062D\u0642\u0627\u064B:",l),await GoogleIntegration.autoSave("HSEObjectives",AppState.appData.hseObjectives)}else await GoogleIntegration.autoSave("HSEObjectives",AppState.appData.hseObjectives);Loading.hide(),t.remove(),this.load()}catch(l){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+l.message)}},async showHSERiskAssessmentForm(e=null){Notification.info("\u0633\u064A\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0646\u0645\u0648\u0630\u062C \u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0645\u062E\u0627\u0637\u0631 HSE \u0642\u0631\u064A\u0628\u0627\u064B")},async showEnvironmentalAspectsForm(e=null){const t=document.createElement("div");t.className="modal-overlay",t.innerHTML=`
+        `,document.body.appendChild(t),t.querySelector("#save-objective-btn").addEventListener("click",()=>this.handleHSEObjectiveSubmit(e?.id,t)),t.addEventListener("click",a=>{a.target===t&&t.remove()})},async handleHSEObjectiveSubmit(e=null,t){const s=document.getElementById("objective-name"),a=document.getElementById("objective-description"),o=document.getElementById("objective-due-date"),i=document.getElementById("objective-responsible");if(!s||!a||!o||!i){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const r={id:e||Utils.generateId("HSE_OBJ"),name:s.value.trim(),description:a.value.trim(),dueDate:new Date(o.value).toISOString(),responsible:i.value.trim(),status:e&&AppState.appData.hseObjectives.find(l=>l.id===e)?.status||"\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u064A\u0630",createdAt:e?AppState.appData.hseObjectives.find(l=>l.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};AppState.appData.hseObjectives||(AppState.appData.hseObjectives=[]),Loading.show();try{if(e){const l=AppState.appData.hseObjectives.findIndex(c=>c.id===e);l!==-1&&(AppState.appData.hseObjectives[l]=r),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0647\u062F \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("HSEObjectives",AppState.appData.hseObjectives)}else if(AppState.appData.hseObjectives.push(r),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0647\u062F \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig.appsScript.enabled&&AppState.googleConfig.appsScript.scriptUrl)try{await GoogleIntegration.sendToAppsScript("addHSEObjective",r),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0647\u062F\u0641 \u0645\u0628\u0627\u0634\u0631\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629")}catch(l){Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u060C \u0633\u064A\u062A\u0645 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0644\u0627\u062D\u0642\u0627\u064B:",l),await GoogleIntegration.autoSave("HSEObjectives",AppState.appData.hseObjectives)}else await GoogleIntegration.autoSave("HSEObjectives",AppState.appData.hseObjectives);Loading.hide(),t.remove(),this.load()}catch(l){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+l.message)}},async showHSERiskAssessmentForm(e=null){Notification.info("\u0633\u064A\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0646\u0645\u0648\u0630\u062C \u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0645\u062E\u0627\u0637\u0631 HSE \u0642\u0631\u064A\u0628\u0627\u064B")},async showEnvironmentalAspectsForm(e=null){const t=document.createElement("div");t.className="modal-overlay",t.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
                     <h2 class="modal-title">${e?"\u062A\u0639\u062F\u064A\u0644 \u062C\u0627\u0646\u0628 \u0628\u064A\u0626\u064A":"\u0625\u0636\u0627\u0641\u0629 \u062C\u0627\u0646\u0628 \u0628\u064A\u0626\u064A \u062C\u062F\u064A\u062F"}</h2>
@@ -817,7 +1003,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <button type="button" id="save-aspect-btn" class="btn-primary">\u062D\u0641\u0638</button>
                 </div>
             </div>
-        `,document.body.appendChild(t),t.querySelector("#save-aspect-btn").addEventListener("click",()=>this.handleEnvironmentalAspectsSubmit(e?.id,t)),t.addEventListener("click",a=>{a.target===t&&t.remove()})},async handleEnvironmentalAspectsSubmit(e=null,t){const s=document.getElementById("aspect-name"),a=document.getElementById("aspect-description"),i=document.getElementById("aspect-impact");if(!s||!a||!i){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const o={id:e||Utils.generateId("ENV_ASP"),name:s.value.trim(),description:a.value.trim(),impact:i.value,createdAt:e?AppState.appData.environmentalAspects.find(d=>d.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};AppState.appData.environmentalAspects||(AppState.appData.environmentalAspects=[]),Loading.show();try{if(e){const d=AppState.appData.environmentalAspects.findIndex(l=>l.id===e);d!==-1&&(AppState.appData.environmentalAspects[d]=o),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("EnvironmentalAspects",AppState.appData.environmentalAspects)}else if(AppState.appData.environmentalAspects.push(o),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig.appsScript.enabled&&AppState.googleConfig.appsScript.scriptUrl)try{await GoogleIntegration.sendToAppsScript("addEnvironmentalAspect",o),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A \u0645\u0628\u0627\u0634\u0631\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629")}catch(d){Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u060C \u0633\u064A\u062A\u0645 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0644\u0627\u062D\u0642\u0627\u064B:",d),await GoogleIntegration.autoSave("EnvironmentalAspects",AppState.appData.environmentalAspects)}else await GoogleIntegration.autoSave("EnvironmentalAspects",AppState.appData.environmentalAspects);Loading.hide(),t.remove(),this.load()}catch(d){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+d.message)}},async showEnvironmentalMonitoringForm(e=null){Notification.info("\u0633\u064A\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0628\u064A\u0626\u064A\u0629 \u0642\u0631\u064A\u0628\u0627\u064B")},async showAuditForm(e=null){const t=document.createElement("div");t.className="modal-overlay",t.innerHTML=`
+        `,document.body.appendChild(t),t.querySelector("#save-aspect-btn").addEventListener("click",()=>this.handleEnvironmentalAspectsSubmit(e?.id,t)),t.addEventListener("click",a=>{a.target===t&&t.remove()})},async handleEnvironmentalAspectsSubmit(e=null,t){const s=document.getElementById("aspect-name"),a=document.getElementById("aspect-description"),o=document.getElementById("aspect-impact");if(!s||!a||!o){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const i={id:e||Utils.generateId("ENV_ASP"),name:s.value.trim(),description:a.value.trim(),impact:o.value,createdAt:e?AppState.appData.environmentalAspects.find(r=>r.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};AppState.appData.environmentalAspects||(AppState.appData.environmentalAspects=[]),Loading.show();try{if(e){const r=AppState.appData.environmentalAspects.findIndex(l=>l.id===e);r!==-1&&(AppState.appData.environmentalAspects[r]=i),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("EnvironmentalAspects",AppState.appData.environmentalAspects)}else if(AppState.appData.environmentalAspects.push(i),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig.appsScript.enabled&&AppState.googleConfig.appsScript.scriptUrl)try{await GoogleIntegration.sendToAppsScript("addEnvironmentalAspect",i),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A \u0645\u0628\u0627\u0634\u0631\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629")}catch(r){Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u060C \u0633\u064A\u062A\u0645 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0644\u0627\u062D\u0642\u0627\u064B:",r),await GoogleIntegration.autoSave("EnvironmentalAspects",AppState.appData.environmentalAspects)}else await GoogleIntegration.autoSave("EnvironmentalAspects",AppState.appData.environmentalAspects);Loading.hide(),t.remove(),this.load()}catch(r){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+r.message)}},async showEnvironmentalMonitoringForm(e=null){Notification.info("\u0633\u064A\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0628\u064A\u0626\u064A\u0629 \u0642\u0631\u064A\u0628\u0627\u064B")},async showAuditForm(e=null){const t=document.createElement("div");t.className="modal-overlay",t.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
                     <h2 class="modal-title">${e?"\u062A\u0639\u062F\u064A\u0644 \u062A\u062F\u0642\u064A\u0642":"\u0625\u0636\u0627\u0629 \u062A\u062F\u0642\u064A\u0642 \u062C\u062F\u064A\u062F"}</h2>
@@ -866,7 +1052,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <button type="button" id="save-audit-btn" class="btn-primary">\u062D\u0641\u0638</button>
                 </div>
             </div>
-        `,document.body.appendChild(t),t.querySelector("#save-audit-btn").addEventListener("click",()=>this.handleAuditSubmit(e?.id,t)),t.addEventListener("click",a=>{a.target===t&&t.remove()})},async handleAuditSubmit(e=null,t){const s=document.getElementById("audit-type"),a=document.getElementById("audit-date"),i=document.getElementById("audit-auditor"),o=document.getElementById("audit-status"),d=document.getElementById("audit-description");if(!s||!a||!i||!o||!d){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const l={id:e||Utils.generateId("HSE_AUDIT"),type:s.value,date:new Date(a.value).toISOString(),auditor:i.value.trim(),status:o.value,description:d.value.trim(),createdAt:e?AppState.appData.hseAudits.find(c=>c.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};AppState.appData.hseAudits||(AppState.appData.hseAudits=[]),Loading.show();try{if(e){const c=AppState.appData.hseAudits.findIndex(n=>n.id===e);c!==-1&&(AppState.appData.hseAudits[c]=l),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("HSEAudits",AppState.appData.hseAudits)}else if(AppState.appData.hseAudits.push(l),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig.appsScript.enabled&&AppState.googleConfig.appsScript.scriptUrl)try{await GoogleIntegration.sendToAppsScript("addHSEAudit",l),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0645\u0628\u0627\u0634\u0631\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629")}catch(c){Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u060C \u0633\u064A\u062A\u0645 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0644\u0627\u062D\u0642\u0627\u064B:",c),await GoogleIntegration.autoSave("HSEAudits",AppState.appData.hseAudits)}else await GoogleIntegration.autoSave("HSEAudits",AppState.appData.hseAudits);Loading.hide(),t.remove(),this.load()}catch(c){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+c.message)}},async viewAudit(e){const t=AppState.appData.hseAudits.find(a=>a.id===e);if(!t){Notification.error("\u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
+        `,document.body.appendChild(t),t.querySelector("#save-audit-btn").addEventListener("click",()=>this.handleAuditSubmit(e?.id,t)),t.addEventListener("click",a=>{a.target===t&&t.remove()})},async handleAuditSubmit(e=null,t){const s=document.getElementById("audit-type"),a=document.getElementById("audit-date"),o=document.getElementById("audit-auditor"),i=document.getElementById("audit-status"),r=document.getElementById("audit-description");if(!s||!a||!o||!i||!r){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const l={id:e||Utils.generateId("HSE_AUDIT"),type:s.value,date:new Date(a.value).toISOString(),auditor:o.value.trim(),status:i.value,description:r.value.trim(),createdAt:e?AppState.appData.hseAudits.find(c=>c.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};AppState.appData.hseAudits||(AppState.appData.hseAudits=[]),Loading.show();try{if(e){const c=AppState.appData.hseAudits.findIndex(n=>n.id===e);c!==-1&&(AppState.appData.hseAudits[c]=l),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("HSEAudits",AppState.appData.hseAudits)}else if(AppState.appData.hseAudits.push(l),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig.appsScript.enabled&&AppState.googleConfig.appsScript.scriptUrl)try{await GoogleIntegration.sendToAppsScript("addHSEAudit",l),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0645\u0628\u0627\u0634\u0631\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629")}catch(c){Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u060C \u0633\u064A\u062A\u0645 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0644\u0627\u062D\u0642\u0627\u064B:",c),await GoogleIntegration.autoSave("HSEAudits",AppState.appData.hseAudits)}else await GoogleIntegration.autoSave("HSEAudits",AppState.appData.hseAudits);Loading.hide(),t.remove(),this.load()}catch(c){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+c.message)}},async viewAudit(e){const t=AppState.appData.hseAudits.find(a=>a.id===e);if(!t){Notification.error("\u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
                     <h2 class="modal-title">\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u062A\u062F\u0642\u064A\u0642</h2>
@@ -922,7 +1108,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <button type="button" id="save-nc-btn" class="btn-primary">\u062D\u0641\u0638</button>
                 </div>
             </div>
-        `,document.body.appendChild(t),t.querySelector("#save-nc-btn").addEventListener("click",()=>this.handleNonConformitySubmit(e?.id,t)),t.addEventListener("click",a=>{a.target===t&&t.remove()})},async handleNonConformitySubmit(e=null,t){const s=document.getElementById("nc-date"),a=document.getElementById("nc-description"),i=document.getElementById("nc-status");if(!s||!a||!i){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const o={id:e||Utils.generateId("HSE_NC"),date:new Date(s.value).toISOString(),description:a.value.trim(),status:i.value,createdAt:e?AppState.appData.hseNonConformities.find(d=>d.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};AppState.appData.hseNonConformities||(AppState.appData.hseNonConformities=[]),Loading.show();try{if(e){const d=AppState.appData.hseNonConformities.findIndex(l=>l.id===e);d!==-1&&(AppState.appData.hseNonConformities[d]=o),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("HSENonConformities",AppState.appData.hseNonConformities)}else if(AppState.appData.hseNonConformities.push(o),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig.appsScript.enabled&&AppState.googleConfig.appsScript.scriptUrl)try{await GoogleIntegration.sendToAppsScript("addHSENonConformity",o),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0645\u0628\u0627\u0634\u0631\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629")}catch(d){Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u060C \u0633\u064A\u062A\u0645 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0644\u0627\u062D\u0642\u0627\u064B:",d),await GoogleIntegration.autoSave("HSENonConformities",AppState.appData.hseNonConformities)}else await GoogleIntegration.autoSave("HSENonConformities",AppState.appData.hseNonConformities);Loading.hide(),t.remove(),this.load()}catch(d){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+d.message)}},async viewNonConformity(e){const t=AppState.appData.hseNonConformities.find(a=>a.id===e);if(!t){Notification.error("\u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
+        `,document.body.appendChild(t),t.querySelector("#save-nc-btn").addEventListener("click",()=>this.handleNonConformitySubmit(e?.id,t)),t.addEventListener("click",a=>{a.target===t&&t.remove()})},async handleNonConformitySubmit(e=null,t){const s=document.getElementById("nc-date"),a=document.getElementById("nc-description"),o=document.getElementById("nc-status");if(!s||!a||!o){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const i={id:e||Utils.generateId("HSE_NC"),date:new Date(s.value).toISOString(),description:a.value.trim(),status:o.value,createdAt:e?AppState.appData.hseNonConformities.find(r=>r.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};AppState.appData.hseNonConformities||(AppState.appData.hseNonConformities=[]),Loading.show();try{if(e){const r=AppState.appData.hseNonConformities.findIndex(l=>l.id===e);r!==-1&&(AppState.appData.hseNonConformities[r]=i),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("HSENonConformities",AppState.appData.hseNonConformities)}else if(AppState.appData.hseNonConformities.push(i),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig.appsScript.enabled&&AppState.googleConfig.appsScript.scriptUrl)try{await GoogleIntegration.sendToAppsScript("addHSENonConformity",i),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0645\u0628\u0627\u0634\u0631\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629")}catch(r){Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u060C \u0633\u064A\u062A\u0645 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0644\u0627\u062D\u0642\u0627\u064B:",r),await GoogleIntegration.autoSave("HSENonConformities",AppState.appData.hseNonConformities)}else await GoogleIntegration.autoSave("HSENonConformities",AppState.appData.hseNonConformities);Loading.hide(),t.remove(),this.load()}catch(r){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+r.message)}},async viewNonConformity(e){const t=AppState.appData.hseNonConformities.find(a=>a.id===e);if(!t){Notification.error("\u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
                     <h2 class="modal-title">\u062A\u0641\u0627\u0635\u064A\u0644 \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629</h2>
@@ -980,7 +1166,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <button type="button" id="save-ca-btn" class="btn-primary">\u062D\u0641\u0638</button>
                 </div>
             </div>
-        `,document.body.appendChild(t),t.querySelector("#save-ca-btn").addEventListener("click",()=>this.handleCorrectiveActionSubmit(e?.id,t)),t.addEventListener("click",a=>{a.target===t&&t.remove()})},async handleCorrectiveActionSubmit(e=null,t){const s=document.getElementById("ca-description"),a=document.getElementById("ca-responsible"),i=document.getElementById("ca-due-date"),o=document.getElementById("ca-status");if(!s||!a||!i||!o){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const d={id:e||Utils.generateId("HSE_CA"),description:s.value.trim(),responsible:a.value.trim(),dueDate:new Date(i.value).toISOString(),status:o.value,createdAt:e?AppState.appData.hseCorrectiveActions.find(l=>l.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};AppState.appData.hseCorrectiveActions||(AppState.appData.hseCorrectiveActions=[]),Loading.show();try{if(e){const l=AppState.appData.hseCorrectiveActions.findIndex(c=>c.id===e);l!==-1&&(AppState.appData.hseCorrectiveActions[l]=d),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("HSECorrectiveActions",AppState.appData.hseCorrectiveActions)}else if(AppState.appData.hseCorrectiveActions.push(d),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig.appsScript.enabled&&AppState.googleConfig.appsScript.scriptUrl)try{await GoogleIntegration.sendToAppsScript("addHSECorrectiveAction",d),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A \u0645\u0628\u0627\u0634\u0631\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629")}catch(l){Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u060C \u0633\u064A\u062A\u0645 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0644\u0627\u062D\u0642\u0627\u064B:",l),await GoogleIntegration.autoSave("HSECorrectiveActions",AppState.appData.hseCorrectiveActions)}else await GoogleIntegration.autoSave("HSECorrectiveActions",AppState.appData.hseCorrectiveActions);Loading.hide(),t.remove(),this.load()}catch(l){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+l.message)}},async viewCorrectiveAction(e){const t=AppState.appData.hseCorrectiveActions.find(a=>a.id===e);if(!t){Notification.error("\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
+        `,document.body.appendChild(t),t.querySelector("#save-ca-btn").addEventListener("click",()=>this.handleCorrectiveActionSubmit(e?.id,t)),t.addEventListener("click",a=>{a.target===t&&t.remove()})},async handleCorrectiveActionSubmit(e=null,t){const s=document.getElementById("ca-description"),a=document.getElementById("ca-responsible"),o=document.getElementById("ca-due-date"),i=document.getElementById("ca-status");if(!s||!a||!o||!i){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const r={id:e||Utils.generateId("HSE_CA"),description:s.value.trim(),responsible:a.value.trim(),dueDate:new Date(o.value).toISOString(),status:i.value,createdAt:e?AppState.appData.hseCorrectiveActions.find(l=>l.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};AppState.appData.hseCorrectiveActions||(AppState.appData.hseCorrectiveActions=[]),Loading.show();try{if(e){const l=AppState.appData.hseCorrectiveActions.findIndex(c=>c.id===e);l!==-1&&(AppState.appData.hseCorrectiveActions[l]=r),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("HSECorrectiveActions",AppState.appData.hseCorrectiveActions)}else if(AppState.appData.hseCorrectiveActions.push(r),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig.appsScript.enabled&&AppState.googleConfig.appsScript.scriptUrl)try{await GoogleIntegration.sendToAppsScript("addHSECorrectiveAction",r),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A \u0645\u0628\u0627\u0634\u0631\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629")}catch(l){Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u060C \u0633\u064A\u062A\u0645 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0644\u0627\u062D\u0642\u0627\u064B:",l),await GoogleIntegration.autoSave("HSECorrectiveActions",AppState.appData.hseCorrectiveActions)}else await GoogleIntegration.autoSave("HSECorrectiveActions",AppState.appData.hseCorrectiveActions);Loading.hide(),t.remove(),this.load()}catch(l){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+l.message)}},async viewCorrectiveAction(e){const t=AppState.appData.hseCorrectiveActions.find(a=>a.id===e);if(!t){Notification.error("\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
                     <h2 class="modal-title">\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A</h2>
@@ -1011,7 +1197,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
             </div>
             <div class="card-body bg-gray-50/50 p-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                    ${this.SystemFormsManifest.map(s=>{const a=e.find(o=>o.code===s.defaultCode||o.documentName===s.name);let i=null;if(a){const o=t.filter(d=>d.documentCodeId===a.id&&(d.isActive===!0||d.isActive==="true"));o.length>0&&(o.sort((d,l)=>new Date(l.issueDate||0)-new Date(d.issueDate||0)),i=o[0])}return`
+                    ${this.SystemFormsManifest.map(s=>{const a=e.find(i=>i.code===s.defaultCode||i.documentName===s.name);let o=null;if(a){const i=t.filter(r=>r.documentCodeId===a.id&&(r.isActive===!0||r.isActive==="true"));i.length>0&&(i.sort((r,l)=>new Date(l.issueDate||0)-new Date(r.issueDate||0)),o=i[0])}return`
                         <div class="bg-white border ${a?"border-green-200":"border-red-200"} rounded-xl p-5 hover:shadow-xl transition-all duration-300 relative overflow-hidden group transform hover:-translate-y-1">
                             <div class="absolute top-0 right-0 w-1.5 h-full ${a?"bg-gradient-to-b from-green-400 to-green-600":"bg-gradient-to-b from-red-400 to-red-600"}"></div>
                             
@@ -1026,7 +1212,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                                 <div class="flex items-center bg-gray-50 rounded p-1.5"><i class="fas fa-puzzle-piece text-gray-400 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">\u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644:</span> <span class="font-semibold mr-auto">${s.module}</span></div>
                                 ${a?`
                                     <div class="flex items-center bg-blue-50/50 rounded p-1.5"><i class="fas fa-hashtag text-blue-500 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">\u0627\u0644\u0643\u0648\u062F:</span> <span class="font-mono font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded mr-auto text-xs">${Utils.escapeHTML(a.code||"")}</span></div>
-                                    <div class="flex items-center bg-purple-50/50 rounded p-1.5"><i class="fas fa-code-branch text-purple-500 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">\u0627\u0644\u0625\u0635\u062F\u0627\u0631:</span> ${i?`<span class="font-bold text-purple-700 mr-auto bg-purple-100 px-1.5 py-0.5 rounded text-xs">v${i.versionNumber}</span>`:'<span class="text-red-500 mr-auto text-xs font-semibold">\u0644\u0627 \u064A\u0648\u062C\u062F \u0625\u0635\u062F\u0627\u0631 \u0646\u0634\u0637</span>'}</div>
+                                    <div class="flex items-center bg-purple-50/50 rounded p-1.5"><i class="fas fa-code-branch text-purple-500 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">\u0627\u0644\u0625\u0635\u062F\u0627\u0631:</span> ${o?`<span class="font-bold text-purple-700 mr-auto bg-purple-100 px-1.5 py-0.5 rounded text-xs">v${o.versionNumber}</span>`:'<span class="text-red-500 mr-auto text-xs font-semibold">\u0644\u0627 \u064A\u0648\u062C\u062F \u0625\u0635\u062F\u0627\u0631 \u0646\u0634\u0637</span>'}</div>
                                 `:`
                                     <div class="text-red-600 text-xs bg-red-50 p-2.5 rounded border border-red-100 flex flex-col gap-1 items-center text-center mt-3">
                                         <i class="fas fa-exclamation-triangle text-lg mb-1 opacity-80"></i> 
@@ -1061,9 +1247,9 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                         </div>
                     </div>
                 </div>
-            `;let i=[],o=[],d=!1;const l=e&&e.silentTimeout===!0;if(!t)try{Loading.show();const r=new Promise((h,y)=>setTimeout(()=>y(new Error("TIMEOUT")),6e4)),m=Promise.all([GoogleIntegration.fetchData("getDocumentCodes",{}).catch(()=>({success:!1,data:[]})),GoogleIntegration.fetchData("getDocumentVersions",{documentCodeId:null}).catch(()=>({success:!1,data:[]}))]),[u,v]=await Promise.race([m,r]);u&&u.success&&u.data&&(i=u.data),v&&v.success&&v.data&&(o=v.data)}catch(r){r&&r.message==="TIMEOUT"?(d=!0,Utils.safeError("\u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631: \u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u062A\u062D\u0645\u064A\u0644. \u062C\u0631\u0628 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629."),!l&&typeof Notification<"u"&&Notification.warning("\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A. \u064A\u0645\u0643\u0646\u0643 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0623\u0648 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B.")):Utils.safeError("Error loading coding center data:",r)}finally{Loading.hide()}const c=`
+            `;let o=[],i=[],r=!1;const l=e&&e.silentTimeout===!0;if(!t)try{Loading.show();const d=new Promise((h,y)=>setTimeout(()=>y(new Error("TIMEOUT")),6e4)),m=Promise.all([GoogleIntegration.fetchData("getDocumentCodes",{}).catch(()=>({success:!1,data:[]})),GoogleIntegration.fetchData("getDocumentVersions",{documentCodeId:null}).catch(()=>({success:!1,data:[]}))]),[u,f]=await Promise.race([m,d]);u&&u.success&&u.data&&(o=u.data),f&&f.success&&f.data&&(i=f.data)}catch(d){d&&d.message==="TIMEOUT"?(r=!0,Utils.safeError("\u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631: \u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u062A\u062D\u0645\u064A\u0644. \u062C\u0631\u0628 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629."),!l&&typeof Notification<"u"&&Notification.warning("\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A. \u064A\u0645\u0643\u0646\u0643 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0623\u0648 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B.")):Utils.safeError("Error loading coding center data:",d)}finally{Loading.hide()}const c=`
             <div class="space-y-6">
-                ${d?`
+                ${r?`
                 <div class="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 flex items-center gap-2">
                     <i class="fas fa-clock text-amber-600"></i>
                     <span class="text-sm text-amber-800">\u0644\u0645 \u064A\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0641\u064A \u0627\u0644\u0648\u0642\u062A \u0627\u0644\u0645\u062D\u062F\u062F. \u0627\u0636\u063A\u0637 <strong>\u0625\u0639\u0627\u062F\u0629 \u062A\u062D\u0645\u064A\u0644</strong> \u0644\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.</span>
@@ -1079,15 +1265,15 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                            <div class="text-3xl font-bold text-blue-600 mb-2">${i.length}</div>
+                            <div class="text-3xl font-bold text-blue-600 mb-2">${o.length}</div>
                             <div class="text-sm text-gray-700 font-semibold">\u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A</div>
                         </div>
                         <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                            <div class="text-3xl font-bold text-green-600 mb-2">${o.length}</div>
+                            <div class="text-3xl font-bold text-green-600 mb-2">${i.length}</div>
                             <div class="text-sm text-gray-700 font-semibold">\u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A</div>
                         </div>
                         <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
-                            <div class="text-3xl font-bold text-purple-600 mb-2">${o.filter(n=>n.isActive===!0||n.isActive==="true").length}</div>
+                            <div class="text-3xl font-bold text-purple-600 mb-2">${i.filter(n=>n.isActive===!0||n.isActive==="true").length}</div>
                             <div class="text-sm text-gray-700 font-semibold">\u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0646\u0634\u0637\u0629</div>
                         </div>
                     </div>
@@ -1097,7 +1283,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     </button>
                 </div>
 
-                ${this.renderSystemFormsDirectory(i,o)}
+                ${this.renderSystemFormsDirectory(o,i)}
 
                 <!-- \u0642\u0633\u0645 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062A\u0643\u0648\u064A\u062F -->
                 <div class="content-card">
@@ -1136,7 +1322,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                                 placeholder="\u0628\u062D\u062B \u0641\u064A \u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A..." 
                                 onkeyup="ISO.filterDocumentCodes()">
                         </div>
-                        ${i.length===0?`
+                        ${o.length===0?`
                             <div class="empty-state">
                                 <p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0643\u0648\u0627\u062F \u0645\u0633\u062A\u0646\u062F\u0627\u062A \u0645\u0633\u062C\u0644\u0629</p>
                             </div>
@@ -1155,7 +1341,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                                         </tr>
                                     </thead>
                                     <tbody id="document-codes-table-body">
-                                        ${i.map(n=>`
+                                        ${o.map(n=>`
                                             <tr>
                                                 <td><strong>${Utils.escapeHTML(n.code||"")}</strong></td>
                                                 <td>${Utils.escapeHTML(n.documentName||"")}</td>
@@ -1200,12 +1386,12 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                         <div class="mb-4">
                             <select id="version-filter-code" class="form-input" onchange="ISO.filterDocumentVersions()">
                                 <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0643\u0648\u0627\u062F</option>
-                                ${i.map(n=>`
+                                ${o.map(n=>`
                                     <option value="${n.id}">${Utils.escapeHTML(n.code||"")} - ${Utils.escapeHTML(n.documentName||"")}</option>
                                 `).join("")}
                             </select>
                         </div>
-                        ${o.length===0?`
+                        ${i.length===0?`
                             <div class="empty-state">
                                 <p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0645\u0633\u062C\u0644\u0629</p>
                             </div>
@@ -1223,9 +1409,9 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                                         </tr>
                                     </thead>
                                     <tbody id="document-versions-table-body">
-                                        ${o.map(n=>{const r=i.find(m=>m.id===n.documentCodeId);return`
+                                        ${i.map(n=>{const d=o.find(m=>m.id===n.documentCodeId);return`
                                                 <tr data-code-id="${n.documentCodeId}">
-                                                    <td><strong>${Utils.escapeHTML(n.documentCode||r?.code||"")}</strong></td>
+                                                    <td><strong>${Utils.escapeHTML(n.documentCode||d?.code||"")}</strong></td>
                                                     <td>${Utils.escapeHTML(n.versionNumber||"")}</td>
                                                     <td>${n.issueDate?Utils.formatDate(n.issueDate):"-"}</td>
                                                     <td>${n.revisionDate?Utils.formatDate(n.revisionDate):"-"}</td>
@@ -1251,7 +1437,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     </div>
                 </div>
             </div>
-        `;return e&&e.returnStatus?{html:c,timedOut:d}:c},async reloadCodingCenter(){const e=document.getElementById("iso-content");if(e)try{Loading.show(),this.currentTab="coding-center";const t=await this.renderCodingCenter({returnStatus:!0}),s=t&&typeof t=="object"&&t.html!==void 0?t.html:t;e.innerHTML=s,!(t&&typeof t=="object"&&t.timedOut===!0)&&typeof Notification<"u"&&Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")}catch(t){Utils.safeError("Error reloading coding center:",t),typeof Notification<"u"&&Notification.error("\u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u062D\u0645\u064A\u0644: "+(t&&t.message?t.message:""))}finally{Loading.hide()}},async exportCodingCenterToExcel(){try{if(typeof XLSX>"u"){typeof Notification<"u"&&Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}Loading.show();const[e,t]=await Promise.all([GoogleIntegration.fetchData("getDocumentCodes",{}).catch(()=>({success:!1,data:[]})),GoogleIntegration.fetchData("getDocumentVersions",{documentCodeId:null}).catch(()=>({success:!1,data:[]}))]),s=e&&e.success&&e.data?e.data:[],a=t&&t.success&&t.data?t.data:[];if(s.length===0&&a.length===0){typeof Notification<"u"&&Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u062A\u0635\u062F\u064A\u0631"),Loading.hide();return}const i=XLSX.utils.book_new();if(s.length>0){const d=["\u0627\u0644\u0643\u0648\u062F","\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0646\u062F","\u0646\u0648\u0639 \u0627\u0644\u0645\u0633\u062A\u0646\u062F","\u0627\u0644\u0642\u0633\u0645","\u0627\u0644\u062D\u0627\u0644\u0629","\u0627\u0644\u0648\u0635\u0641","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u062D\u062F\u064A\u062B","\u0623\u0646\u0634\u0626 \u0628\u0648\u0627\u0633\u0637\u0629"],l=s.map(n=>[n.code||"",n.documentName||"",n.documentType||"",n.department||"",n.status||"",n.description||"",n.createdAt?typeof n.createdAt=="string"?n.createdAt:new Date(n.createdAt).toISOString():"",n.updatedAt?typeof n.updatedAt=="string"?n.updatedAt:new Date(n.updatedAt).toISOString():"",n.createdBy||""]),c=XLSX.utils.aoa_to_sheet([d,...l]);XLSX.utils.book_append_sheet(i,c,"\u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A")}if(a.length>0){const d=["\u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F","\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631","\u0646\u0634\u0637","\u0627\u0644\u062D\u0627\u0644\u0629","\u0645\u0644\u0627\u062D\u0638\u0627\u062A"],l={};s.forEach(r=>{l[r.id]=r.code});const c=a.map(r=>[l[r.documentCodeId]||r.documentCodeId||"",r.versionNumber||"",r.issueDate?typeof r.issueDate=="string"?r.issueDate:new Date(r.issueDate).toISOString().slice(0,10):"",r.isActive===!0||r.isActive==="true"?"\u0646\u0639\u0645":"\u0644\u0627",r.status||"",r.notes||""]),n=XLSX.utils.aoa_to_sheet([d,...c]);XLSX.utils.book_append_sheet(i,n,"\u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A")}const o="\u0645\u0631\u0643\u0632_\u0627\u0644\u062A\u0643\u0648\u064A\u062F_\u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631_"+new Date().toISOString().slice(0,10)+".xlsx";XLSX.writeFile(i,o),typeof Notification<"u"&&Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 Excel \u0628\u0646\u062C\u0627\u062D")}catch(e){Utils.safeError("\u062A\u0635\u062F\u064A\u0631 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0625\u0644\u0649 Excel:",e),typeof Notification<"u"&&Notification.error("\u0641\u0634\u0644 \u0627\u0644\u062A\u0635\u062F\u064A\u0631: "+(e.message||e))}finally{Loading.hide()}},async exportCodingCenterToPDF(){try{Loading.show();const[e,t]=await Promise.all([GoogleIntegration.fetchData("getDocumentCodes",{}).catch(()=>({success:!1,data:[]})),GoogleIntegration.fetchData("getDocumentVersions",{documentCodeId:null}).catch(()=>({success:!1,data:[]}))]),s=e&&e.success&&e.data?e.data:[],a=t&&t.success&&t.data?t.data:[];if(s.length===0&&a.length===0){typeof Notification<"u"&&Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u062A\u0635\u062F\u064A\u0631"),Loading.hide();return}if(typeof window.jsPDF>"u"){typeof Notification<"u"&&Notification.error("\u0645\u0643\u062A\u0628\u0629 PDF \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."),Loading.hide();return}const{jsPDF:i}=window.jsPDF,o=new i("l","mm","a4"),d=o.internal.pageSize.getWidth(),l=o.internal.pageSize.getHeight(),c=new Date().toLocaleDateString("ar-EG",{dateStyle:"medium"});o.setFontSize(14),o.setFont(void 0,"bold"),o.text("\u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631 - \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A",d/2,14,{align:"center"}),o.setFont(void 0,"normal"),o.setFontSize(9),o.text("\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0635\u062F\u064A\u0631: "+c,d/2,21,{align:"center"});let n=28;if(s.length>0){o.setFontSize(10),o.setFont(void 0,"bold"),o.text("\u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A",14,n),o.setFont(void 0,"normal"),n+=6;const r=["\u0627\u0644\u0643\u0648\u062F","\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0646\u062F","\u0646\u0648\u0639 \u0627\u0644\u0645\u0633\u062A\u0646\u062F","\u0627\u0644\u0642\u0633\u0645","\u0627\u0644\u062D\u0627\u0644\u0629"],m=s.map(u=>[String(u.code||""),String(u.documentName||"").substring(0,25),String(u.documentType||""),String(u.department||""),String(u.status||"")]);typeof o.autoTable<"u"?(o.autoTable({head:[r],body:m,startY:n,styles:{fontSize:7,cellPadding:2},headStyles:{fillColor:[37,99,235],textColor:255},margin:{left:8,right:8}}),n=o.lastAutoTable.finalY+10):n+=20}if(a.length>0&&n<l-40){o.setFontSize(10),o.setFont(void 0,"bold"),o.text("\u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A",14,n),o.setFont(void 0,"normal"),n+=6;const r={};s.forEach(v=>{r[v.id]=v.code});const m=["\u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F","\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631","\u0646\u0634\u0637","\u0627\u0644\u062D\u0627\u0644\u0629"],u=a.slice(0,30).map(v=>[String(r[v.documentCodeId]||""),String(v.versionNumber||""),String(v.issueDate||"").slice(0,10),v.isActive===!0||v.isActive==="true"?"\u0646\u0639\u0645":"\u0644\u0627",String(v.status||"")]);typeof o.autoTable<"u"&&o.autoTable({head:[m],body:u,startY:n,styles:{fontSize:7,cellPadding:2},headStyles:{fillColor:[34,197,94],textColor:255},margin:{left:8,right:8}})}o.setFontSize(8),o.setTextColor(128,128,128),o.text("\u2014 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u2014 "+c,d/2,l-10,{align:"center"}),o.save("\u0645\u0631\u0643\u0632_\u0627\u0644\u062A\u0643\u0648\u064A\u062F_\u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631_"+new Date().toISOString().slice(0,10)+".pdf"),typeof Notification<"u"&&Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 PDF \u0628\u0646\u062C\u0627\u062D")}catch(e){Utils.safeError("\u062A\u0635\u062F\u064A\u0631 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0625\u0644\u0649 PDF:",e),typeof Notification<"u"&&Notification.error("\u0641\u0634\u0644 \u0627\u0644\u062A\u0635\u062F\u064A\u0631: "+(e.message||e))}finally{Loading.hide()}},importCodingCenterFromExcel(){const e=document.createElement("input");e.type="file",e.accept=".xlsx,.xls,.csv",e.style.display="none",e.onchange=async t=>{const s=t.target&&t.target.files&&t.target.files[0];if(!s)return;const a=(s.name||"").toLowerCase();try{Loading.show();let i=[];if(a.endsWith(".csv")){const l=await new Promise((f,p)=>{const b=new FileReader;b.onload=()=>f(b.result),b.onerror=p,b.readAsText(s,"UTF-8")}),c=l.split(/\r?\n/).filter(f=>f.trim()),n=l.indexOf("	")>=0?"	":l.indexOf(";")>=0?";":",",r=c[0]?c[0].split(n).map(f=>f.trim()):[],m=r.findIndex(f=>/كود|code/i.test(f)),u=r.findIndex(f=>/اسم|name|document/i.test(f)),v=r.findIndex(f=>/نوع|type/i.test(f)),h=r.findIndex(f=>/قسم|department/i.test(f)),y=r.findIndex(f=>/حالة|status/i.test(f)),x=r.findIndex(f=>/وصف|description/i.test(f));for(let f=1;f<c.length;f++){const p=c[f].split(n),b=(m>=0?p[m]:p[0])||"",g=(u>=0?p[u]:p[1])||"";String(b).trim()&&i.push({code:String(b).trim(),documentName:String(g).trim()||String(b).trim(),documentType:v>=0?(p[v]||"").trim():"\u0648\u062B\u064A\u0642\u0629",department:h>=0?(p[h]||"").trim():"",status:y>=0?(p[y]||"").trim():"\u0646\u0634\u0637",description:x>=0?(p[x]||"").trim():""})}}else{if(typeof XLSX>"u"){typeof Notification<"u"&&Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."),Loading.hide();return}const l=await new Promise((p,b)=>{const g=new FileReader;g.onload=()=>p(g.result),g.onerror=b,g.readAsArrayBuffer(s)}),c=XLSX.read(l,{type:"array"}),n=c.SheetNames[0]?c.Sheets[c.SheetNames[0]]:null;if(!n){Loading.hide();return}const r=XLSX.utils.sheet_to_json(n,{header:1});if(!r||r.length<2){Loading.hide(),Notification&&Notification.warning("\u0627\u0644\u0645\u0644\u0641 \u0644\u0627 \u064A\u062D\u062A\u0648\u064A \u0639\u0644\u0649 \u0635\u0641\u0648\u0641 \u0628\u064A\u0627\u0646\u0627\u062A.");return}const m=(r[0]||[]).map(p=>String(p).trim()),u=m.findIndex(p=>/كود|code/i.test(p)),v=m.findIndex(p=>/اسم|name|document/i.test(p)),h=m.findIndex(p=>/نوع|type/i.test(p)),y=m.findIndex(p=>/قسم|department/i.test(p)),x=m.findIndex(p=>/حالة|status/i.test(p)),f=m.findIndex(p=>/وصف|description/i.test(p));for(let p=1;p<r.length;p++){const b=r[p]||[],g=u>=0?b[u]:b[0],S=v>=0?b[v]:b[1],D=g!=null&&g!==void 0?String(g).trim():"";D&&i.push({code:D,documentName:S!=null&&S!==void 0?String(S).trim():D,documentType:h>=0?String(b[h]||"").trim():"\u0648\u062B\u064A\u0642\u0629",department:y>=0?String(b[y]||"").trim():"",status:x>=0?String(b[x]||"").trim():"\u0646\u0634\u0637",description:f>=0?String(b[f]||"").trim():""})}}if(i.length===0){typeof Notification<"u"&&Notification.warning("\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0635\u0641\u0648\u0641 \u0635\u0627\u0644\u062D\u0629 (\u064A\u062C\u0628 \u0648\u062C\u0648\u062F \u0639\u0645\u0648\u062F \u0627\u0644\u0643\u0648\u062F)."),Loading.hide();return}let o=0,d=0;for(const l of i)try{const c=await GoogleIntegration.fetchData("addDocumentCode",{code:l.code,documentName:l.documentName,documentType:l.documentType,department:l.department,status:l.status,description:l.description});c&&c.success?o++:d++}catch{d++}typeof Notification<"u"&&Notification.success("\u062A\u0645 \u0627\u0633\u062A\u064A\u0631\u0627\u062F "+o+" \u0643\u0648\u062F\u0627\u064B. \u0641\u0634\u0644: "+d+" (\u0642\u062F \u064A\u0643\u0648\u0646 \u0628\u0633\u0628\u0628 \u062A\u0643\u0631\u0627\u0631 \u0627\u0644\u0643\u0648\u062F)."),this.reloadCodingCenter()}catch(i){Utils.safeError("\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0645\u0646 Excel:",i),typeof Notification<"u"&&Notification.error("\u0641\u0634\u0644 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F: "+(i.message||i))}finally{Loading.hide()}e.value=""},document.body.appendChild(e),e.click(),setTimeout(()=>e.remove(),500)},importCodingCenterFromPDF(){typeof Notification<"u"&&Notification.warning("\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0646\u0638\u0645\u0629 \u0645\u0646 \u0645\u0644\u0641 PDF \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u062D\u0627\u0644\u064A\u0627\u064B. \u064A\u0631\u062C\u0649 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0645\u0644\u0641 Excel \u0623\u0648 CSV \u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A.")},quickAssignFormCode(e,t,s,a){this.showDocumentCodeForm({documentName:e,code:t,documentType:s,department:a,status:"\u0646\u0634\u0637"})},async showDocumentCodeForm(e=null){const t=document.createElement("div");t.className="modal-overlay",t.innerHTML=`
+        `;return e&&e.returnStatus?{html:c,timedOut:r}:c},async reloadCodingCenter(){const e=document.getElementById("iso-content");if(e)try{Loading.show(),this.currentTab="coding-center";const t=await this.renderCodingCenter({returnStatus:!0}),s=t&&typeof t=="object"&&t.html!==void 0?t.html:t;e.innerHTML=s,!(t&&typeof t=="object"&&t.timedOut===!0)&&typeof Notification<"u"&&Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")}catch(t){Utils.safeError("Error reloading coding center:",t),typeof Notification<"u"&&Notification.error("\u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u062D\u0645\u064A\u0644: "+(t&&t.message?t.message:""))}finally{Loading.hide()}},async exportCodingCenterToExcel(){try{if(typeof XLSX>"u"){typeof Notification<"u"&&Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}Loading.show();const[e,t]=await Promise.all([GoogleIntegration.fetchData("getDocumentCodes",{}).catch(()=>({success:!1,data:[]})),GoogleIntegration.fetchData("getDocumentVersions",{documentCodeId:null}).catch(()=>({success:!1,data:[]}))]),s=e&&e.success&&e.data?e.data:[],a=t&&t.success&&t.data?t.data:[];if(s.length===0&&a.length===0){typeof Notification<"u"&&Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u062A\u0635\u062F\u064A\u0631"),Loading.hide();return}const o=XLSX.utils.book_new();if(s.length>0){const r=["\u0627\u0644\u0643\u0648\u062F","\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0646\u062F","\u0646\u0648\u0639 \u0627\u0644\u0645\u0633\u062A\u0646\u062F","\u0627\u0644\u0642\u0633\u0645","\u0627\u0644\u062D\u0627\u0644\u0629","\u0627\u0644\u0648\u0635\u0641","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u062D\u062F\u064A\u062B","\u0623\u0646\u0634\u0626 \u0628\u0648\u0627\u0633\u0637\u0629"],l=s.map(n=>[n.code||"",n.documentName||"",n.documentType||"",n.department||"",n.status||"",n.description||"",n.createdAt?typeof n.createdAt=="string"?n.createdAt:new Date(n.createdAt).toISOString():"",n.updatedAt?typeof n.updatedAt=="string"?n.updatedAt:new Date(n.updatedAt).toISOString():"",n.createdBy||""]),c=XLSX.utils.aoa_to_sheet([r,...l]);XLSX.utils.book_append_sheet(o,c,"\u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A")}if(a.length>0){const r=["\u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F","\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631","\u0646\u0634\u0637","\u0627\u0644\u062D\u0627\u0644\u0629","\u0645\u0644\u0627\u062D\u0638\u0627\u062A"],l={};s.forEach(d=>{l[d.id]=d.code});const c=a.map(d=>[l[d.documentCodeId]||d.documentCodeId||"",d.versionNumber||"",d.issueDate?typeof d.issueDate=="string"?d.issueDate:new Date(d.issueDate).toISOString().slice(0,10):"",d.isActive===!0||d.isActive==="true"?"\u0646\u0639\u0645":"\u0644\u0627",d.status||"",d.notes||""]),n=XLSX.utils.aoa_to_sheet([r,...c]);XLSX.utils.book_append_sheet(o,n,"\u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A")}const i="\u0645\u0631\u0643\u0632_\u0627\u0644\u062A\u0643\u0648\u064A\u062F_\u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631_"+new Date().toISOString().slice(0,10)+".xlsx";XLSX.writeFile(o,i),typeof Notification<"u"&&Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 Excel \u0628\u0646\u062C\u0627\u062D")}catch(e){Utils.safeError("\u062A\u0635\u062F\u064A\u0631 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0625\u0644\u0649 Excel:",e),typeof Notification<"u"&&Notification.error("\u0641\u0634\u0644 \u0627\u0644\u062A\u0635\u062F\u064A\u0631: "+(e.message||e))}finally{Loading.hide()}},async exportCodingCenterToPDF(){try{Loading.show();const[e,t]=await Promise.all([GoogleIntegration.fetchData("getDocumentCodes",{}).catch(()=>({success:!1,data:[]})),GoogleIntegration.fetchData("getDocumentVersions",{documentCodeId:null}).catch(()=>({success:!1,data:[]}))]),s=e&&e.success&&e.data?e.data:[],a=t&&t.success&&t.data?t.data:[];if(s.length===0&&a.length===0){typeof Notification<"u"&&Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u062A\u0635\u062F\u064A\u0631"),Loading.hide();return}if(typeof window.jsPDF>"u"){typeof Notification<"u"&&Notification.error("\u0645\u0643\u062A\u0628\u0629 PDF \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."),Loading.hide();return}const{jsPDF:o}=window.jsPDF,i=new o("l","mm","a4"),r=i.internal.pageSize.getWidth(),l=i.internal.pageSize.getHeight(),c=new Date().toLocaleDateString("ar-EG",{dateStyle:"medium"});i.setFontSize(14),i.setFont(void 0,"bold"),i.text("\u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631 - \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A",r/2,14,{align:"center"}),i.setFont(void 0,"normal"),i.setFontSize(9),i.text("\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0635\u062F\u064A\u0631: "+c,r/2,21,{align:"center"});let n=28;if(s.length>0){i.setFontSize(10),i.setFont(void 0,"bold"),i.text("\u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A",14,n),i.setFont(void 0,"normal"),n+=6;const d=["\u0627\u0644\u0643\u0648\u062F","\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0646\u062F","\u0646\u0648\u0639 \u0627\u0644\u0645\u0633\u062A\u0646\u062F","\u0627\u0644\u0642\u0633\u0645","\u0627\u0644\u062D\u0627\u0644\u0629"],m=s.map(u=>[String(u.code||""),String(u.documentName||"").substring(0,25),String(u.documentType||""),String(u.department||""),String(u.status||"")]);typeof i.autoTable<"u"?(i.autoTable({head:[d],body:m,startY:n,styles:{fontSize:7,cellPadding:2},headStyles:{fillColor:[37,99,235],textColor:255},margin:{left:8,right:8}}),n=i.lastAutoTable.finalY+10):n+=20}if(a.length>0&&n<l-40){i.setFontSize(10),i.setFont(void 0,"bold"),i.text("\u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A",14,n),i.setFont(void 0,"normal"),n+=6;const d={};s.forEach(f=>{d[f.id]=f.code});const m=["\u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F","\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631","\u0646\u0634\u0637","\u0627\u0644\u062D\u0627\u0644\u0629"],u=a.slice(0,30).map(f=>[String(d[f.documentCodeId]||""),String(f.versionNumber||""),String(f.issueDate||"").slice(0,10),f.isActive===!0||f.isActive==="true"?"\u0646\u0639\u0645":"\u0644\u0627",String(f.status||"")]);typeof i.autoTable<"u"&&i.autoTable({head:[m],body:u,startY:n,styles:{fontSize:7,cellPadding:2},headStyles:{fillColor:[34,197,94],textColor:255},margin:{left:8,right:8}})}i.setFontSize(8),i.setTextColor(128,128,128),i.text("\u2014 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u2014 "+c,r/2,l-10,{align:"center"}),i.save("\u0645\u0631\u0643\u0632_\u0627\u0644\u062A\u0643\u0648\u064A\u062F_\u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631_"+new Date().toISOString().slice(0,10)+".pdf"),typeof Notification<"u"&&Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 PDF \u0628\u0646\u062C\u0627\u062D")}catch(e){Utils.safeError("\u062A\u0635\u062F\u064A\u0631 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0625\u0644\u0649 PDF:",e),typeof Notification<"u"&&Notification.error("\u0641\u0634\u0644 \u0627\u0644\u062A\u0635\u062F\u064A\u0631: "+(e.message||e))}finally{Loading.hide()}},importCodingCenterFromExcel(){const e=document.createElement("input");e.type="file",e.accept=".xlsx,.xls,.csv",e.style.display="none",e.onchange=async t=>{const s=t.target&&t.target.files&&t.target.files[0];if(!s)return;const a=(s.name||"").toLowerCase();try{Loading.show();let o=[];if(a.endsWith(".csv")){const l=await new Promise((b,p)=>{const v=new FileReader;v.onload=()=>b(v.result),v.onerror=p,v.readAsText(s,"UTF-8")}),c=l.split(/\r?\n/).filter(b=>b.trim()),n=l.indexOf("	")>=0?"	":l.indexOf(";")>=0?";":",",d=c[0]?c[0].split(n).map(b=>b.trim()):[],m=d.findIndex(b=>/كود|code/i.test(b)),u=d.findIndex(b=>/اسم|name|document/i.test(b)),f=d.findIndex(b=>/نوع|type/i.test(b)),h=d.findIndex(b=>/قسم|department/i.test(b)),y=d.findIndex(b=>/حالة|status/i.test(b)),x=d.findIndex(b=>/وصف|description/i.test(b));for(let b=1;b<c.length;b++){const p=c[b].split(n),v=(m>=0?p[m]:p[0])||"",g=(u>=0?p[u]:p[1])||"";String(v).trim()&&o.push({code:String(v).trim(),documentName:String(g).trim()||String(v).trim(),documentType:f>=0?(p[f]||"").trim():"\u0648\u062B\u064A\u0642\u0629",department:h>=0?(p[h]||"").trim():"",status:y>=0?(p[y]||"").trim():"\u0646\u0634\u0637",description:x>=0?(p[x]||"").trim():""})}}else{if(typeof XLSX>"u"){typeof Notification<"u"&&Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."),Loading.hide();return}const l=await new Promise((p,v)=>{const g=new FileReader;g.onload=()=>p(g.result),g.onerror=v,g.readAsArrayBuffer(s)}),c=XLSX.read(l,{type:"array"}),n=c.SheetNames[0]?c.Sheets[c.SheetNames[0]]:null;if(!n){Loading.hide();return}const d=XLSX.utils.sheet_to_json(n,{header:1});if(!d||d.length<2){Loading.hide(),Notification&&Notification.warning("\u0627\u0644\u0645\u0644\u0641 \u0644\u0627 \u064A\u062D\u062A\u0648\u064A \u0639\u0644\u0649 \u0635\u0641\u0648\u0641 \u0628\u064A\u0627\u0646\u0627\u062A.");return}const m=(d[0]||[]).map(p=>String(p).trim()),u=m.findIndex(p=>/كود|code/i.test(p)),f=m.findIndex(p=>/اسم|name|document/i.test(p)),h=m.findIndex(p=>/نوع|type/i.test(p)),y=m.findIndex(p=>/قسم|department/i.test(p)),x=m.findIndex(p=>/حالة|status/i.test(p)),b=m.findIndex(p=>/وصف|description/i.test(p));for(let p=1;p<d.length;p++){const v=d[p]||[],g=u>=0?v[u]:v[0],w=f>=0?v[f]:v[1],S=g!=null&&g!==void 0?String(g).trim():"";S&&o.push({code:S,documentName:w!=null&&w!==void 0?String(w).trim():S,documentType:h>=0?String(v[h]||"").trim():"\u0648\u062B\u064A\u0642\u0629",department:y>=0?String(v[y]||"").trim():"",status:x>=0?String(v[x]||"").trim():"\u0646\u0634\u0637",description:b>=0?String(v[b]||"").trim():""})}}if(o.length===0){typeof Notification<"u"&&Notification.warning("\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0635\u0641\u0648\u0641 \u0635\u0627\u0644\u062D\u0629 (\u064A\u062C\u0628 \u0648\u062C\u0648\u062F \u0639\u0645\u0648\u062F \u0627\u0644\u0643\u0648\u062F)."),Loading.hide();return}let i=0,r=0;for(const l of o)try{const c=await GoogleIntegration.fetchData("addDocumentCode",{code:l.code,documentName:l.documentName,documentType:l.documentType,department:l.department,status:l.status,description:l.description});c&&c.success?i++:r++}catch{r++}typeof Notification<"u"&&Notification.success("\u062A\u0645 \u0627\u0633\u062A\u064A\u0631\u0627\u062F "+i+" \u0643\u0648\u062F\u0627\u064B. \u0641\u0634\u0644: "+r+" (\u0642\u062F \u064A\u0643\u0648\u0646 \u0628\u0633\u0628\u0628 \u062A\u0643\u0631\u0627\u0631 \u0627\u0644\u0643\u0648\u062F)."),this.reloadCodingCenter()}catch(o){Utils.safeError("\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0645\u0646 Excel:",o),typeof Notification<"u"&&Notification.error("\u0641\u0634\u0644 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F: "+(o.message||o))}finally{Loading.hide()}e.value=""},document.body.appendChild(e),e.click(),setTimeout(()=>e.remove(),500)},importCodingCenterFromPDF(){typeof Notification<"u"&&Notification.warning("\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0646\u0638\u0645\u0629 \u0645\u0646 \u0645\u0644\u0641 PDF \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u062D\u0627\u0644\u064A\u0627\u064B. \u064A\u0631\u062C\u0649 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0645\u0644\u0641 Excel \u0623\u0648 CSV \u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A.")},quickAssignFormCode(e,t,s,a){this.showDocumentCodeForm({documentName:e,code:t,documentType:s,department:a,status:"\u0646\u0634\u0637"})},async showDocumentCodeForm(e=null){const t=document.createElement("div");t.className="modal-overlay",t.innerHTML=`
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
                     <h2 class="modal-title">${e?"\u062A\u0639\u062F\u064A\u0644 \u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F":"\u0625\u0636\u0627\u0641\u0629 \u0643\u0648\u062F \u0645\u0633\u062A\u0646\u062F \u062C\u062F\u064A\u062F"}</h2>
@@ -1309,7 +1495,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <button type="button" id="save-doc-code-btn" class="btn-primary">\u062D\u0641\u0638</button>
                 </div>
             </div>
-        `,document.body.appendChild(t),t.querySelector("#save-doc-code-btn").addEventListener("click",()=>this.handleDocumentCodeSubmit(e?.id,t)),t.addEventListener("click",a=>{a.target===t&&t.remove()})},async handleDocumentCodeSubmit(e=null,t){const s=document.getElementById("doc-code"),a=document.getElementById("doc-name"),i=document.getElementById("doc-type"),o=document.getElementById("doc-department"),d=document.getElementById("doc-status"),l=document.getElementById("doc-description");if(!s||!a||!i||!o||!d){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const c=s.value.trim(),n=a.value.trim();if(!c){Notification.error("\u062D\u0642\u0644 \u0627\u0644\u0643\u0648\u062F \u0645\u0637\u0644\u0648\u0628.");return}if(!n){Notification.error("\u062D\u0642\u0644 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0646\u062F / \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0645\u0637\u0644\u0648\u0628.");return}const r={id:e||Utils.generateId("DOC_CODE"),code:c,documentName:n,documentType:i.value,department:o.value.trim(),status:d.value,description:l?.value.trim()||"",createdAt:e?(await this.getDocumentCodeById(e))?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),createdBy:AppState.currentUser?.name||AppState.currentUser?.email||"System"};Loading.show();try{const m=e?"updateDocumentCode":"addDocumentCode",u=await GoogleIntegration.fetchData(m,r);if(u.success)Notification.success(e?"\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0643\u0648\u062F \u0628\u0646\u062C\u0627\u062D":"\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0643\u0648\u062F \u0628\u0646\u062C\u0627\u062D"),t.remove(),this.load();else{const v=u.message||"\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062D\u0641\u0638";Notification.error(u.errorCode==="DUPLICATE_CODE"?"\u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F \u0645\u0648\u062C\u0648\u062F \u0645\u0633\u0628\u0642\u0627\u064B. \u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0643\u0648\u062F \u0641\u0631\u064A\u062F (\u0645\u062B\u0644: DOC-001\u060C FORM-002).":v)}}catch(m){const u=m&&m.message?String(m.message):"";u.indexOf("\u063A\u064A\u0631 \u0645\u0639\u062A\u0631\u0641 \u0628\u0647")!==-1||u.indexOf("ACTION_NOT_RECOGNIZED")!==-1?Notification.error("\u0627\u0644\u062E\u0627\u062F\u0645 \u0644\u0627 \u064A\u062A\u0639\u0631\u0651\u0641 \u0639\u0644\u0649 \u0639\u0645\u0644\u064A\u0629 \u0625\u0636\u0627\u0641\u0629 \u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F. \u062A\u0623\u0643\u062F \u0645\u0646: 1) \u062A\u062D\u062F\u064A\u062B \u0645\u0644\u0641\u0627\u062A Code.gs \u0648 ISO.gs \u0648 Headers.gs \u0648 Config.gs \u0641\u064A \u0645\u0634\u0631\u0648\u0639 Google Apps Script. 2) \u0646\u0634\u0631 \u0646\u0633\u062E\u0629 \u062C\u062F\u064A\u062F\u0629 (Deploy \u2192 Manage deployments \u2192 Edit \u2192 New version \u2192 Deploy). 3) \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u0630\u064A \u064A\u0646\u062A\u0647\u064A \u0628\u0640 /exec \u0641\u064A \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A."):Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+u)}finally{Loading.hide()}},async getDocumentCodeById(e){try{const t=await GoogleIntegration.fetchData("getDocumentCodes",{});if(t.success&&t.data)return t.data.find(s=>s.id===e)}catch(t){Utils.safeError("Error getting document code:",t)}return null},async editDocumentCode(e){const t=await this.getDocumentCodeById(e);t?this.showDocumentCodeForm(t):Notification.error("\u0627\u0644\u0643\u0648\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F")},async deleteDocumentCode(e){const t=await this.getDocumentCodeById(e),s=t&&(t.code||t.documentName)||e;if(confirm('\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0627\u0644\u0643\u0648\u062F "'+s+'"\u061F \u0633\u064A\u062A\u0645 \u062D\u0630\u0641 \u062C\u0645\u064A\u0639 \u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u0647.')){Loading.show();try{const a=await GoogleIntegration.fetchData("deleteDocumentCode",{id:e});a.success?(Notification.success("\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0643\u0648\u062F \u0628\u0646\u062C\u0627\u062D"),this.load()):Notification.error(a.message||"\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062D\u0630\u0641")}catch(a){Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+a.message)}finally{Loading.hide()}}},async showDocumentVersionForm(e=null,t=null){let s=[];try{const o=await GoogleIntegration.fetchData("getDocumentCodes",{});o.success&&o.data&&(s=o.data)}catch(o){Utils.safeError("Error loading codes:",o)}const a=document.createElement("div");a.className="modal-overlay",a.innerHTML=`
+        `,document.body.appendChild(t),t.querySelector("#save-doc-code-btn").addEventListener("click",()=>this.handleDocumentCodeSubmit(e?.id,t)),t.addEventListener("click",a=>{a.target===t&&t.remove()})},async handleDocumentCodeSubmit(e=null,t){const s=document.getElementById("doc-code"),a=document.getElementById("doc-name"),o=document.getElementById("doc-type"),i=document.getElementById("doc-department"),r=document.getElementById("doc-status"),l=document.getElementById("doc-description");if(!s||!a||!o||!i||!r){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const c=s.value.trim(),n=a.value.trim();if(!c){Notification.error("\u062D\u0642\u0644 \u0627\u0644\u0643\u0648\u062F \u0645\u0637\u0644\u0648\u0628.");return}if(!n){Notification.error("\u062D\u0642\u0644 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0646\u062F / \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0645\u0637\u0644\u0648\u0628.");return}const d={id:e||Utils.generateId("DOC_CODE"),code:c,documentName:n,documentType:o.value,department:i.value.trim(),status:r.value,description:l?.value.trim()||"",createdAt:e?(await this.getDocumentCodeById(e))?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),createdBy:AppState.currentUser?.name||AppState.currentUser?.email||"System"};Loading.show();try{const m=e?"updateDocumentCode":"addDocumentCode",u=await GoogleIntegration.fetchData(m,d);if(u.success)Notification.success(e?"\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0643\u0648\u062F \u0628\u0646\u062C\u0627\u062D":"\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0643\u0648\u062F \u0628\u0646\u062C\u0627\u062D"),t.remove(),this.load();else{const f=u.message||"\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062D\u0641\u0638";Notification.error(u.errorCode==="DUPLICATE_CODE"?"\u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F \u0645\u0648\u062C\u0648\u062F \u0645\u0633\u0628\u0642\u0627\u064B. \u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0643\u0648\u062F \u0641\u0631\u064A\u062F (\u0645\u062B\u0644: DOC-001\u060C FORM-002).":f)}}catch(m){const u=m&&m.message?String(m.message):"";u.indexOf("\u063A\u064A\u0631 \u0645\u0639\u062A\u0631\u0641 \u0628\u0647")!==-1||u.indexOf("ACTION_NOT_RECOGNIZED")!==-1?Notification.error("\u0627\u0644\u062E\u0627\u062F\u0645 \u0644\u0627 \u064A\u062A\u0639\u0631\u0651\u0641 \u0639\u0644\u0649 \u0639\u0645\u0644\u064A\u0629 \u0625\u0636\u0627\u0641\u0629 \u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F. \u062A\u0623\u0643\u062F \u0645\u0646: 1) \u062A\u062D\u062F\u064A\u062B \u0645\u0644\u0641\u0627\u062A Code.gs \u0648 ISO.gs \u0648 Headers.gs \u0648 Config.gs \u0641\u064A \u0645\u0634\u0631\u0648\u0639 Google Apps Script. 2) \u0646\u0634\u0631 \u0646\u0633\u062E\u0629 \u062C\u062F\u064A\u062F\u0629 (Deploy \u2192 Manage deployments \u2192 Edit \u2192 New version \u2192 Deploy). 3) \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u0630\u064A \u064A\u0646\u062A\u0647\u064A \u0628\u0640 /exec \u0641\u064A \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A."):Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+u)}finally{Loading.hide()}},async getDocumentCodeById(e){try{const t=await GoogleIntegration.fetchData("getDocumentCodes",{});if(t.success&&t.data)return t.data.find(s=>s.id===e)}catch(t){Utils.safeError("Error getting document code:",t)}return null},async editDocumentCode(e){const t=await this.getDocumentCodeById(e);t?this.showDocumentCodeForm(t):Notification.error("\u0627\u0644\u0643\u0648\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F")},async deleteDocumentCode(e){const t=await this.getDocumentCodeById(e),s=t&&(t.code||t.documentName)||e;if(confirm('\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0627\u0644\u0643\u0648\u062F "'+s+'"\u061F \u0633\u064A\u062A\u0645 \u062D\u0630\u0641 \u062C\u0645\u064A\u0639 \u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u0647.')){Loading.show();try{const a=await GoogleIntegration.fetchData("deleteDocumentCode",{id:e});a.success?(Notification.success("\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0643\u0648\u062F \u0628\u0646\u062C\u0627\u062D"),this.load()):Notification.error(a.message||"\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062D\u0630\u0641")}catch(a){Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+a.message)}finally{Loading.hide()}}},async showDocumentVersionForm(e=null,t=null){let s=[];try{const i=await GoogleIntegration.fetchData("getDocumentCodes",{});i.success&&i.data&&(s=i.data)}catch(i){Utils.safeError("Error loading codes:",i)}const a=document.createElement("div");a.className="modal-overlay",a.innerHTML=`
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
                     <h2 class="modal-title">${e?"\u062A\u0639\u062F\u064A\u0644 \u0625\u0635\u062F\u0627\u0631 \u0627\u0644\u0645\u0633\u062A\u0646\u062F":"\u0625\u0636\u0627\u0641\u0629 \u0625\u0635\u062F\u0627\u0631 \u062C\u062F\u064A\u062F"}</h2>
@@ -1323,10 +1509,10 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                             <label class="block text-sm font-semibold text-gray-700 mb-2">\u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F *</label>
                             <select id="version-code-id" required class="form-input" ${e?"disabled":""}>
                                 <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F</option>
-                                ${s.map(o=>`
-                                    <option value="${o.id}" 
-                                        ${e?.documentCodeId===o.id||t===o.id?"selected":""}>
-                                        ${Utils.escapeHTML(o.code||"")} - ${Utils.escapeHTML(o.documentName||"")}
+                                ${s.map(i=>`
+                                    <option value="${i.id}" 
+                                        ${e?.documentCodeId===i.id||t===i.id?"selected":""}>
+                                        ${Utils.escapeHTML(i.code||"")} - ${Utils.escapeHTML(i.documentName||"")}
                                     </option>
                                 `).join("")}
                             </select>
@@ -1372,7 +1558,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <button type="button" id="save-version-btn" class="btn-primary">\u062D\u0641\u0638</button>
                 </div>
             </div>
-        `,document.body.appendChild(a),a.querySelector("#save-version-btn").addEventListener("click",()=>this.handleDocumentVersionSubmit(e?.id,a)),a.addEventListener("click",o=>{o.target===a&&a.remove()})},async handleDocumentVersionSubmit(e=null,t){const s=document.getElementById("version-code-id"),a=document.getElementById("version-number"),i=document.getElementById("version-issue-date"),o=document.getElementById("version-revision-date"),d=document.getElementById("version-status"),l=document.getElementById("version-notes"),c=document.getElementById("version-change-reason");if(!s||!a||!i||!d){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const n=s.value,r=await this.getDocumentCodeById(n),m={id:e||Utils.generateId("DOC_VER"),documentCodeId:n,documentCode:r?.code||"",versionNumber:a.value.trim(),issueDate:new Date(i.value).toISOString(),revisionDate:o?.value?new Date(o.value).toISOString():null,status:d.value,notes:l?.value.trim()||"",changeReason:c?.value.trim()||"",isActive:d.value==="\u0646\u0634\u0637",createdAt:e?(await this.getDocumentVersionById(e))?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),createdBy:AppState.currentUser?.name||AppState.currentUser?.email||"System"};Loading.show();try{const u=e?"updateDocumentVersion":"addDocumentVersion",v=await GoogleIntegration.fetchData(u,m);v.success?(Notification.success(e?"\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0628\u0646\u062C\u0627\u062D":"\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0628\u0646\u062C\u0627\u062D"),t.remove(),this.load()):Notification.error(v.message||"\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062D\u0641\u0638")}catch(u){Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+u.message)}finally{Loading.hide()}},async getDocumentVersionById(e){try{const t=await GoogleIntegration.fetchData("getDocumentVersions",{documentCodeId:null});if(t.success&&t.data)return t.data.find(s=>s.id===e)}catch(t){Utils.safeError("Error getting document version:",t)}return null},async editDocumentVersion(e){const t=await this.getDocumentVersionById(e);t?this.showDocumentVersionForm(t):Notification.error("\u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F")},async viewDocumentVersions(e){try{Loading.show();const t=await GoogleIntegration.fetchData("getDocumentVersions",{documentCodeId:e});if(Loading.hide(),!t.success||!t.data){Notification.error("\u0641\u0634\u0644 \u062C\u0644\u0628 \u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A");return}const s=t.data,a=await this.getDocumentCodeById(e),i=document.createElement("div");i.className="modal-overlay",i.innerHTML=`
+        `,document.body.appendChild(a),a.querySelector("#save-version-btn").addEventListener("click",()=>this.handleDocumentVersionSubmit(e?.id,a)),a.addEventListener("click",i=>{i.target===a&&a.remove()})},async handleDocumentVersionSubmit(e=null,t){const s=document.getElementById("version-code-id"),a=document.getElementById("version-number"),o=document.getElementById("version-issue-date"),i=document.getElementById("version-revision-date"),r=document.getElementById("version-status"),l=document.getElementById("version-notes"),c=document.getElementById("version-change-reason");if(!s||!a||!o||!r){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const n=s.value,d=await this.getDocumentCodeById(n),m={id:e||Utils.generateId("DOC_VER"),documentCodeId:n,documentCode:d?.code||"",versionNumber:a.value.trim(),issueDate:new Date(o.value).toISOString(),revisionDate:i?.value?new Date(i.value).toISOString():null,status:r.value,notes:l?.value.trim()||"",changeReason:c?.value.trim()||"",isActive:r.value==="\u0646\u0634\u0637",createdAt:e?(await this.getDocumentVersionById(e))?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),createdBy:AppState.currentUser?.name||AppState.currentUser?.email||"System"};Loading.show();try{const u=e?"updateDocumentVersion":"addDocumentVersion",f=await GoogleIntegration.fetchData(u,m);f.success?(Notification.success(e?"\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0628\u0646\u062C\u0627\u062D":"\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0628\u0646\u062C\u0627\u062D"),t.remove(),this.load()):Notification.error(f.message||"\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062D\u0641\u0638")}catch(u){Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+u.message)}finally{Loading.hide()}},async getDocumentVersionById(e){try{const t=await GoogleIntegration.fetchData("getDocumentVersions",{documentCodeId:null});if(t.success&&t.data)return t.data.find(s=>s.id===e)}catch(t){Utils.safeError("Error getting document version:",t)}return null},async editDocumentVersion(e){const t=await this.getDocumentVersionById(e);t?this.showDocumentVersionForm(t):Notification.error("\u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F")},async viewDocumentVersions(e){try{Loading.show();const t=await GoogleIntegration.fetchData("getDocumentVersions",{documentCodeId:e});if(Loading.hide(),!t.success||!t.data){Notification.error("\u0641\u0634\u0644 \u062C\u0644\u0628 \u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A");return}const s=t.data,a=await this.getDocumentCodeById(e),o=document.createElement("div");o.className="modal-overlay",o.innerHTML=`
                 <div class="modal-content" style="max-width: 800px;">
                     <div class="modal-header">
                         <h2 class="modal-title">\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A: ${Utils.escapeHTML(a?.code||"")} - ${Utils.escapeHTML(a?.documentName||"")}</h2>
@@ -1404,20 +1590,20 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${s.map(o=>`
+                                    ${s.map(i=>`
                                         <tr>
-                                            <td><strong>${Utils.escapeHTML(o.versionNumber||"")}</strong></td>
-                                            <td>${o.issueDate?Utils.formatDate(o.issueDate):"-"}</td>
-                                            <td>${o.revisionDate?Utils.formatDate(o.revisionDate):"-"}</td>
+                                            <td><strong>${Utils.escapeHTML(i.versionNumber||"")}</strong></td>
+                                            <td>${i.issueDate?Utils.formatDate(i.issueDate):"-"}</td>
+                                            <td>${i.revisionDate?Utils.formatDate(i.revisionDate):"-"}</td>
                                             <td>
-                                                <span class="badge badge-${o.isActive===!0||o.isActive==="true"?"success":"secondary"}">
-                                                    ${o.isActive===!0||o.isActive==="true"?"\u0646\u0634\u0637":"\u063A\u064A\u0631 \u0646\u0634\u0637"}
+                                                <span class="badge badge-${i.isActive===!0||i.isActive==="true"?"success":"secondary"}">
+                                                    ${i.isActive===!0||i.isActive==="true"?"\u0646\u0634\u0637":"\u063A\u064A\u0631 \u0646\u0634\u0637"}
                                                 </span>
                                             </td>
-                                            <td>${Utils.escapeHTML(o.notes||"-")}</td>
-                                            <td>${Utils.escapeHTML(o.changeReason||"-")}</td>
+                                            <td>${Utils.escapeHTML(i.notes||"-")}</td>
+                                            <td>${Utils.escapeHTML(i.changeReason||"-")}</td>
                                             <td>
-                                                <button onclick="ISO.editDocumentVersion('${o.id}'); this.closest('.modal-overlay').remove();" 
+                                                <button onclick="ISO.editDocumentVersion('${i.id}'); this.closest('.modal-overlay').remove();" 
                                                     class="btn-icon btn-icon-info" title="\u062A\u0639\u062F\u064A\u0644">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
@@ -1432,4 +1618,4 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                         <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u063A\u0644\u0627\u0642</button>
                     </div>
                 </div>
-            `,document.body.appendChild(i),i.addEventListener("click",o=>{o.target===i&&i.remove()})}catch(t){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+t.message)}},async reissueDocument(e){const t=await this.getDocumentVersionById(e);if(!t){Notification.error("\u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}confirm("\u0647\u0644 \u062A\u0631\u064A\u062F \u0625\u063A\u0644\u0627\u0642 \u0647\u0630\u0627 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0648\u0641\u062A\u062D \u0625\u0635\u062F\u0627\u0631 \u062C\u062F\u064A\u062F\u061F")&&this.showDocumentVersionForm(null,t.documentCodeId)},filterDocumentCodes(){const e=document.getElementById("document-code-search")?.value.toLowerCase()||"";document.querySelectorAll("#document-codes-table-body tr").forEach(s=>{const a=s.textContent.toLowerCase();s.style.display=a.includes(e)?"":"none"})},filterDocumentVersions(){const e=document.getElementById("version-filter-code")?.value||"";document.querySelectorAll("#document-versions-table-body tr").forEach(s=>{const a=s.getAttribute("data-code-id")||"";s.style.display=!e||a===e?"":"none"})},async loadDocumentCodeVersion(e="document",t=null){try{const s=e==="document"?"document-code-select":e==="procedure"?"procedure-code-select":"form-code-select",a=e==="document"?"document-version":e==="procedure"?"procedure-version":"form-version",i=e==="document"?"document-issue-date":e==="procedure"?"procedure-issue-date":"form-issue-date",o=e==="document"?"document-revision-date":e==="procedure"?"procedure-revision-date":"form-revision-date",d=document.getElementById(s),l=t||d?.value||"";if(!l){const n=document.getElementById(a),r=document.getElementById(i),m=document.getElementById(o);n&&(n.value=""),r&&(r.value=""),m&&(m.value="");return}Loading.show();const c=await GoogleIntegration.fetchData("getDocumentCodeAndVersion",{documentCode:l});if(Loading.hide(),c.success&&c.version){const n=document.getElementById(a),r=document.getElementById(i),m=document.getElementById(o);n&&(n.value=c.version.versionNumber||""),r&&(r.value=c.version.issueDate?Utils.formatDate(c.version.issueDate):""),m&&(m.value=c.version.revisionDate?Utils.formatDate(c.version.revisionDate):""),Notification.success("\u062A\u0645 \u062C\u0644\u0628 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632")}else if(c.success&&c.code){const n=document.getElementById(a);n&&(n.value="\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"),Notification.warning("\u0627\u0644\u0643\u0648\u062F \u0645\u0648\u062C\u0648\u062F \u0648\u0644\u0643\u0646 \u0644\u0627 \u064A\u0648\u062C\u062F \u0625\u0635\u062F\u0627\u0631 \u0646\u0634\u0637 \u0641\u064A \u0627\u0644\u0645\u0631\u0643\u0632")}else Notification.error("\u0627\u0644\u0643\u0648\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631")}catch(s){Loading.hide(),Utils.safeError("Error loading document code version:",s),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062C\u0644\u0628 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0625\u0635\u062F\u0627\u0631: "+s.message)}},async getFormCodeDetails(e){try{const[t,s]=await Promise.all([GoogleIntegration.fetchData("getDocumentCodes",{}).catch(()=>null),GoogleIntegration.fetchData("getDocumentVersions",{documentCodeId:null}).catch(()=>null)]);if(t?.success&&s?.success){const a=t.data.find(i=>i.code===e||i.documentName===e);if(a){const i=s.data.filter(o=>o.documentCodeId===a.id&&(o.isActive===!0||o.isActive==="true"));if(i.length>0)return i.sort((o,d)=>new Date(d.issueDate||0)-new Date(o.issueDate||0)),{code:a.code,documentName:a.documentName,versionNumber:i[0].versionNumber,issueDate:i[0].issueDate,revisionDate:i[0].revisionDate,changeReason:i[0].changeReason}}}}catch(t){typeof Utils<"u"&&Utils.safeWarn("Error fetching ISO code details:",t)}return null}};(function(){"use strict";try{typeof window<"u"&&typeof ISO<"u"&&(window.ISO=ISO,typeof AppState<"u"&&AppState.debugMode&&typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 ISO module loaded and available on window.ISO"))}catch{if(typeof window<"u"&&typeof ISO<"u")try{window.ISO=ISO}catch{}}})();
+            `,document.body.appendChild(o),o.addEventListener("click",i=>{i.target===o&&o.remove()})}catch(t){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+t.message)}},async reissueDocument(e){const t=await this.getDocumentVersionById(e);if(!t){Notification.error("\u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}confirm("\u0647\u0644 \u062A\u0631\u064A\u062F \u0625\u063A\u0644\u0627\u0642 \u0647\u0630\u0627 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0648\u0641\u062A\u062D \u0625\u0635\u062F\u0627\u0631 \u062C\u062F\u064A\u062F\u061F")&&this.showDocumentVersionForm(null,t.documentCodeId)},filterDocumentCodes(){const e=document.getElementById("document-code-search")?.value.toLowerCase()||"";document.querySelectorAll("#document-codes-table-body tr").forEach(s=>{const a=s.textContent.toLowerCase();s.style.display=a.includes(e)?"":"none"})},filterDocumentVersions(){const e=document.getElementById("version-filter-code")?.value||"";document.querySelectorAll("#document-versions-table-body tr").forEach(s=>{const a=s.getAttribute("data-code-id")||"";s.style.display=!e||a===e?"":"none"})},async loadDocumentCodeVersion(e="document",t=null){try{const s=e==="document"?"document-code-select":e==="procedure"?"procedure-code-select":"form-code-select",a=e==="document"?"document-version":e==="procedure"?"procedure-version":"form-version",o=e==="document"?"document-issue-date":e==="procedure"?"procedure-issue-date":"form-issue-date",i=e==="document"?"document-revision-date":e==="procedure"?"procedure-revision-date":"form-revision-date",r=document.getElementById(s),l=t||r?.value||"";if(!l){const n=document.getElementById(a),d=document.getElementById(o),m=document.getElementById(i);n&&(n.value=""),d&&(d.value=""),m&&(m.value="");return}Loading.show();const c=await GoogleIntegration.fetchData("getDocumentCodeAndVersion",{documentCode:l});if(Loading.hide(),c.success&&c.version){const n=document.getElementById(a),d=document.getElementById(o),m=document.getElementById(i);n&&(n.value=c.version.versionNumber||""),d&&(d.value=c.version.issueDate?Utils.formatDate(c.version.issueDate):""),m&&(m.value=c.version.revisionDate?Utils.formatDate(c.version.revisionDate):""),Notification.success("\u062A\u0645 \u062C\u0644\u0628 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632")}else if(c.success&&c.code){const n=document.getElementById(a);n&&(n.value="\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"),Notification.warning("\u0627\u0644\u0643\u0648\u062F \u0645\u0648\u062C\u0648\u062F \u0648\u0644\u0643\u0646 \u0644\u0627 \u064A\u0648\u062C\u062F \u0625\u0635\u062F\u0627\u0631 \u0646\u0634\u0637 \u0641\u064A \u0627\u0644\u0645\u0631\u0643\u0632")}else Notification.error("\u0627\u0644\u0643\u0648\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631")}catch(s){Loading.hide(),Utils.safeError("Error loading document code version:",s),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062C\u0644\u0628 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0625\u0635\u062F\u0627\u0631: "+s.message)}},async getFormCodeDetails(e){try{const[t,s]=await Promise.all([GoogleIntegration.fetchData("getDocumentCodes",{}).catch(()=>null),GoogleIntegration.fetchData("getDocumentVersions",{documentCodeId:null}).catch(()=>null)]);if(t?.success&&s?.success){const a=t.data.find(o=>o.code===e||o.documentName===e);if(a){const o=s.data.filter(i=>i.documentCodeId===a.id&&(i.isActive===!0||i.isActive==="true"));if(o.length>0)return o.sort((i,r)=>new Date(r.issueDate||0)-new Date(i.issueDate||0)),{code:a.code,documentName:a.documentName,versionNumber:o[0].versionNumber,issueDate:o[0].issueDate,revisionDate:o[0].revisionDate,changeReason:o[0].changeReason}}}}catch(t){typeof Utils<"u"&&Utils.safeWarn("Error fetching ISO code details:",t)}return null}};(function(){"use strict";try{typeof window<"u"&&typeof ISO<"u"&&(window.ISO=ISO,typeof AppState<"u"&&AppState.debugMode&&typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 ISO module loaded and available on window.ISO"))}catch{if(typeof window<"u"&&typeof ISO<"u")try{window.ISO=ISO}catch{}}})();

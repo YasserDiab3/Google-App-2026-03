@@ -217,119 +217,251 @@ const ISO = {
         const nonConformities = AppState.appData.hseNonConformities || [];
         const actions = AppState.appData.hseCorrectiveActions || [];
 
+        const totalDocs = documents.length + procedures.length + forms.length;
+        const openNCs = nonConformities.filter(nc => nc.status !== 'مغلق' && nc.status !== 'Closed').length;
+        const pendingAudits = audits.filter(a => a.status === 'مجدول' || a.status === 'قيد التنفيذ' || a.status === 'Scheduled').length;
+        const openActions = actions.filter(a => a.status !== 'مكتمل' && a.status !== 'Completed').length;
+        
+        // Calculate a mock compliance score based on closed NCs and completed Audits
+        const complianceScore = this.calculateComplianceRate();
+
         return `
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="content-card">
-                    <div class="card-header">
-                        <h2 class="card-title"><i class="fas fa-info-circle ml-2"></i>نظرة عامة على النظام</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="space-y-4">
-                            <div class="bg-blue-50 border border-blue-200 rounded p-4">
-                                <h3 class="font-semibold text-blue-800 mb-3">
-                                    <i class="fas fa-hard-hat ml-2"></i>
-                                    ISO 45001 - السلامة والصحة المهنية
-                                </h3>
-                                <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
-                                    <li>إدارة المخاطر والرص</li>
-                                    <li>التخطيط والتحكم التشغيلي</li>
-                                    <li>القياس والمراقبة</li>
-                                    <li>التحسين المستمر</li>
-                                </ul>
-                            </div>
-                            <div class="bg-green-50 border border-green-200 rounded p-4">
-                                <h3 class="font-semibold text-green-800 mb-3">
-                                    <i class="fas fa-leaf ml-2"></i>
-                                    ISO 14001 - إدارة البيئة
-                                </h3>
-                                <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
-                                    <li>إدارة الجوانب البيئية</li>
-                                    <li>الامتثال للقوانين البيئية</li>
-                                    <li>التخطيط البيئي</li>
-                                    <li>تحسين الأداء البيئي</li>
-                                </ul>
-                            </div>
+            <!-- Top KPIs Row -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <!-- KPI 1 -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-all">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+                    <div class="flex justify-between items-start relative z-10">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 mb-1">إجمالي الوثائق</p>
+                            <h3 class="text-3xl font-bold text-gray-800">${totalDocs}</h3>
                         </div>
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                            <i class="fas fa-file-alt text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-xs text-gray-500 flex items-center">
+                        <span class="text-blue-600 font-semibold ml-1">${procedures.length}</span> إجراءات | 
+                        <span class="text-indigo-600 font-semibold mx-1">${forms.length}</span> نماذج
                     </div>
                 </div>
-                
-                <div class="content-card">
-                    <div class="card-header">
-                        <h2 class="card-title"><i class="fas fa-chart-bar ml-2"></i>إحصائيات النظام</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="space-y-4">
-                            <div class="flex items-center justify-between p-3 border rounded">
-                                <span class="font-semibold">الوثائق</span>
-                                <span class="badge badge-info">${documents.length}</span>
-                            </div>
-                            <div class="flex items-center justify-between p-3 border rounded">
-                                <span class="font-semibold">الإجراءات</span>
-                                <span class="badge badge-success">${procedures.length}</span>
-                            </div>
-                            <div class="flex items-center justify-between p-3 border rounded">
-                                <span class="font-semibold">النماذج</span>
-                                <span class="badge badge-warning">${forms.length}</span>
-                            </div>
-                            <div class="flex items-center justify-between p-3 border rounded">
-                                <span class="font-semibold">عمليات التدقيق</span>
-                                <span class="badge badge-primary">${audits.length}</span>
-                            </div>
-                            <div class="flex items-center justify-between p-3 border rounded">
-                                <span class="font-semibold">عدم المطابقة</span>
-                                <span class="badge badge-danger">${nonConformities.length}</span>
-                            </div>
-                            <div class="flex items-center justify-between p-3 border rounded">
-                                <span class="font-semibold">الإجراءات التصحيحية</span>
-                                <span class="badge badge-info">${actions.length}</span>
-                            </div>
+
+                <!-- KPI 2 -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-all">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-red-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+                    <div class="flex justify-between items-start relative z-10">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 mb-1">حالات عدم المطابقة المفتوحة</p>
+                            <h3 class="text-3xl font-bold text-gray-800">${openNCs}</h3>
                         </div>
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center text-white shadow-lg shadow-red-200">
+                            <i class="fas fa-exclamation-triangle text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-xs text-gray-500">
+                        من إجمالي <span class="font-bold">${nonConformities.length}</span> حالة مسجلة
+                    </div>
+                </div>
+
+                <!-- KPI 3 -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-all">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-purple-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+                    <div class="flex justify-between items-start relative z-10">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 mb-1">عمليات تدقيق قادمة</p>
+                            <h3 class="text-3xl font-bold text-gray-800">${pendingAudits}</h3>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-purple-200">
+                            <i class="fas fa-search text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-xs text-gray-500">
+                        من إجمالي <span class="font-bold">${audits.length}</span> عملية تدقيق
+                    </div>
+                </div>
+
+                <!-- KPI 4 -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-all">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-amber-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+                    <div class="flex justify-between items-start relative z-10">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 mb-1">إجراءات تصحيحية مفتوحة</p>
+                            <h3 class="text-3xl font-bold text-gray-800">${openActions}</h3>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-amber-200">
+                            <i class="fas fa-tools text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-xs text-gray-500">
+                        من إجمالي <span class="font-bold">${actions.length}</span> إجراء تصحيحي
                     </div>
                 </div>
             </div>
+
+            <!-- Main Content Area -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left Column (Compliance & Standards) -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                            <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-shield-check text-blue-600 ml-2"></i>مستوى الامتثال للنظام (QMS Health)</h2>
+                            <span class="text-2xl font-bold ${complianceScore >= 80 ? 'text-green-500' : (complianceScore >= 50 ? 'text-amber-500' : 'text-red-500')}">${complianceScore}%</span>
+                        </div>
+                        <div class="p-6">
+                            <div class="w-full bg-gray-100 rounded-full h-4 mb-6 overflow-hidden relative">
+                                <div class="h-4 rounded-full ${complianceScore >= 80 ? 'bg-gradient-to-r from-green-400 to-green-500' : (complianceScore >= 50 ? 'bg-gradient-to-r from-amber-400 to-amber-500' : 'bg-gradient-to-r from-red-400 to-red-500')} transition-all duration-1000 relative" style="width: ${complianceScore}%">
+                                    <div class="absolute top-0 left-0 w-full h-full bg-white opacity-20" style="background-image: linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent); background-size: 1rem 1rem; animation: progress-bar-stripes 1s linear infinite;"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="border border-blue-100 bg-blue-50/30 rounded-xl p-4 hover:shadow-sm transition-all">
+                                    <h3 class="font-bold text-blue-800 mb-2 flex items-center">
+                                        <i class="fas fa-hard-hat text-blue-500 ml-2"></i> ISO 45001
+                                    </h3>
+                                    <p class="text-xs text-gray-600 mb-3">نظام إدارة السلامة والصحة المهنية</p>
+                                    <div class="flex justify-between items-center text-sm">
+                                        <span class="text-gray-500">المتطلبات</span>
+                                        <span class="font-semibold text-blue-700">مغطاة</span>
+                                    </div>
+                                </div>
+                                <div class="border border-green-100 bg-green-50/30 rounded-xl p-4 hover:shadow-sm transition-all">
+                                    <h3 class="font-bold text-green-800 mb-2 flex items-center">
+                                        <i class="fas fa-leaf text-green-500 ml-2"></i> ISO 14001
+                                    </h3>
+                                    <p class="text-xs text-gray-600 mb-3">نظام الإدارة البيئية</p>
+                                    <div class="flex justify-between items-center text-sm">
+                                        <span class="text-gray-500">المتطلبات</span>
+                                        <span class="font-semibold text-green-700">مغطاة</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column (Action Items) -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
+                    <div class="p-5 border-b border-gray-50 bg-gradient-to-r from-rose-50 to-orange-50">
+                        <h2 class="text-lg font-bold text-gray-800 flex items-center">
+                            <i class="fas fa-bell text-rose-500 ml-2 animate-pulse"></i>مهام تتطلب الانتباه
+                        </h2>
+                    </div>
+                    <div class="p-0 flex-1 overflow-y-auto" style="max-height: 400px;">
+                        <ul class="divide-y divide-gray-100">
+                            ${openNCs > 0 ? `
+                            <li class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 cursor-pointer" onclick="ISO.currentTab = 'audit'; ISO.load();">
+                                <div class="mt-0.5 bg-red-100 text-red-600 p-2 rounded-lg"><i class="fas fa-exclamation-circle"></i></div>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-800">يوجد ${openNCs} حالة عدم مطابقة مفتوحة</p>
+                                    <p class="text-xs text-gray-500 mt-1">يجب مراجعتها وإغلاقها لتجنب التأثير على مستوى الامتثال.</p>
+                                </div>
+                            </li>
+                            ` : ''}
+                            
+                            ${pendingAudits > 0 ? `
+                            <li class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 cursor-pointer" onclick="ISO.currentTab = 'audit'; ISO.load();">
+                                <div class="mt-0.5 bg-purple-100 text-purple-600 p-2 rounded-lg"><i class="fas fa-calendar-alt"></i></div>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-800">يوجد ${pendingAudits} عملية تدقيق قادمة</p>
+                                    <p class="text-xs text-gray-500 mt-1">يرجى مراجعة الجدول الزمني وتجهيز الوثائق المطلوبة.</p>
+                                </div>
+                            </li>
+                            ` : ''}
+                            
+                            ${openActions > 0 ? `
+                            <li class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 cursor-pointer" onclick="ISO.currentTab = 'audit'; ISO.load();">
+                                <div class="mt-0.5 bg-amber-100 text-amber-600 p-2 rounded-lg"><i class="fas fa-tools"></i></div>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-800">يوجد ${openActions} إجراء تصحيحي معلق</p>
+                                    <p class="text-xs text-gray-500 mt-1">تابع مع المسؤولين لإغلاق الإجراءات التصحيحية المفتوحة.</p>
+                                </div>
+                            </li>
+                            ` : ''}
+                            
+                            ${(openNCs === 0 && pendingAudits === 0 && openActions === 0) ? `
+                            <li class="p-8 text-center flex flex-col items-center justify-center">
+                                <div class="bg-green-50 text-green-500 p-4 rounded-full mb-3"><i class="fas fa-check-double text-2xl"></i></div>
+                                <p class="text-gray-600 font-semibold text-sm">النظام في حالة ممتازة</p>
+                                <p class="text-gray-400 text-xs mt-1">لا توجد أي مهام متأخرة أو معلقة تتطلب الانتباه حالياً.</p>
+                            </li>
+                            ` : ''}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <style>
+                @keyframes progress-bar-stripes {
+                    from { background-position: 1rem 0; }
+                    to { background-position: 0 0; }
+                }
+            </style>
         `;
     },
 
     async renderDocuments() {
         const documents = AppState.appData.isoDocuments || [];
         return `
-            <div class="content-card">
-                <div class="card-header">
-                    <div class="flex items-center justify-between">
-                        <h2 class="card-title"><i class="fas fa-file-alt ml-2"></i>الوثائق</h2>
-                        <button id="add-document-btn" class="btn-primary">
-                            <i class="fas fa-plus ml-2"></i>إضافة وثيقة
-                        </button>
+            <div class="content-card shadow-lg border-0 rounded-2xl overflow-hidden bg-white">
+                <div class="card-header bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-5 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                            <i class="fas fa-file-alt text-xl text-white"></i>
+                        </div>
+                        <div>
+                            <h2 class="card-title text-white m-0 text-xl font-bold">إدارة الوثائق (Document Control)</h2>
+                            <p class="text-blue-100 text-sm m-0 opacity-80">سجل الوثائق المعتمدة في النظام</p>
+                        </div>
                     </div>
+                    <button id="add-document-btn" class="btn bg-white text-blue-700 hover:bg-blue-50 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all hover:shadow-md">
+                        <i class="fas fa-plus"></i>إضافة وثيقة
+                    </button>
                 </div>
-                <div class="card-body">
-                    ${documents.length === 0 ? '<div class="empty-state"><p class="text-gray-500">لا توجد وثائق</p></div>' : `
-                        <table class="data-table table-header-purple">
-                            <thead>
-                                <tr>
-                                    <th>كود ISO</th>
-                                    <th>اسم الوثيقة</th>
-                                    <th>النوع</th>
-                                    <th>الإصدار</th>
-                                    <th>الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${documents.map(d => `
-                                    <tr>
-                                        <td>${Utils.escapeHTML(d.isoCode || '')}</td>
-                                        <td>${Utils.escapeHTML(d.name || '')}</td>
-                                        <td>${Utils.escapeHTML(d.type || '')}</td>
-                                        <td>${d.version || '-'}</td>
-                                        <td>
-                                            <button onclick="ISO.viewDocument('${d.id}')" class="btn-icon btn-icon-primary">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        </td>
+                <div class="card-body p-0">
+                    ${documents.length === 0 ? `
+                        <div class="p-12 text-center flex flex-col items-center justify-center bg-gray-50/50">
+                            <div class="w-20 h-20 bg-blue-50 text-blue-300 rounded-full flex items-center justify-center mb-4"><i class="fas fa-folder-open text-3xl"></i></div>
+                            <h3 class="text-gray-700 font-bold text-lg mb-1">لا توجد وثائق مسجلة</h3>
+                            <p class="text-gray-500 text-sm">قم بإضافة أول وثيقة لبدء بناء مكتبة النظام</p>
+                        </div>
+                    ` : `
+                        <div class="overflow-x-auto p-4">
+                            <table class="w-full text-right border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
+                                        <th class="p-3 font-semibold text-right rounded-tr-lg">كود ISO</th>
+                                        <th class="p-3 font-semibold text-right">اسم الوثيقة</th>
+                                        <th class="p-3 font-semibold text-right">النوع</th>
+                                        <th class="p-3 font-semibold text-center">الإصدار</th>
+                                        <th class="p-3 font-semibold text-center">الحالة</th>
+                                        <th class="p-3 font-semibold text-center rounded-tl-lg">الإجراءات</th>
                                     </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    ${documents.map(d => {
+                                        const status = d.status || 'معتمد';
+                                        let statusBadge = 'bg-green-100 text-green-800 border-green-200';
+                                        if (status === 'مسودة' || status === 'Draft') statusBadge = 'bg-gray-100 text-gray-800 border-gray-200';
+                                        else if (status === 'قيد المراجعة' || status === 'Under Review') statusBadge = 'bg-amber-100 text-amber-800 border-amber-200';
+                                        
+                                        return `
+                                        <tr class="border-b border-gray-100 hover:bg-blue-50/30 transition-colors group">
+                                            <td class="p-3"><span class="font-mono text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-100 text-sm font-bold">${Utils.escapeHTML(d.isoCode || '---')}</span></td>
+                                            <td class="p-3 font-medium text-gray-800">${Utils.escapeHTML(d.name || '')}</td>
+                                            <td class="p-3 text-sm text-gray-600">${Utils.escapeHTML(d.type || '')}</td>
+                                            <td class="p-3 text-center"><span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-bold text-xs border border-gray-200">v${d.version || '1.0'}</span></td>
+                                            <td class="p-3 text-center"><span class="px-2.5 py-1 text-xs rounded-full border ${statusBadge} font-semibold">${status}</span></td>
+                                            <td class="p-3 text-center">
+                                                <button onclick="ISO.viewDocument('${d.id}')" class="text-gray-400 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors" title="عرض التفاصيل">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `}).join('')}
+                                </tbody>
+                            </table>
+                        </div>
                     `}
                 </div>
             </div>
@@ -339,41 +471,69 @@ const ISO = {
     async renderProcedures() {
         const procedures = AppState.appData.isoProcedures || [];
         return `
-            <div class="content-card">
-                <div class="card-header">
-                    <div class="flex items-center justify-between">
-                        <h2 class="card-title"><i class="fas fa-tasks ml-2"></i>الإجراءات</h2>
-                        <button id="add-procedure-btn" class="btn-primary">
-                            <i class="fas fa-plus ml-2"></i>إضافة إجراء
-                        </button>
+            <div class="content-card shadow-lg border-0 rounded-2xl overflow-hidden bg-white">
+                <div class="card-header bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-5 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                            <i class="fas fa-project-diagram text-xl text-white"></i>
+                        </div>
+                        <div>
+                            <h2 class="card-title text-white m-0 text-xl font-bold">إدارة الإجراءات (Procedures)</h2>
+                            <p class="text-emerald-100 text-sm m-0 opacity-80">إجراءات العمل القياسية (SOPs)</p>
+                        </div>
                     </div>
+                    <button id="add-procedure-btn" class="btn bg-white text-emerald-700 hover:bg-emerald-50 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all hover:shadow-md">
+                        <i class="fas fa-plus"></i>إضافة إجراء
+                    </button>
                 </div>
-                <div class="card-body">
-                    ${procedures.length === 0 ? '<div class="empty-state"><p class="text-gray-500">لا توجد إجراءات</p></div>' : `
-                        <table class="data-table table-header-purple">
-                            <thead>
-                                <tr>
-                                    <th>كود ISO</th>
-                                    <th>اسم الإجراء</th>
-                                    <th>القسم</th>
-                                    <th>الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${procedures.map(p => `
-                                    <tr>
-                                        <td>${Utils.escapeHTML(p.isoCode || '')}</td>
-                                        <td>${Utils.escapeHTML(p.name || '')}</td>
-                                        <td>${Utils.escapeHTML(p.department || '')}</td>
-                                        <td>
-                                            <button onclick="ISO.viewProcedure('${p.id}')" class="btn-icon btn-icon-primary">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        </td>
+                <div class="card-body p-0">
+                    ${procedures.length === 0 ? `
+                        <div class="p-12 text-center flex flex-col items-center justify-center bg-gray-50/50">
+                            <div class="w-20 h-20 bg-emerald-50 text-emerald-300 rounded-full flex items-center justify-center mb-4"><i class="fas fa-network-wired text-3xl"></i></div>
+                            <h3 class="text-gray-700 font-bold text-lg mb-1">لا توجد إجراءات مسجلة</h3>
+                            <p class="text-gray-500 text-sm">قم بإضافة أول إجراء (SOP) لتنظيم العمل</p>
+                        </div>
+                    ` : `
+                        <div class="overflow-x-auto p-4">
+                            <table class="w-full text-right border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
+                                        <th class="p-3 font-semibold text-right rounded-tr-lg">كود الإجراء</th>
+                                        <th class="p-3 font-semibold text-right">اسم الإجراء</th>
+                                        <th class="p-3 font-semibold text-right">القسم المالك</th>
+                                        <th class="p-3 font-semibold text-center">المراجعة القادمة</th>
+                                        <th class="p-3 font-semibold text-center rounded-tl-lg">الإجراءات</th>
                                     </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    ${procedures.map(p => {
+                                        // Fake Next Review calculation for UI
+                                        const issueDate = p.issueDate || new Date().toISOString();
+                                        const nextReview = new Date(issueDate);
+                                        nextReview.setFullYear(nextReview.getFullYear() + 1);
+                                        const isOverdue = nextReview < new Date();
+                                        
+                                        return `
+                                        <tr class="border-b border-gray-100 hover:bg-emerald-50/30 transition-colors group">
+                                            <td class="p-3"><span class="font-mono text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 text-sm font-bold">${Utils.escapeHTML(p.isoCode || '---')}</span></td>
+                                            <td class="p-3 font-medium text-gray-800">${Utils.escapeHTML(p.name || '')}</td>
+                                            <td class="p-3"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200"><i class="fas fa-building text-gray-400"></i> ${Utils.escapeHTML(p.department || 'عام')}</span></td>
+                                            <td class="p-3 text-center">
+                                                <div class="flex items-center justify-center gap-1.5 ${isOverdue ? 'text-red-600 font-bold' : 'text-gray-600'}">
+                                                    <i class="fas ${isOverdue ? 'fa-exclamation-circle' : 'fa-calendar-alt'}"></i>
+                                                    <span class="text-sm">${nextReview.toLocaleDateString('ar-EG')}</span>
+                                                </div>
+                                            </td>
+                                            <td class="p-3 text-center">
+                                                <button onclick="ISO.viewProcedure('${p.id}')" class="text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 p-2 rounded-lg transition-colors" title="عرض التفاصيل">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `}).join('')}
+                                </tbody>
+                            </table>
+                        </div>
                     `}
                 </div>
             </div>
@@ -383,41 +543,60 @@ const ISO = {
     async renderForms() {
         const forms = AppState.appData.isoForms || [];
         return `
-            <div class="content-card">
-                <div class="card-header">
-                    <div class="flex items-center justify-between">
-                        <h2 class="card-title"><i class="fas fa-file-signature ml-2"></i>النماذج</h2>
-                        <button id="add-form-btn" class="btn-primary">
-                            <i class="fas fa-plus ml-2"></i>إضافة نموذج
-                        </button>
+            <div class="content-card shadow-lg border-0 rounded-2xl overflow-hidden bg-white">
+                <div class="card-header bg-gradient-to-r from-amber-500 to-orange-600 text-white p-5 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                            <i class="fas fa-file-signature text-xl text-white"></i>
+                        </div>
+                        <div>
+                            <h2 class="card-title text-white m-0 text-xl font-bold">النماذج القياسية (Forms)</h2>
+                            <p class="text-amber-100 text-sm m-0 opacity-80">سجل النماذج المعتمدة لجمع البيانات</p>
+                        </div>
                     </div>
+                    <button id="add-form-btn" class="btn bg-white text-orange-700 hover:bg-orange-50 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all hover:shadow-md">
+                        <i class="fas fa-plus"></i>إضافة نموذج
+                    </button>
                 </div>
-                <div class="card-body">
-                    ${forms.length === 0 ? '<div class="empty-state"><p class="text-gray-500">لا توجد نماذج</p></div>' : `
-                        <table class="data-table table-header-purple">
-                            <thead>
-                                <tr>
-                                    <th>كود ISO</th>
-                                    <th>اسم النموذج</th>
-                                    <th>النوع</th>
-                                    <th>الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${forms.map(f => `
-                                    <tr>
-                                        <td>${Utils.escapeHTML(f.isoCode || '')}</td>
-                                        <td>${Utils.escapeHTML(f.name || '')}</td>
-                                        <td>${Utils.escapeHTML(f.type || '')}</td>
-                                        <td>
-                                            <button onclick="ISO.viewForm('${f.id}')" class="btn-icon btn-icon-primary">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        </td>
+                <div class="card-body p-0">
+                    ${forms.length === 0 ? `
+                        <div class="p-12 text-center flex flex-col items-center justify-center bg-gray-50/50">
+                            <div class="w-20 h-20 bg-orange-50 text-orange-300 rounded-full flex items-center justify-center mb-4"><i class="fas fa-clipboard-list text-3xl"></i></div>
+                            <h3 class="text-gray-700 font-bold text-lg mb-1">لا توجد نماذج مسجلة</h3>
+                            <p class="text-gray-500 text-sm">قم بإضافة أول نموذج ليكون متاحاً للطباعة والاستخدام</p>
+                        </div>
+                    ` : `
+                        <div class="overflow-x-auto p-4">
+                            <table class="w-full text-right border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
+                                        <th class="p-3 font-semibold text-right rounded-tr-lg">الكود المرجعي</th>
+                                        <th class="p-3 font-semibold text-right">اسم النموذج</th>
+                                        <th class="p-3 font-semibold text-right">نوع النموذج</th>
+                                        <th class="p-3 font-semibold text-center rounded-tl-lg">الإجراءات</th>
                                     </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    ${forms.map(f => `
+                                        <tr class="border-b border-gray-100 hover:bg-orange-50/30 transition-colors group">
+                                            <td class="p-3"><span class="font-mono text-orange-700 bg-orange-50 px-2 py-1 rounded border border-orange-100 text-sm font-bold">${Utils.escapeHTML(f.isoCode || '---')}</span></td>
+                                            <td class="p-3 font-medium text-gray-800">${Utils.escapeHTML(f.name || '')}</td>
+                                            <td class="p-3 text-sm text-gray-600">
+                                                <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                                                    <i class="fas ${f.type?.includes('سجل') ? 'fa-book' : 'fa-clipboard'}"></i>
+                                                    ${Utils.escapeHTML(f.type || 'نموذج إدخال')}
+                                                </span>
+                                            </td>
+                                            <td class="p-3 text-center">
+                                                <button onclick="ISO.viewForm('${f.id}')" class="text-gray-400 hover:text-orange-600 hover:bg-orange-50 p-2 rounded-lg transition-colors" title="عرض التفاصيل">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
                     `}
                 </div>
             </div>
@@ -1182,110 +1361,155 @@ const ISO = {
         const actions = AppState.appData.hseCorrectiveActions || [];
 
         return `
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="content-card">
-                    <div class="card-header">
-                        <div class="flex items-center justify-between">
-                            <h2 class="card-title"><i class="fas fa-clipboard-check ml-2"></i>عمليات التدقيق</h2>
-                            <button class="btn-primary" onclick="ISO.showAuditForm()">
-                                <i class="fas fa-plus ml-2"></i>إضافة تدقيق
-                            </button>
-                        </div>
+            <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                        <i class="fas fa-search-plus text-blue-600 ml-3"></i>مركز التدقيق والجودة
+                    </h2>
+                    <p class="text-sm text-gray-500 mt-1">إدارة عمليات التدقيق وحالات عدم المطابقة والإجراءات التصحيحية</p>
+                </div>
+                <div class="flex gap-2">
+                    <button class="btn bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all" onclick="ISO.showAuditForm()">
+                        <i class="fas fa-plus text-blue-600"></i>جدولة تدقيق
+                    </button>
+                    <button class="btn bg-blue-600 text-white hover:bg-blue-700 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all" onclick="ISO.showNonConformityForm()">
+                        <i class="fas fa-exclamation-triangle"></i>تسجيل حالة عدم مطابقة
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Audits Card -->
+                <div class="content-card shadow-lg border-0 rounded-2xl overflow-hidden bg-white flex flex-col">
+                    <div class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 p-5 border-b border-blue-100 flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-blue-900 m-0 flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center ml-2">
+                                <i class="fas fa-clipboard-check"></i>
+                            </div>
+                            سجل عمليات التدقيق
+                        </h3>
+                        <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full border border-blue-200">${audits.length} عمليات</span>
                     </div>
-                    <div class="card-body">
-                        ${audits.length === 0 ? '<div class="empty-state"><p class="text-gray-500">لا توجد عمليات تدقيق مسجلة</p></div>' : `
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>التاريخ</th>
-                                        <th>النوع</th>
-                                        <th>المدقق</th>
-                                        <th>الحالة</th>
-                                        <th>الإجراءات</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${audits.map(audit => `
-                                        <tr>
-                                            <td>${Utils.formatDate(audit.date)}</td>
-                                            <td>${Utils.escapeHTML(audit.type)}</td>
-                                            <td>${Utils.escapeHTML(audit.auditor)}</td>
-                                            <td><span class="badge badge-${audit.status === 'مكتمل' ? 'success' : 'warning'}">${audit.status}</span></td>
-                                            <td>
-                                                <button onclick="ISO.viewAudit('${audit.id}')" class="btn-icon btn-icon-info"><i class="fas fa-eye"></i></button>
-                                            </td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
+                    <div class="card-body p-0 flex-1 overflow-y-auto" style="max-height: 500px;">
+                        ${audits.length === 0 ? `
+                            <div class="p-12 text-center flex flex-col items-center justify-center h-full">
+                                <div class="w-16 h-16 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mb-3"><i class="fas fa-clipboard text-2xl"></i></div>
+                                <h4 class="text-gray-600 font-bold mb-1">لا توجد سجلات تدقيق</h4>
+                                <p class="text-gray-400 text-xs">قم بجدولة أول عملية تدقيق لتقييم النظام</p>
+                            </div>
+                        ` : `
+                            <div class="divide-y divide-gray-100">
+                                ${audits.map(audit => {
+                                    const isCompleted = audit.status === 'مكتمل' || audit.status === 'Completed';
+                                    const isScheduled = audit.status === 'مجدول' || audit.status === 'Scheduled';
+                                    
+                                    let statusColor = isCompleted ? 'green' : (isScheduled ? 'blue' : 'amber');
+                                    let typeIcon = audit.type?.includes('خارجي') ? 'fa-building' : 'fa-users-cog';
+                                    
+                                    return `
+                                    <div class="p-4 hover:bg-gray-50 transition-colors flex items-start justify-between group">
+                                        <div class="flex items-start gap-4">
+                                            <div class="mt-1 w-10 h-10 rounded-xl bg-${statusColor}-50 text-${statusColor}-600 flex items-center justify-center border border-${statusColor}-100">
+                                                <i class="fas ${isCompleted ? 'fa-check' : 'fa-calendar-alt'}"></i>
+                                            </div>
+                                            <div>
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    <h4 class="font-bold text-gray-800 text-sm m-0">${Utils.escapeHTML(audit.type)}</h4>
+                                                    <span class="bg-${statusColor}-100 text-${statusColor}-800 text-[10px] font-bold px-2 py-0.5 rounded border border-${statusColor}-200">${audit.status}</span>
+                                                </div>
+                                                <div class="text-xs text-gray-500 flex items-center gap-3">
+                                                    <span title="تاريخ التدقيق"><i class="far fa-calendar ml-1"></i>${Utils.formatDate(audit.date)}</span>
+                                                    <span title="المدقق"><i class="fas fa-user-tie ml-1"></i>${Utils.escapeHTML(audit.auditor)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button onclick="ISO.viewAudit('${audit.id}')" class="text-gray-400 hover:text-blue-600 bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-200 w-8 h-8 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 focus:opacity-100" title="التفاصيل">
+                                            <i class="fas fa-chevron-left text-xs"></i>
+                                        </button>
+                                    </div>
+                                    `;
+                                }).join('')}
+                            </div>
                         `}
                     </div>
                 </div>
                 
-                <div class="content-card">
-                    <div class="card-header">
-                        <div class="flex items-center justify-between">
-                            <h2 class="card-title"><i class="fas fa-times-circle ml-2"></i>عدم المطابقة والإجراءات التصحيحية</h2>
-                            <button class="btn-primary" onclick="ISO.showNonConformityForm()">
-                                <i class="fas fa-plus ml-2"></i>إضافة عدم مطابقة
-                            </button>
+                <!-- CAPA Card -->
+                <div class="content-card shadow-lg border-0 rounded-2xl overflow-hidden bg-white flex flex-col">
+                    <div class="card-header bg-gradient-to-r from-red-50 to-orange-50 p-5 border-b border-red-100 flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-red-900 m-0 flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center ml-2">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            تتبع إجراءات CAPA
+                        </h3>
+                        <div class="flex gap-1">
+                            <span class="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-1 rounded-md border border-red-200" title="حالات عدم مطابقة">${nonConformities.length} NC</span>
+                            <span class="bg-orange-100 text-orange-800 text-[10px] font-bold px-2 py-1 rounded-md border border-orange-200" title="إجراءات تصحيحية">${actions.length} CA</span>
                         </div>
                     </div>
-                    <div class="card-body">
-                        ${nonConformities.length === 0 && actions.length === 0 ? '<div class="empty-state"><p class="text-gray-500">لا توجد عدم مطابقة أو إجراءات تصحيحية</p></div>' : `
-                            <h3 class="font-semibold text-md mb-2">عدم المطابقة (${nonConformities.length})</h3>
-                            ${nonConformities.length === 0 ? '<p class="text-gray-500 text-sm">لا توجد عدم مطابقة مسجلة</p>' : `
-                                <table class="data-table mb-4">
-                                    <thead>
-                                        <tr>
-                                            <th>التاريخ</th>
-                                            <th>الوصف</th>
-                                            <th>الحالة</th>
-                                            <th>الإجراءات</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${nonConformities.map(nc => `
-                                            <tr>
-                                                <td>${Utils.formatDate(nc.date)}</td>
-                                                <td>${Utils.escapeHTML(nc.description.substring(0, 50))}...</td>
-                                                <td><span class="badge badge-${nc.status === 'مغلق' ? 'success' : 'danger'}">${nc.status}</span></td>
-                                                <td>
-                                                    <button onclick="ISO.viewNonConformity('${nc.id}')" class="btn-icon btn-icon-info"><i class="fas fa-eye"></i></button>
-                                                </td>
-                                            </tr>
-                                        `).join('')}
-                                    </tbody>
-                                </table>
-                            `}
+                    <div class="card-body p-0 flex-1 overflow-y-auto bg-gray-50/30" style="max-height: 500px;">
+                        ${nonConformities.length === 0 && actions.length === 0 ? `
+                            <div class="p-12 text-center flex flex-col items-center justify-center h-full">
+                                <div class="w-16 h-16 bg-green-50 text-green-400 rounded-full flex items-center justify-center mb-3"><i class="fas fa-shield-alt text-2xl"></i></div>
+                                <h4 class="text-gray-600 font-bold mb-1">لا توجد حالات مسجلة</h4>
+                                <p class="text-gray-400 text-xs">نظام الجودة يعمل بشكل مثالي دون ملاحظات.</p>
+                            </div>
+                        ` : `
+                            <div class="p-4">
+                                <!-- Non-Conformities Section -->
+                                ${nonConformities.length > 0 ? `
+                                    <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 pb-2 border-b border-gray-200 flex items-center gap-2">
+                                        <i class="fas fa-bug text-red-400"></i> حالات عدم المطابقة (NC)
+                                    </h4>
+                                    <div class="space-y-3 mb-6">
+                                        ${nonConformities.map(nc => {
+                                            const isClosed = nc.status === 'مغلق' || nc.status === 'Closed';
+                                            return `
+                                                <div class="bg-white border ${isClosed ? 'border-gray-200' : 'border-red-200 shadow-sm'} rounded-xl p-3 hover:border-red-300 transition-colors cursor-pointer group" onclick="ISO.viewNonConformity('${nc.id}')">
+                                                    <div class="flex justify-between items-start mb-2">
+                                                        <span class="text-xs font-bold ${isClosed ? 'text-gray-500 bg-gray-100' : 'text-red-700 bg-red-100'} px-2 py-0.5 rounded border ${isClosed ? 'border-gray-200' : 'border-red-200'}">${nc.status}</span>
+                                                        <span class="text-[10px] text-gray-400"><i class="far fa-clock ml-1"></i>${Utils.formatDate(nc.date)}</span>
+                                                    </div>
+                                                    <p class="text-sm text-gray-800 font-medium line-clamp-2 leading-snug">${Utils.escapeHTML(nc.description)}</p>
+                                                    <div class="mt-2 text-[10px] text-gray-500 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <span class="text-blue-600">عرض التفاصيل &larr;</span>
+                                                    </div>
+                                                </div>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                ` : ''}
 
-                            <h3 class="font-semibold text-md mb-2 mt-6">الإجراءات التصحيحية (${actions.length})</h3>
-                            ${actions.length === 0 ? '<p class="text-gray-500 text-sm">لا توجد إجراءات تصحيحية مسجلة</p>' : `
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>الوص</th>
-                                            <th>المسؤول</th>
-                                            <th>تاريخ الانتهاء</th>
-                                            <th>الحالة</th>
-                                            <th>الإجراءات</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${actions.map(action => `
-                                            <tr>
-                                                <td>${Utils.escapeHTML(action.description.substring(0, 50))}...</td>
-                                                <td>${Utils.escapeHTML(action.responsible)}</td>
-                                                <td>${Utils.formatDate(action.dueDate)}</td>
-                                                <td><span class="badge badge-${action.status === 'مكتمل' ? 'success' : 'warning'}">${action.status}</span></td>
-                                                <td>
-                                                    <button onclick="ISO.viewCorrectiveAction('${action.id}')" class="btn-icon btn-icon-info"><i class="fas fa-eye"></i></button>
-                                                </td>
-                                            </tr>
-                                        `).join('')}
-                                    </tbody>
-                                </table>
-                            `}
+                                <!-- Corrective Actions Section -->
+                                ${actions.length > 0 ? `
+                                    <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 pb-2 border-b border-gray-200 flex items-center gap-2">
+                                        <i class="fas fa-tools text-orange-400"></i> الإجراءات التصحيحية (CA)
+                                    </h4>
+                                    <div class="space-y-3">
+                                        ${actions.map(action => {
+                                            const isCompleted = action.status === 'مكتمل' || action.status === 'Completed';
+                                            const dueDateObj = new Date(action.dueDate);
+                                            const isOverdue = !isCompleted && dueDateObj < new Date();
+                                            
+                                            return `
+                                                <div class="bg-white border ${isCompleted ? 'border-gray-200' : (isOverdue ? 'border-red-300 shadow-sm' : 'border-orange-200 shadow-sm')} rounded-xl p-3 hover:shadow-md transition-shadow cursor-pointer group relative overflow-hidden" onclick="ISO.viewCorrectiveAction('${action.id}')">
+                                                    ${isOverdue ? '<div class="absolute top-0 right-0 w-1 h-full bg-red-500"></div>' : ''}
+                                                    <div class="flex justify-between items-start mb-2">
+                                                        <span class="text-xs font-bold ${isCompleted ? 'text-green-700 bg-green-100 border-green-200' : 'text-orange-700 bg-orange-100 border-orange-200'} px-2 py-0.5 rounded border">${action.status}</span>
+                                                        <span class="text-[10px] ${isOverdue ? 'text-red-600 font-bold' : 'text-gray-500'}"><i class="far fa-calendar-times ml-1"></i>تاريخ الاستحقاق: ${Utils.formatDate(action.dueDate)}</span>
+                                                    </div>
+                                                    <p class="text-sm text-gray-800 line-clamp-2 leading-snug mb-2">${Utils.escapeHTML(action.description)}</p>
+                                                    <div class="flex items-center gap-1.5 text-xs bg-gray-50 w-fit px-2 py-1 rounded text-gray-600 border border-gray-100">
+                                                        <i class="fas fa-user-hard-hat text-gray-400"></i>
+                                                        <span class="font-medium">${Utils.escapeHTML(action.responsible)}</span>
+                                                    </div>
+                                                </div>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
                         `}
                     </div>
                 </div>
