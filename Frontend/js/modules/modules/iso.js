@@ -2080,43 +2080,43 @@ const ISO = {
                             }
                         }
                         
-                        return \`
-                        <div class="bg-white border \${matchedCode ? 'border-green-200' : 'border-red-200'} rounded-xl p-5 hover:shadow-xl transition-all duration-300 relative overflow-hidden group transform hover:-translate-y-1">
-                            <div class="absolute top-0 right-0 w-1.5 h-full \${matchedCode ? 'bg-gradient-to-b from-green-400 to-green-600' : 'bg-gradient-to-b from-red-400 to-red-600'}"></div>
+                        return `
+                        <div class="bg-white border ${matchedCode ? 'border-green-200' : 'border-red-200'} rounded-xl p-5 hover:shadow-xl transition-all duration-300 relative overflow-hidden group transform hover:-translate-y-1">
+                            <div class="absolute top-0 right-0 w-1.5 h-full ${matchedCode ? 'bg-gradient-to-b from-green-400 to-green-600' : 'bg-gradient-to-b from-red-400 to-red-600'}"></div>
                             
                             <div class="flex justify-between items-start mb-4">
-                                <h3 class="font-bold text-gray-800 text-lg leading-tight">\${form.name}</h3>
-                                <span class="badge \${matchedCode ? 'badge-success bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-2.5 py-1 rounded-full font-semibold text-xs shadow-sm flex items-center whitespace-nowrap">
-                                    \${matchedCode ? '<i class="fas fa-check-circle ml-1"></i> مكود' : '<i class="fas fa-times-circle ml-1"></i> غير معرّف'}
+                                <h3 class="font-bold text-gray-800 text-lg leading-tight">${form.name}</h3>
+                                <span class="badge ${matchedCode ? 'badge-success bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-2.5 py-1 rounded-full font-semibold text-xs shadow-sm flex items-center whitespace-nowrap">
+                                    ${matchedCode ? '<i class="fas fa-check-circle ml-1"></i> مكود' : '<i class="fas fa-times-circle ml-1"></i> غير معرّف'}
                                 </span>
                             </div>
                             
                             <div class="text-sm text-gray-600 space-y-2.5 mb-5">
-                                <div class="flex items-center bg-gray-50 rounded p-1.5"><i class="fas fa-puzzle-piece text-gray-400 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">الموديول:</span> <span class="font-semibold mr-auto">\${form.module}</span></div>
-                                \${matchedCode ? \`
-                                    <div class="flex items-center bg-blue-50/50 rounded p-1.5"><i class="fas fa-hashtag text-blue-500 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">الكود:</span> <span class="font-mono font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded mr-auto text-xs">\${Utils.escapeHTML(matchedCode.code || '')}</span></div>
-                                    <div class="flex items-center bg-purple-50/50 rounded p-1.5"><i class="fas fa-code-branch text-purple-500 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">الإصدار:</span> \${activeVersion ? \`<span class="font-bold text-purple-700 mr-auto bg-purple-100 px-1.5 py-0.5 rounded text-xs">v\${activeVersion.versionNumber}</span>\` : '<span class="text-red-500 mr-auto text-xs font-semibold">لا يوجد إصدار نشط</span>'}</div>
-                                \` : \`
+                                <div class="flex items-center bg-gray-50 rounded p-1.5"><i class="fas fa-puzzle-piece text-gray-400 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">الموديول:</span> <span class="font-semibold mr-auto">${form.module}</span></div>
+                                ${matchedCode ? `
+                                    <div class="flex items-center bg-blue-50/50 rounded p-1.5"><i class="fas fa-hashtag text-blue-500 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">الكود:</span> <span class="font-mono font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded mr-auto text-xs">${Utils.escapeHTML(matchedCode.code || '')}</span></div>
+                                    <div class="flex items-center bg-purple-50/50 rounded p-1.5"><i class="fas fa-code-branch text-purple-500 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">الإصدار:</span> ${activeVersion ? `<span class="font-bold text-purple-700 mr-auto bg-purple-100 px-1.5 py-0.5 rounded text-xs">v${activeVersion.versionNumber}</span>` : '<span class="text-red-500 mr-auto text-xs font-semibold">لا يوجد إصدار نشط</span>'}</div>
+                                ` : `
                                     <div class="text-red-600 text-xs bg-red-50 p-2.5 rounded border border-red-100 flex flex-col gap-1 items-center text-center mt-3">
                                         <i class="fas fa-exclamation-triangle text-lg mb-1 opacity-80"></i> 
                                         <span>قم بتعيين كود ليظهر في <br>تذييل هذا النموذج عند الطباعة</span>
                                     </div>
-                                \`}
+                                `}
                             </div>
                             
                             <div class="mt-auto pt-4 border-t border-gray-100 flex justify-end">
-                                \${matchedCode ? \`
-                                    <button class="btn-secondary btn-sm flex items-center hover:bg-gray-100 transition-colors w-full justify-center py-2 text-gray-700 font-semibold" onclick="ISO.viewDocumentVersions('\${matchedCode.id}')" title="سجل التغييرات">
+                                ${matchedCode ? `
+                                    <button class="btn-secondary btn-sm flex items-center hover:bg-gray-100 transition-colors w-full justify-center py-2 text-gray-700 font-semibold" onclick="ISO.viewDocumentVersions('${matchedCode.id}')" title="سجل التغييرات">
                                         <i class="fas fa-history ml-2 text-gray-500"></i> سجل التغييرات
                                     </button>
-                                \` : \`
-                                    <button class="btn-primary btn-sm flex items-center shadow-md hover:shadow-lg transition-all w-full justify-center py-2 bg-gradient-to-r from-blue-600 to-blue-700 border-0" onclick="ISO.quickAssignFormCode('\${form.name}', '\${form.defaultCode}', '\${form.type}', '\${form.department}')" title="إنشاء كود سريع">
+                                ` : `
+                                    <button class="btn-primary btn-sm flex items-center shadow-md hover:shadow-lg transition-all w-full justify-center py-2 bg-gradient-to-r from-blue-600 to-blue-700 border-0" onclick="ISO.quickAssignFormCode('${form.name}', '${form.defaultCode}', '${form.type}', '${form.department}')" title="إنشاء كود سريع">
                                         <i class="fas fa-plus ml-2"></i> تعيين كود الآن
                                     </button>
-                                \`}
+                                `}
                             </div>
                         </div>
-                        \`;
+                        `;
                     }).join('')}
                 </div>
             </div>
