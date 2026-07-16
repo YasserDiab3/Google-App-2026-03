@@ -8204,14 +8204,31 @@ const PTW = {
         return review;
     },
 
-    generateManualPermitPrintHTML(entry, options = {}) {
+    async generateManualPermitPrintHTML(entry, options = {}) {
         const pdfExport = options?.pdfExport === true;
         const content = this.generateManualPermitPrintContent(entry);
         const displayNo = this.getPermitDisplayNumber(entry);
+        
+        let formCode = entry?.isoCode || 'Form ICP (F14-26-01)';
+        let issueDate = entry?.createdAt || entry?.timeFrom;
+        let revisionDate = entry?.updatedAt || entry?.timeTo || entry?.createdAt;
+        let isoVersion = null;
+        
+        try {
+            if (typeof ISO !== 'undefined' && typeof ISO.getFormCodeDetails === 'function') {
+                const isoDetails = await ISO.getFormCodeDetails('Form ICP (F14-26-01)');
+                if (isoDetails) {
+                    if (isoDetails.versionNumber) isoVersion = isoDetails.versionNumber;
+                    if (isoDetails.issueDate) issueDate = isoDetails.issueDate;
+                    if (isoDetails.revisionDate) revisionDate = isoDetails.revisionDate;
+                }
+            }
+        } catch(e){}
+
         const footerMeta = {
-            formCode: entry?.isoCode || `PTW-MANUAL-${displayNo}`,
-            issueDate: entry?.createdAt || entry?.timeFrom,
-            revisionDate: entry?.updatedAt || entry?.timeTo || entry?.createdAt
+            formCode: isoVersion ? `${formCode} (v${isoVersion})` : formCode,
+            issueDate,
+            revisionDate
         };
         const footer = this.renderPermitSystemFooter(footerMeta);
         const header = this.renderPermitSystemHeader({ forPdf: pdfExport });
@@ -8685,7 +8702,7 @@ const PTW = {
         return String(name || 'PTW').replace(/[/\\?%*:|"<>]/g, '-').trim() || 'PTW';
     },
 
-    buildPermitExportPayload(permitId, options = {}) {
+    async buildPermitExportPayload(permitId, options = {}) {
         const forPdf = options?.forPdf !== false;
         const reg = Array.isArray(this.registryData)
             ? this.registryData.find((r) => r.permitId === permitId || r.id === permitId)
@@ -8694,8 +8711,8 @@ const PTW = {
         if (reg?.isManualEntry) {
             const displayNo = this.getPermitDisplayNumber(reg);
             const seq = String(reg.sequentialNumber || displayNo).replace(/\D/g, '').padStart(4, '0') || displayNo;
-            const printHtml = this.generateManualPermitPrintHTML(reg);
-            const html = this.generateManualPermitPrintHTML(reg, { pdfExport: true, skipReview: true });
+            const printHtml = await this.generateManualPermitPrintHTML(reg);
+            const html = await this.generateManualPermitPrintHTML(reg, { pdfExport: true, skipReview: true });
             const review = this._verifyManualPermitExportHtml_(html);
             return {
                 html,
@@ -8713,7 +8730,22 @@ const PTW = {
 
         const registryEntry = reg || this.registryData.find((r) => r.permitId === item.id);
         const displayNo = this.getPermitDisplayNumber(registryEntry || item);
-        const formCode = item.isoCode || `PTW-${item.id?.substring(0, 8) || 'UNKNOWN'}`;
+        let formCode = item.isoCode || 'Form ICP (F14-26-01)';
+        let versionStr = item.version || '1.0';
+        let releaseDate = item.startDate || item.createdAt;
+        let revisionDate = item.updatedAt || item.endDate || item.startDate;
+        
+        try {
+            if (typeof ISO !== 'undefined' && typeof ISO.getFormCodeDetails === 'function') {
+                const isoDetails = await ISO.getFormCodeDetails('Form ICP (F14-26-01)');
+                if (isoDetails) {
+                    if (isoDetails.versionNumber) versionStr = isoDetails.versionNumber;
+                    if (isoDetails.issueDate) releaseDate = isoDetails.issueDate;
+                    if (isoDetails.revisionDate) revisionDate = isoDetails.revisionDate;
+                }
+            }
+        } catch(e){}
+
         const formData = this.getPermitFormDataForPrint(item);
         const content = this.generatePrintContent(formData);
 
@@ -8726,9 +8758,9 @@ const PTW = {
                     false,
                     false,
                     {
-                        version: item.version || '1.0',
-                        releaseDate: item.startDate || item.createdAt,
-                        revisionDate: item.updatedAt || item.endDate || item.startDate,
+                        version: versionStr,
+                        releaseDate: releaseDate,
+                        revisionDate: revisionDate,
                         compactPdfFooter: true,
                         'رقم التصريح': displayNo
                     },
@@ -8774,8 +8806,10 @@ const PTW = {
     /**
      * طباعة التصريح
      */
-    printPermit(permitId) {
-        const payload = this.buildPermitExportPayload(permitId, { forPdf: false });
+    async printPermit(permitId) {
+        Loading.show();
+        const payload = await this.buildPermitExportPayload(permitId, { forPdf: false });
+        Loading.hide();
         if (!payload) {
             Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
             return;
@@ -11464,14 +11498,16 @@ const PTW = {
         };
     },
 
-    printManualPermitFromModal(modal, entryId = null) {
+    async printManualPermitFromModal(modal, entryId = null) {
         try {
             const data = this.collectManualPermitDataFromModal(modal, entryId);
             if (!data) {
                 Notification.warning(this._t('module.ptw.notify.formNotFound', 'النموذج غير موجود'));
                 return;
             }
-            const htmlContent = this.generateManualPermitPrintHTML(data);
+            Loading.show();
+            const htmlContent = await this.generateManualPermitPrintHTML(data);
+            Loading.hide();
             this.openPermitPrintWindow(htmlContent);
         } catch (error) {
             Utils.safeError('خطأ في طباعة التصريح اليدوي:', error);

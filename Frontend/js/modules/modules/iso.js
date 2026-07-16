@@ -2863,6 +2863,12 @@ const ISO = {
                             <textarea id="version-notes" class="form-input" rows="3" 
                                 placeholder="ملاحظات حول هذا الإصدار">${Utils.escapeHTML(data?.notes || '')}</textarea>
                         </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">سبب التعديل (سجل التغييرات)</label>
+                            <input type="text" id="version-change-reason" class="form-input" 
+                                value="${Utils.escapeHTML(data?.changeReason || '')}" 
+                                placeholder="مثال: تحديث الإجراء بناءً على المراجعة السنوية">
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -2889,6 +2895,7 @@ const ISO = {
         const revisionDateEl = document.getElementById('version-revision-date');
         const statusEl = document.getElementById('version-status');
         const notesEl = document.getElementById('version-notes');
+        const changeReasonEl = document.getElementById('version-change-reason');
         
         if (!codeIdEl || !versionNumberEl || !issueDateEl || !statusEl) {
             Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
@@ -2909,6 +2916,7 @@ const ISO = {
                 : null,
             status: statusEl.value,
             notes: notesEl?.value.trim() || '',
+            changeReason: changeReasonEl?.value.trim() || '',
             isActive: statusEl.value === 'نشط',
             createdAt: editId ? (await this.getDocumentVersionById(editId))?.createdAt : new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -2974,7 +2982,7 @@ const ISO = {
             modal.innerHTML = `
                 <div class="modal-content" style="max-width: 800px;">
                     <div class="modal-header">
-                        <h2 class="modal-title">إصدارات: ${Utils.escapeHTML(code?.code || '')} - ${Utils.escapeHTML(code?.documentName || '')}</h2>
+                        <h2 class="modal-title">سجل التغييرات والإصدارات: ${Utils.escapeHTML(code?.code || '')} - ${Utils.escapeHTML(code?.documentName || '')}</h2>
                         <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                             <i class="fas fa-times"></i>
                         </button>
@@ -2998,6 +3006,7 @@ const ISO = {
                                         <th>تاريخ التعديل</th>
                                         <th>الحالة</th>
                                         <th>ملاحظات</th>
+                                        <th>سبب التعديل</th>
                                         <th>الإجراءات</th>
                                     </tr>
                                 </thead>
@@ -3013,6 +3022,7 @@ const ISO = {
                                                 </span>
                                             </td>
                                             <td>${Utils.escapeHTML(v.notes || '-')}</td>
+                                            <td>${Utils.escapeHTML(v.changeReason || '-')}</td>
                                             <td>
                                                 <button onclick="ISO.editDocumentVersion('${v.id}'); this.closest('.modal-overlay').remove();" 
                                                     class="btn-icon btn-icon-info" title="تعديل">
@@ -3146,6 +3156,40 @@ const ISO = {
             Utils.safeError('Error loading document code version:', error);
             Notification.error('حدث خطأ أثناء جلب بيانات الإصدار: ' + error.message);
         }
+    },
+
+    /**
+     * دالة مساعدة للحصول على تفاصيل كود مستند مع أحدث إصدار نشط (تُستخدم للربط الديناميكي مع النماذج الأخرى)
+     * @param {string} codeString - الكود الثابت للنموذج (مثال: Form ICP (F14-26-01))
+     */
+    async getFormCodeDetails(codeString) {
+        try {
+            const [codesRes, versionsRes] = await Promise.all([
+                GoogleIntegration.fetchData('getDocumentCodes', {}).catch(() => null),
+                GoogleIntegration.fetchData('getDocumentVersions', { documentCodeId: null }).catch(() => null)
+            ]);
+            
+            if (codesRes?.success && versionsRes?.success) {
+                const code = codesRes.data.find(c => c.code === codeString || c.documentName === codeString);
+                if (code) {
+                    const activeVersions = versionsRes.data.filter(v => v.documentCodeId === code.id && (v.isActive === true || v.isActive === 'true'));
+                    if (activeVersions.length > 0) {
+                        activeVersions.sort((a, b) => new Date(b.issueDate || 0) - new Date(a.issueDate || 0));
+                        return {
+                            code: code.code,
+                            documentName: code.documentName,
+                            versionNumber: activeVersions[0].versionNumber,
+                            issueDate: activeVersions[0].issueDate,
+                            revisionDate: activeVersions[0].revisionDate,
+                            changeReason: activeVersions[0].changeReason
+                        };
+                    }
+                }
+            }
+        } catch (e) {
+            if (typeof Utils !== 'undefined') Utils.safeWarn('Error fetching ISO code details:', e);
+        }
+        return null;
     }
 };
 

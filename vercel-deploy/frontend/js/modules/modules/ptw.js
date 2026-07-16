@@ -6304,7 +6304,7 @@ const PTW = {
             // جمع بيانات النموذج
             const formData = this.collectFormDataForPrint();
             const permitId = this.currentEditId || formData.id || 'NEW';
-            const formCode = `PTW-${permitId.substring(0, 8)}`;
+            const formCode = 'Form ICP (F14-26-01)';
             
             // إنشاء محتوى النموذج للطباعة
             const content = this.generatePrintContent(formData);
@@ -8635,7 +8635,7 @@ const PTW = {
 
         const registryEntry = reg || this.registryData.find((r) => r.permitId === item.id);
         const displayNo = this.getPermitDisplayNumber(registryEntry || item);
-        const formCode = item.isoCode || `PTW-${item.id?.substring(0, 8) || 'UNKNOWN'}`;
+        const formCode = 'Form ICP (F14-26-01)';
         const formData = this.getPermitFormDataForPrint(item);
         const content = this.generatePrintContent(formData);
 
@@ -13300,7 +13300,7 @@ const PTW = {
             settings.secondaryName || settings.departmentName || settings.managementName || 'إدارة السلامة والصحة المهنية والبيئة'
         ).trim();
         const esc = (v) => Utils.escapeHTML(v == null ? '' : String(v));
-        const formCode = esc(options.formCode || 'PTW-MANUAL');
+        const formCode = 'Form ICP (F14-26-01)';
         const formatFooterDate = (value) => {
             if (!value) return '—';
             try {
