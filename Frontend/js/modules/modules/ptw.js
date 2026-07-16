@@ -16659,7 +16659,9 @@ const PTW = {
 
     async exportPDF(id) {
         try {
-            const payload = this.buildPermitExportPayload(id);
+            Loading.show();
+            const payload = await this.buildPermitExportPayload(id);
+            Loading.hide();
             if (!payload) {
                 Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
                 return;
