@@ -7,26 +7,75 @@ const ISO = {
     currentTab: 'overview',
 
     SystemFormsManifest: [
-        { id: 'ptw', name: 'تصريح العمل', module: 'PTW', type: 'نموذج', defaultCode: 'Form ICP (F14-26-01)', department: 'HSE' },
-        { id: 'incident', name: 'تقرير الحوادث', module: 'Incidents', type: 'تقرير', defaultCode: 'INC-REP-01', department: 'HSE' },
-        { id: 'nearmiss', name: 'تقرير الحوادث الوشيكة', module: 'NearMiss', type: 'تقرير', defaultCode: 'NM-REP-01', department: 'HSE' },
-        { id: 'clinic', name: 'سجل الزيارات الطبية', module: 'Clinic', type: 'سجل', defaultCode: 'CLN-FRM-01', department: 'Medical' },
-        { id: 'observation', name: 'الملاحظات اليومية', module: 'Observations', type: 'نموذج', defaultCode: 'OBS-FRM-01', department: 'HSE' },
-        { id: 'risk', name: 'تقييم المخاطر (JHA)', module: 'RiskAssessment', type: 'نموذج', defaultCode: 'JHA-FRM-01', department: 'HSE' },
-        { id: 'violation', name: 'إشعار مخالفة', module: 'Violations', type: 'نموذج', defaultCode: 'VIO-FRM-01', department: 'HSE' },
-        { id: 'inspection', name: 'التفتيش الدوري', module: 'Inspections', type: 'نموذج', defaultCode: 'INSP-FRM-01', department: 'HSE' },
-        { id: 'dscl', name: 'فحص السلامة اليومي', module: 'Daily Check List', type: 'نموذج', defaultCode: 'DSCL-FRM-01', department: 'HSE' },
-        { id: 'tbt', name: 'اجتماع السلامة (TBT)', module: 'ToolBox Talk', type: 'نموذج', defaultCode: 'TBT-FRM-01', department: 'HSE' },
-        { id: 'ppe', name: 'سجل مهمات الوقاية', module: 'PPE', type: 'سجل', defaultCode: 'PPE-REG-01', department: 'HSE' },
-        { id: 'fire', name: 'تفتيش معدات الإطفاء', module: 'Fire Equipment', type: 'نموذج', defaultCode: 'FIRE-INSP-01', department: 'HSE' },
-        { id: 'sds', name: 'صحيفة بيانات السلامة', module: 'Chemical Safety', type: 'وثيقة', defaultCode: 'SDS-DOC-01', department: 'HSE' },
-        { id: 'moc', name: 'إدارة التغيير (MOC)', module: 'Change Management', type: 'نموذج', defaultCode: 'MOC-FRM-01', department: 'HSE' },
-        { id: 'legal', name: 'المتطلبات القانونية', module: 'Legal Documents', type: 'سجل', defaultCode: 'LEG-REG-01', department: 'HSE' },
-        { id: 'kpi', name: 'مؤشرات الأداء (KPIs)', module: 'Performance KPIs', type: 'تقرير', defaultCode: 'KPI-REP-01', department: 'HSE' },
-        { id: 'training', name: 'سجل التدريب', module: 'Trainings', type: 'سجل', defaultCode: 'TRN-REG-01', department: 'HSE' },
-        { id: 'audit', name: 'تقرير التدقيق', module: 'ISO / Audits', type: 'تقرير', defaultCode: 'AUD-REP-01', department: 'HSE' },
-        { id: 'nc', name: 'تقرير عدم المطابقة (NC)', module: 'ISO / CAPA', type: 'نموذج', defaultCode: 'NC-FRM-01', department: 'HSE' },
-        { id: 'ca', name: 'الإجراءات التصحيحية (CA)', module: 'ISO / CAPA', type: 'نموذج', defaultCode: 'CA-FRM-01', department: 'HSE' }
+        // PTW
+        { id: 'ptw', name: 'تصريح العمل العام', i18nKey: 'module.iso.manifest.ptw.general', module: 'PTW', type: 'نموذج', defaultCode: 'PTW-GEN-01', department: 'HSE' },
+        { id: 'ptw-hot', name: 'تصريح العمل الساخن', i18nKey: 'module.iso.manifest.ptw.hot', module: 'PTW', type: 'نموذج', defaultCode: 'PTW-HOT-01', department: 'HSE' },
+        { id: 'ptw-cold', name: 'تصريح العمل البارد', i18nKey: 'module.iso.manifest.ptw.cold', module: 'PTW', type: 'نموذج', defaultCode: 'PTW-COLD-01', department: 'HSE' },
+        { id: 'ptw-confined', name: 'تصريح دخول الأماكن المغلقة', i18nKey: 'module.iso.manifest.ptw.confined', module: 'PTW', type: 'نموذج', defaultCode: 'PTW-CONF-01', department: 'HSE' },
+        { id: 'ptw-excavation', name: 'تصريح الحفريات', i18nKey: 'module.iso.manifest.ptw.excavation', module: 'PTW', type: 'نموذج', defaultCode: 'PTW-EXC-01', department: 'HSE' },
+        { id: 'ptw-electrical', name: 'تصريح عزل طاقة (LOTO)', i18nKey: 'module.iso.manifest.ptw.loto', module: 'PTW', type: 'نموذج', defaultCode: 'PTW-LOTO-01', department: 'HSE' },
+
+        // Incidents
+        { id: 'incident', name: 'تقرير الحوادث', i18nKey: 'module.iso.manifest.incident.report', module: 'Incidents', type: 'تقرير', defaultCode: 'INC-REP-01', department: 'HSE' },
+        { id: 'incident-reg', name: 'سجل الحوادث والإصابات', i18nKey: 'module.iso.manifest.incident.register', module: 'Incidents', type: 'سجل', defaultCode: 'INC-REG-01', department: 'HSE' },
+
+        // NearMiss
+        { id: 'nearmiss', name: 'تقرير الحوادث الوشيكة', i18nKey: 'module.iso.manifest.nearmiss.report', module: 'NearMiss', type: 'تقرير', defaultCode: 'NM-REP-01', department: 'HSE' },
+        { id: 'nearmiss-reg', name: 'سجل الحوادث الوشيكة', i18nKey: 'module.iso.manifest.nearmiss.register', module: 'NearMiss', type: 'سجل', defaultCode: 'NM-REG-01', department: 'HSE' },
+
+        // Clinic
+        { id: 'clinic', name: 'سجل الزيارات الطبية', i18nKey: 'module.iso.manifest.clinic.register', module: 'Clinic', type: 'سجل', defaultCode: 'CLN-REG-01', department: 'Medical' },
+        { id: 'clinic-exam', name: 'نموذج الفحص الطبي', i18nKey: 'module.iso.manifest.clinic.exam', module: 'Clinic', type: 'نموذج', defaultCode: 'CLN-FRM-01', department: 'Medical' },
+
+        // Observations
+        { id: 'observation', name: 'الملاحظات اليومية', i18nKey: 'module.iso.manifest.obs.report', module: 'Observations', type: 'نموذج', defaultCode: 'OBS-FRM-01', department: 'HSE' },
+        { id: 'observation-bbs', name: 'بطاقة ملاحظة السلوك (BBS)', i18nKey: 'module.iso.manifest.obs.bbs', module: 'Observations', type: 'بطاقة', defaultCode: 'OBS-BBS-01', department: 'HSE' },
+
+        // Risk Assessment
+        { id: 'risk-jha', name: 'تحليل مخاطر العمل (JHA)', i18nKey: 'module.iso.manifest.risk.jha', module: 'RiskAssessment', type: 'نموذج', defaultCode: 'JHA-FRM-01', department: 'HSE' },
+        { id: 'risk-reg', name: 'سجل تقييم المخاطر', i18nKey: 'module.iso.manifest.risk.register', module: 'RiskAssessment', type: 'سجل', defaultCode: 'RISK-REG-01', department: 'HSE' },
+
+        // Violations
+        { id: 'violation', name: 'إشعار مخالفة', i18nKey: 'module.iso.manifest.viol.notice', module: 'Violations', type: 'نموذج', defaultCode: 'VIO-FRM-01', department: 'HSE' },
+        { id: 'violation-reg', name: 'سجل المخالفات والإنذارات', i18nKey: 'module.iso.manifest.viol.register', module: 'Violations', type: 'سجل', defaultCode: 'VIO-REG-01', department: 'HSE' },
+
+        // Inspections & Checklists
+        { id: 'inspection', name: 'التفتيش الدوري الشامل', i18nKey: 'module.iso.manifest.insp.periodic', module: 'Inspections', type: 'نموذج', defaultCode: 'INSP-FRM-01', department: 'HSE' },
+        { id: 'inspection-reg', name: 'سجل التفتيش', i18nKey: 'module.iso.manifest.insp.register', module: 'Inspections', type: 'سجل', defaultCode: 'INSP-REG-01', department: 'HSE' },
+        { id: 'dscl', name: 'فحص السلامة اليومي', i18nKey: 'module.iso.manifest.insp.daily', module: 'Inspections', type: 'نموذج', defaultCode: 'DSCL-FRM-01', department: 'HSE' },
+        { id: 'scaffold-insp', name: 'نموذج فحص السقالات', i18nKey: 'module.iso.manifest.insp.scaffold', module: 'Inspections', type: 'نموذج', defaultCode: 'SCAFF-INSP-01', department: 'HSE' },
+        { id: 'equip-insp', name: 'نموذج فحص المعدات', i18nKey: 'module.iso.manifest.insp.equip', module: 'Inspections', type: 'نموذج', defaultCode: 'EQP-INSP-01', department: 'HSE' },
+
+        // TBT
+        { id: 'tbt', name: 'نموذج اجتماع السلامة (TBT)', i18nKey: 'module.iso.manifest.tbt.form', module: 'ToolBox Talk', type: 'نموذج', defaultCode: 'TBT-FRM-01', department: 'HSE' },
+        { id: 'tbt-reg', name: 'سجل اجتماعات TBT', i18nKey: 'module.iso.manifest.tbt.register', module: 'ToolBox Talk', type: 'سجل', defaultCode: 'TBT-REG-01', department: 'HSE' },
+
+        // PPE
+        { id: 'ppe-receive', name: 'سجل استلام مهمات الوقاية', i18nKey: 'module.iso.manifest.ppe.receive', module: 'PPE', type: 'سجل', defaultCode: 'PPE-REG-01', department: 'HSE' },
+        { id: 'ppe-insp', name: 'نموذج فحص مهمات الوقاية', i18nKey: 'module.iso.manifest.ppe.insp', module: 'PPE', type: 'نموذج', defaultCode: 'PPE-INSP-01', department: 'HSE' },
+
+        // Fire & Emergency
+        { id: 'fire-insp', name: 'تفتيش معدات الإطفاء', i18nKey: 'module.iso.manifest.fire.insp', module: 'Fire Equipment', type: 'نموذج', defaultCode: 'FIRE-INSP-01', department: 'HSE' },
+        { id: 'drill-report', name: 'تقرير تجربة إخلاء', i18nKey: 'module.iso.manifest.fire.drill', module: 'Fire Equipment', type: 'تقرير', defaultCode: 'DRILL-REP-01', department: 'HSE' },
+
+        // Chemicals & MOC
+        { id: 'sds', name: 'سجل المواد الكيميائية (SDS)', i18nKey: 'module.iso.manifest.chem.sds', module: 'Chemical Safety', type: 'وثيقة', defaultCode: 'SDS-REG-01', department: 'HSE' },
+        { id: 'moc', name: 'إدارة التغيير (MOC)', i18nKey: 'module.iso.manifest.moc.form', module: 'Change Management', type: 'نموذج', defaultCode: 'MOC-FRM-01', department: 'HSE' },
+
+        // ISO & Quality
+        { id: 'legal', name: 'سجل المتطلبات القانونية', i18nKey: 'module.iso.manifest.iso.legal', module: 'ISO / Quality', type: 'سجل', defaultCode: 'LEG-REG-01', department: 'HSE' },
+        { id: 'kpi', name: 'مؤشرات الأداء (KPIs)', i18nKey: 'module.iso.manifest.iso.kpi', module: 'ISO / Quality', type: 'تقرير', defaultCode: 'KPI-REP-01', department: 'HSE' },
+        { id: 'audit-plan', name: 'خطة التدقيق الداخلي', i18nKey: 'module.iso.manifest.iso.auditPlan', module: 'ISO / Quality', type: 'وثيقة', defaultCode: 'AUD-PLN-01', department: 'HSE' },
+        { id: 'audit-report', name: 'تقرير التدقيق الداخلي', i18nKey: 'module.iso.manifest.iso.auditRep', module: 'ISO / Quality', type: 'تقرير', defaultCode: 'AUD-REP-01', department: 'HSE' },
+        
+        // CAPA
+        { id: 'nc', name: 'تقرير حالة عدم المطابقة (NC)', i18nKey: 'module.iso.manifest.capa.nc', module: 'ISO / CAPA', type: 'نموذج', defaultCode: 'NC-FRM-01', department: 'HSE' },
+        { id: 'ca', name: 'الإجراءات التصحيحية (CAR)', i18nKey: 'module.iso.manifest.capa.car', module: 'ISO / CAPA', type: 'نموذج', defaultCode: 'CAR-FRM-01', department: 'HSE' },
+
+        // Trainings
+        { id: 'training-plan', name: 'خطة التدريب السنوية', i18nKey: 'module.iso.manifest.train.plan', module: 'Trainings', type: 'وثيقة', defaultCode: 'TRN-PLN-01', department: 'HSE' },
+        { id: 'training-att', name: 'سجل حضور تدريب', i18nKey: 'module.iso.manifest.train.att', module: 'Trainings', type: 'سجل', defaultCode: 'TRN-ATT-01', department: 'HSE' },
+        { id: 'training-eval', name: 'نموذج تقييم تدريب', i18nKey: 'module.iso.manifest.train.eval', module: 'Trainings', type: 'نموذج', defaultCode: 'TRN-EVAL-01', department: 'HSE' }
     ],
 
     async load() {
@@ -2288,20 +2337,28 @@ const ISO = {
 
     // ===== مركز التكويد والإصدار (Document Coding & Issuing Center) =====
     renderSystemFormsDirectory(documentCodes, documentVersions) {
-        if (!this.SystemFormsManifest) return '';
+        if (!this.SystemFormsManifest || this.SystemFormsManifest.length === 0) return '';
         
-        return `
-        <div class="content-card mb-6 border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
-            <div class="card-header bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-6 py-4 border-0">
-                <h2 class="card-title text-white flex items-center text-xl font-bold m-0">
-                    <i class="fas fa-layer-group ml-3 text-2xl opacity-90"></i>
-                    ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.title', 'دليل نماذج النظام المدمجة') : 'دليل نماذج النظام المدمجة'}
-                </h2>
-                <p class="text-blue-100 text-sm mt-1 mb-0 opacity-80">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.desc', 'يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد') : 'يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد'}</p>
-            </div>
-            <div class="card-body bg-gray-50/50 p-6">
+        // Group forms by module
+        const groupedForms = this.SystemFormsManifest.reduce((acc, form) => {
+            if (!acc[form.module]) {
+                acc[form.module] = [];
+            }
+            acc[form.module].push(form);
+            return acc;
+        }, {});
+
+        const modulesHtml = Object.keys(groupedForms).map(moduleName => {
+            const forms = groupedForms[moduleName];
+            
+            return `
+            <div class="mb-8 last:mb-0">
+                <h3 class="text-xl font-bold text-gray-800 border-b-2 border-blue-500 pb-2 mb-5 flex items-center">
+                    <i class="fas fa-folder-open text-blue-600 mx-2"></i> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.moduleName.' + moduleName.replace(/[^a-zA-Z0-9]/g, ''), moduleName) : moduleName}
+                    <span class="badge badge-secondary mx-3 text-sm">${forms.length}</span>
+                </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                    ${this.SystemFormsManifest.map(form => {
+                    ${forms.map(form => {
                         const matchedCode = documentCodes.find(c => c.code === form.defaultCode || c.documentName === form.name);
                         let activeVersion = null;
                         if (matchedCode) {
@@ -2313,21 +2370,22 @@ const ISO = {
                         }
                         
                         return `
-                        <div class="bg-white border ${matchedCode ? 'border-green-200' : 'border-red-200'} rounded-xl p-5 hover:shadow-xl transition-all duration-300 relative overflow-hidden group transform hover:-translate-y-1">
+                        <div class="bg-white border ${matchedCode ? 'border-green-200' : 'border-red-200'} rounded-xl p-5 hover:shadow-xl transition-all duration-300 relative overflow-hidden group transform hover:-translate-y-1 flex flex-col h-full">
                             <div class="absolute top-0 right-0 w-1.5 h-full ${matchedCode ? 'bg-gradient-to-b from-green-400 to-green-600' : 'bg-gradient-to-b from-red-400 to-red-600'}"></div>
                             
                             <div class="flex justify-between items-start mb-4">
-                                <h3 class="font-bold text-gray-800 text-lg leading-tight">${typeof I18n !== 'undefined' ? I18n.t(form.i18nKey, form.name) : form.name}</h3>
-                                <span class="badge ${matchedCode ? 'badge-success bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-2.5 py-1 rounded-full font-semibold text-xs shadow-sm flex items-center whitespace-nowrap">
-                                    ${matchedCode ? '<i class="fas fa-check-circle ml-1"></i> ' + (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.coded', 'مكود') : 'مكود') : '<i class="fas fa-times-circle ml-1"></i> ' + (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.notCoded', 'غير معرّف') : 'غير معرّف')}
+                                <h4 class="font-bold text-gray-800 text-lg leading-tight flex-1 ml-2">${typeof I18n !== 'undefined' ? I18n.t(form.i18nKey, form.name) : form.name}</h4>
+                                <span class="badge ${matchedCode ? 'badge-success bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-2.5 py-1 rounded-full font-semibold text-xs shadow-sm flex items-center whitespace-nowrap shrink-0">
+                                    ${matchedCode ? '<i class="fas fa-check-circle mx-1"></i> ' + (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.coded', 'مكود') : 'مكود') : '<i class="fas fa-times-circle mx-1"></i> ' + (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.notCoded', 'غير معرّف') : 'غير معرّف')}
                                 </span>
                             </div>
                             
-                            <div class="text-sm text-gray-600 space-y-2.5 mb-5">
-                                <div class="flex items-center bg-gray-50 rounded p-1.5"><i class="fas fa-puzzle-piece text-gray-400 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.module', 'الموديول:') : 'الموديول:'}</span> <span class="font-semibold mr-auto">${form.module}</span></div>
+                            <div class="text-sm text-gray-600 space-y-2.5 mb-5 flex-1">
+                                <div class="flex items-center bg-gray-50 rounded p-1.5"><i class="fas fa-puzzle-piece text-gray-400 w-5 mx-1 text-center"></i> <span class="text-xs text-gray-500 mx-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.module', 'القسم:') : 'القسم:'}</span> <span class="font-semibold ml-auto">${form.department}</span></div>
+                                <div class="flex items-center bg-gray-50 rounded p-1.5"><i class="fas fa-file text-gray-400 w-5 mx-1 text-center"></i> <span class="text-xs text-gray-500 mx-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.formType', 'النوع:') : 'النوع:'}</span> <span class="font-semibold ml-auto">${form.type}</span></div>
                                 ${matchedCode ? `
-                                    <div class="flex items-center bg-blue-50/50 rounded p-1.5"><i class="fas fa-hashtag text-blue-500 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.code', 'الكود:') : 'الكود:'}</span> <span class="font-mono font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded mr-auto text-xs">${Utils.escapeHTML(matchedCode.code || '')}</span></div>
-                                    <div class="flex items-center bg-purple-50/50 rounded p-1.5"><i class="fas fa-code-branch text-purple-500 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.version', 'الإصدار:') : 'الإصدار:'}</span> ${activeVersion ? `<span class="font-bold text-purple-700 mr-auto bg-purple-100 px-1.5 py-0.5 rounded text-xs">v${activeVersion.versionNumber}</span>` : '<span class="text-red-500 mr-auto text-xs font-semibold">' + (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.noVersion', 'لا يوجد إصدار نشط') : 'لا يوجد إصدار نشط') + '</span>'}</div>
+                                    <div class="flex items-center bg-blue-50/50 rounded p-1.5"><i class="fas fa-hashtag text-blue-500 w-5 mx-1 text-center"></i> <span class="text-xs text-gray-500 mx-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.code', 'الكود:') : 'الكود:'}</span> <span class="font-mono font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded ml-auto text-xs">${Utils.escapeHTML(matchedCode.code || '')}</span></div>
+                                    <div class="flex items-center bg-purple-50/50 rounded p-1.5"><i class="fas fa-code-branch text-purple-500 w-5 mx-1 text-center"></i> <span class="text-xs text-gray-500 mx-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.version', 'الإصدار:') : 'الإصدار:'}</span> ${activeVersion ? `<span class="font-bold text-purple-700 ml-auto bg-purple-100 px-1.5 py-0.5 rounded text-xs">v${activeVersion.versionNumber}</span>` : '<span class="text-red-500 ml-auto text-xs font-semibold">' + (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.noVersion', 'لا يوجد إصدار نشط') : 'لا يوجد إصدار نشط') + '</span>'}</div>
                                 ` : `
                                     <div class="text-red-600 text-xs bg-red-50 p-2.5 rounded border border-red-100 flex flex-col gap-1 items-center text-center mt-3">
                                         <i class="fas fa-exclamation-triangle text-lg mb-1 opacity-80"></i> 
@@ -2336,14 +2394,14 @@ const ISO = {
                                 `}
                             </div>
                             
-                            <div class="mt-auto pt-4 border-t border-gray-100 flex justify-end">
+                            <div class="mt-auto pt-4 border-t border-gray-100 flex justify-end shrink-0">
                                 ${matchedCode ? `
                                     <button class="btn-secondary btn-sm flex items-center hover:bg-gray-100 transition-colors w-full justify-center py-2 text-gray-700 font-semibold" onclick="ISO.viewDocumentVersions('${matchedCode.id}')" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.history', 'سجل التغييرات') : 'سجل التغييرات'}">
-                                        <i class="fas fa-history ml-2 text-gray-500"></i> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.history', 'سجل التغييرات') : 'سجل التغييرات'}
+                                        <i class="fas fa-history mx-2 text-gray-500"></i> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.history', 'سجل التغييرات') : 'سجل التغييرات'}
                                     </button>
                                 ` : `
                                     <button class="btn-primary btn-sm flex items-center shadow-md hover:shadow-lg transition-all w-full justify-center py-2 bg-gradient-to-r from-blue-600 to-blue-700 border-0" onclick="ISO.quickAssignFormCode('${form.name}', '${form.defaultCode}', '${form.type}', '${form.department}')" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.assignCode', 'إنشاء كود سريع') : 'إنشاء كود سريع'}">
-                                        <i class="fas fa-plus ml-2"></i> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.assignNow', 'تعيين كود الآن') : 'تعيين كود الآن'}
+                                        <i class="fas fa-plus mx-2"></i> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.assignNow', 'تعيين كود الآن') : 'تعيين كود الآن'}
                                     </button>
                                 `}
                             </div>
@@ -2351,6 +2409,21 @@ const ISO = {
                         `;
                     }).join('')}
                 </div>
+            </div>
+            `;
+        }).join('');
+
+        return `
+        <div class="content-card mb-6 border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+            <div class="card-header bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-6 py-4 border-0">
+                <h2 class="card-title text-white flex items-center text-xl font-bold m-0">
+                    <i class="fas fa-layer-group mx-3 text-2xl opacity-90"></i>
+                    ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.title', 'دليل نماذج النظام المدمجة') : 'دليل نماذج النظام المدمجة'}
+                </h2>
+                <p class="text-blue-100 text-sm mt-1 mb-0 opacity-80">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.desc', 'يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد') : 'يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد'}</p>
+            </div>
+            <div class="card-body bg-gray-50/50 p-6">
+                ${modulesHtml}
             </div>
         </div>
         `;
