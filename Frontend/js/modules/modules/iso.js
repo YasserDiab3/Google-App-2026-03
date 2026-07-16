@@ -10,11 +10,23 @@ const ISO = {
         { id: 'ptw', name: 'تصريح العمل', module: 'PTW', type: 'نموذج', defaultCode: 'Form ICP (F14-26-01)', department: 'HSE' },
         { id: 'incident', name: 'تقرير الحوادث', module: 'Incidents', type: 'تقرير', defaultCode: 'INC-REP-01', department: 'HSE' },
         { id: 'nearmiss', name: 'تقرير الحوادث الوشيكة', module: 'NearMiss', type: 'تقرير', defaultCode: 'NM-REP-01', department: 'HSE' },
-        { id: 'clinic', name: 'الزيارات الطبية', module: 'Clinic', type: 'نموذج', defaultCode: 'CLN-FRM-01', department: 'Medical' },
+        { id: 'clinic', name: 'سجل الزيارات الطبية', module: 'Clinic', type: 'سجل', defaultCode: 'CLN-FRM-01', department: 'Medical' },
         { id: 'observation', name: 'الملاحظات اليومية', module: 'Observations', type: 'نموذج', defaultCode: 'OBS-FRM-01', department: 'HSE' },
         { id: 'risk', name: 'تقييم المخاطر (JHA)', module: 'RiskAssessment', type: 'نموذج', defaultCode: 'JHA-FRM-01', department: 'HSE' },
         { id: 'violation', name: 'إشعار مخالفة', module: 'Violations', type: 'نموذج', defaultCode: 'VIO-FRM-01', department: 'HSE' },
-        { id: 'inspection', name: 'التفتيش الدوري', module: 'Inspections', type: 'نموذج', defaultCode: 'INSP-FRM-01', department: 'HSE' }
+        { id: 'inspection', name: 'التفتيش الدوري', module: 'Inspections', type: 'نموذج', defaultCode: 'INSP-FRM-01', department: 'HSE' },
+        { id: 'dscl', name: 'فحص السلامة اليومي', module: 'Daily Check List', type: 'نموذج', defaultCode: 'DSCL-FRM-01', department: 'HSE' },
+        { id: 'tbt', name: 'اجتماع السلامة (TBT)', module: 'ToolBox Talk', type: 'نموذج', defaultCode: 'TBT-FRM-01', department: 'HSE' },
+        { id: 'ppe', name: 'سجل مهمات الوقاية', module: 'PPE', type: 'سجل', defaultCode: 'PPE-REG-01', department: 'HSE' },
+        { id: 'fire', name: 'تفتيش معدات الإطفاء', module: 'Fire Equipment', type: 'نموذج', defaultCode: 'FIRE-INSP-01', department: 'HSE' },
+        { id: 'sds', name: 'صحيفة بيانات السلامة', module: 'Chemical Safety', type: 'وثيقة', defaultCode: 'SDS-DOC-01', department: 'HSE' },
+        { id: 'moc', name: 'إدارة التغيير (MOC)', module: 'Change Management', type: 'نموذج', defaultCode: 'MOC-FRM-01', department: 'HSE' },
+        { id: 'legal', name: 'المتطلبات القانونية', module: 'Legal Documents', type: 'سجل', defaultCode: 'LEG-REG-01', department: 'HSE' },
+        { id: 'kpi', name: 'مؤشرات الأداء (KPIs)', module: 'Performance KPIs', type: 'تقرير', defaultCode: 'KPI-REP-01', department: 'HSE' },
+        { id: 'training', name: 'سجل التدريب', module: 'Trainings', type: 'سجل', defaultCode: 'TRN-REG-01', department: 'HSE' },
+        { id: 'audit', name: 'تقرير التدقيق', module: 'ISO / Audits', type: 'تقرير', defaultCode: 'AUD-REP-01', department: 'HSE' },
+        { id: 'nc', name: 'تقرير عدم المطابقة (NC)', module: 'ISO / CAPA', type: 'نموذج', defaultCode: 'NC-FRM-01', department: 'HSE' },
+        { id: 'ca', name: 'الإجراءات التصحيحية (CA)', module: 'ISO / CAPA', type: 'نموذج', defaultCode: 'CA-FRM-01', department: 'HSE' }
     ],
 
     async load() {
@@ -2696,6 +2708,18 @@ const ISO = {
     async exportCodingCenterToPDF() {
         try {
             Loading.show();
+            
+            // Load jsPDF and autoTable libraries dynamically if not present
+            const loadLib = (src, check) => new Promise((res, rej) => {
+                if (check()) return res();
+                const s = document.createElement('script');
+                s.src = src; s.onload = () => res(); s.onerror = () => rej(new Error('Failed: ' + src));
+                document.head.appendChild(s);
+            });
+            
+            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => typeof window.jspdf !== 'undefined');
+            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js', () => typeof window.jspdf?.jsPDF?.prototype?.autoTable !== 'undefined');
+
             const [codesRes, versionsRes] = await Promise.all([
                 GoogleIntegration.fetchData('getDocumentCodes', {}).catch(() => ({ success: false, data: [] })),
                 GoogleIntegration.fetchData('getDocumentVersions', { documentCodeId: null }).catch(() => ({ success: false, data: [] }))
@@ -2707,30 +2731,31 @@ const ISO = {
                 Loading.hide();
                 return;
             }
-            if (typeof window.jsPDF === 'undefined') {
-                if (typeof Notification !== 'undefined') Notification.error('مكتبة PDF غير متاحة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
+            
+            if (typeof window.jspdf === 'undefined') {
+                if (typeof Notification !== 'undefined') Notification.error('فشل تحميل مكتبة PDF. يرجى المحاولة مرة أخرى.');
                 Loading.hide();
                 return;
             }
-            const { jsPDF } = window.jsPDF;
+            
+            const { jsPDF } = window.jspdf;
             const doc = new jsPDF('l', 'mm', 'a4');
             const pageW = doc.internal.pageSize.getWidth();
             const pageH = doc.internal.pageSize.getHeight();
             const exportDate = new Date().toLocaleDateString('ar-EG', { dateStyle: 'medium' });
+            
+            // Note: jsPDF without custom fonts doesn't support Arabic well natively, 
+            // but we will keep the original export logic here as requested.
             doc.setFontSize(14);
-            doc.setFont(undefined, 'bold');
-            doc.text('مركز التكويد والإصدار - تصدير البيانات', pageW / 2, 14, { align: 'center' });
-            doc.setFont(undefined, 'normal');
+            doc.text('Document Coding and Issuing Center', pageW / 2, 14, { align: 'center' });
             doc.setFontSize(9);
-            doc.text('تاريخ التصدير: ' + exportDate, pageW / 2, 21, { align: 'center' });
+            doc.text('Export Date: ' + exportDate, pageW / 2, 21, { align: 'center' });
             let startY = 28;
             if (documentCodes.length > 0) {
                 doc.setFontSize(10);
-                doc.setFont(undefined, 'bold');
-                doc.text('أكواد المستندات', 14, startY);
-                doc.setFont(undefined, 'normal');
+                doc.text('Document Codes', 14, startY);
                 startY += 6;
-                const codeHeaders = ['الكود', 'اسم المستند', 'نوع المستند', 'القسم', 'الحالة'];
+                const codeHeaders = ['Code', 'Document Name', 'Type', 'Department', 'Status'];
                 const codeRows = documentCodes.map(c => [
                     String(c.code || ''),
                     String(c.documentName || '').substring(0, 25),
@@ -2738,51 +2763,47 @@ const ISO = {
                     String(c.department || ''),
                     String(c.status || '')
                 ]);
-                if (typeof doc.autoTable !== 'undefined') {
-                    doc.autoTable({
-                        head: [codeHeaders],
-                        body: codeRows,
-                        startY: startY,
-                        styles: { fontSize: 7, cellPadding: 2 },
-                        headStyles: { fillColor: [37, 99, 235], textColor: 255 },
-                        margin: { left: 8, right: 8 }
-                    });
-                    startY = doc.lastAutoTable.finalY + 10;
-                } else {
-                    startY += 20;
-                }
+                
+                doc.autoTable({
+                    head: [codeHeaders],
+                    body: codeRows,
+                    startY: startY,
+                    styles: { fontSize: 7, cellPadding: 2, font: 'helvetica' },
+                    headStyles: { fillColor: [37, 99, 235], textColor: 255 },
+                    margin: { left: 8, right: 8 }
+                });
+                startY = doc.lastAutoTable.finalY + 10;
             }
+            
             if (documentVersions.length > 0 && startY < pageH - 40) {
                 doc.setFontSize(10);
-                doc.setFont(undefined, 'bold');
-                doc.text('إصدارات المستندات', 14, startY);
-                doc.setFont(undefined, 'normal');
+                doc.text('Document Versions', 14, startY);
                 startY += 6;
                 const codeIdToCode = {};
                 documentCodes.forEach(c => { codeIdToCode[c.id] = c.code; });
-                const verHeaders = ['كود المستند', 'رقم الإصدار', 'تاريخ الإصدار', 'نشط', 'الحالة'];
-                const verRows = documentVersions.slice(0, 30).map(v => [
+                const verHeaders = ['Document Code', 'Version', 'Issue Date', 'Active', 'Status'];
+                const verRows = documentVersions.slice(0, 50).map(v => [
                     String(codeIdToCode[v.documentCodeId] || ''),
                     String(v.versionNumber || ''),
                     String(v.issueDate || '').slice(0, 10),
-                    v.isActive === true || v.isActive === 'true' ? 'نعم' : 'لا',
+                    v.isActive === true || v.isActive === 'true' ? 'Yes' : 'No',
                     String(v.status || '')
                 ]);
-                if (typeof doc.autoTable !== 'undefined') {
-                    doc.autoTable({
-                        head: [verHeaders],
-                        body: verRows,
-                        startY: startY,
-                        styles: { fontSize: 7, cellPadding: 2 },
-                        headStyles: { fillColor: [34, 197, 94], textColor: 255 },
-                        margin: { left: 8, right: 8 }
-                    });
-                }
+                
+                doc.autoTable({
+                    head: [verHeaders],
+                    body: verRows,
+                    startY: startY,
+                    styles: { fontSize: 7, cellPadding: 2, font: 'helvetica' },
+                    headStyles: { fillColor: [34, 197, 94], textColor: 255 },
+                    margin: { left: 8, right: 8 }
+                });
             }
+            
             doc.setFontSize(8);
             doc.setTextColor(128, 128, 128);
-            doc.text('— مركز التكويد والإصدار — ' + exportDate, pageW / 2, pageH - 10, { align: 'center' });
-            doc.save('مركز_التكويد_والإصدار_' + new Date().toISOString().slice(0, 10) + '.pdf');
+            doc.text('— Document Coding and Issuing Center — ' + exportDate, pageW / 2, pageH - 10, { align: 'center' });
+            doc.save('Coding_Center_' + new Date().toISOString().slice(0, 10) + '.pdf');
             if (typeof Notification !== 'undefined') Notification.success('تم تصدير البيانات إلى PDF بنجاح');
         } catch (err) {
             Utils.safeError('تصدير مركز التكويد إلى PDF:', err);
