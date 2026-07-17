@@ -8154,7 +8154,16 @@ const PTW = {
     },
 
     _splitManualPermitPrintPages_(content, header, footer, forPdf) {
-        return `${header}${content}${footer}`;
+        if (!forPdf) return `${header}${content}${footer}`;
+        const wrapPage = (inner) => `<div class="ptw-a4-page">${inner}</div>`;
+        const splitMarker = '<div class="ptw-manual-form-section manual-section-6">';
+        const splitPos = content.indexOf(splitMarker);
+        if (splitPos <= 0) {
+            return wrapPage(`${header}${content}${footer}`);
+        }
+        const page1 = wrapPage(`${header}${content.slice(0, splitPos)}`);
+        const page2 = wrapPage(`${content.slice(splitPos)}${footer}`);
+        return `${page1}${page2}`;
     },
 
     _verifyManualPermitExportHtml_(html) {
