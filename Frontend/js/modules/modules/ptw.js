@@ -7478,10 +7478,10 @@ const PTW = {
             .ptw-a4-page {
                 width: ${this.PERMIT_A4_WIDTH_PX}px !important;
                 max-width: ${this.PERMIT_A4_WIDTH_PX}px !important;
-                height: 1115px !important;
-                min-height: 1115px !important;
+                height: 1120px !important;
+                min-height: 1120px !important;
                 box-sizing: border-box;
-                padding: 4px 6px 55px 6px !important;
+                padding: 4px 6px 60px 6px !important;
                 background: #fff;
                 overflow: hidden;
                 position: relative !important;
@@ -7509,7 +7509,7 @@ const PTW = {
             .manual-print-seq-badge .lbl { font-size: 8px; }
             .manual-print-seq-badge .val { font-size: 14px; letter-spacing: 1px; }
             .manual-print-paper-no { font-size: 10px; }
-            .ptw-manual-form-section { margin: 11px 0 !important; padding: 4.5px 7px !important; border-radius: 4px; border-width: 1.2px; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .ptw-manual-form-section { margin: 12px 0 15px 0 !important; padding: 4.5px 7px !important; border-radius: 4px; border-width: 1.2px; page-break-inside: avoid !important; break-inside: avoid !important; }
             .ptw-manual-form-section h3 { font-size: 10px; margin: 0 0 4.5px 0 !important; padding-bottom: 2px !important; gap: 4px; }
             .manual-print-field { padding: 2.5px 3.5px; border-radius: 3px; }
             .manual-print-field .lbl { font-size: 7.8px; margin-bottom: 1px; }
