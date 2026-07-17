@@ -7481,12 +7481,14 @@ const PTW = {
                 height: 1120px !important;
                 min-height: 1120px !important;
                 box-sizing: border-box;
-                padding: 4px 6px 60px 6px !important;
+                padding: 10px 15px 75px 15px !important;
                 background: #fff;
                 overflow: hidden;
                 position: relative !important;
                 page-break-after: always;
                 break-after: page;
+                display: flex;
+                flex-direction: column;
             }
             .ptw-a4-page:last-child { page-break-after: auto; break-after: auto; }
             .ptw-paper-header { padding: 4px 6px; min-height: 0; border-radius: 6px; margin-bottom: 2px; }
@@ -7509,45 +7511,59 @@ const PTW = {
             .manual-print-seq-badge .lbl { font-size: 8px; }
             .manual-print-seq-badge .val { font-size: 14px; letter-spacing: 1px; }
             .manual-print-paper-no { font-size: 10px; }
-            .ptw-manual-form-section { margin: 12px 0 15px 0 !important; padding: 4.5px 7px !important; border-radius: 4px; border-width: 1.2px; page-break-inside: avoid !important; break-inside: avoid !important; }
-            .ptw-manual-form-section h3 { font-size: 10px; margin: 0 0 4.5px 0 !important; padding-bottom: 2px !important; gap: 4px; }
-            .manual-print-field { padding: 2.5px 3.5px; border-radius: 3px; }
-            .manual-print-field .lbl { font-size: 7.8px; margin-bottom: 1px; }
-            .manual-print-field .val { font-size: 8.8px; }
-            .manual-print-grid { gap: 3px; }
-            .manual-print-req-grid { gap: 3px; }
+            
+            /* Section stretching rules for filling the page elegantly */
+            .manual-section-2, .manual-section-4, .manual-section-5,
+            .manual-section-6, .manual-section-7, .manual-section-9 {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-evenly;
+            }
+            .manual-section-7 .ptw-paper-grid-table,
+            .manual-section-9 .ptw-paper-grid-table {
+                flex: 1;
+            }
+
+            .ptw-manual-form-section { margin: 10px 0 12px 0 !important; padding: 6px 8px !important; border-radius: 4px; border-width: 1.2px; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .ptw-manual-form-section h3 { font-size: 10.5px; margin: 0 0 5px 0 !important; padding-bottom: 3px !important; gap: 4px; }
+            .manual-print-field { padding: 3px 4px; border-radius: 3px; }
+            .manual-print-field .lbl { font-size: 8px; margin-bottom: 1px; }
+            .manual-print-field .val { font-size: 9px; }
+            .manual-print-grid { gap: 4px; }
+            .manual-print-req-grid { gap: 4px; }
             .manual-print-req-item { font-size: 8.5px; padding: 2px 3px; border-radius: 3px; }
-            .ptw-paper-grid-table { font-size: 8px; }
-            .ptw-paper-grid-table th, .ptw-paper-grid-table td { padding: 2px 2.8px; }
-            .ptw-paper-grid-table thead th { font-size: 8.2px; }
-            .ptw-manual-ppe-print-matrix, .ptw-manual-equipment-print-matrix { padding: 3px 3px; border-radius: 4px; }
-            .ptw-manual-ppe-fixed-row, .ptw-manual-equipment-fixed-row { gap: 2px 1.5px; margin-bottom: 2px; }
-            .ptw-manual-ppe-cell, .ptw-manual-equipment-cell { font-size: 7.2px; padding: 1px 1.5px; min-height: 14px; line-height: 1.15; letter-spacing: 0; border-width: 1px; border-radius: 3px; gap: 2px; }
-            .ppe-checkbox, .equipment-checkbox { width: 7px; height: 7px; border-width: 1px; }
-            .ppe-checkbox.checked::after, .equipment-checkbox.checked::after { left: 1px; top: 0; width: 3px; height: 5px; border-width: 0 1.5px 1.5px 0; }
-            .ptw-manual-ppe-notes-print, .ptw-manual-equipment-notes-print { margin-top: 3px; padding: 2.5px 4px; border-radius: 4px; }
-            .ptw-manual-ppe-notes-print .lbl, .ptw-manual-equipment-notes-print .lbl { font-size: 8px; margin-bottom: 1px; }
-            .ptw-manual-ppe-notes-print .val, .ptw-manual-equipment-notes-print .val { font-size: 9px; }
-            .manual-risk-matrix { font-size: 7.8px; }
-            .manual-risk-matrix th, .manual-risk-matrix td { padding: 1px 1.5px; }
-            .manual-risk-matrix .risk-cell { padding: 2.5px 1.5px; }
-            .manual-risk-summary { margin-top: 3px; padding: 3px 5px; gap: 5px; border-radius: 4px; }
-            .manual-risk-badge { width: 22px; height: 22px; font-size: 9.5px; }
-            .manual-risk-summary div { font-size: 8.5px; }
-            .manual-work-block { padding: 3px 4px; margin-bottom: 2px; border-radius: 4px; }
-            .manual-work-block h4 { font-size: 9.5px; margin: 0 0 2px 0; }
-            .manual-status-pill { padding: 2px 5px; font-size: 8.8px; }
-            .manual-print-supervisors-grid { gap: 4px; }
-            .manual-print-supervisor-card { padding: 2.5px 3.5px; border-radius: 4px; }
-            .manual-print-supervisor-card .lbl { font-size: 7.8px; margin-bottom: 2px; }
-            .manual-print-supervisor-card .val { font-size: 8.8px; }
+            .ptw-paper-grid-table { font-size: 8.5px; }
+            .ptw-paper-grid-table th, .ptw-paper-grid-table td { padding: 3px 4px; }
+            .ptw-paper-grid-table thead th { font-size: 8.8px; }
+            .ptw-manual-ppe-print-matrix, .ptw-manual-equipment-print-matrix { padding: 4px 4px; border-radius: 4px; }
+            .ptw-manual-ppe-fixed-row, .ptw-manual-equipment-fixed-row { gap: 3px 2px; margin-bottom: 3px; }
+            .ptw-manual-ppe-cell, .ptw-manual-equipment-cell { font-size: 7.5px; padding: 1.5px 2px; min-height: 15px; line-height: 1.2; letter-spacing: 0; border-width: 1px; border-radius: 3px; gap: 2px; }
+            .ppe-checkbox, .equipment-checkbox { width: 8px; height: 8px; border-width: 1px; }
+            .ppe-checkbox.checked::after, .equipment-checkbox.checked::after { left: 1.5px; top: 0.5px; width: 3px; height: 5px; border-width: 0 1.5px 1.5px 0; }
+            .ptw-manual-ppe-notes-print, .ptw-manual-equipment-notes-print { margin-top: 4px; padding: 3px 5px; border-radius: 4px; }
+            .ptw-manual-ppe-notes-print .lbl, .ptw-manual-equipment-notes-print .lbl { font-size: 8.5px; margin-bottom: 1.5px; }
+            .ptw-manual-ppe-notes-print .val, .ptw-manual-equipment-notes-print .val { font-size: 9.5px; }
+            .manual-risk-matrix { font-size: 8px; }
+            .manual-risk-matrix th, .manual-risk-matrix td { padding: 2px 2px; }
+            .manual-risk-matrix .risk-cell { padding: 3px 2px; }
+            .manual-risk-summary { margin-top: 4px; padding: 4px 6px; gap: 6px; border-radius: 4px; }
+            .manual-risk-badge { width: 24px; height: 24px; font-size: 10px; }
+            .manual-risk-summary div { font-size: 9px; }
+            .manual-work-block { padding: 4px 5px; margin-bottom: 3px; border-radius: 4px; }
+            .manual-work-block h4 { font-size: 10px; margin: 0 0 3px 0; }
+            .manual-status-pill { padding: 2.5px 6px; font-size: 9px; }
+            .manual-print-supervisors-grid { gap: 5px; }
+            .manual-print-supervisor-card { padding: 3px 4px; border-radius: 4px; }
+            .manual-print-supervisor-card .lbl { font-size: 8px; margin-bottom: 2px; }
+            .manual-print-supervisor-card .val { font-size: 9px; }
             .ptw-paper-grid-table .approval-name-cell,
-            .ptw-paper-grid-table .approval-sig-cell { min-height: 14px; }
+            .ptw-paper-grid-table .approval-sig-cell { min-height: 18px; }
             .ptw-paper-footer {
                 position: absolute !important;
-                bottom: 8px !important;
-                left: 8px !important;
-                right: 8px !important;
+                bottom: 15px !important;
+                left: 15px !important;
+                right: 15px !important;
                 margin-top: 0 !important;
                 border-top: 1px dashed #cbd5e1;
                 page-break-inside: avoid;
@@ -7555,17 +7571,17 @@ const PTW = {
             }
             .ptw-paper-footer-frame {
                 background: linear-gradient(135deg, rgba(59, 130, 246, 0.03), rgba(37, 99, 235, 0.05));
-                border: 1px solid rgba(59, 130, 246, 0.1); border-radius: 4px; padding: 2px 4px;
+                border: 1px solid rgba(59, 130, 246, 0.1); border-radius: 4px; padding: 4px 6px;
             }
             .ptw-paper-footer-meta {
-                display: flex; flex-wrap: wrap; justify-content: space-between; gap: 3px 6px;
-                font-size: 8px; color: #475569; font-weight: 600; padding-bottom: 2px;
+                display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px;
+                font-size: 8.5px; color: #475569; font-weight: 600; padding-bottom: 3px;
                 border-bottom: 1px dashed rgba(148, 163, 184, 0.3); letter-spacing: 0;
             }
             .ptw-pf-item { white-space: nowrap; }
             .ptw-paper-footer-company {
-                display: flex; flex-direction: column; align-items: center; gap: 1px;
-                margin-top: 2px; font-size: 8px; color: #334155; font-weight: 600; letter-spacing: 0;
+                display: flex; flex-direction: column; align-items: center; gap: 1.5px;
+                margin-top: 3px; font-size: 8.5px; color: #334155; font-weight: 600; letter-spacing: 0;
             }
         ` : '';
         return `
