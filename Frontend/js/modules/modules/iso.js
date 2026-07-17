@@ -1323,42 +1323,182 @@ const ISO = {
     async renderISO45001() {
         const objectives = AppState.appData.hseObjectives || [];
         const riskAssessments = AppState.appData.hseRiskAssessments || [];
+        
+        // Calculate statistics
+        const highRisks = riskAssessments.filter(r => r.riskLevel === 'عالي' || r.riskLevel === 'High').length;
+        const mediumRisks = riskAssessments.filter(r => r.riskLevel === 'متوسط' || r.riskLevel === 'Medium').length;
+        const lowRisks = riskAssessments.filter(r => r.riskLevel === 'منخفض' || r.riskLevel === 'Low').length;
+        
+        const completedObjectives = objectives.filter(o => o.progress >= 100).length;
+
+        // Generate Risk Table Rows
+        const riskRows = riskAssessments.length > 0 ? riskAssessments.map(r => `
+            <tr>
+                <td class="align-middle fw-bold text-dark">${Utils.escapeHTML(r.activity)}</td>
+                <td class="align-middle">${Utils.escapeHTML(r.hazards)}</td>
+                <td class="align-middle">
+                    <span class="badge ${r.riskLevel === 'عالي' || r.riskLevel === 'High' ? 'bg-danger' : (r.riskLevel === 'متوسط' || r.riskLevel === 'Medium' ? 'bg-warning text-dark' : 'bg-success')} rounded-pill px-3">
+                        ${Utils.escapeHTML(r.riskLevel)}
+                    </span>
+                </td>
+                <td class="align-middle text-muted small">${Utils.escapeHTML(r.controlMeasures)}</td>
+                <td class="align-middle text-center">
+                    <button class="btn btn-sm btn-outline-primary rounded-circle" onclick="ISO.showHSERiskAssessmentForm(${JSON.stringify(r).replace(/"/g, '&quot;')})" title="تعديل">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger rounded-circle ms-1" onclick="ISO.deleteHSERiskAssessment('${r.id}')" title="حذف">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('') : `<tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-info-circle fs-4 mb-2 d-block"></i>لا توجد تقييمات مخاطر مسجلة حتى الآن</td></tr>`;
+
+        // Generate Objectives Table Rows
+        const objectiveRows = objectives.length > 0 ? objectives.map(o => `
+            <tr>
+                <td class="align-middle fw-bold text-dark">${Utils.escapeHTML(o.title)}</td>
+                <td class="align-middle">${Utils.escapeHTML(o.target)}</td>
+                <td class="align-middle">
+                    <div class="d-flex align-items-center">
+                        <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                            <div class="progress-bar ${o.progress >= 100 ? 'bg-success' : 'bg-primary'}" role="progressbar" style="width: ${o.progress}%;" aria-valuenow="${o.progress}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <span class="small fw-bold ${o.progress >= 100 ? 'text-success' : 'text-primary'}">${o.progress}%</span>
+                    </div>
+                </td>
+                <td class="align-middle text-center">
+                    <button class="btn btn-sm btn-outline-primary rounded-circle" onclick="ISO.showHSEObjectiveForm(${JSON.stringify(o).replace(/"/g, '&quot;')})" title="تعديل">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger rounded-circle ms-1" onclick="ISO.deleteHSEObjective('${o.id}')" title="حذف">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('') : `<tr><td colspan="4" class="text-center text-muted py-4"><i class="fas fa-bullseye fs-4 mb-2 d-block"></i>لا توجد أهداف مسجلة حتى الآن</td></tr>`;
 
         return `
-            <div class="content-card">
-                <div class="card-header">
-                    <h2 class="card-title"><i class="fas fa-hard-hat ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.compliance.iso45001Title', 'ISO 45001 - السلامة والصحة المهنية') : 'ISO 45001 - السلامة والصحة المهنية'}</h2>
-                </div>
-                <div class="card-body">
-                    <div class="space-y-4">
-                        <p class="text-gray-700">
-                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.desc', 'يركز هذا القسم على متطلبات نظام إدارة السلامة والصحة المهنية (OH&S) وفقًا لمعيار ISO 45001. يهدف إلى تمكين المنظمة من توفير أماكن عمل آمنة وصحية، ومنع الإصابات والأمراض المرتبطة بالعمل، بالإضافة إلى التحسين المستمر لأداء السلامة والصحة المهنية.') : 'يركز هذا القسم على متطلبات نظام إدارة السلامة والصحة المهنية (OH&S) وفقًا لمعيار ISO 45001. يهدف إلى تمكين المنظمة من توفير أماكن عمل آمنة وصحية، ومنع الإصابات والأمراض المرتبطة بالعمل، بالإضافة إلى التحسين المستمر لأداء السلامة والصحة المهنية.'}
+            <div class="iso-dashboard">
+                <!-- Header -->
+                <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; overflow: hidden;">
+                    <div class="card-header bg-primary text-white p-4 border-0" style="background: linear-gradient(135deg, #0f172a 0%, #334155 100%) !important;">
+                        <h3 class="card-title text-white d-flex align-items-center fw-bold m-0" style="font-size: 1.5rem;">
+                            <i class="fas fa-hard-hat mx-3 text-warning fs-3"></i>
+                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.compliance.iso45001Title', 'نظام إدارة السلامة والصحة المهنية (ISO 45001)') : 'نظام إدارة السلامة والصحة المهنية (ISO 45001)'}
+                        </h3>
+                        <p class="text-white-50 small mt-2 mb-0 px-2" style="max-width: 800px;">
+                            يهدف هذا النظام إلى توفير أماكن عمل آمنة وصحية، ومنع الإصابات والأمراض المرتبطة بالعمل، والتحسين المستمر لأداء السلامة والصحة المهنية.
                         </p>
-                        <h3 class="font-semibold text-lg mt-4 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.elementsTitle', 'العناصر الرئيسية:') : 'العناصر الرئيسية:'}</h3>
-                        <ul class="list-disc list-inside text-gray-700 space-y-2">
-                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.el1', 'السياق التنظيمي') : 'السياق التنظيمي'}</li>
-                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.el2', 'القيادة ومشاركة العاملين') : 'القيادة ومشاركة العاملين'}</li>
-                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.el3', 'التخطيط (تحديد المخاطر والفرص، الأهداف)') : 'التخطيط (تحديد المخاطر والفرص، الأهداف)'}</li>
-                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.el4', 'الدعم (الموارد، الكفاءة، الوعي، الاتصال، المعلومات الموثقة)') : 'الدعم (الموارد، الكفاءة، الوعي، الاتصال، المعلومات الموثقة)'}</li>
-                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.el5', 'التشغيل (التخطيط والتحكم التشغيلي، إدارة التغيير، المشتريات، المقاولون، الاستعداد للطوارئ)') : 'التشغيل (التخطيط والتحكم التشغيلي، إدارة التغيير، المشتريات، المقاولون، الاستعداد للطوارئ)'}</li>
-                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.el6', 'تقييم الأداء (المراقبة والقياس، تقييم الامتثال، التدقيق الداخلي، مراجعة الإدارة)') : 'تقييم الأداء (المراقبة والقياس، تقييم الامتثال، التدقيق الداخلي، مراجعة الإدارة)'}</li>
-                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.el7', 'التحسين (عدم المطابقة والإجراءات التصحيحية، التحسين المستمر)') : 'التحسين (عدم المطابقة والإجراءات التصحيحية، التحسين المستمر)'}</li>
-                        </ul>
-                        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="bg-blue-50 border border-blue-200 rounded p-4">
-                                <h4 class="font-semibold text-blue-800 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.objectivesTitle', 'الأهداف') : 'الأهداف'} (${objectives.length})</h4>
-                                <p class="text-sm text-gray-700 mb-3">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.objectivesDesc', 'إدارة أهداف السلامة والصحة المهنية') : 'إدارة أهداف السلامة والصحة المهنية'}</p>
-                                <button class="btn-secondary w-full" onclick="ISO.showHSEObjectiveForm()">
-                                    <i class="fas fa-bullseye ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.manageObjectivesBtn', 'إدارة الأهداف') : 'إدارة الأهداف'}
-                                </button>
+                    </div>
+                </div>
+
+                <!-- KPIs -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #ef4444 !important;">
+                            <div class="card-body d-flex align-items-center">
+                                <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-exclamation-triangle fs-4"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted mb-1 small fw-bold">مخاطر عالية</h6>
+                                    <h3 class="mb-0 fw-bold text-dark">${highRisks}</h3>
+                                </div>
                             </div>
-                            <div class="bg-green-50 border border-green-200 rounded p-4">
-                                <h4 class="font-semibold text-green-800 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.risksTitle', 'تقييمات المخاطر') : 'تقييمات المخاطر'} (${riskAssessments.length})</h4>
-                                <p class="text-sm text-gray-700 mb-3">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.risksDesc', 'تقييم مخاطر السلامة والصحة المهنية') : 'تقييم مخاطر السلامة والصحة المهنية'}</p>
-                                <button class="btn-secondary w-full" onclick="ISO.showHSERiskAssessmentForm()">
-                                    <i class="fas fa-shield-alt ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso45001.manageRisksBtn', 'تقييم المخاطر') : 'تقييم المخاطر'}
-                                </button>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #f59e0b !important;">
+                            <div class="card-body d-flex align-items-center">
+                                <div class="bg-warning bg-opacity-10 text-warning rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-exclamation-circle fs-4"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted mb-1 small fw-bold">مخاطر متوسطة</h6>
+                                    <h3 class="mb-0 fw-bold text-dark">${mediumRisks}</h3>
+                                </div>
                             </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #10b981 !important;">
+                            <div class="card-body d-flex align-items-center">
+                                <div class="bg-success bg-opacity-10 text-success rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-shield-alt fs-4"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted mb-1 small fw-bold">مخاطر منخفضة</h6>
+                                    <h3 class="mb-0 fw-bold text-dark">${lowRisks}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #3b82f6 !important;">
+                            <div class="card-body d-flex align-items-center">
+                                <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-bullseye fs-4"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted mb-1 small fw-bold">أهداف مكتملة</h6>
+                                    <h3 class="mb-0 fw-bold text-dark">${completedObjectives} <span class="fs-6 text-muted fw-normal">من ${objectives.length}</span></h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Register Section -->
+                <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                    <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold text-dark m-0"><i class="fas fa-list-alt text-danger me-2"></i>سجل تقييم المخاطر (Risk Register)</h5>
+                        <button class="btn btn-primary shadow-sm rounded-pill px-4" onclick="ISO.showHSERiskAssessmentForm()">
+                            <i class="fas fa-plus me-2"></i>إضافة تقييم خطر
+                        </button>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle border">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>النشاط / المهمة</th>
+                                        <th>المخاطر المحتملة (Hazards)</th>
+                                        <th>مستوى الخطر</th>
+                                        <th>إجراءات التحكم (Control Measures)</th>
+                                        <th class="text-center">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${riskRows}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Objectives Section -->
+                <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                    <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold text-dark m-0"><i class="fas fa-crosshairs text-primary me-2"></i>أهداف السلامة والصحة المهنية (HSE Objectives)</h5>
+                        <button class="btn btn-primary shadow-sm rounded-pill px-4" onclick="ISO.showHSEObjectiveForm()">
+                            <i class="fas fa-plus me-2"></i>إضافة هدف جديد
+                        </button>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle border">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>الهدف الرئيسي</th>
+                                        <th>المستهدف (Target)</th>
+                                        <th style="min-width: 200px;">نسبة الإنجاز (Progress)</th>
+                                        <th class="text-center">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${objectiveRows}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -1369,42 +1509,179 @@ const ISO = {
     async renderISO14001() {
         const aspects = AppState.appData.environmentalAspects || [];
         const monitoring = AppState.appData.environmentalMonitoring || [];
+        
+        // Calculate statistics
+        const significantAspects = aspects.filter(a => a.isSignificant).length;
+        const totalEmissions = monitoring.filter(m => m.type === 'انبعاثات' || m.type === 'Emissions').length;
+        const totalWaste = monitoring.filter(m => m.type === 'مخلفات' || m.type === 'Waste').length;
+
+        // Generate Aspects Table Rows
+        const aspectRows = aspects.length > 0 ? aspects.map(a => `
+            <tr>
+                <td class="align-middle fw-bold text-dark">${Utils.escapeHTML(a.activity)}</td>
+                <td class="align-middle">${Utils.escapeHTML(a.aspect)}</td>
+                <td class="align-middle">${Utils.escapeHTML(a.impact)}</td>
+                <td class="align-middle">
+                    <span class="badge ${a.isSignificant ? 'bg-danger' : 'bg-success'} rounded-pill px-3">
+                        ${a.isSignificant ? 'هام جداً (Significant)' : 'عادي (Non-Significant)'}
+                    </span>
+                </td>
+                <td class="align-middle text-center">
+                    <button class="btn btn-sm btn-outline-primary rounded-circle" onclick="ISO.showEnvironmentalAspectsForm(${JSON.stringify(a).replace(/"/g, '&quot;')})" title="تعديل">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger rounded-circle ms-1" onclick="ISO.deleteEnvironmentalAspect('${a.id}')" title="حذف">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('') : `<tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-leaf fs-4 mb-2 d-block"></i>لا توجد جوانب بيئية مسجلة حتى الآن</td></tr>`;
+
+        // Generate Monitoring Table Rows
+        const monitoringRows = monitoring.length > 0 ? monitoring.map(m => `
+            <tr>
+                <td class="align-middle fw-bold text-dark">${Utils.formatDate(m.date)}</td>
+                <td class="align-middle">
+                    <span class="badge ${m.type === 'مخلفات' || m.type === 'Waste' ? 'bg-warning text-dark' : (m.type === 'انبعاثات' || m.type === 'Emissions' ? 'bg-secondary' : 'bg-info text-dark')} px-2 py-1">
+                        ${Utils.escapeHTML(m.type)}
+                    </span>
+                </td>
+                <td class="align-middle">${Utils.escapeHTML(m.parameter)}</td>
+                <td class="align-middle fw-bold font-monospace text-primary">${Utils.escapeHTML(m.value)} ${Utils.escapeHTML(m.unit)}</td>
+                <td class="align-middle text-center">
+                    <button class="btn btn-sm btn-outline-primary rounded-circle" onclick="ISO.showEnvironmentalMonitoringForm(${JSON.stringify(m).replace(/"/g, '&quot;')})" title="تعديل">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger rounded-circle ms-1" onclick="ISO.deleteEnvironmentalMonitoring('${m.id}')" title="حذف">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('') : `<tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-chart-line fs-4 mb-2 d-block"></i>لا توجد سجلات مراقبة مسجلة حتى الآن</td></tr>`;
 
         return `
-            <div class="content-card">
-                <div class="card-header">
-                    <h2 class="card-title"><i class="fas fa-leaf ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.compliance.iso14001Title', 'ISO 14001 - إدارة البيئة') : 'ISO 14001 - إدارة البيئة'}</h2>
-                </div>
-                <div class="card-body">
-                    <div class="space-y-4">
-                        <p class="text-gray-700">
-                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.desc', 'يحدد هذا القسم متطلبات نظام إدارة البيئة (EMS) وفقًا لمعيار ISO 14001. يهدف إلى مساعدة المنظمات على تحسين أدائها البيئي من خلال إدارة مسؤولياتها البيئية بطريقة منهجية تساهم في ركيزة الاستدامة.') : 'يحدد هذا القسم متطلبات نظام إدارة البيئة (EMS) وفقًا لمعيار ISO 14001. يهدف إلى مساعدة المنظمات على تحسين أدائها البيئي من خلال إدارة مسؤولياتها البيئية بطريقة منهجية تساهم في ركيزة الاستدامة.'}
+            <div class="iso-dashboard">
+                <!-- Header -->
+                <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; overflow: hidden;">
+                    <div class="card-header bg-success text-white p-4 border-0" style="background: linear-gradient(135deg, #166534 0%, #15803d 100%) !important;">
+                        <h3 class="card-title text-white d-flex align-items-center fw-bold m-0" style="font-size: 1.5rem;">
+                            <i class="fas fa-leaf mx-3 text-white-50 fs-3"></i>
+                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.compliance.iso14001Title', 'نظام الإدارة البيئية (ISO 14001)') : 'نظام الإدارة البيئية (ISO 14001)'}
+                        </h3>
+                        <p class="text-white-50 small mt-2 mb-0 px-2" style="max-width: 800px;">
+                            يهدف هذا النظام إلى مساعدة المنظمة على تحسين أدائها البيئي من خلال إدارة مسؤولياتها البيئية بطريقة منهجية تساهم في الاستدامة وتقليل الآثار السلبية.
                         </p>
-                        <h3 class="font-semibold text-lg mt-4 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.elementsTitle', 'العناصر الرئيسية:') : 'العناصر الرئيسية:'}</h3>
-                        <ul class="list-disc list-inside text-gray-700 space-y-2">
-                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.el1', 'السياق التنظيمي') : 'السياق التنظيمي'}</li>
-                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.el2', 'القيادة') : 'القيادة'}</li>
-                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.el3', 'التخطيط (تحديد الجوانب البيئية، الالتزامات الامتثالية، الأهداف البيئية)') : 'التخطيط (تحديد الجوانب البيئية، الالتزامات الامتثالية، الأهداف البيئية)'}</li>
-                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.el4', 'الدعم (الموارد، الكفاءة، الوعي، الاتصال، المعلومات الموثقة)') : 'الدعم (الموارد، الكفاءة، الوعي، الاتصال، المعلومات الموثقة)'}</li>
-                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.el5', 'التشغيل (التخطيط والتحكم التشغيلي، الاستعداد للطوارئ والاستجابة لها)') : 'التشغيل (التخطيط والتحكم التشغيلي، الاستعداد للطوارئ والاستجابة لها)'}</li>
-                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.el6', 'تقييم الأداء (المراقبة والقياس، تقييم الامتثال، التدقيق الداخلي، مراجعة الإدارة)') : 'تقييم الأداء (المراقبة والقياس، تقييم الامتثال، التدقيق الداخلي، مراجعة الإدارة)'}</li>
-                            <li>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.el7', 'التحسين (عدم المطابقة والإجراءات التصحيحية، التحسين المستمر)') : 'التحسين (عدم المطابقة والإجراءات التصحيحية، التحسين المستمر)'}</li>
-                        </ul>
-                        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="bg-green-50 border border-green-200 rounded p-4">
-                                <h4 class="font-semibold text-green-800 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.aspectsTitle', 'الجوانب البيئية') : 'الجوانب البيئية'} (${aspects.length})</h4>
-                                <p class="text-sm text-gray-700 mb-3">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.aspectsDesc', 'إدارة الجوانب البيئية وتأثيراتها') : 'إدارة الجوانب البيئية وتأثيراتها'}</p>
-                                <button class="btn-secondary w-full" onclick="ISO.showEnvironmentalAspectsForm()">
-                                    <i class="fas fa-globe ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.manageAspectsBtn', 'إدارة الجوانب البيئية') : 'إدارة الجوانب البيئية'}
-                                </button>
+                    </div>
+                </div>
+
+                <!-- KPIs -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #22c55e !important;">
+                            <div class="card-body d-flex align-items-center">
+                                <div class="bg-success bg-opacity-10 text-success rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-globe fs-4"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted mb-1 small fw-bold">إجمالي الجوانب البيئية</h6>
+                                    <h3 class="mb-0 fw-bold text-dark">${aspects.length}</h3>
+                                </div>
                             </div>
-                            <div class="bg-blue-50 border border-blue-200 rounded p-4">
-                                <h4 class="font-semibold text-blue-800 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.monitoringTitle', 'المراقبة البيئية') : 'المراقبة البيئية'} (${monitoring.length})</h4>
-                                <p class="text-sm text-gray-700 mb-3">${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.monitoringDesc', 'تتبع ومراقبة الأداء البيئي') : 'تتبع ومراقبة الأداء البيئي'}</p>
-                                <button class="btn-secondary w-full" onclick="ISO.showEnvironmentalMonitoringForm()">
-                                    <i class="fas fa-chart-line ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.iso14001.manageMonitoringBtn', 'المراقبة البيئية') : 'المراقبة البيئية'}
-                                </button>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #ef4444 !important;">
+                            <div class="card-body d-flex align-items-center">
+                                <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-exclamation-triangle fs-4"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted mb-1 small fw-bold">جوانب ذات تأثير هام</h6>
+                                    <h3 class="mb-0 fw-bold text-dark">${significantAspects}</h3>
+                                </div>
                             </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #64748b !important;">
+                            <div class="card-body d-flex align-items-center">
+                                <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-smog fs-4"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted mb-1 small fw-bold">سجلات الانبعاثات</h6>
+                                    <h3 class="mb-0 fw-bold text-dark">${totalEmissions}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #eab308 !important;">
+                            <div class="card-body d-flex align-items-center">
+                                <div class="bg-warning bg-opacity-10 text-warning rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-trash-alt fs-4"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted mb-1 small fw-bold">سجلات المخلفات</h6>
+                                    <h3 class="mb-0 fw-bold text-dark">${totalWaste}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aspects Register Section -->
+                <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                    <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold text-dark m-0"><i class="fas fa-list text-success me-2"></i>سجل الجوانب البيئية (Environmental Aspects Register)</h5>
+                        <button class="btn btn-success shadow-sm rounded-pill px-4" onclick="ISO.showEnvironmentalAspectsForm()">
+                            <i class="fas fa-plus me-2"></i>إضافة جانب بيئي
+                        </button>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle border">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>النشاط / العملية</th>
+                                        <th>الجانب البيئي (Aspect)</th>
+                                        <th>التأثير البيئي (Impact)</th>
+                                        <th>مستوى الأهمية (Significance)</th>
+                                        <th class="text-center">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${aspectRows}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monitoring Section -->
+                <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                    <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold text-dark m-0"><i class="fas fa-chart-line text-info me-2"></i>سجل المراقبة البيئية (Environmental Monitoring)</h5>
+                        <button class="btn btn-success shadow-sm rounded-pill px-4" onclick="ISO.showEnvironmentalMonitoringForm()">
+                            <i class="fas fa-plus me-2"></i>إضافة سجل مراقبة
+                        </button>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle border">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>تاريخ القياس</th>
+                                        <th>نوع القياس</th>
+                                        <th>المعامل (Parameter)</th>
+                                        <th>القيمة المُقاسة (Value)</th>
+                                        <th class="text-center">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${monitoringRows}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -3625,6 +3902,350 @@ const ISO = {
             if (typeof Utils !== 'undefined') Utils.safeWarn('Error fetching ISO code details:', e);
         }
         return null;
+    },
+
+    // ==========================================
+    // ISO 45001 Forms and Logic
+    // ==========================================
+    
+    showHSERiskAssessmentForm(existingData = null) {
+        const data = existingData || {};
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay fixed inset-0 bg-black/50 z-50 flex justify-center items-center';
+        modal.innerHTML = `
+            <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden d-flex flex-column" style="max-height: 90vh;">
+                <div class="modal-header bg-light p-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="modal-title fw-bold m-0"><i class="fas fa-shield-alt text-primary me-2"></i>${data.id ? 'تعديل تقييم المخاطر' : 'إضافة تقييم مخاطر جديد'}</h5>
+                    <button type="button" class="btn-close" onclick="this.closest('.modal-overlay').remove()"></button>
+                </div>
+                <div class="modal-body p-4 overflow-auto flex-grow-1">
+                    <form id="iso-risk-form">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">النشاط / المهمة <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="risk-activity" required value="${Utils.escapeHTML(data.activity || '')}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">المخاطر المحتملة (Hazards) <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="risk-hazards" rows="3" required>${Utils.escapeHTML(data.hazards || '')}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">مستوى الخطر <span class="text-danger">*</span></label>
+                            <select class="form-select" id="risk-level" required>
+                                <option value="" disabled ${!data.riskLevel ? 'selected' : ''}>اختر مستوى الخطر...</option>
+                                <option value="منخفض" ${data.riskLevel === 'منخفض' || data.riskLevel === 'Low' ? 'selected' : ''}>منخفض (Low)</option>
+                                <option value="متوسط" ${data.riskLevel === 'متوسط' || data.riskLevel === 'Medium' ? 'selected' : ''}>متوسط (Medium)</option>
+                                <option value="عالي" ${data.riskLevel === 'عالي' || data.riskLevel === 'High' ? 'selected' : ''}>عالي (High)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">إجراءات التحكم والوقاية (Control Measures)</label>
+                            <textarea class="form-control" id="risk-controls" rows="3">${Utils.escapeHTML(data.controlMeasures || '')}</textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-light p-3 border-top d-flex justify-content-end">
+                    <button type="button" class="btn btn-secondary me-2 px-4" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                    <button type="button" class="btn btn-primary px-4" onclick="ISO.handleHSERiskSubmit('${data.id || ''}', this.closest('.modal-overlay'))">
+                        <i class="fas fa-save me-2"></i>حفظ
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    },
+
+    handleHSERiskSubmit(editId, modal) {
+        const activity = document.getElementById('risk-activity').value.trim();
+        const hazards = document.getElementById('risk-hazards').value.trim();
+        const riskLevel = document.getElementById('risk-level').value;
+        const controlMeasures = document.getElementById('risk-controls').value.trim();
+
+        if (!activity || !hazards || !riskLevel) {
+            Notification.warning('يرجى تعبئة الحقول المطلوبة');
+            return;
+        }
+
+        const riskRecord = {
+            id: editId || Utils.generateId('RSK'),
+            activity,
+            hazards,
+            riskLevel,
+            controlMeasures,
+            createdAt: new Date().toISOString()
+        };
+
+        if (!AppState.appData.hseRiskAssessments) AppState.appData.hseRiskAssessments = [];
+
+        if (editId) {
+            const idx = AppState.appData.hseRiskAssessments.findIndex(r => r.id === editId);
+            if (idx >= 0) AppState.appData.hseRiskAssessments[idx] = { ...AppState.appData.hseRiskAssessments[idx], ...riskRecord };
+        } else {
+            AppState.appData.hseRiskAssessments.push(riskRecord);
+        }
+
+        Notification.success('تم حفظ بيانات تقييم المخاطر بنجاح');
+        modal.remove();
+        ISO.load(); // Refresh view
+    },
+
+    deleteHSERiskAssessment(id) {
+        if (!confirm('هل أنت متأكد من رغبتك في حذف هذا التقييم؟')) return;
+        AppState.appData.hseRiskAssessments = AppState.appData.hseRiskAssessments.filter(r => r.id !== id);
+        Notification.success('تم الحذف بنجاح');
+        ISO.load();
+    },
+
+    showHSEObjectiveForm(existingData = null) {
+        const data = existingData || {};
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay fixed inset-0 bg-black/50 z-50 flex justify-center items-center';
+        modal.innerHTML = `
+            <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden d-flex flex-column" style="max-height: 90vh;">
+                <div class="modal-header bg-light p-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="modal-title fw-bold m-0"><i class="fas fa-bullseye text-primary me-2"></i>${data.id ? 'تعديل هدف' : 'إضافة هدف جديد'}</h5>
+                    <button type="button" class="btn-close" onclick="this.closest('.modal-overlay').remove()"></button>
+                </div>
+                <div class="modal-body p-4 overflow-auto flex-grow-1">
+                    <form id="iso-objective-form">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">الهدف الرئيسي <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="obj-title" required value="${Utils.escapeHTML(data.title || '')}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">المستهدف (Target) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="obj-target" required value="${Utils.escapeHTML(data.target || '')}" placeholder="مثال: تحقيق 0 إصابات وقت ضائع (LTI)">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">نسبة الإنجاز %</label>
+                            <input type="range" class="form-range" id="obj-progress" min="0" max="100" value="${data.progress || 0}" oninput="document.getElementById('progress-val').textContent = this.value + '%'">
+                            <div class="text-center fw-bold text-primary mt-2" id="progress-val">${data.progress || 0}%</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-light p-3 border-top d-flex justify-content-end">
+                    <button type="button" class="btn btn-secondary me-2 px-4" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                    <button type="button" class="btn btn-primary px-4" onclick="ISO.handleHSEObjectiveSubmit('${data.id || ''}', this.closest('.modal-overlay'))">
+                        <i class="fas fa-save me-2"></i>حفظ
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    },
+
+    handleHSEObjectiveSubmit(editId, modal) {
+        const title = document.getElementById('obj-title').value.trim();
+        const target = document.getElementById('obj-target').value.trim();
+        const progress = parseInt(document.getElementById('obj-progress').value, 10);
+
+        if (!title || !target) {
+            Notification.warning('يرجى تعبئة الحقول المطلوبة');
+            return;
+        }
+
+        const objRecord = {
+            id: editId || Utils.generateId('OBJ'),
+            title,
+            target,
+            progress,
+            createdAt: new Date().toISOString()
+        };
+
+        if (!AppState.appData.hseObjectives) AppState.appData.hseObjectives = [];
+
+        if (editId) {
+            const idx = AppState.appData.hseObjectives.findIndex(o => o.id === editId);
+            if (idx >= 0) AppState.appData.hseObjectives[idx] = { ...AppState.appData.hseObjectives[idx], ...objRecord };
+        } else {
+            AppState.appData.hseObjectives.push(objRecord);
+        }
+
+        Notification.success('تم حفظ بيانات الهدف بنجاح');
+        modal.remove();
+        ISO.load();
+    },
+
+    deleteHSEObjective(id) {
+        if (!confirm('هل أنت متأكد من رغبتك في حذف هذا الهدف؟')) return;
+        AppState.appData.hseObjectives = AppState.appData.hseObjectives.filter(o => o.id !== id);
+        Notification.success('تم الحذف بنجاح');
+        ISO.load();
+    },
+
+    // ==========================================
+    // ISO 14001 Forms and Logic
+    // ==========================================
+
+    showEnvironmentalAspectsForm(existingData = null) {
+        const data = existingData || {};
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay fixed inset-0 bg-black/50 z-50 flex justify-center items-center';
+        modal.innerHTML = `
+            <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden d-flex flex-column" style="max-height: 90vh;">
+                <div class="modal-header bg-light p-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="modal-title fw-bold m-0"><i class="fas fa-globe text-success me-2"></i>${data.id ? 'تعديل جانب بيئي' : 'إضافة جانب بيئي جديد'}</h5>
+                    <button type="button" class="btn-close" onclick="this.closest('.modal-overlay').remove()"></button>
+                </div>
+                <div class="modal-body p-4 overflow-auto flex-grow-1">
+                    <form id="iso-env-aspect-form">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">النشاط / العملية <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="env-activity" required value="${Utils.escapeHTML(data.activity || '')}" placeholder="مثال: تشغيل المولدات الكهربائية">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">الجانب البيئي (Aspect) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="env-aspect" required value="${Utils.escapeHTML(data.aspect || '')}" placeholder="مثال: انبعاث غازات العادم / استهلاك وقود">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">التأثير البيئي (Impact) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="env-impact" required value="${Utils.escapeHTML(data.impact || '')}" placeholder="مثال: تلوث الهواء / استنزاف موارد طبيعية">
+                        </div>
+                        <div class="mb-3 form-check form-switch mt-4">
+                            <input class="form-check-input" type="checkbox" role="switch" id="env-significant" ${data.isSignificant ? 'checked' : ''} style="transform: scale(1.5); margin-right: -2rem; margin-left: 1rem;">
+                            <label class="form-check-label fw-bold ms-4 pt-1" for="env-significant">تصنيف كجانب بيئي ذو تأثير هام (Significant)</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-light p-3 border-top d-flex justify-content-end">
+                    <button type="button" class="btn btn-secondary me-2 px-4" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                    <button type="button" class="btn btn-success px-4" onclick="ISO.handleEnvironmentalAspectSubmit('${data.id || ''}', this.closest('.modal-overlay'))">
+                        <i class="fas fa-save me-2"></i>حفظ
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    },
+
+    handleEnvironmentalAspectSubmit(editId, modal) {
+        const activity = document.getElementById('env-activity').value.trim();
+        const aspect = document.getElementById('env-aspect').value.trim();
+        const impact = document.getElementById('env-impact').value.trim();
+        const isSignificant = document.getElementById('env-significant').checked;
+
+        if (!activity || !aspect || !impact) {
+            Notification.warning('يرجى تعبئة الحقول المطلوبة');
+            return;
+        }
+
+        const aspectRecord = {
+            id: editId || Utils.generateId('ENV_ASP'),
+            activity,
+            aspect,
+            impact,
+            isSignificant,
+            createdAt: new Date().toISOString()
+        };
+
+        if (!AppState.appData.environmentalAspects) AppState.appData.environmentalAspects = [];
+
+        if (editId) {
+            const idx = AppState.appData.environmentalAspects.findIndex(a => a.id === editId);
+            if (idx >= 0) AppState.appData.environmentalAspects[idx] = { ...AppState.appData.environmentalAspects[idx], ...aspectRecord };
+        } else {
+            AppState.appData.environmentalAspects.push(aspectRecord);
+        }
+
+        Notification.success('تم حفظ الجانب البيئي بنجاح');
+        modal.remove();
+        ISO.load();
+    },
+
+    deleteEnvironmentalAspect(id) {
+        if (!confirm('هل أنت متأكد من رغبتك في حذف هذا الجانب البيئي؟')) return;
+        AppState.appData.environmentalAspects = AppState.appData.environmentalAspects.filter(a => a.id !== id);
+        Notification.success('تم الحذف بنجاح');
+        ISO.load();
+    },
+
+    showEnvironmentalMonitoringForm(existingData = null) {
+        const data = existingData || {};
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay fixed inset-0 bg-black/50 z-50 flex justify-center items-center';
+        modal.innerHTML = `
+            <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden d-flex flex-column" style="max-height: 90vh;">
+                <div class="modal-header bg-light p-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="modal-title fw-bold m-0"><i class="fas fa-chart-line text-info me-2"></i>${data.id ? 'تعديل سجل مراقبة' : 'إضافة سجل مراقبة جديد'}</h5>
+                    <button type="button" class="btn-close" onclick="this.closest('.modal-overlay').remove()"></button>
+                </div>
+                <div class="modal-body p-4 overflow-auto flex-grow-1">
+                    <form id="iso-env-monitor-form">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">تاريخ القياس <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="mon-date" required value="${data.date ? data.date.split('T')[0] : new Date().toISOString().split('T')[0]}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">نوع القياس <span class="text-danger">*</span></label>
+                            <select class="form-select" id="mon-type" required>
+                                <option value="" disabled ${!data.type ? 'selected' : ''}>اختر نوع القياس...</option>
+                                <option value="انبعاثات" ${data.type === 'انبعاثات' ? 'selected' : ''}>انبعاثات (Emissions)</option>
+                                <option value="مخلفات" ${data.type === 'مخلفات' ? 'selected' : ''}>مخلفات (Waste)</option>
+                                <option value="استهلاك طاقة" ${data.type === 'استهلاك طاقة' ? 'selected' : ''}>استهلاك طاقة (Energy)</option>
+                                <option value="استهلاك مياه" ${data.type === 'استهلاك مياه' ? 'selected' : ''}>استهلاك مياه (Water)</option>
+                                <option value="ضوضاء" ${data.type === 'ضوضاء' ? 'selected' : ''}>ضوضاء (Noise)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">المعامل (Parameter) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="mon-param" required value="${Utils.escapeHTML(data.parameter || '')}" placeholder="مثال: كمية المخلفات الصلبة / نسبة ثاني أكسيد الكربون">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">القيمة (Value) <span class="text-danger">*</span></label>
+                                <input type="number" step="0.01" class="form-control" id="mon-value" required value="${data.value || ''}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">وحدة القياس (Unit) <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="mon-unit" required value="${Utils.escapeHTML(data.unit || '')}" placeholder="مثال: kg, ppm, kWh">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-light p-3 border-top d-flex justify-content-end">
+                    <button type="button" class="btn btn-secondary me-2 px-4" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                    <button type="button" class="btn btn-info px-4 text-white" onclick="ISO.handleEnvironmentalMonitoringSubmit('${data.id || ''}', this.closest('.modal-overlay'))">
+                        <i class="fas fa-save me-2"></i>حفظ
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    },
+
+    handleEnvironmentalMonitoringSubmit(editId, modal) {
+        const date = document.getElementById('mon-date').value;
+        const type = document.getElementById('mon-type').value;
+        const parameter = document.getElementById('mon-param').value.trim();
+        const value = document.getElementById('mon-value').value;
+        const unit = document.getElementById('mon-unit').value.trim();
+
+        if (!date || !type || !parameter || !value || !unit) {
+            Notification.warning('يرجى تعبئة الحقول المطلوبة');
+            return;
+        }
+
+        const monRecord = {
+            id: editId || Utils.generateId('ENV_MON'),
+            date,
+            type,
+            parameter,
+            value,
+            unit,
+            createdAt: new Date().toISOString()
+        };
+
+        if (!AppState.appData.environmentalMonitoring) AppState.appData.environmentalMonitoring = [];
+
+        if (editId) {
+            const idx = AppState.appData.environmentalMonitoring.findIndex(m => m.id === editId);
+            if (idx >= 0) AppState.appData.environmentalMonitoring[idx] = { ...AppState.appData.environmentalMonitoring[idx], ...monRecord };
+        } else {
+            AppState.appData.environmentalMonitoring.push(monRecord);
+        }
+
+        Notification.success('تم حفظ سجل المراقبة البيئية بنجاح');
+        modal.remove();
+        ISO.load();
     }
 };
 
