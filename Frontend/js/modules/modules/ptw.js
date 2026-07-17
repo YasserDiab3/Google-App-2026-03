@@ -7512,40 +7512,40 @@ const PTW = {
             .manual-print-seq-badge .lbl { font-size: 8px; }
             .manual-print-seq-badge .val { font-size: 14px; letter-spacing: 1px; }
             .manual-print-paper-no { font-size: 10px; }
-            .ptw-manual-form-section { margin: 3px 0 !important; padding: 3px 6px !important; border-radius: 4px; border-width: 1.2px; page-break-inside: avoid !important; break-inside: avoid !important; }
-            .ptw-manual-form-section h3 { font-size: 9px; margin: 0 0 3px 0 !important; padding-bottom: 2px !important; gap: 4px; }
-            .manual-print-field { padding: 2px 3px; border-radius: 3px; }
-            .manual-print-field .lbl { font-size: 7.5px; margin-bottom: 1px; }
+            .ptw-manual-form-section { margin: 2px 0 !important; padding: 2px 4px !important; border-radius: 4px; border-width: 1.2px; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .ptw-manual-form-section h3 { font-size: 9px; margin: 0 0 2px 0 !important; padding-bottom: 1px !important; gap: 4px; }
+            .manual-print-field { padding: 1.5px 2.5px; border-radius: 3px; }
+            .manual-print-field .lbl { font-size: 7.5px; margin-bottom: 0.5px; }
             .manual-print-field .val { font-size: 8.5px; }
-            .manual-print-grid { gap: 3px; }
-            .manual-print-req-grid { gap: 3px; }
-            .manual-print-req-item { font-size: 8.5px; padding: 2px 3px; border-radius: 3px; }
+            .manual-print-grid { gap: 2px; }
+            .manual-print-req-grid { gap: 2px; }
+            .manual-print-req-item { font-size: 8.5px; padding: 1.5px 2px; border-radius: 3px; }
             .ptw-paper-grid-table { font-size: 8px; }
-            .ptw-paper-grid-table th, .ptw-paper-grid-table td { padding: 1.5px 2px; }
+            .ptw-paper-grid-table th, .ptw-paper-grid-table td { padding: 1px 1.5px; }
             .ptw-paper-grid-table thead th { font-size: 8px; }
-            .ptw-manual-ppe-print-matrix, .ptw-manual-equipment-print-matrix { padding: 4px 4px; border-radius: 4px; }
-            .ptw-manual-ppe-fixed-row, .ptw-manual-equipment-fixed-row { gap: 2px 1px; margin-bottom: 1px; }
-            .ptw-manual-ppe-cell, .ptw-manual-equipment-cell { font-size: 7px; padding: 1px 1.5px; min-height: 14px; line-height: 1.15; letter-spacing: 0; border-width: 1px; border-radius: 3px; gap: 2px; }
-            .ppe-checkbox, .equipment-checkbox { width: 7px; height: 7px; border-width: 1px; }
+            .ptw-manual-ppe-print-matrix, .ptw-manual-equipment-print-matrix { padding: 2px 2px; border-radius: 4px; }
+            .ptw-manual-ppe-fixed-row, .ptw-manual-equipment-fixed-row { gap: 1px 1px; margin-bottom: 1px; }
+            .ptw-manual-ppe-cell, .ptw-manual-equipment-cell { font-size: 7px; padding: 0.5px 1px; min-height: 12px; line-height: 1.15; letter-spacing: 0; border-width: 1px; border-radius: 3px; gap: 2px; }
+            .ppe-checkbox, .equipment-checkbox { width: 6px; height: 6px; border-width: 1px; }
             .ppe-checkbox.checked::after, .equipment-checkbox.checked::after { left: 1px; top: 0; width: 3px; height: 5px; border-width: 0 1.5px 1.5px 0; }
             .ptw-manual-ppe-notes-print, .ptw-manual-equipment-notes-print { margin-top: 2px; padding: 2px 4px; border-radius: 4px; }
             .ptw-manual-ppe-notes-print .lbl, .ptw-manual-equipment-notes-print .lbl { font-size: 8px; margin-bottom: 1px; }
             .ptw-manual-ppe-notes-print .val, .ptw-manual-equipment-notes-print .val { font-size: 9px; }
             .manual-risk-matrix { font-size: 7.5px; }
-            .manual-risk-matrix th, .manual-risk-matrix td { padding: 1px; }
-            .manual-risk-matrix .risk-cell { padding: 3px 1px; }
-            .manual-risk-summary { margin-top: 3px; padding: 3px 5px; gap: 6px; border-radius: 4px; }
-            .manual-risk-badge { width: 22px; height: 22px; font-size: 10px; }
+            .manual-risk-matrix th, .manual-risk-matrix td { padding: 0.5px; }
+            .manual-risk-matrix .risk-cell { padding: 2px 1px; }
+            .manual-risk-summary { margin-top: 2px; padding: 2px 4px; gap: 4px; border-radius: 4px; }
+            .manual-risk-badge { width: 20px; height: 20px; font-size: 9.5px; }
             .manual-risk-summary div { font-size: 8.5px; }
-            .manual-work-block { padding: 3px 4px; margin-bottom: 2px; border-radius: 4px; }
-            .manual-work-block h4 { font-size: 9.5px; margin: 0 0 2px 0; }
-            .manual-status-pill { padding: 2px 6px; font-size: 9px; }
-            .manual-print-supervisors-grid { gap: 4px; }
-            .manual-print-supervisor-card { padding: 3px 4px; border-radius: 4px; }
-            .manual-print-supervisor-card .lbl { font-size: 8px; margin-bottom: 2px; }
-            .manual-print-supervisor-card .val { font-size: 9px; min-height: 1.1em; }
+            .manual-work-block { padding: 2px 3px; margin-bottom: 1px; border-radius: 4px; }
+            .manual-work-block h4 { font-size: 9.5px; margin: 0 0 1px 0; }
+            .manual-status-pill { padding: 1.5px 4px; font-size: 8.5px; }
+            .manual-print-supervisors-grid { gap: 3px; }
+            .manual-print-supervisor-card { padding: 2px 3px; border-radius: 4px; }
+            .manual-print-supervisor-card .lbl { font-size: 7.5px; margin-bottom: 1.5px; }
+            .manual-print-supervisor-card .val { font-size: 8.5px; min-height: 1.1em; }
             .ptw-paper-grid-table .approval-name-cell,
-            .ptw-paper-grid-table .approval-sig-cell { min-height: 15px; }
+            .ptw-paper-grid-table .approval-sig-cell { min-height: 14px; }
             .ptw-paper-footer {
                 position: absolute !important;
                 bottom: 4px !important;
@@ -7558,7 +7558,7 @@ const PTW = {
             }
             .ptw-paper-footer-frame {
                 background: linear-gradient(135deg, rgba(59, 130, 246, 0.03), rgba(37, 99, 235, 0.05));
-                border: 1px solid rgba(59, 130, 246, 0.1); border-radius: 4px; padding: 3px 6px;
+                border: 1px solid rgba(59, 130, 246, 0.1); border-radius: 4px; padding: 2px 4px;
             }
             .ptw-paper-footer-meta {
                 display: flex; flex-wrap: wrap; justify-content: space-between; gap: 3px 6px;
