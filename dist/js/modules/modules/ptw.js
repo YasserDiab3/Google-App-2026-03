@@ -1730,7 +1730,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
             }
             .ptw-paper-grid-table .approval-name-cell,
             .ptw-paper-grid-table .approval-sig-cell {
-                min-height: 28px; font-weight: 500; color: #111827;
+                min-height: 22px; font-weight: 500; color: #111827;
             }
             @media print {
                 body { padding: 2px; font-size: 10px; }
@@ -1787,33 +1787,34 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
             .ptw-paper-header-dept { font-size: 10px; }
             .ptw-paper-header-logo { max-height: 48px; max-width: 110px; }
             .manual-print-disclaimer-wrap { margin-bottom: 8px; }
-            .manual-print-disclaimer-text { font-size: 11px; line-height: 1.6; padding: 10px; }
-            .manual-print-permit-no { padding: 10px; }
-            .manual-print-seq-badge { padding: 8px 20px; }
-            .manual-print-seq-badge .val { font-size: 20px; letter-spacing: 1px; }
-            .ptw-manual-form-section { margin: 5px 0; padding: 9px 11px; border-radius: 8px; page-break-inside: auto; break-inside: auto; }
-            .ptw-manual-form-section h3 { font-size: 12px; margin-bottom: 7px; padding-bottom: 5px; display: block; }
-            .manual-print-field .lbl { font-size: 9px; }
+            .manual-print-disclaimer-text { font-size: 11px; line-height: 1.6; padding: 6px; }
+            .manual-print-permit-no { padding: 6px; }
+            .manual-print-seq-badge { padding: 6px 12px; }
+            .manual-print-seq-badge .val { font-size: 18px; letter-spacing: 1px; }
+            .ptw-manual-form-section { margin: 3px 0; padding: 5px 8px; border-radius: 6px; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .ptw-manual-form-section h3 { font-size: 12px; margin-bottom: 5px; padding-bottom: 3px; display: block; }
+            .manual-print-field { padding: 4px 6px; }
+            .manual-print-field .lbl { font-size: 9px; margin-bottom: 2px; }
             .manual-print-field .val { font-size: 10px; }
-            .manual-print-grid { gap: 7px; }
+            .manual-print-grid { gap: 4px; }
             .ptw-paper-grid-table { font-size: 9px; }
-            .ptw-paper-grid-table th, .ptw-paper-grid-table td { padding: 4px 5px; }
-            .ptw-manual-ppe-fixed-row { gap: 4px 3px; margin-bottom: 4px; }
-            .ptw-manual-ppe-cell { font-size: 8.5px; padding: 4px 3px; min-height: 24px; line-height: 1.3; letter-spacing: 0; }
-            .ppe-checkbox { width: 11px; height: 11px; border-width: 1.5px; }
-            .ppe-checkbox.checked::after { left: 2px; top: 0; width: 3px; height: 6px; }
+            .ptw-paper-grid-table th, .ptw-paper-grid-table td { padding: 2px 3px; }
+            .ptw-manual-ppe-fixed-row { gap: 3px 2px; margin-bottom: 2px; }
+            .ptw-manual-ppe-cell { font-size: 8.5px; padding: 2px 2px; min-height: 20px; line-height: 1.2; letter-spacing: 0; }
+            .ppe-checkbox { width: 10px; height: 10px; border-width: 1px; }
+            .ppe-checkbox.checked::after { left: 2px; top: 0; width: 3px; height: 5px; }
             .manual-risk-matrix { font-size: 8.5px; }
-            .manual-risk-matrix th, .manual-risk-matrix td { padding: 3px; }
-            .manual-risk-badge { width: 32px; height: 32px; font-size: 12px; }
-            .manual-print-req-item { font-size: 9px; padding: 4px; }
-            .manual-print-supervisor-card { padding: 9px 11px; }
+            .manual-risk-matrix th, .manual-risk-matrix td { padding: 2px; }
+            .manual-risk-badge { width: 24px; height: 24px; font-size: 11px; }
+            .manual-print-req-item { font-size: 9px; padding: 2px 4px; }
+            .manual-print-supervisor-card { padding: 6px 8px; }
             .manual-print-supervisor-card .val { font-size: 11px; }
-            .manual-work-block { padding: 7px; margin-bottom: 5px; }
-            .manual-work-block h4 { font-size: 11px; margin-bottom: 4px; }
-            .ptw-paper-footer { margin-top: 8px; padding-top: 6px; border-top: 2px solid #e0e7ff; }
+            .manual-work-block { padding: 5px; margin-bottom: 3px; }
+            .manual-work-block h4 { font-size: 11px; margin-bottom: 3px; }
+            .ptw-paper-footer { margin-top: 6px; padding-top: 4px; border-top: 2px solid #e0e7ff; page-break-inside: avoid; break-inside: avoid; }
             .ptw-paper-footer-frame {
                 background: linear-gradient(135deg, rgba(59, 130, 246, 0.03), rgba(37, 99, 235, 0.05));
-                border: 1.5px solid rgba(59, 130, 246, 0.15); border-radius: 8px; padding: 8px 12px;
+                border: 1.5px solid rgba(59, 130, 246, 0.15); border-radius: 6px; padding: 6px 10px;
             }
             .ptw-paper-footer-meta {
                 display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 10px;
