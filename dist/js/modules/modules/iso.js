@@ -1183,77 +1183,74 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                 </div>
             </div>
         `,document.body.appendChild(o),o.addEventListener("click",n=>{n.target===o&&o.remove()})},renderSystemFormsDirectory(e,t){if(!this.SystemFormsManifest||this.SystemFormsManifest.length===0)return"";const o=this.SystemFormsManifest.reduce((s,i)=>(s[i.module]||(s[i.module]=[]),s[i.module].push(i),s),{}),n=Object.keys(o).map(s=>{const i=o[s];return`
-            <div class="mb-8 last:mb-0">
-                <h3 class="text-xl font-bold text-gray-800 border-b-2 border-blue-500 pb-2 mb-5 flex items-center">
-                    <i class="fas fa-folder-open text-blue-600 mx-2"></i> ${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.moduleName."+s.replace(/[^a-zA-Z0-9]/g,""),s):s}
-                    <span class="badge badge-secondary mx-3 text-sm">${i.length}</span>
-                </h3>
+            <div class="mb-10 last:mb-0">
+                <div class="flex items-center gap-3 border-b-2 border-gray-200 pb-3 mb-5">
+                    <div class="bg-blue-100 text-blue-600 w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
+                        <i class="fas fa-folder-open text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 m-0">
+                        ${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.moduleName."+s.replace(/[^a-zA-Z0-9]/g,""),s):s}
+                    </h3>
+                    <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold border border-gray-200 shadow-sm">${i.length}</span>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                     ${i.map(a=>{const l=e.find(d=>d.code===a.defaultCode||d.documentName===a.name);let c=null;if(l){const d=t.filter(r=>r.documentCodeId===l.id&&(r.isActive===!0||r.isActive==="true"));d.length>0&&(d.sort((r,u)=>new Date(u.issueDate||0)-new Date(r.issueDate||0)),c=d[0])}return`
-                        <div class="bg-white border ${l?"border-emerald-200":"border-rose-200"} rounded-xl p-5 hover:shadow-xl transition-all duration-300 flex flex-col h-full relative z-0">
-                            <!-- Status Indicator Line -->
-                            <div class="absolute top-0 bottom-0 right-0 w-1.5 ${l?"bg-emerald-500":"bg-rose-500"} rtl:right-0 ltr:left-0 rounded-r-xl rtl:rounded-r-xl ltr:rounded-l-xl"></div>
+                        <div class="bg-white border border-gray-200 hover:border-blue-300 rounded-xl p-4 hover:shadow-lg transition-all duration-300 flex flex-col h-full relative group">
+                            <!-- Indicator -->
+                            <div class="absolute top-0 rtl:right-0 ltr:left-0 w-1.5 h-full ${l?"bg-emerald-500":"bg-rose-500"} rtl:rounded-r-xl ltr:rounded-l-xl opacity-80 group-hover:opacity-100 transition-opacity"></div>
                             
-                            <!-- Header: Title and Badge -->
-                            <div class="flex items-start justify-between gap-3 mb-4 pl-1 rtl:pr-2 ltr:pl-2">
-                                <h4 class="font-bold text-gray-800 text-base md:text-lg leading-snug m-0">
-                                    ${typeof I18n<"u"?I18n.t(a.i18nKey,a.name):a.name}
-                                </h4>
-                                <div class="shrink-0 pt-0.5">
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${l?"bg-emerald-100 text-emerald-700":"bg-rose-100 text-rose-700"}">
-                                        ${l?'<i class="fas fa-check-circle"></i> '+(typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.coded","\u0645\u0643\u0648\u062F"):"\u0645\u0643\u0648\u062F"):'<i class="fas fa-times-circle"></i> '+(typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.notCoded","\u063A\u064A\u0631 \u0645\u0639\u0631\u0651\u0641"):"\u063A\u064A\u0631 \u0645\u0639\u0631\u0651\u0641")}
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <!-- Meta Properties -->
-                            <div class="flex flex-col gap-2 mb-5 flex-1">
-                                <!-- Module & Type -->
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div class="flex flex-col bg-gray-50 rounded-lg p-2.5 border border-gray-100 justify-center">
-                                        <span class="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5 font-semibold"><i class="fas fa-puzzle-piece mx-1"></i>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.module","\u0627\u0644\u0642\u0633\u0645"):"\u0627\u0644\u0642\u0633\u0645"}</span>
-                                        <span class="text-xs font-bold text-gray-700 truncate">${a.department}</span>
-                                    </div>
-                                    <div class="flex flex-col bg-gray-50 rounded-lg p-2.5 border border-gray-100 justify-center">
-                                        <span class="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5 font-semibold"><i class="fas fa-file mx-1"></i>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.formType","\u0627\u0644\u0646\u0648\u0639"):"\u0627\u0644\u0646\u0648\u0639"}</span>
-                                        <span class="text-xs font-bold text-gray-700 truncate">${a.type}</span>
+                            <div class="rtl:pr-3 ltr:pl-3 flex flex-col h-full">
+                                <!-- Title and Status -->
+                                <div class="flex flex-col gap-2.5 mb-4">
+                                    <h4 class="font-bold text-gray-800 text-base leading-snug m-0">${typeof I18n<"u"?I18n.t(a.i18nKey,a.name):a.name}</h4>
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold ${l?"bg-emerald-50 text-emerald-700 border border-emerald-100":"bg-rose-50 text-rose-700 border border-rose-100"}">
+                                            ${l?'<i class="fas fa-check-circle"></i> '+(typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.coded","\u0645\u0643\u0648\u062F"):"\u0645\u0643\u0648\u062F"):'<i class="fas fa-times-circle"></i> '+(typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.notCoded","\u063A\u064A\u0631 \u0645\u0639\u0631\u0651\u0641"):"\u063A\u064A\u0631 \u0645\u0639\u0631\u0651\u0641")}
+                                        </span>
+                                        <span class="inline-flex items-center gap-1.5 text-[11px] text-gray-600 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded font-bold">
+                                            <i class="fas fa-tag text-gray-400"></i> ${a.type}
+                                        </span>
+                                        <span class="inline-flex items-center gap-1.5 text-[11px] text-gray-600 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded font-bold">
+                                            <i class="fas fa-puzzle-piece text-gray-400"></i> ${a.department}
+                                        </span>
                                     </div>
                                 </div>
-
-                                ${l?`
-                                    <div class="flex flex-col bg-blue-50/50 rounded-lg p-2.5 border border-blue-100/50 mt-1">
-                                        <div class="flex justify-between items-center w-full">
-                                            <span class="text-[11px] text-gray-500 font-semibold"><i class="fas fa-hashtag text-blue-400 mx-1"></i>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.code","\u0627\u0644\u0643\u0648\u062F"):"\u0627\u0644\u0643\u0648\u062F"}</span>
-                                            <span class="font-mono text-xs font-bold text-blue-700 bg-white px-2 py-0.5 rounded shadow-sm border border-blue-100">${Utils.escapeHTML(l.code||"")}</span>
+                                
+                                <!-- Meta/Warning Area -->
+                                <div class="flex-1 flex flex-col justify-center mb-5">
+                                    ${l?`
+                                        <div class="space-y-2">
+                                            <div class="flex items-center justify-between text-sm bg-blue-50/30 rounded-lg px-3 py-2.5 border border-blue-100/50">
+                                                <span class="text-gray-500 text-xs font-semibold"><i class="fas fa-hashtag mx-1 text-blue-400"></i>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.code","\u0627\u0644\u0643\u0648\u062F"):"\u0627\u0644\u0643\u0648\u062F"}</span>
+                                                <span class="font-mono font-bold text-blue-700 bg-white px-2 py-0.5 rounded shadow-sm border border-blue-100">${Utils.escapeHTML(l.code||"")}</span>
+                                            </div>
+                                            <div class="flex items-center justify-between text-sm bg-purple-50/30 rounded-lg px-3 py-2.5 border border-purple-100/50">
+                                                <span class="text-gray-500 text-xs font-semibold"><i class="fas fa-code-branch mx-1 text-purple-400"></i>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.version","\u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</span>
+                                                ${c?`<span class="font-bold text-purple-700 bg-white border border-purple-100 shadow-sm px-2 py-0.5 rounded text-xs">v${c.versionNumber}</span>`:`<span class="text-rose-500 text-[10px] font-bold bg-white px-2 py-0.5 rounded border border-rose-100 shadow-sm">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.noVersion","\u0644\u0627 \u064A\u0648\u062C\u062F"):"\u0644\u0627 \u064A\u0648\u062C\u062F"}</span>`}
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="flex flex-col bg-purple-50/50 rounded-lg p-2.5 border border-purple-100/50">
-                                        <div class="flex justify-between items-center w-full">
-                                            <span class="text-[11px] text-gray-500 font-semibold"><i class="fas fa-code-branch text-purple-400 mx-1"></i>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.version","\u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</span>
-                                            ${c?`<span class="text-xs font-bold text-purple-700 bg-white px-2 py-0.5 rounded shadow-sm border border-purple-100">v${c.versionNumber}</span>`:`<span class="text-[10px] text-rose-500 font-bold bg-white px-2 py-0.5 rounded shadow-sm">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.noVersion","\u0644\u0627 \u064A\u0648\u062C\u062F \u0625\u0635\u062F\u0627\u0631 \u0646\u0634\u0637"):"\u0644\u0627 \u064A\u0648\u062C\u062F \u0625\u0635\u062F\u0627\u0631 \u0646\u0634\u0637"}</span>`}
+                                    `:`
+                                        <div class="flex items-start gap-2.5 text-rose-600 bg-rose-50 p-3 rounded-lg border border-rose-100">
+                                            <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 opacity-80 text-sm"></i>
+                                            <span class="text-[11px] leading-relaxed font-medium">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.warning","\u064A\u0631\u062C\u0649 \u062A\u0639\u064A\u064A\u0646 \u0643\u0648\u062F \u0644\u0647\u0630\u0627 \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0644\u0643\u064A \u064A\u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F\u0647 \u0648\u0627\u0633\u062A\u062E\u062F\u0627\u0645\u0647 \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D."):"\u064A\u0631\u062C\u0649 \u062A\u0639\u064A\u064A\u0646 \u0643\u0648\u062F \u0644\u0647\u0630\u0627 \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0644\u0643\u064A \u064A\u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F\u0647 \u0648\u0627\u0633\u062A\u062E\u062F\u0627\u0645\u0647 \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D."}</span>
                                         </div>
-                                    </div>
-                                `:`
-                                    <div class="flex items-center gap-3 bg-rose-50/50 text-rose-600 rounded-lg p-3 border border-rose-100 mt-2 h-full">
-                                        <i class="fas fa-exclamation-triangle text-xl opacity-70 shrink-0 mx-1"></i>
-                                        <span class="text-[11px] leading-tight font-medium">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.warning","\u0642\u0645 \u0628\u062A\u0639\u064A\u064A\u0646 \u0643\u0648\u062F \u0644\u064A\u0638\u0647\u0631 \u0641\u064A \u062A\u0630\u064A\u064A\u0644 \u0647\u0630\u0627 \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0639\u0646\u062F \u0627\u0644\u0637\u0628\u0627\u0639\u0629 \u0648\u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645"):"\u0642\u0645 \u0628\u062A\u0639\u064A\u064A\u0646 \u0643\u0648\u062F \u0644\u064A\u0638\u0647\u0631 \u0641\u064A \u062A\u0630\u064A\u064A\u0644 \u0647\u0630\u0627 \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0639\u0646\u062F \u0627\u0644\u0637\u0628\u0627\u0639\u0629 \u0648\u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645"}</span>
-                                    </div>
-                                `}
-                            </div>
-                            
-                            <!-- Action Button -->
-                            <div class="mt-auto pt-3 border-t border-gray-100">
-                                ${l?`
-                                    <button class="w-full flex items-center justify-center gap-2 py-2 px-4 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg text-sm font-bold transition-colors border border-gray-200" onclick="ISO.viewDocumentVersions('${l.id}')" title="${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.history","\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A"):"\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A"}">
-                                        <i class="fas fa-history text-gray-400"></i>
-                                        <span>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.history","\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A"):"\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A"}</span>
-                                    </button>
-                                `:`
-                                    <button class="w-full flex items-center justify-center gap-2 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-all shadow-sm hover:shadow-md border border-blue-600" onclick="ISO.quickAssignFormCode('${a.name}', '${a.defaultCode}', '${a.type}', '${a.department}')" title="${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.assignCode","\u0625\u0646\u0634\u0627\u0621 \u0643\u0648\u062F \u0633\u0631\u064A\u0639"):"\u0625\u0646\u0634\u0627\u0621 \u0643\u0648\u062F \u0633\u0631\u064A\u0639"}">
-                                        <i class="fas fa-plus-circle opacity-80"></i>
-                                        <span>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.assignNow","\u062A\u0639\u064A\u064A\u0646 \u0643\u0648\u062F \u0627\u0644\u0622\u0646"):"\u062A\u0639\u064A\u064A\u0646 \u0643\u0648\u062F \u0627\u0644\u0622\u0646"}</span>
-                                    </button>
-                                `}
+                                    `}
+                                </div>
+                                
+                                <!-- Actions -->
+                                <div class="mt-auto">
+                                    ${l?`
+                                        <button class="w-full flex items-center justify-center gap-2 py-2 px-4 bg-white hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-bold transition-colors border border-gray-200 shadow-sm" onclick="ISO.viewDocumentVersions('${l.id}')" title="${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.history","\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A"):"\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A"}">
+                                            <i class="fas fa-history text-gray-400"></i>
+                                            <span>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.history","\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A"):"\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A"}</span>
+                                        </button>
+                                    `:`
+                                        <button class="w-full flex items-center justify-center gap-2 py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg text-sm font-bold transition-all shadow-sm hover:shadow-md border border-transparent" onclick="ISO.quickAssignFormCode('${a.name}', '${a.defaultCode}', '${a.type}', '${a.department}')" title="${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.assignCode","\u0625\u0646\u0634\u0627\u0621 \u0643\u0648\u062F \u0633\u0631\u064A\u0639"):"\u0625\u0646\u0634\u0627\u0621 \u0643\u0648\u062F \u0633\u0631\u064A\u0639"}">
+                                            <i class="fas fa-plus-circle opacity-90"></i>
+                                            <span>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.assignNow","\u062A\u0639\u064A\u064A\u0646 \u0643\u0648\u062F \u0627\u0644\u0622\u0646"):"\u062A\u0639\u064A\u064A\u0646 \u0643\u0648\u062F \u0627\u0644\u0622\u0646"}</span>
+                                        </button>
+                                    `}
+                                </div>
                             </div>
                         </div>
                         `}).join("")}
