@@ -1712,8 +1712,8 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                 margin: 0 !important;
                 padding: 0 !important;
                 background: #fff !important;
-                font-size: 9.5px !important;
-                line-height: 1.25 !important;
+                font-size: 9.8px !important;
+                line-height: 1.28 !important;
             }
             .ptw-manual-print {
                 width: ${this.PERMIT_A4_WIDTH_PX}px !important;
@@ -1724,10 +1724,10 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
             .ptw-a4-page {
                 width: ${this.PERMIT_A4_WIDTH_PX}px !important;
                 max-width: ${this.PERMIT_A4_WIDTH_PX}px !important;
-                height: 1040px !important;
-                min-height: 1040px !important;
+                height: 1115px !important;
+                min-height: 1115px !important;
                 box-sizing: border-box;
-                padding: 4px 6px 45px 6px !important;
+                padding: 4px 6px 55px 6px !important;
                 background: #fff;
                 overflow: hidden;
                 position: relative !important;
@@ -1755,8 +1755,8 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
             .manual-print-seq-badge .lbl { font-size: 8px; }
             .manual-print-seq-badge .val { font-size: 14px; letter-spacing: 1px; }
             .manual-print-paper-no { font-size: 10px; }
-            .ptw-manual-form-section { margin: 10px 0 !important; padding: 4px 6px !important; border-radius: 4px; border-width: 1.2px; page-break-inside: avoid !important; break-inside: avoid !important; }
-            .ptw-manual-form-section h3 { font-size: 9.5px; margin: 0 0 4px 0 !important; padding-bottom: 2px !important; gap: 4px; }
+            .ptw-manual-form-section { margin: 11px 0 !important; padding: 4.5px 7px !important; border-radius: 4px; border-width: 1.2px; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .ptw-manual-form-section h3 { font-size: 10px; margin: 0 0 4.5px 0 !important; padding-bottom: 2px !important; gap: 4px; }
             .manual-print-field { padding: 2.5px 3.5px; border-radius: 3px; }
             .manual-print-field .lbl { font-size: 7.8px; margin-bottom: 1px; }
             .manual-print-field .val { font-size: 8.8px; }
@@ -1764,7 +1764,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
             .manual-print-req-grid { gap: 3px; }
             .manual-print-req-item { font-size: 8.5px; padding: 2px 3px; border-radius: 3px; }
             .ptw-paper-grid-table { font-size: 8px; }
-            .ptw-paper-grid-table th, .ptw-paper-grid-table td { padding: 2px 2.5px; }
+            .ptw-paper-grid-table th, .ptw-paper-grid-table td { padding: 2px 2.8px; }
             .ptw-paper-grid-table thead th { font-size: 8.2px; }
             .ptw-manual-ppe-print-matrix, .ptw-manual-equipment-print-matrix { padding: 3px 3px; border-radius: 4px; }
             .ptw-manual-ppe-fixed-row, .ptw-manual-equipment-fixed-row { gap: 2px 1.5px; margin-bottom: 2px; }
@@ -1791,9 +1791,9 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
             .ptw-paper-grid-table .approval-sig-cell { min-height: 14px; }
             .ptw-paper-footer {
                 position: absolute !important;
-                bottom: 6px !important;
-                left: 6px !important;
-                right: 6px !important;
+                bottom: 8px !important;
+                left: 8px !important;
+                right: 8px !important;
                 margin-top: 0 !important;
                 border-top: 1px dashed #cbd5e1;
                 page-break-inside: avoid;
