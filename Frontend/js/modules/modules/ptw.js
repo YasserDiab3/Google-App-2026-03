@@ -7514,9 +7514,17 @@ const PTW = {
             .ptw-a4-page {
                 width: ${this.PERMIT_A4_WIDTH_PX}px !important;
                 max-width: ${this.PERMIT_A4_WIDTH_PX}px !important;
-                height: auto; min-height: 0; box-sizing: border-box;
-                padding: 4px 6px; background: #fff; overflow: hidden;
+                height: 1030px !important;
+                min-height: 1030px !important;
+                box-sizing: border-box;
+                padding: 4px 6px 60px 6px !important;
+                background: #fff;
+                overflow: hidden;
+                position: relative !important;
+                page-break-after: always;
+                break-after: page;
             }
+            .ptw-a4-page:last-child { page-break-after: auto; break-after: auto; }
             .ptw-paper-header { padding: 8px 10px; min-height: 0; border-radius: 8px; margin-bottom: 4px; }
             .ptw-paper-header-pdf { display: block; padding: 0; background: transparent; border: none; min-height: 0; margin-bottom: 4px; }
             .ptw-paper-header-table { width: 100%; border-collapse: collapse; table-layout: fixed; background: #1e3a5f; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.18); }
@@ -7571,7 +7579,16 @@ const PTW = {
             .manual-print-supervisor-card .val { font-size: 10px; min-height: 1.2em; }
             .ptw-paper-grid-table .approval-name-cell,
             .ptw-paper-grid-table .approval-sig-cell { min-height: 18px; }
-            .ptw-paper-footer { margin-top: 4px; padding-top: 4px; border-top: 1.5px solid #e0e7ff; page-break-inside: avoid; break-inside: avoid; }
+            .ptw-paper-footer {
+                position: absolute !important;
+                bottom: 6px !important;
+                left: 6px !important;
+                right: 6px !important;
+                margin-top: 0 !important;
+                border-top: 1.5px solid #e0e7ff;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
             .ptw-paper-footer-frame {
                 background: linear-gradient(135deg, rgba(59, 130, 246, 0.03), rgba(37, 99, 235, 0.05));
                 border: 1.5px solid rgba(59, 130, 246, 0.15); border-radius: 6px; padding: 4px 8px;
@@ -8203,7 +8220,7 @@ const PTW = {
     },
 
     async generateManualPermitPrintHTML(entry, options = {}) {
-        const pdfExport = options?.pdfExport === true;
+        const pdfExport = true; // Always force split and page styling for identical print/pdf layout
         const content = this.generateManualPermitPrintContent(entry);
         const displayNo = this.getPermitDisplayNumber(entry);
         
