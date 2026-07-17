@@ -7791,7 +7791,7 @@ const PTW = {
             }
             @media print {
                 body { padding: 6px; font-size: 10px; }
-                .ptw-manual-form-section { page-break-inside: auto; break-inside: auto; margin: 6px 0; padding: 10px; }
+                .ptw-manual-form-section { page-break-inside: avoid; break-inside: avoid; margin: 6px 0; padding: 10px; }
                 .manual-section-7 { page-break-before: always; break-before: page; }
                 .ptw-manual-ppe-fixed-row { gap: 6px 3px; }
                 .ptw-paper-footer { page-break-inside: avoid; break-inside: avoid; }
@@ -8150,7 +8150,7 @@ const PTW = {
     _splitManualPermitPrintPages_(content, header, footer, forPdf) {
         if (!forPdf) return `${header}${content}${footer}`;
         const wrapPage = (inner) => `<div class="ptw-a4-page">${inner}</div>`;
-        const breakMarkers = ['manual-section-4', 'manual-section-7', 'manual-section-9'];
+        const breakMarkers = ['manual-section-7'];
         const positions = breakMarkers
             .map((marker) => content.indexOf(`<div class="ptw-manual-form-section ${marker}">`))
             .filter((idx) => idx > 0)
