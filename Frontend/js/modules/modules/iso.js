@@ -1393,55 +1393,55 @@ const ISO = {
                 </div>
 
                 <!-- KPIs -->
-                <div class="row g-4 mb-4">
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #ef4444 !important;">
-                            <div class="card-body d-flex align-items-center">
-                                <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                    <i class="fas fa-exclamation-triangle fs-4"></i>
+                <div class="mb-4" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #ef4444 !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-danger bg-opacity-10 text-danger rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-exclamation-triangle fs-6"></i>
                                 </div>
                                 <div>
-                                    <h6 class="text-muted mb-1 small fw-bold">مخاطر عالية</h6>
-                                    <h3 class="mb-0 fw-bold text-dark">${highRisks}</h3>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">مخاطر عالية</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${highRisks}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #f59e0b !important;">
-                            <div class="card-body d-flex align-items-center">
-                                <div class="bg-warning bg-opacity-10 text-warning rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                    <i class="fas fa-exclamation-circle fs-4"></i>
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #f59e0b !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-warning bg-opacity-10 text-warning rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-exclamation-circle fs-6"></i>
                                 </div>
                                 <div>
-                                    <h6 class="text-muted mb-1 small fw-bold">مخاطر متوسطة</h6>
-                                    <h3 class="mb-0 fw-bold text-dark">${mediumRisks}</h3>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">مخاطر متوسطة</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${mediumRisks}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #10b981 !important;">
-                            <div class="card-body d-flex align-items-center">
-                                <div class="bg-success bg-opacity-10 text-success rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                    <i class="fas fa-shield-alt fs-4"></i>
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #10b981 !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-success bg-opacity-10 text-success rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-shield-alt fs-6"></i>
                                 </div>
                                 <div>
-                                    <h6 class="text-muted mb-1 small fw-bold">مخاطر منخفضة</h6>
-                                    <h3 class="mb-0 fw-bold text-dark">${lowRisks}</h3>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">مخاطر منخفضة</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${lowRisks}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #3b82f6 !important;">
-                            <div class="card-body d-flex align-items-center">
-                                <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                    <i class="fas fa-bullseye fs-4"></i>
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #3b82f6 !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-primary bg-opacity-10 text-primary rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-bullseye fs-6"></i>
                                 </div>
                                 <div>
-                                    <h6 class="text-muted mb-1 small fw-bold">أهداف مكتملة</h6>
-                                    <h3 class="mb-0 fw-bold text-dark">${completedObjectives} <span class="fs-6 text-muted fw-normal">من ${objectives.length}</span></h3>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">أهداف مكتملة</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${completedObjectives} <span style="font-size: 0.75rem; font-weight: normal; color: #6c757d;">من ${objectives.length}</span></div>
                                 </div>
                             </div>
                         </div>
@@ -1575,55 +1575,55 @@ const ISO = {
                 </div>
 
                 <!-- KPIs -->
-                <div class="row g-4 mb-4">
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #22c55e !important;">
-                            <div class="card-body d-flex align-items-center">
-                                <div class="bg-success bg-opacity-10 text-success rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                    <i class="fas fa-globe fs-4"></i>
+                <div class="mb-4" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #22c55e !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-success bg-opacity-10 text-success rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-globe fs-6"></i>
                                 </div>
                                 <div>
-                                    <h6 class="text-muted mb-1 small fw-bold">إجمالي الجوانب البيئية</h6>
-                                    <h3 class="mb-0 fw-bold text-dark">${aspects.length}</h3>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">إجمالي الجوانب البيئية</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${aspects.length}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #ef4444 !important;">
-                            <div class="card-body d-flex align-items-center">
-                                <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                    <i class="fas fa-exclamation-triangle fs-4"></i>
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #ef4444 !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-danger bg-opacity-10 text-danger rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-exclamation-triangle fs-6"></i>
                                 </div>
                                 <div>
-                                    <h6 class="text-muted mb-1 small fw-bold">جوانب ذات تأثير هام</h6>
-                                    <h3 class="mb-0 fw-bold text-dark">${significantAspects}</h3>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">جوانب تأثير هام</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${significantAspects}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #64748b !important;">
-                            <div class="card-body d-flex align-items-center">
-                                <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                    <i class="fas fa-smog fs-4"></i>
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #64748b !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-smog fs-6"></i>
                                 </div>
                                 <div>
-                                    <h6 class="text-muted mb-1 small fw-bold">سجلات الانبعاثات</h6>
-                                    <h3 class="mb-0 fw-bold text-dark">${totalEmissions}</h3>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">سجلات الانبعاثات</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${totalEmissions}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #eab308 !important;">
-                            <div class="card-body d-flex align-items-center">
-                                <div class="bg-warning bg-opacity-10 text-warning rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                    <i class="fas fa-trash-alt fs-4"></i>
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #eab308 !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-warning bg-opacity-10 text-warning rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-trash-alt fs-6"></i>
                                 </div>
                                 <div>
-                                    <h6 class="text-muted mb-1 small fw-bold">سجلات المخلفات</h6>
-                                    <h3 class="mb-0 fw-bold text-dark">${totalWaste}</h3>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">سجلات المخلفات</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${totalWaste}</div>
                                 </div>
                             </div>
                         </div>

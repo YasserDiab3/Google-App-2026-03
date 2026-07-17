@@ -767,55 +767,55 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                 </div>
 
                 <!-- KPIs -->
-                <div class="row g-4 mb-4">
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #ef4444 !important;">
-                            <div class="card-body d-flex align-items-center">
-                                <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                    <i class="fas fa-exclamation-triangle fs-4"></i>
+                <div class="mb-4" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #ef4444 !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-danger bg-opacity-10 text-danger rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-exclamation-triangle fs-6"></i>
                                 </div>
                                 <div>
-                                    <h6 class="text-muted mb-1 small fw-bold">\u0645\u062E\u0627\u0637\u0631 \u0639\u0627\u0644\u064A\u0629</h6>
-                                    <h3 class="mb-0 fw-bold text-dark">${o}</h3>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">\u0645\u062E\u0627\u0637\u0631 \u0639\u0627\u0644\u064A\u0629</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${o}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #f59e0b !important;">
-                            <div class="card-body d-flex align-items-center">
-                                <div class="bg-warning bg-opacity-10 text-warning rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                    <i class="fas fa-exclamation-circle fs-4"></i>
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #f59e0b !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-warning bg-opacity-10 text-warning rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-exclamation-circle fs-6"></i>
                                 </div>
                                 <div>
-                                    <h6 class="text-muted mb-1 small fw-bold">\u0645\u062E\u0627\u0637\u0631 \u0645\u062A\u0648\u0633\u0637\u0629</h6>
-                                    <h3 class="mb-0 fw-bold text-dark">${s}</h3>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">\u0645\u062E\u0627\u0637\u0631 \u0645\u062A\u0648\u0633\u0637\u0629</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${s}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #10b981 !important;">
-                            <div class="card-body d-flex align-items-center">
-                                <div class="bg-success bg-opacity-10 text-success rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                    <i class="fas fa-shield-alt fs-4"></i>
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #10b981 !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-success bg-opacity-10 text-success rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-shield-alt fs-6"></i>
                                 </div>
                                 <div>
-                                    <h6 class="text-muted mb-1 small fw-bold">\u0645\u062E\u0627\u0637\u0631 \u0645\u0646\u062E\u0641\u0636\u0629</h6>
-                                    <h3 class="mb-0 fw-bold text-dark">${n}</h3>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">\u0645\u062E\u0627\u0637\u0631 \u0645\u0646\u062E\u0641\u0636\u0629</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${n}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #3b82f6 !important;">
-                            <div class="card-body d-flex align-items-center">
-                                <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                    <i class="fas fa-bullseye fs-4"></i>
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #3b82f6 !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-primary bg-opacity-10 text-primary rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-bullseye fs-6"></i>
                                 </div>
                                 <div>
-                                    <h6 class="text-muted mb-1 small fw-bold">\u0623\u0647\u062F\u0627\u0641 \u0645\u0643\u062A\u0645\u0644\u0629</h6>
-                                    <h3 class="mb-0 fw-bold text-dark">${i} <span class="fs-6 text-muted fw-normal">\u0645\u0646 ${e.length}</span></h3>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">\u0623\u0647\u062F\u0627\u0641 \u0645\u0643\u062A\u0645\u0644\u0629</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${i} <span style="font-size: 0.75rem; font-weight: normal; color: #6c757d;">\u0645\u0646 ${e.length}</span></div>
                                 </div>
                             </div>
                         </div>
@@ -931,55 +931,55 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                 </div>
 
                 <!-- KPIs -->
-                <div class="row g-4 mb-4">
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #22c55e !important;">
-                            <div class="card-body d-flex align-items-center">
-                                <div class="bg-success bg-opacity-10 text-success rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                    <i class="fas fa-globe fs-4"></i>
+                <div class="mb-4" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #22c55e !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-success bg-opacity-10 text-success rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-globe fs-6"></i>
                                 </div>
                                 <div>
-                                    <h6 class="text-muted mb-1 small fw-bold">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u062C\u0648\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A\u0629</h6>
-                                    <h3 class="mb-0 fw-bold text-dark">${e.length}</h3>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u062C\u0648\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A\u0629</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${e.length}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #ef4444 !important;">
-                            <div class="card-body d-flex align-items-center">
-                                <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                    <i class="fas fa-exclamation-triangle fs-4"></i>
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #ef4444 !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-danger bg-opacity-10 text-danger rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-exclamation-triangle fs-6"></i>
                                 </div>
                                 <div>
-                                    <h6 class="text-muted mb-1 small fw-bold">\u062C\u0648\u0627\u0646\u0628 \u0630\u0627\u062A \u062A\u0623\u062B\u064A\u0631 \u0647\u0627\u0645</h6>
-                                    <h3 class="mb-0 fw-bold text-dark">${o}</h3>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">\u062C\u0648\u0627\u0646\u0628 \u062A\u0623\u062B\u064A\u0631 \u0647\u0627\u0645</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${o}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #64748b !important;">
-                            <div class="card-body d-flex align-items-center">
-                                <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                    <i class="fas fa-smog fs-4"></i>
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #64748b !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-smog fs-6"></i>
                                 </div>
                                 <div>
-                                    <h6 class="text-muted mb-1 small fw-bold">\u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0627\u0646\u0628\u0639\u0627\u062B\u0627\u062A</h6>
-                                    <h3 class="mb-0 fw-bold text-dark">${s}</h3>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">\u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0627\u0646\u0628\u0639\u0627\u062B\u0627\u062A</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${s}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; border-bottom: 4px solid #eab308 !important;">
-                            <div class="card-body d-flex align-items-center">
-                                <div class="bg-warning bg-opacity-10 text-warning rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                    <i class="fas fa-trash-alt fs-4"></i>
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #eab308 !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-warning bg-opacity-10 text-warning rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-trash-alt fs-6"></i>
                                 </div>
                                 <div>
-                                    <h6 class="text-muted mb-1 small fw-bold">\u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u062E\u0644\u0641\u0627\u062A</h6>
-                                    <h3 class="mb-0 fw-bold text-dark">${n}</h3>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">\u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u062E\u0644\u0641\u0627\u062A</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${n}</div>
                                 </div>
                             </div>
                         </div>
