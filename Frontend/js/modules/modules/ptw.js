@@ -8219,7 +8219,7 @@ const PTW = {
             ? this._splitManualPermitPrintPages_(content, header, footer, true)
             : `${header}${content}${footer}`;
         const exportStyles = pdfExport ? this.getManualPermitPdfExportTechnicalStyles_() : '';
-        const styleBlock = `${this.getManualPermitPrintStyles(false)}${exportStyles}`;
+        const styleBlock = `${this.getManualPermitPrintStyles(pdfExport)}${exportStyles}`;
 
         const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
