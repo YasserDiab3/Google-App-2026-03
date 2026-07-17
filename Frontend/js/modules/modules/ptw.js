@@ -7496,7 +7496,7 @@ const PTW = {
 
     getManualPermitPrintStyles(forPdfExport = false) {
         const a4Overrides = forPdfExport ? `
-            @page { size: A4 portrait; margin: 4mm; }
+            @page { size: A4 portrait; margin: 5mm; }
             html, body {
                 width: ${this.PERMIT_A4_WIDTH_PX}px !important;
                 max-width: ${this.PERMIT_A4_WIDTH_PX}px !important;
@@ -7509,82 +7509,82 @@ const PTW = {
                 width: ${this.PERMIT_A4_WIDTH_PX}px !important;
                 max-width: ${this.PERMIT_A4_WIDTH_PX}px !important;
                 margin: 0 !important;
-                padding: 2px 4px !important;
+                padding: 4px 6px !important;
             }
             .ptw-a4-page {
                 width: ${this.PERMIT_A4_WIDTH_PX}px !important;
                 max-width: ${this.PERMIT_A4_WIDTH_PX}px !important;
                 height: auto; min-height: 0; box-sizing: border-box;
-                padding: 2px 4px; background: #fff; overflow: hidden;
+                padding: 4px 6px; background: #fff; overflow: hidden;
             }
-            .ptw-paper-header { padding: 6px 8px; min-height: 0; border-radius: 6px; margin-bottom: 4px; }
-            .ptw-paper-header-pdf { display: block; padding: 0; background: transparent; border: none; min-height: 0; margin-bottom: 4px; }
-            .ptw-paper-header-table { width: 100%; border-collapse: collapse; table-layout: fixed; background: #1e3a5f; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.18); }
-            .ptw-ph-cell { padding: 5px 6px; vertical-align: middle; color: #fff; letter-spacing: 0 !important; word-spacing: normal; }
+            .ptw-paper-header { padding: 8px 10px; min-height: 0; border-radius: 8px; margin-bottom: 6px; }
+            .ptw-paper-header-pdf { display: block; padding: 0; background: transparent; border: none; min-height: 0; margin-bottom: 6px; }
+            .ptw-paper-header-table { width: 100%; border-collapse: collapse; table-layout: fixed; background: #1e3a5f; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.18); }
+            .ptw-ph-cell { padding: 6px 8px; vertical-align: middle; color: #fff; letter-spacing: 0 !important; word-spacing: normal; }
             .ptw-ph-right { width: 38%; text-align: right; }
             .ptw-ph-center { width: 32%; text-align: center; }
             .ptw-ph-left { width: 30%; text-align: left; }
-            .ptw-paper-header-company { letter-spacing: 0 !important; word-break: keep-all; white-space: nowrap; unicode-bidi: embed; font-size: 12px; }
+            .ptw-paper-header-company { letter-spacing: 0 !important; word-break: keep-all; white-space: nowrap; unicode-bidi: embed; font-size: 13px; }
             .ptw-paper-header-dept, .ptw-paper-header-form-title { letter-spacing: 0 !important; word-break: normal; white-space: normal; unicode-bidi: embed; }
-            .ptw-paper-header-form-subtitle { font-size: 9px; letter-spacing: 0.3px !important; }
-            .ptw-paper-header-form-title { font-size: 13px; padding-bottom: 2px; margin-bottom: 2px; }
-            .ptw-paper-header-dept { font-size: 8px; }
-            .ptw-paper-header-logo { max-height: 36px; max-width: 80px; }
-            .manual-print-disclaimer-wrap { margin-bottom: 3px; border-width: 1px; }
-            .manual-print-disclaimer-text { font-size: 9px; line-height: 1.4; padding: 3px 6px; }
-            .manual-print-permit-no { padding: 3px; gap: 3px; }
-            .manual-print-seq-badge { padding: 3px 10px; border-radius: 4px; }
-            .manual-print-seq-badge .lbl { font-size: 8px; }
-            .manual-print-seq-badge .val { font-size: 14px; letter-spacing: 1px; }
-            .manual-print-paper-no { font-size: 10px; }
-            .ptw-manual-form-section { margin: 2px 0 !important; padding: 3px 5px !important; border-radius: 4px; border-width: 1px; page-break-inside: avoid !important; break-inside: avoid !important; }
-            .ptw-manual-form-section h3 { font-size: 10px; margin: 0 0 3px 0 !important; padding-bottom: 2px !important; gap: 4px; }
-            .manual-print-field { padding: 2px 4px; border-radius: 3px; }
-            .manual-print-field .lbl { font-size: 8px; margin-bottom: 1px; }
-            .manual-print-field .val { font-size: 9px; }
-            .manual-print-grid { gap: 3px; }
-            .manual-print-req-grid { gap: 3px; }
-            .manual-print-req-item { font-size: 8px; padding: 2px 3px; border-radius: 3px; }
-            .ptw-paper-grid-table { font-size: 8px; }
-            .ptw-paper-grid-table th, .ptw-paper-grid-table td { padding: 1px 2px; }
-            .ptw-paper-grid-table thead th { font-size: 8px; }
-            .ptw-manual-ppe-print-matrix, .ptw-manual-equipment-print-matrix { padding: 4px 4px; border-radius: 4px; }
-            .ptw-manual-ppe-fixed-row, .ptw-manual-equipment-fixed-row { gap: 2px 1px; margin-bottom: 1px; }
-            .ptw-manual-ppe-cell, .ptw-manual-equipment-cell { font-size: 7.5px; padding: 1px 2px; min-height: 14px; line-height: 1.15; letter-spacing: 0; border-width: 1px; border-radius: 3px; gap: 2px; }
-            .ppe-checkbox, .equipment-checkbox { width: 8px; height: 8px; border-width: 1px; }
-            .ppe-checkbox.checked::after, .equipment-checkbox.checked::after { left: 1px; top: 0; width: 3px; height: 5px; border-width: 0 1.5px 1.5px 0; }
-            .ptw-manual-ppe-notes-print, .ptw-manual-equipment-notes-print { margin-top: 2px; padding: 3px 4px; border-radius: 4px; }
-            .ptw-manual-ppe-notes-print .lbl, .ptw-manual-equipment-notes-print .lbl { font-size: 8px; margin-bottom: 1px; }
-            .ptw-manual-ppe-notes-print .val, .ptw-manual-equipment-notes-print .val { font-size: 9px; }
-            .manual-risk-matrix { font-size: 7.5px; }
-            .manual-risk-matrix th, .manual-risk-matrix td { padding: 1px; }
-            .manual-risk-matrix .risk-cell { padding: 3px 1px; }
-            .manual-risk-summary { margin-top: 3px; padding: 3px 5px; gap: 6px; border-radius: 4px; }
-            .manual-risk-badge { width: 20px; height: 20px; font-size: 9px; }
-            .manual-risk-summary div { font-size: 8px; }
-            .manual-work-block { padding: 3px 4px; margin-bottom: 2px; border-radius: 4px; }
-            .manual-work-block h4 { font-size: 9px; margin: 0 0 2px 0; }
-            .manual-status-pill { padding: 2px 6px; font-size: 9px; }
-            .manual-print-supervisors-grid { gap: 4px; }
-            .manual-print-supervisor-card { padding: 3px 5px; border-radius: 4px; }
-            .manual-print-supervisor-card .lbl { font-size: 8px; margin-bottom: 2px; }
-            .manual-print-supervisor-card .val { font-size: 9px; min-height: 1em; }
+            .ptw-paper-header-form-subtitle { font-size: 10px; letter-spacing: 0.3px !important; }
+            .ptw-paper-header-form-title { font-size: 14px; padding-bottom: 3px; margin-bottom: 3px; }
+            .ptw-paper-header-dept { font-size: 9px; }
+            .ptw-paper-header-logo { max-height: 42px; max-width: 90px; }
+            .manual-print-disclaimer-wrap { margin-bottom: 6px; border-width: 1.5px; }
+            .manual-print-disclaimer-text { font-size: 10px; line-height: 1.5; padding: 5px 8px; }
+            .manual-print-permit-no { padding: 5px; gap: 4px; }
+            .manual-print-seq-badge { padding: 4px 14px; border-radius: 6px; }
+            .manual-print-seq-badge .lbl { font-size: 9px; }
+            .manual-print-seq-badge .val { font-size: 16px; letter-spacing: 1px; }
+            .manual-print-paper-no { font-size: 11px; }
+            .ptw-manual-form-section { margin: 6px 0 !important; padding: 6px 10px !important; border-radius: 6px; border-width: 1.5px; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .ptw-manual-form-section h3 { font-size: 11px; margin: 0 0 5px 0 !important; padding-bottom: 3px !important; gap: 6px; }
+            .manual-print-field { padding: 4px 6px; border-radius: 4px; }
+            .manual-print-field .lbl { font-size: 8.5px; margin-bottom: 1px; }
+            .manual-print-field .val { font-size: 10px; }
+            .manual-print-grid { gap: 5px; }
+            .manual-print-req-grid { gap: 5px; }
+            .manual-print-req-item { font-size: 9px; padding: 3px 5px; border-radius: 4px; }
+            .ptw-paper-grid-table { font-size: 9px; }
+            .ptw-paper-grid-table th, .ptw-paper-grid-table td { padding: 3px 4px; }
+            .ptw-paper-grid-table thead th { font-size: 9px; }
+            .ptw-manual-ppe-print-matrix, .ptw-manual-equipment-print-matrix { padding: 6px 6px; border-radius: 6px; }
+            .ptw-manual-ppe-fixed-row, .ptw-manual-equipment-fixed-row { gap: 3px 2px; margin-bottom: 2px; }
+            .ptw-manual-ppe-cell, .ptw-manual-equipment-cell { font-size: 8px; padding: 2px 3px; min-height: 20px; line-height: 1.25; letter-spacing: 0; border-width: 1.2px; border-radius: 4px; gap: 3px; }
+            .ppe-checkbox, .equipment-checkbox { width: 10px; height: 10px; border-width: 1.2px; }
+            .ppe-checkbox.checked::after, .equipment-checkbox.checked::after { left: 2px; top: 0; width: 3px; height: 6px; border-width: 0 2px 2px 0; }
+            .ptw-manual-ppe-notes-print, .ptw-manual-equipment-notes-print { margin-top: 4px; padding: 4px 6px; border-radius: 6px; }
+            .ptw-manual-ppe-notes-print .lbl, .ptw-manual-equipment-notes-print .lbl { font-size: 9px; margin-bottom: 2px; }
+            .ptw-manual-ppe-notes-print .val, .ptw-manual-equipment-notes-print .val { font-size: 10px; }
+            .manual-risk-matrix { font-size: 8px; }
+            .manual-risk-matrix th, .manual-risk-matrix td { padding: 2px; }
+            .manual-risk-matrix .risk-cell { padding: 4px 2px; }
+            .manual-risk-summary { margin-top: 4px; padding: 4px 6px; gap: 8px; border-radius: 6px; }
+            .manual-risk-badge { width: 28px; height: 28px; font-size: 11px; }
+            .manual-risk-summary div { font-size: 9px; }
+            .manual-work-block { padding: 4px 6px; margin-bottom: 3px; border-radius: 6px; }
+            .manual-work-block h4 { font-size: 10px; margin: 0 0 3px 0; }
+            .manual-status-pill { padding: 3px 8px; font-size: 10px; }
+            .manual-print-supervisors-grid { gap: 6px; }
+            .manual-print-supervisor-card { padding: 4px 6px; border-radius: 6px; }
+            .manual-print-supervisor-card .lbl { font-size: 9px; margin-bottom: 3px; }
+            .manual-print-supervisor-card .val { font-size: 10px; min-height: 1.2em; }
             .ptw-paper-grid-table .approval-name-cell,
-            .ptw-paper-grid-table .approval-sig-cell { min-height: 16px; }
-            .ptw-paper-footer { margin-top: 3px; padding-top: 2px; border-top: 1px solid #e0e7ff; page-break-inside: avoid; break-inside: avoid; }
+            .ptw-paper-grid-table .approval-sig-cell { min-height: 20px; }
+            .ptw-paper-footer { margin-top: 8px; padding-top: 4px; border-top: 1.5px solid #e0e7ff; page-break-inside: avoid; break-inside: avoid; }
             .ptw-paper-footer-frame {
                 background: linear-gradient(135deg, rgba(59, 130, 246, 0.03), rgba(37, 99, 235, 0.05));
-                border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 4px; padding: 3px 6px;
+                border: 1.5px solid rgba(59, 130, 246, 0.15); border-radius: 6px; padding: 4px 8px;
             }
             .ptw-paper-footer-meta {
-                display: flex; flex-wrap: wrap; justify-content: space-between; gap: 3px 6px;
-                font-size: 8px; color: #475569; font-weight: 600; padding-bottom: 3px;
+                display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px;
+                font-size: 9px; color: #475569; font-weight: 600; padding-bottom: 4px;
                 border-bottom: 1px dashed rgba(148, 163, 184, 0.45); letter-spacing: 0;
             }
             .ptw-pf-item { white-space: nowrap; }
             .ptw-paper-footer-company {
-                display: flex; flex-direction: column; align-items: center; gap: 1px;
-                margin-top: 3px; font-size: 8px; color: #334155; font-weight: 600; letter-spacing: 0;
+                display: flex; flex-direction: column; align-items: center; gap: 2px;
+                margin-top: 4px; font-size: 9px; color: #334155; font-weight: 600; letter-spacing: 0;
             }
         ` : '';
         return `
@@ -8161,7 +8161,7 @@ const PTW = {
         if (splitPos <= 0) {
             return wrapPage(`${header}${content}${footer}`);
         }
-        const page1 = wrapPage(`${header}${content.slice(0, splitPos)}`);
+        const page1 = wrapPage(`${header}${content.slice(0, splitPos)}${footer}`);
         const page2 = wrapPage(`${content.slice(splitPos)}${footer}`);
         return `${page1}${page2}`;
     },
