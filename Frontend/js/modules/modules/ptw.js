@@ -1745,15 +1745,18 @@ const PTW = {
 
     sortPermitRecordsNewestFirst(records) {
         if (!Array.isArray(records)) return [];
-        return [...records].sort((a, b) => {
-            const ka = this.getPermitRecordSortKey(a);
-            const kb = this.getPermitRecordSortKey(b);
+        // استخدام Schwartzian transform لتسريع عملية الفرز ومنع تجمد الصفحة
+        const mapped = records.map(r => ({ record: r, key: this.getPermitRecordSortKey(r) }));
+        mapped.sort((a, b) => {
+            const ka = a.key;
+            const kb = b.key;
             if (kb.seq !== ka.seq) return kb.seq - ka.seq;
             if (kb.createdAt !== ka.createdAt) return kb.createdAt - ka.createdAt;
             if (kb.startAt !== ka.startAt) return kb.startAt - ka.startAt;
             if (kb.updatedAt !== ka.updatedAt) return kb.updatedAt - ka.updatedAt;
-            return String(b.id || b.permitId || '').localeCompare(String(a.id || a.permitId || ''), 'en', { numeric: true });
+            return String(b.record.id || b.record.permitId || '').localeCompare(String(a.record.id || a.record.permitId || ''), 'en', { numeric: true });
         });
+        return mapped.map(m => m.record);
     },
 
     getRegistrySanitizedDataset() {
