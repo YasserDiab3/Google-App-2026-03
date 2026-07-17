@@ -7792,6 +7792,9 @@ const PTW = {
                 .manual-section-7 { page-break-before: always; break-before: page; }
                 .ptw-manual-ppe-fixed-row { gap: 6px 3px; }
                 .ptw-paper-footer { page-break-inside: avoid; break-inside: avoid; }
+                table, .manual-risk-matrix { page-break-inside: avoid; break-inside: avoid; }
+                tr, td, th { page-break-inside: avoid; break-inside: avoid; }
+                .ptw-paper-grid-table { page-break-inside: avoid; break-inside: avoid; }
             }
             ${a4Overrides}
         `;
@@ -8146,7 +8149,7 @@ const PTW = {
         const wrapPage = (inner) => `<div class="ptw-a4-page">${inner}</div>`;
         const breakMarkers = ['manual-section-4', 'manual-section-7', 'manual-section-9'];
         const positions = breakMarkers
-            .map((marker) => content.indexOf(marker))
+            .map((marker) => content.indexOf(`<div class="ptw-manual-form-section ${marker}">`))
             .filter((idx) => idx > 0)
             .sort((a, b) => a - b);
         const uniquePositions = [...new Set(positions)];
