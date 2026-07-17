@@ -2352,17 +2352,18 @@ const ISO = {
             const forms = groupedForms[moduleName];
             
             return `
-            <div class="mb-10 last:mb-0">
-                <div class="flex items-center gap-3 border-b-2 border-gray-200 pb-3 mb-5">
-                    <div class="bg-blue-100 text-blue-600 w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
-                        <i class="fas fa-folder-open text-xl"></i>
+            <div class="mb-5">
+                <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-4" style="border-color: #3b82f6 !important; border-bottom-width: 2px !important;">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-folder-open text-primary fs-5"></i>
+                        <h4 class="font-bold text-gray-800 m-0">
+                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.moduleName.' + moduleName.replace(/[^a-zA-Z0-9]/g, ''), moduleName) : moduleName}
+                        </h4>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-800 m-0">
-                        ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.moduleName.' + moduleName.replace(/[^a-zA-Z0-9]/g, ''), moduleName) : moduleName}
-                    </h3>
-                    <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold border border-gray-200 shadow-sm">${forms.length}</span>
+                    <span class="badge bg-secondary rounded-pill shadow-sm">${forms.length}</span>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                
+                <div class="row g-4 mb-4">
                     ${forms.map(form => {
                         const matchedCode = documentCodes.find(c => c.code === form.defaultCode || c.documentName === form.name);
                         let activeVersion = null;
@@ -2375,61 +2376,62 @@ const ISO = {
                         }
                         
                         return `
-                        <div class="bg-white border border-gray-200 hover:border-blue-300 rounded-xl p-4 hover:shadow-lg transition-all duration-300 flex flex-col h-full relative group">
-                            <!-- Indicator -->
-                            <div class="absolute top-0 rtl:right-0 ltr:left-0 w-1.5 h-full ${matchedCode ? 'bg-emerald-500' : 'bg-rose-500'} rtl:rounded-r-xl ltr:rounded-l-xl opacity-80 group-hover:opacity-100 transition-opacity"></div>
-                            
-                            <div class="rtl:pr-3 ltr:pl-3 flex flex-col h-full">
-                                <!-- Title and Status -->
-                                <div class="flex flex-col gap-2.5 mb-4">
-                                    <h4 class="font-bold text-gray-800 text-base leading-snug m-0">${typeof I18n !== 'undefined' ? I18n.t(form.i18nKey, form.name) : form.name}</h4>
-                                    <div class="flex items-center gap-2 flex-wrap">
-                                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold ${matchedCode ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'}">
-                                            ${matchedCode ? '<i class="fas fa-check-circle"></i> ' + (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.coded', 'مكود') : 'مكود') : '<i class="fas fa-times-circle"></i> ' + (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.notCoded', 'غير معرّف') : 'غير معرّف')}
+                        <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+                            <div class="card h-100 border-0 shadow-sm hover-shadow transition-all relative overflow-hidden">
+                                <!-- Indicator -->
+                                <div class="position-absolute top-0 bottom-0 ${matchedCode ? 'bg-success' : 'bg-danger'}" style="width: 4px; ${document.dir === 'rtl' ? 'right: 0;' : 'left: 0;'}"></div>
+                                
+                                <div class="card-body d-flex flex-column" style="${document.dir === 'rtl' ? 'padding-right: 1.25rem;' : 'padding-left: 1.25rem;'}">
+                                    <!-- Title -->
+                                    <h5 class="card-title font-bold text-gray-800 mb-3" style="line-height: 1.4;">${typeof I18n !== 'undefined' ? I18n.t(form.i18nKey, form.name) : form.name}</h5>
+                                    
+                                    <!-- Badges -->
+                                    <div class="d-flex flex-wrap gap-2 mb-4">
+                                        <span class="badge ${matchedCode ? 'bg-success' : 'bg-danger'} d-flex align-items-center">
+                                            <i class="fas ${matchedCode ? 'fa-check-circle' : 'fa-times-circle'} mx-1"></i>
+                                            ${matchedCode ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.coded', 'مكود') : 'مكود') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.notCoded', 'غير معرّف') : 'غير معرّف')}
                                         </span>
-                                        <span class="inline-flex items-center gap-1.5 text-[11px] text-gray-600 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded font-bold">
-                                            <i class="fas fa-tag text-gray-400"></i> ${form.type}
+                                        <span class="badge bg-light text-dark border d-flex align-items-center">
+                                            <i class="fas fa-tag text-secondary mx-1"></i> ${form.type}
                                         </span>
-                                        <span class="inline-flex items-center gap-1.5 text-[11px] text-gray-600 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded font-bold">
-                                            <i class="fas fa-puzzle-piece text-gray-400"></i> ${form.department}
+                                        <span class="badge bg-light text-dark border d-flex align-items-center">
+                                            <i class="fas fa-puzzle-piece text-secondary mx-1"></i> ${form.department}
                                         </span>
                                     </div>
-                                </div>
-                                
-                                <!-- Meta/Warning Area -->
-                                <div class="flex-1 flex flex-col justify-center mb-5">
-                                    ${matchedCode ? `
-                                        <div class="space-y-2">
-                                            <div class="flex items-center justify-between text-sm bg-blue-50/30 rounded-lg px-3 py-2.5 border border-blue-100/50">
-                                                <span class="text-gray-500 text-xs font-semibold"><i class="fas fa-hashtag mx-1 text-blue-400"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.code', 'الكود') : 'الكود'}</span>
-                                                <span class="font-mono font-bold text-blue-700 bg-white px-2 py-0.5 rounded shadow-sm border border-blue-100">${Utils.escapeHTML(matchedCode.code || '')}</span>
+                                    
+                                    <!-- Middle Content (Code/Warning) -->
+                                    <div class="flex-grow-1 d-flex flex-column justify-content-center mb-4">
+                                        ${matchedCode ? `
+                                            <div class="d-flex justify-content-between align-items-center bg-light rounded p-2 mb-2 border">
+                                                <span class="text-muted small fw-bold"><i class="fas fa-hashtag mx-1 text-primary"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.code', 'الكود') : 'الكود'}</span>
+                                                <span class="badge bg-primary font-monospace">${Utils.escapeHTML(matchedCode.code || '')}</span>
                                             </div>
-                                            <div class="flex items-center justify-between text-sm bg-purple-50/30 rounded-lg px-3 py-2.5 border border-purple-100/50">
-                                                <span class="text-gray-500 text-xs font-semibold"><i class="fas fa-code-branch mx-1 text-purple-400"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.version', 'الإصدار') : 'الإصدار'}</span>
-                                                ${activeVersion ? `<span class="font-bold text-purple-700 bg-white border border-purple-100 shadow-sm px-2 py-0.5 rounded text-xs">v${activeVersion.versionNumber}</span>` : `<span class="text-rose-500 text-[10px] font-bold bg-white px-2 py-0.5 rounded border border-rose-100 shadow-sm">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.noVersion', 'لا يوجد') : 'لا يوجد'}</span>`}
+                                            <div class="d-flex justify-content-between align-items-center bg-light rounded p-2 border">
+                                                <span class="text-muted small fw-bold"><i class="fas fa-code-branch mx-1 text-primary"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.version', 'الإصدار') : 'الإصدار'}</span>
+                                                ${activeVersion ? `<span class="badge bg-success font-monospace">v${activeVersion.versionNumber}</span>` : `<span class="badge bg-danger small">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.noVersion', 'لا يوجد') : 'لا يوجد'}</span>`}
                                             </div>
-                                        </div>
-                                    ` : `
-                                        <div class="flex items-start gap-2.5 text-rose-600 bg-rose-50 p-3 rounded-lg border border-rose-100">
-                                            <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 opacity-80 text-sm"></i>
-                                            <span class="text-[11px] leading-relaxed font-medium">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.warning', 'يرجى تعيين كود لهذا النموذج لكي يتم اعتماده واستخدامه في النظام بشكل صحيح.') : 'يرجى تعيين كود لهذا النموذج لكي يتم اعتماده واستخدامه في النظام بشكل صحيح.'}</span>
-                                        </div>
-                                    `}
-                                </div>
-                                
-                                <!-- Actions -->
-                                <div class="mt-auto">
-                                    ${matchedCode ? `
-                                        <button class="w-full flex items-center justify-center gap-2 py-2 px-4 bg-white hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-bold transition-colors border border-gray-200 shadow-sm" onclick="ISO.viewDocumentVersions('${matchedCode.id}')" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.history', 'سجل التغييرات') : 'سجل التغييرات'}">
-                                            <i class="fas fa-history text-gray-400"></i>
-                                            <span>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.history', 'سجل التغييرات') : 'سجل التغييرات'}</span>
-                                        </button>
-                                    ` : `
-                                        <button class="w-full flex items-center justify-center gap-2 py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg text-sm font-bold transition-all shadow-sm hover:shadow-md border border-transparent" onclick="ISO.quickAssignFormCode('${form.name}', '${form.defaultCode}', '${form.type}', '${form.department}')" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.assignCode', 'إنشاء كود سريع') : 'إنشاء كود سريع'}">
-                                            <i class="fas fa-plus-circle opacity-90"></i>
-                                            <span>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.assignNow', 'تعيين كود الآن') : 'تعيين كود الآن'}</span>
-                                        </button>
-                                    `}
+                                        ` : `
+                                            <div class="alert alert-danger py-2 px-3 m-0 d-flex align-items-start shadow-sm" style="font-size: 0.8rem; border-left: 3px solid #dc3545;">
+                                                <i class="fas fa-exclamation-triangle mx-1 mt-1"></i>
+                                                <span class="fw-bold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.warning', 'يرجى تعيين كود لهذا النموذج لكي يتم اعتماده واستخدامه في النظام.') : 'يرجى تعيين كود لهذا النموذج لكي يتم اعتماده واستخدامه في النظام.'}</span>
+                                            </div>
+                                        `}
+                                    </div>
+                                    
+                                    <!-- Action Button -->
+                                    <div class="mt-auto border-top pt-3">
+                                        ${matchedCode ? `
+                                            <button class="btn btn-outline-secondary btn-sm w-100 d-flex justify-content-center align-items-center fw-bold" onclick="ISO.viewDocumentVersions('${matchedCode.id}')" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.history', 'سجل التغييرات') : 'سجل التغييرات'}">
+                                                <i class="fas fa-history mx-2"></i>
+                                                ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.history', 'سجل التغييرات') : 'سجل التغييرات'}
+                                            </button>
+                                        ` : `
+                                            <button class="btn btn-primary btn-sm w-100 d-flex justify-content-center align-items-center fw-bold shadow-sm" onclick="ISO.quickAssignFormCode('${form.name}', '${form.defaultCode}', '${form.type}', '${form.department}')" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.assignCode', 'إنشاء كود سريع') : 'إنشاء كود سريع'}">
+                                                <i class="fas fa-plus-circle mx-2"></i>
+                                                ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.assignNow', 'تعيين كود الآن') : 'تعيين كود الآن'}
+                                            </button>
+                                        `}
+                                    </div>
                                 </div>
                             </div>
                         </div>
