@@ -7558,8 +7558,8 @@ const PTW = {
             .ppe-checkbox.checked::after { left: 2px; top: 0; width: 3px; height: 6px; }
             .manual-risk-matrix { font-size: 8.5px; }
             .manual-risk-matrix th, .manual-risk-matrix td { padding: 3px; }
-            .manual-risk-badge { width: 40px; height: 40px; font-size: 14px; }
-            .manual-print-req-item { font-size: 9px; padding: 5px; }
+            .manual-risk-badge { width: 32px; height: 32px; font-size: 12px; }
+            .manual-print-req-item { font-size: 9px; padding: 4px; }
             .manual-print-supervisor-card { padding: 9px 11px; }
             .manual-print-supervisor-card .val { font-size: 11px; }
             .manual-work-block { padding: 7px; margin-bottom: 5px; }
@@ -7790,9 +7790,8 @@ const PTW = {
                 min-height: 28px; font-weight: 500; color: #111827;
             }
             @media print {
-                body { padding: 6px; font-size: 10px; }
-                .ptw-manual-form-section { page-break-inside: avoid; break-inside: avoid; margin: 6px 0; padding: 10px; }
-                .manual-section-7 { page-break-before: always; break-before: page; }
+                body { padding: 2px; font-size: 10px; }
+                .ptw-manual-form-section { page-break-inside: avoid !important; break-inside: avoid !important; margin: 4px 0; padding: 6px; }
                 .ptw-manual-ppe-fixed-row { gap: 6px 3px; }
                 .ptw-paper-footer { page-break-inside: avoid; break-inside: avoid; }
                 table, .manual-risk-matrix { page-break-inside: avoid; break-inside: avoid; }
@@ -8148,30 +8147,7 @@ const PTW = {
     },
 
     _splitManualPermitPrintPages_(content, header, footer, forPdf) {
-        if (!forPdf) return `${header}${content}${footer}`;
-        const wrapPage = (inner) => `<div class="ptw-a4-page">${inner}</div>`;
-        const breakMarkers = ['manual-section-7'];
-        const positions = breakMarkers
-            .map((marker) => content.indexOf(`<div class="ptw-manual-form-section ${marker}">`))
-            .filter((idx) => idx > 0)
-            .sort((a, b) => a - b);
-        const uniquePositions = [...new Set(positions)];
-
-        if (!uniquePositions.length) {
-            return wrapPage(`${header}${content}${footer}`);
-        }
-
-        const parts = [];
-        uniquePositions.forEach((pos, index) => {
-            if (index === 0) {
-                parts.push(wrapPage(`${header}${content.slice(0, pos)}`));
-            } else {
-                parts.push(wrapPage(content.slice(uniquePositions[index - 1], pos)));
-            }
-        });
-        const lastPos = uniquePositions[uniquePositions.length - 1];
-        parts.push(wrapPage(`${content.slice(lastPos)}${footer}`));
-        return parts.join('');
+        return `${header}${content}${footer}`;
     },
 
     _verifyManualPermitExportHtml_(html) {
