@@ -7485,6 +7485,9 @@ const PTW = {
                 background: #fff;
                 overflow: hidden;
                 position: relative !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
                 page-break-after: always;
                 break-after: page;
             }
