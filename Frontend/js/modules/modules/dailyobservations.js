@@ -1,4 +1,4 @@
-﻿/**
+/**
  * DailyObservations Module
  * تم استخراجه من app-modules.js
  * ✅ تحديث: 2026-04-02 - إصلاح عرض المرفقات وصور بعد التنفيذ
@@ -2037,11 +2037,7 @@ const DailyObservations = {
                             Utils.safeWarn('⚠️ خطأ في تحميل قائمة الملاحظات الأولي:', err);
                         }
                     };
-                    if (typeof requestIdleCallback !== 'undefined') {
-                        requestIdleCallback(runDeferred, { timeout: 2500 });
-                    } else {
-                        setTimeout(runDeferred, 0);
-                    }
+                    setTimeout(runDeferred, 10);
                 });
             } catch (error) {
                 Utils.safeWarn('⚠️ خطأ في تحميل قائمة الملاحظات الأولي:', error);
