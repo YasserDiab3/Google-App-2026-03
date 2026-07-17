@@ -13409,7 +13409,7 @@ const PTW = {
         const settings = AppState?.companySettings || {};
         const companyName = settings.name || settings.companyName || settings.organizationName || 'HSE System';
         const deptName = String(
-            settings.secondaryName || settings.departmentName || settings.managementName || 'إدارة السلامة والصحة المهنية والبيئة'
+            settings.secondaryName || settings.departmentName || settings.managementName || 'إدارة السلامة والصحة المهنية والبيئة المهنية'
         ).trim();
         const esc = (v) => Utils.escapeHTML(v == null ? '' : String(v));
         const formCode = esc(options.formCode || 'PTW-MANUAL');
@@ -13435,7 +13435,6 @@ const PTW = {
                         <span class="ptw-pf-item">تاريخ التعديل: ${revisionDate}</span>
                     </div>
                     <div class="ptw-paper-footer-company" dir="rtl">
-                        <span>${esc(companyName)}</span>
                         <span>${esc(deptName)}</span>
                     </div>
                 </div>

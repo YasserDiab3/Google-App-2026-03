@@ -3679,7 +3679,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                 </div>
                 <div class="ptw-paper-header-left">${p}</div>
             </div>
-        `},renderPermitSystemFooter(e={}){const t=AppState?.companySettings||{},a=t.name||t.companyName||t.organizationName||"HSE System",i=String(t.secondaryName||t.departmentName||t.managementName||"\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0628\u064A\u0626\u0629").trim(),r=p=>Utils.escapeHTML(p==null?"":String(p)),s=r(e.formCode||"PTW-MANUAL"),o=p=>{if(!p)return"\u2014";try{const d=new Date(p);return isNaN(d.getTime())?r(p):r(d.toLocaleDateString("ar-EG",{year:"numeric",month:"long",day:"numeric"}))}catch{return r(p)}},n=o(e.issueDate||e.releaseDate||e.createdAt),l=o(e.revisionDate||e.updatedAt||e.issueDate||e.createdAt);return`
+        `},renderPermitSystemFooter(e={}){const t=AppState?.companySettings||{},a=t.name||t.companyName||t.organizationName||"HSE System",i=String(t.secondaryName||t.departmentName||t.managementName||"\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0628\u064A\u0626\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629").trim(),r=p=>Utils.escapeHTML(p==null?"":String(p)),s=r(e.formCode||"PTW-MANUAL"),o=p=>{if(!p)return"\u2014";try{const d=new Date(p);return isNaN(d.getTime())?r(p):r(d.toLocaleDateString("ar-EG",{year:"numeric",month:"long",day:"numeric"}))}catch{return r(p)}},n=o(e.issueDate||e.releaseDate||e.createdAt),l=o(e.revisionDate||e.updatedAt||e.issueDate||e.createdAt);return`
             <div class="ptw-paper-footer">
                 <div class="ptw-paper-footer-frame">
                     <div class="ptw-paper-footer-meta" dir="rtl">
@@ -3688,7 +3688,6 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                         <span class="ptw-pf-item">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644: ${l}</span>
                     </div>
                     <div class="ptw-paper-footer-company" dir="rtl">
-                        <span>${r(a)}</span>
                         <span>${r(i)}</span>
                     </div>
                 </div>
