@@ -2443,15 +2443,15 @@ const ISO = {
         }).join('');
 
         return `
-        <div class="content-card mb-6 border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
-            <div class="card-header bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-6 py-4 border-0">
-                <h2 class="card-title text-white flex items-center text-xl font-bold m-0">
-                    <i class="fas fa-layer-group mx-3 text-2xl opacity-90"></i>
+        <div class="card mb-4 border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+            <div class="card-header bg-primary text-white p-4 border-0" style="background: linear-gradient(135deg, #2563eb 0%, #4338ca 100%) !important;">
+                <h3 class="card-title text-white d-flex align-items-center fw-bold m-0" style="font-size: 1.25rem;">
+                    <i class="fas fa-layer-group mx-3 opacity-75 fs-4"></i>
                     ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.title', 'دليل نماذج النظام المدمجة') : 'دليل نماذج النظام المدمجة'}
-                </h2>
-                <p class="text-blue-100 text-sm mt-1 mb-0 opacity-80">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.desc', 'يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد') : 'يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد'}</p>
+                </h3>
+                <p class="text-white-50 small mt-2 mb-0" style="padding-right: 3.5rem;">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.desc', 'يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد') : 'يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد'}</p>
             </div>
-            <div class="card-body bg-gray-50/50 p-6">
+            <div class="card-body bg-light p-4 p-md-5">
                 ${modulesHtml}
             </div>
         </div>

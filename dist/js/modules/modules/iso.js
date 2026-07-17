@@ -1259,15 +1259,15 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                 </div>
             </div>
             `}).join("");return`
-        <div class="content-card mb-6 border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
-            <div class="card-header bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-6 py-4 border-0">
-                <h2 class="card-title text-white flex items-center text-xl font-bold m-0">
-                    <i class="fas fa-layer-group mx-3 text-2xl opacity-90"></i>
+        <div class="card mb-4 border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+            <div class="card-header bg-primary text-white p-4 border-0" style="background: linear-gradient(135deg, #2563eb 0%, #4338ca 100%) !important;">
+                <h3 class="card-title text-white d-flex align-items-center fw-bold m-0" style="font-size: 1.25rem;">
+                    <i class="fas fa-layer-group mx-3 opacity-75 fs-4"></i>
                     ${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.title","\u062F\u0644\u064A\u0644 \u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0646\u0638\u0627\u0645 \u0627\u0644\u0645\u062F\u0645\u062C\u0629"):"\u062F\u0644\u064A\u0644 \u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0646\u0638\u0627\u0645 \u0627\u0644\u0645\u062F\u0645\u062C\u0629"}
-                </h2>
-                <p class="text-blue-100 text-sm mt-1 mb-0 opacity-80">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.desc","\u064A\u062A\u0645 \u0639\u0631\u0636 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629 \u0628\u0627\u0644\u0646\u0638\u0627\u0645 \u0648\u062D\u0627\u0644\u062A\u0647\u0627 \u0641\u064A \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F"):"\u064A\u062A\u0645 \u0639\u0631\u0636 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629 \u0628\u0627\u0644\u0646\u0638\u0627\u0645 \u0648\u062D\u0627\u0644\u062A\u0647\u0627 \u0641\u064A \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F"}</p>
+                </h3>
+                <p class="text-white-50 small mt-2 mb-0" style="padding-right: 3.5rem;">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.desc","\u064A\u062A\u0645 \u0639\u0631\u0636 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629 \u0628\u0627\u0644\u0646\u0638\u0627\u0645 \u0648\u062D\u0627\u0644\u062A\u0647\u0627 \u0641\u064A \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F"):"\u064A\u062A\u0645 \u0639\u0631\u0636 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629 \u0628\u0627\u0644\u0646\u0638\u0627\u0645 \u0648\u062D\u0627\u0644\u062A\u0647\u0627 \u0641\u064A \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F"}</p>
             </div>
-            <div class="card-body bg-gray-50/50 p-6">
+            <div class="card-body bg-light p-4 p-md-5">
                 ${n}
             </div>
         </div>
