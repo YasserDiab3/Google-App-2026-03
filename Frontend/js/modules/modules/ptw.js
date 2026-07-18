@@ -11367,6 +11367,13 @@ const PTW = {
             
             await this.saveManualPermitEntry(modal, entryId);
         });
+        } catch (error) {
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('Error opening manual permit form:', error);
+            } else {
+                console.error('Error opening manual permit form:', error);
+            }
+            alert('Error opening form: ' + error.message + '\nStack: ' + error.stack);
         } finally {
             const loadingOverlayToRemove = document.getElementById(ptwManualLoadingId);
             if (loadingOverlayToRemove) loadingOverlayToRemove.remove();
