@@ -14439,6 +14439,20 @@ const Clinic = {
     /**
      * عرض tab طلبات الموافقة (للمدير فقط)
      */
+    getClinicWorkflowStyles_() {
+        return `<style>
+            .clinic-workflow-root{--cw-navy:#0b2d4f;--cw-blue:#174d78;--cw-teal:#0f8b83;--cw-gold:#f59e0b;--cw-ink:#183047;--cw-muted:#64748b;--cw-line:#d9e6ee;--cw-pale:#f4f9fb;color:var(--cw-ink);font-family:inherit}.clinic-workflow-root *{box-sizing:border-box}
+            .cw-hero{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:19px 22px;margin-bottom:14px;border-radius:16px;background:linear-gradient(128deg,var(--cw-navy),var(--cw-blue) 62%,#17726e);color:#fff;box-shadow:0 9px 26px rgba(11,45,79,.19)}.cw-hero:after{content:"";position:absolute;width:210px;height:210px;left:-75px;top:-120px;border:28px solid rgba(255,255,255,.06);border-radius:50%;pointer-events:none}.cw-hero-copy{position:relative;z-index:1;display:flex;align-items:center;gap:13px}.cw-hero-icon{width:48px;height:48px;border:1px solid rgba(255,255,255,.24);border-radius:14px;background:rgba(255,255,255,.13);display:grid;place-items:center;font-size:21px}.cw-hero h2{margin:0;font-size:1.12rem;font-weight:850}.cw-hero p{margin:4px 0 0;color:#d9ebf3;font-size:.75rem}.cw-hero-meta{position:relative;z-index:1;display:flex;align-items:center;gap:7px;flex-wrap:wrap}.cw-hero-pill{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid rgba(255,255,255,.22);border-radius:9px;background:rgba(255,255,255,.11);font-size:.72rem;font-weight:750}
+            .cw-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}.cw-kpi{display:flex;align-items:center;gap:11px;padding:12px 14px;border:1px solid var(--cw-line);border-radius:12px;background:#fff;box-shadow:0 3px 12px rgba(15,46,72,.045)}.cw-kpi-icon{width:39px;height:39px;border-radius:10px;display:grid;place-items:center}.cw-kpi:nth-child(1) .cw-kpi-icon{background:#fff7ed;color:#c2410c}.cw-kpi:nth-child(2) .cw-kpi-icon{background:#ecfdf5;color:#047857}.cw-kpi:nth-child(3) .cw-kpi-icon{background:#fef2f2;color:#b91c1c}.cw-kpi:nth-child(4) .cw-kpi-icon{background:#eff6ff;color:#1d4ed8}.cw-kpi small{display:block;color:var(--cw-muted);font-size:.67rem;font-weight:650}.cw-kpi strong{display:block;margin-top:2px;font-size:1.05rem;font-weight:850;color:var(--cw-ink)}
+            .cw-filter{padding:14px 16px;margin-bottom:14px;border:1px solid #b9dbe2;border-radius:14px;background:linear-gradient(180deg,#f9fcfd,#f1f8fa)}.cw-filter-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}.cw-filter-title{display:flex;align-items:center;gap:7px;color:var(--cw-navy);font-size:.81rem;font-weight:820}.cw-count-pill{padding:3px 8px;border-radius:999px;background:#d9f4f1;color:#0f766e;font-size:.66rem}.cw-filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.cw-field label{display:block;margin-bottom:5px;color:#536b7c;font-size:.68rem;font-weight:750}.cw-field label i{width:17px;color:var(--cw-teal)}.cw-control{width:100%;min-height:39px;padding:8px 11px;border:1.5px solid #c8dce4;border-radius:9px;background:#fff;color:var(--cw-ink);font:inherit;font-size:.78rem;outline:none;transition:border-color .18s,box-shadow .18s}.cw-control:focus{border-color:var(--cw-teal);box-shadow:0 0 0 3px rgba(15,139,131,.11)}.cw-input-wrap{position:relative}.cw-input-wrap>i{position:absolute;right:11px;top:50%;transform:translateY(-50%);color:#7890a1;font-size:.75rem;pointer-events:none}.cw-input-wrap .cw-control{padding-right:34px}.cw-reset{padding:6px 10px;border:1px solid #c8dce4;border-radius:8px;background:#fff;color:#536b7c;font-size:.71rem;font-weight:750;cursor:pointer}.cw-reset:disabled{opacity:.42;cursor:not-allowed}
+            .cw-table-card{overflow:hidden;border:1px solid var(--cw-line);border-radius:14px;background:#fff;box-shadow:0 5px 20px rgba(15,46,72,.06)}.cw-table-caption{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 15px;border-bottom:1px solid var(--cw-line)}.cw-table-caption strong{color:var(--cw-navy);font-size:.84rem}.cw-table-caption span{color:var(--cw-muted);font-size:.69rem}.cw-table-scroll{overflow:auto;max-height:68vh}.cw-table{width:100%;min-width:1020px;border-collapse:separate;border-spacing:0}.cw-table thead{position:sticky;top:0;z-index:4}.cw-table th{padding:12px 10px;background:linear-gradient(180deg,#17466f,#103758);color:#fff;border-left:1px solid rgba(255,255,255,.1);font-size:.71rem;font-weight:780;white-space:nowrap;text-align:right}.cw-table th i{margin-left:5px;color:#6ee7dc}.cw-table td{padding:11px 10px;border-bottom:1px solid #e8eff4;color:#344b5f;font-size:.77rem;vertical-align:middle}.cw-table tbody tr:nth-child(even){background:#f8fbfd}.cw-table tbody tr:hover{background:#eef8f8}.cw-table tbody tr:last-child td{border-bottom:0}.cw-serial{display:inline-grid;place-items:center;width:27px;height:27px;border-radius:8px;background:#e8f1f7;color:var(--cw-navy);font-weight:850}.cw-main-cell{display:flex;align-items:center;gap:9px}.cw-cell-icon{flex:0 0 auto;width:34px;height:34px;border-radius:10px;background:#e7f5f3;color:var(--cw-teal);display:grid;place-items:center}.cw-main-cell strong{display:block;color:var(--cw-ink);font-size:.79rem}.cw-main-cell small{display:block;margin-top:3px;color:#7a91a1;font-size:.65rem}.cw-actions{display:flex;align-items:center;justify-content:center;gap:6px}.cw-actions .btn-icon{width:32px;height:32px;border-radius:8px;box-shadow:none}.cw-empty{text-align:center;padding:52px 20px;color:var(--cw-muted)}.cw-empty i{display:grid;place-items:center;width:60px;height:60px;margin:0 auto 11px;border-radius:17px;background:#eaf4f8;color:var(--cw-teal);font-size:24px}.cw-empty h3{margin:0 0 4px;color:var(--cw-navy);font-size:.95rem}.cw-empty p{margin:0;font-size:.75rem}
+            .cw-form-card{overflow:hidden;margin-bottom:14px;border:1px solid var(--cw-line);border-radius:15px;background:#fff;box-shadow:0 5px 20px rgba(15,46,72,.06)}.cw-form-head{display:flex;align-items:center;gap:10px;padding:14px 17px;border-bottom:1px solid var(--cw-line);background:linear-gradient(180deg,#fbfdfe,#f4f9fb)}.cw-form-head span{width:36px;height:36px;border-radius:10px;background:#dff4f1;color:var(--cw-teal);display:grid;place-items:center}.cw-form-head h3{margin:0;color:var(--cw-navy);font-size:.9rem}.cw-form-head p{margin:2px 0 0;color:var(--cw-muted);font-size:.67rem}.cw-form-body{padding:17px}.cw-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.cw-field-full{grid-column:1/-1}.cw-field-title{display:flex;align-items:center;gap:6px;margin-bottom:6px;color:#40596c;font-size:.72rem;font-weight:780}.cw-field-title i{color:var(--cw-teal)}.cw-form-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:15px;padding-top:14px;border-top:1px solid #e8eff4}.cw-submit,.cw-secondary{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 15px;border-radius:9px;font-size:.77rem;font-weight:780;cursor:pointer}.cw-submit{border:1px solid var(--cw-navy);background:var(--cw-navy);color:#fff;box-shadow:0 4px 12px rgba(11,45,79,.18)}.cw-secondary{border:1px solid #cbdce3;background:#fff;color:#536b7c}
+            @media(max-width:980px){.cw-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.cw-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+            @media(max-width:620px){.cw-hero{padding:16px}.cw-hero-meta{width:100%}.cw-hero-pill{flex:1;justify-content:center}.cw-kpis,.cw-filter-grid,.cw-form-grid{grid-template-columns:1fr}.cw-field-full{grid-column:auto}.cw-filter,.cw-form-body{padding:12px}.cw-table-caption{align-items:flex-start;flex-direction:column}.cw-form-actions{flex-direction:column}.cw-submit,.cw-secondary{width:100%}}
+            @media(prefers-reduced-motion:reduce){.cw-control{transition:none}}
+        </style>`;
+    },
+
     async ensureApprovalsDataLoaded({ force = false } = {}) {
         if (this._approvalsLoadPromise && !force) return this._approvalsLoadPromise;
         this._approvalsLoadPromise = (async () => {
@@ -14603,71 +14617,40 @@ const Clinic = {
             }
 
             panel.innerHTML = `
-                <div class="content-card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            <i class="fas fa-check-circle ml-2"></i>
-                            طلبات الموافقة
-                        </h2>
-                    </div>
-                    <div class="card-body">
-                        <!-- إحصائيات -->
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                            <div class="text-center p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                                <i class="fas fa-clock text-3xl text-yellow-600 mb-2"></i>
-                                <p class="text-sm text-gray-600">طلبات معلقة</p>
-                                <p class="text-2xl font-bold">${pendingRequests.length}</p>
-                            </div>
-                            <div class="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-                                <i class="fas fa-check text-3xl text-green-600 mb-2"></i>
-                                <p class="text-sm text-gray-600">موافق عليها</p>
-                                <p class="text-2xl font-bold">${approvedRequests.length}</p>
-                            </div>
-                            <div class="text-center p-4 bg-red-50 rounded-lg border border-red-200">
-                                <i class="fas fa-times text-3xl text-red-600 mb-2"></i>
-                                <p class="text-sm text-gray-600">مرفوضة</p>
-                                <p class="text-2xl font-bold">${rejectedRequests.length}</p>
-                            </div>
+                ${this.getClinicWorkflowStyles_()}
+                <div class="clinic-workflow-root" id="clinic-approvals-root">
+                    <section class="cw-hero" aria-labelledby="approvals-title">
+                        <div class="cw-hero-copy"><span class="cw-hero-icon"><i class="fas fa-clipboard-check"></i></span><div><h2 id="approvals-title">مركز طلبات الموافقة</h2><p>مراجعة واعتماد طلبات العيادة من شاشة تشغيل موحدة</p></div></div>
+                        <div class="cw-hero-meta"><span class="cw-hero-pill"><i class="fas fa-hourglass-half"></i>${pendingRequests.length} بانتظار القرار</span><button type="button" id="approvals-refresh-btn" class="cw-hero-pill" style="cursor:pointer;color:#fff;"><i class="fas fa-sync-alt"></i>تحديث البيانات</button></div>
+                    </section>
+                    <section class="cw-kpis" aria-label="ملخص طلبات الموافقة">
+                        <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-clock"></i></span><div><small>طلبات معلقة</small><strong>${pendingRequests.length}</strong></div></div>
+                        <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-check"></i></span><div><small>موافق عليها</small><strong>${approvedRequests.length}</strong></div></div>
+                        <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-times"></i></span><div><small>طلبات مرفوضة</small><strong>${rejectedRequests.length}</strong></div></div>
+                        <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-layer-group"></i></span><div><small>إجمالي الطلبات</small><strong>${allRequests.length}</strong></div></div>
+                    </section>
+                    <section class="cw-filter" aria-label="فلاتر طلبات الموافقة">
+                        <div class="cw-filter-head"><div class="cw-filter-title"><i class="fas fa-sliders-h"></i>فلترة الطلبات <span id="approvals-filter-count" class="cw-count-pill">${pendingRequests.length} من ${allRequests.length}</span></div><button type="button" id="approvals-reset-filters" class="cw-reset"><i class="fas fa-undo-alt ml-1"></i>إعادة الضبط</button></div>
+                        <div class="cw-filter-grid">
+                            <div class="cw-field"><label for="approvals-search-filter"><i class="fas fa-search"></i>بحث شامل</label><div class="cw-input-wrap"><i class="fas fa-search"></i><input type="search" id="approvals-search-filter" class="cw-control" placeholder="العنصر أو مقدم الطلب..." autocomplete="off"></div></div>
+                            <div class="cw-field"><label for="approvals-status-filter"><i class="fas fa-tasks"></i>الحالة</label><select id="approvals-status-filter" class="cw-control"><option value="all">جميع الحالات</option><option value="pending" selected>طلبات معلقة</option><option value="approved">موافق عليها</option><option value="rejected">مرفوضة</option></select></div>
+                            <div class="cw-field"><label for="approvals-type-filter"><i class="fas fa-tags"></i>نوع الطلب</label><select id="approvals-type-filter" class="cw-control"><option value="all">جميع الأنواع</option><option value="deletion">حذف الأدوية</option><option value="supply">طلبات الاحتياج</option><option value="visit">حذف الزيارات</option><option value="timeoff">إجازة / إذن / إضافي</option></select></div>
                         </div>
-
-                        <!-- فلاتر -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">تصفية حسب الحالة:</label>
-                                <select id="approvals-status-filter" class="form-input">
-                                    <option value="all">جميع الطلبات</option>
-                                    <option value="pending" selected>طلبات معلقة</option>
-                                    <option value="approved">موافق عليها</option>
-                                    <option value="rejected">مرفوضة</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">تصفية حسب النوع:</label>
-                                <select id="approvals-type-filter" class="form-input">
-                                    <option value="all">جميع الأنواع</option>
-                                    <option value="deletion">طلبات حذف الأدوية</option>
-                                    <option value="supply">طلبات الاحتياج</option>
-                                    <option value="visit">طلبات حذف الزيارات</option>
-                                    <option value="timeoff">طلبات إجازة / إذن / إضافي</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- جدول الطلبات -->
-                        <div id="approvals-table-container">
-                            ${this.renderApprovalsTable(pendingRequests)}
-                        </div>
-                    </div>
-                </div>
-            `;
+                    </section>
+                    <section class="cw-table-card"><div class="cw-table-caption"><div><strong>قائمة الطلبات</strong><span> — اتخذ القرار أو اعرض التفاصيل</span></div><span id="approvals-result-pill" class="cw-count-pill">${pendingRequests.length} طلب</span></div><div id="approvals-table-container">${this.renderApprovalsTable(pendingRequests)}</div></section>
+                </div>`;
 
             // ربط الأحداث
             const statusFilter = document.getElementById('approvals-status-filter');
             const typeFilter = document.getElementById('approvals-type-filter');
+            const searchFilter = document.getElementById('approvals-search-filter');
+            const resetFilters = document.getElementById('approvals-reset-filters');
+            const refreshBtn = document.getElementById('approvals-refresh-btn');
 
             const updateTable = () => {
                 const status = statusFilter?.value || 'all';
                 const type = typeFilter?.value || 'all';
+                const search = this.normalizeArabicText(searchFilter?.value || '');
 
                 let filteredRequests = allRequests;
 
@@ -14677,12 +14660,29 @@ const Clinic = {
                 if (type !== 'all') {
                     filteredRequests = filteredRequests.filter(r => this._approvalRequestMatchesTypeFilter(r, type));
                 }
+                if (search) {
+                    filteredRequests = filteredRequests.filter((request) => this.normalizeArabicText([
+                        request.itemName,
+                        request.requestedBy?.name,
+                        request.requestedByName,
+                        request.userName,
+                        request.userEmail,
+                        request.medicationData?.name,
+                        request.visitData?.employeeName,
+                        request.visitData?.contractorName,
+                        request.reason
+                    ].filter(Boolean).join(' ')).includes(search));
+                }
 
                 const approvalsTableContainer = document.getElementById('approvals-table-container');
                 if (approvalsTableContainer) {
                     approvalsTableContainer.innerHTML = this.renderApprovalsTable(filteredRequests);
-                    this.bindApprovalsEvents();
+                    this.bindApprovalsEvents(approvalsTableContainer);
                 }
+                const count = document.getElementById('approvals-filter-count');
+                const result = document.getElementById('approvals-result-pill');
+                if (count) count.textContent = `${filteredRequests.length} من ${allRequests.length}`;
+                if (result) result.textContent = `${filteredRequests.length} طلب`;
             };
 
             if (statusFilter) {
@@ -14691,8 +14691,21 @@ const Clinic = {
             if (typeFilter) {
                 typeFilter.addEventListener('change', updateTable);
             }
+            searchFilter?.addEventListener('input', updateTable);
+            resetFilters?.addEventListener('click', () => {
+                if (searchFilter) searchFilter.value = '';
+                if (statusFilter) statusFilter.value = 'pending';
+                if (typeFilter) typeFilter.value = 'all';
+                updateTable();
+            });
+            refreshBtn?.addEventListener('click', async () => {
+                refreshBtn.disabled = true;
+                refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>جاري التحديث';
+                try { await this.ensureApprovalsDataLoaded({ force: true }); }
+                finally { this.renderApprovalsTab(); }
+            });
 
-            this.bindApprovalsEvents();
+            this.bindApprovalsEvents(panel);
 
             // إضافة مستمعي التمرير للجدول
             setTimeout(() => {
@@ -14710,10 +14723,10 @@ const Clinic = {
 
     renderApprovalsTable(requests) {
         if (!requests || requests.length === 0) {
-            return '<div class="text-center py-8 text-gray-500">لا توجد طلبات</div>';
+            return '<div class="cw-empty"><i class="fas fa-inbox"></i><h3>لا توجد طلبات مطابقة</h3><p>غيّر الفلاتر أو حدّث البيانات لعرض الطلبات.</p></div>';
         }
 
-        const rows = requests.map(request => {
+        const rows = requests.map((request, index) => {
             const approvalKind = request.approvalKind || request.requestType || 'deletion';
             const isDeletion = approvalKind === 'deletion';
             const isSupply = approvalKind === 'supply';
@@ -14728,7 +14741,7 @@ const Clinic = {
                 const medication = request.medicationData || {};
                 itemName = medication.name || '-';
                 itemType = medication.type || '-';
-                itemDetails = `الدواء: ${Utils.escapeHTML(itemName)}`;
+                itemDetails = `الدواء: ${itemName}`;
             } else if (isSupply) {
                 itemName = request.itemName || '-';
                 const typeLabel = {
@@ -14738,7 +14751,7 @@ const Clinic = {
                     'other': 'أخرى'
                 }[request.type] || request.type || '-';
                 itemType = typeLabel;
-                itemDetails = `${typeLabel}: ${Utils.escapeHTML(itemName)} (${request.quantity || ''} ${Utils.escapeHTML(request.unit || '')})`;
+                itemDetails = `${typeLabel}: ${itemName} (${request.quantity || ''} ${request.unit || ''})`;
             } else if (isVisitDeletion) {
                 const visitData = request.visitData || {};
                 const personName = visitData.employeeName || visitData.contractorWorkerName || visitData.contractorName || visitData.externalName || '-';
@@ -14747,11 +14760,11 @@ const Clinic = {
                     : (visitData.personType === 'contractor' ? 'مقاول' : 'عمالة خارجية');
                 itemName = personName;
                 itemType = typeLabel;
-                itemDetails = `زيارة: ${Utils.escapeHTML(personName)} (${Utils.escapeHTML(typeLabel)})`;
+                itemDetails = `زيارة: ${personName} (${typeLabel})`;
             } else if (isTimeOff) {
                 itemName = request.userName || request.userEmail || '-';
                 itemType = this.getTimeOffRequestTypeLabel(request.requestType);
-                itemDetails = `${Utils.escapeHTML(itemType)}: ${Utils.escapeHTML(this.formatTimeOffRequestDetails(request))}`;
+                itemDetails = `${itemType}: ${this.formatTimeOffRequestDetails(request)}`;
             }
 
             const requestedBy = isTimeOff
@@ -14769,23 +14782,24 @@ const Clinic = {
 
             return `
                 <tr>
+                    <td class="text-center"><span class="cw-serial">${index + 1}</span></td>
                     <td>${requestTypeBadge}</td>
-                    <td>${Utils.escapeHTML(itemName)}</td>
+                    <td><div class="cw-main-cell"><span class="cw-cell-icon"><i class="${isSupply ? 'fas fa-box-open' : isTimeOff ? 'fas fa-user-clock' : isVisitDeletion ? 'fas fa-user-minus' : 'fas fa-pills'}"></i></span><div><strong>${Utils.escapeHTML(itemName)}</strong><small>${Utils.escapeHTML(itemDetails)}</small></div></div></td>
                     <td>${Utils.escapeHTML(itemType)}</td>
                     <td>${Utils.escapeHTML(requestedBy.name || '-')}</td>
                     <td>${this.formatDate(request.createdAt || request.requestDate, true)}</td>
                     <td>${statusBadge}</td>
-                    <td>
-                        <div class="flex gap-2 justify-center">
+                    <td class="text-center">
+                        <div class="cw-actions">
                             ${isPending ? `
-                                <button class="btn-icon btn-icon-success" data-action="approve-request" data-id="${request.id}" data-type="${approvalKind}" title="موافقة">
+                                <button type="button" class="btn-icon btn-icon-success" data-action="approve-request" data-id="${Utils.escapeHTML(request.id || '')}" data-type="${Utils.escapeHTML(approvalKind)}" title="موافقة" aria-label="موافقة">
                                     <i class="fas fa-check"></i>
                                 </button>
-                                <button class="btn-icon btn-icon-danger" data-action="reject-request" data-id="${request.id}" data-type="${approvalKind}" title="رفض">
+                                <button type="button" class="btn-icon btn-icon-danger" data-action="reject-request" data-id="${Utils.escapeHTML(request.id || '')}" data-type="${Utils.escapeHTML(approvalKind)}" title="رفض" aria-label="رفض">
                                     <i class="fas fa-times"></i>
                                 </button>
                             ` : ''}
-                            <button class="btn-icon btn-icon-primary" data-action="view-request" data-id="${request.id}" data-type="${approvalKind}" title="عرض التفاصيل">
+                            <button type="button" class="btn-icon btn-icon-primary" data-action="view-request" data-id="${Utils.escapeHTML(request.id || '')}" data-type="${Utils.escapeHTML(approvalKind)}" title="عرض التفاصيل" aria-label="عرض التفاصيل">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
@@ -14795,17 +14809,18 @@ const Clinic = {
         }).join('');
 
         return `
-            <div class="table-responsive clinic-table-wrapper" style="overflow-x: auto; overflow-y: auto; max-height: 70vh;">
-                <table class="data-table">
+            <div class="cw-table-scroll clinic-table-wrapper">
+                <table class="cw-table">
                     <thead>
                         <tr>
-                            <th>نوع الطلب</th>
-                            <th>اسم العنصر</th>
-                            <th>النوع</th>
-                            <th>مقدم الطلب</th>
-                            <th>تاريخ الطلب</th>
-                            <th>الحالة</th>
-                            <th>الإجراءات</th>
+                            <th class="text-center"><i class="fas fa-hashtag"></i>م</th>
+                            <th><i class="fas fa-tag"></i>نوع الطلب</th>
+                            <th><i class="fas fa-file-medical-alt"></i>بيانات الطلب</th>
+                            <th><i class="fas fa-layer-group"></i>التصنيف</th>
+                            <th><i class="fas fa-user"></i>مقدم الطلب</th>
+                            <th><i class="fas fa-calendar-alt"></i>تاريخ الطلب</th>
+                            <th><i class="fas fa-tasks"></i>الحالة</th>
+                            <th class="text-center"><i class="fas fa-cogs"></i>الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -14829,8 +14844,8 @@ const Clinic = {
         }
     },
 
-    bindApprovalsEvents() {
-        document.querySelectorAll('[data-action="approve-request"]').forEach(btn => {
+    bindApprovalsEvents(root = document) {
+        root.querySelectorAll('[data-action="approve-request"]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const requestId = btn.getAttribute('data-id');
                 const requestType = btn.getAttribute('data-type') || 'deletion';
@@ -14838,7 +14853,7 @@ const Clinic = {
             });
         });
 
-        document.querySelectorAll('[data-action="reject-request"]').forEach(btn => {
+        root.querySelectorAll('[data-action="reject-request"]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const requestId = btn.getAttribute('data-id');
                 const requestType = btn.getAttribute('data-type') || 'deletion';
@@ -14846,7 +14861,7 @@ const Clinic = {
             });
         });
 
-        document.querySelectorAll('[data-action="view-request"]').forEach(btn => {
+        root.querySelectorAll('[data-action="view-request"]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const requestId = btn.getAttribute('data-id');
                 const requestType = btn.getAttribute('data-type') || 'deletion';
@@ -19065,99 +19080,50 @@ const Clinic = {
                 new Date(b.createdAt || b.requestDate) - new Date(a.createdAt || a.requestDate)
             ) :
             userRequests;
+        const pendingCount = allRequests.filter((request) => (request.status || 'pending') === 'pending').length;
+        const approvedCount = allRequests.filter((request) => request.status === 'approved' || request.status === 'fulfilled').length;
+        const rejectedCount = allRequests.filter((request) => request.status === 'rejected').length;
+        const urgentCount = allRequests.filter((request) => request.priority === 'urgent').length;
 
         panel.innerHTML = `
-            <div class="space-y-6">
-                <div class="content-card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            <i class="fas fa-shopping-cart ml-2"></i>
-                            إرسال طلب احتياجات
-                        </h2>
-                    </div>
-                    <div class="card-body">
-                        <form id="supply-request-form" class="space-y-4">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                        <i class="fas fa-tag ml-2"></i>
-                                        نوع الطلب *
-                                    </label>
-                                    <select id="request-type" class="form-input" required>
-                                        <option value="">اختر نوع الطلب</option>
-                                        <option value="medication">أدوية</option>
-                                        <option value="equipment">أجهزة طبية</option>
-                                        <option value="supplies">مستلزمات طبية</option>
-                                        <option value="other">أخرى</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                        <i class="fas fa-box ml-2"></i>
-                                        اسم العنصر المطلوب *
-                                    </label>
-                                    <input type="text" id="item-name" class="form-input" placeholder="مثال: باراسيتامول 500 مجم" required>
-                                </div>
+            ${this.getClinicWorkflowStyles_()}
+            <div class="clinic-workflow-root" id="clinic-supply-request-root">
+                <section class="cw-hero" aria-labelledby="supply-request-title">
+                    <div class="cw-hero-copy"><span class="cw-hero-icon"><i class="fas fa-dolly-flatbed"></i></span><div><h2 id="supply-request-title">إرسال طلب احتياجات</h2><p>أنشئ طلبًا واضحًا وتابع حالة المراجعة والتنفيذ من مكان واحد</p></div></div>
+                    <div class="cw-hero-meta"><span class="cw-hero-pill"><i class="fas fa-list-alt"></i>${allRequests.length} ${isAdmin ? 'طلب بالنظام' : 'طلب خاص بك'}</span><span class="cw-hero-pill"><i class="fas fa-hourglass-half"></i>${pendingCount} قيد الانتظار</span></div>
+                </section>
+                <section class="cw-kpis" aria-label="ملخص طلبات الاحتياجات">
+                    <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-clock"></i></span><div><small>قيد الانتظار</small><strong>${pendingCount}</strong></div></div>
+                    <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-check-circle"></i></span><div><small>موافق أو منفذ</small><strong>${approvedCount}</strong></div></div>
+                    <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-times-circle"></i></span><div><small>طلبات مرفوضة</small><strong>${rejectedCount}</strong></div></div>
+                    <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-bolt"></i></span><div><small>طلبات عاجلة</small><strong>${urgentCount}</strong></div></div>
+                </section>
+                <section class="cw-form-card">
+                    <div class="cw-form-head"><span><i class="fas fa-file-medical"></i></span><div><h3>بيانات الطلب الجديد</h3><p>الحقول المميزة بعلامة * مطلوبة لإرسال الطلب</p></div></div>
+                    <div class="cw-form-body">
+                        <form id="supply-request-form">
+                            <div class="cw-form-grid">
+                                <div class="cw-field"><label class="cw-field-title" for="request-type"><i class="fas fa-tag"></i>نوع الطلب *</label><select id="request-type" class="cw-control" required><option value="">اختر نوع الطلب</option><option value="medication">أدوية</option><option value="equipment">أجهزة طبية</option><option value="supplies">مستلزمات طبية</option><option value="other">أخرى</option></select></div>
+                                <div class="cw-field"><label class="cw-field-title" for="item-name"><i class="fas fa-box-open"></i>اسم العنصر المطلوب *</label><input type="text" id="item-name" class="cw-control" placeholder="مثال: باراسيتامول 500 مجم" required></div>
+                                <div class="cw-field"><label class="cw-field-title" for="quantity"><i class="fas fa-sort-numeric-up"></i>الكمية المطلوبة *</label><input type="number" id="quantity" class="cw-control" placeholder="مثال: 10" min="1" required></div>
+                                <div class="cw-field"><label class="cw-field-title" for="unit"><i class="fas fa-ruler"></i>الوحدة</label><input type="text" id="unit" class="cw-control" placeholder="مثال: علبة، عبوة، قطعة"></div>
+                                <div class="cw-field"><label class="cw-field-title" for="priority"><i class="fas fa-exclamation-triangle"></i>الأولوية</label><select id="priority" class="cw-control"><option value="normal">عادية</option><option value="high">عالية</option><option value="urgent">عاجلة</option></select></div>
+                                <div class="cw-field cw-field-full"><label class="cw-field-title" for="request-notes"><i class="fas fa-comment-medical"></i>ملاحظات / سبب الطلب</label><textarea id="request-notes" class="cw-control" rows="3" placeholder="اذكر سبب الحاجة لهذا العنصر..."></textarea></div>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                        <i class="fas fa-sort-numeric-up ml-2"></i>
-                                        الكمية المطلوبة *
-                                    </label>
-                                    <input type="number" id="quantity" class="form-input" placeholder="مثال: 10" min="1" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                        <i class="fas fa-ruler ml-2"></i>
-                                        الوحدة
-                                    </label>
-                                    <input type="text" id="unit" class="form-input" placeholder="مثال: علبة، عبوة، قطعة">
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <i class="fas fa-comment-alt ml-2"></i>
-                                    ملاحظات / سبب الطلب
-                                </label>
-                                <textarea id="request-notes" class="form-textarea" rows="3" placeholder="اذكر سبب الحاجة لهذا العنصر..."></textarea>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <i class="fas fa-exclamation-triangle ml-2"></i>
-                                    الأولوية
-                                </label>
-                                <select id="priority" class="form-input">
-                                    <option value="normal">عادية</option>
-                                    <option value="high">عالية</option>
-                                    <option value="urgent">عاجلة</option>
-                                </select>
-                            </div>
-                            <div class="flex gap-2">
-                                <button type="submit" class="btn-primary">
-                                    <i class="fas fa-paper-plane ml-2"></i>
-                                    إرسال الطلب
-                                </button>
-                                <button type="reset" class="btn-secondary">
-                                    <i class="fas fa-redo ml-2"></i>
-                                    إعادة تعيين
-                                </button>
-                            </div>
+                            <div class="cw-form-actions"><button type="reset" class="cw-secondary"><i class="fas fa-undo-alt"></i>إعادة تعيين</button><button type="submit" class="cw-submit"><i class="fas fa-paper-plane"></i>إرسال الطلب للموافقة</button></div>
                         </form>
                     </div>
-                </div>
-
-                <div class="content-card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            <i class="fas fa-list ml-2"></i>
-                            ${isAdmin ? 'جميع طلبات الاحتياجات' : 'طلباتي'}
-                        </h2>
+                </section>
+                <section class="cw-filter" aria-label="فلاتر طلبات الاحتياجات">
+                    <div class="cw-filter-head"><div class="cw-filter-title"><i class="fas fa-sliders-h"></i>${isAdmin ? 'فلترة جميع الطلبات' : 'فلترة طلباتي'} <span id="supply-filter-count" class="cw-count-pill">${allRequests.length} طلب</span></div><button type="button" id="supply-reset-filters" class="cw-reset"><i class="fas fa-undo-alt ml-1"></i>مسح الفلاتر</button></div>
+                    <div class="cw-filter-grid">
+                        <div class="cw-field"><label for="supply-search-filter"><i class="fas fa-search"></i>بحث بالعنصر أو مقدم الطلب</label><div class="cw-input-wrap"><i class="fas fa-search"></i><input type="search" id="supply-search-filter" class="cw-control" placeholder="اكتب للبحث..." autocomplete="off"></div></div>
+                        <div class="cw-field"><label for="supply-status-filter"><i class="fas fa-tasks"></i>الحالة</label><select id="supply-status-filter" class="cw-control"><option value="all">جميع الحالات</option><option value="pending">قيد الانتظار</option><option value="approved">موافق عليه</option><option value="rejected">مرفوض</option><option value="fulfilled">تم التنفيذ</option></select></div>
+                        <div class="cw-field"><label for="supply-type-filter"><i class="fas fa-tags"></i>نوع الطلب</label><select id="supply-type-filter" class="cw-control"><option value="all">جميع الأنواع</option><option value="medication">أدوية</option><option value="equipment">أجهزة طبية</option><option value="supplies">مستلزمات طبية</option><option value="other">أخرى</option></select></div>
+                        <div class="cw-field"><label for="supply-priority-filter"><i class="fas fa-bolt"></i>الأولوية</label><select id="supply-priority-filter" class="cw-control"><option value="all">جميع الأولويات</option><option value="urgent">عاجلة</option><option value="high">عالية</option><option value="normal">عادية</option></select></div>
                     </div>
-                    <div class="card-body">
-                        ${this.renderSupplyRequestsList(allRequests, isAdmin)}
-                    </div>
-                </div>
+                </section>
+                <section class="cw-table-card"><div class="cw-table-caption"><div><strong>${isAdmin ? 'جميع طلبات الاحتياجات' : 'سجل طلباتي'}</strong><span> — متابعة الحالة والأولوية والإجراءات</span></div><span id="supply-result-pill" class="cw-count-pill">${allRequests.length} طلب</span></div><div id="supply-requests-list-container">${this.renderSupplyRequestsList(allRequests, isAdmin)}</div></section>
             </div>
         `;
         this.applyModuleI18n(panel);
@@ -19171,21 +19137,62 @@ const Clinic = {
             });
         }
 
-        // ربط أحداث الإجراءات
-        panel.querySelectorAll('[data-action="view-request"]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const requestId = btn.getAttribute('data-id');
-                this.viewSupplyRequest(requestId);
+        const bindSupplyListActions = () => {
+            panel.querySelectorAll('[data-action="view-request"]').forEach(btn => {
+                btn.addEventListener('click', () => this.viewSupplyRequest(btn.getAttribute('data-id')));
             });
-        });
+            panel.querySelectorAll('[data-action="update-status"]').forEach(btn => {
+                btn.addEventListener('click', () => this.updateSupplyRequestStatus(
+                    btn.getAttribute('data-id'),
+                    btn.getAttribute('data-status')
+                ));
+            });
+        };
 
-        panel.querySelectorAll('[data-action="update-status"]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const requestId = btn.getAttribute('data-id');
-                const currentStatus = btn.getAttribute('data-status');
-                this.updateSupplyRequestStatus(requestId, currentStatus);
+        const searchFilter = panel.querySelector('#supply-search-filter');
+        const statusFilter = panel.querySelector('#supply-status-filter');
+        const typeFilter = panel.querySelector('#supply-type-filter');
+        const priorityFilter = panel.querySelector('#supply-priority-filter');
+        const resetFilters = panel.querySelector('#supply-reset-filters');
+        const listContainer = panel.querySelector('#supply-requests-list-container');
+        const updateSupplyList = () => {
+            const search = this.normalizeArabicText(searchFilter?.value || '');
+            const status = statusFilter?.value || 'all';
+            const type = typeFilter?.value || 'all';
+            const priority = priorityFilter?.value || 'all';
+            const filtered = allRequests.filter((request) => {
+                if (status !== 'all' && (request.status || 'pending') !== status) return false;
+                if (type !== 'all' && request.type !== type) return false;
+                if (priority !== 'all' && (request.priority || 'normal') !== priority) return false;
+                if (search) {
+                    const haystack = this.normalizeArabicText([
+                        request.itemName,
+                        request.requestedBy?.name,
+                        request.requestedByName,
+                        request.notes,
+                        request.unit
+                    ].filter(Boolean).join(' '));
+                    if (!haystack.includes(search)) return false;
+                }
+                return true;
             });
+            if (listContainer) listContainer.innerHTML = this.renderSupplyRequestsList(filtered, isAdmin);
+            const count = panel.querySelector('#supply-filter-count');
+            const result = panel.querySelector('#supply-result-pill');
+            if (count) count.textContent = `${filtered.length} من ${allRequests.length}`;
+            if (result) result.textContent = `${filtered.length} طلب`;
+            bindSupplyListActions();
+        };
+        [statusFilter, typeFilter, priorityFilter].forEach((control) => control?.addEventListener('change', updateSupplyList));
+        searchFilter?.addEventListener('input', updateSupplyList);
+        resetFilters?.addEventListener('click', () => {
+            if (searchFilter) searchFilter.value = '';
+            if (statusFilter) statusFilter.value = 'all';
+            if (typeFilter) typeFilter.value = 'all';
+            if (priorityFilter) priorityFilter.value = 'all';
+            updateSupplyList();
         });
+        bindSupplyListActions();
 
         // إضافة مستمعي التمرير للجدول
         setTimeout(() => {
@@ -19198,10 +19205,10 @@ const Clinic = {
 
     renderSupplyRequestsList(requests, isAdmin) {
         if (!requests || requests.length === 0) {
-            return '<p class="text-center text-gray-500 py-8">لا توجد طلبات</p>';
+            return '<div class="cw-empty"><i class="fas fa-box-open"></i><h3>لا توجد طلبات مطابقة</h3><p>ستظهر الطلبات هنا بعد إرسالها أو عند تعديل الفلاتر.</p></div>';
         }
 
-        const rows = requests.map(request => {
+        const rows = requests.map((request, index) => {
             const requestDate = this.formatDate(request.createdAt || request.requestDate, true);
             const requestedBy = request.requestedBy?.name || request.requestedByName || 'غير معروف';
             const status = request.status || 'pending';
@@ -19226,26 +19233,33 @@ const Clinic = {
                 'supplies': 'مستلزمات طبية',
                 'other': 'أخرى'
             }[request.type] || request.type || 'غير محدد';
+            const typeIcon = {
+                medication: 'fas fa-pills',
+                equipment: 'fas fa-stethoscope',
+                supplies: 'fas fa-briefcase-medical',
+                other: 'fas fa-box'
+            }[request.type] || 'fas fa-box';
 
             return `
                 <tr>
-                    <td>${this.formatDate(request.createdAt || request.requestDate, true)}</td>
+                    <td class="text-center"><span class="cw-serial">${index + 1}</span></td>
+                    <td>${requestDate}</td>
                     <td>${Utils.escapeHTML(requestedBy)}</td>
                     <td>${Utils.escapeHTML(typeLabel)}</td>
-                    <td>${Utils.escapeHTML(request.itemName || '')}</td>
+                    <td><div class="cw-main-cell"><span class="cw-cell-icon"><i class="${typeIcon}"></i></span><div><strong>${Utils.escapeHTML(request.itemName || 'غير محدد')}</strong><small>${Utils.escapeHTML(request.notes || 'لا توجد ملاحظات')}</small></div></div></td>
                     <td class="text-center">${request.quantity || ''} ${Utils.escapeHTML(request.unit || '')}</td>
                     <td class="text-center">${priorityBadge}</td>
                     <td class="text-center">${statusBadge}</td>
                     <td class="text-center">
-                        <div class="flex items-center justify-center gap-2">
-                            <button type="button" class="btn-icon btn-icon-primary" data-action="view-request" data-id="${Utils.escapeHTML(request.id || '')}" title="عرض التفاصيل">
+                        <div class="cw-actions">
+                            <button type="button" class="btn-icon btn-icon-primary" data-action="view-request" data-id="${Utils.escapeHTML(request.id || '')}" title="عرض التفاصيل" aria-label="عرض التفاصيل">
                                 <i class="fas fa-eye"></i>
                             </button>
                             ${isAdmin && status === 'pending' ? `
-                            <button type="button" class="btn-icon btn-icon-success" data-action="update-status" data-id="${Utils.escapeHTML(request.id || '')}" data-status="approved" title="موافقة">
+                            <button type="button" class="btn-icon btn-icon-success" data-action="update-status" data-id="${Utils.escapeHTML(request.id || '')}" data-status="approved" title="موافقة" aria-label="موافقة">
                                 <i class="fas fa-check"></i>
                             </button>
-                            <button type="button" class="btn-icon btn-icon-danger" data-action="update-status" data-id="${Utils.escapeHTML(request.id || '')}" data-status="rejected" title="رفض">
+                            <button type="button" class="btn-icon btn-icon-danger" data-action="update-status" data-id="${Utils.escapeHTML(request.id || '')}" data-status="rejected" title="رفض" aria-label="رفض">
                                 <i class="fas fa-times"></i>
                             </button>
                             ` : ''}
@@ -19256,18 +19270,19 @@ const Clinic = {
         }).join('');
 
         return `
-            <div class="table-wrapper clinic-table-wrapper" style="overflow-x: auto; overflow-y: auto; max-height: 70vh;">
-                <table class="data-table">
+            <div class="cw-table-scroll clinic-table-wrapper">
+                <table class="cw-table">
                     <thead>
                         <tr>
-                            <th>تاريخ الطلب</th>
-                            <th>المقدم</th>
-                            <th>نوع الطلب</th>
-                            <th>اسم العنصر</th>
-                            <th class="text-center">الكمية</th>
-                            <th class="text-center">الأولوية</th>
-                            <th class="text-center">الحالة</th>
-                            <th class="text-center">الإجراءات</th>
+                            <th class="text-center"><i class="fas fa-hashtag"></i>م</th>
+                            <th><i class="fas fa-calendar-alt"></i>تاريخ الطلب</th>
+                            <th><i class="fas fa-user"></i>مقدم الطلب</th>
+                            <th><i class="fas fa-tag"></i>النوع</th>
+                            <th><i class="fas fa-box-open"></i>العنصر المطلوب</th>
+                            <th class="text-center"><i class="fas fa-balance-scale"></i>الكمية</th>
+                            <th class="text-center"><i class="fas fa-bolt"></i>الأولوية</th>
+                            <th class="text-center"><i class="fas fa-tasks"></i>الحالة</th>
+                            <th class="text-center"><i class="fas fa-cogs"></i>الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
