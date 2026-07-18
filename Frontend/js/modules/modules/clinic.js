@@ -2751,16 +2751,24 @@ const Clinic = {
 
     getFilteredSickLeaves() {
         const filters = this.state.filters.sickLeave || {};
-        const searchTerm = (filters.search || '').toLowerCase();
+        const searchTerm = this.normalizeArabicText(filters.search || '');
         const departmentFilter = filters.department || '';
         const fromDate = filters.dateFrom ? new Date(filters.dateFrom) : null;
         const toDate = filters.dateTo ? new Date(filters.dateTo) : null;
 
         return this.getSickLeaves().filter((item) => {
-            const matchesSearch = !searchTerm
-                || (item.employeeName && item.employeeName.toLowerCase().includes(searchTerm))
-                || (item.personName && item.personName.toLowerCase().includes(searchTerm))
-                || (item.employeeDepartment && item.employeeDepartment.toLowerCase().includes(searchTerm));
+            const searchableText = this.normalizeArabicText([
+                item.employeeName,
+                item.personName,
+                item.employeeCode,
+                item.employeeNumber,
+                item.employeeDepartment,
+                item.employeePosition,
+                item.position,
+                item.treatingDoctor,
+                item.reason
+            ].filter(Boolean).join(' '));
+            const matchesSearch = !searchTerm || searchableText.includes(searchTerm);
 
             if (!matchesSearch) return false;
 
@@ -5558,30 +5566,50 @@ const Clinic = {
         if (!panel) return;
 
         const filters = this.state.filters.sickLeave || {};
+        const allLeaves = this.getSickLeaves();
         const leaves = this.getFilteredSickLeaves();
         const departments = this.getClinicDepartments();
+        const activeFilterCount = ['search', 'department', 'dateFrom', 'dateTo']
+            .filter((key) => String(filters[key] || '').trim()).length;
+        const totalDays = leaves.reduce((sum, item) => {
+            const days = item.daysCount ?? this.calculateSickLeaveDays(item.startDate, item.endDate);
+            return sum + (parseInt(days, 10) || 0);
+        }, 0);
+        const averageDays = leaves.length ? (totalDays / leaves.length).toFixed(1) : '0';
+        const filteredDepartments = new Set(leaves.map((item) => item.employeeDepartment).filter(Boolean)).size;
 
-        const rows = leaves.map((item) => {
+        const rows = leaves.map((item, index) => {
             const name = item.employeeName || item.personName || '';
             const department = item.employeeDepartment || '—';
             const start = this.formatDate(item.startDate);
             const end = this.formatDate(item.endDate);
             const days = item.daysCount ?? this.calculateSickLeaveDays(item.startDate, item.endDate);
             const doctor = item.treatingDoctor || '—';
+            const employeeCode = item.employeeCode || item.employeeNumber || '';
+            const initial = String(name || '؟').trim().charAt(0) || '؟';
             return `
                 <tr>
-                    <td>${Utils.escapeHTML(name)}</td>
-                    <td>${Utils.escapeHTML(department)}</td>
-                    <td>${start}</td>
-                    <td>${end}</td>
-                    <td>${days}</td>
-                    <td>${Utils.escapeHTML(doctor)}</td>
-                    <td class="text-center">
-                        <div class="flex items-center justify-center gap-2">
-                            <button type="button" class="btn-icon btn-icon-primary" data-action="view-sick-leave" data-id="${Utils.escapeHTML(item.id || '')}">
+                    <td class="sl-serial-cell"><span>${index + 1}</span></td>
+                    <td>
+                        <div class="sl-person-cell">
+                            <span class="sl-person-avatar">${Utils.escapeHTML(initial)}</span>
+                            <span class="sl-person-copy">
+                                <strong>${Utils.escapeHTML(name || 'غير محدد')}</strong>
+                                ${employeeCode ? `<small><i class="fas fa-id-badge"></i>${Utils.escapeHTML(employeeCode)}</small>` : ''}
+                            </span>
+                        </div>
+                    </td>
+                    <td><span class="sl-department-chip"><i class="fas fa-building"></i>${Utils.escapeHTML(department)}</span></td>
+                    <td><span class="sl-date-cell"><i class="far fa-calendar-alt"></i>${start}</span></td>
+                    <td><span class="sl-date-cell"><i class="far fa-calendar-check"></i>${end}</span></td>
+                    <td class="text-center"><span class="sl-days-badge"><strong>${days}</strong><small>يوم</small></span></td>
+                    <td><span class="sl-doctor-cell"><i class="fas fa-user-md"></i>${Utils.escapeHTML(doctor)}</span></td>
+                    <td class="text-center sl-actions-cell">
+                        <div class="sl-row-actions">
+                            <button type="button" class="btn-icon btn-icon-primary" data-action="view-sick-leave" data-id="${Utils.escapeHTML(item.id || '')}" title="عرض تفاصيل الإجازة" aria-label="عرض تفاصيل الإجازة">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button type="button" class="btn-icon btn-icon-warning" data-action="edit-sick-leave" data-id="${Utils.escapeHTML(item.id || '')}">
+                            <button type="button" class="btn-icon btn-icon-warning" data-action="edit-sick-leave" data-id="${Utils.escapeHTML(item.id || '')}" title="تعديل الإجازة" aria-label="تعديل الإجازة">
                                 <i class="fas fa-edit"></i>
                             </button>
                         </div>
@@ -5592,17 +5620,18 @@ const Clinic = {
 
         const tableHtml = leaves.length
             ? `
-                <div class="table-wrapper clinic-table-wrapper" style="overflow-x: auto; overflow-y: auto; max-height: 70vh;">
-                    <table class="data-table">
+                <div class="sl-table-scroll clinic-table-wrapper">
+                    <table class="sl-table">
                         <thead>
                             <tr>
-                                <th>اسم الموظف</th>
-                                <th>القسم / الإدارة</th>
-                                <th>تاريخ البداية</th>
-                                <th>تاريخ النهاية</th>
-                                <th>عدد الأيام</th>
-                                <th>الطبيب المعالج</th>
-                                <th class="text-center">الإجراءات</th>
+                                <th class="text-center"><span class="sl-th"><i class="fas fa-hashtag"></i>م</span></th>
+                                <th><span class="sl-th"><i class="fas fa-user-injured"></i>الموظف</span></th>
+                                <th><span class="sl-th"><i class="fas fa-sitemap"></i>القسم / الإدارة</span></th>
+                                <th><span class="sl-th"><i class="fas fa-calendar-plus"></i>بداية الإجازة</span></th>
+                                <th><span class="sl-th"><i class="fas fa-calendar-check"></i>نهاية الإجازة</span></th>
+                                <th class="text-center"><span class="sl-th"><i class="fas fa-hourglass-half"></i>المدة</span></th>
+                                <th><span class="sl-th"><i class="fas fa-user-md"></i>الطبيب المعالج</span></th>
+                                <th class="text-center"><span class="sl-th"><i class="fas fa-cogs"></i>الإجراءات</span></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -5611,37 +5640,70 @@ const Clinic = {
                     </table>
                 </div>
             `
-            : this.renderEmptyState('لا توجد إجازات مرضية مسجلة.');
+            : `
+                <div class="sl-empty-state">
+                    <span class="sl-empty-icon"><i class="fas fa-file-medical-alt"></i></span>
+                    <h3>${activeFilterCount ? 'لا توجد نتائج مطابقة' : 'لا توجد إجازات مرضية مسجلة'}</h3>
+                    <p>${activeFilterCount ? 'جرّب تعديل كلمات البحث أو مسح أحد الفلاتر.' : 'ستظهر سجلات الإجازات المرضية هنا بعد إضافتها.'}</p>
+                    ${activeFilterCount ? '<button type="button" id="sick-leave-empty-reset" class="sl-reset-inline"><i class="fas fa-undo-alt"></i>مسح الفلاتر</button>' : ''}
+                </div>`;
 
         panel.innerHTML = `
-            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <div class="flex flex-wrap items-center gap-2">
-                    <div class="relative">
-                        <input type="text" id="sick-leave-search" class="form-input pr-10" placeholder="بحث بالاسم أو القسم" value="${Utils.escapeHTML(filters.search || '')}">
-                        <i class="fas fa-search absolute top-3 right-3 text-gray-400"></i>
+            <style>
+                #clinic-sick-leave-root{--sl-navy:#12365f;--sl-navy-deep:#0b2848;--sl-teal:#0f8b83;--sl-orange:#f59e0b;--sl-ink:#183047;--sl-muted:#64748b;--sl-line:#dbe7ef;--sl-pale:#f3f8fb;font-family:inherit;color:var(--sl-ink)}
+                #clinic-sick-leave-root *{box-sizing:border-box}
+                .sl-hero{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:19px 22px;margin-bottom:14px;border-radius:16px;background:linear-gradient(128deg,var(--sl-navy-deep),var(--sl-navy) 62%,#176b73);color:#fff;box-shadow:0 9px 26px rgba(11,40,72,.19)}
+                .sl-hero:after{content:"";position:absolute;width:210px;height:210px;left:-70px;top:-115px;border:28px solid rgba(255,255,255,.06);border-radius:50%;pointer-events:none}
+                .sl-hero-title{position:relative;z-index:1;display:flex;align-items:center;gap:13px}
+                .sl-hero-icon{width:48px;height:48px;border:1px solid rgba(255,255,255,.24);border-radius:14px;background:rgba(255,255,255,.13);display:grid;place-items:center;font-size:21px;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+                .sl-hero h2{margin:0;font-size:1.12rem;font-weight:850;letter-spacing:.01em}.sl-hero p{margin:4px 0 0;font-size:.76rem;color:#d7eaf3}
+                .sl-hero-actions{position:relative;z-index:1;display:flex;align-items:center;gap:7px;flex-wrap:wrap}.sl-action-btn{border:1px solid rgba(255,255,255,.26);border-radius:9px;padding:8px 12px;font-size:.76rem;font-weight:750;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:transform .18s ease,background .18s ease,box-shadow .18s ease}.sl-action-btn:hover{transform:translateY(-1px)}
+                .sl-action-ghost{background:rgba(255,255,255,.11);color:#fff}.sl-action-ghost:hover{background:rgba(255,255,255,.2)}.sl-action-add{background:#fff;color:var(--sl-navy-deep);border-color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.13)}
+                .sl-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}.sl-kpi{display:flex;align-items:center;gap:11px;padding:12px 14px;background:#fff;border:1px solid var(--sl-line);border-radius:12px;box-shadow:0 3px 12px rgba(15,46,72,.045)}.sl-kpi-icon{width:38px;height:38px;border-radius:10px;display:grid;place-items:center}.sl-kpi:nth-child(1) .sl-kpi-icon{background:#e0f2fe;color:#0369a1}.sl-kpi:nth-child(2) .sl-kpi-icon{background:#ccfbf1;color:#0f766e}.sl-kpi:nth-child(3) .sl-kpi-icon{background:#fff7ed;color:#c2410c}.sl-kpi:nth-child(4) .sl-kpi-icon{background:#f1f5f9;color:#475569}.sl-kpi small{display:block;color:var(--sl-muted);font-size:.68rem;font-weight:650}.sl-kpi strong{display:block;margin-top:2px;color:var(--sl-ink);font-size:1.05rem;font-weight:850}
+                .sl-filter-shell{padding:14px 16px;margin-bottom:14px;border:1px solid #b9dbe2;border-radius:14px;background:linear-gradient(180deg,#f8fcfd,#f1f8fa)}.sl-filter-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}.sl-filter-title{display:flex;align-items:center;gap:8px;font-size:.82rem;font-weight:800;color:var(--sl-navy)}.sl-filter-count{padding:2px 8px;border-radius:999px;background:#d9f4f1;color:#0f766e;font-size:.66rem}.sl-clear-btn{border:1px solid #cbdce3;border-radius:8px;background:#fff;color:#536b7c;padding:6px 10px;font-size:.72rem;font-weight:700;cursor:pointer}.sl-clear-btn:disabled{opacity:.42;cursor:not-allowed}.sl-filter-grid{display:grid;grid-template-columns:minmax(220px,1.6fr) repeat(3,minmax(150px,1fr));gap:10px}.sl-field label{display:block;margin-bottom:5px;color:#536b7c;font-size:.68rem;font-weight:750}.sl-field label i{width:17px;color:var(--sl-teal)}.sl-input-wrap{position:relative}.sl-input-wrap>i{position:absolute;right:11px;top:50%;transform:translateY(-50%);color:#7b93a4;font-size:.76rem;pointer-events:none}.sl-filter-control{width:100%;min-height:39px;padding:8px 11px;border:1.5px solid #c9dce4;border-radius:9px;background:#fff;color:var(--sl-ink);font:inherit;font-size:.78rem;outline:none;transition:border-color .18s,box-shadow .18s}.sl-input-wrap .sl-filter-control{padding-right:34px}.sl-filter-control:focus{border-color:var(--sl-teal);box-shadow:0 0 0 3px rgba(15,139,131,.11)}
+                .sl-table-card{overflow:hidden;border:1px solid var(--sl-line);border-radius:14px;background:#fff;box-shadow:0 5px 20px rgba(15,46,72,.06)}.sl-table-caption{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 15px;border-bottom:1px solid var(--sl-line);background:#fff}.sl-table-caption strong{font-size:.84rem;color:var(--sl-navy)}.sl-table-caption span{font-size:.7rem;color:var(--sl-muted)}.sl-result-pill{padding:4px 9px;border:1px solid #bce4df;border-radius:999px;background:#effcf9!important;color:#0f766e!important;font-weight:750}.sl-table-scroll{overflow:auto;max-height:68vh}.sl-table{width:100%;min-width:1040px;border-collapse:separate;border-spacing:0}.sl-table thead{position:sticky;top:0;z-index:4}.sl-table th{padding:12px 11px;background:linear-gradient(180deg,#163f6c,#11355e);color:#fff;border-left:1px solid rgba(255,255,255,.1);font-size:.72rem;font-weight:780;white-space:nowrap;text-align:right}.sl-table th:first-child{width:54px}.sl-table th:last-child{width:108px}.sl-th{display:inline-flex;align-items:center;gap:6px}.sl-th i{color:#6ee7dc;font-size:.71rem}.sl-table td{padding:11px;border-bottom:1px solid #e8eff4;color:#344b5f;font-size:.78rem;vertical-align:middle}.sl-table tbody tr:nth-child(even){background:#f8fbfd}.sl-table tbody tr:hover{background:#eef8f8}.sl-table tbody tr:last-child td{border-bottom:0}.sl-serial-cell{text-align:center}.sl-serial-cell span{display:inline-grid;place-items:center;width:27px;height:27px;border-radius:8px;background:#e8f1f7;color:var(--sl-navy);font-weight:850}.sl-person-cell{display:flex;align-items:center;gap:9px}.sl-person-avatar{flex:0 0 auto;width:34px;height:34px;border-radius:10px;background:linear-gradient(145deg,#d7edf4,#c7eee9);color:var(--sl-navy);display:grid;place-items:center;font-size:.85rem;font-weight:900}.sl-person-copy strong{display:block;color:#183047;font-size:.8rem}.sl-person-copy small{display:flex;align-items:center;gap:4px;margin-top:3px;color:#7890a1;font-size:.65rem}.sl-department-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:7px;background:#edf5f8;color:#34546a;font-weight:650}.sl-department-chip i{color:#0f8b83}.sl-date-cell,.sl-doctor-cell{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}.sl-date-cell i{color:#7895a8}.sl-doctor-cell i{color:#0f8b83}.sl-days-badge{display:inline-flex;align-items:baseline;justify-content:center;gap:3px;min-width:58px;padding:5px 8px;border:1px solid #fed7aa;border-radius:999px;background:#fff7ed;color:#9a3412}.sl-days-badge strong{font-size:.84rem}.sl-days-badge small{font-size:.62rem}.sl-row-actions{display:flex;align-items:center;justify-content:center;gap:6px}.sl-actions-cell .btn-icon{width:32px;height:32px;border-radius:8px;box-shadow:none}.sl-empty-state{text-align:center;padding:54px 20px;color:var(--sl-muted)}.sl-empty-icon{display:grid;place-items:center;width:62px;height:62px;margin:0 auto 12px;border-radius:18px;background:#eaf4f8;color:var(--sl-teal);font-size:25px}.sl-empty-state h3{margin:0 0 5px;color:var(--sl-navy);font-size:.98rem}.sl-empty-state p{margin:0;font-size:.76rem}.sl-reset-inline{margin-top:14px;padding:7px 12px;border:1px solid #b9dbe2;border-radius:8px;background:#fff;color:var(--sl-teal);font-weight:750;cursor:pointer}
+                @media(max-width:980px){.sl-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.sl-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+                @media(max-width:620px){.sl-hero{padding:16px}.sl-hero-actions{width:100%}.sl-action-btn{flex:1;justify-content:center}.sl-kpis,.sl-filter-grid{grid-template-columns:1fr}.sl-kpi{padding:10px 12px}.sl-filter-shell{padding:12px}.sl-table-caption{align-items:flex-start;flex-direction:column}}
+                @media(prefers-reduced-motion:reduce){.sl-action-btn,.sl-filter-control{transition:none}}
+            </style>
+            <div id="clinic-sick-leave-root">
+                <section class="sl-hero" aria-labelledby="sick-leave-title">
+                    <div class="sl-hero-title">
+                        <span class="sl-hero-icon"><i class="fas fa-notes-medical"></i></span>
+                        <div>
+                            <h2 id="sick-leave-title">سجل الإجازات المرضية</h2>
+                            <p>متابعة دقيقة للفترات المرضية والجهات والأطباء المعالجين</p>
+                        </div>
                     </div>
-                    <select id="sick-leave-department" class="form-input">
-                        <option value="">جميع الإدارات</option>
-                        ${departments.map((department) => `
-                            <option value="${Utils.escapeHTML(department)}" ${filters.department === department ? 'selected' : ''}>${Utils.escapeHTML(department)}</option>
-                        `).join('')}
-                    </select>
-                    <input type="date" id="sick-leave-date-from" class="form-input" value="${filters.dateFrom || ''}" title="من تاريخ">
-                    <input type="date" id="sick-leave-date-to" class="form-input" value="${filters.dateTo || ''}" title="إلى تاريخ">
-                </div>
-                <div class="flex items-center gap-2">
-                    <button type="button" class="btn-secondary" id="sick-leave-export-pdf-btn">
-                        <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
-                    </button>
-                    <button type="button" class="btn-success" id="sick-leave-export-excel-btn">
-                        <i class="fas fa-file-excel ml-2"></i>تصدير Excel
-                    </button>
-                    <button type="button" class="btn-primary" id="sick-leave-add-btn">
-                        <i class="fas fa-plus ml-2"></i>إضافة جديد
-                    </button>
-                </div>
+                    <div class="sl-hero-actions">
+                        <button type="button" class="sl-action-btn sl-action-ghost" id="sick-leave-export-pdf-btn"><i class="fas fa-file-pdf"></i>PDF</button>
+                        <button type="button" class="sl-action-btn sl-action-ghost" id="sick-leave-export-excel-btn"><i class="fas fa-file-excel"></i>Excel</button>
+                        <button type="button" class="sl-action-btn sl-action-add" id="sick-leave-add-btn"><i class="fas fa-plus"></i>إضافة إجازة</button>
+                    </div>
+                </section>
+                <section class="sl-kpis" aria-label="ملخص الإجازات المرضية">
+                    <div class="sl-kpi"><span class="sl-kpi-icon"><i class="fas fa-file-medical"></i></span><div><small>السجلات المعروضة</small><strong>${leaves.length}</strong></div></div>
+                    <div class="sl-kpi"><span class="sl-kpi-icon"><i class="fas fa-calendar-day"></i></span><div><small>إجمالي أيام الإجازات</small><strong>${totalDays}</strong></div></div>
+                    <div class="sl-kpi"><span class="sl-kpi-icon"><i class="fas fa-chart-line"></i></span><div><small>متوسط مدة الإجازة</small><strong>${averageDays} يوم</strong></div></div>
+                    <div class="sl-kpi"><span class="sl-kpi-icon"><i class="fas fa-building"></i></span><div><small>الإدارات الظاهرة</small><strong>${filteredDepartments}</strong></div></div>
+                </section>
+                <section class="sl-filter-shell" aria-label="فلاتر الإجازات المرضية">
+                    <div class="sl-filter-head">
+                        <div class="sl-filter-title"><i class="fas fa-sliders-h"></i>فلترة السجل <span class="sl-filter-count">${leaves.length} من ${allLeaves.length}</span></div>
+                        <button type="button" id="sick-leave-reset-filters" class="sl-clear-btn" ${activeFilterCount ? '' : 'disabled'}><i class="fas fa-undo-alt ml-1"></i>مسح الفلاتر${activeFilterCount ? ` (${activeFilterCount})` : ''}</button>
+                    </div>
+                    <div class="sl-filter-grid">
+                        <div class="sl-field"><label for="sick-leave-search"><i class="fas fa-search"></i>بحث شامل</label><div class="sl-input-wrap"><i class="fas fa-search"></i><input type="search" id="sick-leave-search" class="sl-filter-control" placeholder="الاسم، الكود، الإدارة، الطبيب أو السبب..." value="${Utils.escapeHTML(filters.search || '')}" autocomplete="off"></div></div>
+                        <div class="sl-field"><label for="sick-leave-department"><i class="fas fa-sitemap"></i>القسم / الإدارة</label><select id="sick-leave-department" class="sl-filter-control"><option value="">جميع الإدارات</option>${departments.map((department) => `<option value="${Utils.escapeHTML(department)}" ${filters.department === department ? 'selected' : ''}>${Utils.escapeHTML(department)}</option>`).join('')}</select></div>
+                        <div class="sl-field"><label for="sick-leave-date-from"><i class="fas fa-calendar-plus"></i>من تاريخ</label><input type="date" id="sick-leave-date-from" class="sl-filter-control" value="${filters.dateFrom || ''}"></div>
+                        <div class="sl-field"><label for="sick-leave-date-to"><i class="fas fa-calendar-check"></i>إلى تاريخ</label><input type="date" id="sick-leave-date-to" class="sl-filter-control" value="${filters.dateTo || ''}"></div>
+                    </div>
+                </section>
+                <section class="sl-table-card">
+                    <div class="sl-table-caption"><div><strong>بيانات الإجازات المرضية</strong><span> — مرتبة حسب السجلات المتاحة</span></div><span class="sl-result-pill">${leaves.length} سجل</span></div>
+                    ${tableHtml}
+                </section>
             </div>
-            ${tableHtml}
         `;
         this.applyModuleI18n(panel);
 
@@ -5664,11 +5726,29 @@ const Clinic = {
         const addBtn = panel.querySelector('#sick-leave-add-btn');
         const exportPdfBtn = panel.querySelector('#sick-leave-export-pdf-btn');
         const exportExcelBtn = panel.querySelector('#sick-leave-export-excel-btn');
+        const resetFiltersBtn = panel.querySelector('#sick-leave-reset-filters');
+        const emptyResetBtn = panel.querySelector('#sick-leave-empty-reset');
+
+        const resetFilters = () => {
+            this.state.filters.sickLeave = { search: '', department: '', dateFrom: '', dateTo: '' };
+            this.renderSickLeaveTab();
+        };
 
         if (searchInput) {
             searchInput.addEventListener('input', (event) => {
-                this.state.filters.sickLeave.search = event.target.value.trim();
-                this.renderSickLeaveTab();
+                const value = event.target.value;
+                clearTimeout(this._sickLeaveSearchTimer);
+                this._sickLeaveSearchTimer = setTimeout(() => {
+                    this.state.filters.sickLeave.search = value.trim();
+                    this.renderSickLeaveTab();
+                    requestAnimationFrame(() => {
+                        const nextSearchInput = panel.querySelector('#sick-leave-search');
+                        if (!nextSearchInput) return;
+                        nextSearchInput.focus({ preventScroll: true });
+                        const caret = nextSearchInput.value.length;
+                        nextSearchInput.setSelectionRange?.(caret, caret);
+                    });
+                }, 180);
             });
         }
 
@@ -5696,6 +5776,8 @@ const Clinic = {
         addBtn?.addEventListener('click', () => this.showSickLeaveForm());
         exportPdfBtn?.addEventListener('click', () => this.exportSickLeaveToPDF());
         exportExcelBtn?.addEventListener('click', () => this.exportSickLeaveToExcel());
+        resetFiltersBtn?.addEventListener('click', resetFilters);
+        emptyResetBtn?.addEventListener('click', resetFilters);
 
         panel.querySelectorAll('[data-action="view-sick-leave"]').forEach((btn) => {
             btn.addEventListener('click', () => this.viewSickLeaveRecord(btn.getAttribute('data-id')));
