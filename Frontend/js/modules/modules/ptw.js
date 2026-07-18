@@ -14784,19 +14784,19 @@ const PTW = {
                         if (newAddManualBtn) {
                             newAddManualBtn.addEventListener('click', () => {
                                 Utils.safeLog('🖱️ تم النقر على زر إضافة تصريح يدوي');
-                                this.showForm({ isManualEntry: true });
+                                this.openManualPermitForm();
                             });
                         }
-                    } catch (error) {
+                    catch (error) {
                         addManualBtn.addEventListener('click', () => {
                             Utils.safeLog('🖱️ تم النقر على زر إضافة تصريح يدوي');
-                            this.showForm({ isManualEntry: true });
+                            this.openManualPermitForm();
                         });
                     }
                 } else {
                     addManualBtn.addEventListener('click', () => {
                         Utils.safeLog('🖱️ تم النقر على زر إضافة تصريح يدوي');
-                        this.showForm({ isManualEntry: true });
+                        this.openManualPermitForm();
                     });
                 }
             }
