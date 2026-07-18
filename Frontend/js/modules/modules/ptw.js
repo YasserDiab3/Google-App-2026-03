@@ -3085,9 +3085,9 @@ const PTW = {
                         <p class="section-subtitle">${t('module.ptw.subtitle', 'إصدار ومتابعة تصاريح العمل مع دائرة الاعتمادات')}</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button id="add-manual-ptw-btn" class="btn-secondary" style="border:1px solid #d1d5db; background:#f3f4f6; color:#374151;">
-                            <i class="fas fa-pen ml-2"></i>
-                            إضافة تصريح يدوي / Manual Permit Entry
+                        <button id="add-manual-ptw-btn" class="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none;">
+                            <i class="fas fa-edit ml-2"></i>
+                            ${t('module.ptw.btn.addManual', 'إضافة تصريح يدوي')}
                         </button>
                         <button id="add-ptw-btn" class="btn-primary">
                             <i class="fas fa-plus ml-2"></i>
@@ -3581,9 +3581,9 @@ const PTW = {
         return `
             <!-- أزرار التصدير والإدخال -->
             <div class="flex justify-between items-center gap-2 mb-4">
-                <button id="ptw-registry-add-manual" class="btn-success">
+                <button id="ptw-registry-add-manual" class="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none;">
                     <i class="fas fa-plus-circle ml-2"></i>
-                    ${t('module.ptw.registry.addManual', 'إضافة تصريح يدوي / Manual Permit Entry')}
+                    ${t('module.ptw.registry.addManual', 'إضافة تصريح يدوي')}
                 </button>
                 <div class="flex gap-2">
                     <button id="ptw-registry-import-excel" class="btn-secondary">
@@ -10222,7 +10222,7 @@ const PTW = {
                         </div>
                         <div>
                             <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0; color: white;">
-                                ${isEdit ? 'تعديل تصريح عمل' : 'إصدار تصريح عمل يدوي'} – Manual Permit Entry
+                                ${isEdit ? t('module.ptw.form.editManual', 'تعديل تصريح عمل يدوي') : t('module.ptw.form.newManual', 'إصدار تصريح عمل يدوي')}
                             </h2>
                             <p style="font-size: 0.875rem; opacity: 0.8; margin: 4px 0 0 0;">
                                 <i class="fas fa-info-circle ml-1"></i>
