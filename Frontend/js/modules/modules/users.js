@@ -364,7 +364,7 @@ const Users = {
                                     required
                                     class="form-input"
                                     value="${userData?.email || ''}"
-                                    placeholder="example@americana.com"
+                                    placeholder="example@icapp.com.eg"
                                     ${isEdit ? 'readonly' : ''}
                                 >
                             </div>

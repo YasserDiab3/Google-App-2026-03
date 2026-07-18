@@ -3707,8 +3707,6 @@ window.UI = {
             'السلامة والصحة المهنية والبيئة': 'Health, Safety & Environment (HSE)',
             'السلامة والصحة المهنية': 'Occupational Safety & Health',
             'نظام السلامة المهنية': 'Occupational Safety System',
-            'نظام إدارة السلامة والصحة المهنية': 'SafetyHub | ICAPP',
-            'نظام إدارة السلامة والصحة المهنية والبيئة': 'SafetyHub | ICAPP',
         };
 
         // EN → AR (for when user switches back to Arabic)
@@ -3718,7 +3716,6 @@ window.UI = {
             'Health, Safety & Environment (HSE)': 'السلامة والصحة المهنية والبيئة',
             'Occupational Safety & Health': 'السلامة والصحة المهنية',
             'Occupational Safety System': 'نظام السلامة المهنية',
-            'HSE Management System': 'SafetyHub | ICAPP',
         };
 
         if (lang === 'en') {
@@ -4586,7 +4583,7 @@ window.UI = {
                                 id="forgot-password-email" 
                                 required
                                 class="form-input"
-                                placeholder="example@americana.com"
+                                placeholder="example@icapp.com.eg"
                                 autocomplete="email"
                             >
                         </div>

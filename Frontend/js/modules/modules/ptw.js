@@ -9319,7 +9319,26 @@ const PTW = {
      * فتح نموذج إدخال تصريح يدوي
      */
     async openManualPermitForm(entryId = null) {
-        const isEdit = entryId !== null;
+        const ptwManualLoadingId = 'ptw-manual-form-loading-' + Date.now();
+        const ptwManualLoadingOverlay = document.createElement('div');
+        ptwManualLoadingOverlay.id = ptwManualLoadingId;
+        ptwManualLoadingOverlay.className = 'modal-overlay';
+        ptwManualLoadingOverlay.style.zIndex = '999999';
+        ptwManualLoadingOverlay.innerHTML = `
+            <div class="flex items-center justify-center h-full w-full">
+                <div class="bg-white p-6 rounded-xl shadow-2xl flex flex-col items-center">
+                    <div class="w-12 h-12 border-4 border-blue-200 border-t-blue-600 border-solid rounded-full animate-spin mb-4"></div>
+                    <p class="text-gray-700 font-bold text-lg">جاري تجهيز النموذج...</p>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(ptwManualLoadingOverlay);
+
+        try {
+            // Ensure browser paints the loading spinner before heavy synchronous DOM creation
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 50))));
+
+            const isEdit = entryId !== null;
         const existingEntry = entryId ? this.registryData.find(r => r.id === entryId) : null;
 
         // استعادة أسماء القائمين بالعمل من النص المخزن (عند التحميل من قاعدة البيانات)
@@ -11348,6 +11367,10 @@ const PTW = {
             
             await this.saveManualPermitEntry(modal, entryId);
         });
+        } finally {
+            const loadingOverlayToRemove = document.getElementById(ptwManualLoadingId);
+            if (loadingOverlayToRemove) loadingOverlayToRemove.remove();
+        }
     },
 
     /**

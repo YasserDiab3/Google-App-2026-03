@@ -163,7 +163,7 @@ const Users={currentView:"list",currentEditId:null,autoRefreshInterval:null,refr
                                     required
                                     class="form-input"
                                     value="${t?.email||""}"
-                                    placeholder="example@americana.com"
+                                    placeholder="example@icapp.com.eg"
                                     ${s?"readonly":""}
                                 >
                             </div>

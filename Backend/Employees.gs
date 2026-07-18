@@ -797,7 +797,7 @@ function getPublicProfileByToken(token) {
                 hireDateDisplay: hireInfo.hireDateDisplay,
                 tenureText: hireInfo.tenureText,
                 emergencyContacts: emergencyContacts,
-                companyName: 'Americana HSE',
+                companyName: 'SafetyHub | ICAPP',
                 trainingSessions: trainingSessions,
                 violationsCount: violationsCount,
                 ppeCount: ppeCount
