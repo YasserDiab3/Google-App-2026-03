@@ -1852,7 +1852,7 @@ const PTW = {
         const t = (key, fallback) => this._t(key, fallback);
         return `
             <div class="ptw-table-wrapper">
-                <table class="data-table" id="ptw-registry-data-table">
+                <table class="data-table ptw-registry-table" id="ptw-registry-data-table">
                     <thead>
                         <tr>
                             <th>${t('module.ptw.registry.col.seq', 'مسلسل')}</th>
@@ -3579,8 +3579,75 @@ const PTW = {
             : `<div class="table-responsive" id="ptw-registry-table-mount" data-registry-table-pending="1">${this.renderRegistryTableShell()}</div>`;
 
         return `
+            <style>
+                .ptw-registry-workspace {
+                    --ptr-navy:#102a43; --ptr-navy-2:#173d6c; --ptr-cyan:#0891b2; --ptr-blue:#2563eb;
+                    --ptr-line:#d9e5f2; --ptr-soft:#f3f8fd; --ptr-ink:#172033; --ptr-muted:#64748b;
+                    display:grid; gap:18px; direction:rtl;
+                }
+                .ptw-registry-toolbar { display:flex!important; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:0!important; padding:13px 15px; border:1px solid #bfdbfe; border-radius:16px; background:linear-gradient(120deg,#eff6ff,#f0fdfa); box-shadow:0 7px 20px rgba(30,64,175,.07); }
+                .ptw-registry-toolbar>div { display:flex; flex-wrap:wrap; gap:8px; }
+                .ptw-registry-toolbar button { min-height:40px; border-radius:10px; font-weight:750; box-shadow:0 4px 12px rgba(15,23,42,.09); }
+                .ptw-registry-kpis { margin-bottom:0!important; }
+                .ptw-registry-filter-card { margin-bottom:0!important; overflow:hidden; border:1px solid #bae6fd; border-radius:18px; box-shadow:0 10px 26px rgba(14,116,144,.08); }
+                .ptw-registry-filter-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:14px 16px; border-bottom:1px solid #bae6fd; background:linear-gradient(125deg,#0f2942,#164e63); color:#fff; }
+                .ptw-registry-filter-title { display:flex; align-items:center; gap:10px; min-width:0; }
+                .ptw-registry-filter-title>i { display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border:1px solid rgba(255,255,255,.3); border-radius:11px; color:#cffafe; background:rgba(255,255,255,.1); }
+                .ptw-registry-filter-title h3 { margin:0; color:#fff; font-size:1rem; font-weight:850; }
+                .ptw-registry-filter-title p { margin:2px 0 0; color:#bae6fd; font-size:.72rem; }
+                .ptw-registry-filter-summary { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+                .ptw-registry-result-pill { display:inline-flex; align-items:center; gap:6px; padding:7px 11px; border:1px solid rgba(255,255,255,.28); border-radius:999px; color:#ecfeff; background:rgba(255,255,255,.1); font-size:.76rem; font-weight:750; }
+                .ptw-registry-result-pill strong { min-width:24px; text-align:center; color:#083344; background:#67e8f9; border-radius:999px; padding:2px 7px; }
+                .ptw-registry-filter-reset { min-height:34px!important; padding:6px 11px!important; border:1px solid rgba(255,255,255,.35)!important; border-radius:9px!important; color:#fff!important; background:rgba(255,255,255,.1)!important; font-size:.75rem!important; font-weight:750!important; box-shadow:none!important; }
+                .ptw-registry-filter-reset:hover:not(:disabled) { color:#0f2942!important; background:#fff!important; }
+                .ptw-registry-filter-reset:disabled { opacity:.45; cursor:not-allowed; }
+                .ptw-registry-filter-card>.card-body { padding:16px; background:linear-gradient(180deg,#f0f9ff,#fff); }
+                .ptw-registry-filter-grid { display:grid!important; grid-template-columns:minmax(240px,1.5fr) repeat(3,minmax(155px,1fr)); gap:12px!important; align-items:end; }
+                .ptw-registry-filter-field { min-width:0; }
+                .ptw-registry-filter-field label { display:flex!important; align-items:center; gap:6px; margin-bottom:6px!important; color:#334155!important; font-size:.76rem!important; font-weight:800!important; }
+                .ptw-registry-filter-field label i { color:var(--ptr-cyan); }
+                .ptw-registry-filter-field .form-input { width:100%; min-height:44px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; color:var(--ptr-ink); transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease; }
+                .ptw-registry-filter-field .form-input:hover { border-color:#7dd3fc; }
+                .ptw-registry-filter-field .form-input:focus { border-color:#0891b2; box-shadow:0 0 0 3px rgba(8,145,178,.14); background:#fafeff; }
+                .ptw-registry-filter-field.is-active .form-input { border-color:#0891b2; background:#ecfeff; box-shadow:0 0 0 3px rgba(8,145,178,.09); }
+                .ptw-registry-filter-card #registry-filter-count-wrapper { display:none; }
+                .ptw-registry-table-card { overflow:hidden; border:1px solid #cbddeb; border-radius:18px; box-shadow:0 13px 30px rgba(15,42,67,.09); }
+                .ptw-registry-table-card>.card-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:15px 17px; border-bottom:0; background:linear-gradient(125deg,var(--ptr-navy),var(--ptr-navy-2)); }
+                .ptw-registry-table-card .card-title { display:flex; align-items:center; gap:8px; margin:0; color:#fff; font-size:1.08rem; font-weight:850; }
+                .ptw-registry-table-card .card-title i { color:#67e8f9; }
+                .ptw-registry-visible-badge { display:inline-flex; align-items:center; gap:5px; padding:6px 10px; border:1px solid rgba(255,255,255,.25); border-radius:999px; color:#dbeafe; background:rgba(255,255,255,.09); font-size:.73rem; font-weight:750; }
+                .ptw-registry-visible-badge strong { color:#fff; font-size:.88rem; }
+                .ptw-registry-table-card>.card-body { padding:0; }
+                .ptw-registry-table-card .table-responsive,.ptw-registry-table-card .ptw-table-wrapper { max-height:min(68vh,720px); overflow:auto; scrollbar-width:thin; scrollbar-color:#94a3b8 #e2e8f0; }
+                .ptw-registry-table { width:max-content!important; min-width:100%; border-collapse:separate!important; border-spacing:0; table-layout:auto; font-size:.79rem; }
+                .ptw-registry-table thead { position:sticky; top:0; z-index:8; }
+                .ptw-registry-table thead th { position:sticky; top:0; z-index:8; min-width:108px; padding:13px 11px!important; border:0!important; border-left:1px solid rgba(255,255,255,.13)!important; color:#f8fafc!important; background:linear-gradient(180deg,#173d6c,#102a43)!important; font-size:.73rem; font-weight:850!important; line-height:1.45; white-space:normal; vertical-align:middle; box-shadow:inset 0 -3px #22d3ee; }
+                .ptw-registry-table thead th:first-child { min-width:78px; right:0; z-index:11; }
+                .ptw-registry-table thead th:last-child { min-width:118px; left:0; z-index:11; }
+                .ptw-registry-table tbody td { padding:11px 10px!important; border:0!important; border-bottom:1px solid #e2e8f0!important; border-left:1px solid #edf2f7!important; color:#334155; background:#fff; line-height:1.5; vertical-align:middle; }
+                .ptw-registry-table tbody tr:nth-child(even) td { background:#f8fbff; }
+                .ptw-registry-table tbody tr:hover td { background:#ecfeff; }
+                .ptw-registry-table tbody td:first-child { position:sticky; right:0; z-index:4; min-width:78px; color:#1d4ed8!important; background:#eff6ff!important; font-family:Consolas,'Courier New',monospace; font-size:.86rem; text-align:center; box-shadow:-5px 0 12px rgba(15,23,42,.04); }
+                .ptw-registry-table tbody td:last-child { position:sticky; left:0; z-index:4; min-width:118px; background:#f8fafc!important; box-shadow:5px 0 12px rgba(15,23,42,.07); }
+                .ptw-registry-table tbody td:nth-child(3),.ptw-registry-table tbody td:nth-child(10) { min-width:190px; max-width:260px; }
+                .ptw-registry-table tbody td:nth-child(11),.ptw-registry-table tbody td:nth-child(12) { min-width:150px; }
+                .ptw-registry-table .badge { display:inline-flex; align-items:center; justify-content:center; min-width:105px; padding:6px 9px; border-radius:999px; font-size:.69rem; font-weight:800; white-space:normal; }
+                .ptw-registry-table td:last-child .btn { min-height:33px; border-radius:8px; white-space:nowrap; box-shadow:0 3px 9px rgba(37,99,235,.16); }
+                @media (max-width:1050px) { .ptw-registry-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+                @media (max-width:680px) {
+                    .ptw-registry-toolbar { align-items:stretch; }
+                    .ptw-registry-toolbar>button,.ptw-registry-toolbar>div,.ptw-registry-toolbar>div>button { width:100%; }
+                    .ptw-registry-filter-head { align-items:flex-start; }
+                    .ptw-registry-filter-summary { width:100%; justify-content:space-between; }
+                    .ptw-registry-filter-grid { grid-template-columns:1fr; }
+                    .ptw-registry-table-card>.card-header { align-items:flex-start; flex-direction:column; }
+                    .ptw-registry-table-card .table-responsive,.ptw-registry-table-card .ptw-table-wrapper { max-height:72vh; }
+                }
+                @media (prefers-reduced-motion:reduce) { .ptw-registry-filter-field .form-input { transition:none; } }
+            </style>
+            <div class="ptw-registry-workspace">
             <!-- أزرار التصدير والإدخال -->
-            <div class="flex justify-between items-center gap-2 mb-4">
+            <div class="flex justify-between items-center gap-2 mb-4 ptw-registry-toolbar">
                 <button type="button" id="ptw-registry-add-manual" class="btn-warning" onclick="PTW.openManualPermitForm()">
                     <i class="fas fa-plus-circle ml-2"></i>
                     ${t('module.ptw.registry.addManual', 'إضافة تصريح يدوي')}
@@ -3602,7 +3669,7 @@ const PTW = {
             </div>
             
             <!-- بطاقات الإحصائيات -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 ptw-registry-kpis">
                 <div class="kpi-card kpi-info">
                     <div class="kpi-icon"><i class="fas fa-list-ol"></i></div>
                     <div class="kpi-content">
@@ -3635,16 +3702,35 @@ const PTW = {
             </div>
             
             <!-- فلاتر البحث -->
-            <div class="content-card mb-4">
-                <div class="card-body">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="content-card mb-4 ptw-registry-filter-card">
+                <div class="ptw-registry-filter-head">
+                    <div class="ptw-registry-filter-title">
+                        <i class="fas fa-sliders-h" aria-hidden="true"></i>
                         <div>
+                            <h3>${t('module.ptw.registry.dynamicFilter', 'فلترة سجل التصاريح')}</h3>
+                            <p>${t('module.ptw.registry.dynamicFilterHint', 'تتحدث النتائج تلقائياً أثناء البحث أو تغيير الفترة')}</p>
+                        </div>
+                    </div>
+                    <div class="ptw-registry-filter-summary">
+                        <span class="ptw-registry-result-pill">
+                            <i class="fas fa-list-check" aria-hidden="true"></i>
+                            ${t('module.ptw.registry.visibleResults', 'النتائج الظاهرة')}
+                            <strong id="ptw-registry-filter-count-head">${registryRowCount}</strong>
+                        </span>
+                        <button type="button" id="registry-filter-reset" class="ptw-registry-filter-reset" onclick="PTW.resetRegistryFilters()" disabled>
+                            <i class="fas fa-undo-alt ml-1" aria-hidden="true"></i>${t('module.ptw.registry.resetFilters', 'إعادة الضبط')}
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 ptw-registry-filter-grid">
+                        <div class="ptw-registry-filter-field" data-registry-filter-field>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-search ml-2"></i>${t('module.ptw.registry.search', 'بحث')}
                             </label>
                             <input type="text" id="registry-search" class="form-input" placeholder="${t('module.ptw.registry.searchPlaceholder', 'ابحث برقم التصريح الورقي أو المسلسل أو الوصف...')}">
                         </div>
-                        <div>
+                        <div class="ptw-registry-filter-field" data-registry-filter-field>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-filter ml-2"></i>${t('module.ptw.registry.status', 'الحالة')}
                             </label>
@@ -3657,13 +3743,13 @@ const PTW = {
                                 <option value="إغلاق جبري">إغلاق جبري</option>
                             </select>
                         </div>
-                        <div>
+                        <div class="ptw-registry-filter-field" data-registry-filter-field>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-calendar ml-2"></i>${t('module.ptw.registry.fromDate', 'من تاريخ')}
                             </label>
                             <input type="date" id="registry-filter-date-from" class="form-input">
                         </div>
-                        <div>
+                        <div class="ptw-registry-filter-field" data-registry-filter-field>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-calendar ml-2"></i>${t('module.ptw.registry.toDate', 'إلى تاريخ')}
                             </label>
@@ -3677,16 +3763,21 @@ const PTW = {
             </div>
             
             <!-- جدول السجل -->
-            <div class="content-card">
+            <div class="content-card ptw-registry-table-card">
                 <div class="card-header">
                     <h2 class="card-title" id="ptw-registry-table-title">
                         <i class="fas fa-table ml-2"></i>
                         ${t('module.ptw.registry.tableTitle', 'جدول سجل حصر التصاريح')} (${registryRowCount} ${t('module.ptw.registry.recordWord', 'سجل')})
                     </h2>
+                    <span class="ptw-registry-visible-badge">
+                        <i class="fas fa-eye" aria-hidden="true"></i>
+                        ${t('module.ptw.registry.currentView', 'المعروض حالياً')}: <strong id="ptw-registry-visible-count">${registryRowCount}</strong>
+                    </span>
                 </div>
                 <div class="card-body">
                     ${tableBlock}
                 </div>
+            </div>
             </div>
         `;
     },
@@ -3711,7 +3802,7 @@ const PTW = {
         const sortedData = this.sortPermitRecordsNewestFirst(registryRows);
 
         let tableHTML = `
-            <table class="data-table">
+            <table class="data-table ptw-registry-table" id="ptw-registry-data-table">
                 <thead>
                     <tr>
                         <th>${t('module.ptw.registry.col.seq', 'مسلسل')}</th>
@@ -9176,7 +9267,16 @@ const PTW = {
         // البحث
         const searchInput = document.getElementById('registry-search');
         if (searchInput) {
-            searchInput.oninput = () => this.applyRegistryFilters();
+            searchInput.oninput = () => {
+                clearTimeout(this._registryFilterDebounceTimer);
+                this._registryFilterDebounceTimer = setTimeout(() => this.applyRegistryFilters(), 120);
+            };
+            searchInput.onkeydown = (event) => {
+                if (event.key === 'Escape' && searchInput.value) {
+                    searchInput.value = '';
+                    this.applyRegistryFilters();
+                }
+            };
         }
 
         // فلتر الحالة
@@ -9276,12 +9376,27 @@ const PTW = {
     /**
      * تطبيق الفلاتر على السجل
      */
+    resetRegistryFilters() {
+        const search = document.getElementById('registry-search');
+        const status = document.getElementById('registry-filter-status');
+        const dateFrom = document.getElementById('registry-filter-date-from');
+        const dateTo = document.getElementById('registry-filter-date-to');
+        if (search) search.value = '';
+        if (status) status.value = '';
+        if (dateFrom) dateFrom.value = '';
+        if (dateTo) dateTo.value = '';
+        clearTimeout(this._registryFilterDebounceTimer);
+        this.applyRegistryFilters();
+        if (search && typeof search.focus === 'function') search.focus();
+    },
+
     applyRegistryFilters() {
         const searchRaw = document.getElementById('registry-search')?.value.trim() || '';
         const searchTerm = searchRaw.toLowerCase();
         const statusFilter = document.getElementById('registry-filter-status')?.value || '';
         const dateFromFilter = document.getElementById('registry-filter-date-from')?.value || '';
         const dateToFilter = document.getElementById('registry-filter-date-to')?.value || '';
+        const hasActiveFilters = !!(searchRaw || statusFilter || dateFromFilter || dateToFilter);
 
         const rows = document.querySelectorAll('[data-registry-id]');
         let visibleCount = 0;
@@ -9325,6 +9440,19 @@ const PTW = {
         if (countEl) {
             countEl.textContent = String(visibleCount);
         }
+        const countHead = document.getElementById('ptw-registry-filter-count-head');
+        const visibleBadge = document.getElementById('ptw-registry-visible-count');
+        if (countHead) countHead.textContent = String(visibleCount);
+        if (visibleBadge) visibleBadge.textContent = String(visibleCount);
+
+        const resetButton = document.getElementById('registry-filter-reset');
+        if (resetButton) resetButton.disabled = !hasActiveFilters;
+
+        ['registry-search', 'registry-filter-status', 'registry-filter-date-from', 'registry-filter-date-to'].forEach((id) => {
+            const control = document.getElementById(id);
+            const field = control?.closest?.('[data-registry-filter-field]');
+            if (field) field.classList.toggle('is-active', !!control.value);
+        });
     },
 
     /**
