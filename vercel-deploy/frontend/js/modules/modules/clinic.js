@@ -4448,7 +4448,10 @@ const Clinic = {
     },
 
     /** القائمة الافتراضية لأنواع الزيارة (قابلة للتعديل من مدير النظام عبر إعدادات العيادة) */
-    DEFAULT_VISIT_TYPES: ['طوارئ', 'اصابة عمل', 'مرض', 'فحص دوري', 'متابعة', 'فحص ماقبل التعيين', 'تحليل مخدارت'],
+    DEFAULT_VISIT_TYPES: ['طوارئ', 'اصابة عمل', 'مرض', 'صرف الأدوية', 'فحص دوري', 'متابعة', 'فحص ماقبل التعيين', 'تحليل مخدارت'],
+
+    /** الوظائف الافتراضية للمقاولين - قابلة للإدارة مركزيًا بواسطة مدير النظام */
+    DEFAULT_CONTRACTOR_JOB_TITLES: ['مهندس', 'مشرف', 'عامل', 'عاملة', 'فني', 'لحام', 'براد'],
 
     /**
      * الحصول على قائمة أنواع الزيارة (من إعدادات المدير أو الافتراضية)
@@ -4471,10 +4474,41 @@ const Clinic = {
         if ((!Array.isArray(custom) || custom.length === 0) && AppState.appData?.clinicVisitTypes) {
             custom = AppState.appData.clinicVisitTypes;
         }
-        if (Array.isArray(custom) && custom.length > 0) {
-            return custom.map((v) => (typeof v === 'string' ? v.trim() : String(v))).filter(Boolean);
+        const list = Array.isArray(custom) && custom.length > 0
+            ? custom.map((v) => (typeof v === 'string' ? v.trim() : String(v))).filter(Boolean)
+            : (this.DEFAULT_VISIT_TYPES || []).slice();
+        if (!list.some((value) => this.normalizeArabicText(value) === this.normalizeArabicText('صرف الأدوية'))) {
+            list.push('صرف الأدوية');
         }
-        return (this.DEFAULT_VISIT_TYPES || []).slice();
+        return list;
+    },
+
+    getContractorJobTitleOptions() {
+        let custom = AppState.companySettings?.clinicContractorJobTitles;
+        if (typeof custom === 'string') {
+            const raw = custom.trim();
+            if (raw) {
+                try { custom = JSON.parse(raw); }
+                catch (_error) { custom = raw.split(/\n|,/).map((item) => item.trim()).filter(Boolean); }
+            } else {
+                custom = [];
+            }
+        }
+        if ((!Array.isArray(custom) || custom.length === 0) && Array.isArray(AppState.appData?.clinicContractorJobTitles)) {
+            custom = AppState.appData.clinicContractorJobTitles;
+        }
+        const source = Array.isArray(custom) && custom.length > 0 ? custom : this.DEFAULT_CONTRACTOR_JOB_TITLES;
+        const seen = new Set();
+        return (source || []).map((value) => String(value || '').trim()).filter((value) => {
+            const key = this.normalizeArabicText(value);
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    },
+
+    isMedicationDispenseVisitType_(value) {
+        return this.normalizeArabicText(value) === this.normalizeArabicText('صرف الأدوية');
     },
 
     normalizeArabicText(text) {
@@ -4688,6 +4722,125 @@ const Clinic = {
         modal.querySelectorAll('.modal-close, .modal-close-btn').forEach(btn => {
             btn.addEventListener('click', () => modal.remove());
         });
+    },
+
+    refreshContractorJobTitlesDatalist_() {
+        const datalist = document.getElementById('visit-contractor-position-datalist');
+        const input = document.getElementById('visit-contractor-position');
+        if (!datalist || !input) return;
+        const options = this.getContractorJobTitleOptions();
+        datalist.innerHTML = options.map((title) => `<option value="${Utils.escapeHTML(title)}"></option>`).join('');
+        try {
+            input.dataset.allowedValues = JSON.stringify(options.map((value) => this.normalizeArabicText(value)));
+        } catch (_error) { /* ignore */ }
+    },
+
+    showContractorJobTitlesSettingsModal() {
+        if (!this.isCurrentUserAdmin()) {
+            Notification?.error?.('هذا القسم متاح لمدير النظام فقط');
+            return;
+        }
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        const toItems = (list) => list.map((text, index) => ({
+            id: `cjt-${Date.now()}-${index}`,
+            text: String(text || '').trim()
+        }));
+        let items = toItems(this.getContractorJobTitleOptions());
+
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width:560px;border-radius:16px;overflow:hidden;">
+                <div class="modal-header" style="background:linear-gradient(125deg,#173d6c,#0f766e);color:#fff;">
+                    <h2 class="modal-title" style="color:#fff;"><i class="fas fa-briefcase ml-2"></i>إدارة وظائف المقاولين</h2>
+                    <button type="button" class="modal-close" style="color:#fff;"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body" style="padding:20px;background:#f8fafc;">
+                    <div style="padding:12px 14px;margin-bottom:14px;border:1px solid #bae6fd;border-radius:10px;background:#f0f9ff;color:#0c4a6e;font-size:.82rem;">
+                        تظهر هذه الوظائف في حقل الوظيفة عند اختيار «مقاول». يمكن الإضافة والتعديل والحذف ثم حفظها لجميع المستخدمين.
+                    </div>
+                    <div id="clinic-contractor-job-titles-list"></div>
+                    <button type="button" id="clinic-contractor-job-title-add" class="btn-secondary mt-2"><i class="fas fa-plus ml-2"></i>إضافة وظيفة</button>
+                    <div class="flex flex-wrap gap-2 justify-end mt-4 pt-4 border-t">
+                        <button type="button" class="btn-secondary modal-close-btn">إلغاء</button>
+                        <button type="button" id="clinic-contractor-job-title-reset" class="btn-secondary">استعادة الافتراضي</button>
+                        <button type="button" id="clinic-contractor-job-title-save" class="btn-primary"><i class="fas fa-save ml-2"></i>حفظ وتعميم</button>
+                    </div>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+
+        const render = () => {
+            const container = modal.querySelector('#clinic-contractor-job-titles-list');
+            if (!container) return;
+            container.innerHTML = items.map((item) => `
+                <div class="flex items-center gap-2 mb-2" data-id="${item.id}">
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:40px;border-radius:9px;background:#e0f2fe;color:#0369a1;"><i class="fas fa-user-tag"></i></span>
+                    <input type="text" class="form-input flex-1 contractor-job-title-edit" data-id="${item.id}" value="${Utils.escapeHTML(item.text)}" placeholder="اسم الوظيفة">
+                    <button type="button" class="btn-icon btn-icon-danger remove-contractor-job-title" data-id="${item.id}" title="حذف الوظيفة"><i class="fas fa-trash"></i></button>
+                </div>`).join('');
+            container.querySelectorAll('.contractor-job-title-edit').forEach((input) => {
+                input.addEventListener('input', () => {
+                    const item = items.find((entry) => entry.id === input.dataset.id);
+                    if (item) item.text = input.value.trim();
+                });
+            });
+            container.querySelectorAll('.remove-contractor-job-title').forEach((button) => {
+                button.addEventListener('click', () => {
+                    items = items.filter((entry) => entry.id !== button.dataset.id);
+                    render();
+                });
+            });
+        };
+
+        render();
+        modal.querySelector('#clinic-contractor-job-title-add')?.addEventListener('click', () => {
+            items.push({ id: `cjt-${Date.now()}-${items.length}`, text: '' });
+            render();
+        });
+        modal.querySelector('#clinic-contractor-job-title-reset')?.addEventListener('click', () => {
+            items = toItems(this.DEFAULT_CONTRACTOR_JOB_TITLES || []);
+            render();
+        });
+        modal.querySelector('#clinic-contractor-job-title-save')?.addEventListener('click', async (event) => {
+            const saveButton = event.currentTarget;
+            const list = [];
+            const seen = new Set();
+            items.forEach((item) => {
+                const text = String(item.text || '').trim();
+                const key = this.normalizeArabicText(text);
+                if (text && key && !seen.has(key)) {
+                    seen.add(key);
+                    list.push(text);
+                }
+            });
+            if (!list.length) {
+                Notification?.warning?.('أضف وظيفة واحدة على الأقل أو استعد القائمة الافتراضية');
+                return;
+            }
+            const originalHtml = saveButton.innerHTML;
+            saveButton.disabled = true;
+            saveButton.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i>جاري الحفظ...';
+            try {
+                if (!AppState.appData) AppState.appData = {};
+                if (!AppState.companySettings || typeof AppState.companySettings !== 'object') AppState.companySettings = {};
+                AppState.appData.clinicContractorJobTitles = list;
+                AppState.companySettings.clinicContractorJobTitles = list;
+                const result = await GoogleIntegration.sendRequest({
+                    action: 'saveCompanySettings',
+                    data: { ...AppState.companySettings, clinicContractorJobTitles: list, userData: AppState.currentUser || {} }
+                });
+                if (!result || result.success !== true) throw new Error(result?.message || 'تعذر حفظ وظائف المقاولين');
+                if (typeof DataManager !== 'undefined' && DataManager.save) DataManager.save();
+                this.refreshContractorJobTitlesDatalist_();
+                Notification?.success?.('تم حفظ وظائف المقاولين وتعميمها على المستخدمين');
+                modal.remove();
+            } catch (error) {
+                Notification?.error?.(error?.message || 'تعذر حفظ وظائف المقاولين');
+                saveButton.disabled = false;
+                saveButton.innerHTML = originalHtml;
+            }
+        });
+        modal.querySelectorAll('.modal-close, .modal-close-btn').forEach((button) => button.addEventListener('click', () => modal.remove()));
     },
 
     /** القائمة الافتراضية لأنواع الإصابات (قابلة للتعديل من مدير النظام) */
@@ -10859,12 +11012,40 @@ const Clinic = {
         if (contractorPositionInput) {
             if (personType === 'contractor' || personType === 'external') {
                 contractorPositionInput.required = true;
-                contractorPositionInput.placeholder = 'أدخل الوظيفة يدوياً';
+                if (personType === 'contractor') {
+                    contractorPositionInput.setAttribute('list', 'visit-contractor-position-datalist');
+                    contractorPositionInput.placeholder = 'اختر أو ابحث عن الوظيفة';
+                    this.refreshContractorJobTitlesDatalist_();
+                } else {
+                    contractorPositionInput.removeAttribute('list');
+                    contractorPositionInput.placeholder = 'أدخل الوظيفة يدوياً للعمالة الخارجية';
+                }
             } else {
                 contractorPositionInput.required = false;
                 contractorPositionInput.value = '';
                 contractorPositionInput.placeholder = '';
             }
+        }
+        const contractorPositionHint = document.getElementById('visit-contractor-position-hint');
+        if (contractorPositionHint) {
+            contractorPositionHint.textContent = personType === 'contractor'
+                ? 'اختر وظيفة معتمدة من القائمة'
+                : 'يسمح بالإدخال اليدوي للعمالة الخارجية';
+        }
+        if (contractorPositionInput && !contractorPositionInput.dataset.jobValidationBound) {
+            contractorPositionInput.dataset.jobValidationBound = '1';
+            contractorPositionInput.addEventListener('blur', () => {
+                if (document.getElementById('visit-person-type')?.value !== 'contractor') return;
+                const value = contractorPositionInput.value.trim();
+                if (!value) return;
+                const allowed = this.getContractorJobTitleOptions().some((title) =>
+                    this.normalizeArabicText(title) === this.normalizeArabicText(value)
+                );
+                if (!allowed) {
+                    contractorPositionInput.value = '';
+                    Notification?.warning?.('يرجى اختيار وظيفة المقاول من القائمة المعتمدة');
+                }
+            });
         }
 
         if (workAreaInput) {
@@ -11914,11 +12095,19 @@ const Clinic = {
                                 <datalist id="visit-employee-location-datalist"></datalist>
                             </div>
                             <div id="visit-contractor-position-container" style="display: ${visitData?.personType === 'contractor' || visitData?.personType === 'external' ? 'block' : 'none'};">
-                                <label for="visit-contractor-position" class="block text-sm font-semibold text-gray-700 mb-2">الوظيفة *</label>
-                                <input type="text" id="visit-contractor-position" class="form-input"
+                                <div class="flex items-center justify-between gap-2 mb-2">
+                                    <label for="visit-contractor-position" class="block text-sm font-semibold text-gray-700">الوظيفة *</label>
+                                    ${this.isCurrentUserAdmin() ? `<button type="button" onclick="Clinic.showContractorJobTitlesSettingsModal()" class="btn-icon btn-icon-primary" title="إدارة وظائف المقاولين" aria-label="إدارة وظائف المقاولين" style="width:30px;height:30px;border-radius:8px;"><i class="fas fa-cog"></i></button>` : ''}
+                                </div>
+                                <input type="text" id="visit-contractor-position" class="form-input" list="visit-contractor-position-datalist"
                                     value="${visitData?.contractorPosition || visitData?.employeePosition || ''}" 
-                                    placeholder="أدخل الوظيفة يدوياً"
+                                    placeholder="اختر أو ابحث عن الوظيفة"
+                                    autocomplete="off"
                                     ${visitData?.personType === 'contractor' || visitData?.personType === 'external' ? 'required' : ''}>
+                                <datalist id="visit-contractor-position-datalist">
+                                    ${this.getContractorJobTitleOptions().map((title) => `<option value="${Utils.escapeHTML(title)}"></option>`).join('')}
+                                </datalist>
+                                <span id="visit-contractor-position-hint" style="display:block;margin-top:5px;color:#64748b;font-size:.72rem;">اختر وظيفة معتمدة من القائمة</span>
                             </div>
                             <div id="visit-contractor-factory-container" style="display: ${visitData?.personType === 'contractor' || visitData?.personType === 'external' ? 'block' : 'none'};">
                                 <label for="visit-contractor-factory" class="block text-sm font-semibold text-gray-700 mb-2">المصنع</label>
@@ -11979,11 +12168,17 @@ const Clinic = {
                                 <label class="block text-sm font-semibold mb-2" style="color: #4facfe; display: flex; align-items: center; gap: 5px;"><i class="fas fa-pills"></i> العلاج</label>
                                 <textarea id="visit-treatment" class="form-input" rows="3" style="border: 2px solid #4facfe; border-radius: 8px;"
                                     placeholder="العلاج الموصوف">${visitData?.treatment || ''}</textarea>
+                                <div id="visit-treatment-medication-mode" style="display:none;padding:12px;border:1px solid #7dd3fc;border-radius:10px;background:rgba(255,255,255,.76);">
+                                    <label for="visit-treatment-medication-select" style="display:flex;align-items:center;gap:6px;margin-bottom:7px;color:#075985;font-size:.78rem;font-weight:800;"><i class="fas fa-prescription-bottle-alt"></i>اختر الدواء من المخزون الفعلي</label>
+                                    <input id="visit-treatment-medication-select" class="form-input" list="visit-treatment-medications-datalist" placeholder="اكتب اسم الدواء للبحث" autocomplete="off" style="border:2px solid #0891b2;border-radius:9px;">
+                                    <datalist id="visit-treatment-medications-datalist"></datalist>
+                                    <p id="visit-treatment-medication-hint" style="margin:7px 0 0;color:#475569;font-size:.72rem;">بعد الاختيار حدد الكمية في قسم صرف الأدوية ثم اضغط «إضافة».</p>
+                                </div>
                             </div>
                         </div>
                         
                         <!-- قسم الأدوية -->
-                        <div class="grid grid-cols-1 gap-4" style="background: linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%); padding: 20px; border-radius: 10px;">
+                        <div id="visit-medications-section" class="grid grid-cols-1 gap-4" style="background: linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%); padding: 20px; border-radius: 10px;">
                             <div class="col-span-2">
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">صرف الأدوية</label>
                                 <div id="visit-medications-container" class="space-y-2">
@@ -12162,10 +12357,46 @@ const Clinic = {
             const addMedicationBtn = document.getElementById('visit-add-medication-btn');
             const medicationQuantityInput = document.getElementById('visit-medication-quantity');
             const medicationDatalist = document.getElementById('visit-medications-datalist');
+            const visitTypeSelect = document.getElementById('visit-type');
+            const treatmentTextarea = document.getElementById('visit-treatment');
+            const treatmentMedicationMode = document.getElementById('visit-treatment-medication-mode');
+            const treatmentMedicationSelect = document.getElementById('visit-treatment-medication-select');
+            const treatmentMedicationDatalist = document.getElementById('visit-treatment-medications-datalist');
 
             let selectedMedications = visitData?.medications && Array.isArray(visitData.medications)
                 ? [...visitData.medications]
                 : [];
+
+            const getAvailableMedicationChoices = () => this.getMedications().filter((medication) => {
+                const remaining = parseInt(medication.remainingQuantity ?? medication.quantity ?? 0, 10) || 0;
+                return remaining > 0;
+            });
+
+            const loadTreatmentMedications = () => {
+                if (!treatmentMedicationSelect || !treatmentMedicationDatalist) return;
+                const map = {};
+                treatmentMedicationDatalist.innerHTML = getAvailableMedicationChoices().map((medication) => {
+                    const remaining = parseInt(medication.remainingQuantity ?? medication.quantity ?? 0, 10) || 0;
+                    const name = String(medication.name || medication.medicationName || '').trim();
+                    if (!name) return '';
+                    const label = `${name} (متوفر: ${remaining})`;
+                    map[this.normalizeArabicText(name)] = { id: medication.id || '', name, label };
+                    return `<option value="${Utils.escapeHTML(label)}"></option>`;
+                }).join('');
+                treatmentMedicationSelect.dataset.medicationMap = JSON.stringify(map);
+            };
+
+            const syncTreatmentMedicationMode = () => {
+                const isDispense = this.isMedicationDispenseVisitType_(visitTypeSelect?.value || '');
+                if (treatmentTextarea) treatmentTextarea.style.display = isDispense ? 'none' : 'block';
+                if (treatmentMedicationMode) treatmentMedicationMode.style.display = isDispense ? 'block' : 'none';
+                if (isDispense) {
+                    loadTreatmentMedications();
+                    if (treatmentMedicationSelect && selectedMedications.length > 0) {
+                        treatmentMedicationSelect.value = selectedMedications.map((item) => item.medicationName).filter(Boolean).join('، ');
+                    }
+                }
+            };
 
             const loadMedicationsIntoSelect = () => {
                 if (!medicationSelect || !medicationDatalist) return;
@@ -12178,8 +12409,9 @@ const Clinic = {
                 const map = {};
                 medicationDatalist.innerHTML = medications.map(m => {
                     const remaining = m.remainingQuantity ?? m.quantity ?? 0;
-                    const label = `${m.name || ''} (متوفر: ${remaining})`;
-                    const key = String(m.name || '').toLowerCase().trim();
+                    const medicationName = String(m.name || m.medicationName || '').trim();
+                    const label = `${medicationName} (متوفر: ${remaining})`;
+                    const key = medicationName.toLowerCase().trim();
                     if (key) map[key] = m.id;
                     return `<option value="${Utils.escapeHTML(label)}"></option>`;
                 }).join('');
@@ -12191,6 +12423,9 @@ const Clinic = {
                 if (!medicationsList) return;
                 if (selectedMedications.length === 0) {
                     medicationsList.innerHTML = '';
+                    if (this.isMedicationDispenseVisitType_(visitTypeSelect?.value || '') && treatmentTextarea) {
+                        treatmentTextarea.value = '';
+                    }
                     return;
                 }
                 medicationsList.innerHTML = selectedMedications.map((med, idx) => {
@@ -12207,6 +12442,11 @@ const Clinic = {
                         </div>
                     `;
                 }).join('');
+
+                if (this.isMedicationDispenseVisitType_(visitTypeSelect?.value || '') && treatmentTextarea) {
+                    treatmentTextarea.value = selectedMedications.map((item) => item.medicationName).filter(Boolean).join('، ');
+                    if (treatmentMedicationSelect) treatmentMedicationSelect.value = treatmentTextarea.value;
+                }
 
                 // ربط أحداث الحذف
                 medicationsList.querySelectorAll('[data-remove-med]').forEach(btn => {
@@ -12252,7 +12492,7 @@ const Clinic = {
 
                     selectedMedications.push({
                         medicationId: medicationId,
-                        medicationName: medication.name || '',
+                        medicationName: medication.name || medication.medicationName || '',
                         quantity: quantity
                     });
 
@@ -12290,8 +12530,36 @@ const Clinic = {
                 });
             }
 
+            visitTypeSelect?.addEventListener('change', syncTreatmentMedicationMode);
+            treatmentMedicationSelect?.addEventListener('input', () => {
+                const raw = String(treatmentMedicationSelect.value || '').trim();
+                const nameOnly = raw.replace(/\s*\(.*\)\s*$/, '').trim();
+                let map = {};
+                try { map = JSON.parse(treatmentMedicationSelect.dataset.medicationMap || '{}'); } catch (_error) { map = {}; }
+                const choice = map[this.normalizeArabicText(nameOnly)];
+                if (!choice) {
+                    treatmentMedicationSelect.dataset.selectedId = '';
+                    return;
+                }
+                treatmentMedicationSelect.dataset.selectedId = choice.id;
+                if (treatmentTextarea) treatmentTextarea.value = choice.name;
+                if (medicationSelect) {
+                    medicationSelect.value = choice.label;
+                    medicationSelect.dataset.selectedId = choice.id;
+                }
+                medicationQuantityInput?.focus();
+            });
+            treatmentMedicationSelect?.addEventListener('blur', () => {
+                const raw = String(treatmentMedicationSelect.value || '').trim();
+                if (!raw || treatmentMedicationSelect.dataset.selectedId) return;
+                const selectedNames = selectedMedications.map((item) => item.medicationName).filter(Boolean).join('، ');
+                treatmentMedicationSelect.value = selectedNames;
+                Notification?.warning?.('يرجى اختيار الدواء من قائمة المخزون الفعلي');
+            });
+
             loadMedicationsIntoSelect();
             renderMedicationsList();
+            syncTreatmentMedicationMode();
         }, 300);
 
         const form = modal.querySelector('#visit-form');
@@ -12340,6 +12608,20 @@ const Clinic = {
             const contractorPositionValue = personType === 'contractor'
                 ? document.getElementById('visit-contractor-position')?.value.trim() || ''
                 : null;
+
+            if (rawPersonType === 'contractor' && contractorPositionValue) {
+                const validContractorJob = this.getContractorJobTitleOptions().some((title) =>
+                    this.normalizeArabicText(title) === this.normalizeArabicText(contractorPositionValue)
+                );
+                if (!validContractorJob) {
+                    this.showVisitFormAlert('الوظيفة يجب اختيارها من قائمة وظائف المقاولين المعتمدة');
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                    }
+                    return;
+                }
+            }
 
             // الحصول على اسم المقاول من select أو input حسب النوع
             let personName = '';
@@ -17588,6 +17870,10 @@ const Clinic = {
                             <i class="fas fa-list-ul ml-2"></i>
                             أنواع الزيارة
                         </button>
+                        <button id="clinic-contractor-jobs-settings-btn" class="btn-secondary" title="إدارة وظائف المقاولين (مدير النظام فقط)">
+                            <i class="fas fa-briefcase ml-2"></i>
+                            وظائف المقاولين
+                        </button>
                         ` : ''}
                         <button id="clinic-refresh-btn" class="btn-secondary" title="تحديث البيانات">
                             <i class="fas fa-sync-alt ml-2"></i>
@@ -17740,6 +18026,10 @@ const Clinic = {
         const visitTypesSettingsBtn = document.getElementById('clinic-visit-types-settings-btn');
         if (visitTypesSettingsBtn) {
             visitTypesSettingsBtn.addEventListener('click', () => this.showVisitTypesSettingsModal());
+        }
+        const contractorJobsSettingsBtn = document.getElementById('clinic-contractor-jobs-settings-btn');
+        if (contractorJobsSettingsBtn) {
+            contractorJobsSettingsBtn.addEventListener('click', () => this.showContractorJobTitlesSettingsModal());
         }
 
         // إضافة أيقونات التنقل مباشرة بعد renderUI
