@@ -1084,7 +1084,7 @@ const Clinic = {
         this.ensureData();
         switch (dataset) {
             case 'visits':
-                return Array.isArray(AppState.appData.clinicVisits) ? AppState.appData.clinicVisits : [];
+                return this.getActualClinicVisits_(AppState.appData.clinicVisits);
             case 'medications':
                 return (Array.isArray(AppState.appData.clinicMedications) ? AppState.appData.clinicMedications : []).map(m => this.normalizeMedicationRecord(m));
             case 'sickLeave':
@@ -1100,6 +1100,22 @@ const Clinic = {
         }
     },
 
+    /** استبعاد سجلات الاختبار المعروفة من العرض والتحليل دون حذف بيانات من المصدر. */
+    isTestClinicVisit_(visit) {
+        if (!visit || typeof visit !== 'object') return false;
+        const value = (key) => String(visit[key] || '').trim().toLowerCase();
+        const factory = value('factoryName') || value('factory');
+        return value('id').startsWith('test-') ||
+            value('employeeCode') === 'test001' ||
+            value('email') === 'test@example.com' ||
+            value('userId') === 'test-user-id' ||
+            factory === 'مصنع اختبار';
+    },
+
+    getActualClinicVisits_(visits) {
+        return (Array.isArray(visits) ? visits : []).filter(visit => !this.isTestClinicVisit_(visit));
+    },
+
     /** دمج زيارات العيادة لأغراض التحليل (بدون تكرار id) */
     getClinicVisitsForAnalysis_() {
         const clinicVisits = Array.isArray(AppState.appData.clinicVisits) ? AppState.appData.clinicVisits : [];
@@ -1108,7 +1124,7 @@ const Clinic = {
         const allVisitIds = new Set();
         const visits = [];
         [...clinicVisits, ...employeeVisits, ...contractorVisits].forEach(v => {
-            if (!v) return;
+            if (!v || this.isTestClinicVisit_(v)) return;
             const vid = String(v.id || '').trim();
             if (vid && allVisitIds.has(vid)) return;
             if (vid) allVisitIds.add(vid);
@@ -7000,7 +7016,7 @@ const Clinic = {
         // ── 1. جمع البيانات ──
         try { this.ensureData(); } catch(e) {}
         const period   = parseInt(this._clinicPeriod || '0', 10);
-        const allVisits = AppState.appData?.clinicVisits       || [];
+        const allVisits = this.getActualClinicVisits_(AppState.appData?.clinicVisits);
         const allMeds   = AppState.appData?.clinicMedications  || [];
         const allSL     = AppState.appData?.sickLeave          || [];
         const allInj    = AppState.appData?.injuries           || [];
@@ -8685,7 +8701,7 @@ const Clinic = {
             this.ensureData();
             
             // ✅ فرز الزيارات ليكون الأحدث في الأعلى دائماً والاقدم بالأسفل بشكل تنازلي دقيق
-            const allVisits = (AppState.appData.clinicVisits || []).slice();
+            const allVisits = this.getActualClinicVisits_(AppState.appData.clinicVisits).slice();
             allVisits.sort((a, b) => {
                 const dateA = new Date(a.visitDate || a.createdAt || 0).getTime();
                 const dateB = new Date(b.visitDate || b.createdAt || 0).getTime();
