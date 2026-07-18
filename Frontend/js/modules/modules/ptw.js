@@ -3085,7 +3085,7 @@ const PTW = {
                         <p class="section-subtitle">${t('module.ptw.subtitle', 'إصدار ومتابعة تصاريح العمل مع دائرة الاعتمادات')}</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button id="add-manual-ptw-btn" class="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none;">
+                        <button id="add-manual-ptw-btn" class="btn-warning">
                             <i class="fas fa-edit ml-2"></i>
                             ${t('module.ptw.btn.addManual', 'إضافة تصريح يدوي')}
                         </button>

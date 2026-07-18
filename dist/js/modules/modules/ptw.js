@@ -288,7 +288,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                         <p class="section-subtitle">${a("module.ptw.subtitle","\u0625\u0635\u062F\u0627\u0631 \u0648\u0645\u062A\u0627\u0628\u0639\u0629 \u062A\u0635\u0627\u0631\u064A\u062D \u0627\u0644\u0639\u0645\u0644 \u0645\u0639 \u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F\u0627\u062A")}</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button id="add-manual-ptw-btn" class="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none;">
+                        <button id="add-manual-ptw-btn" class="btn-warning">
                             <i class="fas fa-edit ml-2"></i>
                             ${a("module.ptw.btn.addManual","\u0625\u0636\u0627\u0641\u0629 \u062A\u0635\u0631\u064A\u062D \u064A\u062F\u0648\u064A")}
                         </button>
