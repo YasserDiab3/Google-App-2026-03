@@ -2827,7 +2827,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                         </div>
                         <div>
                             <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0; color: white;">
-                                ${s?t("module.ptw.form.editManual","\u062A\u0639\u062F\u064A\u0644 \u062A\u0635\u0631\u064A\u062D \u0639\u0645\u0644 \u064A\u062F\u0648\u064A"):t("module.ptw.form.newManual","\u0625\u0635\u062F\u0627\u0631 \u062A\u0635\u0631\u064A\u062D \u0639\u0645\u0644 \u064A\u062F\u0648\u064A")}
+                                ${s?this._t("module.ptw.form.editManual","\u062A\u0639\u062F\u064A\u0644 \u062A\u0635\u0631\u064A\u062D \u0639\u0645\u0644 \u064A\u062F\u0648\u064A"):this._t("module.ptw.form.newManual","\u0625\u0635\u062F\u0627\u0631 \u062A\u0635\u0631\u064A\u062D \u0639\u0645\u0644 \u064A\u062F\u0648\u064A")}
                             </h2>
                             <p style="font-size: 0.875rem; opacity: 0.8; margin: 4px 0 0 0;">
                                 <i class="fas fa-info-circle ml-1"></i>

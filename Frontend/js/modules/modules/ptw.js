@@ -10238,7 +10238,7 @@ const PTW = {
                         </div>
                         <div>
                             <h2 style="font-size: 1.5rem; font-weight: 700; margin: 0; color: white;">
-                                ${isEdit ? t('module.ptw.form.editManual', 'تعديل تصريح عمل يدوي') : t('module.ptw.form.newManual', 'إصدار تصريح عمل يدوي')}
+                                ${isEdit ? this._t('module.ptw.form.editManual', 'تعديل تصريح عمل يدوي') : this._t('module.ptw.form.newManual', 'إصدار تصريح عمل يدوي')}
                             </h2>
                             <p style="font-size: 0.875rem; opacity: 0.8; margin: 4px 0 0 0;">
                                 <i class="fas fa-info-circle ml-1"></i>
