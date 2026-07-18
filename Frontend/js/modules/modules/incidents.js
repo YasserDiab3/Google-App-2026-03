@@ -1877,6 +1877,43 @@ const Incidents = {
                 @media (prefers-reduced-motion: reduce) {
                     .incidents-workspace *, .incidents-workspace *::before, .incidents-workspace *::after { transition: none !important; }
                 }
+                .incident-professional-modal {
+                    --im-navy:#0b2942;--im-blue:#123f63;--im-red:#c81e3a;--im-gold:#f4b942;--im-ink:#172033;--im-line:#dbe5ee;
+                    position:fixed!important;inset:0!important;z-index:10000!important;display:flex!important;align-items:center!important;justify-content:center!important;
+                    padding:clamp(10px,2vw,24px)!important;background:rgba(5,20,32,.74)!important;-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);
+                    font-family:"Cairo","Segoe UI",Tahoma,sans-serif;
+                }
+                .incident-professional-modal .modal-content {
+                    display:flex!important;flex-direction:column;width:min(100%,980px)!important;max-width:none!important;max-height:calc(100dvh - 32px)!important;overflow:hidden!important;
+                    border:1px solid rgba(255,255,255,.42)!important;border-radius:20px!important;background:#fff!important;color:var(--im-ink)!important;
+                    box-shadow:0 30px 75px rgba(2,18,30,.34),0 8px 24px rgba(2,18,30,.16)!important;
+                }
+                .incident-modal-selector .modal-content,.incident-modal-approval .modal-content{width:min(100%,800px)!important}
+                .incident-modal-registry-details .modal-content,.incident-modal-details .modal-content{width:min(100%,860px)!important}
+                .incident-modal-notification .modal-content,.incident-modal-safety-alert .modal-content,.incident-modal-investigation .modal-content{width:min(100%,1080px)!important}
+                .incident-professional-modal .modal-header {
+                    position:relative;flex:0 0 auto;display:flex!important;align-items:center!important;justify-content:space-between!important;min-height:82px;padding:18px 24px!important;
+                    border:0!important;border-bottom:4px solid var(--im-gold)!important;background:radial-gradient(circle at 12% -25%,rgba(244,185,66,.35),transparent 32%),linear-gradient(125deg,var(--im-navy),var(--im-blue) 78%,#185376)!important;color:#fff!important;
+                }
+                .incident-professional-modal .modal-header::after{content:"INCIDENT CONTROL";position:absolute;inset-inline-end:72px;bottom:8px;color:rgba(255,255,255,.48);font-size:.55rem;font-weight:800;letter-spacing:.16em}
+                .incident-professional-modal .modal-title{display:flex!important;align-items:center;gap:11px;margin:0!important;padding:0!important;color:#fff!important;font-size:clamp(1.02rem,2vw,1.35rem)!important;font-weight:800!important;line-height:1.5}
+                .incident-professional-modal .modal-title i{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;margin:0!important;border:1px solid rgba(255,255,255,.22);border-radius:11px;background:rgba(255,255,255,.11);color:#fde68a!important}
+                .incident-professional-modal .modal-close{position:relative;z-index:2;display:inline-flex!important;align-items:center;justify-content:center;width:40px;height:40px;min-width:40px;margin:0!important;padding:0!important;border:1px solid rgba(255,255,255,.3)!important;border-radius:11px!important;background:rgba(255,255,255,.1)!important;color:#fff!important}
+                .incident-professional-modal .modal-close:hover{background:var(--im-red)!important}
+                .incident-professional-modal .modal-body{flex:1 1 auto;min-height:0;padding:clamp(16px,2.6vw,28px)!important;overflow:auto!important;background:linear-gradient(rgba(219,229,238,.32) 1px,transparent 1px),linear-gradient(90deg,rgba(219,229,238,.22) 1px,transparent 1px),#f4f7fa!important;background-size:26px 26px!important;color:var(--im-ink)!important;scrollbar-width:thin}
+                .incident-professional-modal .modal-footer,.incident-professional-modal .form-actions-centered{flex:0 0 auto;display:flex!important;align-items:center;justify-content:center!important;flex-wrap:wrap;gap:10px!important;padding:15px 22px!important;border-top:1px solid var(--im-line)!important;background:#fff!important}
+                .incident-professional-modal .modal-body>.grid>div{min-height:48px;padding:13px 15px;border:1px solid var(--im-line);border-radius:11px;background:#fff;box-shadow:0 4px 12px rgba(15,47,79,.045)}
+                .incident-professional-modal label,.incident-professional-modal strong{color:#30465a!important;font-weight:800!important}
+                .incident-professional-modal .form-input,.incident-professional-modal input:not([type=checkbox]):not([type=radio]),.incident-professional-modal select,.incident-professional-modal textarea{min-height:44px;border:1.5px solid #c8d7e3!important;border-radius:10px!important;background:#fff!important;color:var(--im-ink)!important;box-shadow:0 2px 5px rgba(15,47,79,.035)!important}
+                .incident-professional-modal textarea{min-height:92px;resize:vertical}.incident-professional-modal .form-input:focus,.incident-professional-modal input:focus,.incident-professional-modal select:focus,.incident-professional-modal textarea:focus{border-color:var(--im-blue)!important;outline:none!important;box-shadow:0 0 0 3px rgba(18,63,99,.13)!important}
+                .incident-professional-modal .table-wrapper,.incident-professional-modal .table-responsive{max-width:100%;overflow:auto!important;border:1px solid #d4e0e9;border-radius:13px;background:#fff}.incident-professional-modal .data-table{min-width:680px;margin:0;border:0}
+                .incident-professional-modal .data-table thead th{position:sticky;top:0;z-index:2;padding:13px 12px!important;border:0!important;border-inline-end:1px solid rgba(255,255,255,.12)!important;border-bottom:3px solid var(--im-gold)!important;background:linear-gradient(180deg,var(--im-blue),var(--im-navy))!important;color:#fff!important;font-size:.76rem;font-weight:800;white-space:nowrap}
+                .incident-professional-modal .data-table tbody td{padding:11px 12px!important;border-color:#e5edf3!important;background:#fff;color:var(--im-ink);vertical-align:middle}.incident-professional-modal .data-table tbody tr:nth-child(even) td{background:#f8fbfd}.incident-professional-modal .data-table tbody tr:hover td{background:#fff8ed}
+                .incident-professional-modal .notification-section-title,.incident-professional-modal .safety-alert-grey-label{border-radius:10px!important;background:linear-gradient(115deg,var(--im-blue),var(--im-navy))!important;color:#fff!important;box-shadow:0 6px 14px rgba(11,41,66,.13)}
+                .incident-professional-modal .safety-alert-grey-bar{height:4px!important;background:linear-gradient(90deg,var(--im-red),var(--im-gold))!important}.incident-professional-modal .safety-alert-field,.incident-professional-modal .notification-field,.incident-professional-modal .investigation-section{border:1px solid var(--im-line)!important;border-radius:13px!important;background:#fff!important;box-shadow:0 6px 18px rgba(15,47,79,.06)!important}
+                .incident-professional-modal .btn-primary,.incident-professional-modal .btn-secondary,.incident-professional-modal .btn-success,.incident-professional-modal .btn-danger{min-height:42px;border-radius:10px!important;font-weight:800!important;box-shadow:0 5px 13px rgba(15,47,79,.13)}.incident-professional-modal .btn-primary{background:linear-gradient(135deg,#174f72,var(--im-navy))!important}.incident-professional-modal .btn-danger{background:linear-gradient(135deg,#dc314a,#a9142c)!important}
+                [data-theme=dark] .incident-professional-modal .modal-content,[data-theme=dark] .incident-professional-modal .modal-footer{background:#152635!important;color:#e7eef5!important}[data-theme=dark] .incident-professional-modal .modal-body{background:#0f1e2b!important;color:#e7eef5!important}[data-theme=dark] .incident-professional-modal .modal-body>.grid>div,[data-theme=dark] .incident-professional-modal .safety-alert-field,[data-theme=dark] .incident-professional-modal .notification-field,[data-theme=dark] .incident-professional-modal .investigation-section,[data-theme=dark] .incident-professional-modal form>div[style*="background: white"]{background:#182d3e!important;color:#e7eef5!important}[data-theme=dark] .incident-professional-modal label,[data-theme=dark] .incident-professional-modal strong{color:#dce7ef!important}[data-theme=dark] .incident-professional-modal .form-input,[data-theme=dark] .incident-professional-modal input:not([type=checkbox]):not([type=radio]),[data-theme=dark] .incident-professional-modal select,[data-theme=dark] .incident-professional-modal textarea{border-color:#466176!important;background:#102231!important;color:#f1f5f9!important}
+                @media(max-width:768px){.incident-professional-modal{align-items:stretch!important;padding:8px!important}.incident-professional-modal .modal-content{width:100%!important;max-height:calc(100dvh - 16px)!important;border-radius:15px!important}.incident-professional-modal .modal-header{min-height:70px;padding:14px 15px!important}.incident-professional-modal .modal-header::after{display:none}.incident-professional-modal .modal-body{padding:14px!important}.incident-professional-modal .modal-body .grid-cols-2,.incident-professional-modal .modal-body .grid-cols-3,.incident-professional-modal .modal-body .grid-cols-4{grid-template-columns:1fr!important}.incident-professional-modal .modal-footer button,.incident-professional-modal .form-actions-centered button{flex:1 1 145px}}
             </style>
         `;
     },
@@ -3456,7 +3493,7 @@ const Incidents = {
         }
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay incident-professional-modal incident-modal-safety-alert';
         
         // جلب اسم الشركة من الإعدادات
         const companyName = AppState?.companySettings?.name || AppState?.companyName || '';
@@ -3728,7 +3765,7 @@ const Incidents = {
      */
     async showSafetyAlertForm(alertId = null, incidentId = null) {
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay incident-professional-modal incident-modal-safety-alert';
         
         // جلب بيانات التنبيه إذا كان تعديل
         let alertData = null;
@@ -4693,7 +4730,7 @@ const Incidents = {
         }
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay incident-professional-modal incident-modal-registry-details';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 800px;">
                 <div class="modal-header">
@@ -4748,7 +4785,7 @@ const Incidents = {
      */
     showManualEntryForm() {
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay incident-professional-modal incident-modal-notification';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
                 <div class="modal-header modal-header-centered">
@@ -6753,7 +6790,7 @@ const Incidents = {
         const sections = this.buildReportContent();
         const modal = document.createElement('div');
         modal.id = this.reportPreviewModalId;
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay incident-professional-modal incident-modal-report-preview';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 900px;">
                 <div class="modal-header">
@@ -8630,7 +8667,7 @@ const Incidents = {
             : null;
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay incident-professional-modal incident-modal-notification';
         const esc = (v) => Utils.escapeHTML(String(v ?? ''));
         const notificationNumber = isEdit
             ? d.notificationNumber
@@ -9916,7 +9953,7 @@ const Incidents = {
         const approvalState = this.getIncidentApprovalState(incident);
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay incident-professional-modal incident-modal-details';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 800px;">
                 <div class="modal-header">
@@ -10241,7 +10278,7 @@ const Incidents = {
             const actionPlanRows = this.renderInvestigationActionPlanRows(investigationData.actionPlan || []);
 
             const modal = document.createElement('div');
-            modal.className = 'modal-overlay';
+            modal.className = 'modal-overlay incident-professional-modal incident-modal-investigation';
             // إضافة styles مباشرة لضمان ظهور النموذج
             modal.style.cssText = 'display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 10000; align-items: center; justify-content: center;';
             modal.innerHTML = `
@@ -10830,7 +10867,7 @@ const Incidents = {
             }
 
             const modal = document.createElement('div');
-            modal.className = 'modal-overlay';
+            modal.className = 'modal-overlay incident-professional-modal incident-modal-selector';
             modal.style.cssText = 'display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 10000; align-items: center; justify-content: center;';
 
             modal.innerHTML = `
@@ -14559,7 +14596,7 @@ const Incidents = {
         const showActions = canApprove && approvalState.awaitingApproval && this.hasInvestigationData(incident);
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay incident-professional-modal incident-modal-approval';
         modal.innerHTML = `
             <div class="modal-content" style="max-width:720px;">
                 <div class="modal-header">
