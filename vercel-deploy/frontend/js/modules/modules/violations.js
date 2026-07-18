@@ -1566,8 +1566,8 @@ const Violations = {
                                             <button type="button" onclick='Violations.showViolationForm(${this._escapeIdForHandler(violation.id)})' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(139,92,246,0.3);" title="تعديل">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button type="button" onclick='Violations.exportPDF(${this._escapeIdForHandler(violation.id)})' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #10b981, #059669); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(16,185,129,0.3);" title="تصدير PDF">
-                                                <i class="fas fa-file-pdf"></i>
+                                            <button type="button" onclick='Violations.downloadViolationReport(${this._escapeIdForHandler(violation.id)}, this)' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #10b981, #059669); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(16,185,129,0.3);" title="تحميل تقرير المخالفة PDF مباشرة" aria-label="تحميل تقرير المخالفة PDF">
+                                                <i class="fas fa-file-download"></i>
                                             </button>
                                             <button type="button" onclick='Violations.deleteViolation(${this._escapeIdForHandler(violation.id)})' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(239,68,68,0.3);" title="حذف">
                                                 <i class="fas fa-trash"></i>
@@ -2158,6 +2158,9 @@ const Violations = {
                                     </button>
                                     <button type="button" onclick='Violations.showViolationForm(${this._escapeIdForHandler(violation.id)})' class="btn-icon btn-icon-warning" title="تعديل">
                                         <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" onclick='Violations.downloadViolationReport(${this._escapeIdForHandler(violation.id)}, this)' class="btn-icon violation-report-download-btn" title="تحميل تقرير المخالفة PDF مباشرة" aria-label="تحميل تقرير مخالفة المقاول PDF" style="background:linear-gradient(135deg,#059669,#047857);color:#fff;border:1px solid rgba(4,120,87,.25);box-shadow:0 4px 10px rgba(5,150,105,.24);">
+                                        <i class="fas fa-file-download"></i>
                                     </button>
                                     <button type="button" onclick='Violations.deleteViolation(${this._escapeIdForHandler(violation.id)})' class="btn-icon btn-icon-danger" title="حذف">
                                         <i class="fas fa-trash"></i>
@@ -5415,8 +5418,8 @@ const Violations = {
                     <button type="button" class="btn-primary" onclick='Violations.printViolationProfessional(${this._escapeIdForHandler(violation.id)})' style="background: linear-gradient(135deg, #0f766e, #0d9488); padding: 10px 18px; border-radius: 10px;">
                         <i class="fas fa-print ml-2"></i>طباعة منسّقة
                     </button>
-                    <button type="button" class="btn-primary" onclick='Violations.exportPDF(${this._escapeIdForHandler(violation.id)})' style="background: linear-gradient(135deg, #10b981, #059669); padding: 10px 18px; border-radius: 10px;">
-                        <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
+                    <button type="button" class="btn-primary" onclick='Violations.downloadViolationReport(${this._escapeIdForHandler(violation.id)}, this)' style="background: linear-gradient(135deg, #10b981, #059669); padding: 10px 18px; border-radius: 10px;">
+                        <i class="fas fa-file-download ml-2"></i>تحميل PDF مباشر
                     </button>
                     <button type="button" class="btn-primary" onclick='Violations.showViolationForm(${this._escapeIdForHandler(violation.id)}); this.closest(".modal-overlay").remove();' style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); padding: 10px 18px; border-radius: 10px;">
                         <i class="fas fa-sliders-h ml-2"></i>تعديل كامل (جميع الحقول)
@@ -5520,39 +5523,105 @@ const Violations = {
 
     _buildViolationReportTableHtml(violation) {
         const v = this.normalizeViolationRecord(violation) || violation;
+        const esc = (value, fallback = '—') => Utils.escapeHTML(String(value == null || value === '' ? fallback : value));
+        const formatDateTime = (value) => {
+            if (!value) return '—';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return String(value);
+            return date.toLocaleString('ar-EG', {
+                year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+        };
+        const isContractor = v.personType === 'contractor' || !!v.contractorName;
+        const infoItem = (label, value, options = {}) => `
+            <div class="vr-info ${options.wide ? 'vr-info-wide' : ''}">
+                <span class="vr-label">${esc(label, '')}</span>
+                <strong class="vr-value ${options.accent || ''}">${esc(value)}</strong>
+            </div>`;
+        const photoUrl = this.processPhoto(v.photo);
         return `
-                <table>
-                    <tr><th>كود ISO</th><td>${Utils.escapeHTML(v.isoCode || '')}</td></tr>
-                    <tr><th>اسم المخالف</th><td>${Utils.escapeHTML((v.contractorName || v.personType === 'contractor') ? (v.contractorWorker || v.employeeName || v.contractorName || '') : (v.employeeName || ''))}</td></tr>
-                    ${(v.contractorName || v.personType === 'contractor') ? `
-                    ${v.contractorPosition ? `<tr><th>الوظيفة</th><td>${Utils.escapeHTML(v.contractorPosition || '')}</td></tr>` : ''}
-                    <tr><th>اسم المقاول</th><td>${Utils.escapeHTML(v.contractorName || '')}</td></tr>
-                    ${v.contractorDepartment ? `<tr><th>الإدارة</th><td>${Utils.escapeHTML(v.contractorDepartment || '')}</td></tr>` : ''}
-                    ` : `
-                    ${v.employeeCode ? `<tr><th>الكود الوظيفي</th><td>${Utils.escapeHTML(v.employeeCode || v.employeeNumber || '')}</td></tr>` : ''}
-                    ${v.employeePosition ? `<tr><th>الوظيفة</th><td>${Utils.escapeHTML(v.employeePosition || '')}</td></tr>` : ''}
-                    ${v.employeeDepartment ? `<tr><th>الإدارة</th><td>${Utils.escapeHTML(v.employeeDepartment || '')}</td></tr>` : ''}
-                    `}
-                    <tr><th>نوع المخالفة</th><td>${Utils.escapeHTML(v.violationType || '')}</td></tr>
-                    <tr><th>تاريخ المخالفة</th><td>${v.violationDate ? Utils.formatDate(v.violationDate) : '-'}</td></tr>
-                    <tr><th>الموقع</th><td>${Utils.escapeHTML(v.violationLocation || '')}</td></tr>
-                    <tr><th>المكان</th><td>${Utils.escapeHTML(v.violationPlace || '')}</td></tr>
-                    <tr><th>الشدة</th><td>${Utils.escapeHTML(v.severity || '')}</td></tr>
-                    <tr><th>الحالة</th><td>${Utils.escapeHTML(v.status || '')}</td></tr>
-                    <tr><th>القيمة المالية</th><td>${this.formatFineAmount(Number(this.getEffectiveFineAmount(v)))}</td></tr>
-                    ${v.violationDetails ? `<tr><th>تفاصيل المخالفة</th><td>${Utils.escapeHTML(v.violationDetails || '')}</td></tr>` : ''}
-                    <tr><th>الإجراء المتخذ</th><td>${Utils.escapeHTML(v.actionTaken || '')}</td></tr>
-                </table>
-                ${(() => {
-                    const photoUrl = this.processPhoto(v.photo);
-                    return photoUrl ? `
-                    <div class="section-title">صورة المخالفة:</div>
-                    <div style="text-align: center; margin: 20px 0;">
-                        <img src="${Utils.escapeHTML(photoUrl)}" alt="صورة المخالفة" style="max-width: 100%; max-height: 400px; border: 1px solid #ddd; border-radius: 8px;"
-                             onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eلا توجد صورة%3C/text%3E%3C/svg%3E';">
+            <style>
+                .violation-report{--vr-navy:#102a43;--vr-red:#b91c1c;--vr-gold:#d97706;--vr-ink:#172033;direction:rtl;color:var(--vr-ink);font-family:'Cairo','Tahoma','Segoe UI',sans-serif;letter-spacing:0}
+                .violation-report *{box-sizing:border-box;letter-spacing:0}
+                .vr-banner{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;margin:0 0 14px;border-radius:12px;background:linear-gradient(125deg,var(--vr-navy),#173d6c);color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+                .vr-banner-title{font-size:18px;font-weight:800}.vr-banner-sub{margin-top:3px;color:#bfdbfe;font-size:10px}
+                .vr-code{min-width:130px;padding:8px 12px;border:1px solid rgba(255,255,255,.3);border-radius:9px;text-align:center;background:rgba(255,255,255,.09)}
+                .vr-code small{display:block;color:#bae6fd;font-size:9px}.vr-code strong{display:block;margin-top:2px;font-size:13px}
+                .vr-section{margin:0 0 12px;border:1px solid #dbe5ef;border-radius:11px;overflow:hidden;page-break-inside:avoid;background:#fff}
+                .vr-section-title{display:flex;align-items:center;gap:7px;padding:8px 12px;border-bottom:1px solid #dbe5ef;color:var(--vr-navy);background:#eff6ff;font-size:12px;font-weight:800;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+                .vr-section-title:before{content:'';width:4px;height:17px;border-radius:4px;background:#0891b2}
+                .vr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0}
+                .vr-info{min-height:55px;padding:9px 12px;border-bottom:1px solid #edf2f7;border-left:1px solid #edf2f7}.vr-info-wide{grid-column:1/-1}
+                .vr-label{display:block;margin-bottom:4px;color:#64748b;font-size:9px;font-weight:700}.vr-value{display:block;color:#172033;font-size:11px;line-height:1.65;overflow-wrap:anywhere;white-space:pre-wrap}
+                .vr-value.vr-danger{color:#b91c1c}.vr-value.vr-success{color:#047857}.vr-value.vr-money{color:#166534;font-size:13px}
+                .vr-photo{padding:12px;text-align:center;background:#f8fafc}.vr-photo img{display:block;max-width:100%;max-height:310px;margin:auto;border:2px solid #dbe5ef;border-radius:10px;object-fit:contain}
+                .vr-signatures{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px;page-break-inside:avoid}.vr-sign{min-height:68px;padding:9px;border:1px dashed #94a3b8;border-radius:9px;text-align:center;color:#64748b;font-size:9px}.vr-sign strong{display:block;margin-bottom:28px;color:#334155;font-size:10px}
+                .vr-footnote{margin-top:10px;padding-top:8px;border-top:1px solid #e2e8f0;color:#64748b;text-align:center;font-size:8px}
+            </style>
+            <div class="violation-report">
+                <div class="vr-banner">
+                    <div><div class="vr-banner-title">${isContractor ? 'تقرير مخالفة مقاول' : 'تقرير مخالفة موظف'}</div><div class="vr-banner-sub">سجل رسمي موثق بكامل بيانات المخالفة والإجراء المتخذ</div></div>
+                    <div class="vr-code"><small>رقم التقرير</small><strong>${esc(v.isoCode || v.id || '—')}</strong></div>
+                </div>
+
+                <section class="vr-section">
+                    <div class="vr-section-title">${isContractor ? 'بيانات المقاول والمخالف' : 'بيانات الموظف المخالف'}</div>
+                    <div class="vr-grid">
+                        ${isContractor ? `
+                            ${infoItem('اسم المقاول', v.contractorName)}
+                            ${infoItem('معرف المقاول', v.contractorId)}
+                            ${infoItem('اسم العامل المخالف', v.contractorWorker || v.employeeName || v.contractorName)}
+                            ${infoItem('الوظيفة', v.contractorPosition)}
+                            ${infoItem('الإدارة / القسم', v.contractorDepartment)}
+                            ${infoItem('نوع السجل', 'مخالفة مقاول')}
+                        ` : `
+                            ${infoItem('اسم الموظف', v.employeeName)}
+                            ${infoItem('الكود الوظيفي', v.employeeCode || v.employeeNumber)}
+                            ${infoItem('الوظيفة', v.employeePosition)}
+                            ${infoItem('الإدارة / القسم', v.employeeDepartment)}
+                        `}
                     </div>
-                ` : '';})()}
-                `;
+                </section>
+
+                <section class="vr-section">
+                    <div class="vr-section-title">بيانات المخالفة</div>
+                    <div class="vr-grid">
+                        ${infoItem('نوع المخالفة', v.violationType)}
+                        ${infoItem('معرف نوع المخالفة', v.violationTypeId)}
+                        ${infoItem('تاريخ المخالفة', v.violationDate ? Utils.formatDate(v.violationDate) : '—')}
+                        ${infoItem('وقت المخالفة', v.violationTime)}
+                        ${infoItem('الموقع', v.violationLocation)}
+                        ${infoItem('معرف الموقع', v.violationLocationId)}
+                        ${infoItem('مكان المخالفة', v.violationPlace)}
+                        ${infoItem('معرف المكان', v.violationPlaceId)}
+                        ${infoItem('درجة الشدة', v.severity, { accent: 'vr-danger' })}
+                        ${infoItem('حالة المخالفة', v.status, { accent: v.status === 'محلول' ? 'vr-success' : 'vr-danger' })}
+                        ${infoItem('تسلسل المخالفة خلال الشهر', v.violationSequenceInMonth)}
+                        ${infoItem('القيمة المالية', this.formatFineAmount(Number(this.getEffectiveFineAmount(v))), { accent: 'vr-money' })}
+                        ${infoItem('تفاصيل المخالفة', v.violationDetails, { wide: true })}
+                        ${infoItem('الإجراء المتخذ', v.actionTaken, { wide: true })}
+                    </div>
+                </section>
+
+                <section class="vr-section">
+                    <div class="vr-section-title">بيانات التوثيق والمتابعة</div>
+                    <div class="vr-grid">
+                        ${infoItem('المعرف الداخلي للسجل', v.id)}
+                        ${infoItem('كود ISO', v.isoCode)}
+                        ${infoItem('تاريخ إنشاء السجل', formatDateTime(v.createdAt))}
+                        ${infoItem('آخر تحديث', formatDateTime(v.updatedAt))}
+                    </div>
+                </section>
+
+                ${photoUrl ? `<section class="vr-section"><div class="vr-section-title">صورة المخالفة</div><div class="vr-photo"><img src="${esc(photoUrl, '')}" alt="صورة المخالفة" onerror="this.style.display='none'"></div></section>` : ''}
+
+                <div class="vr-signatures">
+                    <div class="vr-sign"><strong>ممثل المقاول / المخالف</strong>الاسم والتوقيع</div>
+                    <div class="vr-sign"><strong>مسؤول السلامة</strong>الاسم والتوقيع</div>
+                    <div class="vr-sign"><strong>اعتماد الإدارة</strong>الاسم والتوقيع</div>
+                </div>
+                <div class="vr-footnote">تم إنشاء هذا التقرير إلكترونياً من مديول المخالفات - تاريخ الإصدار: ${esc(formatDateTime(new Date().toISOString()))}</div>
+            </div>`;
     },
 
     _generateViolationPrintDocumentHtml(violation, documentTitle) {
@@ -5655,27 +5724,68 @@ ${inner}
         }
     },
 
-    async exportPDF(id) {
+    _safeViolationReportFilePart(value, fallback = 'سجل') {
+        const cleaned = String(value || fallback)
+            .trim()
+            .replace(/[\u0000-\u001f<>:"/\\|?*]+/g, '_')
+            .replace(/\s+/g, '_')
+            .replace(/_+/g, '_')
+            .replace(/^_+|_+$/g, '');
+        return cleaned || fallback;
+    },
+
+    async downloadViolationReport(id, triggerButton = null) {
         const violation = AppState.appData?.violations?.find(v => v.id === id);
         if (!violation) {
             Notification.error('المخالفة غير موجودة');
-            return;
+            return false;
         }
 
+        const normalized = this.normalizeViolationRecord(violation) || violation;
+        const isContractor = normalized.personType === 'contractor' || !!normalized.contractorName;
+        const originalButtonHtml = triggerButton?.innerHTML || '';
         try {
-            Loading.show();
-            const htmlContent = this._generateViolationPrintDocumentHtml(violation, 'تقرير مخالفة');
-            await this._completeViolationReportPrint(htmlContent);
-        } catch (error) {
-            if (error && error.message === 'popup_blocked') {
-                Notification.error('يرجى السماح بنوافذ منبثقة للطباعة');
-            } else {
-                Utils.safeError('خطأ في تصدير PDF:', error);
-                Notification.error('فشل في تصدير PDF: ' + (error.message || ''));
+            if (triggerButton) {
+                triggerButton.disabled = true;
+                triggerButton.setAttribute('aria-busy', 'true');
+                triggerButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             }
+            Loading.show();
+            const documentTitle = isContractor ? 'تقرير مخالفة مقاول' : 'تقرير مخالفة موظف';
+            const htmlContent = this._generateViolationPrintDocumentHtml(normalized, documentTitle);
+            const subject = isContractor
+                ? (normalized.contractorName || normalized.contractorWorker)
+                : normalized.employeeName;
+            const reportCode = normalized.isoCode || normalized.id || 'سجل';
+            const reportDate = normalized.violationDate
+                ? String(normalized.violationDate).slice(0, 10)
+                : new Date().toISOString().slice(0, 10);
+            const fileName = [
+                'تقرير_مخالفة',
+                this._safeViolationReportFilePart(subject, isContractor ? 'مقاول' : 'موظف'),
+                this._safeViolationReportFilePart(reportCode),
+                this._safeViolationReportFilePart(reportDate)
+            ].join('_') + '.pdf';
+            const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, fileName);
+            if (!downloaded) throw new Error('تعذر إنشاء ملف PDF');
+            Notification.success('تم تحميل تقرير المخالفة PDF بجميع البيانات بنجاح');
+            return true;
+        } catch (error) {
+            Utils.safeError('خطأ في تحميل تقرير المخالفة PDF:', error);
+            Notification.error('فشل تحميل تقرير المخالفة: ' + (error.message || ''));
+            return false;
         } finally {
             Loading.hide();
+            if (triggerButton) {
+                triggerButton.disabled = false;
+                triggerButton.removeAttribute('aria-busy');
+                triggerButton.innerHTML = originalButtonHtml || '<i class="fas fa-file-download"></i>';
+            }
         }
+    },
+
+    async exportPDF(id, triggerButton = null) {
+        return this.downloadViolationReport(id, triggerButton);
     },
 
     // ===== Blacklist Register Functions =====
