@@ -3581,7 +3581,7 @@ const PTW = {
         return `
             <!-- أزرار التصدير والإدخال -->
             <div class="flex justify-between items-center gap-2 mb-4">
-                <button id="ptw-registry-add-manual" class="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none;">
+                <button id="ptw-registry-add-manual" class="btn-warning">
                     <i class="fas fa-plus-circle ml-2"></i>
                     ${t('module.ptw.registry.addManual', 'إضافة تصريح يدوي')}
                 </button>
