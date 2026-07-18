@@ -14442,7 +14442,7 @@ const Clinic = {
     getClinicWorkflowStyles_() {
         return `<style>
             .clinic-workflow-root{--cw-navy:#0b2d4f;--cw-blue:#174d78;--cw-teal:#0f8b83;--cw-gold:#f59e0b;--cw-ink:#183047;--cw-muted:#64748b;--cw-line:#d9e6ee;--cw-pale:#f4f9fb;color:var(--cw-ink);font-family:inherit}.clinic-workflow-root *{box-sizing:border-box}
-            .cw-hero{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:19px 22px;margin-bottom:14px;border-radius:16px;background:linear-gradient(128deg,var(--cw-navy),var(--cw-blue) 62%,#17726e);color:#fff;box-shadow:0 9px 26px rgba(11,45,79,.19)}.cw-hero:after{content:"";position:absolute;width:210px;height:210px;left:-75px;top:-120px;border:28px solid rgba(255,255,255,.06);border-radius:50%;pointer-events:none}.cw-hero-copy{position:relative;z-index:1;display:flex;align-items:center;gap:13px}.cw-hero-icon{width:48px;height:48px;border:1px solid rgba(255,255,255,.24);border-radius:14px;background:rgba(255,255,255,.13);display:grid;place-items:center;font-size:21px}.cw-hero h2{margin:0;font-size:1.12rem;font-weight:850}.cw-hero p{margin:4px 0 0;color:#d9ebf3;font-size:.75rem}.cw-hero-meta{position:relative;z-index:1;display:flex;align-items:center;gap:7px;flex-wrap:wrap}.cw-hero-pill{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid rgba(255,255,255,.22);border-radius:9px;background:rgba(255,255,255,.11);font-size:.72rem;font-weight:750}
+            .cw-hero{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:19px 22px;margin-bottom:14px;border-radius:16px;background:linear-gradient(128deg,var(--cw-navy),var(--cw-blue) 62%,#17726e);color:#fff;box-shadow:0 9px 26px rgba(11,45,79,.19)}.cw-hero:after{content:"";position:absolute;width:210px;height:210px;left:-75px;top:-120px;border:28px solid rgba(255,255,255,.06);border-radius:50%;pointer-events:none}.cw-hero-copy{position:relative;z-index:1;display:flex;align-items:center;gap:13px}.cw-hero-icon{width:48px;height:48px;border:1px solid rgba(255,255,255,.24);border-radius:14px;background:rgba(255,255,255,.13);display:grid;place-items:center;font-size:21px}.cw-hero h2{margin:0;font-size:1.12rem;font-weight:850}.cw-hero p{margin:4px 0 0;color:#d9ebf3;font-size:.75rem}.cw-hero-meta{position:relative;z-index:1;display:flex;align-items:center;gap:7px;flex-wrap:wrap}.cw-hero-pill{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid rgba(255,255,255,.22);border-radius:9px;background:rgba(255,255,255,.11);color:#fff;font:inherit;font-size:.72rem;font-weight:750}.cw-hero-primary{cursor:pointer;background:#fff;color:var(--cw-navy);border-color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.13)}
             .cw-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}.cw-kpi{display:flex;align-items:center;gap:11px;padding:12px 14px;border:1px solid var(--cw-line);border-radius:12px;background:#fff;box-shadow:0 3px 12px rgba(15,46,72,.045)}.cw-kpi-icon{width:39px;height:39px;border-radius:10px;display:grid;place-items:center}.cw-kpi:nth-child(1) .cw-kpi-icon{background:#fff7ed;color:#c2410c}.cw-kpi:nth-child(2) .cw-kpi-icon{background:#ecfdf5;color:#047857}.cw-kpi:nth-child(3) .cw-kpi-icon{background:#fef2f2;color:#b91c1c}.cw-kpi:nth-child(4) .cw-kpi-icon{background:#eff6ff;color:#1d4ed8}.cw-kpi small{display:block;color:var(--cw-muted);font-size:.67rem;font-weight:650}.cw-kpi strong{display:block;margin-top:2px;font-size:1.05rem;font-weight:850;color:var(--cw-ink)}
             .cw-filter{padding:14px 16px;margin-bottom:14px;border:1px solid #b9dbe2;border-radius:14px;background:linear-gradient(180deg,#f9fcfd,#f1f8fa)}.cw-filter-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}.cw-filter-title{display:flex;align-items:center;gap:7px;color:var(--cw-navy);font-size:.81rem;font-weight:820}.cw-count-pill{padding:3px 8px;border-radius:999px;background:#d9f4f1;color:#0f766e;font-size:.66rem}.cw-filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.cw-field label{display:block;margin-bottom:5px;color:#536b7c;font-size:.68rem;font-weight:750}.cw-field label i{width:17px;color:var(--cw-teal)}.cw-control{width:100%;min-height:39px;padding:8px 11px;border:1.5px solid #c8dce4;border-radius:9px;background:#fff;color:var(--cw-ink);font:inherit;font-size:.78rem;outline:none;transition:border-color .18s,box-shadow .18s}.cw-control:focus{border-color:var(--cw-teal);box-shadow:0 0 0 3px rgba(15,139,131,.11)}.cw-input-wrap{position:relative}.cw-input-wrap>i{position:absolute;right:11px;top:50%;transform:translateY(-50%);color:#7890a1;font-size:.75rem;pointer-events:none}.cw-input-wrap .cw-control{padding-right:34px}.cw-reset{padding:6px 10px;border:1px solid #c8dce4;border-radius:8px;background:#fff;color:#536b7c;font-size:.71rem;font-weight:750;cursor:pointer}.cw-reset:disabled{opacity:.42;cursor:not-allowed}
             .cw-table-card{overflow:hidden;border:1px solid var(--cw-line);border-radius:14px;background:#fff;box-shadow:0 5px 20px rgba(15,46,72,.06)}.cw-table-caption{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 15px;border-bottom:1px solid var(--cw-line)}.cw-table-caption strong{color:var(--cw-navy);font-size:.84rem}.cw-table-caption span{color:var(--cw-muted);font-size:.69rem}.cw-table-scroll{overflow:auto;max-height:68vh}.cw-table{width:100%;min-width:1020px;border-collapse:separate;border-spacing:0}.cw-table thead{position:sticky;top:0;z-index:4}.cw-table th{padding:12px 10px;background:linear-gradient(180deg,#17466f,#103758);color:#fff;border-left:1px solid rgba(255,255,255,.1);font-size:.71rem;font-weight:780;white-space:nowrap;text-align:right}.cw-table th i{margin-left:5px;color:#6ee7dc}.cw-table td{padding:11px 10px;border-bottom:1px solid #e8eff4;color:#344b5f;font-size:.77rem;vertical-align:middle}.cw-table tbody tr:nth-child(even){background:#f8fbfd}.cw-table tbody tr:hover{background:#eef8f8}.cw-table tbody tr:last-child td{border-bottom:0}.cw-serial{display:inline-grid;place-items:center;width:27px;height:27px;border-radius:8px;background:#e8f1f7;color:var(--cw-navy);font-weight:850}.cw-main-cell{display:flex;align-items:center;gap:9px}.cw-cell-icon{flex:0 0 auto;width:34px;height:34px;border-radius:10px;background:#e7f5f3;color:var(--cw-teal);display:grid;place-items:center}.cw-main-cell strong{display:block;color:var(--cw-ink);font-size:.79rem}.cw-main-cell small{display:block;margin-top:3px;color:#7a91a1;font-size:.65rem}.cw-actions{display:flex;align-items:center;justify-content:center;gap:6px}.cw-actions .btn-icon{width:32px;height:32px;border-radius:8px;box-shadow:none}.cw-empty{text-align:center;padding:52px 20px;color:var(--cw-muted)}.cw-empty i{display:grid;place-items:center;width:60px;height:60px;margin:0 auto 11px;border-radius:17px;background:#eaf4f8;color:var(--cw-teal);font-size:24px}.cw-empty h3{margin:0 0 4px;color:var(--cw-navy);font-size:.95rem}.cw-empty p{margin:0;font-size:.75rem}
@@ -19059,6 +19059,86 @@ const Clinic = {
 
     // ===== إرسال طلب احتياجات (للمستخدمين) =====
 
+    showSupplyRequestForm() {
+        const existingModal = document.getElementById('supply-request-modal');
+        if (existingModal) {
+            existingModal.querySelector('#request-type')?.focus();
+            return;
+        }
+
+        const modal = document.createElement('div');
+        modal.id = 'supply-request-modal';
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            ${this.getClinicWorkflowStyles_()}
+            <div class="modal-content clinic-workflow-root" role="dialog" aria-modal="true" aria-labelledby="supply-request-modal-title" style="max-width:780px;border-radius:17px;overflow:hidden;box-shadow:0 24px 70px rgba(6,31,55,.3);">
+                <div class="modal-header" style="padding:17px 20px;background:linear-gradient(128deg,#0b2d4f,#174d78 66%,#17726e);color:#fff;border:0;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span style="width:43px;height:43px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.25);border-radius:12px;background:rgba(255,255,255,.13);"><i class="fas fa-file-medical-alt" style="font-size:18px;"></i></span>
+                        <div><h2 id="supply-request-modal-title" class="modal-title" style="margin:0;color:#fff;font-size:1.08rem;">بيانات طلب احتياجات جديد</h2><p style="margin:3px 0 0;color:#d9ebf3;font-size:.72rem;">أدخل تفاصيل الاحتياج ليتم إرساله إلى مسار الموافقة</p></div>
+                    </div>
+                    <button type="button" class="modal-close" aria-label="إغلاق النموذج" style="width:36px;height:36px;border:1px solid rgba(255,255,255,.25);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body" style="padding:18px 20px 20px;max-height:76vh;overflow-y:auto;background:#f6fafc;">
+                    <div style="display:flex;align-items:flex-start;gap:9px;padding:10px 12px;margin-bottom:14px;border:1px solid #bae6fd;border-radius:10px;background:#f0f9ff;color:#0c4a6e;font-size:.74rem;"><i class="fas fa-info-circle" style="margin-top:2px;"></i><span>يرجى إدخال اسم العنصر والكمية بدقة. الحقول المميزة بعلامة * مطلوبة.</span></div>
+                    <form id="supply-request-form" novalidate>
+                        <div class="cw-form-grid">
+                            <div class="cw-field"><label class="cw-field-title" for="request-type"><i class="fas fa-tag"></i>نوع الطلب *</label><select id="request-type" class="cw-control" required><option value="">اختر نوع الطلب</option><option value="medication">أدوية</option><option value="equipment">أجهزة طبية</option><option value="supplies">مستلزمات طبية</option><option value="other">أخرى</option></select></div>
+                            <div class="cw-field"><label class="cw-field-title" for="item-name"><i class="fas fa-box-open"></i>اسم العنصر المطلوب *</label><input type="text" id="item-name" class="cw-control" placeholder="مثال: باراسيتامول 500 مجم" required></div>
+                            <div class="cw-field"><label class="cw-field-title" for="quantity"><i class="fas fa-sort-numeric-up"></i>الكمية المطلوبة *</label><input type="number" id="quantity" class="cw-control" placeholder="مثال: 10" min="1" required></div>
+                            <div class="cw-field"><label class="cw-field-title" for="unit"><i class="fas fa-ruler"></i>الوحدة</label><input type="text" id="unit" class="cw-control" placeholder="مثال: علبة، عبوة، قطعة"></div>
+                            <div class="cw-field"><label class="cw-field-title" for="priority"><i class="fas fa-exclamation-triangle"></i>الأولوية</label><select id="priority" class="cw-control"><option value="normal">عادية</option><option value="high">عالية</option><option value="urgent">عاجلة</option></select></div>
+                            <div class="cw-field cw-field-full"><label class="cw-field-title" for="request-notes"><i class="fas fa-comment-medical"></i>ملاحظات / سبب الطلب</label><textarea id="request-notes" class="cw-control" rows="3" placeholder="اذكر سبب الحاجة لهذا العنصر..."></textarea></div>
+                        </div>
+                        <div class="cw-form-actions" style="margin-top:18px;"><button type="button" class="cw-secondary supply-request-cancel"><i class="fas fa-times"></i>إلغاء</button><button type="reset" class="cw-secondary"><i class="fas fa-undo-alt"></i>إعادة تعيين</button><button type="submit" class="cw-submit"><i class="fas fa-paper-plane"></i>إرسال الطلب للموافقة</button></div>
+                    </form>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        this.applyModuleI18n(modal);
+
+        const form = modal.querySelector('#supply-request-form');
+        let isDirty = false;
+        let isSubmitting = false;
+        const keyHandler = (event) => {
+            if (event.key === 'Escape') closeModal();
+        };
+        const closeModal = () => {
+            if (isSubmitting) return;
+            if (isDirty && !confirm('يوجد بيانات غير محفوظة في الطلب. هل تريد إغلاق النموذج؟')) return;
+            document.removeEventListener('keydown', keyHandler);
+            modal.remove();
+        };
+        form?.addEventListener('input', () => { isDirty = true; });
+        form?.addEventListener('reset', () => { setTimeout(() => { isDirty = false; }, 0); });
+        form?.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (!form.reportValidity()) return;
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalHtml = submitButton?.innerHTML || '';
+            isSubmitting = true;
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>جاري الإرسال...';
+            }
+            const success = await this.submitSupplyRequest();
+            if (success) {
+                document.removeEventListener('keydown', keyHandler);
+                modal.remove();
+                return;
+            }
+            isSubmitting = false;
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalHtml;
+            }
+        });
+        modal.querySelectorAll('.modal-close, .supply-request-cancel').forEach((button) => button.addEventListener('click', closeModal));
+        modal.addEventListener('click', (event) => { if (event.target === modal) closeModal(); });
+        document.addEventListener('keydown', keyHandler);
+        setTimeout(() => modal.querySelector('#request-type')?.focus(), 50);
+    },
+
     renderSupplyRequestTab() {
         const panel = document.querySelector('.clinic-tab-panel[data-tab-panel="supply-request"]');
         if (!panel) return;
@@ -19090,29 +19170,13 @@ const Clinic = {
             <div class="clinic-workflow-root" id="clinic-supply-request-root">
                 <section class="cw-hero" aria-labelledby="supply-request-title">
                     <div class="cw-hero-copy"><span class="cw-hero-icon"><i class="fas fa-dolly-flatbed"></i></span><div><h2 id="supply-request-title">إرسال طلب احتياجات</h2><p>أنشئ طلبًا واضحًا وتابع حالة المراجعة والتنفيذ من مكان واحد</p></div></div>
-                    <div class="cw-hero-meta"><span class="cw-hero-pill"><i class="fas fa-list-alt"></i>${allRequests.length} ${isAdmin ? 'طلب بالنظام' : 'طلب خاص بك'}</span><span class="cw-hero-pill"><i class="fas fa-hourglass-half"></i>${pendingCount} قيد الانتظار</span></div>
+                    <div class="cw-hero-meta"><span class="cw-hero-pill"><i class="fas fa-list-alt"></i>${allRequests.length} ${isAdmin ? 'طلب بالنظام' : 'طلب خاص بك'}</span><span class="cw-hero-pill"><i class="fas fa-hourglass-half"></i>${pendingCount} قيد الانتظار</span><button type="button" id="supply-new-request-btn" class="cw-hero-pill cw-hero-primary"><i class="fas fa-plus"></i>طلب احتياجات جديد</button></div>
                 </section>
                 <section class="cw-kpis" aria-label="ملخص طلبات الاحتياجات">
                     <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-clock"></i></span><div><small>قيد الانتظار</small><strong>${pendingCount}</strong></div></div>
                     <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-check-circle"></i></span><div><small>موافق أو منفذ</small><strong>${approvedCount}</strong></div></div>
                     <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-times-circle"></i></span><div><small>طلبات مرفوضة</small><strong>${rejectedCount}</strong></div></div>
                     <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-bolt"></i></span><div><small>طلبات عاجلة</small><strong>${urgentCount}</strong></div></div>
-                </section>
-                <section class="cw-form-card">
-                    <div class="cw-form-head"><span><i class="fas fa-file-medical"></i></span><div><h3>بيانات الطلب الجديد</h3><p>الحقول المميزة بعلامة * مطلوبة لإرسال الطلب</p></div></div>
-                    <div class="cw-form-body">
-                        <form id="supply-request-form">
-                            <div class="cw-form-grid">
-                                <div class="cw-field"><label class="cw-field-title" for="request-type"><i class="fas fa-tag"></i>نوع الطلب *</label><select id="request-type" class="cw-control" required><option value="">اختر نوع الطلب</option><option value="medication">أدوية</option><option value="equipment">أجهزة طبية</option><option value="supplies">مستلزمات طبية</option><option value="other">أخرى</option></select></div>
-                                <div class="cw-field"><label class="cw-field-title" for="item-name"><i class="fas fa-box-open"></i>اسم العنصر المطلوب *</label><input type="text" id="item-name" class="cw-control" placeholder="مثال: باراسيتامول 500 مجم" required></div>
-                                <div class="cw-field"><label class="cw-field-title" for="quantity"><i class="fas fa-sort-numeric-up"></i>الكمية المطلوبة *</label><input type="number" id="quantity" class="cw-control" placeholder="مثال: 10" min="1" required></div>
-                                <div class="cw-field"><label class="cw-field-title" for="unit"><i class="fas fa-ruler"></i>الوحدة</label><input type="text" id="unit" class="cw-control" placeholder="مثال: علبة، عبوة، قطعة"></div>
-                                <div class="cw-field"><label class="cw-field-title" for="priority"><i class="fas fa-exclamation-triangle"></i>الأولوية</label><select id="priority" class="cw-control"><option value="normal">عادية</option><option value="high">عالية</option><option value="urgent">عاجلة</option></select></div>
-                                <div class="cw-field cw-field-full"><label class="cw-field-title" for="request-notes"><i class="fas fa-comment-medical"></i>ملاحظات / سبب الطلب</label><textarea id="request-notes" class="cw-control" rows="3" placeholder="اذكر سبب الحاجة لهذا العنصر..."></textarea></div>
-                            </div>
-                            <div class="cw-form-actions"><button type="reset" class="cw-secondary"><i class="fas fa-undo-alt"></i>إعادة تعيين</button><button type="submit" class="cw-submit"><i class="fas fa-paper-plane"></i>إرسال الطلب للموافقة</button></div>
-                        </form>
-                    </div>
                 </section>
                 <section class="cw-filter" aria-label="فلاتر طلبات الاحتياجات">
                     <div class="cw-filter-head"><div class="cw-filter-title"><i class="fas fa-sliders-h"></i>${isAdmin ? 'فلترة جميع الطلبات' : 'فلترة طلباتي'} <span id="supply-filter-count" class="cw-count-pill">${allRequests.length} طلب</span></div><button type="button" id="supply-reset-filters" class="cw-reset"><i class="fas fa-undo-alt ml-1"></i>مسح الفلاتر</button></div>
@@ -19128,14 +19192,7 @@ const Clinic = {
         `;
         this.applyModuleI18n(panel);
 
-        // ربط أحداث النموذج
-        const form = panel.querySelector('#supply-request-form');
-        if (form) {
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.submitSupplyRequest();
-            });
-        }
+        panel.querySelector('#supply-new-request-btn')?.addEventListener('click', () => this.showSupplyRequestForm());
 
         const bindSupplyListActions = () => {
             panel.querySelectorAll('[data-action="view-request"]').forEach(btn => {
@@ -19303,7 +19360,7 @@ const Clinic = {
 
         if (!type || !itemName || !quantity) {
             Notification?.error?.('يرجى ملء جميع الحقول المطلوبة');
-            return;
+            return false;
         }
 
         Loading.show();
@@ -19362,6 +19419,7 @@ const Clinic = {
 
                 // إعادة تعيين النموذج
                 document.getElementById('supply-request-form')?.reset();
+                return true;
             } else {
                 throw new Error(result?.message || 'فشل إرسال الطلب');
             }
@@ -19369,6 +19427,7 @@ const Clinic = {
             Loading.hide();
             Utils.safeError('خطأ في إرسال طلب الاحتياج:', error);
             Notification.error('تعذر إرسال الطلب: ' + (error.message || 'حدث خطأ غير معروف'));
+            return false;
         }
     },
 
