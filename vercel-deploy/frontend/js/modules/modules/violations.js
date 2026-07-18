@@ -5634,8 +5634,8 @@ const Violations = {
                 documentTitle,
                 inner,
                 false,
-                true,
-                { version: '1.0' },
+                false,
+                { version: '1.0', includeQRCode: false },
                 v.createdAt,
                 v.updatedAt
             );
@@ -5734,6 +5734,53 @@ ${inner}
         return cleaned || fallback;
     },
 
+    _readViolationReportImageBlob_(blob) {
+        return new Promise((resolve) => {
+            if (!blob || !String(blob.type || '').toLowerCase().startsWith('image/')) {
+                resolve('');
+                return;
+            }
+            try {
+                const reader = new FileReader();
+                reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+                reader.onerror = () => resolve('');
+                reader.readAsDataURL(blob);
+            } catch (_error) {
+                resolve('');
+            }
+        });
+    },
+
+    async _resolveViolationReportPhoto_(photo) {
+        const source = this.processPhoto(photo);
+        if (!source) return '';
+        if (/^data:image\//i.test(source)) return source;
+
+        const display = typeof Utils.resolveDriveAwareImgDisplay === 'function'
+            ? Utils.resolveDriveAwareImgDisplay(source)
+            : { canonical: source, displaySrc: source, needsProxy: false, proxyFileId: '' };
+
+        if (display.needsProxy && display.proxyFileId && typeof Utils.fetchDriveImageDataUri === 'function') {
+            try {
+                const dataUri = await Utils.fetchDriveImageDataUri(display.proxyFileId);
+                if (dataUri && /^data:image\//i.test(dataUri)) return dataUri;
+            } catch (_error) { /* fallback to direct fetch below */ }
+        }
+
+        const fetchSource = display.canonical || source;
+        if (/^(https?:|blob:)/i.test(fetchSource) && typeof fetch === 'function') {
+            try {
+                const response = await fetch(fetchSource, { method: 'GET', credentials: 'omit', mode: 'cors' });
+                if (response.ok) {
+                    const dataUri = await this._readViolationReportImageBlob_(await response.blob());
+                    if (dataUri) return dataUri;
+                }
+            } catch (_error) { /* retain canonical source for html2canvas fallback */ }
+        }
+
+        return fetchSource;
+    },
+
     async downloadViolationReport(id, triggerButton = null) {
         const violation = AppState.appData?.violations?.find(v => v.id === id);
         if (!violation) {
@@ -5752,7 +5799,9 @@ ${inner}
             }
             Loading.show();
             const documentTitle = isContractor ? 'تقرير مخالفة مقاول' : 'تقرير مخالفة موظف';
-            const htmlContent = this._generateViolationPrintDocumentHtml(normalized, documentTitle);
+            const reportPhoto = await this._resolveViolationReportPhoto_(normalized.photo);
+            const reportViolation = { ...normalized, photo: reportPhoto };
+            const htmlContent = this._generateViolationPrintDocumentHtml(reportViolation, documentTitle);
             const subject = isContractor
                 ? (normalized.contractorName || normalized.contractorWorker)
                 : normalized.employeeName;
