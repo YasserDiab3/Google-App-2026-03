@@ -6246,121 +6246,286 @@ const PTW = {
         const paperNo = String(entry.paperPermitNumber || '').trim() || '—';
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay ptw-manual-details-overlay';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 900px; background: #ffffff;">
-                <div class="modal-header modal-header-centered bg-white border-b border-gray-200 rounded-t-lg" style="padding: 20px 30px; display: flex; align-items: center; justify-content: space-between;">
-                    <div style="flex: 1;">
-                        <h2 class="modal-title flex items-center gap-2" style="color: #000000; font-size: 1.5rem; font-weight: 700; margin: 0;">
-                            <i class="fas fa-file-alt" style="color: #2563eb;"></i>
-                            ${t('module.ptw.manual.detailsTitle', 'تفاصيل التصريح اليدوي')} — ${t('module.ptw.manual.sequentialNumber', 'مسلسل')} #${Utils.escapeHTML(seqNo)} | ${t('module.ptw.manual.paperPermitNumber', 'ورقي')} #${Utils.escapeHTML(paperNo)}
-                        </h2>
-                        <p class="text-sm mt-2" style="color: #6b7280;">
-                            <i class="fas fa-calendar-alt ml-1"></i>
-                            ${entry.openDate ? Utils.formatDate(entry.openDate) : 'غير محدد'}
-                            <span class="badge ${entry.status === 'اكتمل العمل بشكل آمن' ? 'bg-green-500' : entry.status === 'إغلاق جبري' ? 'bg-red-500' : 'bg-blue-500'} mr-3" style="color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.75rem;">
-                                ${entry.status || 'غير محدد'}
-                            </span>
-                        </p>
-                    </div>
-                    <button class="hover:bg-gray-100 rounded-full w-10 h-10 flex items-center justify-center transition" onclick="this.closest('.modal-overlay').remove()" style="color: #374151; margin: 0 auto;">
-                        <i class="fas fa-times"></i>
+            <style>
+                .ptw-manual-details-overlay {
+                    --ptw-details-ink: #111827;
+                    --ptw-details-muted: #64748b;
+                    --ptw-details-line: #e2e8f0;
+                    --ptw-details-blue: #2457e6;
+                    --ptw-details-blue-soft: #eef5ff;
+                    --ptw-details-footer: #f8fafc;
+                    padding: 18px;
+                }
+                .ptw-manual-details-shell {
+                    width: min(940px, 100%);
+                    max-width: 940px !important;
+                    max-height: 94vh;
+                    overflow: hidden;
+                    border: 1px solid rgba(148, 163, 184, .55);
+                    border-radius: 22px;
+                    background: #fff;
+                    box-shadow: 0 26px 70px rgba(15, 23, 42, .28);
+                    color: var(--ptw-details-ink);
+                    direction: rtl;
+                }
+                .ptw-manual-details-header {
+                    position: relative;
+                    padding: 24px 76px 20px;
+                    text-align: center;
+                    border-bottom: 1px solid var(--ptw-details-line);
+                    background: #fff;
+                }
+                .ptw-manual-details-icon {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 34px;
+                    height: 34px;
+                    margin-bottom: 2px;
+                    color: var(--ptw-details-blue);
+                    font-size: 20px;
+                }
+                .ptw-manual-details-title {
+                    max-width: 720px;
+                    margin: 0 auto;
+                    color: #050505;
+                    font-size: clamp(1.15rem, 2.5vw, 1.55rem);
+                    font-weight: 800;
+                    line-height: 1.45;
+                }
+                .ptw-manual-details-meta {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-wrap: wrap;
+                    gap: 10px 16px;
+                    margin-top: 10px;
+                    color: var(--ptw-details-muted);
+                    font-size: .82rem;
+                }
+                .ptw-manual-details-status {
+                    display: inline-flex;
+                    align-items: center;
+                    padding: 5px 13px;
+                    border-radius: 999px;
+                    color: #fff;
+                    background: ${entry.status === 'اكتمل العمل بشكل آمن' ? '#10b981' : entry.status === 'إغلاق جبري' ? '#dc2626' : '#2563eb'};
+                    font-size: .76rem;
+                    font-weight: 700;
+                    line-height: 1.2;
+                }
+                .ptw-manual-details-close {
+                    position: absolute;
+                    top: 28px;
+                    left: 30px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 42px;
+                    height: 42px;
+                    padding: 0;
+                    border: 1.5px solid #111827;
+                    border-radius: 50%;
+                    background: #fff;
+                    color: #111827;
+                    cursor: pointer;
+                    transition: background-color .18s ease, color .18s ease, transform .18s ease;
+                }
+                .ptw-manual-details-close:hover { background: #111827; color: #fff; transform: rotate(6deg); }
+                .ptw-manual-details-close:focus-visible { outline: 3px solid rgba(37, 87, 230, .3); outline-offset: 3px; }
+                .ptw-manual-details-body {
+                    max-height: calc(94vh - 186px);
+                    overflow-y: auto;
+                    padding: 24px 26px 22px;
+                    scrollbar-width: thin;
+                    scrollbar-color: #cbd5e1 transparent;
+                }
+                .ptw-manual-details-numbers {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 14px;
+                    margin-bottom: 22px;
+                }
+                .ptw-manual-number-card {
+                    min-height: 70px;
+                    padding: 14px 16px;
+                    border: 1px solid #dbeafe;
+                    border-radius: 6px;
+                    background: var(--ptw-details-blue-soft);
+                }
+                .ptw-manual-number-card span,
+                .ptw-manual-detail-item dt {
+                    display: block;
+                    margin-bottom: 4px;
+                    color: var(--ptw-details-muted);
+                    font-size: .75rem;
+                    font-weight: 500;
+                }
+                .ptw-manual-number-card strong {
+                    display: block;
+                    color: var(--ptw-details-blue);
+                    font-family: Consolas, "Courier New", monospace;
+                    font-size: 1.08rem;
+                    font-weight: 800;
+                    letter-spacing: .04em;
+                }
+                .ptw-manual-details-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    column-gap: 58px;
+                    row-gap: 0;
+                }
+                .ptw-manual-details-column { display: grid; align-content: start; gap: 2px; }
+                .ptw-manual-detail-item {
+                    min-width: 0;
+                    padding: 8px 4px 10px;
+                }
+                .ptw-manual-detail-item dd {
+                    margin: 0;
+                    color: var(--ptw-details-ink);
+                    font-size: .96rem;
+                    font-weight: 650;
+                    line-height: 1.65;
+                    overflow-wrap: anywhere;
+                }
+                .ptw-manual-details-wide {
+                    grid-column: 1 / -1;
+                    margin-top: 3px;
+                    padding-top: 12px;
+                    border-top: 1px dashed var(--ptw-details-line);
+                }
+                .ptw-manual-details-supervisors {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 26px;
+                    grid-column: 1 / -1;
+                    margin-top: 2px;
+                }
+                .ptw-manual-details-actions {
+                    display: flex;
+                    flex-wrap: wrap;
+                    justify-content: center;
+                    gap: 9px;
+                    margin-top: 20px;
+                    padding-top: 18px;
+                    border-top: 1px solid var(--ptw-details-line);
+                }
+                .ptw-manual-details-action {
+                    min-height: 42px;
+                    padding-inline: 16px !important;
+                    border-radius: 8px !important;
+                    box-shadow: 0 5px 12px rgba(15, 23, 42, .13);
+                    font-weight: 700;
+                }
+                .ptw-manual-details-footer {
+                    display: flex;
+                    justify-content: center;
+                    padding: 16px 20px;
+                    border-top: 1px solid var(--ptw-details-line);
+                    background: var(--ptw-details-footer);
+                }
+                .ptw-manual-details-footer .btn-secondary {
+                    min-width: 120px;
+                    min-height: 48px;
+                    border-radius: 9px;
+                    background: #fff;
+                    box-shadow: 0 2px 6px rgba(15, 23, 42, .12);
+                }
+                @media (max-width: 700px) {
+                    .ptw-manual-details-overlay { padding: 8px; align-items: flex-end; }
+                    .ptw-manual-details-shell { max-height: 96vh; border-radius: 18px 18px 10px 10px; }
+                    .ptw-manual-details-header { padding: 20px 58px 17px; }
+                    .ptw-manual-details-close { top: 20px; left: 16px; width: 38px; height: 38px; }
+                    .ptw-manual-details-body { max-height: calc(96vh - 174px); padding: 18px 16px; }
+                    .ptw-manual-details-numbers,
+                    .ptw-manual-details-grid,
+                    .ptw-manual-details-supervisors { grid-template-columns: 1fr; gap: 8px; }
+                    .ptw-manual-details-grid { column-gap: 0; }
+                    .ptw-manual-details-supervisors { gap: 0; }
+                    .ptw-manual-details-wide,
+                    .ptw-manual-details-supervisors { grid-column: 1; }
+                    .ptw-manual-details-action { flex: 1 1 130px; }
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .ptw-manual-details-close { transition: none; }
+                }
+            </style>
+            <div class="modal-content ptw-manual-details-shell" role="dialog" aria-modal="true" aria-labelledby="ptw-manual-details-title">
+                <header class="ptw-manual-details-header">
+                    <button type="button" class="ptw-manual-details-close" onclick="this.closest('.modal-overlay').remove()" aria-label="إغلاق">
+                        <i class="fas fa-times" aria-hidden="true"></i>
                     </button>
-                </div>
-                
-                <div class="modal-body p-6">
+                    <div class="ptw-manual-details-icon"><i class="fas fa-file-alt" aria-hidden="true"></i></div>
+                    <h2 id="ptw-manual-details-title" class="ptw-manual-details-title">
+                        ${t('module.ptw.manual.detailsTitle', 'تفاصيل التصريح اليدوي')} — ${t('module.ptw.manual.sequentialNumber', 'رقم المسلسل')} #${Utils.escapeHTML(seqNo)} | ${t('module.ptw.manual.paperPermitNumber', 'رقم التصريح الورقي')} #${Utils.escapeHTML(paperNo)}
+                    </h2>
+                    <div class="ptw-manual-details-meta">
+                        <span><i class="fas fa-calendar-alt ml-1" aria-hidden="true"></i>${entry.openDate ? Utils.formatDate(entry.openDate) : 'غير محدد'}</span>
+                        <span class="ptw-manual-details-status">${Utils.escapeHTML(entry.status || 'غير محدد')}</span>
+                    </div>
+                </header>
+
+                <div class="modal-body ptw-manual-details-body">
                     <!-- أرقام التصريح -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div class="bg-blue-50 p-3 rounded border border-blue-200">
-                            <label class="text-xs text-gray-700 block" style="color: #374151;">${t('module.ptw.manual.sequentialNumber', 'رقم المسلسل')}</label>
-                            <p class="font-bold text-blue-700" style="font-family: 'Courier New', monospace; font-size: 1.1rem;">${Utils.escapeHTML(seqNo)}</p>
+                    <div class="ptw-manual-details-numbers">
+                        <div class="ptw-manual-number-card">
+                            <span>${t('module.ptw.manual.sequentialNumber', 'رقم المسلسل')}</span>
+                            <strong>${Utils.escapeHTML(seqNo)}</strong>
                         </div>
-                        <div class="bg-blue-50 p-3 rounded border border-blue-200">
-                            <label class="text-xs text-gray-700 block" style="color: #374151;">${t('module.ptw.manual.paperPermitNumber', 'رقم التصريح الورقي')}</label>
-                            <p class="font-bold text-blue-700" style="font-family: 'Courier New', monospace; font-size: 1.1rem;">${Utils.escapeHTML(paperNo)}</p>
+                        <div class="ptw-manual-number-card">
+                            <span>${t('module.ptw.manual.paperPermitNumber', 'رقم التصريح الورقي')}</span>
+                            <strong>${Utils.escapeHTML(paperNo)}</strong>
                         </div>
                     </div>
                     <!-- تفاصيل التصريح -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="space-y-3">
-                            <div class="bg-white p-3 rounded border">
-                                <label class="text-xs text-gray-700 block" style="color: #374151;">نوع التصريح</label>
-                                <p class="font-semibold" style="color: #000000;">${Utils.escapeHTML(permitTypeDisplay)}</p>
-                            </div>
-                            <div class="bg-white p-3 rounded border">
-                                <label class="text-xs text-gray-700 block" style="color: #374151;">الموقع</label>
-                                <p class="font-semibold" style="color: #000000;">${Utils.escapeHTML(entry.location || '-')}</p>
-                            </div>
-                            <div class="bg-white p-3 rounded border">
-                                <label class="text-xs text-gray-700 block" style="color: #374151;">الجهة الطالبة</label>
-                                <p class="font-semibold" style="color: #000000;">${Utils.escapeHTML(entry.requestingParty || '-')}</p>
-                            </div>
-                            <div class="bg-white p-3 rounded border">
-                                <label class="text-xs text-gray-700 block" style="color: #374151;">الجهة المصرح لها</label>
-                                <p class="font-semibold" style="color: #000000;">${Utils.escapeHTML(entry.authorizedParty || '-')}</p>
-                            </div>
-                        </div>
-                        <div class="space-y-3">
-                            <div class="bg-white p-3 rounded border">
-                                <label class="text-xs text-gray-700 block" style="color: #374151;">الوقت من</label>
-                                <p class="font-semibold" style="color: #000000;">${entry.timeFrom && entry.timeFrom !== 'غير محدد' ? Utils.formatDate(entry.timeFrom) : '-'}</p>
-                            </div>
-                            <div class="bg-white p-3 rounded border">
-                                <label class="text-xs text-gray-700 block" style="color: #374151;">الوقت إلى</label>
-                                <p class="font-semibold" style="color: #000000;">${entry.timeTo && entry.timeTo !== 'غير محدد' ? Utils.formatDate(entry.timeTo) : '-'}</p>
-                            </div>
-                            <div class="bg-white p-3 rounded border">
-                                <label class="text-xs text-gray-700 block" style="color: #374151;">إجمالي الوقت</label>
-                                <p class="font-semibold" style="color: #000000;">${Utils.escapeHTML(entry.totalTime || '-')}</p>
-                            </div>
-                            <div class="bg-white p-3 rounded border">
-                                <label class="text-xs text-gray-700 block" style="color: #374151;">حالة التصريح</label>
-                                <p class="font-semibold" style="color: #000000;">${Utils.escapeHTML(entry.status || '-')}</p>
-                            </div>
+                    <div class="ptw-manual-details-grid">
+                        <dl class="ptw-manual-details-column">
+                            <div class="ptw-manual-detail-item"><dt>نوع التصريح</dt><dd>${Utils.escapeHTML(permitTypeDisplay)}</dd></div>
+                            <div class="ptw-manual-detail-item"><dt>الموقع</dt><dd>${Utils.escapeHTML(entry.location || '-')}</dd></div>
+                            <div class="ptw-manual-detail-item"><dt>الجهة الطالبة</dt><dd>${Utils.escapeHTML(entry.requestingParty || '-')}</dd></div>
+                            <div class="ptw-manual-detail-item"><dt>الجهة المصرح لها</dt><dd>${Utils.escapeHTML(entry.authorizedParty || '-')}</dd></div>
+                        </dl>
+                        <dl class="ptw-manual-details-column">
+                            <div class="ptw-manual-detail-item"><dt>الوقت من</dt><dd>${entry.timeFrom && entry.timeFrom !== 'غير محدد' ? Utils.formatDate(entry.timeFrom) : '-'}</dd></div>
+                            <div class="ptw-manual-detail-item"><dt>الوقت إلى</dt><dd>${entry.timeTo && entry.timeTo !== 'غير محدد' ? Utils.formatDate(entry.timeTo) : '-'}</dd></div>
+                            <div class="ptw-manual-detail-item"><dt>إجمالي الوقت</dt><dd>${Utils.escapeHTML(entry.totalTime || '-')}</dd></div>
+                            <div class="ptw-manual-detail-item"><dt>حالة التصريح</dt><dd>${Utils.escapeHTML(entry.status || '-')}</dd></div>
+                        </dl>
+                        <dl class="ptw-manual-detail-item ptw-manual-details-wide">
+                            <dt>وصف العمل</dt><dd class="whitespace-pre-wrap">${Utils.escapeHTML(entry.workDescription || '-')}</dd>
+                        </dl>
+                        <div class="ptw-manual-details-supervisors">
+                            <dl class="ptw-manual-detail-item"><dt>مسؤول المتابعة 01</dt><dd>${Utils.escapeHTML(entry.supervisor1 || '-')}</dd></dl>
+                            <dl class="ptw-manual-detail-item"><dt>مسؤول المتابعة 02</dt><dd>${Utils.escapeHTML(entry.supervisor2 || '-')}</dd></dl>
                         </div>
                     </div>
-                    
-                    <div class="mt-4 space-y-3">
-                        <div class="bg-white p-3 rounded border">
-                            <label class="text-xs text-gray-700 block" style="color: #374151;">وصف العمل</label>
-                            <p class="whitespace-pre-wrap" style="color: #000000;">${Utils.escapeHTML(entry.workDescription || '-')}</p>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="bg-white p-3 rounded border">
-                                <label class="text-xs text-gray-700 block" style="color: #374151;">مسؤول المتابعة 01</label>
-                                <p class="font-semibold" style="color: #000000;">${Utils.escapeHTML(entry.supervisor1 || '-')}</p>
-                            </div>
-                            <div class="bg-white p-3 rounded border">
-                                <label class="text-xs text-gray-700 block" style="color: #374151;">مسؤول المتابعة 02</label>
-                                <p class="font-semibold" style="color: #000000;">${Utils.escapeHTML(entry.supervisor2 || '-')}</p>
-                            </div>
-                        </div>
-                    </div>
-                    
+
                     <!-- أزرار الإجراءات في أسفل النموذج -->
-                    <div class="mt-6 pt-4 border-t border-gray-200 flex flex-wrap gap-2 justify-center">
-                        <button class="btn-primary btn-sm" onclick="PTW.printPermit('${entry.permitId || entry.id}')">
+                    <div class="ptw-manual-details-actions">
+                        <button type="button" class="btn-primary btn-sm ptw-manual-details-action" onclick="PTW.printPermit('${entry.permitId || entry.id}')">
                             <i class="fas fa-print ml-1"></i> طباعة
                         </button>
-                        <button class="btn-success btn-sm" onclick="PTW.exportPDF('${entry.permitId || entry.id}')">
+                        <button type="button" class="btn-success btn-sm ptw-manual-details-action" onclick="PTW.exportPDF('${entry.permitId || entry.id}')">
                             <i class="fas fa-file-pdf ml-1"></i> تصدير PDF
                         </button>
                         ${isAdmin ? `
-                            <button class="btn-warning btn-sm" onclick="this.closest('.modal-overlay').remove(); PTW.openManualPermitForm('${entry.id}')">
+                            <button type="button" class="btn-warning btn-sm ptw-manual-details-action" onclick="this.closest('.modal-overlay').remove(); PTW.openManualPermitForm('${entry.id}')">
                                 <i class="fas fa-edit ml-1"></i> تعديل
                             </button>
-                            <button class="btn-danger btn-sm" onclick="PTW.deleteManualPermitEntry('${entry.id}'); this.closest('.modal-overlay').remove();">
+                            <button type="button" class="btn-danger btn-sm ptw-manual-details-action" onclick="PTW.deleteManualPermitEntry('${entry.id}'); this.closest('.modal-overlay').remove();">
                                 <i class="fas fa-trash ml-1"></i> حذف
                             </button>
                         ` : ''}
                     </div>
                 </div>
-                
-                <div class="modal-footer border-t p-4 bg-gray-50 flex justify-center gap-2 form-actions-centered">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="min-width: 120px;">
+
+                <footer class="modal-footer ptw-manual-details-footer form-actions-centered">
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times ml-1"></i> إغلاق
                     </button>
-                </div>
+                </footer>
             </div>
         `;
 
