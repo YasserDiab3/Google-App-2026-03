@@ -12805,7 +12805,7 @@
         <!-- 3. UI (UI rendering and DOM manipulation) -->
         <script src="js/modules/i18n-core.js?v=20260430-5" defer></script>
         <!-- Training قبل app-ui: loadSectionData/refreshCurrentSection قد تُستدعى قبل نهاية سلسلة الموديولات -->
-        <script src="js/modules/modules/training.js?v=20260718-training-identity-v1" defer></script>
+        <script src="js/modules/modules/training.js?v=20260719-contractor-analytics-v2" defer></script>
         <script src="js/modules/app-ui.js?v=20260501-3" defer></script>
 
         <!-- 4. Modules (Auth, Dashboard, Users, etc.) -->
@@ -12985,7 +12985,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.529-20260719";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.530-20260719";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

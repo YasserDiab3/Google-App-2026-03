@@ -341,6 +341,12 @@ const Training = {
                     border-radius: 9px !important;
                 }
                 .training-workspace #training-tab-content canvas { max-width: 100% !important; }
+                .training-workspace #training-tab-content[data-tab="contractors"] .contractor-analytics-shell-card{overflow:hidden;border-color:#c9ddd8!important;background:#edf5f3!important;box-shadow:0 16px 36px rgba(7,59,58,.11)!important}.training-workspace #training-tab-content[data-tab="contractors"] .contractor-analytics-card-header{padding:clamp(17px,2vw,24px)!important;border-bottom:4px solid var(--training-gold)!important;background:radial-gradient(circle at 10% -30%,rgba(45,212,191,.23),transparent 34%),linear-gradient(120deg,#062f2f,var(--training-petrol-2) 76%,#12675f)!important}.training-workspace #training-tab-content[data-tab="contractors"] .contractor-analytics-card-header::before{display:none}
+                .training-workspace .contractor-analytics-header-layout{display:flex;align-items:center;justify-content:space-between;gap:18px;min-width:0}.training-workspace .contractor-analytics-heading{min-width:0}.training-workspace .contractor-analytics-eyebrow{display:inline-flex;align-items:center;gap:7px;margin-bottom:6px;color:#99f6e4;font-size:.61rem;font-weight:900;letter-spacing:.11em;text-transform:uppercase}.training-workspace .contractor-analytics-card-header .card-title{display:flex;align-items:center;gap:10px;margin:0!important;color:#fff!important;font-size:clamp(1.05rem,1.8vw,1.35rem)!important}.training-workspace .contractor-analytics-card-header .card-title i{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;margin:0!important;border:1px solid rgba(255,255,255,.18);border-radius:11px;background:rgba(255,255,255,.1);color:#fde68a}.training-workspace .contractor-analytics-heading p{margin:7px 0 0;color:rgba(255,255,255,.68);font-size:.76rem;line-height:1.65}.training-workspace .contractor-analytics-header-tools{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}.training-workspace .contractor-analytics-live-pill{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:7px 11px;border:1px solid rgba(153,246,228,.28);border-radius:999px;background:rgba(15,118,110,.38);color:#ccfbf1;font-size:.68rem;font-weight:800}.training-workspace .contractor-analytics-live-pill::before{content:"";width:7px;height:7px;border-radius:50%;background:#5eead4;box-shadow:0 0 0 4px rgba(94,234,212,.13)}.training-workspace #contractor-analytics-reset-btn{min-height:38px;padding:8px 13px!important;border:1px solid rgba(255,255,255,.22)!important;border-radius:10px!important;background:rgba(255,255,255,.1)!important;color:#fff!important;box-shadow:none!important}.training-workspace #contractor-analytics-reset-btn:hover{background:rgba(255,255,255,.18)!important}.training-workspace .contractor-analytics-card-body{padding:clamp(12px,1.8vw,18px)!important}.training-workspace #contractor-analytics-dashboard{min-width:0;contain:layout style}.training-workspace .contractor-analytics-section{display:flex!important;flex-direction:column;gap:14px!important;min-width:0;font-family:inherit}
+                .training-workspace .contractor-analytics-snapshot{order:0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:11px 14px;border:1px solid #cadeda;border-radius:12px;background:linear-gradient(110deg,#fff,#f4faf8);color:#49635f}.training-workspace .contractor-analytics-snapshot-copy{display:flex;align-items:center;gap:9px;min-width:0;font-size:.74rem}.training-workspace .contractor-analytics-snapshot-copy i{color:var(--training-teal)}.training-workspace .contractor-analytics-filter-count{padding:5px 9px;border-radius:999px;background:#e3f4f0;color:#0b625c;font-size:.66rem;font-weight:900}.training-workspace .contractor-analytics-kpi-grid{order:1;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}.training-workspace .contractor-analytics-kpi-card{position:relative;overflow:hidden;min-width:0;min-height:92px;padding:14px!important;border:1px solid #d5e5e1;border-radius:13px;background:#fff!important;box-shadow:0 6px 16px rgba(7,59,58,.065)!important}.training-workspace .contractor-analytics-kpi-card::after{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:4px;background:var(--kpi-accent,#0f766e)}.training-workspace .contractor-analytics-kpi-card .kpi-label{margin-bottom:9px;color:#627773!important;font-size:.67rem;font-weight:850}.training-workspace .contractor-analytics-kpi-card .kpi-label i{display:inline-flex;align-items:center;justify-content:center;width:25px;height:25px;border-radius:7px;background:color-mix(in srgb,var(--kpi-accent,#0f766e) 12%,white);color:var(--kpi-accent,#0f766e)}.training-workspace .contractor-analytics-kpi-card .kpi-value{color:#163c39!important;font-size:clamp(1.15rem,2vw,1.55rem);font-weight:900;font-variant-numeric:tabular-nums}.training-workspace .contractor-analytics-kpi-card.kpi-purple{--kpi-accent:#7c3aed}.training-workspace .contractor-analytics-kpi-card.kpi-green{--kpi-accent:#059669}.training-workspace .contractor-analytics-kpi-card.kpi-amber{--kpi-accent:#d97706}.training-workspace .contractor-analytics-kpi-card.kpi-blue{--kpi-accent:#2563eb}.training-workspace .contractor-analytics-kpi-card.kpi-pink{--kpi-accent:#be185d}.training-workspace .contractor-analytics-kpi-card.kpi-indigo{--kpi-accent:#4f46e5}
+                .training-workspace .contractor-analytics-slicers{order:2;padding:16px 17px;border:1px solid #cfdfdc;border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(7,59,58,.055)}.training-workspace .contractor-analytics-slicers-header{margin-bottom:13px;padding-bottom:11px;border-color:#e1ece9}.training-workspace .contractor-analytics-slicers-title{color:var(--training-petrol);font-size:.82rem;font-weight:900}.training-workspace .contractor-analytics-slicers-title i{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;background:#e7f5f2;color:var(--training-teal)}.training-workspace .contractor-analytics-slicers-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:11px;margin:0}.training-workspace .contractor-analytics-slicers-grid .search-full{grid-column:span 2}.training-workspace .contractor-analytics-slicers-grid .filter-group{gap:6px;min-width:0}.training-workspace .contractor-analytics-slicers-grid .filter-group label{color:#405b57;font-size:.68rem;font-weight:850}.training-workspace .contractor-analytics-slicers-grid .filter-group label i{color:var(--training-teal)}.training-workspace .contractor-analytics-slicers-grid .filter-group select,.training-workspace .contractor-analytics-slicers-grid .filter-group input{width:100%;min-width:0;min-height:41px;padding:8px 10px;border:1.5px solid #c9dcd8;border-radius:9px;font-size:.76rem;transition:border-color .16s ease,box-shadow .16s ease}.training-workspace .contractor-analytics-slicers-grid .filter-group select:focus,.training-workspace .contractor-analytics-slicers-grid .filter-group input:focus{border-color:var(--training-teal);box-shadow:0 0 0 3px rgba(15,118,110,.11);transform:none}
+                .training-workspace .contractor-analytics-tabs-bar{order:3;padding:10px;border:0;border-radius:13px;background:var(--training-petrol);box-shadow:0 8px 20px rgba(7,59,58,.13)}.training-workspace .contractor-analytics-tabs-bar .tabs-row{gap:9px}.training-workspace .contractor-analytics-tabs-bar .tabs-group{gap:6px}.training-workspace .contractor-analytics-tab{min-height:39px;padding:8px 13px;border:1px solid rgba(255,255,255,.14);border-radius:9px;background:rgba(255,255,255,.075);color:rgba(255,255,255,.78);font-size:.72rem;font-weight:800;box-shadow:none}.training-workspace .contractor-analytics-tab:hover{border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.14);color:#fff}.training-workspace .contractor-analytics-tab.active{border-color:#f3ca59;background:linear-gradient(135deg,#edc653,#c9961e);color:#203d39;box-shadow:0 5px 12px rgba(0,0,0,.18)}.training-workspace .contractor-analytics-sort-box{min-height:39px;padding:5px 8px;border-color:rgba(255,255,255,.15);background:rgba(255,255,255,.08)}.training-workspace .contractor-analytics-sort-box label{color:rgba(255,255,255,.72)}.training-workspace .contractor-analytics-sort-box label i{color:#fde68a}.training-workspace .contractor-analytics-sort-box select{min-height:30px!important;border:0!important;background:#fff;color:#274945;font-size:.69rem}.training-workspace .contractor-analytics-content{order:4;min-width:0;min-height:280px;padding:14px;border:1px solid #cfdfdc;border-radius:14px;background:#fff;box-shadow:0 7px 20px rgba(7,59,58,.06)}.training-workspace .contractor-analytics-pivot-wrap,.training-workspace .contractor-analytics-details-wrap{max-width:100%;border-color:#cddfdb;border-radius:11px;box-shadow:none;scrollbar-color:#6f9d96 #e8f1ef}.training-workspace .contractor-analytics-pivot-table tr{transition:background-color .14s ease}.training-workspace .contractor-analytics-pivot-table tr:hover{transform:none!important}.training-workspace .contractor-analytics-pivot-table tr:focus-visible{outline:3px solid rgba(215,169,47,.55);outline-offset:-3px}.training-workspace .contractor-analytics-pivot-table .label-cell{color:#0d625c;font-weight:800}.training-workspace .contractor-analytics-pivot-table .label-cell .dot{background:var(--training-gold)}.training-workspace .contractor-analytics-pivot-footnote{color:#69807c}
+                @media(max-width:1180px){.training-workspace .contractor-analytics-kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.training-workspace .contractor-analytics-slicers-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:760px){.training-workspace .contractor-analytics-header-layout{align-items:flex-start;flex-direction:column}.training-workspace .contractor-analytics-header-tools{width:100%;justify-content:stretch}.training-workspace #contractor-analytics-reset-btn{flex:1}.training-workspace .contractor-analytics-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.training-workspace .contractor-analytics-slicers-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.training-workspace .contractor-analytics-slicers-grid .search-full{grid-column:1/-1}.training-workspace .contractor-analytics-tabs-bar .tabs-row{align-items:stretch}.training-workspace .contractor-analytics-tabs-bar .tabs-group{display:grid;grid-template-columns:1fr;width:100%}.training-workspace .contractor-analytics-sort-group,.training-workspace .contractor-analytics-sort-box{width:100%}.training-workspace .contractor-analytics-content{padding:9px}.training-workspace .contractor-analytics-details-footer{align-items:flex-start;flex-direction:column}}@media(max-width:480px){.training-workspace .contractor-analytics-live-pill{display:none}.training-workspace .contractor-analytics-kpi-grid,.training-workspace .contractor-analytics-slicers-grid{grid-template-columns:1fr}.training-workspace .contractor-analytics-slicers-grid .search-full{grid-column:auto}.training-workspace .contractor-analytics-kpi-card{min-height:72px;flex-direction:row;align-items:center;justify-content:space-between}.training-workspace .contractor-analytics-kpi-card .kpi-label{margin:0}.training-workspace .contractor-analytics-snapshot{align-items:flex-start;flex-direction:column}}
                 .training-workspace #training-tab-content .legal-kpi-grid { gap: 12px; }
                 .training-workspace #training-tab-content .legal-kpi-card {
                     border: 1px solid var(--training-line) !important;
@@ -361,6 +367,7 @@ const Training = {
                 [data-theme="dark"] .training-workspace #training-tab-content table tbody td { border-color: #2f4c49 !important; background: #142927; color: #e4efed; }
                 [data-theme="dark"] .training-workspace #training-tab-content table tbody tr:nth-child(even) td { background: #18312f; }
                 [data-theme="dark"] .training-workspace #training-tab-content table tbody tr:hover td { background: #38412d !important; }
+                [data-theme="dark"] .training-workspace .contractor-analytics-snapshot,[data-theme="dark"] .training-workspace .contractor-analytics-slicers,[data-theme="dark"] .training-workspace .contractor-analytics-kpi-card,[data-theme="dark"] .training-workspace .contractor-analytics-content{border-color:#365b57;background:#142927!important;color:#e4efed}[data-theme="dark"] .training-workspace .contractor-analytics-kpi-card .kpi-value,[data-theme="dark"] .training-workspace .contractor-analytics-slicers-title,[data-theme="dark"] .training-workspace .contractor-analytics-slicers-grid .filter-group label{color:#e4efed!important}[data-theme="dark"] .training-workspace .contractor-analytics-filter-count{background:#1c4541;color:#a7f3d0}
                 @media (max-width: 1180px) {
                     .training-workspace .training-hero-layout { align-items: flex-start; flex-direction: column; }
                     .training-workspace .training-hero-actions { justify-content: flex-start; width: 100%; }
@@ -1608,6 +1615,8 @@ const Training = {
 
         const computed = this.computeContractorAnalytics(model, state);
         const drillLabel = state.drillKey ? String(state.drillKey) : '';
+        const activeFilterCount = [state.contractor, state.trainer, state.topic, state.location, state.search, state.drillKey]
+            .filter(value => String(value || '').trim()).length;
 
         const optionList = (items, selected) => {
             const selKey = String(selected ?? '').replace(/\s+/g, ' ').trim();
@@ -1633,7 +1642,7 @@ const Training = {
                         </thead>
                         <tbody>
                             ${rows.map((r) => `
-                                <tr data-analytics-drill="${safe(r.label)}" data-analytics-mode="${mode}">
+                                <tr tabindex="0" role="button" aria-label="عرض تفاصيل ${safe(r.label)}" data-analytics-drill="${safe(r.label)}" data-analytics-mode="${mode}">
                                     <td>
                                         <span class="label-cell">
                                             <span class="dot"></span>
@@ -1697,6 +1706,13 @@ const Training = {
 
         return `
             <div class="contractor-analytics-section grid grid-cols-1 gap-4">
+                <div class="contractor-analytics-snapshot" aria-live="polite">
+                    <div class="contractor-analytics-snapshot-copy">
+                        <i class="fas fa-chart-line"></i>
+                        <span>النتائج تتحدث مباشرة حسب الفلاتر — <strong>${fmt(computed.filtered.length)}</strong> سجل مطابق</span>
+                    </div>
+                    <span class="contractor-analytics-filter-count">${activeFilterCount ? `${fmt(activeFilterCount)} فلاتر نشطة` : 'عرض جميع البيانات'}</span>
+                </div>
                 <!-- Slicers -->
                 <div class="contractor-analytics-slicers">
                     <div class="contractor-analytics-slicers-header">
@@ -1761,13 +1777,13 @@ const Training = {
                 <div class="contractor-analytics-tabs-bar">
                     <div class="tabs-row">
                         <div class="tabs-group">
-                            <button type="button" id="contractor-analytics-tab-contractor" class="contractor-analytics-tab ${tabActiveClass('contractor')}">
+                            <button type="button" role="tab" aria-selected="${state.view === 'contractor'}" id="contractor-analytics-tab-contractor" class="contractor-analytics-tab ${tabActiveClass('contractor')}">
                                 <i class="fas fa-building"></i>ملخص حسب المقاول
                             </button>
-                            <button type="button" id="contractor-analytics-tab-trainer" class="contractor-analytics-tab ${tabActiveClass('trainer')}">
+                            <button type="button" role="tab" aria-selected="${state.view === 'trainer'}" id="contractor-analytics-tab-trainer" class="contractor-analytics-tab ${tabActiveClass('trainer')}">
                                 <i class="fas fa-user-tie"></i>ملخص حسب المدرب
                             </button>
-                            <button type="button" id="contractor-analytics-tab-details" class="contractor-analytics-tab ${tabActiveClass('details')}">
+                            <button type="button" role="tab" aria-selected="${state.view === 'details'}" id="contractor-analytics-tab-details" class="contractor-analytics-tab ${tabActiveClass('details')}">
                                 <i class="fas fa-list-alt"></i>عرض التفاصيل
                             </button>
                         </div>
@@ -1805,10 +1821,18 @@ const Training = {
     refreshContractorAnalytics(monthFilter = '') {
         const dashboard = document.getElementById('contractor-analytics-dashboard');
         if (!dashboard) return;
-        const state = this.getContractorAnalyticsState();
-        const model = this.getContractorTrainingAnalyticsModel(monthFilter);
-        dashboard.innerHTML = this.renderContractorAnalyticsDashboard(model, state);
-        this.bindContractorAnalyticsEvents(monthFilter);
+        const render = () => {
+            this._contractorAnalyticsRenderFrame = null;
+            const currentDashboard = document.getElementById('contractor-analytics-dashboard');
+            if (!currentDashboard) return;
+            const state = this.getContractorAnalyticsState();
+            const model = this.getContractorTrainingAnalyticsModel(monthFilter);
+            currentDashboard.innerHTML = this.renderContractorAnalyticsDashboard(model, state);
+            this.bindContractorAnalyticsEvents(monthFilter);
+        };
+        if (this._contractorAnalyticsRenderFrame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(this._contractorAnalyticsRenderFrame);
+        if (typeof requestAnimationFrame === 'function') this._contractorAnalyticsRenderFrame = requestAnimationFrame(render);
+        else render();
     },
 
     bindContractorAnalyticsEvents(monthFilter = '') {
@@ -1867,7 +1891,7 @@ const Training = {
                         next.focus();
                         try { next.setSelectionRange(selStart, selEnd); } catch (_e) { /* ignore */ }
                     });
-                }, 220);
+                }, 140);
             });
         }
 
@@ -1898,15 +1922,25 @@ const Training = {
         // Drill-down from pivot rows
         const dashboard = document.getElementById('contractor-analytics-dashboard');
         if (dashboard) {
-            dashboard.querySelectorAll('[data-analytics-drill]')?.forEach(row => {
-                row.addEventListener('click', () => {
-                    const key = String(row.getAttribute('data-analytics-drill') || '').trim();
-                    const mode = String(row.getAttribute('data-analytics-mode') || '').trim();
-                    state.drillMode = mode === 'trainer' ? 'trainer' : 'contractor';
-                    state.drillKey = key;
-                    state.view = 'details';
-                    this.refreshContractorAnalytics(monthFilter);
-                });
+            const openDrill = (row) => {
+                const key = String(row?.getAttribute('data-analytics-drill') || '').trim();
+                if (!key) return;
+                const mode = String(row.getAttribute('data-analytics-mode') || '').trim();
+                state.drillMode = mode === 'trainer' ? 'trainer' : 'contractor';
+                state.drillKey = key;
+                state.view = 'details';
+                this.refreshContractorAnalytics(monthFilter);
+            };
+            dashboard.addEventListener('click', (event) => {
+                const row = event.target?.closest?.('[data-analytics-drill]');
+                if (row) openDrill(row);
+            });
+            dashboard.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                const row = event.target?.closest?.('[data-analytics-drill]');
+                if (!row) return;
+                event.preventDefault();
+                openDrill(row);
             });
         }
     },
@@ -3136,16 +3170,23 @@ const Training = {
                 </div>
 
                 <!-- تحليل تفاعلي (Power BI-like) -->
-                <div class="content-card mb-4">
-                    <div class="card-header">
-                        <div class="flex items-center justify-between">
-                            <h3 class="card-title"><i class="fas fa-layer-group ml-2"></i>تحليل تفاعلي لتدريبات المقاولين (Slicers + Pivot + Drill-down)</h3>
-                            <button id="contractor-analytics-reset-btn" class="btn-secondary btn-sm">
+                <div class="content-card contractor-analytics-shell-card mb-4">
+                    <div class="card-header contractor-analytics-card-header">
+                        <div class="contractor-analytics-header-layout">
+                            <div class="contractor-analytics-heading">
+                                <span class="contractor-analytics-eyebrow"><i class="fas fa-bolt"></i>SLICERS · PIVOT · DRILL-DOWN</span>
+                                <h3 class="card-title"><i class="fas fa-chart-area"></i>تحليل تفاعلي لتدريبات المقاولين</h3>
+                                <p>استكشف البرامج والمتدربين والساعات، ثم انتقل من المؤشر إلى السجل التفصيلي بضغطة واحدة.</p>
+                            </div>
+                            <div class="contractor-analytics-header-tools">
+                                <span class="contractor-analytics-live-pill">تحليل فوري</span>
+                                <button id="contractor-analytics-reset-btn" class="btn-secondary btn-sm">
                                 <i class="fas fa-redo ml-2"></i>إعادة تعيين التحليل
-                            </button>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div class="card-body" style="padding: 12px;">
+                    <div class="card-body contractor-analytics-card-body">
                         <div id="contractor-analytics-dashboard">
                             ${this.renderContractorAnalyticsDashboard(analyticsModel, analyticsState)}
                         </div>
