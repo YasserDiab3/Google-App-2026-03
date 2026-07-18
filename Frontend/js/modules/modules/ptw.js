@@ -16213,8 +16213,8 @@ const PTW = {
         // إنشاء HTML لفريق العمل
         const teamMembers = Array.isArray(item.teamMembers) ? item.teamMembers : [];
         const teamMembersHTML = teamMembers.length > 0
-            ? `<div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                ${teamMembers.map(m => `<span class="bg-gray-100 px-3 py-1 rounded text-sm">${Utils.escapeHTML(m.name || '-')}</span>`).join('')}
+            ? `<div class="ptw-permit-details-team-grid">
+                ${teamMembers.map(m => `<span class="ptw-permit-details-team-chip"><i class="fas fa-user-check" aria-hidden="true"></i>${Utils.escapeHTML(m.name || '-')}</span>`).join('')}
                </div>`
             : '<p class="text-gray-500">لا يوجد فريق محدد</p>';
 
@@ -16235,9 +16235,9 @@ const PTW = {
             const hasContent = badges || otherText;
             
             return `
-                <div>
-                    <label class="text-sm font-semibold text-gray-600">${title}:</label>
-                    <div class="mt-1">
+                <div class="ptw-permit-details-work-card">
+                    <label>${title}:</label>
+                    <div class="ptw-permit-details-work-value">
                         ${hasContent ? `${badges}${otherText}` : '<p class="text-gray-500">لا يوجد</p>'}
                     </div>
                 </div>
@@ -16251,17 +16251,130 @@ const PTW = {
         const closureStatusLabel = item.status === 'مغلق' ? 'مغلق' : 'غير مغلق';
         const closureTimeText = item.endDate ? Utils.formatDate(item.endDate) : '-';
 
+        modal.classList.add('ptw-permit-details-overlay');
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 900px;">
-                <div class="modal-header modal-header-centered">
+            <style>
+                .ptw-permit-details-overlay {
+                    --ptwd-navy:#102a43; --ptwd-blue:#2563eb; --ptwd-cyan:#0891b2;
+                    --ptwd-green:#15803d; --ptwd-orange:#ea580c; --ptwd-violet:#6d28d9;
+                    --ptwd-ink:#172033; --ptwd-muted:#64748b;
+                    padding:18px;
+                    background:radial-gradient(circle at 14% 10%,rgba(14,165,233,.2),transparent 28%),rgba(2,8,23,.68);
+                }
+                .ptw-permit-details-shell {
+                    width:min(980px,100%); max-width:980px!important; max-height:95vh; overflow:hidden;
+                    border:1px solid rgba(125,211,252,.5); border-radius:24px; background:#f8fbff;
+                    box-shadow:0 30px 90px rgba(2,8,23,.4),0 0 0 6px rgba(255,255,255,.07);
+                    color:var(--ptwd-ink); direction:rtl;
+                }
+                .ptw-permit-details-header {
+                    position:relative; display:flex; align-items:center; justify-content:center; min-height:112px;
+                    padding:20px 82px; border-bottom:4px solid #22d3ee;
+                    background:linear-gradient(125deg,#0f172a 0%,#173d6c 58%,#0369a1 100%); overflow:hidden;
+                }
+                .ptw-permit-details-header::after { content:''; position:absolute; inset:auto -8% -72px; height:118px; border-radius:50%; background:rgba(56,189,248,.12); }
+                .ptw-permit-details-header .modal-title { position:relative; z-index:1; margin:0; color:#fff!important; font-size:clamp(1.25rem,2.5vw,1.65rem); font-weight:850; }
+                .ptw-permit-details-header .modal-title::before {
+                    content:'PTW'; display:block; width:max-content; margin:0 auto 5px; padding:3px 11px;
+                    border:1px solid rgba(255,255,255,.3); border-radius:999px; color:#a5f3fc;
+                    background:rgba(15,23,42,.25); font-size:.62rem; font-weight:850; letter-spacing:.16em;
+                }
+                .ptw-permit-details-close {
+                    position:absolute; z-index:2; top:30px; left:28px; display:inline-flex; align-items:center; justify-content:center;
+                    width:42px; height:42px; padding:0; border:1px solid rgba(255,255,255,.55); border-radius:50%;
+                    color:#fff; background:rgba(255,255,255,.12); backdrop-filter:blur(6px); cursor:pointer;
+                    transition:transform .18s ease,background-color .18s ease,color .18s ease;
+                }
+                .ptw-permit-details-close:hover { transform:rotate(7deg); color:var(--ptwd-navy); background:#fff; }
+                .ptw-permit-details-close:focus-visible { outline:3px solid rgba(34,211,238,.45); outline-offset:3px; }
+                .ptw-permit-details-body {
+                    max-height:calc(95vh - 190px); overflow-y:auto; padding:24px 26px 28px;
+                    background:linear-gradient(180deg,#eef7ff 0,#f8fbff 170px,#fff 100%); scrollbar-width:thin; scrollbar-color:#94a3b8 transparent;
+                }
+                .ptw-permit-details-stack { display:grid; gap:16px; }
+                .ptw-permit-details-info {
+                    display:grid!important; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px!important;
+                    padding:14px; border:1px solid #bfdbfe; border-radius:18px; background:rgba(255,255,255,.9);
+                    box-shadow:0 10px 28px rgba(30,64,175,.08);
+                }
+                .ptw-permit-details-info>div,.ptw-permit-details-mini-grid>div {
+                    min-width:0; padding:11px 13px; border:1px solid #e2e8f0; border-radius:11px; background:#f8fafc;
+                }
+                .ptw-permit-details-info>div:nth-child(4n+1),.ptw-permit-details-info>div:nth-child(4n+2) { background:#eff6ff; border-color:#dbeafe; }
+                .ptw-permit-details-info label,.ptw-permit-details-mini-grid label {
+                    display:block; margin-bottom:4px; color:var(--ptwd-muted)!important; font-size:.73rem!important; font-weight:750!important;
+                }
+                .ptw-permit-details-info p,.ptw-permit-details-mini-grid p {
+                    margin:0; color:var(--ptwd-ink)!important; font-size:.94rem; font-weight:650; line-height:1.55; overflow-wrap:anywhere;
+                }
+                .ptw-permit-details-info .badge { display:inline-flex; margin-top:2px; padding:5px 11px; border-radius:999px; font-weight:800; }
+                .ptw-permit-details-description {
+                    padding:15px 17px; border:1px solid #fed7aa; border-right:5px solid var(--ptwd-orange); border-radius:14px;
+                    background:linear-gradient(135deg,#fff7ed,#fffbeb); box-shadow:0 7px 18px rgba(234,88,12,.07);
+                }
+                .ptw-permit-details-description label { display:block; margin-bottom:5px; color:#9a3412!important; font-size:.76rem!important; font-weight:800!important; }
+                .ptw-permit-details-description p { margin:0; color:var(--ptwd-ink)!important; font-size:1rem; font-weight:650; line-height:1.65; }
+                .ptw-permit-details-stack>div:nth-child(2) {
+                    padding:15px 17px; border:1px solid #fed7aa; border-right:5px solid var(--ptwd-orange); border-radius:14px;
+                    background:linear-gradient(135deg,#fff7ed,#fffbeb); box-shadow:0 7px 18px rgba(234,88,12,.07);
+                }
+                .ptw-permit-details-stack>div:nth-child(2) label { display:block; margin-bottom:5px; color:#9a3412!important; font-size:.76rem!important; font-weight:800!important; }
+                .ptw-permit-details-stack>div:nth-child(2) p { margin:0; color:var(--ptwd-ink)!important; font-size:1rem; font-weight:650; line-height:1.65; }
+                .ptw-permit-details-section { padding:17px 18px; border:1px solid #dbe4f0!important; border-radius:16px; background:#fff; box-shadow:0 8px 22px rgba(15,23,42,.06); }
+                .ptw-permit-details-section.team { border-top:4px solid var(--ptwd-green)!important; background:linear-gradient(160deg,#fff,#f0fdf4); }
+                .ptw-permit-details-section.work { border-top:4px solid var(--ptwd-violet)!important; background:linear-gradient(160deg,#fff,#faf5ff); }
+                .ptw-permit-details-section.closure { border-top:4px solid var(--ptwd-cyan)!important; background:linear-gradient(160deg,#fff,#ecfeff); }
+                .ptw-permit-details-section.approvals { border-top:4px solid var(--ptwd-blue)!important; }
+                .ptw-permit-details-section-title { margin:0 0 13px!important; color:var(--ptwd-navy)!important; font-size:1.05rem!important; font-weight:850!important; }
+                .ptw-permit-details-stack>.border-t {
+                    padding:17px 18px!important; border:1px solid #dbe4f0!important; border-top:4px solid var(--ptwd-blue)!important;
+                    border-radius:16px; background:#fff; box-shadow:0 8px 22px rgba(15,23,42,.06);
+                }
+                .ptw-permit-details-stack>.border-t:nth-child(3) { border-top-color:var(--ptwd-green)!important; background:linear-gradient(160deg,#fff,#f0fdf4); }
+                .ptw-permit-details-stack>.border-t:nth-child(4) { border-top-color:var(--ptwd-violet)!important; background:linear-gradient(160deg,#fff,#faf5ff); }
+                .ptw-permit-details-stack>.border-t:nth-child(8) { border-top-color:var(--ptwd-cyan)!important; background:linear-gradient(160deg,#fff,#ecfeff); }
+                .ptw-permit-details-stack>.border-t>h3 { margin:0 0 13px!important; color:var(--ptwd-navy)!important; font-size:1.05rem!important; font-weight:850!important; }
+                .ptw-permit-details-stack>.border-t .grid { gap:10px!important; }
+                .ptw-permit-details-stack>.border-t .grid>div:not(.ptw-permit-details-work-card) { min-width:0; padding:10px 12px; border:1px solid #e2e8f0; border-radius:10px; background:rgba(255,255,255,.82); }
+                .ptw-permit-details-stack>.border-t label { display:block; margin-bottom:4px; color:var(--ptwd-muted)!important; font-size:.73rem!important; font-weight:750!important; }
+                .ptw-permit-details-stack>.border-t p { margin:0; color:var(--ptwd-ink)!important; line-height:1.55; }
+                .ptw-permit-details-stack>.border-t:has(>h3:last-child),
+                .ptw-permit-details-stack>.border-t:has(>.grid):not(:has(>.grid>*)) { display:none; }
+                .ptw-permit-details-team-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+                .ptw-permit-details-team-chip { display:flex; align-items:center; gap:7px; padding:9px 11px; border:1px solid #bbf7d0; border-radius:10px; color:#166534; background:#f0fdf4; font-size:.84rem; font-weight:700; }
+                .ptw-permit-details-work-grid { display:grid!important; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px!important; }
+                .ptw-permit-details-work-card { min-width:0; padding:12px 13px; border:1px solid #e9d5ff; border-radius:11px; background:rgba(255,255,255,.86); }
+                .ptw-permit-details-work-card label { display:block; margin-bottom:5px; color:#6b21a8; font-size:.75rem; font-weight:800; }
+                .ptw-permit-details-work-value { color:var(--ptwd-ink); font-size:.88rem; }
+                .ptw-permit-details-mini-grid { display:grid!important; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px!important; margin-top:10px!important; }
+                .ptw-permit-details-excavation { grid-template-columns:repeat(4,minmax(0,1fr))!important; }
+                .ptw-permit-details-footer { padding:15px 20px; border-top:1px solid #dbe4f0; background:linear-gradient(180deg,#f8fafc,#eef2f7); }
+                .ptw-permit-details-footer .btn-primary,.ptw-permit-details-footer .btn-secondary { min-height:46px; border-radius:11px; font-weight:750; box-shadow:0 6px 15px rgba(15,23,42,.12); }
+                .ptw-permit-details-footer .btn-primary { background:linear-gradient(135deg,#2563eb,#1d4ed8); }
+                .ptw-permit-details-shell .table-wrapper { border:1px solid #dbe4f0; border-radius:12px; overflow:auto; }
+                .ptw-permit-details-shell .data-table { margin:0; }
+                .ptw-permit-details-shell .data-table thead th { background:#e0f2fe; color:#0c4a6e; }
+                @media (max-width:720px) {
+                    .ptw-permit-details-overlay { padding:7px; align-items:flex-end; }
+                    .ptw-permit-details-shell { max-height:97vh; border-radius:20px 20px 10px 10px; }
+                    .ptw-permit-details-header { min-height:102px; padding:17px 62px 17px 20px; }
+                    .ptw-permit-details-close { top:25px; left:15px; width:38px; height:38px; }
+                    .ptw-permit-details-body { max-height:calc(97vh - 174px); padding:15px 13px 20px; }
+                    .ptw-permit-details-info,.ptw-permit-details-work-grid,.ptw-permit-details-mini-grid,.ptw-permit-details-excavation,.ptw-permit-details-team-grid { grid-template-columns:1fr!important; }
+                    .ptw-permit-details-section { padding:14px 13px; }
+                }
+                @media (prefers-reduced-motion:reduce) { .ptw-permit-details-close { transition:none; } }
+            </style>
+            <div class="modal-content ptw-permit-details-shell">
+                <div class="modal-header modal-header-centered ptw-permit-details-header">
                     <h2 class="modal-title">تفاصيل تصريح العمل</h2>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
+                    <button class="modal-close ptw-permit-details-close" onclick="this.closest('.modal-overlay').remove()" aria-label="Close">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="modal-body">
-                    <div class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="modal-body ptw-permit-details-body">
+                    <div class="space-y-4 ptw-permit-details-stack">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 ptw-permit-details-info">
                             <div>
                                 <label class="text-sm font-semibold text-gray-600">نوع العمل:</label>
                                 <p class="text-gray-800">${Utils.escapeHTML(item.workType || '')}</p>
@@ -16550,7 +16663,7 @@ const PTW = {
                         ` : ''}
                     </div>
                 </div>
-                <div class="modal-footer form-actions-centered">
+                <div class="modal-footer form-actions-centered ptw-permit-details-footer">
                     <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
                     <button class="btn-primary" onclick="PTW.exportPDF('${item.id}'); this.closest('.modal-overlay').remove();">
                         <i class="fas fa-file-pdf ml-2"></i>
