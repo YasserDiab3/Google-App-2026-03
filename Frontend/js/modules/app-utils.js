@@ -2939,41 +2939,48 @@ const Permissions = {
         }
 
         const effective = {};
-
-        // ✅ إصلاح: الحصول على الصلاحيات من الجلسة أولاً (لضمان العمل حتى لو لم تكن البيانات محملة)
         const sessionPermissions = this.normalizePermissions(user.permissions);
-        if (sessionPermissions && typeof sessionPermissions === 'object' && Object.keys(sessionPermissions).length > 0) {
-            // دمج الصلاحيات من الجلسة
-            // ✅ إصلاح: استخدام deep merge للصلاحيات التفصيلية
-            Object.keys(sessionPermissions).forEach(key => {
-                if (key.endsWith('Permissions') && typeof sessionPermissions[key] === 'object') {
-                    // الصلاحيات التفصيلية - دمج عميق
-                    effective[key] = { ...(effective[key] || {}), ...sessionPermissions[key] };
+        const dbPermissions = this.getDatabasePermissions(user);
+        const dbUser = AppState.appData && Array.isArray(AppState.appData.users)
+            ? AppState.appData.users.find(candidate => candidate.email && user.email &&
+                candidate.email.toLowerCase() === user.email.toLowerCase())
+            : null;
+        const sourceTimestamp = (source) => {
+            if (!source) return 0;
+            const raw = source.updatedAt || source.modifiedAt || source.lastModified || '';
+            if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+            const parsed = Date.parse(raw);
+            return Number.isFinite(parsed) ? parsed : 0;
+        };
+        const sessionTimestamp = sourceTimestamp(user);
+        const databaseTimestamp = sourceTimestamp(dbUser);
+        const sessionIsNewer = sessionTimestamp > 0 &&
+            (databaseTimestamp === 0 || sessionTimestamp >= databaseTimestamp);
+        const mergePermissions = (permissions) => {
+            if (!permissions || typeof permissions !== 'object' || Array.isArray(permissions)) return;
+            Object.keys(permissions).forEach(key => {
+                if (key.endsWith('Permissions') && permissions[key] && typeof permissions[key] === 'object') {
+                    effective[key] = { ...(effective[key] || {}), ...permissions[key] };
                 } else {
-                    // الصلاحيات الأساسية
-                    effective[key] = sessionPermissions[key];
+                    effective[key] = permissions[key];
                 }
             });
+        };
+
+        // المصدر الأحدث فقط هو الذي يملك أولوية الكتابة. كانت نسخة AppState القديمة
+        // تطغى على صلاحيات جلسة تسجيل الدخول الحديثة فتُخفي التبويبات الممنوحة حديثاً.
+        if (sessionIsNewer) {
+            mergePermissions(dbPermissions);
+            mergePermissions(sessionPermissions);
+        } else {
+            mergePermissions(sessionPermissions);
+            mergePermissions(dbPermissions);
         }
 
-        // الحصول على الصلاحيات من قاعدة البيانات (الأحدث - لها الأولوية)
-        const dbPermissions = this.getDatabasePermissions(user);
-        if (dbPermissions && typeof dbPermissions === 'object' && Object.keys(dbPermissions).length > 0) {
-            // ✅ إصلاح: دمج عميق للصلاحيات من قاعدة البيانات (الأولوية - تستبدل الصلاحيات من الجلسة)
-            Object.keys(dbPermissions).forEach(key => {
-                if (key.endsWith('Permissions') && typeof dbPermissions[key] === 'object') {
-                    // الصلاحيات التفصيلية - دمج عميق
-                    effective[key] = { ...(effective[key] || {}), ...dbPermissions[key] };
-                } else {
-                    // الصلاحيات الأساسية
-                    effective[key] = dbPermissions[key];
-                }
-            });
-
-            // تحديث صلاحيات المستخدم الحالي في AppState إذا كان هو المستخدم الحالي
-            if (user === AppState.currentUser || (user.email && AppState.currentUser && user.email === AppState.currentUser.email)) {
-                AppState.currentUser.permissions = dbPermissions;
-            }
+        const isCurrentUser = user === AppState.currentUser ||
+            (user.email && AppState.currentUser && user.email === AppState.currentUser.email);
+        if (isCurrentUser && dbPermissions && !sessionIsNewer) {
+            AppState.currentUser.permissions = dbPermissions;
         }
 
         // ⚠️ لا يتم إضافة أي صلاحيات افتراضية هنا - فقط الصلاحيات الممنوحة صراحةً
@@ -4049,7 +4056,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.507',
+    appVersion: '1.0.508',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
