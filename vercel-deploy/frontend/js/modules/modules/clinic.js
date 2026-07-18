@@ -4519,6 +4519,123 @@ const Clinic = {
         return this.normalizeArabicText(value) === this.normalizeArabicText('صرف الأدوية');
     },
 
+    getVisitReasonSuggestions_(context = {}) {
+        const normalizePersonType = (value) => {
+            const raw = String(value || '').trim().toLowerCase();
+            if (raw === 'employee' || raw.includes('موظ')) return 'employee';
+            if (raw === 'contractor' || raw === 'external' || raw.includes('مقاول') || raw.includes('خارج')) return 'contractor';
+            return raw;
+        };
+        const sources = (Array.isArray(AppState.appData?.clinicVisits) ? AppState.appData.clinicVisits : []).concat(
+            Array.isArray(AppState.appData?.clinicContractorVisits) ? AppState.appData.clinicContractorVisits : []
+        );
+        const seenIds = new Set();
+        const records = sources.filter((record) => {
+            if (!record) return false;
+            const id = String(record.id || '').trim();
+            if (!id) return true;
+            if (seenIds.has(id)) return false;
+            seenIds.add(id);
+            return true;
+        });
+        const targetPersonType = normalizePersonType(context.personType);
+        const targetVisitType = this.normalizeArabicText(context.visitType);
+        const targetEmployeeCode = String(context.employeeCode || '').trim().toLowerCase();
+        const targetContractor = this.normalizeArabicText(context.contractorName);
+        const targetWorker = this.normalizeArabicText(context.contractorWorkerName);
+        const currentRecordId = String(context.currentRecordId || '').trim();
+        const groups = new Map();
+
+        records.forEach((record) => {
+            if (currentRecordId && String(record.id || '').trim() === currentRecordId) return;
+            const reason = String(record.reason || record.visitReason || record.reasonForVisit || '').trim();
+            const key = this.normalizeArabicText(reason);
+            if (!key || key === '-' || key === this.normalizeArabicText('غير محدد')) return;
+
+            const recordPersonType = normalizePersonType(record.personType || (record.contractorName || record.externalName ? 'contractor' : 'employee'));
+            const recordVisitType = this.normalizeArabicText(record.visitType || record.type);
+            const recordEmployeeCode = String(record.employeeCode || record.employeeNumber || '').trim().toLowerCase();
+            const recordContractor = this.normalizeArabicText(record.contractorName || record.externalName || (recordPersonType === 'contractor' ? record.employeeName : ''));
+            const recordWorker = this.normalizeArabicText(record.contractorWorkerName);
+            const dateValue = record.visitDate || record.createdAt || record.updatedAt;
+            const timestamp = dateValue ? new Date(dateValue).getTime() : 0;
+            const ageDays = timestamp > 0 ? Math.max(0, (Date.now() - timestamp) / 86400000) : 3650;
+            let score = 1 + Math.max(0, 3 - (ageDays / 180));
+
+            if (targetPersonType && recordPersonType === targetPersonType) score += 5;
+            if (targetVisitType && recordVisitType === targetVisitType) score += 4;
+            if (targetPersonType && targetVisitType && recordPersonType === targetPersonType && recordVisitType === targetVisitType) score += 3;
+            if (targetEmployeeCode && recordEmployeeCode === targetEmployeeCode) score += 9;
+            if (targetContractor && recordContractor === targetContractor) score += 6;
+            if (targetWorker && recordWorker === targetWorker) score += 8;
+
+            const existing = groups.get(key) || { reason, count: 0, score: 0, latestAt: 0 };
+            existing.count += 1;
+            existing.score += score;
+            existing.latestAt = Math.max(existing.latestAt, timestamp || 0);
+            if (timestamp >= existing.latestAt) existing.reason = reason;
+            groups.set(key, existing);
+        });
+
+        return Array.from(groups.values())
+            .sort((a, b) => b.score - a.score || b.count - a.count || b.latestAt - a.latestAt || a.reason.localeCompare(b.reason, 'ar'))
+            .slice(0, 30);
+    },
+
+    refreshVisitReasonSuggestions_(currentRecordId = '') {
+        const input = document.getElementById('visit-reason');
+        const datalist = document.getElementById('visit-reason-datalist');
+        const panel = document.getElementById('visit-reason-suggestion-panel');
+        const chips = document.getElementById('visit-reason-suggestions');
+        const hint = document.getElementById('visit-reason-suggestion-hint');
+        if (!input || !datalist || !panel || !chips) return;
+
+        const contractorSelect = document.getElementById('visit-contractor-name-select');
+        const suggestions = this.getVisitReasonSuggestions_({
+            personType: document.getElementById('visit-person-type')?.value || '',
+            visitType: document.getElementById('visit-type')?.value || '',
+            employeeCode: document.getElementById('visit-employee-code')?.value || '',
+            contractorName: contractorSelect?.value || document.getElementById('visit-employee-name')?.value || '',
+            contractorWorkerName: document.getElementById('visit-contractor-worker')?.value || '',
+            currentRecordId
+        });
+
+        datalist.innerHTML = suggestions.map((item) => {
+            const usage = item.count > 1 ? `استخدم ${item.count} مرات` : 'سبب سابق';
+            return `<option value="${Utils.escapeHTML(item.reason)}" label="${Utils.escapeHTML(usage)}"></option>`;
+        }).join('');
+
+        const quickSuggestions = suggestions.slice(0, 6);
+        panel.style.display = quickSuggestions.length ? 'block' : 'none';
+        chips.innerHTML = quickSuggestions.map((item, index) => `
+            <button type="button" class="visit-reason-chip" data-reason="${Utils.escapeHTML(item.reason)}"
+                style="display:inline-flex;align-items:center;gap:6px;border:1px solid ${index === 0 ? '#0ea5e9' : '#bae6fd'};background:${index === 0 ? '#e0f2fe' : '#fff'};color:#0c4a6e;border-radius:999px;padding:7px 11px;font-size:.78rem;font-weight:700;cursor:pointer;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;">
+                <i class="fas fa-history" aria-hidden="true" style="font-size:.68rem;color:#0284c7;"></i>
+                <span>${Utils.escapeHTML(item.reason)}</span>
+                ${item.count > 1 ? `<small style="background:#0c4a6e;color:#fff;border-radius:999px;min-width:20px;padding:1px 5px;font-size:.64rem;">${item.count}</small>` : ''}
+            </button>
+        `).join('');
+        if (hint) hint.textContent = suggestions.length
+            ? `تم ترتيب ${suggestions.length} سبباً سابقاً حسب نوع الشخص والزيارة والتكرار.`
+            : 'اكتب السبب مرة واحدة وسيظهر ضمن المقترحات في الزيارات القادمة.';
+
+        chips.querySelectorAll('.visit-reason-chip').forEach((button) => {
+            button.addEventListener('click', () => {
+                input.value = button.dataset.reason || '';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.focus();
+            });
+            button.addEventListener('mouseenter', () => {
+                button.style.transform = 'translateY(-1px)';
+                button.style.boxShadow = '0 6px 16px rgba(14, 165, 233, .16)';
+            });
+            button.addEventListener('mouseleave', () => {
+                button.style.transform = '';
+                button.style.boxShadow = '';
+            });
+        });
+    },
+
     normalizeArabicText(text) {
         if (text == null) return '';
         let str = String(text).trim().toLowerCase();
@@ -12238,8 +12355,19 @@ const Clinic = {
                             </div>
                             <div class="col-span-2">
                                 <label for="visit-reason" class="block text-sm font-semibold mb-2" style="color: #4facfe; display: flex; align-items: center; gap: 5px;"><i class="fas fa-question-circle"></i> سبب الزيارة *</label>
-                                <input type="text" id="visit-reason" required class="form-input" style="border: 2px solid #4facfe; border-radius: 8px;"
-                                    value="${visitData?.reason || ''}" placeholder="سبب الزيارة">
+                                <input type="text" id="visit-reason" required class="form-input" list="visit-reason-datalist"
+                                    style="border: 2px solid #4facfe; border-radius: 8px;"
+                                    value="${visitData?.reason || ''}" placeholder="اكتب للبحث في الأسباب السابقة أو أدخل سبباً جديداً"
+                                    autocomplete="off" autocorrect="off" spellcheck="false">
+                                <datalist id="visit-reason-datalist"></datalist>
+                                <div id="visit-reason-suggestion-panel" style="display:none;margin-top:10px;padding:11px 12px;border:1px solid #bae6fd;border-radius:12px;background:linear-gradient(135deg,#f0f9ff 0%,#ecfeff 100%);box-shadow:0 8px 22px rgba(14,165,233,.08);">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">
+                                        <span style="display:flex;align-items:center;gap:6px;color:#075985;font-size:.76rem;font-weight:800;"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i> مقترحات ذكية من السجل السابق</span>
+                                        <span style="color:#64748b;font-size:.68rem;">اضغط للاختيار السريع</span>
+                                    </div>
+                                    <div id="visit-reason-suggestions" style="display:flex;flex-wrap:wrap;gap:7px;"></div>
+                                </div>
+                                <small id="visit-reason-suggestion-hint" style="display:block;margin-top:6px;color:#64748b;font-size:.71rem;line-height:1.5;">تظهر الأسباب السابقة المناسبة تلقائياً مع بقاء الإدخال اليدوي متاحاً.</small>
                             </div>
                             <div class="col-span-2">
                                 <label class="block text-sm font-semibold mb-2" style="color: #4facfe; display: flex; align-items: center; gap: 5px;"><i class="fas fa-diagnoses"></i> التشخيص</label>
@@ -12432,6 +12560,22 @@ const Clinic = {
                 Clinic.setupClinicWorkplaceDatalist('visit-factory', 'visit-employee-location', 'visit-employee-location-datalist');
                 Clinic.setupClinicWorkplaceDatalist('visit-contractor-factory', 'visit-work-area', 'visit-work-area-datalist');
             }
+
+            const refreshVisitReasonSuggestions = () => Clinic.refreshVisitReasonSuggestions_(visitData?.id || '');
+            let visitReasonRefreshTimer = null;
+            const scheduleVisitReasonRefresh = () => {
+                clearTimeout(visitReasonRefreshTimer);
+                visitReasonRefreshTimer = setTimeout(refreshVisitReasonSuggestions, 180);
+            };
+            ['visit-person-type', 'visit-type', 'visit-contractor-name-select'].forEach((id) => {
+                document.getElementById(id)?.addEventListener('change', refreshVisitReasonSuggestions);
+            });
+            ['visit-employee-code', 'visit-contractor-worker'].forEach((id) => {
+                const element = document.getElementById(id);
+                element?.addEventListener('input', scheduleVisitReasonRefresh);
+                element?.addEventListener('blur', refreshVisitReasonSuggestions);
+            });
+            refreshVisitReasonSuggestions();
 
             // تحميل قائمة الأدوية المتاحة
             const medicationSelect = document.getElementById('visit-medication-select');
