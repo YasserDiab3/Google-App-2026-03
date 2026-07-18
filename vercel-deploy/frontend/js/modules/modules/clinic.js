@@ -17498,12 +17498,32 @@ const Clinic = {
 
         if (this.isCurrentUserAdmin()) return true;
 
-        if (typeof Permissions !== 'undefined') {
-            if (!Permissions.hasDetailedPermission('clinic', tabName)) return false;
-        }
-
         if (tabName === 'attendance') {
             return this.canAccessAttendanceTab();
+        }
+
+        if (typeof Permissions !== 'undefined') {
+            if (tabName === 'data-analysis') {
+                const permissionAliases = ['data-analysis', 'analytics', 'analysis', 'dataAnalysis', 'data_analysis'];
+                if (typeof Permissions.hasAccess === 'function' && !Permissions.hasAccess('clinic')) {
+                    return false;
+                }
+                if (permissionAliases.some((key) => Permissions.hasDetailedPermission('clinic', key))) {
+                    return true;
+                }
+
+                // توافق مع سجلات صلاحيات قديمة/مستوردة خزّنت true كنص بدل Boolean.
+                const effectivePermissions = typeof Permissions.getEffectivePermissions === 'function'
+                    ? Permissions.getEffectivePermissions(user)
+                    : null;
+                const clinicPermissions = effectivePermissions?.clinicPermissions;
+                const isGranted = (value) => value === true || value === 1 ||
+                    String(value || '').trim().toLowerCase() === 'true';
+
+                return !!clinicPermissions && typeof clinicPermissions === 'object' &&
+                    permissionAliases.some((key) => isGranted(clinicPermissions[key]));
+            }
+            if (!Permissions.hasDetailedPermission('clinic', tabName)) return false;
         }
 
         return true;
@@ -17666,8 +17686,10 @@ const Clinic = {
                 ` : ''}
                 <div class="clinic-tab-panel ${this.state.activeTab === 'injuries' ? 'active' : ''}" data-tab-panel="injuries"></div>
                 <div class="clinic-tab-panel ${this.state.activeTab === 'supply-request' ? 'active' : ''}" data-tab-panel="supply-request"></div>
-                ${isAdmin ? `
+                ${this.hasTabAccess('approvals') ? `
                 <div class="clinic-tab-panel ${this.state.activeTab === 'approvals' ? 'active' : ''}" data-tab-panel="approvals"></div>
+                ` : ''}
+                ${this.hasTabAccess('data-analysis') ? `
                 <div class="clinic-tab-panel ${this.state.activeTab === 'data-analysis' ? 'active' : ''}" data-tab-panel="data-analysis"></div>
                 ` : ''}
                 ${this.hasTabAccess('attendance') ? `

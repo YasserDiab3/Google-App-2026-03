@@ -17846,8 +17846,24 @@ const Clinic = {
 
         if (typeof Permissions !== 'undefined') {
             if (tabName === 'data-analysis') {
-                return Permissions.hasDetailedPermission('clinic', 'data-analysis') || 
-                       Permissions.hasDetailedPermission('clinic', 'analytics');
+                const permissionAliases = ['data-analysis', 'analytics', 'analysis', 'dataAnalysis', 'data_analysis'];
+                if (typeof Permissions.hasAccess === 'function' && !Permissions.hasAccess('clinic')) {
+                    return false;
+                }
+                if (permissionAliases.some((key) => Permissions.hasDetailedPermission('clinic', key))) {
+                    return true;
+                }
+
+                // توافق مع سجلات صلاحيات قديمة/مستوردة خزّنت true كنص بدل Boolean.
+                const effectivePermissions = typeof Permissions.getEffectivePermissions === 'function'
+                    ? Permissions.getEffectivePermissions(user)
+                    : null;
+                const clinicPermissions = effectivePermissions?.clinicPermissions;
+                const isGranted = (value) => value === true || value === 1 ||
+                    String(value || '').trim().toLowerCase() === 'true';
+
+                return !!clinicPermissions && typeof clinicPermissions === 'object' &&
+                    permissionAliases.some((key) => isGranted(clinicPermissions[key]));
             }
             if (!Permissions.hasDetailedPermission('clinic', tabName)) return false;
         }
