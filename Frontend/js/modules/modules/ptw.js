@@ -14787,7 +14787,7 @@ const PTW = {
                                 this.openManualPermitForm();
                             });
                         }
-                    catch (error) {
+                    } catch (error) {
                         addManualBtn.addEventListener('click', () => {
                             Utils.safeLog('🖱️ تم النقر على زر إضافة تصريح يدوي');
                             this.openManualPermitForm();
