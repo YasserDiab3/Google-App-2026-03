@@ -3846,7 +3846,7 @@ window.UI = {
 
         const mobileCompanyName = document.getElementById('mobile-company-name');
         if (mobileCompanyName) {
-            mobileCompanyName.textContent = resolvedNameTranslated || (lang === 'en' ? 'Safety System' : 'نظام السلامة المهنية');
+            mobileCompanyName.textContent = resolvedNameTranslated || 'SafetyHub | ICAPP';
             mobileCompanyName.style.fontSize = `${nameFontSize}px`;
         }
     },
