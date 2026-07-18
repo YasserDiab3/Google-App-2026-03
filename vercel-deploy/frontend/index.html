@@ -1209,7 +1209,29 @@
             content="نظام إدارة السلامة المهنية للشركة العالمية للانتاج والتصنيع الزراعي"
         />
 
+        <meta name="application-name" content="SafetyHub | ICAPP | Designed &amp; Developed by HSEHub360.Com" />
+        <meta name="apple-mobile-web-app-title" content="SafetyHub | ICAPP" />
         <title>SafetyHub | ICAPP | Designed &amp; Developed by HSEHub360.Com</title>
+        <script>
+            (function enforceSafetyHubDocumentTitle() {
+                var canonicalTitle = "SafetyHub | ICAPP | Designed & Developed by HSEHub360.Com";
+                var applyCanonicalTitle = function () {
+                    if (document.title !== canonicalTitle) document.title = canonicalTitle;
+                };
+                applyCanonicalTitle();
+                var titleElement = document.querySelector("title");
+                if (titleElement && typeof MutationObserver !== "undefined") {
+                    new MutationObserver(applyCanonicalTitle).observe(titleElement, {
+                        childList: true,
+                        characterData: true,
+                        subtree: true,
+                    });
+                }
+                document.addEventListener("DOMContentLoaded", applyCanonicalTitle, { once: true });
+                document.addEventListener("visibilitychange", applyCanonicalTitle);
+                window.addEventListener("pageshow", applyCanonicalTitle);
+            })();
+        </script>
 
         <!-- ========================================
          ✅ قمع ULTRA-AGGRESSIVE لأخطاء uploadmanager.js:518
@@ -8823,7 +8845,7 @@
                         var link = document.createElement("link");
                         link.rel = "manifest";
                         // مسار نسبي ليعمل من الجذر (Vercel) أو من /Frontend/
-                        link.href = "manifest.json";
+                        link.href = "manifest.json?v=20260718-brand-title-v2";
                         link.id = "pwa-manifest-link";
                         link.onerror = function () {
                             if (
@@ -12963,7 +12985,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.523-20260718";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.524-20260718";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +
