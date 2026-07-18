@@ -29,6 +29,33 @@ const ISO = {
         { id: 'ca', name: 'الإجراءات التصحيحية (CA)', module: 'ISO / CAPA', type: 'نموذج', defaultCode: 'CA-FRM-01', department: 'HSE' }
     ],
 
+    renderIdentityStyles_() {
+        return `
+            <style id="iso-professional-identity-styles">
+                .iso-workspace{--iso-petrol:#073b3a;--iso-petrol-2:#0b5551;--iso-teal:#0f766e;--iso-mint:#2db9a8;--iso-gold:#e4b64f;--iso-ink:#172334;--iso-muted:#64748b;--iso-line:#d8e6e3;--iso-surface:#fff;font-family:"Cairo","Segoe UI",Tahoma,sans-serif}
+                .iso-workspace .iso-hero-header{position:relative;overflow:hidden;margin-bottom:18px;padding:22px 24px;border:1px solid rgba(255,255,255,.12);border-radius:18px;background:radial-gradient(circle at 8% 10%,rgba(228,182,79,.22),transparent 27%),linear-gradient(125deg,#052f31 0%,var(--iso-petrol-2) 68%,#0b6660 100%);color:#fff;box-shadow:0 18px 38px rgba(7,59,58,.22)}
+                .iso-workspace .iso-hero-header:after{content:"ISO";position:absolute;inset-inline-end:24px;bottom:-20px;color:rgba(255,255,255,.055);font:900 6.4rem/1 "Segoe UI",sans-serif;letter-spacing:-.08em;pointer-events:none}
+                .iso-workspace .iso-hero-header>div{position:relative;z-index:1;width:100%;gap:16px}.iso-workspace .iso-hero-header .section-title{display:flex;align-items:center;gap:11px;margin:0 0 5px;color:#fff!important;font-size:1.45rem;font-weight:900;text-shadow:0 2px 7px rgba(0,0,0,.22)}
+                .iso-workspace .iso-hero-header .section-title i{display:inline-flex;align-items:center;justify-content:center;width:43px;height:43px;margin:0!important;border:1px solid rgba(255,255,255,.2);border-radius:12px;background:rgba(255,255,255,.12);color:#fde68a}.iso-workspace .iso-hero-header .section-subtitle{margin:0;color:rgba(255,255,255,.78)!important;font-size:.79rem;font-weight:600}
+                .iso-workspace .iso-hero-header .btn-success{min-height:43px;padding-inline:17px;border:1px solid rgba(255,255,255,.45);border-radius:11px;background:#fff!important;color:var(--iso-petrol)!important;font-size:.8rem;font-weight:800;box-shadow:0 8px 20px rgba(0,0,0,.16)}
+                .iso-workspace .iso-quick-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin:0 0 18px!important}.iso-workspace .iso-stat-card{--stat-accent:var(--iso-teal);position:relative;overflow:hidden;min-height:108px;padding:16px 17px!important;border:1px solid var(--iso-line)!important;border-radius:15px!important;background:linear-gradient(145deg,#fff,#f5faf9)!important;text-align:start!important;box-shadow:0 9px 23px rgba(7,59,58,.075);transition:.2s ease}
+                .iso-workspace .iso-stat-card:before{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:4px;background:var(--stat-accent)}.iso-workspace .iso-stat-card:after{content:"";position:absolute;inset-inline-end:-24px;bottom:-30px;width:86px;height:86px;border-radius:50%;background:color-mix(in srgb,var(--stat-accent) 9%,transparent)}.iso-workspace .iso-stat-card:hover{border-color:#b7d1cc!important;box-shadow:0 13px 28px rgba(7,59,58,.12);transform:translateY(-2px)}
+                .iso-workspace .iso-stat-card>div:first-child{position:relative;z-index:1;margin-bottom:5px!important;color:var(--stat-accent)!important;font:900 1.85rem/1.1 "Segoe UI","Cairo",sans-serif}.iso-workspace .iso-stat-card>div:last-child{position:relative;z-index:1;color:#425466!important;font-size:.75rem!important;font-weight:800!important}.iso-workspace .iso-stat-docs{--stat-accent:#2563eb}.iso-workspace .iso-stat-procedures{--stat-accent:#059669}.iso-workspace .iso-stat-forms{--stat-accent:#d97706}.iso-workspace .iso-stat-compliance{--stat-accent:#7c3aed}
+                .iso-workspace .iso-tabs-shell{position:relative;overflow:hidden;padding:8px;border:1px solid rgba(255,255,255,.11);border-radius:18px;background:radial-gradient(circle at 92% 0%,rgba(45,185,168,.2),transparent 26%),linear-gradient(125deg,var(--iso-petrol),var(--iso-petrol-2));box-shadow:0 14px 32px rgba(7,59,58,.18)}
+                .iso-workspace .iso-tabs-nav{position:relative;z-index:1;display:flex;flex-wrap:nowrap!important;gap:7px!important;margin:0!important;padding:0 0 2px!important;overflow-x:auto;border:0!important;background:transparent;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.36) transparent}.iso-workspace .iso-tabs-nav .tab-btn{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;min-height:48px;min-width:max-content;padding:10px 14px;gap:8px;border:1px solid rgba(255,255,255,.14);border-radius:11px;background:rgba(255,255,255,.075);color:rgba(255,255,255,.82);font-size:.8rem;font-weight:750;white-space:nowrap;box-shadow:none;transition:.18s ease}
+                .iso-workspace .iso-tabs-nav .tab-btn:before{display:none}.iso-workspace .iso-tabs-nav .tab-btn i{display:inline-flex;align-items:center;justify-content:center;width:29px;height:29px;margin:0!important;border-radius:8px;background:rgba(255,255,255,.12);color:#a7f3d0;font-size:.76rem}.iso-workspace .iso-tabs-nav .tab-btn[data-tab=forms] i{color:#fde68a}.iso-workspace .iso-tabs-nav .tab-btn[data-tab=iso45001] i{color:#bfdbfe}.iso-workspace .iso-tabs-nav .tab-btn[data-tab=iso14001] i{color:#bbf7d0}.iso-workspace .iso-tabs-nav .tab-btn[data-tab=audit] i{color:#ddd6fe}
+                .iso-workspace .iso-tabs-nav .tab-btn:hover{background:rgba(255,255,255,.14);color:#fff;transform:translateY(-1px)}.iso-workspace .iso-tabs-nav .tab-btn.active{border-color:#fff;background:#fff;color:var(--iso-petrol);box-shadow:0 8px 22px rgba(0,0,0,.18);transform:translateY(-1px)}.iso-workspace .iso-tabs-nav .tab-btn.active i{background:#e6f7f3;color:var(--iso-teal)}
+                .iso-workspace .iso-tab-content{min-height:240px;margin-top:18px;animation:isoSurfaceIn .24s ease-out}@keyframes isoSurfaceIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}.iso-workspace .iso-tab-content .content-card{overflow:hidden!important;border:1px solid var(--iso-line)!important;border-radius:16px!important;background:var(--iso-surface)!important;box-shadow:0 10px 28px rgba(7,59,58,.08)!important;transform:none!important}.iso-workspace .iso-tab-content .content-card:hover{box-shadow:0 14px 32px rgba(7,59,58,.11)!important;transform:none!important}
+                .iso-workspace .iso-tab-content .card-header{position:relative;padding:17px 20px!important;border-bottom:1px solid #d8e6e3!important;background:linear-gradient(115deg,#eaf5f3,#fff 66%,#f7fbfa)!important;color:var(--iso-petrol)!important}.iso-workspace .iso-tab-content .card-header:before{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:5px;background:linear-gradient(180deg,var(--iso-mint),var(--iso-teal))}.iso-workspace .iso-tab-content[data-tab=documents] .card-header:before{background:linear-gradient(#60a5fa,#2563eb)}.iso-workspace .iso-tab-content[data-tab=procedures] .card-header:before{background:linear-gradient(#34d399,#059669)}.iso-workspace .iso-tab-content[data-tab=forms] .card-header:before{background:linear-gradient(#fbbf24,#d97706)}.iso-workspace .iso-tab-content[data-tab=iso45001] .card-header:before{background:linear-gradient(#38bdf8,#0369a1)}.iso-workspace .iso-tab-content[data-tab=iso14001] .card-header:before{background:linear-gradient(#4ade80,#15803d)}.iso-workspace .iso-tab-content[data-tab=audit] .card-header:before{background:linear-gradient(#a78bfa,#6d28d9)}.iso-workspace .iso-tab-content[data-tab=coding-center] .card-header:before{background:linear-gradient(#facc15,#a16207)}
+                .iso-workspace .iso-tab-content .card-title{color:var(--iso-petrol)!important;font-size:1rem!important;font-weight:850!important}.iso-workspace .iso-tab-content .card-header p{color:var(--iso-muted)!important}.iso-workspace .iso-tab-content .card-header button{min-height:39px;border:1px solid #b9d3ce!important;border-radius:10px!important;background:#fff!important;color:var(--iso-petrol)!important;font-size:.76rem;font-weight:800;box-shadow:0 5px 13px rgba(7,59,58,.1)!important}
+                .iso-workspace .iso-tab-content .form-input,.iso-workspace .iso-tab-content input:not([type=checkbox]):not([type=radio]):not([type=file]),.iso-workspace .iso-tab-content select{border-color:#c6d9d5;border-radius:10px}.iso-workspace .iso-tab-content .form-input:focus,.iso-workspace .iso-tab-content input:not([type=checkbox]):not([type=radio]):not([type=file]):focus,.iso-workspace .iso-tab-content select:focus{border-color:var(--iso-teal);box-shadow:0 0 0 3px rgba(15,118,110,.12);outline:none}
+                .iso-workspace .iso-tab-content .overflow-x-auto:has(>table),.iso-workspace .iso-tab-content .table-responsive:has(>table){overflow:auto;border:1px solid #d7e5e2;border-radius:13px;background:#fff;scrollbar-width:thin;scrollbar-color:#8eb2ab #edf5f3}.iso-workspace .iso-tab-content table{width:100%;margin:0;border:0!important;border-collapse:separate!important;border-spacing:0;color:var(--iso-ink);font-size:.78rem}.iso-workspace .iso-tab-content table thead th{position:sticky;top:0;z-index:3;padding:13px 12px!important;border:0!important;border-inline-end:1px solid rgba(255,255,255,.11)!important;border-bottom:3px solid var(--iso-gold)!important;border-radius:0!important;background:linear-gradient(var(--iso-petrol-2),var(--iso-petrol))!important;color:#fff!important;font-size:.73rem!important;font-weight:850!important;line-height:1.5;text-align:center!important;white-space:nowrap}.iso-workspace .iso-tab-content table tbody td{padding:11px 12px!important;border:0!important;border-inline-end:1px solid #edf3f2!important;border-bottom:1px solid #e4eeec!important;background:#fff;color:var(--iso-ink);vertical-align:middle;line-height:1.65}.iso-workspace .iso-tab-content table tbody tr:nth-child(even) td{background:#f7fbfa}.iso-workspace .iso-tab-content table tbody tr:hover td{background:#fff9e9!important}.iso-workspace .iso-tab-content table button{display:inline-flex;align-items:center;justify-content:center;min-width:34px;min-height:34px;border-radius:9px!important}
+                [data-theme=dark] .iso-workspace{--iso-ink:#e5efed;--iso-muted:#abc0bc;--iso-line:#365b57;--iso-surface:#142927}[data-theme=dark] .iso-workspace .iso-stat-card,[data-theme=dark] .iso-workspace .iso-tab-content .content-card,[data-theme=dark] .iso-workspace .iso-tab-content .card-header{background:#142927!important;color:#e5efed!important}[data-theme=dark] .iso-workspace .iso-stat-card>div:last-child,[data-theme=dark] .iso-workspace .iso-tab-content .card-title,[data-theme=dark] .iso-workspace .iso-tab-content .card-header p{color:#e5efed!important}[data-theme=dark] .iso-workspace .iso-tab-content table tbody td{border-color:#2e4c49!important;background:#142927;color:#e5efed}[data-theme=dark] .iso-workspace .iso-tab-content table tbody tr:nth-child(even) td{background:#18312f}[data-theme=dark] .iso-workspace .iso-tab-content table tbody tr:hover td{background:#38412d!important}
+                @media(max-width:980px){.iso-workspace .iso-quick-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:768px){.iso-workspace .iso-hero-header{padding:18px;border-radius:15px}.iso-workspace .iso-hero-header>div{align-items:flex-start;flex-direction:column}.iso-workspace .iso-hero-header .btn-success{width:100%}.iso-workspace .iso-tabs-shell{padding:6px;border-radius:14px}.iso-workspace .iso-tabs-nav .tab-btn{min-height:43px;padding:8px 11px;font-size:.74rem}.iso-workspace .iso-tabs-nav .tab-btn i{width:26px;height:26px}.iso-workspace .iso-tab-content .card-header{align-items:flex-start!important;gap:12px;flex-direction:column!important}.iso-workspace .iso-tab-content .card-header button{width:100%;justify-content:center}.iso-workspace .iso-tab-content .card-body{padding:13px}}@media(max-width:480px){.iso-workspace .iso-quick-stats{grid-template-columns:1fr}.iso-workspace .iso-stat-card{min-height:92px}.iso-workspace .iso-hero-header:after{display:none}}@media(prefers-reduced-motion:reduce){.iso-workspace *,.iso-workspace :before,.iso-workspace :after{transition:none!important;animation:none!important}}
+            </style>
+        `;
+    },
+
     async load() {
         // Add language change listener
         if (!this._languageChangeListenerAdded) {
@@ -43,7 +70,9 @@ const ISO = {
 
         try {
         section.innerHTML = `
-            <div class="section-header">
+            ${this.renderIdentityStyles_()}
+            <div class="iso-workspace">
+            <div class="section-header iso-hero-header">
                 <div class="flex items-center justify-between">
                     <div>
                         <h1 class="section-title">
@@ -58,53 +87,53 @@ const ISO = {
                 </div>
             </div>
             
-            <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 iso-quick-stats">
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center iso-stat-card iso-stat-docs">
                     <div class="text-3xl font-bold text-blue-600 mb-2">${(AppState.appData.isoDocuments || []).length}</div>
                     <div class="text-sm text-gray-700 font-semibold">الوثائق</div>
                 </div>
-                <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center iso-stat-card iso-stat-procedures">
                     <div class="text-3xl font-bold text-green-600 mb-2">${(AppState.appData.isoProcedures || []).length}</div>
                     <div class="text-sm text-gray-700 font-semibold">الإجراءات</div>
                 </div>
-                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center iso-stat-card iso-stat-forms">
                     <div class="text-3xl font-bold text-yellow-600 mb-2">${(AppState.appData.isoForms || []).length}</div>
                     <div class="text-sm text-gray-700 font-semibold">النماذج</div>
                 </div>
-                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center iso-stat-card iso-stat-compliance">
                     <div class="text-3xl font-bold text-purple-600 mb-2">${this.calculateComplianceRate()}%</div>
                     <div class="text-sm text-gray-700 font-semibold">معدل الامتثال</div>
                 </div>
             </div>
             
-            <div class="mt-6">
-                <div class="flex gap-2 mb-6 border-b">
-                    <button class="tab-btn ${this.currentTab === 'overview' ? 'active' : ''}" data-tab="overview">
+            <div class="mt-6 iso-tabs-shell">
+                <div class="flex gap-2 mb-6 border-b iso-tabs-nav" role="tablist" aria-label="تبويبات نظام ISO">
+                    <button class="tab-btn ${this.currentTab === 'overview' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'overview' ? 'true' : 'false'}" data-tab="overview">
                         <i class="fas fa-chart-pie ml-2"></i>نظرة عامة
                     </button>
-                    <button class="tab-btn ${this.currentTab === 'documents' ? 'active' : ''}" data-tab="documents">
+                    <button class="tab-btn ${this.currentTab === 'documents' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'documents' ? 'true' : 'false'}" data-tab="documents">
                         <i class="fas fa-file-alt ml-2"></i>الوثائق
                     </button>
-                    <button class="tab-btn ${this.currentTab === 'procedures' ? 'active' : ''}" data-tab="procedures">
+                    <button class="tab-btn ${this.currentTab === 'procedures' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'procedures' ? 'true' : 'false'}" data-tab="procedures">
                         <i class="fas fa-tasks ml-2"></i>الإجراءات
                     </button>
-                    <button class="tab-btn ${this.currentTab === 'forms' ? 'active' : ''}" data-tab="forms">
+                    <button class="tab-btn ${this.currentTab === 'forms' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'forms' ? 'true' : 'false'}" data-tab="forms">
                         <i class="fas fa-file-signature ml-2"></i>النماذج
                     </button>
-                    <button class="tab-btn ${this.currentTab === 'iso45001' ? 'active' : ''}" data-tab="iso45001">
+                    <button class="tab-btn ${this.currentTab === 'iso45001' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'iso45001' ? 'true' : 'false'}" data-tab="iso45001">
                         <i class="fas fa-hard-hat ml-2"></i>ISO 45001
                     </button>
-                    <button class="tab-btn ${this.currentTab === 'iso14001' ? 'active' : ''}" data-tab="iso14001">
+                    <button class="tab-btn ${this.currentTab === 'iso14001' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'iso14001' ? 'true' : 'false'}" data-tab="iso14001">
                         <i class="fas fa-leaf ml-2"></i>ISO 14001
                     </button>
-                    <button class="tab-btn ${this.currentTab === 'audit' ? 'active' : ''}" data-tab="audit">
+                    <button class="tab-btn ${this.currentTab === 'audit' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'audit' ? 'true' : 'false'}" data-tab="audit">
                         <i class="fas fa-clipboard-check ml-2"></i>التدقيق والمراجعة
                     </button>
-                    <button class="tab-btn ${this.currentTab === 'coding-center' ? 'active' : ''}" data-tab="coding-center">
+                    <button class="tab-btn ${this.currentTab === 'coding-center' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'coding-center' ? 'true' : 'false'}" data-tab="coding-center">
                         <i class="fas fa-code ml-2"></i>مركز التكويد والإصدار
                     </button>
                 </div>
-                <div id="iso-content">
+                <div id="iso-content" class="iso-tab-content" data-tab="${this.currentTab}">
                     <div class="content-card">
                         <div class="card-body">
                             <div class="empty-state">
@@ -118,6 +147,7 @@ const ISO = {
                         </div>
                     </div>
                 </div>
+            </div>
             </div>
         `;
             this.setupEventListeners();
@@ -617,7 +647,7 @@ const ISO = {
 
     setupEventListeners() {
         setTimeout(() => {
-            const tabs = document.querySelectorAll('.tab-btn');
+            const tabs = document.querySelectorAll('.iso-tabs-nav .tab-btn');
             tabs.forEach(tab => {
                 tab.addEventListener('click', () => {
                     this.currentTab = tab.getAttribute('data-tab');
