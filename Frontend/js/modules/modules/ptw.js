@@ -3085,11 +3085,11 @@ const PTW = {
                         <p class="section-subtitle">${t('module.ptw.subtitle', 'إصدار ومتابعة تصاريح العمل مع دائرة الاعتمادات')}</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button id="add-manual-ptw-btn" class="btn-warning">
+                        <button type="button" id="add-manual-ptw-btn" class="btn-warning" onclick="PTW.openManualPermitForm()">
                             <i class="fas fa-edit ml-2"></i>
                             ${t('module.ptw.btn.addManual', 'إضافة تصريح يدوي')}
                         </button>
-                        <button id="add-ptw-btn" class="btn-primary">
+                        <button type="button" id="add-ptw-btn" class="btn-primary" onclick="PTW.showForm()">
                             <i class="fas fa-plus ml-2"></i>
                             ${t('module.ptw.btn.newPermit', 'إصدار تصريح جديد')}
                         </button>
@@ -3581,7 +3581,7 @@ const PTW = {
         return `
             <!-- أزرار التصدير والإدخال -->
             <div class="flex justify-between items-center gap-2 mb-4">
-                <button id="ptw-registry-add-manual" class="btn-warning">
+                <button type="button" id="ptw-registry-add-manual" class="btn-warning" onclick="PTW.openManualPermitForm()">
                     <i class="fas fa-plus-circle ml-2"></i>
                     ${t('module.ptw.registry.addManual', 'إضافة تصريح يدوي')}
                 </button>
@@ -8869,10 +8869,7 @@ const PTW = {
      */
     setupRegistryEventListeners() {
         // زر إضافة تصريح يدوي
-        const addManualBtn = document.getElementById('ptw-registry-add-manual');
-        if (addManualBtn) {
-            addManualBtn.onclick = () => this.openManualPermitForm();
-        }
+        // زر التصريح اليدوي أصبح يعتمد على onclick مباشرة في الـ HTML
 
         // استيراد Excel
         const importExcelBtn = document.getElementById('ptw-registry-import-excel');
@@ -14744,90 +14741,8 @@ const PTW = {
                     newRefreshBtn.addEventListener('click', () => this.refreshCurrentTab());
                 }
             }
-            // زر إصدار تصريح جديد
-            const addBtn = document.getElementById('add-ptw-btn');
-            const addManualBtn = document.getElementById('add-manual-ptw-btn');
-            const addEmptyBtn = document.getElementById('add-ptw-empty-btn');
-            
-            if (addBtn) {
-                // ✅ التحقق من أن العنصر موجود في DOM قبل replaceWith
-                if (addBtn.parentNode && document.body.contains(addBtn)) {
-                    try {
-                        addBtn.replaceWith(addBtn.cloneNode(true));
-                        const newAddBtn = document.getElementById('add-ptw-btn');
-                        if (newAddBtn) {
-                            newAddBtn.addEventListener('click', () => {
-                                Utils.safeLog('🖱️ تم النقر على زر إصدار تصريح جديد');
-                                this.showForm();
-                            });
-                        }
-                    } catch (error) {
-                        Utils.safeWarn('⚠️ خطأ في replaceWith للزر add-ptw-btn:', error);
-                        addBtn.addEventListener('click', () => {
-                            Utils.safeLog('🖱️ تم النقر على زر إصدار تصريح جديد');
-                            this.showForm();
-                        });
-                    }
-                } else {
-                    addBtn.addEventListener('click', () => {
-                        Utils.safeLog('🖱️ تم النقر على زر إصدار تصريح جديد');
-                        this.showForm();
-                    });
-                }
-            }
-            
-            if (addManualBtn) {
-                if (addManualBtn.parentNode && document.body.contains(addManualBtn)) {
-                    try {
-                        addManualBtn.replaceWith(addManualBtn.cloneNode(true));
-                        const newAddManualBtn = document.getElementById('add-manual-ptw-btn');
-                        if (newAddManualBtn) {
-                            newAddManualBtn.addEventListener('click', () => {
-                                Utils.safeLog('🖱️ تم النقر على زر إضافة تصريح يدوي');
-                                this.openManualPermitForm();
-                            });
-                        }
-                    } catch (error) {
-                        addManualBtn.addEventListener('click', () => {
-                            Utils.safeLog('🖱️ تم النقر على زر إضافة تصريح يدوي');
-                            this.openManualPermitForm();
-                        });
-                    }
-                } else {
-                    addManualBtn.addEventListener('click', () => {
-                        Utils.safeLog('🖱️ تم النقر على زر إضافة تصريح يدوي');
-                        this.openManualPermitForm();
-                    });
-                }
-            }
-            if (addEmptyBtn) {
-                // ✅ التحقق من أن العنصر موجود في DOM قبل replaceWith
-                if (addEmptyBtn.parentNode && document.body.contains(addEmptyBtn)) {
-                    try {
-                        addEmptyBtn.replaceWith(addEmptyBtn.cloneNode(true));
-                        const newAddEmptyBtn = document.getElementById('add-ptw-empty-btn');
-                        if (newAddEmptyBtn) {
-                            newAddEmptyBtn.addEventListener('click', () => {
-                                Utils.safeLog('🖱️ تم النقر على زر إصدار تصريح جديد (من القائمة الفارغة)');
-                                this.showForm();
-                            });
-                        }
-                    } catch (error) {
-                        Utils.safeWarn('⚠️ خطأ في replaceWith للزر add-ptw-empty-btn:', error);
-                        // استخدام طريقة بديلة: إضافة مستمع مباشرة
-                        addEmptyBtn.addEventListener('click', () => {
-                            Utils.safeLog('🖱️ تم النقر على زر إصدار تصريح جديد (من القائمة الفارغة)');
-                            this.showForm();
-                        });
-                    }
-                } else {
-                    // العنصر غير موجود في DOM - إضافة مستمع مباشرة
-                    addEmptyBtn.addEventListener('click', () => {
-                        Utils.safeLog('🖱️ تم النقر على زر إصدار تصريح جديد (من القائمة الفارغة)');
-                        this.showForm();
-                    });
-                }
-            }
+            // أزرار إصدار التصاريح (add-ptw-btn, add-manual-ptw-btn) 
+            // تعتمد الآن على سمة onclick مباشرة في الـ HTML لضمان الاستجابة الفورية
 
             const searchInput = document.getElementById('ptw-search');
             const filterStatus = document.getElementById('ptw-filter-status');
