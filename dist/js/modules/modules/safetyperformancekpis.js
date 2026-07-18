@@ -1880,7 +1880,7 @@ const SafetyPerformanceKPIs={filters:{period:"monthly",department:"",location:""
                 </table>
                 <div class="footer">
                     <p>Generated on: ${new Date().toLocaleDateString("en-US")}</p>
-                    <p>HSE Management System - Safety Performance KPIs</p>
+                    <p>SafetyHub | ICAPP - Safety Performance KPIs</p>
                 </div>
             </body>
             </html>
@@ -1918,7 +1918,7 @@ const SafetyPerformanceKPIs={filters:{period:"monthly",department:"",location:""
         `;i.forEach(d=>{const u=a.data.filter(g=>g.frequency===d);u.length!==0&&(o+=`<h2>${d} Activities</h2>`,o+="<table><thead><tr>",o+="<th>Activity</th><th>Description</th><th>Area</th><th>Responsibility</th><th>Record Document</th>",o+=s.map(g=>`<th class="target-col">${g}T</th>`).join(""),o+=s.map(g=>`<th class="executed-col">${g}E</th>`).join(""),o+='<th class="total-target">Total Target</th>',o+='<th class="total-executed">Total Executed</th>',o+='<th class="score">Score %</th>',o+="</tr></thead><tbody>",u.forEach(g=>{const h=r.reduce((f,b)=>f+(parseFloat(g["target_"+b])||0),0),m=r.reduce((f,b)=>f+(parseFloat(g["executed_"+b])||0),0),p=h>0?(m/h*100).toFixed(1):"0.0";o+="<tr>",o+=`<td style="text-align: left;">${Utils.escapeHTML(g.activity||"-")}</td>`,o+=`<td style="text-align: left;">${Utils.escapeHTML(g.activityDescription||"-")}</td>`,o+=`<td>${Utils.escapeHTML(g.area||"-")}</td>`,o+=`<td>${Utils.escapeHTML(g.responsibility||"-")}</td>`,o+=`<td style="text-align: left;">${Utils.escapeHTML(g.recordDocument||"-")}</td>`,o+=r.map(f=>`<td class="target-col">${g["target_"+f]||"0"}</td>`).join(""),o+=r.map(f=>`<td class="executed-col">${g["executed_"+f]||"0"}</td>`).join(""),o+=`<td class="total-target">${h}</td>`,o+=`<td class="total-executed">${m}</td>`,o+=`<td class="score">${p}%</td>`,o+="</tr>"}),o+="</tbody></table>")}),o+=`
                 <div class="footer">
                     <p>Generated on: ${new Date().toLocaleDateString("en-US")}</p>
-                    <p>HSE Management System - Monitoring Plan</p>
+                    <p>SafetyHub | ICAPP - Monitoring Plan</p>
                 </div>
             </body>
             </html>

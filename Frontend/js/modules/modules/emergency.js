@@ -3065,9 +3065,9 @@ const Emergency = {
 
         this._fmCanvasSetFont(ctx, 9, 'bold', '#003865');
         ctx.textAlign = 'center';
-        const companySize = this._fmCanvasFitFontSize(ctx, meta.companyName || 'نظام إدارة السلامة والصحة المهنية', contentW - 24, 9, 'bold');
+        const companySize = this._fmCanvasFitFontSize(ctx, meta.companyName || 'SafetyHub | ICAPP', contentW - 24, 9, 'bold');
         this._fmCanvasSetFont(ctx, companySize, 'bold', '#003865');
-        ctx.fillText(meta.companyName || 'نظام إدارة السلامة والصحة المهنية', pad + contentW / 2, frameY + frameH - 14);
+        ctx.fillText(meta.companyName || 'SafetyHub | ICAPP', pad + contentW / 2, frameY + frameH - 14);
         this._fmCanvasSetFont(ctx, 8, 'normal', '#94a3b8');
         const confSize = this._fmCanvasFitFontSize(ctx, 'سري — للاستخدام الداخلي | إدارة السلامة والصحة المهنية والبيئة', contentW - 24, 8, 'normal');
         this._fmCanvasSetFont(ctx, confSize, 'normal', '#94a3b8');

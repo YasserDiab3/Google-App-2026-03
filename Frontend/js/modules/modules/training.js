@@ -14539,7 +14539,7 @@ const Training = {
                 pdf.text('Training Analytics Report', margin, 9, { align: 'left' });
                 pdf.setFontSize(8);
                 pdf.setFont(undefined, 'normal');
-                pdf.text('HSE Management System — Training Analysis Dashboard', margin, 15, { align: 'left' });
+                pdf.text('SafetyHub | ICAPP — Training Analysis Dashboard', margin, 15, { align: 'left' });
                 // التاريخ + الصفحة (يمين — English date format)
                 // (enDate/enTime defined above)
                 pdf.setFontSize(8.5);
@@ -14570,7 +14570,7 @@ const Training = {
                 pdf.setFontSize(7.5);
                 pdf.setTextColor(67, 56, 202); // indigo-700
                 pdf.setFont(undefined, 'bold');
-                pdf.text('HSE Management System', margin, footerY + 5, { align: 'left' });
+                pdf.text('SafetyHub | ICAPP', margin, footerY + 5, { align: 'left' });
                 pdf.setFont(undefined, 'normal');
                 pdf.setFontSize(6.5);
                 pdf.setTextColor(100, 116, 139);

@@ -4,9 +4,9 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <div>
                         <h1 class="section-title">
                             <i class="fas fa-shield-alt ml-3"></i>
-                            ${typeof I18n<"u"?I18n.t("module.iso.title","\u0646\u0638\u0627\u0645 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0628\u064A\u0626\u0629"):"\u0646\u0638\u0627\u0645 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0628\u064A\u0626\u0629"}
+                            ${typeof I18n<"u"?I18n.t("module.iso.title","SafetyHub | ICAPP"):"SafetyHub | ICAPP"}
                         </h1>
-                        <p class="section-subtitle">${typeof I18n<"u"?I18n.t("module.iso.subtitle","HSE Management System - \u0645\u062A\u0648\u0627\u0641\u0642 \u0645\u0639 ISO 45001 & ISO 14001"):"HSE Management System - \u0645\u062A\u0648\u0627\u0641\u0642 \u0645\u0639 ISO 45001 & ISO 14001"}</p>
+                        <p class="section-subtitle">${typeof I18n<"u"?I18n.t("module.iso.subtitle","SafetyHub | ICAPP - \u0645\u062A\u0648\u0627\u0641\u0642 \u0645\u0639 ISO 45001 & ISO 14001"):"SafetyHub | ICAPP - \u0645\u062A\u0648\u0627\u0641\u0642 \u0645\u0639 ISO 45001 & ISO 14001"}</p>
                     </div>
                     <button id="export-compliance-report-btn" class="btn-success">
                         <i class="fas fa-file-pdf ml-2"></i>${typeof I18n<"u"?I18n.t("module.iso.btn.exportCompliance","\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0627\u0645\u062A\u062B\u0627\u0644 PDF"):"\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0627\u0645\u062A\u062B\u0627\u0644 PDF"}
@@ -195,7 +195,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                                     <h3 class="font-bold text-blue-800 mb-2 flex items-center">
                                         <i class="fas fa-hard-hat text-blue-500 ml-2"></i> ISO 45001
                                     </h3>
-                                    <p class="text-xs text-gray-600 mb-3">${typeof I18n<"u"?I18n.t("module.iso.overview.healthDesc","\u0646\u0638\u0627\u0645 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629"):"\u0646\u0638\u0627\u0645 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629"}</p>
+                                    <p class="text-xs text-gray-600 mb-3">${typeof I18n<"u"?I18n.t("module.iso.overview.healthDesc","SafetyHub | ICAPP"):"SafetyHub | ICAPP"}</p>
                                     <div class="flex justify-between items-center text-sm">
                                         <span class="text-gray-500">${typeof I18n<"u"?I18n.t("module.iso.overview.excellent","\u0627\u0644\u0645\u062A\u0637\u0644\u0628\u0627\u062A"):"\u0627\u0644\u0645\u062A\u0637\u0644\u0628\u0627\u062A"}</span>
                                         <span class="font-semibold text-blue-700">\u0645\u063A\u0637\u0627\u0629</span>
@@ -758,7 +758,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <div class="card-header bg-primary text-white p-4 border-0" style="background: linear-gradient(135deg, #0f172a 0%, #334155 100%) !important;">
                         <h3 class="card-title text-white d-flex align-items-center fw-bold m-0" style="font-size: 1.5rem;">
                             <i class="fas fa-hard-hat mx-3 text-warning fs-3"></i>
-                            ${typeof I18n<"u"?I18n.t("module.iso.overview.compliance.iso45001Title","\u0646\u0638\u0627\u0645 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 (ISO 45001)"):"\u0646\u0638\u0627\u0645 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 (ISO 45001)"}
+                            ${typeof I18n<"u"?I18n.t("module.iso.overview.compliance.iso45001Title","SafetyHub | ICAPP (ISO 45001)"):"SafetyHub | ICAPP (ISO 45001)"}
                         </h3>
                         <p class="text-white-50 small mt-2 mb-0 px-2" style="max-width: 800px;">
                             \u064A\u0647\u062F\u0641 \u0647\u0630\u0627 \u0627\u0644\u0646\u0638\u0627\u0645 \u0625\u0644\u0649 \u062A\u0648\u0641\u064A\u0631 \u0623\u0645\u0627\u0643\u0646 \u0639\u0645\u0644 \u0622\u0645\u0646\u0629 \u0648\u0635\u062D\u064A\u0629\u060C \u0648\u0645\u0646\u0639 \u0627\u0644\u0625\u0635\u0627\u0628\u0627\u062A \u0648\u0627\u0644\u0623\u0645\u0631\u0627\u0636 \u0627\u0644\u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u0627\u0644\u0639\u0645\u0644\u060C \u0648\u0627\u0644\u062A\u062D\u0633\u064A\u0646 \u0627\u0644\u0645\u0633\u062A\u0645\u0631 \u0644\u0623\u062F\u0627\u0621 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629.

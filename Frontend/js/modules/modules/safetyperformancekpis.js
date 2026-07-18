@@ -5533,7 +5533,7 @@ SafetyPerformanceKPIs.exportAnnualPlanToPDF = async function() {
                 </table>
                 <div class="footer">
                     <p>Generated on: ${new Date().toLocaleDateString('en-US')}</p>
-                    <p>HSE Management System - Safety Performance KPIs</p>
+                    <p>SafetyHub | ICAPP - Safety Performance KPIs</p>
                 </div>
             </body>
             </html>
@@ -5712,7 +5712,7 @@ SafetyPerformanceKPIs.exportMonitoringPlanToPDF = async function() {
         htmlContent += `
                 <div class="footer">
                     <p>Generated on: ${new Date().toLocaleDateString('en-US')}</p>
-                    <p>HSE Management System - Monitoring Plan</p>
+                    <p>SafetyHub | ICAPP - Monitoring Plan</p>
                 </div>
             </body>
             </html>

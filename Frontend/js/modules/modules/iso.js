@@ -2,7 +2,7 @@
  * ISO Module
  * ØªÙ… Ø§Ø³ØªØ®Ø±Ø§Ø¬Ù‡ Ù…Ù† app-modules.js
  */
-// ===== HSE Management System Module (نظام إدارة السلامة والصحة المهنية والبيئة) =====
+// ===== SafetyHub | ICAPP Module =====
 const ISO = {
     currentTab: 'overview',
 
@@ -97,9 +97,9 @@ const ISO = {
                     <div>
                         <h1 class="section-title">
                             <i class="fas fa-shield-alt ml-3"></i>
-                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.title', 'نظام إدارة السلامة والصحة المهنية والبيئة') : 'نظام إدارة السلامة والصحة المهنية والبيئة'}
+                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.title', 'SafetyHub | ICAPP') : 'SafetyHub | ICAPP'}
                         </h1>
-                        <p class="section-subtitle">${typeof I18n !== 'undefined' ? I18n.t('module.iso.subtitle', 'HSE Management System - متوافق مع ISO 45001 & ISO 14001') : 'HSE Management System - متوافق مع ISO 45001 & ISO 14001'}</p>
+                        <p class="section-subtitle">${typeof I18n !== 'undefined' ? I18n.t('module.iso.subtitle', 'SafetyHub | ICAPP - متوافق مع ISO 45001 & ISO 14001') : 'SafetyHub | ICAPP - متوافق مع ISO 45001 & ISO 14001'}</p>
                     </div>
                     <button id="export-compliance-report-btn" class="btn-success">
                         <i class="fas fa-file-pdf ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.btn.exportCompliance', 'تقرير الامتثال PDF') : 'تقرير الامتثال PDF'}
@@ -380,7 +380,7 @@ const ISO = {
                                     <h3 class="font-bold text-blue-800 mb-2 flex items-center">
                                         <i class="fas fa-hard-hat text-blue-500 ml-2"></i> ISO 45001
                                     </h3>
-                                    <p class="text-xs text-gray-600 mb-3">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.healthDesc', 'نظام إدارة السلامة والصحة المهنية') : 'نظام إدارة السلامة والصحة المهنية'}</p>
+                                    <p class="text-xs text-gray-600 mb-3">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.healthDesc', 'SafetyHub | ICAPP') : 'SafetyHub | ICAPP'}</p>
                                     <div class="flex justify-between items-center text-sm">
                                         <span class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.excellent', 'المتطلبات') : 'المتطلبات'}</span>
                                         <span class="font-semibold text-blue-700">مغطاة</span>
@@ -1384,7 +1384,7 @@ const ISO = {
                     <div class="card-header bg-primary text-white p-4 border-0" style="background: linear-gradient(135deg, #0f172a 0%, #334155 100%) !important;">
                         <h3 class="card-title text-white d-flex align-items-center fw-bold m-0" style="font-size: 1.5rem;">
                             <i class="fas fa-hard-hat mx-3 text-warning fs-3"></i>
-                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.compliance.iso45001Title', 'نظام إدارة السلامة والصحة المهنية (ISO 45001)') : 'نظام إدارة السلامة والصحة المهنية (ISO 45001)'}
+                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.compliance.iso45001Title', 'SafetyHub | ICAPP (ISO 45001)') : 'SafetyHub | ICAPP (ISO 45001)'}
                         </h3>
                         <p class="text-white-50 small mt-2 mb-0 px-2" style="max-width: 800px;">
                             يهدف هذا النظام إلى توفير أماكن عمل آمنة وصحية، ومنع الإصابات والأمراض المرتبطة بالعمل، والتحسين المستمر لأداء السلامة والصحة المهنية.

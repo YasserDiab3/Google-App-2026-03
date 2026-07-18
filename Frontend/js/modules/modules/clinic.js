@@ -17721,6 +17721,10 @@ const Clinic = {
         }
 
         if (typeof Permissions !== 'undefined') {
+            if (tabName === 'data-analysis') {
+                return Permissions.hasDetailedPermission('clinic', 'data-analysis') || 
+                       Permissions.hasDetailedPermission('clinic', 'analytics');
+            }
             if (!Permissions.hasDetailedPermission('clinic', tabName)) return false;
         }
 
@@ -17879,13 +17883,15 @@ const Clinic = {
                 <div class="clinic-tab-panel ${this.state.activeTab === 'visits' ? 'active' : ''}" data-tab-panel="visits"></div>
                 <div class="clinic-tab-panel ${this.state.activeTab === 'medications' ? 'active' : ''}" data-tab-panel="medications"></div>
                 <div class="clinic-tab-panel ${this.state.activeTab === 'sickLeave' ? 'active' : ''}" data-tab-panel="sickLeave"></div>
-                ${isAdmin ? `
+                ${this.hasTabAccess('dispensed-medications') ? `
                 <div class="clinic-tab-panel ${this.state.activeTab === 'dispensed-medications' ? 'active' : ''}" data-tab-panel="dispensed-medications"></div>
                 ` : ''}
                 <div class="clinic-tab-panel ${this.state.activeTab === 'injuries' ? 'active' : ''}" data-tab-panel="injuries"></div>
                 <div class="clinic-tab-panel ${this.state.activeTab === 'supply-request' ? 'active' : ''}" data-tab-panel="supply-request"></div>
-                ${isAdmin ? `
+                ${this.hasTabAccess('approvals') ? `
                 <div class="clinic-tab-panel ${this.state.activeTab === 'approvals' ? 'active' : ''}" data-tab-panel="approvals"></div>
+                ` : ''}
+                ${this.hasTabAccess('data-analysis') ? `
                 <div class="clinic-tab-panel ${this.state.activeTab === 'data-analysis' ? 'active' : ''}" data-tab-panel="data-analysis"></div>
                 ` : ''}
                 ${this.hasTabAccess('attendance') ? `
