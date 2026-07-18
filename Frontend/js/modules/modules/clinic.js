@@ -6823,6 +6823,7 @@ const Clinic = {
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
                     ${[
+                        {id:'clinic-af-factory', icon:'fas fa-industry',       color:'#ec4899', label:'المصنع'},
                         {id:'clinic-af-ptype',  icon:'fas fa-id-badge',       color:'#6366f1', label:'نوع الشخص'},
                         {id:'clinic-af-dept',   icon:'fas fa-building',        color:'#0d9488', label:'الإدارة'},
                         {id:'clinic-af-loc',    icon:'fas fa-map-marker-alt',  color:'#f59e0b', label:'الموقع'},
@@ -7427,14 +7428,16 @@ const Clinic = {
     // ── تصفية الزيارات بالفلاتر التفاعلية ──
     _clinicApplyFilters(visits) {
         const get = id => { const el=document.getElementById(id); return el?el.value.trim():''; };
+        const fFactory= get('clinic-af-factory');
         const fPtype  = get('clinic-af-ptype');
         const fDept   = get('clinic-af-dept');
         const fLoc    = get('clinic-af-loc');
         const fReason = get('clinic-af-reason');
-        const hasAny  = [fPtype,fDept,fLoc,fReason].some(v=>v!=='');
+        const hasAny  = [fFactory,fPtype,fDept,fLoc,fReason].some(v=>v!=='');
         const badge   = document.getElementById('clinic-filter-badge');
         if (badge) badge.style.display = hasAny ? 'inline' : 'none';
         return visits.filter(v => {
+            if (fFactory && String(v.factoryName||v.factory||'').trim() !== fFactory) return false;
             if (fPtype) {
                 const lbl = String(v.personType||'').toLowerCase()==='contractor'?'contractor':'employee';
                 if (lbl !== fPtype) return false;
@@ -7457,6 +7460,7 @@ const Clinic = {
         // نوع الشخص ثابت
         const ptEl = document.getElementById('clinic-af-ptype');
         if (ptEl) { const cur=ptEl.value; ptEl.innerHTML=`<option value="">الكل</option><option value="employee"${cur==='employee'?' selected':''}>موظف</option><option value="contractor"${cur==='contractor'?' selected':''}>مقاول</option>`; }
+        fill('clinic-af-factory', unique(v=>String(v.factoryName||v.factory||'').trim()));
         fill('clinic-af-dept',   unique(v=>String(v.employeeDepartment||v.department||'').trim()));
         fill('clinic-af-loc',    unique(v=>String(v.employeeLocation||v.workArea||'').trim()));
         fill('clinic-af-reason', unique(v=>String(v.reason||v.diagnosis||'').trim()));
@@ -7600,7 +7604,7 @@ const Clinic = {
         const resetBtn = document.getElementById('clinic-filter-reset-btn');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
-                ['clinic-af-ptype','clinic-af-dept','clinic-af-loc','clinic-af-reason'].forEach(id=>{
+                ['clinic-af-factory','clinic-af-ptype','clinic-af-dept','clinic-af-loc','clinic-af-reason'].forEach(id=>{
                     const el=document.getElementById(id); if(el) el.value='';
                 });
                 this.updateClinicAnalyticsDashboard();
@@ -7608,7 +7612,7 @@ const Clinic = {
         }
 
         // قوائم الفلاتر
-        ['clinic-af-ptype','clinic-af-dept','clinic-af-loc','clinic-af-reason'].forEach(id => {
+        ['clinic-af-factory','clinic-af-ptype','clinic-af-dept','clinic-af-loc','clinic-af-reason'].forEach(id => {
             const el=document.getElementById(id);
             if(el) el.addEventListener('change',()=>this.updateClinicAnalyticsDashboard());
         });
