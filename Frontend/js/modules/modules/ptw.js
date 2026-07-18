@@ -3085,6 +3085,10 @@ const PTW = {
                         <p class="section-subtitle">${t('module.ptw.subtitle', 'إصدار ومتابعة تصاريح العمل مع دائرة الاعتمادات')}</p>
                     </div>
                     <div class="flex items-center gap-2">
+                        <button id="add-manual-ptw-btn" class="btn-secondary" style="border:1px solid #d1d5db; background:#f3f4f6; color:#374151;">
+                            <i class="fas fa-pen ml-2"></i>
+                            إضافة تصريح يدوي / Manual Permit Entry
+                        </button>
                         <button id="add-ptw-btn" class="btn-primary">
                             <i class="fas fa-plus ml-2"></i>
                             ${t('module.ptw.btn.newPermit', 'إصدار تصريح جديد')}
@@ -14742,7 +14746,9 @@ const PTW = {
             }
             // زر إصدار تصريح جديد
             const addBtn = document.getElementById('add-ptw-btn');
+            const addManualBtn = document.getElementById('add-manual-ptw-btn');
             const addEmptyBtn = document.getElementById('add-ptw-empty-btn');
+            
             if (addBtn) {
                 // ✅ التحقق من أن العنصر موجود في DOM قبل replaceWith
                 if (addBtn.parentNode && document.body.contains(addBtn)) {
@@ -14757,17 +14763,40 @@ const PTW = {
                         }
                     } catch (error) {
                         Utils.safeWarn('⚠️ خطأ في replaceWith للزر add-ptw-btn:', error);
-                        // استخدام طريقة بديلة: إزالة المستمعين وإضافة مستمع جديد
                         addBtn.addEventListener('click', () => {
                             Utils.safeLog('🖱️ تم النقر على زر إصدار تصريح جديد');
                             this.showForm();
                         });
                     }
                 } else {
-                    // العنصر غير موجود في DOM - إضافة مستمع مباشرة
                     addBtn.addEventListener('click', () => {
                         Utils.safeLog('🖱️ تم النقر على زر إصدار تصريح جديد');
                         this.showForm();
+                    });
+                }
+            }
+            
+            if (addManualBtn) {
+                if (addManualBtn.parentNode && document.body.contains(addManualBtn)) {
+                    try {
+                        addManualBtn.replaceWith(addManualBtn.cloneNode(true));
+                        const newAddManualBtn = document.getElementById('add-manual-ptw-btn');
+                        if (newAddManualBtn) {
+                            newAddManualBtn.addEventListener('click', () => {
+                                Utils.safeLog('🖱️ تم النقر على زر إضافة تصريح يدوي');
+                                this.showForm({ isManualEntry: true });
+                            });
+                        }
+                    } catch (error) {
+                        addManualBtn.addEventListener('click', () => {
+                            Utils.safeLog('🖱️ تم النقر على زر إضافة تصريح يدوي');
+                            this.showForm({ isManualEntry: true });
+                        });
+                    }
+                } else {
+                    addManualBtn.addEventListener('click', () => {
+                        Utils.safeLog('🖱️ تم النقر على زر إضافة تصريح يدوي');
+                        this.showForm({ isManualEntry: true });
                     });
                 }
             }
