@@ -6417,7 +6417,7 @@ const PPE = {
             Loading.show('جاري تجهيز التقرير…');
 
             // بناء هيدر برانديد (يُضاف فوق المحتوى مؤقتاً)
-            const companyName = String(AppState?.companySettings?.name || 'Americana HSE Management System').trim();
+            const companyName = String(AppState?.companySettings?.name || 'SafetyHub | ICAPP').trim();
             const secondaryName = String(AppState?.companySettings?.secondaryName || 'إدارة السلامة والصحة المهنية والبيئة').trim();
             const exportDateTime = (typeof Utils !== 'undefined' && typeof Utils.formatDateTime === 'function')
                 ? Utils.formatDateTime(new Date())

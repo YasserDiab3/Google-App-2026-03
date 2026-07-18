@@ -1,4 +1,4 @@
-﻿/* ========================================
+/* ========================================
    نظام السلامة المهنية - أمريكانا HSE
    app-utils.js - الدوال المساعدة والثوابت
    ======================================== */
@@ -4049,7 +4049,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.488',
+    appVersion: '1.0.489',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -7410,7 +7410,7 @@ const PDFTemplates = {
                 .replace(/'/g, '&#39;');
         };
 
-        const fallbackCompanyName = typeof DEFAULT_COMPANY_NAME !== 'undefined' ? DEFAULT_COMPANY_NAME : 'Americana HSE Management System';
+        const fallbackCompanyName = typeof DEFAULT_COMPANY_NAME !== 'undefined' ? DEFAULT_COMPANY_NAME : 'SafetyHub | ICAPP';
         const companyNameRaw = AppState?.companySettings?.name || fallbackCompanyName;
         const companySecondaryNameRaw = AppState?.companySettings?.secondaryName || '';
         const companySecondaryNameTrimmed = companySecondaryNameRaw ? String(companySecondaryNameRaw).trim() : '';

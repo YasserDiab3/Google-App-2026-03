@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SafetyPerformanceKPIs Module
  * ØªÙ… Ø§Ø³ØªØ®Ø±Ø§Ø¬Ù‡ Ù…Ù† app-modules.js
  */
@@ -4524,7 +4524,7 @@ SafetyPerformanceKPIs.setupEventListeners = function () {
 };
 
 SafetyPerformanceKPIs.getScorecardExportHeaderInfo = function (reportTitle, exportDate = new Date()) {
-    const companyName = String(AppState?.companySettings?.name || AppState?.companyName || 'Americana HSE Management System').trim();
+    const companyName = String(AppState?.companySettings?.name || AppState?.companyName || 'SafetyHub | ICAPP').trim();
     const secondaryName = String(AppState?.companySettings?.secondaryName || 'إدارة السلامة والصحة المهنية والبيئة').trim();
     const exportDateTime = (typeof Utils !== 'undefined' && typeof Utils.formatDateTime === 'function')
         ? Utils.formatDateTime(exportDate)
