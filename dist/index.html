@@ -8890,7 +8890,7 @@
 
     <body class="font-cairo bg-gray-50" data-theme="light">
         <!-- رابط تخطي للمحتوى الرئيسي (إمكانية الوصول) -->
-        <a href="#main-content" class="skip-link">تخطي إلى المحتوى الرئيسي</a>
+        <a href="#main-content" id="login-skip-link" class="skip-link">تخطي إلى المحتوى الرئيسي</a>
         <div
             id="hse-offline-banner"
             role="status"
@@ -9177,7 +9177,7 @@
                                 class="fas fa-question-circle ml-2"
                                 aria-hidden="true"
                             ></i>
-                            <span id="login-help-text">مساعدة / Help</span>
+                            <span id="login-help-text">مساعدة</span>
                         </button>
 
                         <!-- Language selector dropdown -->
@@ -9308,7 +9308,7 @@
                         forgotAria: "نسيت كلمة المرور",
                         submit: "تسجيل الدخول",
                         submitAria: "تسجيل الدخول",
-                        help: "مساعدة / Help",
+                        help: "مساعدة",
                         helpAria: "مساعدة",
                         footerCopyright:
                             "كل الحقوق محفوظة 2025",
@@ -9318,6 +9318,9 @@
                         footerEmail: "البريد الإلكتروني",
                         footerTeams: "MS Teams",
                         langToggleAria: "تبديل اللغة",
+                        langMenuAria: "قائمة اختيار اللغة",
+                        skipLink: "تخطي إلى المحتوى الرئيسي",
+                        versionAria: "إصدار النظام",
                         langCurrent: "AR",
                         langOther: "EN",
                     },
@@ -9325,7 +9328,7 @@
                         loginScreenAria: "Login screen",
                         title: "SafetyHub | ICAPP",
                         companyName: "International Company for Agricultural Production & Processing (ICAPP)",
-                        companySecondary: "HSE Department",
+                        companySecondary: "Health, Safety & Environment (HSE)",
                         labelEmail: "Email",
                         labelPassword: "Password",
                         placeholderEmail: "example@company.com",
@@ -9347,6 +9350,9 @@
                         footerEmail: "Email Support",
                         footerTeams: "MS Teams",
                         langToggleAria: "Switch language",
+                        langMenuAria: "Language selection menu",
+                        skipLink: "Skip to main content",
+                        versionAria: "System version",
                         langCurrent: "EN",
                         langOther: "AR",
                     },
@@ -9384,7 +9390,7 @@
                     }
                     if (byId("login-company-secondary-name")) {
                         var cSec = byId("login-company-secondary-name").textContent ? byId("login-company-secondary-name").textContent.trim() : "";
-                        if (!cSec || cSec === "إدارة السلامة والصحة المهنية" || cSec === "HSE Department") {
+                        if (!cSec || cSec === "إدارة السلامة والصحة المهنية" || cSec === "إدارة السلامة والصحة المهنية والبيئة" || cSec === "HSE Department" || cSec === "Health, Safety & Environment (HSE)") {
                             byId("login-company-secondary-name").textContent = t.companySecondary;
                             if (t.companySecondary) {
                                 byId("login-company-secondary-name").style.display = "block";
@@ -9430,6 +9436,16 @@
                     if (helpB) helpB.setAttribute("aria-label", t.helpAria);
                     if (byId("login-help-text"))
                         byId("login-help-text").textContent = t.help;
+                    if (byId("login-mfa-hint"))
+                        byId("login-mfa-hint").textContent = lang === "ar"
+                            ? "أدخل رمز المصادقة الثنائية من تطبيق المصادقة (6 أرقام)"
+                            : "Enter the six-digit verification code from your authenticator app";
+                    if (byId("login-mfa-label"))
+                        byId("login-mfa-label").textContent = lang === "ar" ? "رمز المصادقة" : "Verification code";
+                    if (byId("login-mfa-verify-text"))
+                        byId("login-mfa-verify-text").textContent = lang === "ar" ? "تأكيد الرمز" : "Verify code";
+                    if (byId("login-mfa-back-text"))
+                        byId("login-mfa-back-text").textContent = lang === "ar" ? "رجوع" : "Back";
                     if (byId("login-footer-copyright"))
                         byId("login-footer-copyright").textContent =
                             t.footerCopyright;
@@ -9452,6 +9468,12 @@
                             "aria-label",
                             t.langToggleAria,
                         );
+                    if (byId("login-language-dropdown"))
+                        byId("login-language-dropdown").setAttribute("aria-label", t.langMenuAria);
+                    if (byId("login-skip-link"))
+                        byId("login-skip-link").textContent = t.skipLink;
+                    if (byId("login-footer-version"))
+                        byId("login-footer-version").setAttribute("aria-label", t.versionAria);
                     var currentLangText = byId("current-lang-text");
                     if (currentLangText)
                         currentLangText.textContent = lang === "ar" ? "العربية" : "English";
@@ -9491,7 +9513,7 @@
                         var portal = document.createElement("div");
                         portal.id = overlayId;
                         portal.setAttribute("role", "menu");
-                        portal.setAttribute("aria-label", "قائمة اختيار اللغة");
+                        portal.setAttribute("aria-label", document.documentElement.lang === "en" ? "Language selection menu" : "قائمة اختيار اللغة");
                         portal.style.cssText =
                             "position:fixed;z-index:999999;min-width:" + Math.max(rect.width, 120) + "px;max-width:280px;" +
                             "background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.15);" +
@@ -12985,7 +13007,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.533-20260719";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.534-20260719";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

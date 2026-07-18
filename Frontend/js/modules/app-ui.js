@@ -3702,8 +3702,8 @@ window.UI = {
         // AR → EN
         const arToEn = {
             'الشركة العالمية للانتاج والتصنيع الزراعي': 'International Company for Agricultural Production & Processing (ICAPP)',
-            'إدارة السلامة والصحة المهنية والبيئة': 'HSE Department',
-            'إدارة السلامة والصحة المهنية': 'HSE Department',
+            'إدارة السلامة والصحة المهنية والبيئة': 'Health, Safety & Environment (HSE)',
+            'إدارة السلامة والصحة المهنية': 'Occupational Safety & Health',
             'السلامة والصحة المهنية والبيئة': 'Health, Safety & Environment (HSE)',
             'السلامة والصحة المهنية': 'Occupational Safety & Health',
             'نظام السلامة المهنية': 'Occupational Safety System',
@@ -3713,7 +3713,7 @@ window.UI = {
         const enToAr = {
             'International Company for Agricultural Production & Processing (ICAPP)': 'الشركة العالمية للانتاج والتصنيع الزراعي',
             'HSE Department': 'إدارة السلامة والصحة المهنية والبيئة',
-            'Health, Safety & Environment (HSE)': 'السلامة والصحة المهنية والبيئة',
+            'Health, Safety & Environment (HSE)': 'إدارة السلامة والصحة المهنية والبيئة',
             'Occupational Safety & Health': 'السلامة والصحة المهنية',
             'Occupational Safety System': 'نظام السلامة المهنية',
         };
@@ -3729,7 +3729,7 @@ window.UI = {
                 }
             }
             if (norm.includes('إدارة السلامة') || norm.includes('ادارة السلامة') || norm.includes('السلامة والصحة')) {
-                return 'HSE Department';
+                return 'Health, Safety & Environment (HSE)';
             }
             if (norm.includes('الشركة العالمية')) {
                 return 'International Company for Agricultural Production & Processing (ICAPP)';
@@ -4673,12 +4673,25 @@ window.UI = {
     showHelpModal() {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
+        const helpLang = localStorage.getItem('language') || 'ar';
+        const helpCopy = helpLang === 'en' ? {
+            title: 'Help', signIn: 'How to sign in', signInSteps: ['Enter your registered email address', 'Enter your password', 'Enable “Remember me” to sign in automatically next time', 'Select “Log in”'],
+            reset: 'Reset your password', resetSteps: ['Select “Forgot password?” below the password field', 'Enter your registered email address', 'Select “Send”', 'You will receive a password reset link by email', 'Follow the email instructions to reset your password'],
+            guide: 'Complete system guide', guideText: 'After signing in, you can find detailed guidance for every module under <strong>Help</strong> in the sidebar (above Settings).',
+            issue: 'If you experience a problem', issueText: 'Please contact the system administrator at:', close: 'Close'
+        } : {
+            title: 'مساعدة', signIn: 'كيفية تسجيل الدخول', signInSteps: ['أدخل بريدك الإلكتروني المسجل في النظام', 'أدخل كلمة المرور الخاصة بك', 'يمكنك تفعيل خيار "تذكرني" لتسجيل الدخول تلقائياً في المرة القادمة', 'اضغط على زر "تسجيل الدخول"'],
+            reset: 'استرجاع كلمة المرور', resetSteps: ['اضغط على رابط "نسيت كلمة المرور؟" الموجود أسفل حقل كلمة المرور', 'أدخل بريدك الإلكتروني المسجل في النظام', 'اضغط على زر "إرسال"', 'ستتلقى رابط إعادة تعيين كلمة المرور على بريدك الإلكتروني', 'اتبع التعليمات في البريد الإلكتروني لإعادة تعيين كلمة المرور'],
+            guide: 'دليل النظام الكامل', guideText: 'بعد تسجيل الدخول ستجد شرحاً تفصيلياً لكل الموديولات في <strong>المساعدة</strong> من القائمة الجانبية (فوق الإعدادات).',
+            issue: 'في حالة وجود أي مشكلة', issueText: 'يُرجى التواصل مع مدير النظام على البريد التالي:', close: 'فهمت'
+        };
+        const renderSteps = (items) => items.map(item => `<li>${item}</li>`).join('');
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 500px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-question-circle ml-2"></i>
-                        مساعدة / Help
+                        ${helpCopy.title}
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
@@ -4689,47 +4702,40 @@ window.UI = {
                         <div>
                             <h3 class="text-lg font-semibold text-gray-800 mb-2">
                                 <i class="fas fa-sign-in-alt ml-2 text-blue-600"></i>
-                                كيفية تسجيل الدخول
+                                ${helpCopy.signIn}
                             </h3>
                             <ol class="list-decimal list-inside space-y-2 text-gray-700 text-sm mr-4">
-                                <li>أدخل بريدك الإلكتروني المسجل في النظام</li>
-                                <li>أدخل كلمة المرور الخاصة بك</li>
-                                <li>يمكنك تفعيل خيار "تذكرني" لتسجيل الدخول تلقائياً في المرة القادمة</li>
-                                <li>اضغط على زر "تسجيل الدخول"</li>
+                                ${renderSteps(helpCopy.signInSteps)}
                             </ol>
                         </div>
                         
                         <div class="border-t pt-4">
                             <h3 class="text-lg font-semibold text-gray-800 mb-2">
                                 <i class="fas fa-key ml-2 text-blue-600"></i>
-                                استرجاع كلمة المرور
+                                ${helpCopy.reset}
                             </h3>
                             <ol class="list-decimal list-inside space-y-2 text-gray-700 text-sm mr-4">
-                                <li>اضغط على رابط "نسيت كلمة المرور؟" الموجود أسفل حقل كلمة المرور</li>
-                                <li>أدخل بريدك الإلكتروني المسجل في النظام</li>
-                                <li>اضغط على زر "إرسال"</li>
-                                <li>ستتلقى رابط إعادة تعيين كلمة المرور على بريدك الإلكتروني</li>
-                                <li>اتبع التعليمات في البريد الإلكتروني لإعادة تعيين كلمة المرور</li>
+                                ${renderSteps(helpCopy.resetSteps)}
                             </ol>
                         </div>
                         
                         <div class="border-t pt-4 bg-teal-50 border border-teal-200 rounded-lg p-4">
                             <h3 class="text-sm font-semibold text-teal-800 mb-2">
                                 <i class="fas fa-book ml-2"></i>
-                                دليل النظام الكامل
+                                ${helpCopy.guide}
                             </h3>
                             <p class="text-sm text-teal-700">
-                                بعد تسجيل الدخول ستجد شرحاً تفصيلياً لكل الموديولات في <strong>المساعدة</strong> من القائمة الجانبية (فوق الإعدادات).
+                                ${helpCopy.guideText}
                             </p>
                         </div>
                         
                         <div class="border-t pt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                             <h3 class="text-sm font-semibold text-yellow-800 mb-2">
                                 <i class="fas fa-envelope ml-2"></i>
-                                في حالة وجود أي مشكلة
+                                ${helpCopy.issue}
                             </h3>
                             <p class="text-sm text-yellow-700 mb-2">
-                                يُرجى التواصل مع مدير النظام على البريد التالي:
+                                ${helpCopy.issueText}
                             </p>
                             <a href="mailto:Yasser.diab@icapp.com.eg" class="text-yellow-600 hover:text-yellow-800 font-semibold hover:underline inline-flex items-center">
                                 <i class="fas fa-envelope ml-2"></i>
@@ -4741,7 +4747,7 @@ window.UI = {
                     <div class="flex justify-center mt-6">
                         <button type="button" class="btn-primary" onclick="this.closest('.modal-overlay').remove()">
                             <i class="fas fa-check ml-2"></i>
-                            فهمت
+                            ${helpCopy.close}
                         </button>
                     </div>
                 </div>
@@ -11084,7 +11090,7 @@ window.UI = {
                 'login-label-email-text': 'البريد الإلكتروني',
                 'login-label-password-text': 'كلمة المرور',
                 'login-submit-text': 'تسجيل الدخول',
-                'login-help-text': 'مساعدة / Help',
+                'login-help-text': 'مساعدة',
                 'login-forgot-text': 'نسيت كلمة المرور؟',
                 'current-lang-text': 'العربية'
             },
