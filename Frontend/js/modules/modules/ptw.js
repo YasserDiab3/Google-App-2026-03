@@ -13216,13 +13216,81 @@ const PTW = {
                 </div>
             </div>`;
 
-        return `${statsHtml}
-            <div class="content-card">
+        return `<style>
+                .ptw-permit-list-workspace {
+                    --ptl-navy:#102a43; --ptl-navy-2:#173d6c; --ptl-cyan:#0891b2; --ptl-blue:#2563eb;
+                    --ptl-ink:#172033; --ptl-muted:#64748b; display:grid; gap:18px; direction:rtl;
+                }
+                .ptw-permit-list-workspace>#ptw-stats-section { margin-bottom:0!important; }
+                .ptw-permit-list-card { overflow:hidden; border:1px solid #cbddeb; border-radius:18px; box-shadow:0 13px 30px rgba(15,42,67,.09); }
+                .ptw-permit-list-card>.card-header {
+                    display:flex; align-items:center; justify-content:space-between; gap:12px; padding:15px 17px;
+                    border-bottom:0; background:linear-gradient(125deg,var(--ptl-navy),var(--ptl-navy-2));
+                }
+                .ptw-permit-list-card>.card-header .card-title { display:flex; align-items:center; gap:8px; margin:0; color:#fff; font-size:1.08rem; font-weight:850; }
+                .ptw-permit-list-card>.card-header .card-title i { color:#67e8f9; }
+                .ptw-list-visible-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid rgba(255,255,255,.25); border-radius:999px; color:#dbeafe; background:rgba(255,255,255,.09); font-size:.73rem; font-weight:750; }
+                .ptw-list-visible-pill strong { min-width:24px; text-align:center; color:#083344; background:#67e8f9; border-radius:999px; padding:2px 7px; }
+                .ptw-permit-list-card .ptw-filters-row {
+                    width:100%!important; margin:0!important; padding:0!important; border:0; border-bottom:1px solid #bae6fd;
+                    background:linear-gradient(180deg,#f0f9ff,#fff)!important;
+                }
+                .ptw-list-filter-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding:13px 16px; color:#fff; background:linear-gradient(125deg,#0f2942,#164e63); }
+                .ptw-list-filter-heading-title { display:flex; align-items:center; gap:10px; }
+                .ptw-list-filter-heading-title>i { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(255,255,255,.3); border-radius:10px; color:#cffafe; background:rgba(255,255,255,.1); }
+                .ptw-list-filter-heading h3 { margin:0; color:#fff; font-size:.94rem; font-weight:850; }
+                .ptw-list-filter-heading p { margin:2px 0 0; color:#bae6fd; font-size:.7rem; }
+                .ptw-permit-list-card .ptw-filters-grid { display:grid!important; grid-template-columns:repeat(auto-fit,minmax(150px,1fr))!important; gap:11px!important; align-items:end; padding:15px 16px 17px; }
+                .ptw-permit-list-card .ptw-filter-field { min-width:0; gap:6px; }
+                .ptw-permit-list-card .ptw-filter-label { display:flex; align-items:center; gap:5px; margin:0!important; color:#334155; font-size:.73rem; font-weight:800; letter-spacing:0; }
+                .ptw-permit-list-card .ptw-filter-label i { color:var(--ptl-cyan); }
+                .ptw-permit-list-card .ptw-filter-input { width:100%; min-height:42px; padding:9px 11px; border:1px solid #cbd5e1; border-radius:10px; color:var(--ptl-ink); background:#fff; box-shadow:none; transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease; }
+                .ptw-permit-list-card .ptw-filter-input:hover { border-color:#7dd3fc; }
+                .ptw-permit-list-card .ptw-filter-input:focus { border-color:#0891b2; box-shadow:0 0 0 3px rgba(8,145,178,.14); background:#fafeff; }
+                .ptw-permit-list-card .ptw-filter-field.is-active .ptw-filter-input { border-color:#0891b2; background:#ecfeff; box-shadow:0 0 0 3px rgba(8,145,178,.09); }
+                .ptw-permit-list-card .ptw-filter-reset-btn { min-height:42px; border-radius:10px; font-weight:750; box-shadow:0 5px 13px rgba(37,99,235,.16); }
+                .ptw-permit-list-card .ptw-filter-reset-btn:disabled { opacity:.45; cursor:not-allowed; transform:none; }
+                .ptw-permit-list-card .ptw-filter-field .text-xs { display:none; }
+                .ptw-permit-list-card>.card-body { padding:0!important; }
+                .ptw-permit-list-card #ptw-table-container { max-height:min(68vh,720px); overflow:auto; scrollbar-width:thin; scrollbar-color:#94a3b8 #e2e8f0; }
+                .ptw-permit-list-table { width:max-content!important; min-width:100%; border-collapse:separate!important; border-spacing:0; table-layout:auto; font-size:.8rem; }
+                .ptw-permit-list-table thead { position:sticky; top:0; z-index:8; }
+                .ptw-permit-list-table thead th { position:sticky; top:0; z-index:8; min-width:125px; padding:13px 12px!important; border:0!important; border-left:1px solid rgba(255,255,255,.13)!important; color:#f8fafc!important; background:linear-gradient(180deg,#173d6c,#102a43)!important; font-size:.74rem; font-weight:850!important; line-height:1.45; white-space:normal; vertical-align:middle; box-shadow:inset 0 -3px #22d3ee; }
+                .ptw-permit-list-table thead th:first-child { min-width:190px; right:0; z-index:11; }
+                .ptw-permit-list-table thead th:last-child { min-width:190px; left:0; z-index:11; }
+                .ptw-permit-list-table tbody td { padding:11px 11px!important; border:0!important; border-bottom:1px solid #e2e8f0!important; border-left:1px solid #edf2f7!important; color:#334155; background:#fff; line-height:1.5; vertical-align:middle; }
+                .ptw-permit-list-table tbody tr:nth-child(even) td { background:#f8fbff; }
+                .ptw-permit-list-table tbody tr:hover td { background:#ecfeff; }
+                .ptw-permit-list-table tbody td:first-child { position:sticky; right:0; z-index:4; min-width:190px; max-width:260px; color:#0f3d68; background:#eff6ff!important; font-weight:750; box-shadow:-5px 0 12px rgba(15,23,42,.04); }
+                .ptw-permit-list-table tbody td:last-child { position:sticky; left:0; z-index:4; min-width:190px; background:#f8fafc!important; box-shadow:5px 0 12px rgba(15,23,42,.07); }
+                .ptw-permit-list-table tbody td:nth-child(6) { min-width:145px; }
+                .ptw-permit-list-table tbody td:nth-child(7) { min-width:175px; }
+                .ptw-permit-list-table .badge { display:inline-flex; align-items:center; justify-content:center; min-width:72px; margin:2px 0; padding:5px 9px; border-radius:999px; font-size:.69rem; font-weight:800; white-space:normal; }
+                .ptw-permit-list-table td:last-child>div { flex-wrap:nowrap!important; justify-content:center; gap:5px!important; }
+                .ptw-permit-list-table td:last-child .btn-icon { width:33px; height:33px; flex:0 0 33px; border-radius:9px; box-shadow:0 3px 9px rgba(15,23,42,.12); }
+                @media (max-width:760px) {
+                    .ptw-permit-list-card>.card-header { align-items:flex-start; flex-direction:column; }
+                    .ptw-list-filter-heading { align-items:flex-start; }
+                    .ptw-permit-list-card .ptw-filters-grid { grid-template-columns:1fr 1fr!important; }
+                    .ptw-permit-list-card #ptw-table-container { max-height:72vh; }
+                }
+                @media (max-width:480px) { .ptw-permit-list-card .ptw-filters-grid { grid-template-columns:1fr!important; } }
+                @media (prefers-reduced-motion:reduce) { .ptw-permit-list-card .ptw-filter-input { transition:none; } }
+            </style>
+            <div class="ptw-permit-list-workspace">${statsHtml}
+            <div class="content-card ptw-permit-list-card">
                 <div class="card-header">
                     <h2 class="card-title"><i class="fas fa-list ml-2"></i>قائمة تصاريح العمل</h2>
                 </div>
                 <!-- فلتر احترافي أعلى الجدول (بنفس تصميم الملاحظات اليومية) -->
                 <div class="ptw-filters-row" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 16px 20px; margin: 0 -20px 0 -20px; width: calc(100% + 40px); direction: rtl;">
+                    <div class="ptw-list-filter-heading">
+                        <div class="ptw-list-filter-heading-title">
+                            <i class="fas fa-sliders-h" aria-hidden="true"></i>
+                            <div><h3>فلترة قائمة التصاريح</h3><p>تتحدث النتائج تلقائياً حسب الاختيارات</p></div>
+                        </div>
+                        <span class="ptw-list-visible-pill"><i class="fas fa-eye" aria-hidden="true"></i>النتائج الظاهرة <strong id="ptw-list-visible-count">${totalCount}</strong></span>
+                    </div>
                     <div class="ptw-filters-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; align-items: end;">
                         <div class="ptw-filter-field">
                             <label class="ptw-filter-label" style="text-align: right;"><i class="fas fa-search ml-1"></i>البحث</label>
@@ -13268,7 +13336,7 @@ const PTW = {
                             </div>
                         </div>
                         <div class="ptw-filter-field">
-                            <button id="ptw-reset-filters" class="ptw-filter-reset-btn" type="button"><i class="fas fa-redo ml-1"></i>إعادة التعيين</button>
+                            <button id="ptw-reset-filters" class="ptw-filter-reset-btn" type="button" disabled><i class="fas fa-redo ml-1"></i>إعادة التعيين</button>
                         </div>
                         <div class="ptw-filter-field">
                             <button id="ptw-refresh-list" class="ptw-filter-reset-btn" type="button" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);"><i class="fas fa-sync-alt ml-1"></i>تحديث</button>
@@ -13277,7 +13345,7 @@ const PTW = {
                 </div>
                 <div class="card-body" style="padding-top: 20px;">
                     <div id="ptw-table-container" class="ptw-table-wrapper">
-                        <table class="data-table">
+                        <table class="data-table ptw-permit-list-table">
                             <thead>
                                 <tr>
                                     <th>نوع العمل</th>
@@ -13306,6 +13374,7 @@ const PTW = {
                         </table>
                     </div>
                 </div>
+            </div>
             </div>
         `;
     },
@@ -15194,7 +15263,18 @@ const PTW = {
             const filterDateFrom = document.getElementById('ptw-filter-date-from');
             const filterDateTo = document.getElementById('ptw-filter-date-to');
             const applyFilters = () => this.filterItems();
-            if (searchInput) searchInput.addEventListener('input', applyFilters);
+            if (searchInput) {
+                searchInput.addEventListener('input', () => {
+                    clearTimeout(this._permitListFilterTimer);
+                    this._permitListFilterTimer = setTimeout(applyFilters, 120);
+                });
+                searchInput.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape' && searchInput.value) {
+                        searchInput.value = '';
+                        applyFilters();
+                    }
+                });
+            }
             if (filterStatus) filterStatus.addEventListener('change', applyFilters);
             if (filterWorkType) filterWorkType.addEventListener('change', applyFilters);
             if (filterLocation) {
@@ -17565,6 +17645,7 @@ const PTW = {
         const sublocationFilter = (document.getElementById('ptw-filter-sublocation')?.value || '').trim();
         const dateFrom = (document.getElementById('ptw-filter-date-from')?.value || '').trim();
         const dateTo = (document.getElementById('ptw-filter-date-to')?.value || '').trim();
+        const hasActiveFilters = !!(searchTerm || statusFilter || workTypeFilter || locationFilter || sublocationFilter || dateFrom || dateTo);
 
         let filtered = this.getMergedPermitsForFilter();
 
@@ -17666,6 +17747,16 @@ const PTW = {
         if (countEl) {
             countEl.textContent = String(filtered.length);
         }
+        const visibleCount = document.getElementById('ptw-list-visible-count');
+        if (visibleCount) visibleCount.textContent = String(filtered.length);
+
+        const resetButton = document.getElementById('ptw-reset-filters');
+        if (resetButton) resetButton.disabled = !hasActiveFilters;
+        ['ptw-search', 'ptw-filter-work-type', 'ptw-filter-location', 'ptw-filter-sublocation', 'ptw-filter-status', 'ptw-filter-date-from', 'ptw-filter-date-to'].forEach((id) => {
+            const control = document.getElementById(id);
+            const field = control?.closest?.('.ptw-filter-field');
+            if (field) field.classList.toggle('is-active', !!control.value);
+        });
 
         // تحديث KPIs بعد التصفية
         this.updateKPIs();
@@ -19600,7 +19691,7 @@ const PTW = {
                 if (!table) {
                     // إنشاء الجدول إذا لم يكن موجوداً
                     table = document.createElement('table');
-                    table.className = 'data-table';
+                    table.className = 'data-table ptw-permit-list-table';
                     table.innerHTML = `
                         <thead>
                             <tr>
