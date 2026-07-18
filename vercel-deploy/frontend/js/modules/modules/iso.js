@@ -2449,7 +2449,60 @@ const ISO = {
         }
 
         const html = `
-            <div class="space-y-6">
+            <style id="iso-coding-center-contrast-fix">
+                .iso-workspace .iso-coding-center {
+                    --coding-bg:#ffffff;
+                    --coding-soft:#f7faf9;
+                    --coding-ink:#1d302e;
+                    --coding-muted:#617471;
+                    --coding-line:#d9e5e2;
+                    color:var(--coding-ink);
+                }
+                .iso-workspace .iso-coding-center > .flex > .grid > div {
+                    border:1px solid var(--coding-line) !important;
+                    border-radius:14px !important;
+                    background:linear-gradient(145deg,var(--coding-bg),var(--coding-soft)) !important;
+                    color:var(--coding-ink) !important;
+                    box-shadow:0 8px 20px rgba(7,59,58,.07);
+                }
+                .iso-workspace .iso-coding-center > .flex > .grid .text-gray-700,
+                .iso-workspace .iso-coding-center .content-card .text-gray-700 { color:var(--coding-ink) !important; }
+                .iso-workspace .iso-coding-center .content-card .text-gray-600,
+                .iso-workspace .iso-coding-center .content-card .text-gray-500 { color:var(--coding-muted) !important; }
+                .iso-workspace .iso-coding-center .content-card,
+                .iso-workspace .iso-coding-center .content-card .card-body,
+                .iso-workspace .iso-coding-center .empty-state {
+                    background:var(--coding-bg) !important;
+                    color:var(--coding-ink) !important;
+                }
+                .iso-workspace .iso-coding-center input,
+                .iso-workspace .iso-coding-center select,
+                .iso-workspace .iso-coding-center textarea {
+                    border-color:#c7d8d4 !important;
+                    background:#fff !important;
+                    color:#18312e !important;
+                }
+                .iso-workspace .iso-coding-center input::placeholder,
+                .iso-workspace .iso-coding-center textarea::placeholder { color:#738783 !important;opacity:1; }
+                .iso-workspace .iso-coding-center table tbody td,
+                .iso-workspace .iso-coding-center table tbody td strong { color:var(--coding-ink) !important; }
+                [data-theme="dark"] .iso-workspace .iso-coding-center {
+                    --coding-bg:#142927;
+                    --coding-soft:#18312f;
+                    --coding-ink:#e7f0ee;
+                    --coding-muted:#afc2be;
+                    --coding-line:#385b57;
+                }
+                [data-theme="dark"] .iso-workspace .iso-coding-center .content-card,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .content-card .card-body,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .empty-state { background:var(--coding-bg) !important;color:var(--coding-ink) !important; }
+                [data-theme="dark"] .iso-workspace .iso-coding-center input,
+                [data-theme="dark"] .iso-workspace .iso-coding-center select,
+                [data-theme="dark"] .iso-workspace .iso-coding-center textarea { border-color:#466964 !important;background:#0e211f !important;color:#eef7f5 !important; }
+                [data-theme="dark"] .iso-workspace .iso-coding-center input::placeholder,
+                [data-theme="dark"] .iso-workspace .iso-coding-center textarea::placeholder { color:#9bb0ac !important; }
+            </style>
+            <div class="space-y-6 iso-coding-center">
                 ${timedOut ? `
                 <div class="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 flex items-center gap-2">
                     <i class="fas fa-clock text-amber-600"></i>

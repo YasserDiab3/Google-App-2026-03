@@ -24,6 +24,450 @@ const Sustainability = {
         alertThreshold: 1.2   // 120% من المتوسط
     },
 
+    renderIdentityStyles_() {
+        return `
+            <style id="sustainability-professional-identity-styles">
+                .sustainability-workspace {
+                    --sus-forest: #123f35;
+                    --sus-forest-2: #195849;
+                    --sus-leaf: #24866f;
+                    --sus-mint: #5fd0ad;
+                    --sus-gold: #d4a936;
+                    --sus-water: #1976b9;
+                    --sus-power: #b77905;
+                    --sus-gas: #c45124;
+                    --sus-waste: #258454;
+                    --sus-ink: #17322d;
+                    --sus-muted: #607a73;
+                    --sus-line: #d5e5df;
+                    --sus-surface: #ffffff;
+                    --sus-soft: #f3f8f6;
+                    position: relative;
+                    min-width: 0;
+                    color: var(--sus-ink);
+                    isolation: isolate;
+                }
+                .sustainability-workspace *,
+                .sustainability-workspace *::before,
+                .sustainability-workspace *::after { box-sizing: border-box; }
+                .sustainability-workspace .sustainability-hero-header {
+                    position: relative;
+                    overflow: hidden;
+                    margin: 0 !important;
+                    padding: clamp(19px,2.3vw,29px) !important;
+                    border: 1px solid rgba(255,255,255,.12) !important;
+                    border-radius: 19px !important;
+                    background:
+                        radial-gradient(circle at 14% 10%,rgba(95,208,173,.2),transparent 30%),
+                        linear-gradient(125deg,#0d332b 0%,var(--sus-forest) 52%,#1b6653 100%) !important;
+                    color: #fff;
+                    box-shadow: 0 16px 38px rgba(18,63,53,.2);
+                }
+                .sustainability-workspace .sustainability-hero-header::after {
+                    content: "";
+                    position: absolute;
+                    inset-block: -72px;
+                    inset-inline-end: -44px;
+                    width: 225px;
+                    border: 1px solid rgba(255,255,255,.13);
+                    border-radius: 48% 52% 44% 56%;
+                    transform: rotate(-18deg);
+                    pointer-events: none;
+                }
+                .sustainability-workspace .sustainability-hero-main {
+                    position: relative;
+                    z-index: 1;
+                    display: flex;
+                    align-items: center;
+                    gap: 15px;
+                }
+                .sustainability-workspace .sustainability-hero-icon {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex: 0 0 56px;
+                    width: 56px;
+                    height: 56px;
+                    border: 1px solid rgba(255,255,255,.22);
+                    border-radius: 17px 17px 17px 5px;
+                    background: rgba(255,255,255,.12);
+                    color: #a7f3d0;
+                    font-size: 1.4rem;
+                    box-shadow: inset 0 1px rgba(255,255,255,.2);
+                }
+                .sustainability-workspace .sustainability-hero-header .section-title {
+                    margin: 0 0 5px !important;
+                    color: #fff !important;
+                    font-size: clamp(1.25rem,2vw,1.72rem) !important;
+                    font-weight: 900 !important;
+                    letter-spacing: -.02em;
+                }
+                .sustainability-workspace .sustainability-hero-header .section-subtitle {
+                    margin: 0 !important;
+                    color: rgba(255,255,255,.74) !important;
+                    font-size: .84rem;
+                    line-height: 1.7;
+                }
+                .sustainability-workspace #sustainability-year-toolbar-wrap { margin: 14px 0 !important; }
+                .sustainability-workspace #sustainability-year-toolbar-wrap > div {
+                    border: 1px solid #cbe1da !important;
+                    border-radius: 15px !important;
+                    background: linear-gradient(110deg,#eaf6f1,#fff 72%) !important;
+                    color: var(--sus-ink) !important;
+                    box-shadow: 0 7px 19px rgba(18,63,53,.065) !important;
+                }
+                .sustainability-workspace #sustainability-year-toolbar-wrap .bg-emerald-600 {
+                    background: var(--sus-leaf) !important;
+                    color: #fff !important;
+                }
+                .sustainability-workspace #sustainability-year-toolbar-wrap .text-gray-900,
+                .sustainability-workspace #sustainability-year-toolbar-wrap .text-gray-700 { color: var(--sus-ink) !important; }
+                .sustainability-workspace #sustainability-year-toolbar-wrap .text-gray-600 { color: var(--sus-muted) !important; }
+                .sustainability-workspace #sustainability-quick-stats {
+                    display: grid;
+                    grid-template-columns: repeat(4,minmax(0,1fr));
+                    gap: 13px !important;
+                    margin: 0 0 18px !important;
+                }
+                .sustainability-workspace #sustainability-quick-stats > div {
+                    position: relative;
+                    overflow: hidden;
+                    min-height: 112px;
+                    padding: 16px !important;
+                    border: 1px solid var(--sus-line) !important;
+                    border-radius: 15px !important;
+                    background: linear-gradient(145deg,#fff,#f6faf8) !important;
+                    color: var(--sus-ink) !important;
+                    text-align: start !important;
+                    box-shadow: 0 9px 23px rgba(18,63,53,.075);
+                }
+                .sustainability-workspace #sustainability-quick-stats > div::before {
+                    content: "";
+                    position: absolute;
+                    inset-block: 13px;
+                    inset-inline-start: 0;
+                    width: 4px;
+                    border-radius: 0 8px 8px 0;
+                    background: var(--stat-color,var(--sus-leaf));
+                }
+                .sustainability-workspace #sustainability-quick-stats > div:nth-child(1) { --stat-color: var(--sus-water); }
+                .sustainability-workspace #sustainability-quick-stats > div:nth-child(2) { --stat-color: var(--sus-power); }
+                .sustainability-workspace #sustainability-quick-stats > div:nth-child(3) { --stat-color: var(--sus-gas); }
+                .sustainability-workspace #sustainability-quick-stats > div:nth-child(4) { --stat-color: var(--sus-waste); }
+                .sustainability-workspace #sustainability-quick-stats .text-gray-700,
+                .sustainability-workspace #sustainability-quick-stats .text-gray-500 { color: var(--sus-muted) !important; }
+                .sustainability-workspace .sustainability-tabs-shell {
+                    position: relative;
+                    margin: 0 0 18px;
+                    padding: 8px;
+                    border: 1px solid rgba(255,255,255,.1);
+                    border-radius: 16px;
+                    background: linear-gradient(115deg,var(--sus-forest),var(--sus-forest-2));
+                    box-shadow: 0 11px 27px rgba(18,63,53,.15);
+                }
+                .sustainability-workspace .sustainability-tabs-nav {
+                    display: flex;
+                    align-items: center;
+                    flex-wrap: nowrap !important;
+                    gap: 7px !important;
+                    margin: 0 !important;
+                    padding: 0 0 2px !important;
+                    overflow-x: auto;
+                    border: 0 !important;
+                    scrollbar-width: thin;
+                    scrollbar-color: rgba(255,255,255,.38) transparent;
+                    overscroll-behavior-inline: contain;
+                }
+                .sustainability-workspace .sustainability-tabs-nav > .tab-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex: 0 0 auto;
+                    gap: 8px;
+                    min-width: max-content;
+                    min-height: 47px;
+                    margin: 0 !important;
+                    padding: 9px 14px !important;
+                    border: 1px solid rgba(255,255,255,.13) !important;
+                    border-radius: 11px !important;
+                    background: rgba(255,255,255,.07) !important;
+                    color: rgba(255,255,255,.82) !important;
+                    font-size: .78rem !important;
+                    font-weight: 800 !important;
+                    white-space: nowrap;
+                    box-shadow: none !important;
+                    transition: transform .18s ease,background-color .18s ease,color .18s ease;
+                }
+                .sustainability-workspace .sustainability-tabs-nav > .tab-btn i {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 29px;
+                    height: 29px;
+                    margin: 0 !important;
+                    border-radius: 8px;
+                    background: rgba(255,255,255,.12);
+                    color: #a7f3d0;
+                    font-size: .77rem;
+                }
+                .sustainability-workspace .sustainability-tabs-nav > .tab-btn[data-tab="water"] i { color: #bae6fd; }
+                .sustainability-workspace .sustainability-tabs-nav > .tab-btn[data-tab="electricity"] i { color: #fde68a; }
+                .sustainability-workspace .sustainability-tabs-nav > .tab-btn[data-tab="gas"] i { color: #fed7aa; }
+                .sustainability-workspace .sustainability-tabs-nav > .tab-btn[data-tab="waste-management"] i { color: #bbf7d0; }
+                .sustainability-workspace .sustainability-tabs-nav > .tab-btn[data-tab="settings"] i { color: #ddd6fe; }
+                .sustainability-workspace .sustainability-tabs-nav > .tab-btn:hover {
+                    background: rgba(255,255,255,.15) !important;
+                    color: #fff !important;
+                    transform: translateY(-1px);
+                }
+                .sustainability-workspace .sustainability-tabs-nav > .tab-btn.active {
+                    border-color: #fff !important;
+                    background: #fff !important;
+                    color: var(--sus-forest) !important;
+                    box-shadow: 0 8px 20px rgba(0,0,0,.17) !important;
+                }
+                .sustainability-workspace .sustainability-tabs-nav > .tab-btn.active i {
+                    background: #e6f5ef;
+                    color: var(--sus-leaf);
+                }
+                .sustainability-workspace .sustainability-tabs-nav .sustainability-admin-tools {
+                    display: inline-flex;
+                    flex: 0 0 auto;
+                    margin: 0 !important;
+                    padding-inline-start: 8px;
+                    border-inline-start: 1px solid rgba(255,255,255,.18);
+                }
+                .sustainability-workspace .sustainability-tabs-nav .sustainability-admin-tools button,
+                .sustainability-workspace .sustainability-tabs-nav .sustainability-refresh-btn {
+                    flex: 0 0 auto;
+                    min-height: 39px;
+                    margin: 0 !important;
+                    border: 1px solid rgba(255,255,255,.18) !important;
+                    border-radius: 10px !important;
+                    background: rgba(255,255,255,.1) !important;
+                    color: #fff !important;
+                    font-size: .72rem;
+                    font-weight: 750;
+                    box-shadow: none !important;
+                }
+                .sustainability-workspace .sustainability-tab-content {
+                    min-width: 0;
+                    animation: sustainabilitySurfaceIn .24s ease-out;
+                }
+                @keyframes sustainabilitySurfaceIn {
+                    from { opacity: 0; transform: translateY(5px); }
+                    to { opacity: 1; transform: none; }
+                }
+                .sustainability-workspace .sustainability-tab-content .content-card {
+                    overflow: hidden;
+                    min-width: 0;
+                    border: 1px solid var(--sus-line) !important;
+                    border-radius: 15px !important;
+                    background: var(--sus-surface) !important;
+                    color: var(--sus-ink) !important;
+                    box-shadow: 0 9px 25px rgba(18,63,53,.075) !important;
+                    transform: none !important;
+                }
+                .sustainability-workspace .sustainability-tab-content .content-card:hover {
+                    box-shadow: 0 12px 29px rgba(18,63,53,.1) !important;
+                    transform: none !important;
+                }
+                .sustainability-workspace .sustainability-tab-content .card-header {
+                    position: relative;
+                    padding: 16px 18px !important;
+                    border-bottom: 1px solid #d9e8e2 !important;
+                    background: linear-gradient(115deg,#eaf5f1,#fff 68%,#f7fbf9) !important;
+                    color: var(--sus-forest) !important;
+                }
+                .sustainability-workspace .sustainability-tab-content .card-header::before {
+                    content: "";
+                    position: absolute;
+                    inset-block: 0;
+                    inset-inline-start: 0;
+                    width: 5px;
+                    background: linear-gradient(var(--tab-accent-1,var(--sus-mint)),var(--tab-accent-2,var(--sus-leaf)));
+                }
+                .sustainability-workspace .sustainability-tab-content[data-tab="water"] { --tab-accent-1:#38bdf8;--tab-accent-2:#1976b9; }
+                .sustainability-workspace .sustainability-tab-content[data-tab="electricity"] { --tab-accent-1:#facc15;--tab-accent-2:#b77905; }
+                .sustainability-workspace .sustainability-tab-content[data-tab="gas"] { --tab-accent-1:#fb923c;--tab-accent-2:#c45124; }
+                .sustainability-workspace .sustainability-tab-content[data-tab="waste-management"] { --tab-accent-1:#4ade80;--tab-accent-2:#258454; }
+                .sustainability-workspace .sustainability-tab-content[data-tab="settings"] { --tab-accent-1:#a78bfa;--tab-accent-2:#6d28d9; }
+                .sustainability-workspace .sustainability-tab-content .card-title {
+                    color: var(--sus-forest) !important;
+                    font-size: .98rem !important;
+                    font-weight: 900 !important;
+                    line-height: 1.55;
+                }
+                .sustainability-workspace .sustainability-tab-content .card-body { color: var(--sus-ink); }
+                .sustainability-workspace .sustainability-tab-content .text-gray-900,
+                .sustainability-workspace .sustainability-tab-content .text-gray-800,
+                .sustainability-workspace .sustainability-tab-content .text-gray-700 { color: var(--sus-ink) !important; }
+                .sustainability-workspace .sustainability-tab-content .text-gray-600,
+                .sustainability-workspace .sustainability-tab-content .text-gray-500 { color: var(--sus-muted) !important; }
+                .sustainability-workspace .sustainability-tab-content .form-input,
+                .sustainability-workspace .sustainability-tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+                .sustainability-workspace .sustainability-tab-content select,
+                .sustainability-workspace .sustainability-tab-content textarea {
+                    min-height: 40px;
+                    border-color: #c5d9d2 !important;
+                    border-radius: 10px !important;
+                    background: #fff !important;
+                    color: #18332e !important;
+                }
+                .sustainability-workspace .sustainability-tab-content .form-input:focus,
+                .sustainability-workspace .sustainability-tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+                .sustainability-workspace .sustainability-tab-content select:focus,
+                .sustainability-workspace .sustainability-tab-content textarea:focus {
+                    border-color: var(--sus-leaf) !important;
+                    outline: none;
+                    box-shadow: 0 0 0 3px rgba(36,134,111,.13) !important;
+                }
+                .sustainability-workspace .sustainability-tab-content .overflow-x-auto,
+                .sustainability-workspace .sustainability-tab-content .table-wrapper,
+                .sustainability-workspace .sustainability-tab-content .table-responsive {
+                    max-width: 100%;
+                    overflow-x: auto !important;
+                    border-radius: 12px;
+                    scrollbar-width: thin;
+                    scrollbar-color: #80a99e #edf5f2;
+                }
+                .sustainability-workspace .sustainability-tab-content table {
+                    width: 100%;
+                    margin: 0;
+                    border: 0 !important;
+                    border-collapse: separate !important;
+                    border-spacing: 0;
+                    color: var(--sus-ink);
+                    font-size: .77rem;
+                }
+                .sustainability-workspace .sustainability-tab-content table thead th {
+                    position: sticky;
+                    top: 0;
+                    z-index: 3;
+                    padding: 12px 11px !important;
+                    border: 0 !important;
+                    border-inline-end: 1px solid rgba(255,255,255,.1) !important;
+                    border-bottom: 3px solid var(--sus-gold) !important;
+                    border-radius: 0 !important;
+                    background: linear-gradient(var(--sus-forest-2),var(--sus-forest)) !important;
+                    color: #fff !important;
+                    font-size: .72rem !important;
+                    font-weight: 850 !important;
+                    line-height: 1.5;
+                    text-align: center !important;
+                    white-space: nowrap;
+                }
+                .sustainability-workspace .sustainability-tab-content table tbody td {
+                    padding: 10px 11px !important;
+                    border: 0 !important;
+                    border-inline-end: 1px solid #edf3f1 !important;
+                    border-bottom: 1px solid #e3eeea !important;
+                    background: #fff;
+                    color: var(--sus-ink) !important;
+                    line-height: 1.6;
+                    vertical-align: middle;
+                }
+                .sustainability-workspace .sustainability-tab-content table tbody tr:nth-child(even) td { background: #f7fbf9; }
+                .sustainability-workspace .sustainability-tab-content table tbody tr:hover td { background: #fff9e8 !important; }
+                .sustainability-workspace .sustainability-tab-content table button {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-width: 34px;
+                    min-height: 34px;
+                    border-radius: 9px !important;
+                }
+                .sustainability-workspace .sustainability-tab-content canvas { max-width: 100% !important; }
+                .sustainability-workspace .sustainability-tab-content[data-tab="waste-management"] > .space-y-6 > .grid:first-child > div {
+                    border: 1px solid var(--sus-line) !important;
+                    border-radius: 14px !important;
+                    background: #fff !important;
+                    color: var(--sus-ink) !important;
+                    box-shadow: 0 8px 20px rgba(18,63,53,.07);
+                }
+                .sustainability-workspace .sustainability-tab-content .tab-btn-internal {
+                    min-height: 40px;
+                    padding: 8px 14px !important;
+                    border: 1px solid #cfe0da !important;
+                    border-radius: 10px !important;
+                    background: #fff !important;
+                    color: var(--sus-muted) !important;
+                    font-weight: 750 !important;
+                    white-space: nowrap;
+                }
+                .sustainability-workspace .sustainability-tab-content .tab-btn-internal.active {
+                    border-color: var(--sus-leaf) !important;
+                    background: #e8f6f1 !important;
+                    color: var(--sus-forest) !important;
+                    box-shadow: inset 0 -3px var(--sus-leaf);
+                }
+                [data-theme="dark"] .sustainability-workspace {
+                    --sus-ink:#e4efeb;
+                    --sus-muted:#abc0b9;
+                    --sus-line:#385c52;
+                    --sus-surface:#142923;
+                    --sus-soft:#10231e;
+                }
+                [data-theme="dark"] .sustainability-workspace #sustainability-year-toolbar-wrap > div,
+                [data-theme="dark"] .sustainability-workspace #sustainability-quick-stats > div,
+                [data-theme="dark"] .sustainability-workspace .sustainability-tab-content .content-card,
+                [data-theme="dark"] .sustainability-workspace .sustainability-tab-content .card-header,
+                [data-theme="dark"] .sustainability-workspace .sustainability-tab-content[data-tab="waste-management"] > .space-y-6 > .grid:first-child > div {
+                    border-color: var(--sus-line) !important;
+                    background: #142923 !important;
+                    color: #e4efeb !important;
+                }
+                [data-theme="dark"] .sustainability-workspace #sustainability-year-toolbar-wrap .text-gray-900,
+                [data-theme="dark"] .sustainability-workspace #sustainability-year-toolbar-wrap .text-gray-700,
+                [data-theme="dark"] .sustainability-workspace .sustainability-tab-content .card-title,
+                [data-theme="dark"] .sustainability-workspace .sustainability-tab-content .text-gray-900,
+                [data-theme="dark"] .sustainability-workspace .sustainability-tab-content .text-gray-800,
+                [data-theme="dark"] .sustainability-workspace .sustainability-tab-content .text-gray-700 { color:#e4efeb !important; }
+                [data-theme="dark"] .sustainability-workspace .sustainability-tab-content table tbody td { border-color:#2f4c44 !important;background:#142923;color:#e4efeb !important; }
+                [data-theme="dark"] .sustainability-workspace .sustainability-tab-content table tbody tr:nth-child(even) td { background:#19322b; }
+                [data-theme="dark"] .sustainability-workspace .sustainability-tab-content table tbody tr:hover td { background:#3b422d !important; }
+                [data-theme="dark"] .sustainability-workspace .sustainability-tab-content .form-input,
+                [data-theme="dark"] .sustainability-workspace .sustainability-tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+                [data-theme="dark"] .sustainability-workspace .sustainability-tab-content select,
+                [data-theme="dark"] .sustainability-workspace .sustainability-tab-content textarea { border-color:#46685e !important;background:#0f211c !important;color:#e4efeb !important; }
+                [data-theme="dark"] .sustainability-workspace .sustainability-tab-content .tab-btn-internal { border-color:#46685e !important;background:#142923 !important;color:#b8cbc5 !important; }
+                [data-theme="dark"] .sustainability-workspace .sustainability-tab-content .tab-btn-internal.active { border-color:#5fd0ad !important;background:#20473c !important;color:#d7fff2 !important; }
+                @media (max-width: 1050px) {
+                    .sustainability-workspace #sustainability-quick-stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
+                }
+                @media (max-width: 820px) {
+                    .sustainability-workspace .sustainability-hero-header { padding:18px !important;border-radius:15px !important; }
+                    .sustainability-workspace .sustainability-tabs-shell { padding:6px;border-radius:14px; }
+                    .sustainability-workspace .sustainability-tabs-nav > .tab-btn { min-height:43px;padding:8px 11px !important;font-size:.74rem !important; }
+                    .sustainability-workspace .sustainability-tabs-nav > .tab-btn i { width:26px;height:26px; }
+                    .sustainability-workspace .sustainability-tab-content .card-header > div { align-items:stretch !important;flex-direction:column !important; }
+                    .sustainability-workspace .sustainability-tab-content .card-header input,
+                    .sustainability-workspace .sustainability-tab-content .card-header select,
+                    .sustainability-workspace .sustainability-tab-content .card-header button { width:100% !important;max-width:none !important; }
+                    .sustainability-workspace .sustainability-tab-content table { min-width:680px; }
+                    .sustainability-workspace .sustainability-tab-content .md\\:grid-cols-4,
+                    .sustainability-workspace .sustainability-tab-content .md\\:grid-cols-3 { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+                }
+                @media (max-width: 560px) {
+                    .sustainability-workspace .sustainability-hero-icon { flex-basis:47px;width:47px;height:47px; }
+                    .sustainability-workspace .sustainability-hero-header::after { display:none; }
+                    .sustainability-workspace #sustainability-year-toolbar-wrap > div > div { align-items:stretch !important;flex-direction:column !important; }
+                    .sustainability-workspace #sustainability-year-toolbar-wrap select { width:100% !important; }
+                    .sustainability-workspace #sustainability-quick-stats { grid-template-columns:1fr; }
+                    .sustainability-workspace .sustainability-tab-content .md\\:grid-cols-4,
+                    .sustainability-workspace .sustainability-tab-content .md\\:grid-cols-3,
+                    .sustainability-workspace .sustainability-tab-content .md\\:grid-cols-2 { grid-template-columns:1fr !important; }
+                    .sustainability-workspace .sustainability-tab-content .card-body { padding:12px !important; }
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .sustainability-workspace *,
+                    .sustainability-workspace *::before,
+                    .sustainability-workspace *::after { animation:none !important;transition:none !important; }
+                }
+            </style>
+        `;
+    },
+
     /**
      * إدارة كاملة للاستدامة: مخلفات، إعدادات، تعديل/حذف سجلات الموارد
      */
@@ -832,12 +1276,16 @@ ${innerContent}
 
         try {
             section.innerHTML = `
-                <div class="section-header">
-                    <h1 class="section-title">
-                        <i class="fas fa-leaf ml-3"></i>
-                        الاستدامة البيئية
-                    </h1>
-                    <p class="section-subtitle">إدارة ومتابعة استهلاك الموارد البيئية (مياه، كهرباء، غاز طبيعي)</p>
+                ${this.renderIdentityStyles_()}
+                <div class="sustainability-workspace">
+                <div class="section-header sustainability-hero-header">
+                    <div class="sustainability-hero-main">
+                        <span class="sustainability-hero-icon" aria-hidden="true"><i class="fas fa-leaf"></i></span>
+                        <div>
+                            <h1 class="section-title">الاستدامة البيئية</h1>
+                            <p class="section-subtitle">إدارة ومتابعة استهلاك الموارد البيئية (مياه، كهرباء، غاز طبيعي)</p>
+                        </div>
+                    </div>
                 </div>
                 
                 ${this.renderYearFilterToolbarHtml()}
@@ -849,28 +1297,29 @@ ${innerContent}
 
                 <!-- التبويبات -->
                 <div class="mt-6">
-                    <div class="flex gap-2 mb-6 border-b overflow-x-auto items-center flex-wrap">
+                    <div class="sustainability-tabs-shell">
+                    <div class="flex gap-2 mb-6 border-b overflow-x-auto items-center flex-wrap sustainability-tabs-nav" role="tablist" aria-label="تبويبات الاستدامة البيئية">
                         ${this.canRegisterResourceConsumption() ? `
-                        <button class="tab-btn ${this.currentTab === 'dashboard' ? 'active' : ''}" data-tab="dashboard">
+                        <button class="tab-btn ${this.currentTab === 'dashboard' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'dashboard' ? 'true' : 'false'}" data-tab="dashboard">
                             <i class="fas fa-chart-line ml-2"></i>لوحة التحليل
                         </button>
-                        <button class="tab-btn ${this.currentTab === 'water' ? 'active' : ''}" data-tab="water">
+                        <button class="tab-btn ${this.currentTab === 'water' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'water' ? 'true' : 'false'}" data-tab="water">
                             <i class="fas fa-tint ml-2"></i>استهلاك المياه
                         </button>
-                        <button class="tab-btn ${this.currentTab === 'electricity' ? 'active' : ''}" data-tab="electricity">
+                        <button class="tab-btn ${this.currentTab === 'electricity' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'electricity' ? 'true' : 'false'}" data-tab="electricity">
                             <i class="fas fa-bolt ml-2"></i>استهلاك الكهرباء
                         </button>
-                        <button class="tab-btn ${this.currentTab === 'gas' ? 'active' : ''}" data-tab="gas">
+                        <button class="tab-btn ${this.currentTab === 'gas' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'gas' ? 'true' : 'false'}" data-tab="gas">
                             <i class="fas fa-fire ml-2"></i>استهلاك الغاز الطبيعي
                         </button>
                         ` : `
                         <span class="text-sm text-gray-500 dark:text-gray-400 px-2 py-2">لا توجد صلاحية لعرض لوحة التحليل وسجلات الاستهلاك. يطلب مدير النظام منح «تسجيل استهلاك الموارد» أو «إدارة كاملة» من الصلاحيات التفصيلية للاستدامة.</span>
                         `}
                         ${this.hasFullSustainabilityManage() ? `
-                        <button class="tab-btn ${this.currentTab === 'waste-management' ? 'active' : ''}" data-tab="waste-management">
+                        <button class="tab-btn ${this.currentTab === 'waste-management' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'waste-management' ? 'true' : 'false'}" data-tab="waste-management">
                             <i class="fas fa-recycle ml-2"></i>إدارة المخلفات
                         </button>
-                        <button class="tab-btn ${this.currentTab === 'settings' ? 'active' : ''}" data-tab="settings">
+                        <button class="tab-btn ${this.currentTab === 'settings' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'settings' ? 'true' : 'false'}" data-tab="settings">
                             <i class="fas fa-cog ml-2"></i>الإعدادات
                         </button>
                         ` : ''}
@@ -879,7 +1328,8 @@ ${innerContent}
                             <i class="fas fa-sync-alt ml-2"></i>تحديث
                         </button>
                     </div>
-                    <div id="sustainability-content">
+                    </div>
+                    <div id="sustainability-content" class="sustainability-tab-content" data-tab="${this.currentTab}">
                         <div class="content-card">
                             <div class="card-body">
                                 <div class="empty-state">
@@ -893,6 +1343,7 @@ ${innerContent}
                             </div>
                         </div>
                     </div>
+                </div>
                 </div>
             `;
             this.setupEventListeners();
