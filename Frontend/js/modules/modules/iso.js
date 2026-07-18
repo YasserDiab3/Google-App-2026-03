@@ -438,6 +438,224 @@ const ISO = {
                     min-height: 34px;
                     border-radius: 9px !important;
                 }
+                /* ISO assurance dashboards: explicit surfaces prevent utility-color conflicts. */
+                .iso-workspace .iso-standard-dashboard {
+                    display: grid;
+                    gap: 18px;
+                    color: var(--iso-ink);
+                }
+                .iso-workspace .iso-standard-dashboard > .card {
+                    overflow: hidden;
+                    border: 1px solid #cfe0dd !important;
+                    border-radius: 17px !important;
+                    background: var(--iso-surface) !important;
+                    box-shadow: 0 12px 30px rgba(7,59,58,.08) !important;
+                }
+                .iso-workspace .iso-standard-dashboard > .card:first-child {
+                    border: 0 !important;
+                    background: linear-gradient(135deg, var(--iso-petrol) 0%, var(--iso-petrol-2) 68%, #12796f 100%) !important;
+                    box-shadow: 0 16px 38px rgba(7,59,58,.2) !important;
+                }
+                .iso-workspace .iso-standard-dashboard > .card:first-child .card-header,
+                .iso-workspace .iso-standard-dashboard > .card:first-child .card-body {
+                    border-color: rgba(255,255,255,.16) !important;
+                    background: transparent !important;
+                    color: #fff !important;
+                }
+                .iso-workspace .iso-standard-dashboard > .card:first-child .card-header::before { display: none; }
+                .iso-workspace .iso-standard-dashboard > .card:first-child .card-title,
+                .iso-workspace .iso-standard-dashboard > .card:first-child h2,
+                .iso-workspace .iso-standard-dashboard > .card:first-child h3,
+                .iso-workspace .iso-standard-dashboard > .card:first-child p,
+                .iso-workspace .iso-standard-dashboard > .card:first-child .text-muted,
+                .iso-workspace .iso-standard-dashboard > .card:first-child .text-dark { color: #fff !important; }
+                .iso-workspace .iso-standard-dashboard > .mb-4[style*="grid-template-columns"] {
+                    grid-template-columns: repeat(4, minmax(0,1fr)) !important;
+                    gap: 13px !important;
+                }
+                .iso-workspace .iso-standard-dashboard .card {
+                    border: 1px solid #d8e6e3 !important;
+                    border-radius: 14px !important;
+                    background: #fff !important;
+                    color: var(--iso-ink) !important;
+                    box-shadow: 0 7px 20px rgba(7,59,58,.06) !important;
+                }
+                .iso-workspace .iso-standard-dashboard .card-header {
+                    border-bottom: 1px solid #dfeae8 !important;
+                    background: linear-gradient(180deg,#fff 0%,#f4f9f8 100%) !important;
+                    color: var(--iso-ink) !important;
+                }
+                .iso-workspace .iso-standard-dashboard .card-body,
+                .iso-workspace .iso-standard-dashboard .bg-white { background: #fff !important; }
+                .iso-workspace .iso-standard-dashboard h4,
+                .iso-workspace .iso-standard-dashboard h5,
+                .iso-workspace .iso-standard-dashboard h6,
+                .iso-workspace .iso-standard-dashboard .text-dark { color: var(--iso-ink) !important; }
+                .iso-workspace .iso-standard-dashboard .text-muted,
+                .iso-workspace .iso-standard-dashboard .small { color: var(--iso-muted) !important; }
+                .iso-workspace .iso-standard-dashboard .progress {
+                    overflow: hidden;
+                    height: 8px;
+                    border-radius: 999px;
+                    background: #e5efed !important;
+                }
+                .iso-workspace .iso-standard-dashboard table { border-radius: 12px; }
+
+                /* Coding center follows the same controlled-document visual language. */
+                .iso-workspace .iso-coding-center {
+                    padding: 2px;
+                    color: var(--iso-ink) !important;
+                }
+                .iso-workspace .iso-coding-center > .flex > .grid > div {
+                    min-height: 84px;
+                    border: 1px solid #d4e4e1 !important;
+                    border-inline-start: 4px solid var(--iso-teal) !important;
+                    border-radius: 13px !important;
+                    background: #fff !important;
+                    color: var(--iso-ink) !important;
+                    box-shadow: 0 8px 20px rgba(7,59,58,.07);
+                }
+                .iso-workspace .iso-coding-center > .flex > .grid > div:nth-child(2) { border-inline-start-color: #229765 !important; }
+                .iso-workspace .iso-coding-center > .flex > .grid > div:nth-child(3) { border-inline-start-color: #8b5cc7 !important; }
+                .iso-workspace .iso-coding-center .text-gray-900,
+                .iso-workspace .iso-coding-center .text-gray-800,
+                .iso-workspace .iso-coding-center .text-gray-700,
+                .iso-workspace .iso-coding-center .text-blue-800,
+                .iso-workspace .iso-coding-center .text-green-800,
+                .iso-workspace .iso-coding-center .text-purple-800 { color: var(--iso-ink) !important; }
+                .iso-workspace .iso-coding-center .text-gray-600,
+                .iso-workspace .iso-coding-center .text-gray-500 { color: var(--iso-muted) !important; }
+                .iso-workspace .iso-coding-center .content-card,
+                .iso-workspace .iso-coding-center .content-card .card-body,
+                .iso-workspace .iso-coding-center .empty-state {
+                    border-color: #d6e4e1 !important;
+                    background: #fff !important;
+                    color: var(--iso-ink) !important;
+                }
+
+                /* One professional, responsive form system for every ISO workflow. */
+                .iso-professional-modal {
+                    --iso-petrol: #073b3a;
+                    --iso-petrol-2: #0b5551;
+                    --iso-teal: #0f766e;
+                    --iso-gold: #e4b64f;
+                    position: fixed !important;
+                    inset: 0 !important;
+                    z-index: 10050 !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    padding: 16px !important;
+                    background: rgba(4,26,25,.7) !important;
+                    backdrop-filter: blur(6px);
+                }
+                .iso-professional-modal .modal-content {
+                    --iso-modal-width: 820px;
+                    display: flex !important;
+                    overflow: hidden !important;
+                    width: min(100%, var(--iso-modal-width)) !important;
+                    max-width: none !important;
+                    max-height: calc(100dvh - 32px) !important;
+                    flex-direction: column !important;
+                    border: 1px solid rgba(255,255,255,.32) !important;
+                    border-radius: 19px !important;
+                    background: #f6faf9 !important;
+                    color: #172334 !important;
+                    box-shadow: 0 30px 80px rgba(0,20,19,.34) !important;
+                }
+                .iso-professional-modal .modal-content[style*="900px"] { --iso-modal-width: 980px; }
+                .iso-professional-modal .modal-content[style*="700px"] { --iso-modal-width: 790px; }
+                .iso-professional-modal .modal-content[style*="600px"] { --iso-modal-width: 690px; }
+                .iso-professional-modal .modal-header {
+                    position: relative;
+                    min-height: 72px;
+                    padding: 18px 22px !important;
+                    border: 0 !important;
+                    border-bottom: 3px solid var(--iso-gold) !important;
+                    background: linear-gradient(135deg,var(--iso-petrol) 0%,var(--iso-petrol-2) 100%) !important;
+                    color: #fff !important;
+                }
+                .iso-professional-modal .modal-title,
+                .iso-professional-modal .modal-header h2,
+                .iso-professional-modal .modal-header h3,
+                .iso-professional-modal .modal-header h4,
+                .iso-professional-modal .modal-header p { margin: 0; color: #fff !important; }
+                .iso-professional-modal .modal-title { font-size: 1.08rem !important; font-weight: 900 !important; }
+                .iso-professional-modal .modal-close,
+                .iso-professional-modal .btn-close {
+                    position: relative;
+                    display: inline-flex !important;
+                    width: 38px !important;
+                    min-width: 38px !important;
+                    height: 38px !important;
+                    align-items: center;
+                    justify-content: center;
+                    border: 1px solid rgba(255,255,255,.34) !important;
+                    border-radius: 11px !important;
+                    background: rgba(255,255,255,.12) !important;
+                    color: #fff !important;
+                    opacity: 1 !important;
+                    box-shadow: none !important;
+                }
+                .iso-professional-modal .btn-close::after { content: "\\00d7"; color: #fff; font-size: 1.5rem; line-height: 1; }
+                .iso-professional-modal .modal-body {
+                    overflow: auto !important;
+                    padding: 22px !important;
+                    background: #f6faf9 !important;
+                    color: #172334 !important;
+                    scrollbar-width: thin;
+                    scrollbar-color: #88aaa4 #e6efed;
+                }
+                .iso-professional-modal form,
+                .iso-professional-modal .space-y-3,
+                .iso-professional-modal .space-y-4 { color: #172334 !important; }
+                .iso-professional-modal .row { row-gap: 15px; }
+                .iso-professional-modal label,
+                .iso-professional-modal .form-label { margin-bottom: 7px; color: #304741 !important; font-size: .8rem; font-weight: 800 !important; }
+                .iso-professional-modal input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+                .iso-professional-modal select,
+                .iso-professional-modal textarea,
+                .iso-professional-modal .form-control,
+                .iso-professional-modal .form-select {
+                    min-height: 43px;
+                    border: 1px solid #bfd3cf !important;
+                    border-radius: 10px !important;
+                    background: #fff !important;
+                    color: #172334 !important;
+                    box-shadow: inset 0 1px 2px rgba(7,59,58,.03) !important;
+                }
+                .iso-professional-modal textarea { min-height: 92px; resize: vertical; }
+                .iso-professional-modal input:focus,
+                .iso-professional-modal select:focus,
+                .iso-professional-modal textarea:focus {
+                    border-color: var(--iso-teal) !important;
+                    outline: 0 !important;
+                    box-shadow: 0 0 0 3px rgba(15,118,110,.14) !important;
+                }
+                .iso-professional-modal input[readonly],
+                .iso-professional-modal input:disabled,
+                .iso-professional-modal select:disabled,
+                .iso-professional-modal textarea:disabled { background: #e9f0ee !important; color: #657a76 !important; }
+                .iso-professional-modal .space-y-3 > div,
+                .iso-professional-modal .space-y-4 > div:not(.row) {
+                    border: 1px solid #dbe7e4;
+                    border-radius: 11px;
+                    background: #fff;
+                }
+                .iso-professional-modal .modal-footer {
+                    gap: 9px;
+                    padding: 14px 22px !important;
+                    border: 0 !important;
+                    border-top: 1px solid #d8e5e2 !important;
+                    background: #eef5f3 !important;
+                }
+                .iso-professional-modal .modal-footer .btn,
+                .iso-professional-modal .modal-footer button {
+                    min-height: 41px;
+                    padding-inline: 17px;
+                    border-radius: 10px !important;
+                    font-weight: 850 !important;
+                }
                 [data-theme="dark"] .iso-workspace {
                     --iso-ink: #e5efed;
                     --iso-muted: #abc0bc;
@@ -468,8 +686,53 @@ const ISO = {
                     background: #0d201f;
                     color: #eef7f5;
                 }
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard .card,
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard .card-body,
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard .card-header,
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard .bg-white,
+                [data-theme="dark"] .iso-workspace .iso-coding-center > .flex > .grid > div,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .content-card,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .content-card .card-body,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .empty-state {
+                    border-color: #365b57 !important;
+                    background: #142927 !important;
+                    color: #e5efed !important;
+                }
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard h4,
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard h5,
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard h6,
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard .text-dark,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .text-gray-900,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .text-gray-800,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .text-gray-700,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .text-blue-800,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .text-green-800,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .text-purple-800 { color: #e5efed !important; }
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard .text-muted,
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard .small,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .text-gray-600,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .text-gray-500 { color: #abc0bc !important; }
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard .progress { background: #294440 !important; }
+                [data-theme="dark"] .iso-professional-modal .modal-content,
+                [data-theme="dark"] .iso-professional-modal .modal-body { background: #102321 !important; color: #e8f2f0 !important; }
+                [data-theme="dark"] .iso-professional-modal label,
+                [data-theme="dark"] .iso-professional-modal .form-label,
+                [data-theme="dark"] .iso-professional-modal form { color: #d8e8e5 !important; }
+                [data-theme="dark"] .iso-professional-modal input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+                [data-theme="dark"] .iso-professional-modal select,
+                [data-theme="dark"] .iso-professional-modal textarea,
+                [data-theme="dark"] .iso-professional-modal .form-control,
+                [data-theme="dark"] .iso-professional-modal .form-select,
+                [data-theme="dark"] .iso-professional-modal .space-y-3 > div,
+                [data-theme="dark"] .iso-professional-modal .space-y-4 > div:not(.row) {
+                    border-color: #426560 !important;
+                    background: #172f2c !important;
+                    color: #eef7f5 !important;
+                }
+                [data-theme="dark"] .iso-professional-modal .modal-footer { border-color: #365550 !important; background: #132a27 !important; }
                 @media (max-width: 980px) {
                     .iso-workspace .iso-quick-stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+                    .iso-workspace .iso-standard-dashboard > .mb-4[style*="grid-template-columns"] { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
                 }
                 @media (max-width: 768px) {
                     .iso-workspace .iso-hero-header { padding: 18px; border-radius: 15px; }
@@ -482,11 +745,19 @@ const ISO = {
                     .iso-workspace .iso-tab-content .card-header > div { align-items: flex-start; }
                     .iso-workspace .iso-tab-content .card-header button { width: 100%; justify-content: center; }
                     .iso-workspace .iso-tab-content .card-body { padding: 13px; }
+                    .iso-professional-modal { align-items: flex-end !important; padding: 8px !important; }
+                    .iso-professional-modal .modal-content { max-height: calc(100dvh - 16px) !important; border-radius: 17px 17px 10px 10px !important; }
+                    .iso-professional-modal .modal-header { min-height: 64px; padding: 15px 16px !important; }
+                    .iso-professional-modal .modal-body { padding: 16px !important; }
+                    .iso-professional-modal .modal-footer { padding: 12px 16px !important; }
+                    .iso-professional-modal .modal-footer .btn,
+                    .iso-professional-modal .modal-footer button { flex: 1 1 130px; }
                 }
                 @media (max-width: 480px) {
                     .iso-workspace .iso-quick-stats { grid-template-columns: 1fr; }
                     .iso-workspace .iso-stat-card { min-height: 92px; }
                     .iso-workspace .iso-hero-header::after { display: none; }
+                    .iso-workspace .iso-standard-dashboard > .mb-4[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
                 }
                 @media (prefers-reduced-motion: reduce) {
                     .iso-workspace *, .iso-workspace *::before, .iso-workspace *::after { transition: none !important; animation: none !important; }
@@ -1117,7 +1388,7 @@ const ISO = {
         }
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay iso-professional-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
@@ -1291,7 +1562,7 @@ const ISO = {
         }
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay iso-professional-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
@@ -1440,7 +1711,7 @@ const ISO = {
         }
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay iso-professional-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
@@ -1634,7 +1905,7 @@ const ISO = {
         }
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay iso-professional-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
@@ -1673,7 +1944,7 @@ const ISO = {
         }
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay iso-professional-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
@@ -1711,7 +1982,7 @@ const ISO = {
         }
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay iso-professional-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
@@ -1798,7 +2069,7 @@ const ISO = {
         `).join('') : `<tr><td colspan="4" class="text-center text-muted py-4"><i class="fas fa-bullseye fs-4 mb-2 d-block"></i>لا توجد أهداف مسجلة حتى الآن</td></tr>`;
 
         return `
-            <div class="iso-dashboard">
+            <div class="iso-dashboard iso-standard-dashboard iso-45001-dashboard">
                 <!-- Header -->
                 <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; overflow: hidden;">
                     <div class="card-header bg-primary text-white p-4 border-0" style="background: linear-gradient(135deg, #0f172a 0%, #334155 100%) !important;">
@@ -1980,7 +2251,7 @@ const ISO = {
         `).join('') : `<tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-chart-line fs-4 mb-2 d-block"></i>لا توجد سجلات مراقبة مسجلة حتى الآن</td></tr>`;
 
         return `
-            <div class="iso-dashboard">
+            <div class="iso-dashboard iso-standard-dashboard iso-14001-dashboard">
                 <!-- Header -->
                 <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; overflow: hidden;">
                     <div class="card-header bg-success text-white p-4 border-0" style="background: linear-gradient(135deg, #166534 0%, #15803d 100%) !important;">
@@ -2273,7 +2544,7 @@ const ISO = {
 
     async showHSEObjectiveForm(data = null) {
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay iso-professional-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
@@ -2405,7 +2676,7 @@ const ISO = {
 
     async showEnvironmentalAspectsForm(data = null) {
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay iso-professional-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
@@ -2533,7 +2804,7 @@ const ISO = {
 
     async showAuditForm(data = null) {
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay iso-professional-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
@@ -2680,7 +2951,7 @@ const ISO = {
         }
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay iso-professional-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
@@ -2711,7 +2982,7 @@ const ISO = {
 
     async showNonConformityForm(data = null) {
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay iso-professional-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
@@ -2840,7 +3111,7 @@ const ISO = {
         }
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay iso-professional-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
@@ -2869,7 +3140,7 @@ const ISO = {
 
     async showCorrectiveActionForm(data = null) {
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay iso-professional-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
@@ -3004,7 +3275,7 @@ const ISO = {
         }
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay iso-professional-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
@@ -3802,7 +4073,7 @@ const ISO = {
 
     async showDocumentCodeForm(data = null) {
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay iso-professional-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
@@ -3997,7 +4268,7 @@ const ISO = {
         }
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay iso-professional-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
@@ -4163,7 +4434,7 @@ const ISO = {
             const code = await this.getDocumentCodeById(documentCodeId);
 
             const modal = document.createElement('div');
-            modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay iso-professional-modal';
             modal.innerHTML = `
                 <div class="modal-content" style="max-width: 800px;">
                     <div class="modal-header">
@@ -4384,7 +4655,7 @@ const ISO = {
     showHSERiskAssessmentForm(existingData = null) {
         const data = existingData || {};
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay fixed inset-0 bg-black/50 z-50 flex justify-center items-center';
+        modal.className = 'modal-overlay iso-professional-modal fixed inset-0 bg-black/50 z-50 flex justify-center items-center';
         modal.innerHTML = `
             <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden d-flex flex-column" style="max-height: 90vh;">
                 <div class="modal-header bg-light p-4 border-bottom d-flex justify-content-between align-items-center">
@@ -4471,7 +4742,7 @@ const ISO = {
     showHSEObjectiveForm(existingData = null) {
         const data = existingData || {};
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay fixed inset-0 bg-black/50 z-50 flex justify-center items-center';
+        modal.className = 'modal-overlay iso-professional-modal fixed inset-0 bg-black/50 z-50 flex justify-center items-center';
         modal.innerHTML = `
             <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden d-flex flex-column" style="max-height: 90vh;">
                 <div class="modal-header bg-light p-4 border-bottom d-flex justify-content-between align-items-center">
@@ -4552,7 +4823,7 @@ const ISO = {
     showEnvironmentalAspectsForm(existingData = null) {
         const data = existingData || {};
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay fixed inset-0 bg-black/50 z-50 flex justify-center items-center';
+        modal.className = 'modal-overlay iso-professional-modal fixed inset-0 bg-black/50 z-50 flex justify-center items-center';
         modal.innerHTML = `
             <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden d-flex flex-column" style="max-height: 90vh;">
                 <div class="modal-header bg-light p-4 border-bottom d-flex justify-content-between align-items-center">
@@ -4634,7 +4905,7 @@ const ISO = {
     showEnvironmentalMonitoringForm(existingData = null) {
         const data = existingData || {};
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay fixed inset-0 bg-black/50 z-50 flex justify-center items-center';
+        modal.className = 'modal-overlay iso-professional-modal fixed inset-0 bg-black/50 z-50 flex justify-center items-center';
         modal.innerHTML = `
             <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden d-flex flex-column" style="max-height: 90vh;">
                 <div class="modal-header bg-light p-4 border-bottom d-flex justify-content-between align-items-center">
