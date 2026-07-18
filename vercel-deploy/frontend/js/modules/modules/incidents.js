@@ -1457,59 +1457,487 @@ const Incidents = {
         }
     },
 
+    renderIncidentIdentityStyles_() {
+        return `
+            <style id="incidents-professional-identity-styles">
+                .incidents-workspace {
+                    --incident-navy: #0b2942;
+                    --incident-navy-2: #123f63;
+                    --incident-red: #c81e3a;
+                    --incident-red-soft: #fff1f2;
+                    --incident-gold: #f4b942;
+                    --incident-ink: #172033;
+                    --incident-muted: #64748b;
+                    --incident-line: #dbe5ee;
+                    --incident-surface: #ffffff;
+                    --incident-canvas: #f5f8fb;
+                    font-family: "Cairo", "Segoe UI", Tahoma, sans-serif;
+                }
+                .incidents-workspace .incidents-tabs-container {
+                    position: relative;
+                    overflow: hidden;
+                    padding: 8px;
+                    border: 1px solid rgba(255,255,255,.12);
+                    border-radius: 18px;
+                    background:
+                        radial-gradient(circle at 8% 0%, rgba(244,185,66,.2), transparent 28%),
+                        linear-gradient(125deg, var(--incident-navy) 0%, var(--incident-navy-2) 72%, #174f72 100%);
+                    box-shadow: 0 16px 35px rgba(11,41,66,.2);
+                }
+                .incidents-workspace .incidents-tabs-container::after {
+                    content: "";
+                    position: absolute;
+                    inset-inline-end: -48px;
+                    top: -54px;
+                    width: 160px;
+                    height: 160px;
+                    border: 26px solid rgba(255,255,255,.035);
+                    border-radius: 50%;
+                    pointer-events: none;
+                }
+                .incidents-workspace .incidents-tabs-nav {
+                    position: relative;
+                    z-index: 1;
+                    display: flex;
+                    gap: 7px;
+                    padding: 0;
+                    overflow-x: auto;
+                    border: 0;
+                    border-radius: 13px;
+                    background: transparent;
+                    box-shadow: none;
+                    scrollbar-width: thin;
+                    scrollbar-color: rgba(255,255,255,.35) transparent;
+                }
+                .incidents-workspace .incidents-tabs-nav .tab-btn {
+                    min-height: 48px;
+                    min-width: max-content;
+                    padding: 10px 15px;
+                    gap: 8px;
+                    border: 1px solid rgba(255,255,255,.14);
+                    border-radius: 11px;
+                    background: rgba(255,255,255,.075);
+                    color: rgba(255,255,255,.82);
+                    font-size: .83rem;
+                    font-weight: 700;
+                    line-height: 1.2;
+                    white-space: nowrap;
+                    box-shadow: none;
+                    transition: background .2s ease, color .2s ease, transform .2s ease, box-shadow .2s ease;
+                }
+                .incidents-workspace .incidents-tabs-nav .tab-btn::before { display: none; }
+                .incidents-workspace .incidents-tabs-nav .tab-btn i {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 29px;
+                    height: 29px;
+                    margin: 0;
+                    border-radius: 8px;
+                    background: rgba(255,255,255,.12);
+                    color: #fde68a;
+                    font-size: .78rem;
+                }
+                .incidents-workspace .incidents-tabs-nav .tab-btn:hover {
+                    background: rgba(255,255,255,.14);
+                    color: #fff;
+                    transform: translateY(-1px);
+                }
+                .incidents-workspace .incidents-tabs-nav .tab-btn.active {
+                    border-color: #fff;
+                    background: #fff;
+                    color: var(--incident-navy);
+                    box-shadow: 0 8px 22px rgba(0,0,0,.18);
+                    transform: translateY(-1px);
+                }
+                .incidents-workspace .incidents-tabs-nav .tab-btn.active i {
+                    background: var(--incident-red-soft);
+                    color: var(--incident-red);
+                }
+                .incidents-workspace #incidents-tab-content {
+                    margin-top: 18px !important;
+                    min-height: 220px;
+                }
+                .incidents-workspace #incidents-tab-content.incident-identity-surface {
+                    animation: incidentSurfaceIn .24s ease-out;
+                }
+                @keyframes incidentSurfaceIn {
+                    from { opacity: 0; transform: translateY(5px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .incidents-workspace #incidents-tab-content[data-tab="registry"] .content-card,
+                .incidents-workspace #incidents-tab-content[data-tab="detailed-log"] .content-card,
+                .incidents-workspace #incidents-tab-content[data-tab="incidents-list"] .content-card,
+                .incidents-workspace #incidents-tab-content[data-tab="annual-log"] .content-card {
+                    overflow: hidden !important;
+                    border: 1px solid var(--incident-line) !important;
+                    border-radius: 16px !important;
+                    background: var(--incident-surface) !important;
+                    box-shadow: 0 10px 28px rgba(15,47,79,.08) !important;
+                    transform: none !important;
+                }
+                .incidents-workspace #incidents-tab-content.incident-identity-surface .content-card:hover {
+                    box-shadow: 0 14px 32px rgba(15,47,79,.11) !important;
+                    transform: none !important;
+                }
+                .incidents-workspace #incidents-tab-content[data-tab="registry"] .card-header,
+                .incidents-workspace #incidents-tab-content[data-tab="detailed-log"] .card-header,
+                .incidents-workspace #incidents-tab-content[data-tab="incidents-list"] .card-header,
+                .incidents-workspace #incidents-tab-content[data-tab="annual-log"] .card-header {
+                    position: relative;
+                    padding: 17px 20px;
+                    border-bottom: 1px solid #d9e4ed;
+                    background: linear-gradient(115deg, #edf4f9 0%, #fff 64%, #fff7f7 100%) !important;
+                }
+                .incidents-workspace #incidents-tab-content[data-tab="registry"] .card-header::before,
+                .incidents-workspace #incidents-tab-content[data-tab="detailed-log"] .card-header::before,
+                .incidents-workspace #incidents-tab-content[data-tab="incidents-list"] .card-header::before,
+                .incidents-workspace #incidents-tab-content[data-tab="annual-log"] .card-header::before {
+                    content: "";
+                    position: absolute;
+                    inset-block: 0;
+                    inset-inline-start: 0;
+                    width: 5px;
+                    background: linear-gradient(180deg, var(--incident-red), #ef4444);
+                }
+                .incidents-workspace #incidents-tab-content[data-tab="registry"] .card-title,
+                .incidents-workspace #incidents-tab-content[data-tab="detailed-log"] .card-title,
+                .incidents-workspace #incidents-tab-content[data-tab="incidents-list"] .card-title,
+                .incidents-workspace #incidents-tab-content[data-tab="annual-log"] .card-title {
+                    display: flex;
+                    align-items: center;
+                    gap: 9px;
+                    margin: 0;
+                    color: var(--incident-navy);
+                    font-size: 1rem;
+                    font-weight: 800;
+                }
+                .incidents-workspace #incidents-tab-content[data-tab="registry"] .card-title i,
+                .incidents-workspace #incidents-tab-content[data-tab="detailed-log"] .card-title i,
+                .incidents-workspace #incidents-tab-content[data-tab="incidents-list"] .card-title i,
+                .incidents-workspace #incidents-tab-content[data-tab="annual-log"] .card-title i {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 34px;
+                    height: 34px;
+                    margin: 0 !important;
+                    border-radius: 9px;
+                    background: var(--incident-navy);
+                    color: #fff;
+                    box-shadow: 0 5px 12px rgba(11,41,66,.18);
+                }
+                .incidents-workspace .incident-action-bar {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    padding: 14px 16px;
+                    margin-bottom: 16px;
+                    border: 1px solid var(--incident-line);
+                    border-radius: 15px;
+                    background: linear-gradient(120deg, #fff 0%, #f5f9fc 100%);
+                    box-shadow: 0 8px 20px rgba(15,47,79,.06);
+                }
+                .incidents-workspace .incident-action-bar .btn-primary,
+                .incidents-workspace .incident-action-bar .btn-secondary,
+                .incidents-workspace .incident-action-bar .btn-success {
+                    border-radius: 10px;
+                    min-height: 40px;
+                    font-weight: 700;
+                    box-shadow: 0 5px 13px rgba(15,47,79,.12);
+                }
+                .incidents-workspace .incident-kpi-grid {
+                    display: grid;
+                    grid-template-columns: repeat(5, minmax(0, 1fr));
+                    gap: 12px;
+                    margin-bottom: 18px;
+                }
+                .incidents-workspace .incident-kpi-grid .kpi-card {
+                    min-height: 108px;
+                    margin: 0 !important;
+                    padding: 16px !important;
+                    border: 1px solid var(--incident-line) !important;
+                    border-radius: 15px !important;
+                    background: linear-gradient(145deg, #fff 0%, #f7fafc 100%) !important;
+                    box-shadow: 0 8px 20px rgba(15,47,79,.07) !important;
+                    transform: none !important;
+                }
+                .incidents-workspace .incident-kpi-grid .kpi-card::before {
+                    width: 4px !important;
+                    border-radius: 0 15px 15px 0;
+                }
+                .incidents-workspace .incident-kpi-grid .kpi-card:hover {
+                    border-color: #b9cbd9 !important;
+                    box-shadow: 0 12px 26px rgba(15,47,79,.11) !important;
+                    transform: translateY(-2px) !important;
+                }
+                .incidents-workspace .incident-filter-card {
+                    background: linear-gradient(135deg, #f7fafc 0%, #fff 100%) !important;
+                }
+                .incidents-workspace .incident-filter-card .card-body { padding: 17px 18px; }
+                .incidents-workspace .incident-filter-card label {
+                    color: #31465a !important;
+                    font-size: .76rem !important;
+                    font-weight: 800 !important;
+                }
+                .incidents-workspace .incident-filter-card label i { color: var(--incident-red); }
+                .incidents-workspace .incident-filter-card .form-input,
+                .incidents-workspace .incidents-list-toolbar .form-input {
+                    min-height: 42px;
+                    border: 1.5px solid #cbd9e5;
+                    border-radius: 10px;
+                    background-color: #fff;
+                    color: var(--incident-ink);
+                    font-size: .82rem;
+                    box-shadow: 0 2px 5px rgba(15,47,79,.035);
+                    transition: border-color .18s ease, box-shadow .18s ease;
+                }
+                .incidents-workspace .incident-filter-card .form-input:focus,
+                .incidents-workspace .incidents-list-toolbar .form-input:focus {
+                    border-color: var(--incident-navy-2);
+                    box-shadow: 0 0 0 3px rgba(18,63,99,.12);
+                    outline: none;
+                }
+                .incidents-workspace .incidents-list-toolbar {
+                    display: flex;
+                    align-items: flex-end;
+                    gap: 10px;
+                    flex-wrap: wrap;
+                }
+                .incidents-workspace .incident-list-filter-field {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 5px;
+                }
+                .incidents-workspace .incident-list-filter-field label {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    color: #3b5266;
+                    font-size: .69rem;
+                    font-weight: 800;
+                }
+                .incidents-workspace .incident-list-filter-field label i { color: var(--incident-red); }
+                .incidents-workspace #incidents-tab-content[data-tab="registry"] .table-responsive,
+                .incidents-workspace #incidents-tab-content[data-tab="detailed-log"] .table-wrapper,
+                .incidents-workspace #incidents-tab-content[data-tab="incidents-list"] .table-wrapper,
+                .incidents-workspace #incidents-tab-content[data-tab="annual-log"] .table-wrapper {
+                    overflow: auto;
+                    max-height: 68vh;
+                    border: 1px solid #d7e2eb;
+                    border-radius: 13px;
+                    background: #fff;
+                    box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+                    scrollbar-width: thin;
+                    scrollbar-color: #91a9ba #edf3f7;
+                }
+                .incidents-workspace #incidents-tab-content[data-tab="registry"] .data-table,
+                .incidents-workspace #incidents-tab-content[data-tab="detailed-log"] .data-table,
+                .incidents-workspace #incidents-tab-content[data-tab="incidents-list"] .data-table,
+                .incidents-workspace #incidents-tab-content[data-tab="annual-log"] .data-table {
+                    width: 100%;
+                    margin: 0;
+                    border: 0;
+                    border-collapse: separate;
+                    border-spacing: 0;
+                    color: var(--incident-ink);
+                    font-size: .78rem;
+                }
+                .incidents-workspace #incidents-tab-content[data-tab="registry"] .data-table thead th,
+                .incidents-workspace #incidents-tab-content[data-tab="detailed-log"] .data-table thead th,
+                .incidents-workspace #incidents-tab-content[data-tab="incidents-list"] .data-table thead th,
+                .incidents-workspace #incidents-tab-content[data-tab="annual-log"] .data-table thead th {
+                    position: sticky;
+                    top: 0;
+                    z-index: 3;
+                    padding: 13px 12px;
+                    border: 0;
+                    border-inline-end: 1px solid rgba(255,255,255,.11);
+                    border-bottom: 3px solid var(--incident-gold);
+                    background: linear-gradient(180deg, var(--incident-navy-2) 0%, var(--incident-navy) 100%) !important;
+                    color: #fff !important;
+                    font-size: .74rem;
+                    font-weight: 800;
+                    line-height: 1.45;
+                    text-align: center;
+                    white-space: nowrap;
+                    text-shadow: 0 1px 1px rgba(0,0,0,.2);
+                }
+                .incidents-workspace #incidents-tab-content[data-tab="registry"] .data-table tbody td,
+                .incidents-workspace #incidents-tab-content[data-tab="detailed-log"] .data-table tbody td,
+                .incidents-workspace #incidents-tab-content[data-tab="incidents-list"] .data-table tbody td,
+                .incidents-workspace #incidents-tab-content[data-tab="annual-log"] .data-table tbody td {
+                    padding: 11px 12px;
+                    border: 0;
+                    border-inline-end: 1px solid #edf2f6;
+                    border-bottom: 1px solid #e5edf3;
+                    background: #fff;
+                    vertical-align: middle;
+                    text-align: center;
+                    line-height: 1.65;
+                }
+                .incidents-workspace #incidents-tab-content[data-tab="registry"] .data-table tbody tr:nth-child(even) td,
+                .incidents-workspace #incidents-tab-content[data-tab="detailed-log"] .data-table tbody tr:nth-child(even) td,
+                .incidents-workspace #incidents-tab-content[data-tab="incidents-list"] .data-table tbody tr:nth-child(even) td,
+                .incidents-workspace #incidents-tab-content[data-tab="annual-log"] .data-table tbody tr:nth-child(even) td {
+                    background: #f8fbfd;
+                }
+                .incidents-workspace #incidents-tab-content[data-tab="registry"] .data-table tbody tr:hover td,
+                .incidents-workspace #incidents-tab-content[data-tab="detailed-log"] .data-table tbody tr:hover td,
+                .incidents-workspace #incidents-tab-content[data-tab="incidents-list"] .data-table tbody tr:hover td,
+                .incidents-workspace #incidents-tab-content[data-tab="annual-log"] .data-table tbody tr:hover td {
+                    background: #fff8ed;
+                }
+                .incidents-workspace #incidents-tab-content[data-tab="registry"] .data-table .btn-icon,
+                .incidents-workspace #incidents-tab-content[data-tab="detailed-log"] .data-table .btn-icon,
+                .incidents-workspace #incidents-tab-content[data-tab="incidents-list"] .data-table .btn-icon {
+                    width: 34px;
+                    height: 34px;
+                    border-radius: 9px;
+                    box-shadow: 0 4px 10px rgba(15,47,79,.12);
+                }
+                .incidents-workspace .incident-annual-summary {
+                    display: grid;
+                    grid-template-columns: repeat(3, minmax(0,1fr));
+                    gap: 13px;
+                    margin-bottom: 20px;
+                }
+                .incidents-workspace .incident-annual-summary > div {
+                    position: relative;
+                    overflow: hidden;
+                    min-height: 118px;
+                    padding: 18px !important;
+                    border: 1px solid var(--incident-line) !important;
+                    border-radius: 15px !important;
+                    background: linear-gradient(145deg, #fff 0%, #f4f8fb 100%) !important;
+                    box-shadow: 0 8px 20px rgba(15,47,79,.07);
+                }
+                .incidents-workspace .incident-annual-summary > div::after {
+                    content: "";
+                    position: absolute;
+                    inset-inline-end: -22px;
+                    bottom: -28px;
+                    width: 82px;
+                    height: 82px;
+                    border-radius: 50%;
+                    background: rgba(200,30,58,.055);
+                }
+                [data-theme="dark"] .incidents-workspace {
+                    --incident-ink: #e6edf4;
+                    --incident-muted: #a8b8c7;
+                    --incident-line: #344b5e;
+                    --incident-surface: #172736;
+                    --incident-canvas: #101d29;
+                }
+                [data-theme="dark"] .incidents-workspace #incidents-tab-content.incident-identity-surface .content-card,
+                [data-theme="dark"] .incidents-workspace #incidents-tab-content.incident-identity-surface .card-header,
+                [data-theme="dark"] .incidents-workspace .incident-action-bar,
+                [data-theme="dark"] .incidents-workspace .incident-filter-card,
+                [data-theme="dark"] .incidents-workspace .incident-kpi-grid .kpi-card,
+                [data-theme="dark"] .incidents-workspace .incident-annual-summary > div {
+                    background: #172736 !important;
+                    color: #e6edf4;
+                }
+                [data-theme="dark"] .incidents-workspace #incidents-tab-content.incident-identity-surface .data-table tbody td {
+                    border-color: #2d4355;
+                    background: #172736;
+                    color: #e6edf4;
+                }
+                [data-theme="dark"] .incidents-workspace #incidents-tab-content.incident-identity-surface .data-table tbody tr:nth-child(even) td { background: #1b3041; }
+                [data-theme="dark"] .incidents-workspace #incidents-tab-content.incident-identity-surface .data-table tbody tr:hover td { background: #35402f; }
+                [data-theme="dark"] .incidents-workspace #incidents-tab-content.incident-identity-surface .card-title,
+                [data-theme="dark"] .incidents-workspace .incident-filter-card label,
+                [data-theme="dark"] .incidents-workspace .incident-list-filter-field label { color: #e6edf4 !important; }
+                [data-theme="dark"] .incidents-workspace .incident-filter-card .form-input,
+                [data-theme="dark"] .incidents-workspace .incidents-list-toolbar .form-input {
+                    border-color: #466176;
+                    background: #102231;
+                    color: #f1f5f9;
+                }
+                @media (max-width: 1100px) {
+                    .incidents-workspace .incident-kpi-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+                }
+                @media (max-width: 768px) {
+                    .incidents-workspace .incidents-tabs-container { border-radius: 14px; padding: 6px; }
+                    .incidents-workspace .incidents-tabs-nav .tab-btn { min-height: 43px; padding: 8px 11px; font-size: .76rem; }
+                    .incidents-workspace .incidents-tabs-nav .tab-btn i { width: 26px; height: 26px; }
+                    .incidents-workspace .incident-action-bar { align-items: stretch; flex-direction: column; }
+                    .incidents-workspace .incident-action-bar > div { display: grid; grid-template-columns: 1fr 1fr; }
+                    .incidents-workspace .incident-kpi-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+                    .incidents-workspace .incident-annual-summary { grid-template-columns: 1fr; }
+                    .incidents-workspace .incidents-list-toolbar { width: 100%; display: grid; grid-template-columns: 1fr; }
+                    .incidents-workspace .incidents-list-toolbar .form-input { width: 100%; max-width: none !important; }
+                    .incidents-workspace #incidents-tab-content.incident-identity-surface .card-header > div { align-items: flex-start; gap: 12px; flex-direction: column; }
+                    .incidents-workspace #incidents-tab-content.incident-identity-surface .card-body { padding: 13px; }
+                }
+                @media (max-width: 460px) {
+                    .incidents-workspace .incident-kpi-grid { grid-template-columns: 1fr; }
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .incidents-workspace *, .incidents-workspace *::before, .incidents-workspace *::after { transition: none !important; }
+                }
+            </style>
+        `;
+    },
+
     async renderMainView() {
         // الحصول على التبويبات المسموح بها للمستخدم
         const allowedTabs = this.getAllowedTabs();
+        const initialTab = allowedTabs[0] || 'incidents-list';
 
         return `
-            <div class="tabs-container">
-                <div class="tabs-nav">
+            ${this.renderIncidentIdentityStyles_()}
+            <div class="incidents-workspace" dir="rtl">
+            <div class="tabs-container incidents-tabs-container">
+                <div class="tabs-nav incidents-tabs-nav" role="tablist" aria-label="تبويبات مديول الحوادث">
                     ${allowedTabs.includes('registry') ? `
-                    <button class="tab-btn active" data-tab="registry" onclick="Incidents.switchTab('registry')">
+                    <button class="tab-btn ${initialTab === 'registry' ? 'active' : ''}" role="tab" aria-selected="${initialTab === 'registry' ? 'true' : 'false'}" data-tab="registry" onclick="Incidents.switchTab('registry')">
                         <i class="fas fa-clipboard-list"></i>
                         سجل الحوادث
                     </button>
                     ` : ''}
                     ${allowedTabs.includes('detailed-log') ? `
-                    <button class="tab-btn ${allowedTabs.includes('registry') ? '' : 'active'}" data-tab="detailed-log" onclick="Incidents.switchTab('detailed-log')">
+                    <button class="tab-btn ${initialTab === 'detailed-log' ? 'active' : ''}" role="tab" aria-selected="${initialTab === 'detailed-log' ? 'true' : 'false'}" data-tab="detailed-log" onclick="Incidents.switchTab('detailed-log')">
                         <i class="fas fa-clipboard-list"></i>
                         سجل الحوادث التفصيلي
                     </button>
                     ` : ''}
                     ${allowedTabs.includes('incidents-list') ? `
-                    <button class="tab-btn ${!allowedTabs.includes('registry') && !allowedTabs.includes('detailed-log') ? 'active' : ''}" data-tab="incidents-list" onclick="Incidents.switchTab('incidents-list')">
+                    <button class="tab-btn ${initialTab === 'incidents-list' ? 'active' : ''}" role="tab" aria-selected="${initialTab === 'incidents-list' ? 'true' : 'false'}" data-tab="incidents-list" onclick="Incidents.switchTab('incidents-list')">
                         <i class="fas fa-list"></i>
                         قائمة الحوادث
                     </button>
                     ` : ''}
                     ${allowedTabs.includes('annual-log') ? `
-                    <button class="tab-btn" data-tab="annual-log" onclick="Incidents.switchTab('annual-log')">
+                    <button class="tab-btn ${initialTab === 'annual-log' ? 'active' : ''}" role="tab" aria-selected="${initialTab === 'annual-log' ? 'true' : 'false'}" data-tab="annual-log" onclick="Incidents.switchTab('annual-log')">
                         <i class="fas fa-calendar-alt"></i>
                         سجل الحوادث السنوي
                     </button>
                     ` : ''}
                     ${allowedTabs.includes('analysis') ? `
-                    <button class="tab-btn" data-tab="analysis" onclick="Incidents.switchTab('analysis')">
+                    <button class="tab-btn ${initialTab === 'analysis' ? 'active' : ''}" role="tab" aria-selected="${initialTab === 'analysis' ? 'true' : 'false'}" data-tab="analysis" onclick="Incidents.switchTab('analysis')">
                         <i class="fas fa-chart-line"></i>
                         تحليل الحوادث
                     </button>
                     ` : ''}
                     ${allowedTabs.includes('approvals') ? `
-                    <button class="tab-btn" data-tab="approvals" onclick="Incidents.switchTab('approvals')">
+                    <button class="tab-btn ${initialTab === 'approvals' ? 'active' : ''}" role="tab" aria-selected="${initialTab === 'approvals' ? 'true' : 'false'}" data-tab="approvals" onclick="Incidents.switchTab('approvals')">
                         <i class="fas fa-check-circle"></i>
                         الموافقات
                     </button>
                     ` : ''}
                     ${allowedTabs.includes('safety-alerts') ? `
-                    <button class="tab-btn" data-tab="safety-alerts" onclick="Incidents.switchTab('safety-alerts')">
+                    <button class="tab-btn ${initialTab === 'safety-alerts' ? 'active' : ''}" role="tab" aria-selected="${initialTab === 'safety-alerts' ? 'true' : 'false'}" data-tab="safety-alerts" onclick="Incidents.switchTab('safety-alerts')">
                         <i class="fas fa-exclamation-triangle"></i>
                         التنبيه عن حادث
                     </button>
                     ` : ''}
                 </div>
             </div>
-            <div id="incidents-tab-content" class="mt-6">
-                ${await this.renderTabContent(allowedTabs[0] || 'incidents-list')}
+            <div id="incidents-tab-content" class="mt-6 ${['registry', 'detailed-log', 'incidents-list', 'annual-log'].includes(initialTab) ? 'incident-identity-surface' : ''}" data-tab="${initialTab}">
+                ${await this.renderTabContent(initialTab)}
+            </div>
             </div>
         `;
     },
@@ -1554,7 +1982,10 @@ const Incidents = {
         // Update tab buttons
         document.querySelectorAll('.tabs-nav .tab-btn').forEach(btn => {
             btn.classList.remove('active');
-            if (btn.dataset.tab === tabName) {
+            const isActive = btn.dataset.tab === tabName;
+            btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            btn.tabIndex = isActive ? 0 : -1;
+            if (isActive) {
                 btn.classList.add('active');
             }
         });
@@ -1562,6 +1993,8 @@ const Incidents = {
         // Render tab content
         const contentContainer = document.getElementById('incidents-tab-content');
         if (contentContainer) {
+            contentContainer.dataset.tab = tabName;
+            contentContainer.classList.toggle('incident-identity-surface', ['registry', 'detailed-log', 'incidents-list', 'annual-log'].includes(tabName));
             contentContainer.innerHTML = await this.renderTabContent(tabName);
             this.applyModuleI18n(contentContainer);
             this.setupTabEventListeners(tabName);
@@ -1678,7 +2111,7 @@ const Incidents = {
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 incident-annual-summary">
                         <div class="border border-gray-200 rounded-lg p-4 bg-white">
                             <p class="text-xs text-gray-500 mb-1">إجمالي الحوادث</p>
                             <p class="text-3xl font-bold text-gray-900">${totals.totalIncidents}</p>
@@ -1826,22 +2259,22 @@ const Incidents = {
                             <i class="fas fa-list ml-2"></i>
                             قائمة الحوادث
                         </h2>
-                        <div class="flex items-center gap-4">
-                            <input 
-                                type="text" 
-                                id="incidents-search" 
-                                class="form-input" 
-                                style="max-width: 300px;"
-                                placeholder="البحث..."
-                            >
-                            <select id="incidents-filter-status" class="form-input" style="max-width: 200px;">
-                                <option value="">جميع الحالات</option>
-                                <option value="مفتوح">مفتوح</option>
-                                <option value="قيد التحقيق">قيد التحقيق</option>
-                                <option value="تحقيق منتهي">تحقيق منتهي</option>
-                                <option value="مكتمل">مكتمل</option>
-                                <option value="مغلق">مغلق</option>
-                            </select>
+                        <div class="flex items-center gap-4 incidents-list-toolbar">
+                            <div class="incident-list-filter-field">
+                                <label for="incidents-search"><i class="fas fa-search"></i> بحث سريع</label>
+                                <input type="text" id="incidents-search" class="form-input" style="min-width: 260px; max-width: 300px;" placeholder="العنوان، الموقع، المبلّغ...">
+                            </div>
+                            <div class="incident-list-filter-field">
+                                <label for="incidents-filter-status"><i class="fas fa-filter"></i> حالة الحادث</label>
+                                <select id="incidents-filter-status" class="form-input" style="min-width: 180px; max-width: 210px;">
+                                    <option value="">جميع الحالات</option>
+                                    <option value="مفتوح">مفتوح</option>
+                                    <option value="قيد التحقيق">قيد التحقيق</option>
+                                    <option value="تحقيق منتهي">تحقيق منتهي</option>
+                                    <option value="مكتمل">مكتمل</option>
+                                    <option value="مغلق">مغلق</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2660,7 +3093,7 @@ const Incidents = {
 
         return `
             <!-- أزرار التصدير والإدخال -->
-            <div class="flex justify-between items-center gap-2 mb-4">
+            <div class="flex justify-between items-center gap-2 mb-4 incident-action-bar">
                 <button id="incidents-registry-add-manual" class="btn-success">
                     <i class="fas fa-plus-circle ml-2"></i>
                     إضافة حادث / Add Incident
@@ -2678,7 +3111,7 @@ const Incidents = {
             </div>
             
             <!-- بطاقات الإحصائيات -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 incident-kpi-grid">
                 <div class="kpi-card kpi-info">
                     <div class="kpi-icon"><i class="fas fa-list-ol"></i></div>
                     <div class="kpi-content">
@@ -2717,7 +3150,7 @@ const Incidents = {
             </div>
             
             <!-- فلاتر البحث -->
-            <div class="content-card mb-4">
+            <div class="content-card mb-4 incident-filter-card">
                 <div class="card-body">
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
@@ -6451,22 +6884,22 @@ const Incidents = {
                             <i class="fas fa-list ml-2"></i>
                             قائمة الحوادث
                         </h2>
-                        <div class="flex items-center gap-4">
-                            <input 
-                                type="text" 
-                                id="incidents-search" 
-                                class="form-input" 
-                                style="max-width: 300px;"
-                                placeholder="البحث..."
-                            >
-                            <select id="incidents-filter-status" class="form-input" style="max-width: 200px;">
-                                <option value="">جميع الحالات</option>
-                                <option value="مفتوح">مفتوح</option>
-                                <option value="قيد التحقيق">قيد التحقيق</option>
-                                <option value="تحقيق منتهي">تحقيق منتهي</option>
-                                <option value="مكتمل">مكتمل</option>
-                                <option value="مغلق">مغلق</option>
-                            </select>
+                        <div class="flex items-center gap-4 incidents-list-toolbar">
+                            <div class="incident-list-filter-field">
+                                <label for="incidents-search"><i class="fas fa-search"></i> بحث سريع</label>
+                                <input type="text" id="incidents-search" class="form-input" style="min-width: 260px; max-width: 300px;" placeholder="العنوان، الموقع، المبلّغ...">
+                            </div>
+                            <div class="incident-list-filter-field">
+                                <label for="incidents-filter-status"><i class="fas fa-filter"></i> حالة الحادث</label>
+                                <select id="incidents-filter-status" class="form-input" style="min-width: 180px; max-width: 210px;">
+                                    <option value="">جميع الحالات</option>
+                                    <option value="مفتوح">مفتوح</option>
+                                    <option value="قيد التحقيق">قيد التحقيق</option>
+                                    <option value="تحقيق منتهي">تحقيق منتهي</option>
+                                    <option value="مكتمل">مكتمل</option>
+                                    <option value="مغلق">مغلق</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
