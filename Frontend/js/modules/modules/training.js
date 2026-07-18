@@ -15,6 +15,389 @@ const Training = {
             i18nCore.applyLiteralTranslations(target);
         }
     },
+
+    renderIdentityStyles_() {
+        return `
+            <style id="training-professional-identity-styles">
+                .training-workspace {
+                    --training-petrol: #073b3a;
+                    --training-petrol-2: #0a4f4c;
+                    --training-teal: #0f766e;
+                    --training-mint: #2dd4bf;
+                    --training-gold: #d7a92f;
+                    --training-ink: #172b2a;
+                    --training-muted: #617673;
+                    --training-line: #d6e5e2;
+                    --training-surface: #ffffff;
+                    --training-soft: #f3f8f7;
+                    position: relative;
+                    color: var(--training-ink);
+                    isolation: isolate;
+                }
+                .training-workspace *,
+                .training-workspace *::before,
+                .training-workspace *::after { box-sizing: border-box; }
+                .training-workspace .training-hero-header {
+                    position: relative;
+                    overflow: hidden;
+                    margin: 0 !important;
+                    padding: clamp(18px, 2.2vw, 28px) !important;
+                    border: 1px solid rgba(255,255,255,.11) !important;
+                    border-radius: 19px !important;
+                    background:
+                        radial-gradient(circle at 12% 12%, rgba(45,212,191,.19), transparent 31%),
+                        linear-gradient(125deg, #062f2f 0%, var(--training-petrol) 52%, #0b5d58 100%) !important;
+                    color: #fff;
+                    box-shadow: 0 16px 38px rgba(7,59,58,.19);
+                }
+                .training-workspace .training-hero-header::after {
+                    content: "";
+                    position: absolute;
+                    inset-block: -75px;
+                    inset-inline-end: -55px;
+                    width: 230px;
+                    border: 1px solid rgba(255,255,255,.12);
+                    border-radius: 48%;
+                    transform: rotate(-16deg);
+                    pointer-events: none;
+                }
+                .training-workspace .training-hero-layout {
+                    position: relative;
+                    z-index: 1;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 22px;
+                }
+                .training-workspace .training-hero-copy {
+                    display: flex;
+                    align-items: center;
+                    gap: 15px;
+                    min-width: 240px;
+                }
+                .training-workspace .training-hero-icon {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex: 0 0 54px;
+                    width: 54px;
+                    height: 54px;
+                    border: 1px solid rgba(255,255,255,.22);
+                    border-radius: 15px;
+                    background: rgba(255,255,255,.12);
+                    color: #99f6e4;
+                    font-size: 1.35rem;
+                    box-shadow: inset 0 1px rgba(255,255,255,.2);
+                }
+                .training-workspace .training-hero-header .section-title {
+                    margin: 0 0 5px !important;
+                    color: #fff !important;
+                    font-size: clamp(1.25rem, 2vw, 1.7rem) !important;
+                    font-weight: 900 !important;
+                    letter-spacing: -.02em;
+                }
+                .training-workspace .training-hero-header .section-subtitle {
+                    margin: 0 !important;
+                    color: rgba(255,255,255,.72) !important;
+                    font-size: .83rem;
+                    line-height: 1.7;
+                }
+                .training-workspace .training-hero-actions {
+                    display: flex;
+                    align-items: center;
+                    justify-content: flex-end;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                }
+                .training-workspace .training-hero-actions button {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 40px;
+                    margin: 0 !important;
+                    padding: 9px 13px !important;
+                    border: 1px solid rgba(255,255,255,.19) !important;
+                    border-radius: 10px !important;
+                    background: rgba(255,255,255,.11) !important;
+                    color: #fff !important;
+                    font-size: .75rem;
+                    font-weight: 800;
+                    box-shadow: none !important;
+                    backdrop-filter: blur(8px);
+                }
+                .training-workspace .training-hero-actions button:hover {
+                    border-color: rgba(255,255,255,.38) !important;
+                    background: rgba(255,255,255,.2) !important;
+                    transform: translateY(-1px);
+                }
+                .training-workspace .training-hero-actions .btn-primary {
+                    border-color: #f1cf68 !important;
+                    background: linear-gradient(135deg,#edc653,#c9961e) !important;
+                    color: #213b38 !important;
+                }
+                .training-workspace #training-content { margin-top: 17px !important; }
+                .training-workspace .tabs-container {
+                    position: relative;
+                    margin: 0 0 18px !important;
+                    padding: 8px;
+                    border: 1px solid rgba(255,255,255,.1);
+                    border-radius: 16px;
+                    background: linear-gradient(115deg,var(--training-petrol),var(--training-petrol-2));
+                    box-shadow: 0 11px 27px rgba(7,59,58,.14);
+                }
+                .training-workspace .tabs-header {
+                    display: flex;
+                    flex-wrap: nowrap !important;
+                    gap: 7px;
+                    margin: 0;
+                    padding: 0 0 2px;
+                    overflow-x: auto;
+                    border: 0 !important;
+                    scrollbar-width: thin;
+                    scrollbar-color: rgba(255,255,255,.35) transparent;
+                    overscroll-behavior-inline: contain;
+                }
+                .training-workspace .tabs-header .tab-btn {
+                    position: relative;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex: 0 0 auto;
+                    gap: 8px;
+                    min-width: max-content;
+                    min-height: 47px;
+                    margin: 0 !important;
+                    padding: 9px 14px !important;
+                    border: 1px solid rgba(255,255,255,.13) !important;
+                    border-radius: 11px !important;
+                    background: rgba(255,255,255,.07) !important;
+                    color: rgba(255,255,255,.81) !important;
+                    font-size: .79rem !important;
+                    font-weight: 780 !important;
+                    white-space: nowrap;
+                    box-shadow: none !important;
+                    transition: transform .18s ease, background-color .18s ease, color .18s ease;
+                }
+                .training-workspace .tabs-header .tab-btn i {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 29px;
+                    height: 29px;
+                    margin: 0 !important;
+                    border-radius: 8px;
+                    background: rgba(255,255,255,.12);
+                    color: #99f6e4;
+                    font-size: .77rem;
+                }
+                .training-workspace .tabs-header .tab-btn[data-tab="contractors"] i { color: #fde68a; }
+                .training-workspace .tabs-header .tab-btn[data-tab="attendance"] i { color: #bfdbfe; }
+                .training-workspace .tabs-header .tab-btn[data-tab="legalTraining"] i { color: #fecaca; }
+                .training-workspace .tabs-header .tab-btn[data-tab="analysis"] i { color: #ddd6fe; }
+                .training-workspace .tabs-header .tab-btn:hover {
+                    background: rgba(255,255,255,.15) !important;
+                    color: #fff !important;
+                    transform: translateY(-1px);
+                }
+                .training-workspace .tabs-header .tab-btn.active {
+                    border-color: #fff !important;
+                    background: #fff !important;
+                    color: var(--training-petrol) !important;
+                    box-shadow: 0 8px 20px rgba(0,0,0,.17) !important;
+                }
+                .training-workspace .tabs-header .tab-btn.active i {
+                    background: #e5f7f3;
+                    color: var(--training-teal);
+                }
+                .training-workspace #training-tab-content {
+                    min-width: 0;
+                    animation: trainingSurfaceIn .24s ease-out;
+                }
+                @keyframes trainingSurfaceIn {
+                    from { opacity: 0; transform: translateY(5px); }
+                    to { opacity: 1; transform: none; }
+                }
+                .training-workspace #training-tab-content .content-card,
+                .training-workspace #training-tab-content .legal-table-card {
+                    overflow: hidden;
+                    min-width: 0;
+                    border: 1px solid var(--training-line) !important;
+                    border-radius: 15px !important;
+                    background: var(--training-surface) !important;
+                    box-shadow: 0 9px 25px rgba(7,59,58,.075) !important;
+                    transform: none !important;
+                }
+                .training-workspace #training-tab-content .content-card:hover,
+                .training-workspace #training-tab-content .legal-table-card:hover {
+                    box-shadow: 0 12px 29px rgba(7,59,58,.1) !important;
+                    transform: none !important;
+                }
+                .training-workspace #training-tab-content .card-header {
+                    position: relative;
+                    padding: 16px 18px !important;
+                    border-bottom: 1px solid #d9e7e4 !important;
+                    background: linear-gradient(115deg,#eaf5f3,#fff 68%,#f7fbfa) !important;
+                    color: var(--training-petrol) !important;
+                }
+                .training-workspace #training-tab-content .card-header::before {
+                    content: "";
+                    position: absolute;
+                    inset-block: 0;
+                    inset-inline-start: 0;
+                    width: 5px;
+                    background: linear-gradient(180deg,var(--training-mint),var(--training-teal));
+                }
+                .training-workspace #training-tab-content[data-tab="contractors"] .card-header::before { background: linear-gradient(#fbbf24,#d97706); }
+                .training-workspace #training-tab-content[data-tab="attendance"] .card-header::before { background: linear-gradient(#60a5fa,#2563eb); }
+                .training-workspace #training-tab-content[data-tab="legalTraining"] .card-header::before { background: linear-gradient(#fb7185,#be123c); }
+                .training-workspace #training-tab-content[data-tab="analysis"] .card-header::before { background: linear-gradient(#a78bfa,#6d28d9); }
+                .training-workspace #training-tab-content .card-title {
+                    color: var(--training-petrol) !important;
+                    font-size: .98rem !important;
+                    font-weight: 900 !important;
+                    line-height: 1.55;
+                }
+                .training-workspace #training-tab-content .card-header > div,
+                .training-workspace #training-tab-content .legal-header-row,
+                .training-workspace #training-tab-content .legal-header-actions,
+                .training-workspace #training-tab-content .legal-filters-bar,
+                .training-workspace #training-tab-content .filter-group {
+                    min-width: 0;
+                    flex-wrap: wrap;
+                    gap: 10px;
+                }
+                .training-workspace #training-tab-content .card-header input,
+                .training-workspace #training-tab-content .card-header select { min-width: 165px; }
+                .training-workspace #training-tab-content .form-input,
+                .training-workspace #training-tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+                .training-workspace #training-tab-content select,
+                .training-workspace #training-tab-content textarea {
+                    min-height: 40px;
+                    border-color: #c5d9d5 !important;
+                    border-radius: 10px !important;
+                    background-color: #fff;
+                }
+                .training-workspace #training-tab-content .form-input:focus,
+                .training-workspace #training-tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+                .training-workspace #training-tab-content select:focus,
+                .training-workspace #training-tab-content textarea:focus {
+                    border-color: var(--training-teal) !important;
+                    outline: none;
+                    box-shadow: 0 0 0 3px rgba(15,118,110,.12) !important;
+                }
+                .training-workspace #training-tab-content .table-wrapper,
+                .training-workspace #training-tab-content .table-responsive,
+                .training-workspace #training-tab-content .overflow-x-auto {
+                    max-width: 100%;
+                    overflow-x: auto !important;
+                    border-radius: 12px;
+                    scrollbar-width: thin;
+                    scrollbar-color: #86aaa4 #edf5f3;
+                }
+                .training-workspace #training-tab-content table {
+                    width: 100%;
+                    margin: 0;
+                    border: 0 !important;
+                    border-collapse: separate !important;
+                    border-spacing: 0;
+                    color: var(--training-ink);
+                    font-size: .77rem;
+                }
+                .training-workspace #training-tab-content table thead th {
+                    position: sticky;
+                    top: 0;
+                    z-index: 3;
+                    padding: 12px 11px !important;
+                    border: 0 !important;
+                    border-inline-end: 1px solid rgba(255,255,255,.1) !important;
+                    border-bottom: 3px solid var(--training-gold) !important;
+                    border-radius: 0 !important;
+                    background: linear-gradient(var(--training-petrol-2),var(--training-petrol)) !important;
+                    color: #fff !important;
+                    font-size: .72rem !important;
+                    font-weight: 850 !important;
+                    line-height: 1.5;
+                    text-align: center !important;
+                    white-space: nowrap;
+                }
+                .training-workspace #training-tab-content table tbody td {
+                    padding: 10px 11px !important;
+                    border: 0 !important;
+                    border-inline-end: 1px solid #edf3f2 !important;
+                    border-bottom: 1px solid #e3eeec !important;
+                    background: #fff;
+                    color: var(--training-ink);
+                    line-height: 1.6;
+                    vertical-align: middle;
+                }
+                .training-workspace #training-tab-content table tbody tr:nth-child(even) td { background: #f7fbfa; }
+                .training-workspace #training-tab-content table tbody tr:hover td { background: #fff9e9 !important; }
+                .training-workspace #training-tab-content table button {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-width: 34px;
+                    min-height: 34px;
+                    border-radius: 9px !important;
+                }
+                .training-workspace #training-tab-content canvas { max-width: 100% !important; }
+                .training-workspace #training-tab-content .legal-kpi-grid { gap: 12px; }
+                .training-workspace #training-tab-content .legal-kpi-card {
+                    border: 1px solid var(--training-line) !important;
+                    border-radius: 14px !important;
+                    box-shadow: 0 8px 20px rgba(7,59,58,.07) !important;
+                }
+                [data-theme="dark"] .training-workspace {
+                    --training-ink: #e4efed;
+                    --training-muted: #abc0bc;
+                    --training-line: #365b57;
+                    --training-surface: #142927;
+                    --training-soft: #102321;
+                }
+                [data-theme="dark"] .training-workspace #training-tab-content .content-card,
+                [data-theme="dark"] .training-workspace #training-tab-content .legal-table-card,
+                [data-theme="dark"] .training-workspace #training-tab-content .card-header { background: #142927 !important; color: #e4efed !important; }
+                [data-theme="dark"] .training-workspace #training-tab-content .card-title { color: #e4efed !important; }
+                [data-theme="dark"] .training-workspace #training-tab-content table tbody td { border-color: #2f4c49 !important; background: #142927; color: #e4efed; }
+                [data-theme="dark"] .training-workspace #training-tab-content table tbody tr:nth-child(even) td { background: #18312f; }
+                [data-theme="dark"] .training-workspace #training-tab-content table tbody tr:hover td { background: #38412d !important; }
+                @media (max-width: 1180px) {
+                    .training-workspace .training-hero-layout { align-items: flex-start; flex-direction: column; }
+                    .training-workspace .training-hero-actions { justify-content: flex-start; width: 100%; }
+                    .training-workspace #training-tab-content .grid-cols-5 { grid-template-columns: repeat(3,minmax(0,1fr)) !important; }
+                }
+                @media (max-width: 820px) {
+                    .training-workspace .training-hero-header { padding: 18px !important; border-radius: 15px !important; }
+                    .training-workspace .training-hero-copy { align-items: flex-start; min-width: 0; }
+                    .training-workspace .training-hero-actions button { flex: 1 1 180px; }
+                    .training-workspace .tabs-container { padding: 6px; border-radius: 14px; }
+                    .training-workspace .tabs-header .tab-btn { min-height: 43px; padding: 8px 11px !important; font-size: .74rem !important; }
+                    .training-workspace #training-tab-content .grid-cols-5,
+                    .training-workspace #training-tab-content .md\\:grid-cols-4 { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+                    .training-workspace #training-tab-content .card-header > div,
+                    .training-workspace #training-tab-content .legal-header-row { align-items: stretch !important; flex-direction: column !important; }
+                    .training-workspace #training-tab-content .card-header input,
+                    .training-workspace #training-tab-content .card-header select,
+                    .training-workspace #training-tab-content .card-header button { width: 100% !important; max-width: none !important; }
+                    .training-workspace #training-tab-content table { min-width: 680px; }
+                }
+                @media (max-width: 560px) {
+                    .training-workspace .training-hero-icon { flex-basis: 46px; width: 46px; height: 46px; }
+                    .training-workspace .training-hero-header::after { display: none; }
+                    .training-workspace .training-hero-actions button { flex-basis: 100%; }
+                    .training-workspace #training-tab-content .grid-cols-5,
+                    .training-workspace #training-tab-content .md\\:grid-cols-4 { grid-template-columns: 1fr !important; }
+                    .training-workspace #training-tab-content [style*="minmax(340px"] { grid-template-columns: minmax(0,1fr) !important; }
+                    .training-workspace #training-tab-content .card-body { padding: 12px !important; }
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .training-workspace *,
+                    .training-workspace *::before,
+                    .training-workspace *::after { animation: none !important; transition: none !important; }
+                }
+            </style>
+        `;
+    },
     currentEditId: null,
     trainingAnalysisCharts: null,
     /** يمنع طلبات متوازية متعددة لنفس تحميل بيانات التدريب */
@@ -369,16 +752,20 @@ const Training = {
             
             // عرض الواجهة أولاً لتحسين تجربة المستخدم
             section.innerHTML = `
-            <div class="section-header">
-                <div class="flex items-center justify-between">
-                    <div>
+            ${this.renderIdentityStyles_()}
+            <div class="training-workspace">
+            <div class="section-header training-hero-header">
+                <div class="training-hero-layout">
+                    <div class="training-hero-copy">
+                        <span class="training-hero-icon" aria-hidden="true"><i class="fas fa-graduation-cap"></i></span>
+                        <div>
                         <h1 class="section-title">
-                            <i class="fas fa-graduation-cap ml-3"></i>
                             إدارة التدريبات
                         </h1>
                         <p class="section-subtitle">تسجيل ومتابعة برامج التدريب ومصفوفة التدريب للموظين</p>
+                        </div>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="training-hero-actions">
                         ${isAdmin ? `
                         <button id="view-annual-training-plan-btn" class="btn-secondary">
                             <i class="fas fa-calendar-check ml-2"></i>
@@ -405,86 +792,38 @@ const Training = {
                 </div>
             </div>
             <div id="training-content" class="mt-6">
-                <style>
-                    .tabs-container {
-                        margin-bottom: 1.5rem;
-                    }
-                    .tabs-header {
-                        display: flex;
-                        gap: 0.5rem;
-                        border-bottom: 2px solid #e5e7eb;
-                        padding-bottom: 0;
-                    }
-                    .tab-btn {
-                        padding: 0.75rem 1.5rem;
-                        background: none;
-                        border: none;
-                        border-bottom: 3px solid transparent;
-                        color: #6b7280;
-                        font-size: 0.9375rem;
-                        font-weight: 500;
-                        cursor: pointer;
-                        transition: all 0.3s ease;
-                        display: flex;
-                        align-items: center;
-                        gap: 0.5rem;
-                        position: relative;
-                        margin-bottom: -2px;
-                    }
-                    .tab-btn:hover {
-                        color: #3b82f6;
-                        background-color: rgba(59, 130, 246, 0.05);
-                    }
-                    .tab-btn.active {
-                        color: #3b82f6;
-                        border-bottom-color: #3b82f6;
-                        font-weight: 600;
-                    }
-                    .tab-btn i {
-                        font-size: 14px;
-                    }
-                    @media (max-width: 768px) {
-                        .tabs-header {
-                            flex-wrap: wrap;
-                            gap: 0.25rem;
-                        }
-                        .tab-btn {
-                            padding: 0.625rem 1rem;
-                            font-size: 0.875rem;
-                        }
-                    }
-                </style>
                 <div class="tabs-container mb-6">
-                    <div class="tabs-header">
-                        <button class="tab-btn active" data-tab="programs" onclick="Training.switchTab('programs')">
+                    <div class="tabs-header" role="tablist" aria-label="تبويبات إدارة التدريب">
+                        <button class="tab-btn active" role="tab" aria-selected="true" data-tab="programs" onclick="Training.switchTab('programs')">
                             <i class="fas fa-list ml-2"></i>
                             برامج التدريب
                         </button>
-                        <button class="tab-btn" data-tab="contractors" onclick="Training.switchTab('contractors')">
+                        <button class="tab-btn" role="tab" aria-selected="false" data-tab="contractors" onclick="Training.switchTab('contractors')">
                             <i class="fas fa-briefcase ml-2"></i>
                             تدريبات المقاولين والشركات الخارجية
                         </button>
-                        <button class="tab-btn" data-tab="attendance" onclick="Training.switchTab('attendance')">
+                        <button class="tab-btn" role="tab" aria-selected="false" data-tab="attendance" onclick="Training.switchTab('attendance')">
                             <i class="fas fa-clipboard-check ml-2"></i>
                             سجل التدريب للموظفين
                         </button>
                         ${this.canViewLegalTrainingTab() ? `
-                        <button class="tab-btn" data-tab="legalTraining" onclick="Training.switchTab('legalTraining')">
+                        <button class="tab-btn" role="tab" aria-selected="false" data-tab="legalTraining" onclick="Training.switchTab('legalTraining')">
                             <i class="fas fa-gavel ml-2"></i>
                             التدريبات القانونية
                         </button>
                         ` : ''}
                         ${this.isCurrentUserAdmin() ? `
-                        <button class="tab-btn" data-tab="analysis" onclick="Training.switchTab('analysis')">
+                        <button class="tab-btn" role="tab" aria-selected="false" data-tab="analysis" onclick="Training.switchTab('analysis')">
                             <i class="fas fa-chart-bar ml-2"></i>
                             تحليل البيانات
                         </button>
                         ` : ''}
                     </div>
                 </div>
-                <div id="training-tab-content">
+                <div id="training-tab-content" data-tab="programs">
                     ${this.buildProgramsTabMarkup()}
                 </div>
+            </div>
             </div>
         `;
             this.applyModuleI18n(section);
@@ -2851,14 +3190,19 @@ const Training = {
         if (tabName === 'legalTraining' && !this.canViewLegalTrainingTab()) {
             return this.switchTab('programs');
         }
-        document.querySelectorAll('.tab-btn').forEach(btn => {
+        document.querySelectorAll('.training-workspace .tabs-header .tab-btn').forEach(btn => {
             btn.classList.remove('active');
+            btn.setAttribute('aria-selected', 'false');
         });
-        const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
-        if (activeBtn) activeBtn.classList.add('active');
+        const activeBtn = document.querySelector(`.training-workspace .tabs-header .tab-btn[data-tab="${tabName}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+            activeBtn.setAttribute('aria-selected', 'true');
+        }
 
         const content = document.getElementById('training-tab-content');
         if (!content) return;
+        content.dataset.tab = tabName;
 
         this._currentActiveTab = tabName;
 
@@ -13192,7 +13536,7 @@ const Training = {
                 Notification.success('تم حفظ بيانات التحليل بنجاح');
                 
                 // تحديث صفحة التحليل
-                if (document.querySelector('.tab-btn[data-tab="analysis"]')?.classList.contains('active')) {
+                if (document.querySelector('.training-workspace .tabs-header .tab-btn[data-tab="analysis"]')?.classList.contains('active')) {
                     const content = document.getElementById('training-tab-content');
                     if (content) {
                         content.innerHTML = await this.renderAnalysisTab();
