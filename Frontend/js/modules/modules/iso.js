@@ -3320,8 +3320,8 @@ const ISO = {
             const forms = groupedForms[moduleName];
             
             return `
-            <div class="mb-5">
-                <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-4" style="border-color: #3b82f6 !important; border-bottom-width: 2px !important;">
+            <div class="mb-5 coding-system-module">
+                <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-4 coding-system-module-header">
                     <div class="d-flex align-items-center gap-2">
                         <i class="fas fa-folder-open text-primary fs-5"></i>
                         <h4 class="font-bold text-gray-800 m-0">
@@ -3331,7 +3331,7 @@ const ISO = {
                     <span class="badge bg-secondary rounded-pill shadow-sm">${forms.length}</span>
                 </div>
                 
-                <div class="row g-4 mb-4">
+                <div class="row g-4 mb-4 coding-system-grid">
                     ${forms.map(form => {
                         const matchedCode = documentCodes.find(c => c.code === form.defaultCode || c.documentName === form.name);
                         let activeVersion = null;
@@ -3344,12 +3344,12 @@ const ISO = {
                         }
                         
                         return `
-                        <div class="col-12 col-md-6 col-lg-4 col-xl-3">
-                            <div class="card h-100 border-0 shadow-sm hover-shadow transition-all relative overflow-hidden">
+                        <div class="col-12 col-md-6 col-lg-4 col-xl-3 coding-system-col">
+                            <div class="card h-100 border-0 shadow-sm hover-shadow transition-all relative overflow-hidden coding-system-form-card ${matchedCode ? 'is-coded' : 'is-uncoded'}">
                                 <!-- Indicator -->
-                                <div class="position-absolute top-0 bottom-0 ${matchedCode ? 'bg-success' : 'bg-danger'}" style="width: 4px; ${document.dir === 'rtl' ? 'right: 0;' : 'left: 0;'}"></div>
+                                <div class="position-absolute top-0 bottom-0 ${matchedCode ? 'bg-success' : 'bg-danger'} coding-system-status-rail" style="width: 4px; ${document.dir === 'rtl' ? 'right: 0;' : 'left: 0;'}"></div>
                                 
-                                <div class="card-body d-flex flex-column" style="${document.dir === 'rtl' ? 'padding-right: 1.25rem;' : 'padding-left: 1.25rem;'}">
+                                <div class="card-body d-flex flex-column coding-system-form-body" style="${document.dir === 'rtl' ? 'padding-right: 1.25rem;' : 'padding-left: 1.25rem;'}">
                                     <!-- Title -->
                                     <h5 class="card-title font-bold text-gray-800 mb-3" style="line-height: 1.4;">${typeof I18n !== 'undefined' ? I18n.t(form.i18nKey, form.name) : form.name}</h5>
                                     
@@ -3370,11 +3370,11 @@ const ISO = {
                                     <!-- Middle Content (Code/Warning) -->
                                     <div class="flex-grow-1 d-flex flex-column justify-content-center mb-4">
                                         ${matchedCode ? `
-                                            <div class="d-flex justify-content-between align-items-center bg-light rounded p-2 mb-2 border">
+                                            <div class="d-flex justify-content-between align-items-center bg-light rounded p-2 mb-2 border coding-system-meta-row">
                                                 <span class="text-muted small fw-bold"><i class="fas fa-hashtag mx-1 text-primary"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.code', 'الكود') : 'الكود'}</span>
                                                 <span class="badge bg-primary font-monospace">${Utils.escapeHTML(matchedCode.code || '')}</span>
                                             </div>
-                                            <div class="d-flex justify-content-between align-items-center bg-light rounded p-2 border">
+                                            <div class="d-flex justify-content-between align-items-center bg-light rounded p-2 border coding-system-meta-row">
                                                 <span class="text-muted small fw-bold"><i class="fas fa-code-branch mx-1 text-primary"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.version', 'الإصدار') : 'الإصدار'}</span>
                                                 ${activeVersion ? `<span class="badge bg-success font-monospace">v${activeVersion.versionNumber}</span>` : `<span class="badge bg-danger small">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.noVersion', 'لا يوجد') : 'لا يوجد'}</span>`}
                                             </div>
@@ -3387,7 +3387,7 @@ const ISO = {
                                     </div>
                                     
                                     <!-- Action Button -->
-                                    <div class="mt-auto border-top pt-3">
+                                    <div class="mt-auto border-top pt-3 coding-system-card-footer">
                                         ${matchedCode ? `
                                             <button class="btn btn-outline-secondary btn-sm w-100 d-flex justify-content-center align-items-center fw-bold" onclick="ISO.viewDocumentVersions('${matchedCode.id}')" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.history', 'سجل التغييرات') : 'سجل التغييرات'}">
                                                 <i class="fas fa-history mx-2"></i>
@@ -3411,15 +3411,15 @@ const ISO = {
         }).join('');
 
         return `
-        <div class="card mb-4 border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
-            <div class="card-header bg-primary text-white p-4 border-0" style="background: linear-gradient(135deg, #2563eb 0%, #4338ca 100%) !important;">
+        <div class="card mb-4 border-0 shadow-sm coding-system-directory">
+            <div class="card-header bg-primary text-white p-4 border-0 coding-system-directory-header">
                 <h3 class="card-title text-white d-flex align-items-center fw-bold m-0" style="font-size: 1.25rem;">
                     <i class="fas fa-layer-group mx-3 opacity-75 fs-4"></i>
                     ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.title', 'دليل نماذج النظام المدمجة') : 'دليل نماذج النظام المدمجة'}
                 </h3>
                 <p class="text-white-50 small mt-2 mb-0" style="padding-right: 3.5rem;">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.desc', 'يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد') : 'يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد'}</p>
             </div>
-            <div class="card-body bg-light p-4 p-md-5">
+            <div class="card-body bg-light p-4 p-md-5 coding-system-directory-body">
                 ${modulesHtml}
             </div>
         </div>
@@ -3484,6 +3484,11 @@ const ISO = {
             }
         }
 
+        const activeVersionsCount = documentVersions.filter(v => v.isActive === true || v.isActive === 'true').length;
+        const systemForms = Array.isArray(this.SystemFormsManifest) ? this.SystemFormsManifest : [];
+        const codedSystemForms = systemForms.filter(form => documentCodes.some(code => code.code === form.defaultCode || code.documentName === form.name)).length;
+        const codingCoverage = systemForms.length ? Math.round((codedSystemForms / systemForms.length) * 100) : 0;
+
         const html = `
             <style id="iso-coding-center-contrast-fix">
                 .iso-workspace .iso-coding-center {
@@ -3538,52 +3543,125 @@ const ISO = {
                 [data-theme="dark"] .iso-workspace .iso-coding-center input::placeholder,
                 [data-theme="dark"] .iso-workspace .iso-coding-center textarea::placeholder { color:#9bb0ac !important; }
             </style>
-            <div class="space-y-6 iso-coding-center">
+            <style id="iso-coding-governance-styles">
+                .iso-workspace .coding-governance {
+                    --cg-petrol:#073b3a;--cg-petrol-2:#0b5551;--cg-teal:#0f766e;--cg-gold:#d7a92f;
+                    --cg-ink:#172d2a;--cg-muted:#617672;--cg-line:#d3e2df;--cg-surface:#fff;--cg-soft:#f3f8f7;
+                    display:flex;min-width:0;flex-direction:column;gap:18px;color:var(--cg-ink);font-family:"Cairo","Segoe UI",Tahoma,sans-serif;
+                }
+                .iso-workspace .coding-governance-hero {
+                    position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px 26px;
+                    border:1px solid rgba(255,255,255,.14);border-radius:18px;background:radial-gradient(circle at 8% 0%,rgba(215,169,47,.18),transparent 30%),#073b3a;color:#fff;box-shadow:0 18px 40px rgba(7,59,58,.2);
+                }
+                .iso-workspace .coding-governance-hero::after { content:"DOC";position:absolute;inset-inline-end:22px;bottom:-28px;color:rgba(255,255,255,.045);font:900 6.5rem/1 "Segoe UI",sans-serif;letter-spacing:-.08em;pointer-events:none; }
+                .iso-workspace .coding-governance-hero-copy { position:relative;z-index:1;display:flex;align-items:center;gap:14px;min-width:0; }
+                .iso-workspace .coding-governance-hero-icon { display:inline-flex;width:50px;height:50px;flex:0 0 50px;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.2);border-radius:14px;background:rgba(255,255,255,.1);color:#fde68a;font-size:1.25rem; }
+                .iso-workspace .coding-governance-eyebrow { display:block;margin-bottom:4px;color:#99f6e4;font-size:.61rem;font-weight:900;letter-spacing:.12em; }
+                .iso-workspace .coding-governance-hero h2 { margin:0;color:#fff!important;font-size:clamp(1.12rem,2vw,1.45rem);font-weight:900; }
+                .iso-workspace .coding-governance-hero p { margin:5px 0 0;color:rgba(255,255,255,.72)!important;font-size:.76rem;line-height:1.65; }
+                .iso-workspace .coding-governance-hero-actions { position:relative;z-index:1;display:flex;align-items:center;gap:9px; }
+                .iso-workspace .coding-governance-hero-actions button { min-height:41px;border:1px solid rgba(255,255,255,.28)!important;border-radius:10px!important;background:rgba(255,255,255,.1)!important;color:#fff!important;box-shadow:none!important; }
+                .iso-workspace .coding-governance-notice { display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:11px;font-size:.75rem;font-weight:700; }
+                .iso-workspace .coding-governance-notice.is-warning { border:1px solid #ebcf83;background:#fff8e6;color:#78540c; }
+                .iso-workspace .coding-governance-notice.is-loading { border:1px solid #b9dcd5;background:#eef9f6;color:#0b625c; }
+                .iso-workspace .coding-governance-stats { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px; }
+                .iso-workspace .coding-governance-stat { --stat-accent:var(--cg-teal);position:relative;overflow:hidden;min-height:105px;padding:15px 16px;border:1px solid var(--cg-line);border-radius:14px;background:var(--cg-surface);box-shadow:0 8px 22px rgba(7,59,58,.07); }
+                .iso-workspace .coding-governance-stat::before { content:"";position:absolute;inset-block:0;inset-inline-start:0;width:4px;background:var(--stat-accent); }
+                .iso-workspace .coding-governance-stat:nth-child(2){--stat-accent:#267b5b}.iso-workspace .coding-governance-stat:nth-child(3){--stat-accent:#8a6719}.iso-workspace .coding-governance-stat:nth-child(4){--stat-accent:#5d4ca3}
+                .iso-workspace .coding-governance-stat-icon { display:inline-flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:8px;background:color-mix(in srgb,var(--stat-accent) 11%,white);color:var(--stat-accent);font-size:.72rem; }
+                .iso-workspace .coding-governance-stat-value { margin:7px 0 3px;color:var(--cg-ink)!important;font-size:1.55rem;font-weight:900;font-variant-numeric:tabular-nums;line-height:1; }
+                .iso-workspace .coding-governance-stat-label { color:var(--cg-muted)!important;font-size:.69rem;font-weight:850; }
+                .iso-workspace .coding-system-directory { overflow:hidden!important;margin:0!important;border:1px solid var(--cg-line)!important;border-radius:17px!important;background:var(--cg-surface)!important;box-shadow:0 12px 30px rgba(7,59,58,.09)!important; }
+                .iso-workspace .coding-system-directory-header { padding:19px 21px!important;border:0!important;border-bottom:3px solid var(--cg-gold)!important;background:#0b5551!important;color:#fff!important; }
+                .iso-workspace .coding-system-directory-header::before { display:none!important; }
+                .iso-workspace .coding-system-directory-header .card-title,.iso-workspace .coding-system-directory-header p { color:#fff!important; }
+                .iso-workspace .coding-system-directory-body { padding:19px!important;background:var(--cg-soft)!important;color:var(--cg-ink)!important; }
+                .iso-workspace .coding-system-module { margin-bottom:20px!important;padding:16px;border:1px solid var(--cg-line);border-radius:14px;background:var(--cg-surface); }
+                .iso-workspace .coding-system-module:last-child { margin-bottom:0!important; }
+                .iso-workspace .coding-system-module-header { margin-bottom:14px!important;padding-bottom:11px!important;border-color:#c6d9d5!important; }
+                .iso-workspace .coding-system-module-header h4 { color:var(--cg-ink)!important;font-size:.88rem;font-weight:900; }
+                .iso-workspace .coding-system-module-header i { color:var(--cg-teal)!important; }
+                .iso-workspace .coding-system-grid { display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px!important;margin:0!important; }
+                .iso-workspace .coding-system-col { width:auto!important;max-width:none!important;padding:0!important; }
+                .iso-workspace .coding-system-form-card { min-height:260px;border:1px solid var(--cg-line)!important;border-radius:13px!important;background:var(--cg-surface)!important;color:var(--cg-ink)!important;box-shadow:0 6px 18px rgba(7,59,58,.06)!important;transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease; }
+                .iso-workspace .coding-system-form-card:hover { border-color:#abcac4!important;box-shadow:0 11px 24px rgba(7,59,58,.1)!important;transform:translateY(-2px); }
+                .iso-workspace .coding-system-status-rail { background:var(--cg-teal)!important; }.iso-workspace .coding-system-form-card.is-uncoded .coding-system-status-rail { background:#c58a22!important; }
+                .iso-workspace .coding-system-form-body { padding:16px!important;background:transparent!important;color:var(--cg-ink)!important; }
+                .iso-workspace .coding-system-form-card .card-title { color:var(--cg-ink)!important;font-size:.82rem!important;font-weight:900!important; }
+                .iso-workspace .coding-system-form-card .badge { border:1px solid #c9dcd8!important;background:#edf5f3!important;color:#34514c!important;box-shadow:none!important; }
+                .iso-workspace .coding-system-form-card .badge.bg-success { border-color:#a8d6c3!important;background:#e8f7f0!important;color:#176143!important; }
+                .iso-workspace .coding-system-form-card .badge.bg-danger { border-color:#e7cf9b!important;background:#fff5dc!important;color:#7b5813!important; }
+                .iso-workspace .coding-system-form-card .alert-danger { margin:.75rem 0 0;border:1px solid #e8cf95!important;border-inline-start:3px solid var(--cg-gold)!important;border-radius:10px;background:#fff8e7!important;color:#765415!important; }
+                .iso-workspace .coding-system-meta-row { border-color:#d8e5e2!important;background:var(--cg-soft)!important;color:var(--cg-ink)!important; }
+                .iso-workspace .coding-system-card-footer { border-color:#d8e5e2!important; }
+                .iso-workspace .coding-system-card-footer button { min-height:38px;border-radius:9px!important;font-size:.72rem;font-weight:850!important; }
+                .iso-workspace .coding-management-card { overflow:hidden!important;border:1px solid var(--cg-line)!important;border-radius:16px!important;background:var(--cg-surface)!important;box-shadow:0 10px 28px rgba(7,59,58,.08)!important; }
+                .iso-workspace .coding-management-header { padding:17px 19px!important;border-bottom:1px solid var(--cg-line)!important;background:#eef6f4!important; }
+                .iso-workspace .coding-management-header .card-title { color:var(--cg-petrol)!important; }
+                .iso-workspace .coding-management-toolbar { display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap; }
+                .iso-workspace .coding-management-toolbar button { min-height:38px;border-radius:9px!important;font-size:.7rem; }
+                .iso-workspace .coding-filter-bar { display:grid;grid-template-columns:auto minmax(260px,1fr);align-items:center;gap:10px;margin-bottom:14px;padding:12px;border:1px solid var(--cg-line);border-radius:11px;background:var(--cg-soft); }
+                .iso-workspace .coding-filter-label { display:flex;align-items:center;gap:7px;color:var(--cg-petrol);font-size:.72rem;font-weight:900;white-space:nowrap; }
+                .iso-workspace .coding-filter-label i { color:var(--cg-teal); }
+                .iso-workspace .coding-filter-bar input,.iso-workspace .coding-filter-bar select { width:100%;min-height:41px;border-radius:9px!important; }
+                .iso-workspace .coding-table-wrap { max-width:100%;overflow:auto;border:1px solid var(--cg-line)!important;border-radius:12px!important;background:var(--cg-surface);scrollbar-width:thin;scrollbar-color:#7da69f #e8f1ef; }
+                .iso-workspace .coding-table-wrap table { min-width:940px; }
+                .iso-workspace .coding-code-pill { display:inline-flex;align-items:center;padding:5px 9px;border:1px solid #b8d4cf;border-radius:7px;background:#edf7f5;color:#0b625c!important;font:800 .72rem/1.2 "Consolas","Cairo",monospace;direction:ltr; }
+                .iso-workspace .coding-row-actions { display:flex;align-items:center;justify-content:center;gap:6px; }
+                .iso-workspace .coding-empty-state { min-height:180px;border:2px dashed #c6d9d5!important;border-radius:12px;background:var(--cg-soft)!important; }
+                .iso-workspace .coding-empty-state i { color:#7aa59d;font-size:1.8rem; }
+                .iso-workspace .coding-governance button:focus-visible,.iso-workspace .coding-governance a:focus-visible,.iso-workspace .coding-governance input:focus-visible,.iso-workspace .coding-governance select:focus-visible { outline:3px solid rgba(197,138,34,.46);outline-offset:2px; }
+                [data-theme="dark"] .iso-workspace .coding-governance { --cg-ink:#e7f0ee;--cg-muted:#afc2be;--cg-line:#385b57;--cg-surface:#142927;--cg-soft:#102321; }
+                [data-theme="dark"] .iso-workspace .coding-governance-stat,[data-theme="dark"] .iso-workspace .coding-system-directory,[data-theme="dark"] .iso-workspace .coding-system-module,[data-theme="dark"] .iso-workspace .coding-system-form-card,[data-theme="dark"] .iso-workspace .coding-management-card,[data-theme="dark"] .iso-workspace .coding-table-wrap { background:var(--cg-surface)!important;color:var(--cg-ink)!important; }
+                [data-theme="dark"] .iso-workspace .coding-system-directory-body,[data-theme="dark"] .iso-workspace .coding-system-meta-row,[data-theme="dark"] .iso-workspace .coding-management-header,[data-theme="dark"] .iso-workspace .coding-filter-bar,[data-theme="dark"] .iso-workspace .coding-empty-state { background:var(--cg-soft)!important;color:var(--cg-ink)!important; }
+                [data-theme="dark"] .iso-workspace .coding-governance-stat-value,[data-theme="dark"] .iso-workspace .coding-system-module-header h4,[data-theme="dark"] .iso-workspace .coding-system-form-card .card-title,[data-theme="dark"] .iso-workspace .coding-management-header .card-title,[data-theme="dark"] .iso-workspace .coding-filter-label { color:var(--cg-ink)!important; }
+                [data-theme="dark"] .iso-workspace .coding-system-form-card .badge { border-color:#456763!important;background:#183532!important;color:#d9e9e6!important; }
+                [data-theme="dark"] .iso-workspace .coding-system-form-card .alert-danger { border-color:#715c2b!important;background:#342c19!important;color:#ffe3a8!important; }
+                [data-theme="dark"] .iso-workspace .coding-code-pill { border-color:#3d7168;background:#123934;color:#a7f3d0!important; }
+                @media(max-width:1180px){.iso-workspace .coding-system-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}.iso-workspace .coding-governance-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+                @media(max-width:820px){.iso-workspace .coding-governance-hero{align-items:flex-start;flex-direction:column;padding:20px}.iso-workspace .coding-governance-hero-actions{width:100%}.iso-workspace .coding-governance-hero-actions button{width:100%}.iso-workspace .coding-system-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.iso-workspace .coding-management-header>div{align-items:stretch!important;flex-direction:column!important}.iso-workspace .coding-management-toolbar{justify-content:stretch}.iso-workspace .coding-management-toolbar button{flex:1 1 145px}.iso-workspace .coding-filter-bar{grid-template-columns:1fr}}
+                @media(max-width:520px){.iso-workspace .coding-governance-stats,.iso-workspace .coding-system-grid{grid-template-columns:1fr!important}.iso-workspace .coding-governance-hero-copy{align-items:flex-start}.iso-workspace .coding-governance-hero::after{display:none}.iso-workspace .coding-system-directory-body{padding:11px!important}.iso-workspace .coding-system-module{padding:11px}.iso-workspace .coding-system-form-card{min-height:auto}}
+                @media(prefers-reduced-motion:reduce){.iso-workspace .coding-governance *{transition:none!important;animation:none!important}}
+            </style>
+            <div class="space-y-6 iso-coding-center coding-governance">
+                <section class="coding-governance-hero">
+                    <div class="coding-governance-hero-copy">
+                        <span class="coding-governance-hero-icon"><i class="fas fa-fingerprint"></i></span>
+                        <div><span class="coding-governance-eyebrow">DOCUMENT GOVERNANCE · CONTROLLED RECORDS</span><h2>مركز التكويد والإصدار</h2><p>حوكمة الأكواد، متابعة الإصدارات، وضمان استخدام النسخة المعتمدة من كل وثيقة ونموذج.</p></div>
+                    </div>
+                    <div class="coding-governance-hero-actions"><button type="button" onclick="ISO.reloadCodingCenter()"><i class="fas fa-sync-alt ml-2"></i>تحديث بيانات المركز</button></div>
+                </section>
                 ${timedOut ? `
-                <div class="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 flex items-center gap-2">
+                <div class="coding-governance-notice is-warning">
                     <i class="fas fa-clock text-amber-600"></i>
                     <span class="text-sm text-amber-800">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.timeoutWarning', 'لم يتم تحميل البيانات في الوقت المحدد. اضغط <strong>إعادة تحميل</strong> للمحاولة مرة أخرى.') : 'لم يتم تحميل البيانات في الوقت المحدد. اضغط <strong>إعادة تحميل</strong> للمحاولة مرة أخرى.'}</span>
                 </div>
                 ` : ''}
                 ${showLoadingIndicator ? `
-                <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 flex items-center gap-2">
+                <div class="coding-governance-notice is-loading">
                     <i class="fas fa-spinner fa-spin text-blue-600"></i>
                     <span class="text-sm text-blue-800">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.loadingData', 'جاري تحميل البيانات...') : 'جاري تحميل البيانات...'}</span>
                 </div>
                 ` : ''}
                 <!-- إحصائيات سريعة + زر إعادة التحميل -->
-                <div class="flex flex-wrap items-center justify-between gap-4">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                            <div class="text-3xl font-bold text-blue-600 mb-2">${documentCodes.length}</div>
-                            <div class="text-sm text-gray-700 font-semibold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.stats.codes', 'أكواد المستندات') : 'أكواد المستندات'}</div>
-                        </div>
-                        <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                            <div class="text-3xl font-bold text-green-600 mb-2">${documentVersions.length}</div>
-                            <div class="text-sm text-gray-700 font-semibold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.stats.versions', 'إصدارات المستندات') : 'إصدارات المستندات'}</div>
-                        </div>
-                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
-                            <div class="text-3xl font-bold text-purple-600 mb-2">${documentVersions.filter(v => v.isActive === true || v.isActive === 'true').length}</div>
-                            <div class="text-sm text-gray-700 font-semibold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.stats.activeVersions', 'إصدارات نشطة') : 'إصدارات نشطة'}</div>
-                        </div>
-                    </div>
-                    <button type="button" onclick="ISO.reloadCodingCenter()" class="btn-secondary flex items-center gap-2 shrink-0" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.reload', 'إعادة تحميل') : 'إعادة تحميل'}">
-                        <i class="fas fa-sync-alt"></i>
-                        <span>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.reload', 'إعادة تحميل') : 'إعادة تحميل'}</span>
-                    </button>
+                <div class="coding-governance-stats">
+                    <div class="coding-governance-stat"><span class="coding-governance-stat-icon"><i class="fas fa-hashtag"></i></span><div class="coding-governance-stat-value">${documentCodes.length}</div><div class="coding-governance-stat-label">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.stats.codes', 'أكواد المستندات') : 'أكواد المستندات'}</div></div>
+                    <div class="coding-governance-stat"><span class="coding-governance-stat-icon"><i class="fas fa-code-branch"></i></span><div class="coding-governance-stat-value">${documentVersions.length}</div><div class="coding-governance-stat-label">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.stats.versions', 'إصدارات المستندات') : 'إصدارات المستندات'}</div></div>
+                    <div class="coding-governance-stat"><span class="coding-governance-stat-icon"><i class="fas fa-certificate"></i></span><div class="coding-governance-stat-value">${activeVersionsCount}</div><div class="coding-governance-stat-label">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.stats.activeVersions', 'إصدارات نشطة') : 'إصدارات نشطة'}</div></div>
+                    <div class="coding-governance-stat"><span class="coding-governance-stat-icon"><i class="fas fa-shield-alt"></i></span><div class="coding-governance-stat-value">${codingCoverage}%</div><div class="coding-governance-stat-label">تغطية نماذج النظام بالتكويد</div></div>
                 </div>
 
                 ${this.renderSystemFormsDirectory(documentCodes, documentVersions)}
 
                 <!-- قسم إدارة التكويد -->
-                <div class="content-card">
-                    <div class="card-header">
+                <div class="content-card coding-management-card coding-codes-card">
+                    <div class="card-header coding-management-header">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <h2 class="card-title">
                                 <i class="fas fa-code ml-2"></i>
                                 مركز التكويد (Document Coding Center)
                             </h2>
-                            <div class="flex flex-wrap items-center gap-2">
+                            <div class="flex flex-wrap items-center gap-2 coding-management-toolbar">
                                 <button type="button" class="btn-secondary flex items-center gap-1" onclick="ISO.importCodingCenterFromExcel()" title="استيراد أكواد المستندات من ملف Excel أو CSV">
                                     <i class="fas fa-file-excel"></i>
                                     <span>استيراد Excel</span>
@@ -3607,17 +3685,18 @@ const ISO = {
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="mb-4">
+                        <div class="mb-4 coding-filter-bar">
+                            <div class="coding-filter-label"><i class="fas fa-search"></i><span>البحث في سجل الأكواد</span></div>
                             <input type="text" id="document-code-search" class="form-input" 
                                 placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.searchPlaceholder', 'بحث في أكواد المستندات...') : 'بحث في أكواد المستندات...'}" 
                                 onkeyup="ISO.filterDocumentCodes()">
                         </div>
                         ${documentCodes.length === 0 ? `
-                            <div class="empty-state">
-                                <p class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.noCodes', 'لا توجد أكواد مستندات مسجلة') : 'لا توجد أكواد مستندات مسجلة'}</p>
+                            <div class="empty-state coding-empty-state">
+                                <i class="fas fa-barcode"></i><p class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.noCodes', 'لا توجد أكواد مستندات مسجلة') : 'لا توجد أكواد مستندات مسجلة'}</p>
                             </div>
                         ` : `
-                            <div class="overflow-x-auto">
+                            <div class="overflow-x-auto coding-table-wrap">
                                 <table class="data-table">
                                     <thead>
                                         <tr>
@@ -3633,13 +3712,13 @@ const ISO = {
                                     <tbody id="document-codes-table-body">
                                         ${documentCodes.map(code => `
                                             <tr>
-                                                <td><strong>${Utils.escapeHTML(code.code || '')}</strong></td>
+                                                <td><strong class="coding-code-pill">${Utils.escapeHTML(code.code || '')}</strong></td>
                                                 <td>${Utils.escapeHTML(code.documentName || '')}</td>
                                                 <td>${Utils.escapeHTML(code.documentType || '')}</td>
                                                 <td>${Utils.escapeHTML(code.department || '')}</td>
                                                 <td><span class="badge badge-${code.status === 'نشط' || code.status === 'Active' ? 'success' : 'warning'}">${Utils.escapeHTML(code.status || '')}</span></td>
                                                 <td>${code.createdAt ? Utils.formatDate(code.createdAt) : '-'}</td>
-                                                <td>
+                                                <td><div class="coding-row-actions">
                                                     <button onclick="ISO.editDocumentCode('${code.id}')" class="btn-icon btn-icon-info" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
@@ -3649,6 +3728,7 @@ const ISO = {
                                                     <button onclick="ISO.deleteDocumentCode('${code.id}')" class="btn-icon btn-icon-danger" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.delete', 'حذف') : 'حذف'}">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         `).join('')}
@@ -3660,8 +3740,8 @@ const ISO = {
                 </div>
 
                 <!-- قسم إدارة الإصدارات -->
-                <div class="content-card">
-                    <div class="card-header">
+                <div class="content-card coding-management-card coding-versions-card">
+                    <div class="card-header coding-management-header">
                         <div class="flex items-center justify-between">
                             <h2 class="card-title">
                                 <i class="fas fa-file-alt ml-2"></i>
@@ -3673,7 +3753,8 @@ const ISO = {
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="mb-4">
+                        <div class="mb-4 coding-filter-bar">
+                            <div class="coding-filter-label"><i class="fas fa-filter"></i><span>تصفية سجل الإصدارات</span></div>
                             <select id="version-filter-code" class="form-input" onchange="ISO.filterDocumentVersions()">
                                 <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.allCodes', 'جميع الأكواد') : 'جميع الأكواد'}</option>
                                 ${documentCodes.map(code => `
@@ -3682,11 +3763,11 @@ const ISO = {
                             </select>
                         </div>
                         ${documentVersions.length === 0 ? `
-                            <div class="empty-state">
-                                <p class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.noVersions', 'لا توجد إصدارات مسجلة') : 'لا توجد إصدارات مسجلة'}</p>
+                            <div class="empty-state coding-empty-state">
+                                <i class="fas fa-code-branch"></i><p class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.noVersions', 'لا توجد إصدارات مسجلة') : 'لا توجد إصدارات مسجلة'}</p>
                             </div>
                         ` : `
-                            <div class="overflow-x-auto">
+                            <div class="overflow-x-auto coding-table-wrap">
                                 <table class="data-table">
                                     <thead>
                                         <tr>
@@ -3703,11 +3784,11 @@ const ISO = {
             const code = documentCodes.find(c => c.id === version.documentCodeId);
             return `
                                                 <tr data-code-id="${version.documentCodeId}">
-                                                    <td><strong>${Utils.escapeHTML(version.documentCode || code?.code || '')}</strong></td>
+                                                    <td><strong class="coding-code-pill">${Utils.escapeHTML(version.documentCode || code?.code || '')}</strong></td>
                                                     <td>${Utils.escapeHTML(version.versionNumber || '')}</td>
                                                     <td>${version.issueDate ? Utils.formatDate(version.issueDate) : '-'}</td>
                                                     <td>${version.revisionDate ? Utils.formatDate(version.revisionDate) : '-'}</td>
-                                                    <td>
+                                                    <td><div class="coding-row-actions">
                                                         <span class="badge badge-${version.isActive === true || version.isActive === 'true' ? 'success' : 'secondary'}">
                                                             ${version.isActive === true || version.isActive === 'true' ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.active', 'نشط') : 'نشط') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.inactive', 'غير نشط') : 'غير نشط')}
                                                         </span>
@@ -3719,6 +3800,7 @@ const ISO = {
                                                         <button onclick="ISO.reissueDocument('${version.id}')" class="btn-icon btn-icon-warning" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.reissue', 'إعادة إصدار') : 'إعادة إصدار'}">
                                                             <i class="fas fa-redo"></i>
                                                         </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             `;
