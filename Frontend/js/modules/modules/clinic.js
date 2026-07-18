@@ -6846,31 +6846,57 @@ const Clinic = {
                 <div style="text-align:center;padding:16px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
             </div>
 
-            <!-- ══ Row 1: الزيارات حسب النوع + الاتجاه الشهري ══ -->
+            <!-- ══ Row 1: الزيارات حسب النوع + الإجازات المرضية ══ -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-user-circle" style="color:#3b82f6;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">الزيارات حسب نوع الشخص</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:220px;">
+                    <div style="padding:12px;position:relative;height:240px;">
                         <canvas id="clinic-chart-ptype"></canvas>
                         <div id="clinic-chart-ptype-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-chart-area" style="color:#8b5cf6;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">الاتجاه الزمني للزيارات (آخر 12 شهر)</span>
+                        <i class="fas fa-notes-medical" style="color:#f97316;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">الإجازات المرضية حسب الحالة</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:220px;">
-                        <canvas id="clinic-chart-trend"></canvas>
-                        <div id="clinic-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    <div style="padding:12px;position:relative;height:240px;">
+                        <canvas id="clinic-chart-sl-status"></canvas>
+                        <div id="clinic-chart-sl-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
             </div>
 
-            <!-- ══ Row 2: سبب الزيارة + الإدارة ══ -->
+            <!-- ══ الاتجاه الزمني ══ -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-chart-area" style="color:#8b5cf6;"></i>
+                    <span style="font-weight:700;font-size:0.88rem;">الاتجاه الزمني للزيارات (آخر 12 شهر)</span>
+                </div>
+                <div style="padding:12px;position:relative;height:260px;">
+                    <canvas id="clinic-chart-trend"></canvas>
+                    <div id="clinic-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                </div>
+            </div>
+
+            <!-- ══ Row: تحليل المصانع الرئيسية ══ -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-industry" style="color:#0284c7;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">توزيع ونسب الزيارات حسب المصانع الرئيسية</span>
+                    </div>
+                    <span style="font-size:0.72rem;color:#64748b;">انقر على أي مصنع لتصفية لوحة التحكم تلقائياً</span>
+                </div>
+                <div id="clinic-factories-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;padding:16px;background:#f8fafc;">
+                    <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">جارٍ التحميل…</div>
+                </div>
+            </div>
+
+            <!-- ══ Row 4: سبب الزيارة + الإصابات حسب النوع ══ -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
@@ -6884,76 +6910,62 @@ const Clinic = {
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-building" style="color:#6366f1;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">حسب الإدارة (أعلى 8)</span>
-                    </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="clinic-chart-dept"></canvas>
-                        <div id="clinic-chart-dept-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ══ Row 3: الموقع + الإجازات المرضية ══ -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
-                <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-map-marker-alt" style="color:#f59e0b;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">حسب الموقع (أعلى 8)</span>
-                    </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="clinic-chart-loc"></canvas>
-                        <div id="clinic-chart-loc-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
-                    </div>
-                </div>
-                <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-notes-medical" style="color:#f97316;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">الإجازات المرضية حسب الحالة</span>
-                    </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="clinic-chart-sl-status"></canvas>
-                        <div id="clinic-chart-sl-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ══ Row 4: الإصابات حسب النوع + الأدوية حسب الحالة ══ -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
-                <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-user-injured" style="color:#ef4444;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">الإصابات حسب النوع</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:260px;">
+                    <div style="padding:12px;position:relative;height:280px;">
                         <canvas id="clinic-chart-inj-type"></canvas>
                         <div id="clinic-chart-inj-type-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد إصابات</div>
                     </div>
                 </div>
+            </div>
+
+            <!-- ══ Row 5: الموقع + الإدارات ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-map-marker-alt" style="color:#3b82f6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">المواقع الأكثر تردداً (أعلى 10)</span>
+                    </div>
+                    <div id="clinic-locs-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-building" style="color:#6366f1;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">تفاصيل توزيع الزيارات حسب الإدارات</span>
+                    </div>
+                    <div id="clinic-depts-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ الأدوية + المقاولين ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-pills" style="color:#10b981;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">الأدوية حسب الحالة</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:260px;">
+                    <div style="padding:12px;position:relative;height:300px;">
                         <canvas id="clinic-chart-med-status"></canvas>
                         <div id="clinic-chart-med-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات أدوية</div>
                     </div>
                 </div>
-            </div>
-
-            <!-- ══ أكثر المقاولين تردداً على العيادة (أعلى 8) ══ -->
-            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
-                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-hard-hat" style="color:#0891b2;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">أكثر المقاولين تردداً على العيادة (أعلى 8)</span>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-hard-hat" style="color:#0891b2;"></i>
+                            <span style="font-weight:700;font-size:0.88rem;">أكثر المقاولين تردداً على العيادة (أعلى 8)</span>
+                        </div>
+                        <span id="clinic-chart-contractor-count" style="background:#ecfeff;color:#0e7490;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
                     </div>
-                    <span id="clinic-chart-contractor-count" style="background:#ecfeff;color:#0e7490;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
-                </div>
-                <div style="padding:12px;position:relative;height:300px;">
-                    <canvas id="clinic-chart-contractor"></canvas>
-                    <div id="clinic-chart-contractor-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات مقاولين</div>
+                    <div style="padding:12px;position:relative;height:300px;">
+                        <canvas id="clinic-chart-contractor"></canvas>
+                        <div id="clinic-chart-contractor-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات مقاولين</div>
+                    </div>
                 </div>
             </div>
 
@@ -7232,12 +7244,124 @@ const Clinic = {
         const reasonMap = this._cGroupBy(filteredVisits, v=>v.reason||v.diagnosis||'غير محدد', 10);
         this._cHBar('clinic-chart-reason', reasonMap.labels, reasonMap.data, 'rgba(13,148,136,0.75)');
 
-        // الإدارة (HBar)
-        const deptMap = this._cGroupBy(filteredVisits, v=>v.employeeDepartment||v.department||'غير محدد', 8);
-        this._cHBar('clinic-chart-dept', deptMap.labels, deptMap.data, 'rgba(99,102,241,0.75)');
+        // ── القوائم التفاعلية بدلاً من الرسوم البيانية ──
+        // 1. الموقع (List)
+        const locMap = this._cGroupBy(filteredVisits, v=>v.employeeLocation||v.workArea||'غير محدد', 10);
+        const locsListEl = document.getElementById('clinic-locs-list');
+        if (locsListEl) {
+            if (total === 0 || locMap.labels.length === 0) {
+                locsListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
+            } else {
+                locsListEl.innerHTML = locMap.labels.map((loc, i) => {
+                    const count = locMap.data[i];
+                    const pct = Math.round((count / total) * 100);
+                    return `
+                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;cursor:pointer;transition:background 0.2s;padding-left:4px;padding-right:4px;" 
+                             onmouseover="this.style.background='#f0fdfa'" 
+                             onmouseout="this.style.background='transparent'"
+                             onclick="const el = document.getElementById('clinic-af-loc'); if(el){el.value='${Utils.escapeHTML(loc)}'; el.dispatchEvent(new Event('change'));}">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
+                                    <span style="background:#e0f2fe;color:#0369a1;font-size:0.68rem;padding:2px 8px;border-radius:6px;font-weight:700;white-space:nowrap;flex-shrink:0;">موقع</span>
+                                    <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${Utils.escapeHTML(loc)}">${Utils.escapeHTML(loc)}</span>
+                                </div>
+                                <span style="font-size:0.75rem;font-weight:700;color:#0369a1;flex-shrink:0;margin-right:8px;">${count} زيارة (${pct}%)</span>
+                            </div>
+                            <div style="width:100%;height:6px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #38bdf8 0%, #0284c7 100%);border-radius:9999px;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 2. الإدارة (List)
+        const deptMap = this._cGroupBy(filteredVisits, v=>v.employeeDepartment||v.department||'غير محدد', 10);
+        const deptsListEl = document.getElementById('clinic-depts-list');
+        if (deptsListEl) {
+            if (total === 0 || deptMap.labels.length === 0) {
+                deptsListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
+            } else {
+                deptsListEl.innerHTML = deptMap.labels.map((dept, i) => {
+                    const count = deptMap.data[i];
+                    const pct = Math.round((count / total) * 100);
+                    return `
+                        <div style="cursor:pointer;padding:4px;border-radius:6px;transition:background 0.2s;" 
+                             onmouseover="this.style.background='#eff6ff'" 
+                             onmouseout="this.style.background='transparent'"
+                             onclick="const el = document.getElementById('clinic-af-dept'); if(el){el.value='${Utils.escapeHTML(dept)}'; el.dispatchEvent(new Event('change'));}">
+                            <div style="display:flex;justify-content:space-between;font-size:0.8rem;font-weight:700;color:#374151;margin-bottom:4px;">
+                                <span>${Utils.escapeHTML(dept)}</span>
+                                <span style="color:#2563eb;">${count} زيارة (${pct}%)</span>
+                            </div>
+                            <div style="width:100%;height:8px;background:#e5e7eb;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);border-radius:9999px;transition:width 0.5s ease-in-out;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 3. كروت المصانع الرئيسية (Factory Cards)
+        const factoriesCardsEl = document.getElementById('clinic-factories-cards');
+        if (factoriesCardsEl) {
+            if (total === 0) {
+                factoriesCardsEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">لا توجد بيانات</div>`;
+            } else {
+                // استخراج جميع المصانع المميزة من قائمة الزيارات (الكل) قبل الفلترة
+                const factoriesSet = new Set(visits.map(v => String(v.factoryName || v.factory || '').trim()).filter(f => f && f !== 'غير محدد'));
+                const officialSites = Array.from(factoriesSet).sort();
+                if (officialSites.length === 0) {
+                    factoriesCardsEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">لا توجد مصانع</div>`;
+                } else {
+                    factoriesCardsEl.innerHTML = officialSites.map((siteName, index) => {
+                        const siteVisits = filteredVisits.filter(v => (v.factoryName || v.factory || '').trim() === siteName);
+                        const siteTotal = siteVisits.length;
+                        // Calculate percentage against the total filtered visits (if any)
+                        const sitePct = total > 0 ? Math.round((siteTotal / total) * 100) : 0;
+                        
+                        const colors = [
+                            { primary: '#0284c7', light: '#e0f2fe', progress: 'linear-gradient(90deg, #38bdf8 0%, #0284c7 100%)' },
+                            { primary: '#059669', light: '#ecfdf5', progress: 'linear-gradient(90deg, #34d399 0%, #059669 100%)' },
+                            { primary: '#7c3aed', light: '#f5f3ff', progress: 'linear-gradient(90deg, #a78bfa 0%, #7c3aed 100%)' },
+                            { primary: '#ea580c', light: '#fff7ed', progress: 'linear-gradient(90deg, #fb923c 0%, #ea580c 100%)' },
+                            { primary: '#db2777', light: '#fdf2f8', progress: 'linear-gradient(90deg, #f472b6 0%, #db2777 100%)' }
+                        ];
+                        const theme = colors[index % colors.length];
+                        
+                        return `
+                            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);transition:all .2s;cursor:pointer;" 
+                                 onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.08)';this.style.borderColor='${theme.primary}'" 
+                                 onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)';this.style.borderColor='#e2e8f0'"
+                                 onclick="const el = document.getElementById('clinic-af-factory'); if(el){el.value='${Utils.escapeHTML(siteName)}'; el.dispatchEvent(new Event('change'));}">
+                                
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <div style="display:flex;align-items:center;gap:8px;">
+                                        <div style="width:36px;height:36px;background:${theme.light};border-radius:8px;display:flex;align-items:center;justify-content:center;color:${theme.primary};">
+                                            <i class="fas fa-industry" style="font-size:16px;"></i>
+                                        </div>
+                                        <span style="font-size:0.9rem;font-weight:800;color:#1e293b;">${Utils.escapeHTML(siteName)}</span>
+                                    </div>
+                                    <span style="font-size:1.15rem;font-weight:900;color:${theme.primary};">${sitePct}%</span>
+                                </div>
+                                
+                                <div style="width:100%;height:8px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                                    <div style="width:${sitePct}%;height:100%;background:${theme.progress};border-radius:9999px;"></div>
+                                </div>
+                                
+                                <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;color:#64748b;margin-top:2px;">
+                                    <span>إجمالي الزيارات: <strong style="color:#334155;">${siteTotal}</strong></span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+        }
 
         // ✅ أكثر المقاولين تردداً (HBar) — فقط زيارات المقاولين/الخارجي
-        // نأخذ الزيارات التي لها contractorName/externalName (من ClinicContractorVisits)
         const contractorVisits = filteredVisits.filter(v => {
             const cName = String(v.contractorName || '').trim();
             const eName = String(v.externalName || '').trim();
@@ -7256,10 +7380,6 @@ const Clinic = {
                 : '';
         }
         this._cHBar('clinic-chart-contractor', contractorMap.labels, contractorMap.data, 'rgba(8,145,178,0.75)');
-
-        // الموقع (HBar)
-        const locMap = this._cGroupBy(filteredVisits, v=>v.employeeLocation||v.workArea||'غير محدد', 8);
-        this._cHBar('clinic-chart-loc', locMap.labels, locMap.data, 'rgba(245,158,11,0.75)');
 
         // الإجازات المرضية حسب الحالة (Doughnut)
         const slStatusMap = this._cGroupBy(sl, l=>l.status||'قيد المعالجة');
