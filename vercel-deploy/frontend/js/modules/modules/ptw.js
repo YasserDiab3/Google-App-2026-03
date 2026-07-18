@@ -6170,18 +6170,19 @@ const PTW = {
                     --ptw-details-line: #e2e8f0;
                     --ptw-details-blue: #2457e6;
                     --ptw-details-blue-soft: #eef5ff;
-                    --ptw-details-footer: #f8fafc;
+                    --ptw-details-footer: #f1f5f9;
                     padding: 18px;
+                    background: radial-gradient(circle at 15% 12%, rgba(14, 165, 233, .16), transparent 28%), rgba(15, 23, 42, .62);
                 }
                 .ptw-manual-details-shell {
                     width: min(940px, 100%);
                     max-width: 940px !important;
                     max-height: 94vh;
                     overflow: hidden;
-                    border: 1px solid rgba(148, 163, 184, .55);
-                    border-radius: 22px;
-                    background: #fff;
-                    box-shadow: 0 26px 70px rgba(15, 23, 42, .28);
+                    border: 1px solid rgba(125, 211, 252, .55);
+                    border-radius: 24px;
+                    background: linear-gradient(180deg, #f8fbff 0%, #ffffff 38%);
+                    box-shadow: 0 30px 90px rgba(2, 8, 23, .38), 0 0 0 6px rgba(255, 255, 255, .08);
                     color: var(--ptw-details-ink);
                     direction: rtl;
                 }
@@ -6189,23 +6190,39 @@ const PTW = {
                     position: relative;
                     padding: 24px 76px 20px;
                     text-align: center;
-                    border-bottom: 1px solid var(--ptw-details-line);
-                    background: #fff;
+                    border-bottom: 4px solid #22d3ee;
+                    background: linear-gradient(125deg, #0f172a 0%, #153e75 58%, #0369a1 100%);
+                    overflow: hidden;
+                }
+                .ptw-manual-details-header::after {
+                    content: '';
+                    position: absolute;
+                    inset: auto -8% -70px;
+                    height: 110px;
+                    border-radius: 50%;
+                    background: rgba(56, 189, 248, .12);
+                    pointer-events: none;
                 }
                 .ptw-manual-details-icon {
                     display: inline-flex;
                     align-items: center;
                     justify-content: center;
-                    width: 34px;
-                    height: 34px;
-                    margin-bottom: 2px;
-                    color: var(--ptw-details-blue);
-                    font-size: 20px;
+                    width: 44px;
+                    height: 44px;
+                    margin-bottom: 6px;
+                    border: 1px solid rgba(255, 255, 255, .32);
+                    border-radius: 14px;
+                    color: #fff;
+                    background: linear-gradient(135deg, #2563eb, #06b6d4);
+                    box-shadow: 0 8px 22px rgba(2, 132, 199, .35);
+                    font-size: 21px;
                 }
                 .ptw-manual-details-title {
                     max-width: 720px;
                     margin: 0 auto;
-                    color: #050505;
+                    position: relative;
+                    z-index: 1;
+                    color: #fff;
                     font-size: clamp(1.15rem, 2.5vw, 1.55rem);
                     font-weight: 800;
                     line-height: 1.45;
@@ -6217,7 +6234,9 @@ const PTW = {
                     flex-wrap: wrap;
                     gap: 10px 16px;
                     margin-top: 10px;
-                    color: var(--ptw-details-muted);
+                    position: relative;
+                    z-index: 1;
+                    color: #dbeafe;
                     font-size: .82rem;
                 }
                 .ptw-manual-details-status {
@@ -6241,19 +6260,22 @@ const PTW = {
                     width: 42px;
                     height: 42px;
                     padding: 0;
-                    border: 1.5px solid #111827;
+                    z-index: 2;
+                    border: 1px solid rgba(255, 255, 255, .55);
                     border-radius: 50%;
-                    background: #fff;
-                    color: #111827;
+                    background: rgba(255, 255, 255, .12);
+                    color: #fff;
+                    backdrop-filter: blur(6px);
                     cursor: pointer;
                     transition: background-color .18s ease, color .18s ease, transform .18s ease;
                 }
-                .ptw-manual-details-close:hover { background: #111827; color: #fff; transform: rotate(6deg); }
+                .ptw-manual-details-close:hover { background: #fff; color: #0f3c6e; transform: rotate(6deg); }
                 .ptw-manual-details-close:focus-visible { outline: 3px solid rgba(37, 87, 230, .3); outline-offset: 3px; }
                 .ptw-manual-details-body {
                     max-height: calc(94vh - 186px);
                     overflow-y: auto;
-                    padding: 24px 26px 22px;
+                    padding: 26px 28px 24px;
+                    background: linear-gradient(180deg, #f8fbff 0%, #fff 22%);
                     scrollbar-width: thin;
                     scrollbar-color: #cbd5e1 transparent;
                 }
@@ -6266,9 +6288,26 @@ const PTW = {
                 .ptw-manual-number-card {
                     min-height: 70px;
                     padding: 14px 16px;
-                    border: 1px solid #dbeafe;
-                    border-radius: 6px;
-                    background: var(--ptw-details-blue-soft);
+                    position: relative;
+                    overflow: hidden;
+                    border: 1px solid #bfdbfe;
+                    border-radius: 14px;
+                    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+                    box-shadow: 0 8px 20px rgba(37, 99, 235, .10);
+                }
+                .ptw-manual-number-card:nth-child(2) {
+                    border-color: #a5f3fc;
+                    background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
+                }
+                .ptw-manual-number-card::before {
+                    content: '';
+                    position: absolute;
+                    inset: 0 0 0 auto;
+                    width: 5px;
+                    background: linear-gradient(#2563eb, #38bdf8);
+                }
+                .ptw-manual-number-card:nth-child(2)::before {
+                    background: linear-gradient(#0891b2, #22d3ee);
                 }
                 .ptw-manual-number-card span,
                 .ptw-manual-detail-item dt {
@@ -6292,10 +6331,28 @@ const PTW = {
                     column-gap: 58px;
                     row-gap: 0;
                 }
-                .ptw-manual-details-column { display: grid; align-content: start; gap: 2px; }
+                .ptw-manual-details-column {
+                    display: grid;
+                    align-content: start;
+                    gap: 8px;
+                    margin: 0;
+                    padding: 14px;
+                    border: 1px solid #dbeafe;
+                    border-radius: 16px;
+                    background: linear-gradient(160deg, #ffffff, #f0f7ff);
+                    box-shadow: 0 8px 22px rgba(15, 23, 42, .06);
+                }
+                .ptw-manual-details-column:nth-child(2) {
+                    border-color: #ccfbf1;
+                    background: linear-gradient(160deg, #ffffff, #f0fdfa);
+                }
                 .ptw-manual-detail-item {
                     min-width: 0;
-                    padding: 8px 4px 10px;
+                    margin: 0;
+                    padding: 9px 11px 11px;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 10px;
+                    background: rgba(255, 255, 255, .84);
                 }
                 .ptw-manual-detail-item dd {
                     margin: 0;
@@ -6307,16 +6364,23 @@ const PTW = {
                 }
                 .ptw-manual-details-wide {
                     grid-column: 1 / -1;
-                    margin-top: 3px;
-                    padding-top: 12px;
-                    border-top: 1px dashed var(--ptw-details-line);
+                    margin-top: 16px;
+                    padding: 16px 18px;
+                    border: 1px solid #fed7aa;
+                    border-right: 5px solid #f97316;
+                    background: linear-gradient(135deg, #fff7ed, #fffbeb);
                 }
                 .ptw-manual-details-supervisors {
                     display: grid;
                     grid-template-columns: repeat(2, minmax(0, 1fr));
                     gap: 26px;
                     grid-column: 1 / -1;
-                    margin-top: 2px;
+                    margin-top: 12px;
+                }
+                .ptw-manual-details-supervisors .ptw-manual-detail-item {
+                    border-color: #bbf7d0;
+                    border-right: 5px solid #16a34a;
+                    background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
                 }
                 .ptw-manual-details-actions {
                     display: flex;
@@ -6325,13 +6389,14 @@ const PTW = {
                     gap: 9px;
                     margin-top: 20px;
                     padding-top: 18px;
-                    border-top: 1px solid var(--ptw-details-line);
+                    border-top: 1px dashed #cbd5e1;
+                    background: linear-gradient(90deg, transparent, rgba(219, 234, 254, .65), transparent);
                 }
                 .ptw-manual-details-action {
                     min-height: 42px;
                     padding-inline: 16px !important;
-                    border-radius: 8px !important;
-                    box-shadow: 0 5px 12px rgba(15, 23, 42, .13);
+                    border-radius: 10px !important;
+                    box-shadow: 0 7px 16px rgba(15, 23, 42, .16);
                     font-weight: 700;
                 }
                 .ptw-manual-details-footer {
@@ -6339,7 +6404,7 @@ const PTW = {
                     justify-content: center;
                     padding: 16px 20px;
                     border-top: 1px solid var(--ptw-details-line);
-                    background: var(--ptw-details-footer);
+                    background: linear-gradient(180deg, #f8fafc, var(--ptw-details-footer));
                 }
                 .ptw-manual-details-footer .btn-secondary {
                     min-width: 120px;
@@ -7580,7 +7645,7 @@ const PTW = {
 
     getManualPermitPrintStyles(forPdfExport = false) {
         const a4Overrides = forPdfExport ? `
-            @page { size: A4 portrait; margin: 5mm; }
+            @page { size: A4 portrait; margin: 0; }
             html, body {
                 width: ${this.PERMIT_A4_WIDTH_PX}px !important;
                 max-width: ${this.PERMIT_A4_WIDTH_PX}px !important;
@@ -7594,18 +7659,39 @@ const PTW = {
                 margin: 0 !important;
             }
             .ptw-a4-page {
-                width: ${this.PERMIT_A4_WIDTH_PX}px !important;
-                max-width: ${this.PERMIT_A4_WIDTH_PX}px !important;
-                height: auto;
-                min-height: 0;
+                width: 210mm !important;
+                max-width: 210mm !important;
+                height: 297mm !important;
+                min-height: 297mm !important;
+                max-height: 297mm !important;
                 box-sizing: border-box;
-                padding: 6px 8px 8px;
+                padding: 9px 15px 60px !important;
                 background: #fff;
                 overflow: hidden;
+                position: relative !important;
                 page-break-after: always;
                 break-after: page;
+                page-break-inside: avoid !important;
+                break-inside: avoid-page !important;
+                display: flex;
+                flex-direction: column;
             }
             .ptw-a4-page:last-child { page-break-after: auto; break-after: auto; }
+            .ptw-a4-page-sections { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+            .ptw-a4-page-sections .ptw-manual-form-section {
+                min-height: 0; margin: 0 !important; display: flex; flex-direction: column; justify-content: center;
+                page-break-inside: auto !important; break-inside: auto !important;
+            }
+            .ptw-a4-page-sections-1 .manual-section-1 { flex: 2.35 1 0; }
+            .ptw-a4-page-sections-1 .manual-section-2 { flex: .82 1 0; }
+            .ptw-a4-page-sections-1 .manual-section-3 { flex: 1.18 1 0; }
+            .ptw-a4-page-sections-1 .manual-section-4 { flex: .92 1 0; }
+            .ptw-a4-page-sections-1 .manual-section-5 { flex: 1.12 1 0; }
+            .ptw-a4-page-sections-2 .manual-section-6 { flex: 2.05 1 0; }
+            .ptw-a4-page-sections-2 .manual-section-7 { flex: 1.18 1 0; }
+            .ptw-a4-page-sections-2 .manual-section-8 { flex: 1.06 1 0; }
+            .ptw-a4-page-sections-2 .manual-section-9 { flex: 1.12 1 0; }
+            .ptw-a4-page-sections-2 .manual-section-10 { flex: .72 1 0; }
             .ptw-paper-header { padding: 12px 14px; min-height: 68px; border-radius: 8px; }
             .ptw-paper-header-pdf { display: block; padding: 0; background: transparent; border: none; min-height: 0; margin-bottom: 8px; }
             .ptw-paper-header-table { width: 100%; border-collapse: collapse; table-layout: fixed; background: #1e3a5f; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.18); }
@@ -7648,7 +7734,16 @@ const PTW = {
             .manual-print-supervisor-card .val { font-size: 11px; }
             .manual-work-block { padding: 7px; margin-bottom: 5px; }
             .manual-work-block h4 { font-size: 11px; margin-bottom: 4px; }
-            .ptw-paper-footer { margin-top: 8px; padding-top: 6px; border-top: 2px solid #e0e7ff; }
+            .ptw-paper-footer {
+                position: absolute !important; bottom: 9px !important; left: 15px !important; right: 15px !important;
+                margin-top: 0 !important; padding-top: 4px; border-top: 1px dashed #cbd5e1;
+            }
+            .ptw-a4-page.ptw-page-tight { font-size: 9.2px !important; line-height: 1.18 !important; }
+            .ptw-a4-page.ptw-page-tight .ptw-a4-page-sections { gap: 2px; }
+            .ptw-a4-page.ptw-page-tight .ptw-manual-form-section { padding: 4px 6px !important; }
+            .ptw-a4-page.ptw-page-tight .ptw-manual-form-section h3 { font-size: 9.5px; margin-bottom: 3px !important; padding-bottom: 2px !important; }
+            .ptw-a4-page.ptw-page-ultra-tight { font-size: 8.4px !important; line-height: 1.12 !important; }
+            .ptw-a4-page.ptw-page-ultra-tight .ptw-manual-form-section { padding: 3px 5px !important; }
             .ptw-paper-footer-frame {
                 background: linear-gradient(135deg, rgba(59, 130, 246, 0.03), rgba(37, 99, 235, 0.05));
                 border: 1.5px solid rgba(59, 130, 246, 0.15); border-radius: 8px; padding: 8px 12px;
@@ -8230,29 +8325,15 @@ const PTW = {
 
     _splitManualPermitPrintPages_(content, header, footer, forPdf) {
         if (!forPdf) return `${header}${content}${footer}`;
-        const wrapPage = (inner) => `<div class="ptw-a4-page">${inner}</div>`;
-        const breakMarkers = ['manual-section-4', 'manual-section-7', 'manual-section-9'];
-        const positions = breakMarkers
-            .map((marker) => content.indexOf(marker))
-            .filter((idx) => idx > 0)
-            .sort((a, b) => a - b);
-        const uniquePositions = [...new Set(positions)];
-
-        if (!uniquePositions.length) {
-            return wrapPage(`${header}${content}${footer}`);
+        const wrapPage = (inner, pageNo) => `<div class="ptw-a4-page ptw-a4-page-${pageNo}">${inner}${footer}</div>`;
+        const splitMarker = '<div class="ptw-manual-form-section manual-section-6">';
+        const splitPos = content.indexOf(splitMarker);
+        if (splitPos <= 0) {
+            return wrapPage(`${header}<div class="ptw-a4-page-sections ptw-a4-page-sections-1">${content}</div>`, 1);
         }
-
-        const parts = [];
-        uniquePositions.forEach((pos, index) => {
-            if (index === 0) {
-                parts.push(wrapPage(`${header}${content.slice(0, pos)}`));
-            } else {
-                parts.push(wrapPage(content.slice(uniquePositions[index - 1], pos)));
-            }
-        });
-        const lastPos = uniquePositions[uniquePositions.length - 1];
-        parts.push(wrapPage(`${content.slice(lastPos)}${footer}`));
-        return parts.join('');
+        const page1Content = `<div class="ptw-a4-page-sections ptw-a4-page-sections-1">${content.slice(0, splitPos)}</div>`;
+        const page2Content = `<div class="ptw-a4-page-sections ptw-a4-page-sections-2">${content.slice(splitPos)}</div>`;
+        return `${wrapPage(`${header}${page1Content}`, 1)}${wrapPage(page2Content, 2)}`;
     },
 
     _verifyManualPermitExportHtml_(html) {
@@ -8514,28 +8595,48 @@ const PTW = {
         });
     },
 
+    async _fitManualPermitPagesToA4_(pageEls) {
+        const pages = Array.from(pageEls || []);
+        for (const page of pages) {
+            page.classList.remove('ptw-page-tight', 'ptw-page-ultra-tight');
+            if (page.scrollHeight > page.clientHeight + 2) {
+                page.classList.add('ptw-page-tight');
+                await new Promise((resolve) => requestAnimationFrame(resolve));
+            }
+            if (page.scrollHeight > page.clientHeight + 2) {
+                page.classList.add('ptw-page-ultra-tight');
+                await new Promise((resolve) => requestAnimationFrame(resolve));
+            }
+        }
+    },
+
     async _downloadPermitHtmlAsPdfByPages_(pdf, pageEls, iWin, iframe, marginMm, a4W, maxPages) {
         if (!pdf || !pageEls?.length) return false;
-        const pages = Array.from(pageEls).slice(0, maxPages);
+        const pages = Array.from(pageEls).slice(0, Math.min(2, maxPages));
         const maxH = this.PERMIT_A4_HEIGHT_PX;
+
+        await this._fitManualPermitPagesToA4_(pages);
 
         for (let p = 0; p < pages.length; p++) {
             if (p > 0) pdf.addPage();
             const pageEl = pages[p];
-            pageEl.style.display = 'block';
+            pageEl.style.display = 'flex';
+            pageEl.style.flexDirection = 'column';
             pageEl.style.width = `${a4W}px`;
             pageEl.style.maxWidth = `${a4W}px`;
+            pageEl.style.height = `${maxH}px`;
+            pageEl.style.minHeight = `${maxH}px`;
+            pageEl.style.maxHeight = `${maxH}px`;
             pageEl.style.boxSizing = 'border-box';
             pageEl.style.transform = 'none';
             pageEl.style.zoom = '1';
             pageEl.style.background = '#ffffff';
-            pageEl.style.overflow = 'visible';
+            pageEl.style.overflow = 'hidden';
             pageEl.style.position = 'relative';
             this._sanitizePermitNodeForCanvasCapture_(pageEl);
 
-            const naturalH = Math.max(pageEl.scrollHeight, pageEl.offsetHeight, 1);
             iframe.style.width = `${a4W}px`;
-            iframe.style.height = `${naturalH + 160}px`;
+            iframe.style.height = `${maxH + 40}px`;
             if (typeof pageEl.scrollIntoView === 'function') {
                 pageEl.scrollIntoView({ block: 'start' });
             }
@@ -8543,15 +8644,13 @@ const PTW = {
 
             const canvas = await this._capturePermitHtmlToCanvas_(pageEl, iWin, {
                 width: a4W,
-                height: naturalH
+                height: maxH
             });
             if (!canvas) return false;
 
-            const needsSlice = naturalH > maxH;
-            const sliceCount = needsSlice ? Math.min(6, Math.max(1, Math.ceil(naturalH / maxH))) : 1;
             this._addPermitCanvasToPdfFullWidth_(pdf, canvas, marginMm, {
-                allowSlice: needsSlice,
-                maxSlices: sliceCount
+                allowSlice: false,
+                maxSlices: 1
             });
         }
         return true;
