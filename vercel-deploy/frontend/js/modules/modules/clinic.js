@@ -14397,6 +14397,9 @@ const Clinic = {
                 }[request.type] || request.type || '-';
                 itemType = typeLabel;
                 itemDetails = `${typeLabel}: ${itemName} (${request.quantity || ''} ${request.unit || ''})`;
+                if (request.type === 'medication' && request.currentBalanceAtRequest !== null && request.currentBalanceAtRequest !== undefined) {
+                    itemDetails += ` • الرصيد وقت الطلب: ${request.currentBalanceAtRequest} ${request.unit || 'وحدة'}`;
+                }
             } else if (isVisitDeletion) {
                 const visitData = request.visitData || {};
                 const personName = visitData.employeeName || visitData.contractorWorkerName || visitData.contractorName || visitData.externalName || '-';
@@ -14848,6 +14851,10 @@ const Clinic = {
                             <div><strong>اسم العنصر:</strong> ${Utils.escapeHTML(request.itemName || '-')}</div>
                             <div><strong>الكمية:</strong> ${request.quantity || '-'} ${Utils.escapeHTML(request.unit || '')}</div>
                             <div><strong>الأولوية:</strong> ${Utils.escapeHTML(priorityLabel)}</div>
+                            ${request.type === 'medication' && request.currentBalanceAtRequest !== null && request.currentBalanceAtRequest !== undefined ? `
+                                <div style="padding:7px 9px;border-radius:8px;background:#f0fdfa;color:#134e4a;"><strong>الرصيد وقت الطلب:</strong> ${request.currentBalanceAtRequest} ${Utils.escapeHTML(request.unit || 'وحدة')}</div>
+                            ` : ''}
+                            ${request.type === 'medication' && request.medicationExpiryDate ? `<div><strong>الصلاحية:</strong> ${this.formatDate(request.medicationExpiryDate)}</div>` : ''}
                             ${request.notes ? `
                                 <div class="col-span-2"><strong>ملاحظات:</strong> ${Utils.escapeHTML(request.notes)}</div>
                             ` : ''}
@@ -18742,7 +18749,17 @@ const Clinic = {
                     <form id="supply-request-form" novalidate>
                         <div class="cw-form-grid">
                             <div class="cw-field"><label class="cw-field-title" for="request-type"><i class="fas fa-tag"></i>نوع الطلب *</label><select id="request-type" class="cw-control" required><option value="">اختر نوع الطلب</option><option value="medication">أدوية</option><option value="equipment">أجهزة طبية</option><option value="supplies">مستلزمات طبية</option><option value="other">أخرى</option></select></div>
-                            <div class="cw-field"><label class="cw-field-title" for="item-name"><i class="fas fa-box-open"></i>اسم العنصر المطلوب *</label><input type="text" id="item-name" class="cw-control" placeholder="مثال: باراسيتامول 500 مجم" required></div>
+                            <div class="cw-field"><label class="cw-field-title" for="item-name"><i class="fas fa-box-open"></i>اسم العنصر المطلوب *</label><input type="text" id="item-name" class="cw-control" placeholder="مثال: باراسيتامول 500 مجم" autocomplete="off" required><datalist id="supply-medications-datalist"></datalist><small id="supply-medication-match-hint" style="display:none;margin-top:5px;color:#64748b;font-size:.66rem;">ابحث واختر دواءً مسجلاً لعرض رصيده، أو اكتب اسم دواء جديد.</small></div>
+                            <div id="supply-stock-balance-panel" class="cw-field-full" style="display:none;overflow:hidden;border:1px solid #b8ded9;border-radius:12px;background:linear-gradient(135deg,#f0fdfa,#f8fafc);">
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid #cce8e4;"><div style="display:flex;align-items:center;gap:8px;color:#134e4a;font-size:.76rem;font-weight:850;"><span style="width:30px;height:30px;display:grid;place-items:center;border-radius:8px;background:#ccfbf1;color:#0f766e;"><i class="fas fa-warehouse"></i></span><span id="supply-stock-medication-name">رصيد الدواء الحالي</span></div><span id="supply-stock-status" style="padding:4px 9px;border-radius:999px;font-size:.66rem;font-weight:800;"></span></div>
+                                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;padding:11px 12px;">
+                                    <div style="padding:8px 10px;border-radius:9px;background:#fff;border:1px solid #dcebe8;"><small style="display:block;color:#64748b;font-size:.62rem;">الرصيد المتاح</small><strong id="supply-stock-balance" style="display:block;margin-top:2px;color:#0f766e;font-size:1rem;">0</strong></div>
+                                    <div style="padding:8px 10px;border-radius:9px;background:#fff;border:1px solid #dcebe8;"><small style="display:block;color:#64748b;font-size:.62rem;">الكمية الأصلية</small><strong id="supply-stock-original" style="display:block;margin-top:2px;color:#334155;font-size:1rem;">0</strong></div>
+                                    <div style="padding:8px 10px;border-radius:9px;background:#fff;border:1px solid #dcebe8;"><small style="display:block;color:#64748b;font-size:.62rem;">تاريخ الصلاحية</small><strong id="supply-stock-expiry" style="display:block;margin-top:3px;color:#334155;font-size:.76rem;">—</strong></div>
+                                    <div style="padding:8px 10px;border-radius:9px;background:#fff;border:1px solid #dcebe8;"><small style="display:block;color:#64748b;font-size:.62rem;">استكمال الرصيد المقترح</small><div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><strong id="supply-stock-suggested" style="color:#b45309;font-size:1rem;">—</strong><button type="button" id="supply-apply-suggested-qty" style="display:none;padding:3px 7px;border:1px solid #fcd34d;border-radius:6px;background:#fffbeb;color:#92400e;font-size:.62rem;font-weight:750;cursor:pointer;">تطبيق</button></div></div>
+                                </div>
+                                <p style="margin:0;padding:0 12px 10px;color:#527067;font-size:.65rem;"><i class="fas fa-info-circle ml-1"></i>الرصيد للعرض واتخاذ القرار فقط؛ إرسال طلب التوريد لا يخصم من المخزون.</p>
+                            </div>
                             <div class="cw-field"><label class="cw-field-title" for="quantity"><i class="fas fa-sort-numeric-up"></i>الكمية المطلوبة *</label><input type="number" id="quantity" class="cw-control" placeholder="مثال: 10" min="1" required></div>
                             <div class="cw-field"><label class="cw-field-title" for="unit"><i class="fas fa-ruler"></i>الوحدة</label><input type="text" id="unit" class="cw-control" placeholder="مثال: علبة، عبوة، قطعة"></div>
                             <div class="cw-field"><label class="cw-field-title" for="priority"><i class="fas fa-exclamation-triangle"></i>الأولوية</label><select id="priority" class="cw-control"><option value="normal">عادية</option><option value="high">عالية</option><option value="urgent">عاجلة</option></select></div>
@@ -18756,6 +18773,126 @@ const Clinic = {
         this.applyModuleI18n(modal);
 
         const form = modal.querySelector('#supply-request-form');
+        const typeSelect = modal.querySelector('#request-type');
+        const itemNameInput = modal.querySelector('#item-name');
+        const unitInput = modal.querySelector('#unit');
+        const quantityInput = modal.querySelector('#quantity');
+        const medicationDatalist = modal.querySelector('#supply-medications-datalist');
+        const medicationHint = modal.querySelector('#supply-medication-match-hint');
+        const balancePanel = modal.querySelector('#supply-stock-balance-panel');
+        const medicationsByName = new Map();
+
+        this.getMedications().forEach((medication) => {
+            const name = String(medication.name || medication.medicationName || '').trim();
+            const key = this.normalizeArabicText(name);
+            if (!key) return;
+            const current = medicationsByName.get(key) || {
+                id: medication.id || '', ids: [], name, balance: 0, original: 0,
+                unit: medication.unit || medication.packageUnit || 'وحدة', expiryDates: []
+            };
+            if (medication.id && !current.ids.includes(medication.id)) current.ids.push(medication.id);
+            current.balance += Number(medication.remainingQuantity ?? medication.quantity ?? 0) || 0;
+            current.original += Number(medication.quantityAdded ?? medication.quantity ?? 0) || 0;
+            if (medication.expiryDate) current.expiryDates.push(medication.expiryDate);
+            medicationsByName.set(key, current);
+        });
+        if (medicationDatalist) {
+            medicationDatalist.innerHTML = Array.from(medicationsByName.values())
+                .sort((a, b) => a.name.localeCompare(b.name, 'ar'))
+                .map((medication) => `<option value="${Utils.escapeHTML(medication.name)}" label="الرصيد: ${medication.balance} ${Utils.escapeHTML(medication.unit)}"></option>`)
+                .join('');
+        }
+
+        const clearMedicationLink = () => {
+            if (!itemNameInput) return;
+            ['medicationId', 'medicationIds', 'currentBalance', 'quantityAdded', 'stockStatus', 'expiryDate']
+                .forEach((key) => { delete itemNameInput.dataset[key]; });
+            if (balancePanel) balancePanel.style.display = 'none';
+        };
+        const renderMedicationBalance = () => {
+            if (!itemNameInput || typeSelect?.value !== 'medication') {
+                clearMedicationLink();
+                return;
+            }
+            const medication = medicationsByName.get(this.normalizeArabicText(itemNameInput.value));
+            if (!medication) {
+                clearMedicationLink();
+                return;
+            }
+            const earliestExpiry = medication.expiryDates.slice().sort()[0] || '';
+            const expiryTimestamp = earliestExpiry ? new Date(earliestExpiry).getTime() : NaN;
+            const isExpired = Number.isFinite(expiryTimestamp) && expiryTimestamp < new Date().setHours(0, 0, 0, 0);
+            const stockStatus = isExpired ? 'expired' : (medication.balance <= 0 ? 'out' : (medication.balance <= 10 ? 'low' : 'available'));
+            const suggestedQuantity = isExpired
+                ? Math.max(1, Math.ceil(medication.original || medication.balance))
+                : (medication.original > medication.balance
+                    ? Math.ceil(medication.original - medication.balance)
+                    : (medication.balance <= 10 ? Math.max(1, Math.ceil(10 - medication.balance)) : 0));
+            itemNameInput.dataset.medicationId = medication.id || medication.ids[0] || '';
+            itemNameInput.dataset.medicationIds = JSON.stringify(medication.ids);
+            itemNameInput.dataset.currentBalance = String(medication.balance);
+            itemNameInput.dataset.quantityAdded = String(medication.original);
+            itemNameInput.dataset.stockStatus = stockStatus;
+            itemNameInput.dataset.expiryDate = earliestExpiry;
+            if (unitInput && (!unitInput.value || unitInput.dataset.autoFilled === '1')) {
+                unitInput.value = medication.unit;
+                unitInput.dataset.autoFilled = '1';
+            }
+            const nameEl = modal.querySelector('#supply-stock-medication-name');
+            const balanceEl = modal.querySelector('#supply-stock-balance');
+            const originalEl = modal.querySelector('#supply-stock-original');
+            const expiryEl = modal.querySelector('#supply-stock-expiry');
+            const statusEl = modal.querySelector('#supply-stock-status');
+            const suggestedEl = modal.querySelector('#supply-stock-suggested');
+            const applySuggestedBtn = modal.querySelector('#supply-apply-suggested-qty');
+            if (nameEl) nameEl.textContent = medication.name;
+            if (balanceEl) balanceEl.textContent = `${medication.balance} ${medication.unit}`;
+            if (originalEl) originalEl.textContent = `${medication.original} ${medication.unit}`;
+            if (expiryEl) expiryEl.textContent = earliestExpiry ? this.formatDate(earliestExpiry) : 'غير مسجل';
+            if (statusEl) {
+                const statusMap = {
+                    expired: { label: 'منتهي الصلاحية', background: '#fee2e2', color: '#991b1b' },
+                    out: { label: 'نفد المخزون', background: '#fee2e2', color: '#b91c1c' },
+                    low: { label: 'رصيد منخفض', background: '#fef3c7', color: '#92400e' },
+                    available: { label: 'متوفر', background: '#dcfce7', color: '#166534' }
+                };
+                const currentStatus = statusMap[stockStatus];
+                statusEl.textContent = currentStatus.label;
+                statusEl.style.background = currentStatus.background;
+                statusEl.style.color = currentStatus.color;
+            }
+            if (suggestedEl) suggestedEl.textContent = suggestedQuantity > 0 ? `${suggestedQuantity} ${medication.unit}` : 'لا يوجد عجز';
+            if (applySuggestedBtn) {
+                applySuggestedBtn.style.display = suggestedQuantity > 0 ? 'inline-flex' : 'none';
+                applySuggestedBtn.dataset.quantity = String(suggestedQuantity);
+            }
+            if (balancePanel) balancePanel.style.display = 'block';
+        };
+        const syncMedicationMode = ({ clearValue = false } = {}) => {
+            const isMedication = typeSelect?.value === 'medication';
+            if (clearValue && itemNameInput) itemNameInput.value = '';
+            if (itemNameInput) {
+                if (isMedication) itemNameInput.setAttribute('list', 'supply-medications-datalist');
+                else itemNameInput.removeAttribute('list');
+                itemNameInput.placeholder = isMedication ? 'ابحث باسم الدواء المسجل أو أدخل دواءً جديدًا' : 'اكتب اسم العنصر المطلوب';
+            }
+            if (medicationHint) medicationHint.style.display = isMedication ? 'block' : 'none';
+            if (!isMedication) clearMedicationLink();
+        };
+        typeSelect?.addEventListener('change', () => syncMedicationMode({ clearValue: true }));
+        itemNameInput?.addEventListener('input', renderMedicationBalance);
+        itemNameInput?.addEventListener('change', renderMedicationBalance);
+        unitInput?.addEventListener('input', () => { unitInput.dataset.autoFilled = '0'; });
+        modal.querySelector('#supply-apply-suggested-qty')?.addEventListener('click', (event) => {
+            const suggested = parseInt(event.currentTarget.dataset.quantity, 10) || 0;
+            if (quantityInput && suggested > 0) {
+                quantityInput.value = String(suggested);
+                quantityInput.dispatchEvent(new Event('input', { bubbles: true }));
+                quantityInput.focus();
+            }
+        });
+        syncMedicationMode();
+
         let isDirty = false;
         let isSubmitting = false;
         const keyHandler = (event) => {
@@ -18768,7 +18905,14 @@ const Clinic = {
             modal.remove();
         };
         form?.addEventListener('input', () => { isDirty = true; });
-        form?.addEventListener('reset', () => { setTimeout(() => { isDirty = false; }, 0); });
+        form?.addEventListener('reset', () => {
+            setTimeout(() => {
+                isDirty = false;
+                if (unitInput) unitInput.dataset.autoFilled = '0';
+                clearMedicationLink();
+                syncMedicationMode();
+            }, 0);
+        });
         form?.addEventListener('submit', async (event) => {
             event.preventDefault();
             if (!form.reportValidity()) return;
@@ -18954,6 +19098,12 @@ const Clinic = {
                 supplies: 'fas fa-briefcase-medical',
                 other: 'fas fa-box'
             }[request.type] || 'fas fa-box';
+            const itemMeta = [
+                request.type === 'medication' && request.currentBalanceAtRequest !== null && request.currentBalanceAtRequest !== undefined
+                    ? `الرصيد عند الطلب: ${request.currentBalanceAtRequest} ${request.unit || 'وحدة'}`
+                    : '',
+                request.notes || ''
+            ].filter(Boolean).join(' • ') || 'لا توجد ملاحظات';
 
             return `
                 <tr>
@@ -18961,7 +19111,7 @@ const Clinic = {
                     <td>${requestDate}</td>
                     <td>${Utils.escapeHTML(requestedBy)}</td>
                     <td>${Utils.escapeHTML(typeLabel)}</td>
-                    <td><div class="cw-main-cell"><span class="cw-cell-icon"><i class="${typeIcon}"></i></span><div><strong>${Utils.escapeHTML(request.itemName || 'غير محدد')}</strong><small>${Utils.escapeHTML(request.notes || 'لا توجد ملاحظات')}</small></div></div></td>
+                    <td><div class="cw-main-cell"><span class="cw-cell-icon"><i class="${typeIcon}"></i></span><div><strong>${Utils.escapeHTML(request.itemName || 'غير محدد')}</strong><small>${Utils.escapeHTML(itemMeta)}</small></div></div></td>
                     <td class="text-center">${request.quantity || ''} ${Utils.escapeHTML(request.unit || '')}</td>
                     <td class="text-center">${priorityBadge}</td>
                     <td class="text-center">${statusBadge}</td>
@@ -19015,6 +19165,10 @@ const Clinic = {
         const unit = document.getElementById('unit')?.value?.trim() || 'وحدة';
         const notes = document.getElementById('request-notes')?.value?.trim();
         const priority = document.getElementById('priority')?.value || 'normal';
+        const itemNameElement = document.getElementById('item-name');
+        const linkedMedicationId = type === 'medication' ? (itemNameElement?.dataset.medicationId || '') : '';
+        const balanceValue = itemNameElement?.dataset.currentBalance;
+        const originalStockValue = itemNameElement?.dataset.quantityAdded;
 
         if (!type || !itemName || !quantity) {
             Notification?.error?.('يرجى ملء جميع الحقول المطلوبة');
@@ -19032,6 +19186,11 @@ const Clinic = {
                 notes,
                 priority,
                 status: 'pending',
+                medicationId: linkedMedicationId || null,
+                currentBalanceAtRequest: linkedMedicationId && balanceValue !== undefined ? Number(balanceValue) : null,
+                originalStockAtRequest: linkedMedicationId && originalStockValue !== undefined ? Number(originalStockValue) : null,
+                stockStatusAtRequest: linkedMedicationId ? (itemNameElement?.dataset.stockStatus || null) : null,
+                medicationExpiryDate: linkedMedicationId ? (itemNameElement?.dataset.expiryDate || null) : null,
                 requestedBy: {
                     id: AppState.currentUser?.id,
                     name: AppState.currentUser?.name,
@@ -19501,6 +19660,18 @@ const Clinic = {
                                         <i class="fas fa-user-check ml-2"></i>
                                         <strong>للموظفين:</strong> أدخل الكود الوظيفي فقط
                                     </div>
+                        ${request.type === 'medication' && request.currentBalanceAtRequest !== null && request.currentBalanceAtRequest !== undefined ? `
+                        <div style="padding:9px 11px;border:1px solid #b8ded9;border-radius:9px;background:#f0fdfa;">
+                            <label class="text-sm font-semibold" style="color:#0f766e;">الرصيد عند إرسال الطلب</label>
+                            <p style="margin:3px 0 0;color:#134e4a;font-weight:800;">${request.currentBalanceAtRequest} ${Utils.escapeHTML(request.unit || 'وحدة')}</p>
+                        </div>
+                        ` : ''}
+                        ${request.type === 'medication' && request.medicationExpiryDate ? `
+                        <div>
+                            <label class="text-sm font-semibold text-gray-600">صلاحية الدواء</label>
+                            <p class="text-gray-800">${this.formatDate(request.medicationExpiryDate)}</p>
+                        </div>
+                        ` : ''}
                                     <div>
                                         <i class="fas fa-save ml-2"></i>
                                         <strong>الحفظ:</strong> سيتم حفظ البيانات تلقائياً
