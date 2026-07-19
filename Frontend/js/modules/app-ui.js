@@ -9941,6 +9941,92 @@ window.UI = {
                 Utils.safeWarn('⚠️ تنبيهات طلبات الحضور في الإشعارات:', clinicToErr);
             }
 
+            // 7c. سير موافقات العيادة — طلبات الاحتياجات للمدير ونتائج الطلبات لصاحبها
+            try {
+                const cu = AppState.currentUser || {};
+                const normalizeKey = (value) => String(value || '').trim().toLowerCase();
+                const currentKeys = [cu.id, cu.userId, cu.email].map(normalizeKey).filter(Boolean);
+                const isOwnRequest = (request, kind) => {
+                    if (!request || currentKeys.length === 0) return false;
+                    const owner = kind === 'supply' ? (request.requestedBy || {}) : request;
+                    const keys = kind === 'supply'
+                        ? [request.requestedById, request.requestedByEmail, owner.id, owner.userId, owner.email]
+                        : [request.userId, request.userEmail, request.staffId];
+                    return keys.map(normalizeKey).filter(Boolean).some(key => currentKeys.includes(key));
+                };
+                const openClinicTab = (tab) => {
+                    try {
+                        document.querySelector('a[data-section="clinic"]')?.click();
+                        setTimeout(() => {
+                            if (typeof Clinic === 'undefined') return;
+                            Clinic.state = Clinic.state || {};
+                            Clinic.state.activeTab = tab;
+                            if (typeof Clinic.renderUI === 'function') Clinic.renderUI();
+                        }, 400);
+                    } catch (_e) { /* ignore */ }
+                };
+                const isAdminUser = (cu.role === 'admin') ||
+                    (typeof Permissions !== 'undefined' && Permissions.isCurrentUserAdmin && Permissions.isCurrentUserAdmin());
+                const supplyRequests = Array.isArray(AppState.appData?.clinicSupplyRequests)
+                    ? AppState.appData.clinicSupplyRequests : [];
+                const timeOffRequests = Array.isArray(AppState.appData?.clinicStaffTimeOffRequests)
+                    ? AppState.appData.clinicStaffTimeOffRequests : [];
+
+                if (isAdminUser) {
+                    supplyRequests
+                        .filter(request => request && normalizeKey(request.status || 'pending') === 'pending')
+                        .forEach(request => {
+                            const notificationId = 'clinic-supply-' + (request.id || Date.now());
+                            if (readNotifications.includes(notificationId)) return;
+                            const owner = request.requestedBy || {};
+                            const who = request.requestedByName || owner.name || owner.email || 'مستخدم العيادة';
+                            const quantity = request.quantity ? `${request.quantity} ${request.unit || 'وحدة'}` : '';
+                            notifications.push({
+                                id: notificationId,
+                                type: request.priority === 'urgent' ? 'warning' : 'approval',
+                                title: 'طلب احتياجات جديد — العيادة',
+                                message: `${who}: ${request.itemName || 'صنف غير محدد'}${quantity ? ' — ' + quantity : ''}`,
+                                time: request.createdAt || request.requestDate || new Date(),
+                                icon: 'fa-box-medical',
+                                onClick: () => openClinicTab('approvals')
+                            });
+                        });
+                }
+
+                const resultMeta = {
+                    approved: { label: 'تمت الموافقة', type: 'success', icon: 'fa-circle-check' },
+                    rejected: { label: 'تم الرفض', type: 'error', icon: 'fa-circle-xmark' }
+                };
+                const addOwnerResult = (request, kind) => {
+                    const status = normalizeKey(request?.status);
+                    const meta = resultMeta[status];
+                    if (!meta || !isOwnRequest(request, kind)) return;
+                    const requestId = request.id || Date.now();
+                    const notificationId = `clinic-${kind}-result-${requestId}-${status}`;
+                    if (readNotifications.includes(notificationId)) return;
+                    const isSupply = kind === 'supply';
+                    const typeLabels = { leave: 'الإجازة', permission: 'الإذن', overtime: 'العمل الإضافي' };
+                    const subject = isSupply
+                        ? (request.itemName || 'طلب الاحتياجات')
+                        : (typeLabels[normalizeKey(request.requestType)] || 'طلب الحضور');
+                    const reason = status === 'rejected'
+                        ? (request.rejectionReason || request.reviewNotes || '') : '';
+                    notifications.push({
+                        id: notificationId,
+                        type: meta.type,
+                        title: `${meta.label} على ${isSupply ? 'طلب الاحتياجات' : 'طلب الحضور'}`,
+                        message: `${subject}${reason ? ' — السبب: ' + String(reason).slice(0, 100) : ''}`,
+                        time: request.reviewedAt || request.approvedAt || request.rejectedAt || request.updatedAt || new Date(),
+                        icon: meta.icon,
+                        onClick: () => openClinicTab(isSupply ? 'supply-request' : 'attendance')
+                    });
+                };
+                timeOffRequests.forEach(request => addOwnerResult(request, 'timeoff'));
+                supplyRequests.forEach(request => addOwnerResult(request, 'supply'));
+            } catch (clinicWorkflowErr) {
+                Utils.safeWarn('⚠️ تنبيهات سير موافقات العيادة:', clinicWorkflowErr);
+            }
+
             // ترتيب الإشعارات حسب التاريخ (الأحدث أولاً)
             notifications.sort((a, b) => {
                 const dateA = new Date(a.time);
