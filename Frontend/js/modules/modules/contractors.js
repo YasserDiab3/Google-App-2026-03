@@ -3787,6 +3787,7 @@ const Contractors = {
     },
 
     viewApprovedEntity(id) {
+        this.injectAntiShakeStyles();
         this.ensureApprovedSetup();
         const record = (AppState.appData.approvedContractors || []).find((item) => item.id === id);
         if (!record) {
@@ -3799,76 +3800,58 @@ const Contractors = {
         const approvalDate = record.approvalDate ? Utils.formatDate(record.approvalDate) : '—';
         const expiryDate = record.expiryDate ? Utils.formatDate(record.expiryDate) : '—';
         const expiredBadge = this.isApprovalExpired(record) ? '<span class="badge badge-danger ml-2">منتهي</span>' : '';
+        const contractorCode = record.code || record.isoCode || record.contractorCode ||
+            record['كود المقاول'] || record['كود'] || record.codeNumber || '';
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.id = 'contractor-approved-entity-details-modal';
+        modal.className = 'modal-overlay ctr-detail-modal';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 680px;">
-                <div class="modal-header">
-                    <h2 class="modal-title"><i class="fas fa-id-card ml-2"></i>تفاصيل الجهة المعتمدة</h2>
+            <div class="modal-content ctr-detail-dialog">
+                <div class="modal-header ctr-detail-head">
+                    <div class="ctr-detail-head__copy">
+                        <span class="ctr-detail-head__icon"><i class="fas fa-building-shield"></i></span>
+                        <div>
+                            <span class="ctr-detail-head__eyebrow">سجل الاعتماد والتأهيل</span>
+                            <h2 class="modal-title">تفاصيل الجهة المعتمدة</h2>
+                            <p>${Utils.escapeHTML(record.companyName || 'جهة غير مسماة')}</p>
+                        </div>
+                    </div>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="modal-body space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">كود المقاول</label>
-                            <p class="text-gray-800">
-                                ${(() => {
-                const contractorCode = record.code || record.isoCode ||
-                    record.contractorCode || record['كود المقاول'] ||
-                    record['كود'] || record.codeNumber || '';
-                return contractorCode ? `
-                                        <span class="font-mono text-sm font-semibold bg-blue-50 text-blue-700 px-2 py-1 rounded">
-                                            ${Utils.escapeHTML(contractorCode)}
-                                        </span>
-                                    ` : '<span class="text-gray-400">—</span>';
-            })()}
-                            </p>
-                        </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">اسم الشركة / المقاول</label>
-                            <p class="text-gray-800">${Utils.escapeHTML(record.companyName || '')}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">نوع الجهة</label>
-                            <p class="text-gray-800">${typeLabel}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">النشاط / نوع الخدمة</label>
-                            <p class="text-gray-800">${Utils.escapeHTML(record.serviceType || '')}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">السجل التجاري / الترخيص</label>
-                            <p class="text-gray-800">${Utils.escapeHTML(record.licenseNumber || '') || '—'}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">تاريخ الاعتماد</label>
-                            <p class="text-gray-800">${approvalDate}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">تاريخ انتهاء الاعتماد</label>
-                            <p class="text-gray-800">${expiryDate} ${expiredBadge}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">مسؤول السلامة للمراجعة</label>
-                            <p class="text-gray-800">${Utils.escapeHTML(record.safetyReviewer || '') || '—'}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">حالة الاعتماد</label>
-                            <span class="badge ${this.getApprovedStatusBadgeClass(record.status)} mt-1">${statusLabel}</span>
-                        </div>
+                <div class="modal-body ctr-detail-body">
+                    <div class="ctr-detail-summary">
+                        <div><span>كود الجهة</span><strong class="ctr-detail-code">${contractorCode ? Utils.escapeHTML(contractorCode) : '—'}</strong></div>
+                        <div><span>نوع الجهة</span><strong>${typeLabel}</strong></div>
+                        <div><span>حالة الاعتماد</span><strong><span class="badge ${this.getApprovedStatusBadgeClass(record.status)}">${statusLabel}</span></strong></div>
                     </div>
-                    ${record.notes ? `
-                        <div class="bg-gray-50 border border-gray-200 rounded p-3">
-                            <label class="text-sm font-semibold text-gray-600 block mb-2">ملاحظات</label>
-                            <p class="text-gray-700 whitespace-pre-line">${Utils.escapeHTML(record.notes)}</p>
+                    <section class="ctr-detail-section">
+                        <h3><i class="fas fa-address-card"></i>بيانات الجهة</h3>
+                        <div class="ctr-detail-grid">
+                            <div class="ctr-detail-field"><label>اسم الشركة / المقاول</label><p>${Utils.escapeHTML(record.companyName || '') || '—'}</p></div>
+                            <div class="ctr-detail-field"><label>النشاط / نوع الخدمة</label><p>${Utils.escapeHTML(record.serviceType || '') || '—'}</p></div>
+                            <div class="ctr-detail-field"><label>السجل التجاري / الترخيص</label><p>${Utils.escapeHTML(record.licenseNumber || '') || '—'}</p></div>
+                            <div class="ctr-detail-field"><label>مسؤول السلامة للمراجعة</label><p>${Utils.escapeHTML(record.safetyReviewer || '') || '—'}</p></div>
                         </div>
+                    </section>
+                    <section class="ctr-detail-section ctr-detail-section--dates">
+                        <h3><i class="fas fa-calendar-check"></i>صلاحية الاعتماد</h3>
+                        <div class="ctr-detail-grid">
+                            <div class="ctr-detail-field"><label>تاريخ الاعتماد</label><p>${approvalDate}</p></div>
+                            <div class="ctr-detail-field"><label>تاريخ انتهاء الاعتماد</label><p>${expiryDate} ${expiredBadge}</p></div>
+                        </div>
+                    </section>
+                    ${record.notes ? `
+                        <section class="ctr-detail-section ctr-detail-note">
+                            <h3><i class="fas fa-note-sticky"></i>ملاحظات</h3>
+                            <p>${Utils.escapeHTML(record.notes)}</p>
+                        </section>
                     ` : ''}
                 </div>
-                <div class="modal-footer">
-                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                <div class="modal-footer ctr-detail-footer">
+                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-xmark ml-2"></i>إغلاق</button>
                     <button class="btn-success" onclick="Contractors.exportApprovedEntitiesPDF('${record.id}')">
                         <i class="fas fa-file-pdf ml-2"></i>
                         تصدير PDF
@@ -4804,12 +4787,12 @@ const Contractors = {
                         <div><h2 class="card-title"><i class="fas fa-cog ml-2"></i>إدارة اشتراطات اعتماد المقاولين</h2><p style="margin:4px 0 0;color:#d9ebf3;font-size:.68rem;">حوكمة الوثائق الإلزامية والأولويات ومدد الصلاحية</p></div>
                         <div class="flex items-center gap-3">
                             <button onclick="Contractors.exportRequirementsTemplate()" class="btn-secondary btn-sm">
-                                <i class="fas fa-download ml-2"></i>
-                                تصدير قالب
+                                <i class="fas fa-file-excel ml-2 text-green-600"></i>
+                                تصدير قالب Excel
                             </button>
                             <button onclick="Contractors.importRequirementsTemplate()" class="btn-secondary btn-sm">
-                                <i class="fas fa-upload ml-2"></i>
-                                استيراد قالب
+                                <i class="fas fa-file-import ml-2"></i>
+                                استيراد Excel
                             </button>
                         </div>
                     </div>
@@ -8948,69 +8931,157 @@ const Contractors = {
     exportRequirementsTemplate() {
         this.ensureRequirementsSetup();
         const requirements = this.getApprovalRequirements();
-        
-        const template = {
-            version: '1.0',
-            exportDate: new Date().toISOString(),
-            requirements: requirements
-        };
+        if (typeof XLSX === 'undefined') {
+            Notification.error('مكتبة Excel غير محمّلة. يرجى تحديث الصفحة ثم المحاولة مجددًا.');
+            return;
+        }
 
-        const dataStr = JSON.stringify(template, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(dataBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `contractor-requirements-template-${new Date().toISOString().split('T')[0]}.json`;
-        link.click();
-        URL.revokeObjectURL(url);
-        
-        Notification.success('تم تصدير قالب الاشتراطات بنجاح');
+        const rows = requirements.map((req, index) => ({
+            'الترتيب': Number(req.order) || index + 1,
+            'معرف الاشتراط': req.id || '',
+            'اسم الاشتراط': req.label || '',
+            'الوصف': req.description || '',
+            'نوع الحقل': req.type || 'document',
+            'الفئة': (REQUIREMENT_CATEGORIES[req.category] || REQUIREMENT_CATEGORIES.other).label,
+            'الأولوية': (REQUIREMENT_PRIORITIES[req.priority] || REQUIREMENT_PRIORITIES.medium).label,
+            'إلزامي': req.required === false ? 'لا' : 'نعم',
+            'له تاريخ انتهاء': req.hasExpiry ? 'نعم' : 'لا',
+            'مدة الصلاحية بالأشهر': req.hasExpiry ? (Number(req.expiryMonths) || 12) : '',
+            'ينطبق على': Array.isArray(req.applicableTypes) && req.applicableTypes.length === 1
+                ? (req.applicableTypes[0] === 'supplier' ? 'مورد' : 'مقاول')
+                : 'مقاول ومورد'
+        }));
+
+        const workbook = XLSX.utils.book_new();
+        const sheet = XLSX.utils.json_to_sheet(rows);
+        sheet['!cols'] = [
+            { wch: 10 }, { wch: 20 }, { wch: 45 }, { wch: 55 }, { wch: 16 },
+            { wch: 27 }, { wch: 14 }, { wch: 12 }, { wch: 18 }, { wch: 24 }, { wch: 18 }
+        ];
+        sheet['!autofilter'] = { ref: sheet['!ref'] || 'A1:K1' };
+        XLSX.utils.book_append_sheet(workbook, sheet, 'الاشتراطات');
+
+        const guideRows = [
+            ['دليل استخدام قالب اشتراطات اعتماد المقاولين'],
+            ['الحقل', 'القيم المقبولة / التعليمات'],
+            ['اسم الاشتراط', 'إلزامي، ولا يتم استيراد الصف بدونه'],
+            ['نوع الحقل', 'document أو text أو checkbox'],
+            ['الفئة', Object.values(REQUIREMENT_CATEGORIES).map(item => `${item.label} (${item.id})`).join('، ')],
+            ['الأولوية', Object.values(REQUIREMENT_PRIORITIES).map(item => `${item.label} (${item.id})`).join('، ')],
+            ['إلزامي / له تاريخ انتهاء', 'نعم أو لا'],
+            ['ينطبق على', 'مقاول، مورد، أو مقاول ومورد'],
+            ['ملاحظة', 'لا تغيّر أسماء أعمدة ورقة الاشتراطات. يمكن إضافة صفوف جديدة أو تعديل القائمة الحالية.']
+        ];
+        const guideSheet = XLSX.utils.aoa_to_sheet(guideRows);
+        guideSheet['!cols'] = [{ wch: 28 }, { wch: 100 }];
+        guideSheet['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
+        XLSX.utils.book_append_sheet(workbook, guideSheet, 'دليل القيم');
+        workbook.Workbook = workbook.Workbook || {};
+        workbook.Workbook.Views = [{ RTL: true }];
+
+        XLSX.writeFile(workbook, `قالب_اشتراطات_المقاولين_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        Notification.success('تم تصدير قالب الاشتراطات بصيغة Excel بنجاح');
+    },
+
+    getRequirementImportCell(row, ...aliases) {
+        return this.getApprovedImportCell(row, ...aliases);
+    },
+
+    parseRequirementImportBoolean(value, defaultValue = false) {
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'number') return value !== 0;
+        const normalized = String(value ?? '').trim().toLowerCase();
+        if (!normalized) return defaultValue;
+        return ['نعم', 'yes', 'true', '1', 'إلزامي'].includes(normalized);
+    },
+
+    mapRequirementImportOption(value, options, fallback) {
+        const normalized = String(value ?? '').trim().toLowerCase();
+        if (!normalized) return fallback;
+        const match = Object.values(options).find(item =>
+            item.id.toLowerCase() === normalized || item.label.toLowerCase() === normalized
+        );
+        return match ? match.id : fallback;
     },
 
     /**
      * استيراد قالب الاشتراطات
      */
     importRequirementsTemplate() {
+        if (typeof XLSX === 'undefined') {
+            Notification.error('مكتبة Excel غير محمّلة. يرجى تحديث الصفحة ثم المحاولة مجددًا.');
+            return;
+        }
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = '.json';
+        input.accept = '.xlsx,.xls';
         input.onchange = async (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
             try {
-                const text = await file.text();
-                const template = JSON.parse(text);
-                
-                if (!template.requirements || !Array.isArray(template.requirements)) {
-                    Notification.error('ملف القالب غير صحيح');
+                const buffer = await file.arrayBuffer();
+                const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                if (!sheet) {
+                    Notification.error('ملف Excel لا يحتوي على ورقة اشتراطات');
+                    return;
+                }
+                const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
+                const requirements = rows.map((row, index) => {
+                    const label = String(this.getRequirementImportCell(row, 'اسم الاشتراط', 'الاشتراط', 'label', 'name')).trim();
+                    if (!label) return null;
+                    const applicableValue = String(this.getRequirementImportCell(row, 'ينطبق على', 'applicableTypes')).trim().toLowerCase();
+                    const applicableTypes = applicableValue === 'مورد' || applicableValue === 'supplier'
+                        ? ['supplier']
+                        : applicableValue === 'مقاول' || applicableValue === 'contractor'
+                            ? ['contractor']
+                            : ['contractor', 'supplier'];
+                    const hasExpiry = this.parseRequirementImportBoolean(
+                        this.getRequirementImportCell(row, 'له تاريخ انتهاء', 'hasExpiry'), false
+                    );
+                    return {
+                        id: String(this.getRequirementImportCell(row, 'معرف الاشتراط', 'المعرف', 'id')).trim() || `req_${Date.now()}_${index}`,
+                        label,
+                        description: String(this.getRequirementImportCell(row, 'الوصف', 'description')).trim(),
+                        type: ['document', 'text', 'checkbox'].includes(String(this.getRequirementImportCell(row, 'نوع الحقل', 'type')).trim().toLowerCase())
+                            ? String(this.getRequirementImportCell(row, 'نوع الحقل', 'type')).trim().toLowerCase()
+                            : 'document',
+                        category: this.mapRequirementImportOption(
+                            this.getRequirementImportCell(row, 'الفئة', 'category'), REQUIREMENT_CATEGORIES, 'other'
+                        ),
+                        priority: this.mapRequirementImportOption(
+                            this.getRequirementImportCell(row, 'الأولوية', 'priority'), REQUIREMENT_PRIORITIES, 'medium'
+                        ),
+                        required: this.parseRequirementImportBoolean(
+                            this.getRequirementImportCell(row, 'إلزامي', 'مطلوب', 'required'), true
+                        ),
+                        hasExpiry,
+                        expiryMonths: hasExpiry
+                            ? Math.max(1, Number(this.getRequirementImportCell(row, 'مدة الصلاحية بالأشهر', 'expiryMonths')) || 12)
+                            : 12,
+                        applicableTypes,
+                        order: Number(this.getRequirementImportCell(row, 'الترتيب', 'order')) || index + 1
+                    };
+                }).filter(Boolean).sort((a, b) => a.order - b.order).map((req, index) => ({ ...req, order: index + 1 }));
+
+                if (!requirements.length) {
+                    Notification.error('لم يتم العثور على اشتراطات صالحة. تأكد من وجود عمود «اسم الاشتراط».');
                     return;
                 }
 
-                if (!confirm(`هل تريد استيراد ${template.requirements.length} اشتراط؟ سيتم استبدال الاشتراطات الحالية.`)) {
+                if (!confirm(`تم العثور على ${requirements.length} اشتراط صالح. هل تريد استبدال الاشتراطات الحالية؟`)) {
                     return;
                 }
 
                 this.ensureRequirementsSetup();
-                // تحديث المعرفات والترتيب
-                template.requirements.forEach((req, index) => {
-                    req.id = req.id || `req_${Date.now()}_${index}`;
-                    req.order = index + 1;
-                    // تعيين قيم افتراضية للحقول المفقودة
-                    req.category = req.category || 'other';
-                    req.priority = req.priority || 'medium';
-                    req.hasExpiry = req.hasExpiry || false;
-                    req.expiryMonths = req.expiryMonths || 12;
-                    req.applicableTypes = req.applicableTypes || ['contractor', 'supplier'];
-                });
-
-                AppState.companySettings.contractorApprovalRequirements = template.requirements;
+                AppState.companySettings.contractorApprovalRequirements = requirements;
                 
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                     window.DataManager.save();
                 }
 
-                Notification.success('تم استيراد القالب بنجاح');
+                Notification.success(`تم استيراد ${requirements.length} اشتراط من Excel بنجاح`);
                 
                 // إعادة تحميل الواجهة
                 if (this.currentTab === 'requirements') {
@@ -10923,17 +10994,26 @@ const Contractors = {
             entityName = request.companyName || request.contractorName || '';
         }
 
+        this.injectAntiShakeStyles();
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.id = 'contractor-approval-request-details-modal';
+        modal.className = 'modal-overlay ctr-detail-modal';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 800px;">
-                <div class="modal-header">
-                    <h2 class="modal-title">${isDeletionRequest ? 'تفاصيل طلب الحذف' : 'تفاصيل طلب الاعتماد'}</h2>
+            <div class="modal-content ctr-detail-dialog ctr-detail-dialog--wide">
+                <div class="modal-header ctr-detail-head">
+                    <div class="ctr-detail-head__copy">
+                        <span class="ctr-detail-head__icon"><i class="fas ${isDeletionRequest ? 'fa-trash-can' : isEvaluationRequest ? 'fa-clipboard-check' : 'fa-file-signature'}"></i></span>
+                        <div>
+                            <span class="ctr-detail-head__eyebrow">${Utils.escapeHTML(requestType)}</span>
+                            <h2 class="modal-title">${isDeletionRequest ? 'تفاصيل طلب الحذف' : 'تفاصيل طلب الاعتماد'}</h2>
+                            <p>${Utils.escapeHTML(entityName || 'طلب غير مسمى')} · ${Utils.escapeHTML(String(request.id || ''))}</p>
+                        </div>
+                    </div>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body ctr-detail-body ctr-request-detail-body">
                     ${canEdit ? `
                         <div class="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
                             <div class="flex items-center justify-between">
@@ -11176,8 +11256,8 @@ const Contractors = {
                             </div>
                         ` : ''}
                     </div>
-                <div class="modal-footer" style="margin-top: auto; flex-shrink: 0; width: 100%;">
-                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                <div class="modal-footer ctr-detail-footer" style="margin-top: auto; flex-shrink: 0; width: 100%;">
+                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-xmark ml-2"></i>إغلاق</button>
                     ${isEvaluationRequest && evaluationData?.id ? `
                         <button class="btn-info" onclick="Contractors.viewEvaluation('${evaluationData.id}'); this.closest('.modal-overlay').remove();">
                             <i class="fas fa-clipboard-check ml-2"></i>عرض التقييم كاملاً
@@ -15052,9 +15132,47 @@ const Contractors = {
                 #contractor-approval-request-modal .approval-premium-content{border:1px solid #b9d1dc}
                 #contractor-approval-request-modal .approval-premium-header{background:linear-gradient(125deg,#0b2d4f,#174d78 64%,#126c68)!important}
                 #contractor-approval-request-modal .approval-premium-input:focus,#contractor-approval-request-modal .approval-premium-select:focus,#contractor-approval-request-modal .approval-premium-textarea:focus{border-color:#0f8b83!important;box-shadow:0 0 0 3px rgba(15,139,131,.12)!important}
+                .ctr-detail-modal{padding:18px;background:rgba(4,22,38,.7);backdrop-filter:blur(5px)}
+                .ctr-detail-dialog{width:min(760px,96vw)!important;max-width:760px!important;max-height:min(90vh,900px);overflow:hidden;border:1px solid #bcd3df!important;border-radius:18px!important;background:#f7fafc!important;box-shadow:0 26px 80px rgba(4,25,42,.32)!important}
+                .ctr-detail-dialog--wide{width:min(920px,96vw)!important;max-width:920px!important}
+                .ctr-detail-head{position:relative;overflow:hidden;display:flex!important;align-items:center!important;justify-content:space-between!important;min-height:104px;padding:19px 22px!important;border:0!important;background:linear-gradient(125deg,#0b2d4f,#174d78 64%,#126c68)!important;color:#fff!important}
+                .ctr-detail-head:after{content:"";position:absolute;inset-inline-end:-42px;top:-88px;width:190px;height:190px;border:25px solid rgba(255,255,255,.06);border-radius:50%;pointer-events:none}
+                .ctr-detail-head__copy{position:relative;z-index:1;display:flex;align-items:center;gap:14px;min-width:0}
+                .ctr-detail-head__icon{flex:0 0 auto;display:grid;place-items:center;width:50px;height:50px;border:1px solid rgba(255,255,255,.26);border-radius:14px;background:rgba(255,255,255,.12);color:#83e5dc;font-size:20px}
+                .ctr-detail-head__eyebrow{display:block;margin-bottom:3px;color:#8ce9df;font-size:.69rem;font-weight:800;letter-spacing:.03em}
+                .ctr-detail-head .modal-title{margin:0!important;color:#fff!important;font-size:1.12rem!important;font-weight:900!important;line-height:1.4}
+                .ctr-detail-head p{max-width:620px;margin:4px 0 0;color:#d5e8f0;font-size:.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+                .ctr-detail-head .modal-close{position:relative;z-index:2;flex:0 0 auto;display:grid;place-items:center;width:38px;height:38px;border:1px solid rgba(255,255,255,.25);border-radius:10px;background:rgba(255,255,255,.1)!important;color:#fff!important}
+                .ctr-detail-head .modal-close:hover{background:rgba(255,255,255,.2)!important}
+                .ctr-detail-body{overflow-y:auto!important;padding:18px!important;background:linear-gradient(180deg,#f8fbfc,#eef5f7)!important}
+                .ctr-detail-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
+                .ctr-detail-summary>div{min-height:75px;padding:12px 14px;border:1px solid #d8e6ec;border-radius:12px;background:#fff;box-shadow:0 3px 10px rgba(15,46,72,.05)}
+                .ctr-detail-summary span:first-child{display:block;margin-bottom:7px;color:#718596;font-size:.68rem;font-weight:750}
+                .ctr-detail-summary strong{display:block;color:#153b5b;font-size:.84rem;font-weight:850;overflow-wrap:anywhere}
+                .ctr-detail-code{color:#0b70c7!important;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;direction:ltr;text-align:right}
+                .ctr-detail-section{margin-top:12px;padding:15px;border:1px solid #d7e5eb;border-radius:13px;background:#fff;box-shadow:0 4px 14px rgba(15,46,72,.045)}
+                .ctr-detail-section h3{display:flex;align-items:center;gap:8px;margin:0 0 13px;padding-bottom:10px;border-bottom:1px solid #e5edf1;color:#0b2d4f;font-size:.84rem;font-weight:900}
+                .ctr-detail-section h3 i{display:grid;place-items:center;width:27px;height:27px;border-radius:8px;background:#e7f5f3;color:#0f8b83;font-size:.72rem}
+                .ctr-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+                .ctr-detail-field{min-width:0;padding:10px 12px;border:1px solid #e1eaf0;border-radius:10px;background:#f9fbfc}
+                .ctr-detail-field label{display:block;margin-bottom:5px;color:#718394;font-size:.68rem;font-weight:780}
+                .ctr-detail-field p{margin:0;color:#213b51;font-size:.82rem;font-weight:700;line-height:1.65;overflow-wrap:anywhere}
+                .ctr-detail-section--dates{border-inline-start:4px solid #0f8b83}
+                .ctr-detail-note{border-inline-start:4px solid #d99a22}
+                .ctr-detail-note>p{margin:0;color:#41596c;font-size:.8rem;line-height:1.8;white-space:pre-line}
+                .ctr-request-detail-body #request-details-form>.space-y-4>.grid{gap:10px!important}
+                .ctr-request-detail-body #request-details-form>.space-y-4>.grid>div{min-width:0;padding:11px 12px;border:1px solid #dfe9ee;border-radius:10px;background:#fff}
+                .ctr-request-detail-body #request-details-form>.space-y-4>.grid>div label{display:block;margin-bottom:6px!important;color:#6c8191!important;font-size:.68rem!important;font-weight:780!important}
+                .ctr-request-detail-body #request-details-form>.space-y-4>.grid>div p{margin:0;color:#213b51!important;font-size:.81rem;font-weight:700;line-height:1.6;overflow-wrap:anywhere}
+                .ctr-request-detail-body #request-details-form>.space-y-4>div:not(.grid){border-radius:12px!important;box-shadow:none!important}
+                .ctr-request-detail-body table{border:1px solid #d8e5eb;border-radius:9px;overflow:hidden}
+                .ctr-request-detail-body table thead{background:linear-gradient(180deg,#173f61,#0e324f)!important}
+                .ctr-request-detail-body table th{background:transparent!important;color:#fff!important;font-weight:800!important}
+                .ctr-detail-footer{display:flex!important;align-items:center;gap:8px;flex-wrap:wrap;padding:13px 18px!important;border-top:1px solid #d8e5eb!important;background:#fff!important}
+                .ctr-detail-footer button{min-height:39px;border-radius:9px!important;font-size:.76rem!important;font-weight:800!important}
                 @media(max-width:1180px){#contractors-section .contractors-kpi-grid{grid-template-columns:repeat(3,minmax(170px,1fr))!important}.contractors-module-hero__meta{width:100%}}
-                @media(max-width:820px){#contractors-section .contractors-requirements-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#contractors-section .contractors-tab-content>.content-card>.card-header>div{align-items:flex-start;flex-direction:column}#contractors-section .contractors-tab-content>.content-card>.card-header>div>div{width:100%}.contractors-module-hero{padding:18px}.contractors-module-hero__meta span{flex:1;justify-content:center}#contractor-approval-request-modal form div[style*="grid-template-columns:1fr 1fr 1fr"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
-                @media(max-width:620px){.contractors-module-hero__copy{align-items:flex-start}.contractors-module-hero__icon{width:46px;height:46px}.contractors-module-hero h1{font-size:1.05rem}.contractors-module-hero__meta{display:grid;grid-template-columns:1fr}.contractors-module-hero__meta span{width:100%}#contractors-section .contractors-kpi-grid,#contractors-section .contractors-requirements-kpis{grid-template-columns:1fr!important}#contractors-section .contractors-tab-content>.content-card>.card-body{padding:12px}#contractors-section .contractors-request-intro .btn-primary{width:100%}#contractor-approval-request-modal .approval-premium-content{max-width:96vw!important}#contractor-approval-request-modal form div[style*="grid-template-columns:1fr 1fr 1fr"],#contractor-approval-request-modal form div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}}
+                @media(max-width:820px){#contractors-section .contractors-requirements-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#contractors-section .contractors-tab-content>.content-card>.card-header>div{align-items:flex-start;flex-direction:column}#contractors-section .contractors-tab-content>.content-card>.card-header>div>div{width:100%}.contractors-module-hero{padding:18px}.contractors-module-hero__meta span{flex:1;justify-content:center}#contractor-approval-request-modal form div[style*="grid-template-columns:1fr 1fr 1fr"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}.ctr-detail-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+                @media(max-width:620px){.contractors-module-hero__copy{align-items:flex-start}.contractors-module-hero__icon{width:46px;height:46px}.contractors-module-hero h1{font-size:1.05rem}.contractors-module-hero__meta{display:grid;grid-template-columns:1fr}.contractors-module-hero__meta span{width:100%}#contractors-section .contractors-kpi-grid,#contractors-section .contractors-requirements-kpis{grid-template-columns:1fr!important}#contractors-section .contractors-tab-content>.content-card>.card-body{padding:12px}#contractors-section .contractors-request-intro .btn-primary{width:100%}#contractor-approval-request-modal .approval-premium-content{max-width:96vw!important}#contractor-approval-request-modal form div[style*="grid-template-columns:1fr 1fr 1fr"],#contractor-approval-request-modal form div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}.ctr-detail-modal{padding:8px}.ctr-detail-dialog{max-height:96vh}.ctr-detail-head{min-height:92px;padding:15px!important}.ctr-detail-head__icon{width:42px;height:42px}.ctr-detail-head p{max-width:66vw}.ctr-detail-body{padding:11px!important}.ctr-detail-summary,.ctr-detail-grid{grid-template-columns:1fr}.ctr-request-detail-body #request-details-form>.space-y-4>.grid{grid-template-columns:1fr!important}.ctr-detail-footer button{flex:1 1 auto}}
                 @media(prefers-reduced-motion:reduce){#contractors-section .contractors-tab-btn{transition:none}}
                 [data-theme="dark"] #contractors-section.contractors-identity{--ctr-ink:#e6eef5;--ctr-muted:#a7bac9;--ctr-line:#324859}
                 [data-theme="dark"] #contractors-section .contractors-tabs-wrapper,[data-theme="dark"] #contractors-section .contractors-tab-content>.content-card,[data-theme="dark"] #contractors-section .contractors-subsection,[data-theme="dark"] #contractors-section .table-wrapper{background:#132638;border-color:#324859}
@@ -15068,6 +15186,11 @@ const Contractors = {
                 [data-theme="dark"] #contractors-section .contractors-requirements-kpis>div{background:#193549!important;border-color:#3b596b!important}
                 [data-theme="dark"] #contractors-section .contractors-requirements-kpis p{color:#e4edf4!important}
                 [data-theme="dark"] #contractors-section .requirement-category-group,[data-theme="dark"] #contractors-section .requirement-item{background:#183044!important;border-color:#365064!important}
+                [data-theme="dark"] .ctr-detail-dialog,[data-theme="dark"] .ctr-detail-body{background:#102536!important}
+                [data-theme="dark"] .ctr-detail-summary>div,[data-theme="dark"] .ctr-detail-section,[data-theme="dark"] .ctr-request-detail-body #request-details-form>.space-y-4>.grid>div,[data-theme="dark"] .ctr-detail-footer{background:#183044!important;border-color:#365064!important}
+                [data-theme="dark"] .ctr-detail-summary span:first-child,[data-theme="dark"] .ctr-detail-field label,[data-theme="dark"] .ctr-request-detail-body #request-details-form>.space-y-4>.grid>div label{color:#a9bdca!important}
+                [data-theme="dark"] .ctr-detail-summary strong,[data-theme="dark"] .ctr-detail-section h3,[data-theme="dark"] .ctr-detail-field p,[data-theme="dark"] .ctr-request-detail-body #request-details-form>.space-y-4>.grid>div p{color:#e7f0f6!important}
+                [data-theme="dark"] .ctr-detail-field{background:#142b3d;border-color:#365064}
             `;
             document.head.appendChild(identityStyle);
         }
