@@ -15375,50 +15375,82 @@ const Clinic = {
                 `;
             }
 
+            const requestTypeLabel = isDeletion
+                ? 'طلب حذف دواء'
+                : isVisitDeletion
+                    ? 'طلب حذف زيارة'
+                    : isTimeOff
+                        ? `طلب ${this.getTimeOffRequestTypeLabel(request.requestType)}`
+                        : 'طلب احتياجات طبية';
+            const statusKey = String(request.status || 'pending').toLowerCase();
+            const statusLabel = {
+                pending: 'قيد المراجعة',
+                approved: 'تمت الموافقة',
+                rejected: 'مرفوض',
+                fulfilled: 'تم التنفيذ'
+            }[statusKey] || request.status || 'قيد المراجعة';
+            const requestReference = request.id || request.requestId || '-';
+
             const modal = document.createElement('div');
             modal.className = 'modal-overlay';
             modal.innerHTML = `
-                <div class="modal-content" style="max-width: 700px;">
-                    <div class="modal-header modal-header-centered">
-                        <h2 class="modal-title">تفاصيل طلب الموافقة</h2>
-                        <button class="modal-close"><i class="fas fa-times"></i></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="space-y-4">
-                            ${itemDetailsHTML}
-                            <div>
-                                <h3 class="font-semibold text-lg mb-2">معلومات مقدم الطلب:</h3>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div><strong>مقدم الطلب:</strong> ${Utils.escapeHTML(requestedBy.name || '-')}</div>
-                                    <div><strong>تاريخ الطلب:</strong> ${this.formatDate(request.createdAt || request.requestDate, true)}</div>
-                                    <div><strong>الحالة:</strong> ${this.getApprovalStatusBadge(request.status)}</div>
-                                </div>
+                <style>
+                    .clinic-approval-detail{--cad-navy:#0b2d4f;--cad-teal:#0f8b83;--cad-ink:#20384a;--cad-muted:#6b7f8e;--cad-line:#dce8ed;--cad-soft:#f4f8fa;width:min(880px,94vw);max-width:880px;max-height:92vh;overflow:hidden;border:1px solid rgba(15,139,131,.2);border-radius:22px;background:#fff;box-shadow:0 28px 80px rgba(8,34,57,.28);font-family:"Tajawal","Noto Kufi Arabic",sans-serif}
+                    .clinic-approval-detail .cad-header{position:relative;padding:24px 26px 22px;color:#fff;background:linear-gradient(128deg,#0b2d4f 0%,#124c68 62%,#0f8b83 100%);overflow:hidden}
+                    .clinic-approval-detail .cad-header:after{content:"";position:absolute;inset:auto -42px -72px auto;width:190px;height:190px;border:26px solid rgba(255,255,255,.07);border-radius:50%}
+                    .clinic-approval-detail .cad-head-main{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+                    .clinic-approval-detail .cad-title-wrap{display:flex;align-items:center;gap:14px;min-width:0}
+                    .clinic-approval-detail .cad-title-icon{flex:0 0 48px;width:48px;height:48px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.24);border-radius:14px;background:rgba(255,255,255,.12);font-size:21px}
+                    .clinic-approval-detail .cad-eyebrow{margin:0 0 4px;color:#9de7df;font-size:.69rem;font-weight:800;letter-spacing:.04em}
+                    .clinic-approval-detail .cad-title{margin:0;color:#fff;font-size:clamp(1.05rem,2vw,1.35rem);font-weight:850;line-height:1.35}
+                    .clinic-approval-detail .cad-subtitle{margin:5px 0 0;color:rgba(255,255,255,.72);font-size:.72rem}
+                    .clinic-approval-detail .cad-close{position:relative;z-index:2;flex:0 0 38px;width:38px;height:38px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.24);border-radius:11px;background:rgba(255,255,255,.1);color:#fff;cursor:pointer;transition:.18s ease}
+                    .clinic-approval-detail .cad-close:hover{background:#fff;color:var(--cad-navy);transform:rotate(6deg)}
+                    .clinic-approval-detail .cad-meta{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+                    .clinic-approval-detail .cad-chip{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:rgba(255,255,255,.1);color:#fff;font-size:.69rem;font-weight:750}
+                    .clinic-approval-detail .cad-status--pending{background:#fff4cf;color:#7a4a00;border-color:#ffe29a}.clinic-approval-detail .cad-status--approved{background:#dff8eb;color:#14643b;border-color:#bcebd2}.clinic-approval-detail .cad-status--rejected{background:#ffe5e5;color:#9b2323;border-color:#ffc7c7}.clinic-approval-detail .cad-status--fulfilled{background:#dff5fa;color:#0a6073;border-color:#b8e4ed}
+                    .clinic-approval-detail .cad-body{max-height:calc(92vh - 196px);padding:20px 22px;overflow:auto;background:linear-gradient(180deg,#f7fafb 0%,#fff 100%)}
+                    .clinic-approval-detail .cad-card{margin-bottom:14px;padding:17px;border:1px solid var(--cad-line);border-radius:15px;background:#fff;box-shadow:0 5px 18px rgba(11,45,79,.055)}
+                    .clinic-approval-detail .cad-card-title,.clinic-approval-detail .cad-item h3{display:flex;align-items:center;gap:8px;margin:0 0 13px;color:var(--cad-navy);font-size:.86rem;font-weight:850}
+                    .clinic-approval-detail .cad-card-title i{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:#e1f4f1;color:var(--cad-teal);font-size:.75rem}
+                    .clinic-approval-detail .cad-item>div{margin-bottom:14px;padding:17px;border:1px solid var(--cad-line);border-radius:15px;background:#fff;box-shadow:0 5px 18px rgba(11,45,79,.055)}
+                    .clinic-approval-detail .cad-item h3:before{content:"\\f46d";font-family:"Font Awesome 6 Free","Font Awesome 5 Free";font-weight:900;width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:#e1f4f1;color:var(--cad-teal);font-size:.75rem}
+                    .clinic-approval-detail .cad-item .grid,.clinic-approval-detail .cad-data-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+                    .clinic-approval-detail .cad-item .grid>div,.clinic-approval-detail .cad-data{min-width:0;padding:11px 12px;border:1px solid #e6eef2;border-radius:11px;background:var(--cad-soft);color:var(--cad-ink);font-size:.78rem;line-height:1.65;overflow-wrap:anywhere}
+                    .clinic-approval-detail .cad-item strong,.clinic-approval-detail .cad-data strong{display:block;margin-bottom:3px;color:var(--cad-muted);font-size:.66rem;font-weight:800}
+                    .clinic-approval-detail .cad-item .col-span-2,.clinic-approval-detail .cad-data--wide{grid-column:1/-1}
+                    .clinic-approval-detail .cad-item .btn-secondary{display:inline-flex;align-items:center;gap:6px;margin-top:4px;border-color:#b9d8d5;color:var(--cad-teal);font-weight:800}
+                    .clinic-approval-detail .cad-decision{border-inline-start:4px solid var(--cad-teal)}
+                    .clinic-approval-detail .cad-decision--rejected{border-inline-start-color:#cf3f3f}
+                    .clinic-approval-detail .cad-pending{display:flex;align-items:center;gap:10px;padding:12px;border-radius:11px;background:#fff8df;color:#76520b;font-size:.75rem}
+                    .clinic-approval-detail .cad-pending i{font-size:1rem}
+                    .clinic-approval-detail .cad-footer{display:flex;justify-content:center;padding:13px 20px;border-top:1px solid var(--cad-line);background:#f8fbfc}
+                    .clinic-approval-detail .cad-footer button{min-width:130px;padding:9px 18px;border:1px solid #c9d9df;border-radius:10px;background:#fff;color:var(--cad-ink);font-weight:800;cursor:pointer;box-shadow:0 3px 10px rgba(11,45,79,.07)}
+                    [data-theme="dark"] .clinic-approval-detail{--cad-ink:#dce9ee;--cad-muted:#9fb2bd;--cad-line:#29444f;--cad-soft:#18323c;background:#112832}.clinic-approval-detail .cad-close:focus-visible,.clinic-approval-detail button:focus-visible{outline:3px solid rgba(20,184,166,.35);outline-offset:2px}
+                    [data-theme="dark"] .clinic-approval-detail .cad-body,[data-theme="dark"] .clinic-approval-detail .cad-footer{background:#10262f}[data-theme="dark"] .clinic-approval-detail .cad-card,[data-theme="dark"] .clinic-approval-detail .cad-item>div{background:#17313b}
+                    @media(max-width:640px){.clinic-approval-detail{width:96vw;max-height:95vh;border-radius:16px}.clinic-approval-detail .cad-header{padding:18px 16px}.clinic-approval-detail .cad-title-icon{width:42px;height:42px}.clinic-approval-detail .cad-body{max-height:calc(95vh - 184px);padding:13px}.clinic-approval-detail .cad-item .grid,.clinic-approval-detail .cad-data-grid{grid-template-columns:1fr}.clinic-approval-detail .cad-item .col-span-2,.clinic-approval-detail .cad-data--wide{grid-column:auto}}
+                    @media(prefers-reduced-motion:reduce){.clinic-approval-detail .cad-close{transition:none}.clinic-approval-detail .cad-close:hover{transform:none}}
+                </style>
+                <div class="modal-content clinic-approval-detail" role="dialog" aria-modal="true" aria-labelledby="clinic-approval-detail-title">
+                    <header class="cad-header">
+                        <div class="cad-head-main">
+                            <div class="cad-title-wrap">
+                                <span class="cad-title-icon"><i class="fas fa-file-medical-alt"></i></span>
+                                <div><p class="cad-eyebrow">سجل الاعتماد الطبي</p><h2 id="clinic-approval-detail-title" class="cad-title">تفاصيل طلب الموافقة</h2><p class="cad-subtitle">${Utils.escapeHTML(requestTypeLabel)} · رقم ${Utils.escapeHTML(String(requestReference))}</p></div>
                             </div>
-                            ${request.status === 'approved' ? `
-                                <div>
-                                    <h3 class="font-semibold text-lg mb-2">معلومات الموافقة:</h3>
-                                    <div class="grid grid-cols-2 gap-3">
-                                        <div><strong>تمت الموافقة بواسطة:</strong> ${Utils.escapeHTML(approvedBy.name || '-')}</div>
-                                        <div><strong>تاريخ الموافقة:</strong> ${this.formatDate(request.approvedAt, true)}</div>
-                                    </div>
-                                </div>
-                            ` : ''}
-                            ${request.status === 'rejected' ? `
-                                <div>
-                                    <h3 class="font-semibold text-lg mb-2">معلومات الرفض:</h3>
-                                    <div class="grid grid-cols-2 gap-3">
-                                        <div><strong>تم الرفض بواسطة:</strong> ${Utils.escapeHTML(rejectedBy.name || '-')}</div>
-                                        <div><strong>تاريخ الرفض:</strong> ${this.formatDate(request.rejectedAt, true)}</div>
-                                        ${request.rejectionReason ? `
-                                            <div class="col-span-2"><strong>سبب الرفض:</strong> ${Utils.escapeHTML(request.rejectionReason)}</div>
-                                        ` : ''}
-                                    </div>
-                                </div>
-                            ` : ''}
+                            <button class="cad-close modal-close" type="button" aria-label="إغلاق"><i class="fas fa-times"></i></button>
                         </div>
+                        <div class="cad-meta"><span class="cad-chip cad-status--${Utils.escapeHTML(statusKey)}"><i class="fas fa-circle-check"></i>${Utils.escapeHTML(statusLabel)}</span><span class="cad-chip"><i class="far fa-calendar-alt"></i>${Utils.escapeHTML(this.formatDate(request.createdAt || request.requestDate, true))}</span></div>
+                    </header>
+                    <div class="modal-body cad-body">
+                        <div class="cad-item">${itemDetailsHTML}</div>
+                        <section class="cad-card"><h3 class="cad-card-title"><i class="fas fa-user-circle"></i>بيانات مقدم الطلب</h3><div class="cad-data-grid"><div class="cad-data"><strong>مقدم الطلب</strong>${Utils.escapeHTML(requestedBy.name || '-')}</div><div class="cad-data"><strong>البريد الإلكتروني</strong>${Utils.escapeHTML(requestedBy.email || request.userEmail || '-')}</div><div class="cad-data"><strong>تاريخ الطلب</strong>${Utils.escapeHTML(this.formatDate(request.createdAt || request.requestDate, true))}</div><div class="cad-data"><strong>مرجع الطلب</strong>${Utils.escapeHTML(String(requestReference))}</div></div></section>
+                        ${request.status === 'approved' ? `<section class="cad-card cad-decision"><h3 class="cad-card-title"><i class="fas fa-user-check"></i>قرار الموافقة</h3><div class="cad-data-grid"><div class="cad-data"><strong>تمت الموافقة بواسطة</strong>${Utils.escapeHTML(approvedBy.name || '-')}</div><div class="cad-data"><strong>تاريخ الموافقة</strong>${Utils.escapeHTML(this.formatDate(request.approvedAt, true))}</div></div></section>` : ''}
+                        ${request.status === 'rejected' ? `<section class="cad-card cad-decision cad-decision--rejected"><h3 class="cad-card-title"><i class="fas fa-user-times"></i>قرار الرفض</h3><div class="cad-data-grid"><div class="cad-data"><strong>تم الرفض بواسطة</strong>${Utils.escapeHTML(rejectedBy.name || '-')}</div><div class="cad-data"><strong>تاريخ الرفض</strong>${Utils.escapeHTML(this.formatDate(request.rejectedAt, true))}</div>${request.rejectionReason ? `<div class="cad-data cad-data--wide"><strong>سبب الرفض</strong>${Utils.escapeHTML(request.rejectionReason)}</div>` : ''}</div></section>` : ''}
+                        ${request.status !== 'approved' && request.status !== 'rejected' ? `<div class="cad-pending"><i class="fas fa-hourglass-half"></i><span>الطلب قيد المراجعة ولم يصدر قرار نهائي بعد.</span></div>` : ''}
                     </div>
-                    <div class="modal-footer form-actions-centered">
-                        <button class="btn-secondary modal-close-btn">إغلاق</button>
+                    <div class="modal-footer cad-footer">
+                        <button class="modal-close-btn" type="button"><i class="fas fa-times ml-2"></i>إغلاق</button>
                     </div>
                 </div>
             `;
