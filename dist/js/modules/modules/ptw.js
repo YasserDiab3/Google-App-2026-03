@@ -299,7 +299,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                     </div>
                 </div>
             </div>
-
+            
             <!-- \u062A\u0628\u0648\u064A\u0628\u0627\u062A \u0627\u0644\u062A\u0635\u0627\u0631\u064A\u062D \u0648\u0627\u0644\u0633\u062C\u0644 \u0648\u0627\u0644\u0645\u0648\u0627\u0641\u0642\u0627\u062A -->
             <div class="ptw-tabs mt-4 mb-4 bg-white rounded-lg shadow-sm p-1 flex overflow-x-auto" style="flex-wrap: nowrap; overflow-y: visible; min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box;">
                 <button id="ptw-tab-permits" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 text-blue-600 bg-blue-50 shadow-sm" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('permits')">
@@ -327,8 +327,35 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                     ${e("module.common.refresh","\u062A\u062D\u062F\u064A\u062B")}
                 </button>
             </div>
-
+            
             <style id="ptw-scrollbar-styles">
+                /* \u062D\u062F\u0648\u062F \u0645\u0633\u0627\u062D\u0629 PTW: \u0644\u0627 \u062A\u0633\u0645\u062D \u0644\u0644\u062C\u062F\u0648\u0644 \u0627\u0644\u0639\u0631\u064A\u0636 \u0628\u062A\u0648\u0633\u064A\u0639 \u0627\u0644\u0645\u062F\u064A\u0648\u0644 \u062E\u0644\u0641 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062C\u0627\u0646\u0628\u064A\u0629 */
+                #ptw-section,
+                #ptw-section > *,
+                #ptw-tab-content,
+                #ptw-permits-content,
+                #ptw-registry-content,
+                #ptw-analysis-content,
+                #ptw-approvals-content {
+                    width: 100%;
+                    max-width: 100%;
+                    min-width: 0;
+                    box-sizing: border-box;
+                }
+                #ptw-section { overflow-x: hidden; }
+                #ptw-section .section-header > .flex { min-width: 0; }
+                #ptw-section .section-header > .flex > div { min-width: 0; }
+                #ptw-section .section-header > .flex > div:last-child { flex-wrap: wrap; }
+                #ptw-section .content-card,
+                #ptw-section .card-body { min-width: 0; max-width: 100%; }
+                @media (max-width: 1180px) {
+                    #ptw-section .section-header > .flex { align-items: flex-start; }
+                    #ptw-section .section-header > .flex > div:last-child { width: 100%; }
+                }
+                @media (max-width: 640px) {
+                    #ptw-section .section-header > .flex > div:last-child { display: grid; grid-template-columns: 1fr; }
+                    #ptw-section .section-header > .flex > div:last-child > button { width: 100%; }
+                }
                 /* \u0641\u0644\u062A\u0631 \u0627\u062D\u062A\u0631\u0627\u0641\u064A \u0623\u0639\u0644\u0649 \u0627\u0644\u062C\u062F\u0648\u0644 (\u0645\u0645\u064A\u0632 \u0643\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629) */
                 .ptw-filters-row { position: relative; border-bottom: 1px solid #e2e8f0; }
                 .ptw-filters-grid { width: 100%; }
@@ -351,6 +378,9 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                     scroll-behavior: smooth;
                     max-height: 70vh;
                     width: 100%;
+                    max-width: 100%;
+                    min-width: 0;
+                    scrollbar-gutter: stable both-edges;
                 }
                 .ptw-table-wrapper .data-table { direction: rtl; text-align: right; }
                 .ptw-table-wrapper::-webkit-scrollbar { width: 12px; height: 12px; }
@@ -394,12 +424,14 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                 .ptw-registry-workspace {
                     --ptr-navy:#102a43; --ptr-navy-2:#173d6c; --ptr-cyan:#0891b2; --ptr-blue:#2563eb;
                     --ptr-line:#d9e5f2; --ptr-soft:#f3f8fd; --ptr-ink:#172033; --ptr-muted:#64748b;
-                    display:grid; gap:18px; direction:rtl;
+                    display:grid; gap:18px; direction:rtl; width:100%; max-width:100%; min-width:0;
                 }
+                .ptw-registry-workspace>* { min-width:0; max-width:100%; }
                 .ptw-registry-toolbar { display:flex!important; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:0!important; padding:13px 15px; border:1px solid #bfdbfe; border-radius:16px; background:linear-gradient(120deg,#eff6ff,#f0fdfa); box-shadow:0 7px 20px rgba(30,64,175,.07); }
                 .ptw-registry-toolbar>div { display:flex; flex-wrap:wrap; gap:8px; }
                 .ptw-registry-toolbar button { min-height:40px; border-radius:10px; font-weight:750; box-shadow:0 4px 12px rgba(15,23,42,.09); }
-                .ptw-registry-kpis { margin-bottom:0!important; }
+                .ptw-registry-kpis { display:grid!important; grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr))!important; gap:12px!important; width:100%; min-width:0; margin-bottom:0!important; }
+                .ptw-registry-kpis>.kpi-card { min-width:0; width:100%; padding:18px; }
                 .ptw-registry-filter-card { margin-bottom:0!important; overflow:hidden; border:1px solid #bae6fd; border-radius:18px; box-shadow:0 10px 26px rgba(14,116,144,.08); }
                 .ptw-registry-filter-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:14px 16px; border-bottom:1px solid #bae6fd; background:linear-gradient(125deg,#0f2942,#164e63); color:#fff; }
                 .ptw-registry-filter-title { display:flex; align-items:center; gap:10px; min-width:0; }
@@ -422,14 +454,15 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                 .ptw-registry-filter-field .form-input:focus { border-color:#0891b2; box-shadow:0 0 0 3px rgba(8,145,178,.14); background:#fafeff; }
                 .ptw-registry-filter-field.is-active .form-input { border-color:#0891b2; background:#ecfeff; box-shadow:0 0 0 3px rgba(8,145,178,.09); }
                 .ptw-registry-filter-card #registry-filter-count-wrapper { display:none; }
-                .ptw-registry-table-card { overflow:hidden; border:1px solid #cbddeb; border-radius:18px; box-shadow:0 13px 30px rgba(15,42,67,.09); }
+                .ptw-registry-table-card { width:100%; max-width:100%; min-width:0; overflow:hidden; border:1px solid #cbddeb; border-radius:18px; box-shadow:0 13px 30px rgba(15,42,67,.09); }
                 .ptw-registry-table-card>.card-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:15px 17px; border-bottom:0; background:linear-gradient(125deg,var(--ptr-navy),var(--ptr-navy-2)); }
                 .ptw-registry-table-card .card-title { display:flex; align-items:center; gap:8px; margin:0; color:#fff; font-size:1.08rem; font-weight:850; }
                 .ptw-registry-table-card .card-title i { color:#67e8f9; }
                 .ptw-registry-visible-badge { display:inline-flex; align-items:center; gap:5px; padding:6px 10px; border:1px solid rgba(255,255,255,.25); border-radius:999px; color:#dbeafe; background:rgba(255,255,255,.09); font-size:.73rem; font-weight:750; }
                 .ptw-registry-visible-badge strong { color:#fff; font-size:.88rem; }
                 .ptw-registry-table-card>.card-body { padding:0; }
-                .ptw-registry-table-card .table-responsive,.ptw-registry-table-card .ptw-table-wrapper { max-height:min(68vh,720px); overflow:auto; scrollbar-width:thin; scrollbar-color:#94a3b8 #e2e8f0; }
+                .ptw-registry-table-card .table-responsive { width:100%; max-width:100%; min-width:0; max-height:none; margin:0; overflow:visible; background:transparent; }
+                .ptw-registry-table-card .ptw-table-wrapper { width:100%; max-width:100%; min-width:0; max-height:min(68vh,720px); overflow:auto; scrollbar-width:thin; scrollbar-color:#94a3b8 #e2e8f0; scrollbar-gutter:stable both-edges; }
                 .ptw-registry-table { width:max-content!important; min-width:100%; border-collapse:separate!important; border-spacing:0; table-layout:auto; font-size:.79rem; }
                 .ptw-registry-table thead { position:sticky; top:0; z-index:8; }
                 .ptw-registry-table thead th { position:sticky; top:0; z-index:8; min-width:108px; padding:13px 11px!important; border:0!important; border-left:1px solid rgba(255,255,255,.13)!important; color:#f8fafc!important; background:linear-gradient(180deg,#173d6c,#102a43)!important; font-size:.73rem; font-weight:850!important; line-height:1.45; white-space:normal; vertical-align:middle; box-shadow:inset 0 -3px #22d3ee; }
@@ -444,7 +477,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                 .ptw-registry-table tbody td:nth-child(11),.ptw-registry-table tbody td:nth-child(12) { min-width:150px; }
                 .ptw-registry-table .badge { display:inline-flex; align-items:center; justify-content:center; min-width:105px; padding:6px 9px; border-radius:999px; font-size:.69rem; font-weight:800; white-space:normal; }
                 .ptw-registry-table td:last-child .btn { min-height:33px; border-radius:8px; white-space:nowrap; box-shadow:0 3px 9px rgba(37,99,235,.16); }
-                @media (max-width:1050px) { .ptw-registry-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+                @media (max-width:1050px) { .ptw-registry-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .ptw-registry-table thead th { min-width:98px; padding:11px 9px!important; font-size:.69rem; } .ptw-registry-table tbody td { padding:10px 8px!important; font-size:.73rem; } }
                 @media (max-width:680px) {
                     .ptw-registry-toolbar { align-items:stretch; }
                     .ptw-registry-toolbar>button,.ptw-registry-toolbar>div,.ptw-registry-toolbar>div>button { width:100%; }
@@ -452,7 +485,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                     .ptw-registry-filter-summary { width:100%; justify-content:space-between; }
                     .ptw-registry-filter-grid { grid-template-columns:1fr; }
                     .ptw-registry-table-card>.card-header { align-items:flex-start; flex-direction:column; }
-                    .ptw-registry-table-card .table-responsive,.ptw-registry-table-card .ptw-table-wrapper { max-height:72vh; }
+                    .ptw-registry-table-card .ptw-table-wrapper { max-height:72vh; }
                 }
                 @media (prefers-reduced-motion:reduce) { .ptw-registry-filter-field .form-input { transition:none; } }
             </style>
@@ -478,7 +511,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                     </button>
                 </div>
             </div>
-
+            
             <!-- \u0628\u0637\u0627\u0642\u0627\u062A \u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 ptw-registry-kpis">
                 <div class="kpi-card kpi-info">
@@ -511,7 +544,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                     </div>
                 </div>
             </div>
-
+            
             <!-- \u0641\u0644\u0627\u062A\u0631 \u0627\u0644\u0628\u062D\u062B -->
             <div class="content-card mb-4 ptw-registry-filter-card">
                 <div class="ptw-registry-filter-head">
@@ -572,7 +605,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                     </div>
                 </div>
             </div>
-
+            
             <!-- \u062C\u062F\u0648\u0644 \u0627\u0644\u0633\u062C\u0644 -->
             <div class="content-card ptw-registry-table-card">
                 <div class="card-header">
@@ -629,7 +662,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                     min-height: 600px;
                     height: 100%;
                 }
-                #ptw-map {
+                #ptw-map { 
                     z-index: 1;
                     width: 100%;
                     height: 100%;
@@ -694,7 +727,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                 </div>
                 <div id="ptw-map-container">
                     <div id="ptw-map"></div>
-
+                        
                         <div id="ptw-map-legend" class="absolute bottom-4 right-4 bg-white p-3 rounded-lg shadow-lg text-sm z-[400] hidden md:block border border-gray-200 opacity-90 hover:opacity-100 transition-opacity">
                             <h4 class="font-bold mb-2 text-gray-700 border-b pb-1">${t("module.ptw.map.legend","\u0645\u0641\u062A\u0627\u062D \u0627\u0644\u062E\u0631\u064A\u0637\u0629")}</h4>
                             <div class="space-y-1">
@@ -751,8 +784,8 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                             <i class="fas fa-map-marked-alt text-4xl text-gray-400 mb-4"></i>
                             <p class="text-gray-600 mb-2">\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u062E\u0631\u064A\u0637\u0629 \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A\u0629</p>
                             <p class="text-sm text-gray-500 mb-4">\u0627\u0644\u0625\u062D\u062F\u0627\u062B\u064A\u0627\u062A: ${a.toFixed(6)}, ${r.toFixed(6)}</p>
-                            <a href="https://www.openstreetmap.org/?mlat=${a}&mlon=${r}&zoom=${i}"
-                               target="_blank"
+                            <a href="https://www.openstreetmap.org/?mlat=${a}&mlon=${r}&zoom=${i}" 
+                               target="_blank" 
                                class="btn-primary inline-block"
                                style="text-decoration: none;">
                                 <i class="fas fa-external-link-alt ml-2"></i>
@@ -828,38 +861,38 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                                     `:e.map(i=>`
                                         <tr data-site-id="${Utils.escapeHTML(i.id||"")}">
                                             <td>
-                                                <input type="text" class="form-input site-name-input"
-                                                    value="${Utils.escapeHTML(i.name||"")}"
+                                                <input type="text" class="form-input site-name-input" 
+                                                    value="${Utils.escapeHTML(i.name||"")}" 
                                                     data-site-id="${Utils.escapeHTML(i.id||"")}"
                                                     placeholder="${t("module.ptw.mapSettings.placeholderSiteName","\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0642\u0639")}">
                                             </td>
                                             <td>
-                                                <input type="number" step="0.000001" class="form-input site-lat-input"
-                                                    value="${i.latitude||a.lat}"
+                                                <input type="number" step="0.000001" class="form-input site-lat-input" 
+                                                    value="${i.latitude||a.lat}" 
                                                     data-site-id="${Utils.escapeHTML(i.id||"")}"
                                                     placeholder="30.0444">
                                             </td>
                                             <td>
-                                                <input type="number" step="0.000001" class="form-input site-lng-input"
-                                                    value="${i.longitude||a.lng}"
+                                                <input type="number" step="0.000001" class="form-input site-lng-input" 
+                                                    value="${i.longitude||a.lng}" 
                                                     data-site-id="${Utils.escapeHTML(i.id||"")}"
                                                     placeholder="31.2357">
                                             </td>
                                             <td>
-                                                <input type="number" min="1" max="20" class="form-input site-zoom-input"
-                                                    value="${i.zoom||a.zoom||15}"
+                                                <input type="number" min="1" max="20" class="form-input site-zoom-input" 
+                                                    value="${i.zoom||a.zoom||15}" 
                                                     data-site-id="${Utils.escapeHTML(i.id||"")}"
                                                     placeholder="15">
                                             </td>
                                             <td>
                                                 <div class="flex items-center gap-2">
-                                                    <button class="btn-icon btn-icon-success save-site-btn"
-                                                        data-site-id="${Utils.escapeHTML(i.id||"")}"
+                                                    <button class="btn-icon btn-icon-success save-site-btn" 
+                                                        data-site-id="${Utils.escapeHTML(i.id||"")}" 
                                                         title="${t("module.ptw.mapSettings.btnSave","\u062D\u0641\u0638")}">
                                                         <i class="fas fa-save"></i>
                                                     </button>
-                                                    <button class="btn-icon btn-icon-danger delete-site-btn"
-                                                        data-site-id="${Utils.escapeHTML(i.id||"")}"
+                                                    <button class="btn-icon btn-icon-danger delete-site-btn" 
+                                                        data-site-id="${Utils.escapeHTML(i.id||"")}" 
                                                         title="${t("module.ptw.mapSettings.btnDelete","\u062D\u0630\u0641")}">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
@@ -884,17 +917,17 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">${t("module.ptw.mapSettings.defaultLat","\u062E\u0637 \u0627\u0644\u0639\u0631\u0636 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A")}</label>
-                                <input type="number" step="0.000001" id="ptw-default-lat" class="form-input"
+                                <input type="number" step="0.000001" id="ptw-default-lat" class="form-input" 
                                     value="${a.lat}" placeholder="30.0444">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">${t("module.ptw.mapSettings.defaultLng","\u062E\u0637 \u0627\u0644\u0637\u0648\u0644 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A")}</label>
-                                <input type="number" step="0.000001" id="ptw-default-lng" class="form-input"
+                                <input type="number" step="0.000001" id="ptw-default-lng" class="form-input" 
                                     value="${a.lng}" placeholder="31.2357">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">${t("module.ptw.mapSettings.defaultZoom","\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062A\u0643\u0628\u064A\u0631 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A")}</label>
-                                <input type="number" min="1" max="20" id="ptw-default-zoom" class="form-input"
+                                <input type="number" min="1" max="20" id="ptw-default-zoom" class="form-input" 
                                     value="${a.zoom||15}" placeholder="15">
                             </div>
                         </div>
@@ -939,7 +972,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                         </span>
                     </div>
                     <div style="border-top: 1px solid #e5e7eb; padding-top: 8px; margin-top: 8px;">
-                        <button onclick="PTW.viewPTW('${t.id}'); ${e==="leaflet"?"if(window.ptwCurrentPopup) window.ptwCurrentPopup.close();":""}"
+                        <button onclick="PTW.viewPTW('${t.id}'); ${e==="leaflet"?"if(window.ptwCurrentPopup) window.ptwCurrentPopup.close();":""}" 
                                 style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: 600; transition: background 0.2s;"
                                 onmouseover="this.style.background='#2563eb'"
                                 onmouseout="this.style.background='#3b82f6'">
@@ -969,7 +1002,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-
+                
                 <div class="modal-body p-6">
                     <!-- \u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A -->
                     <div class="flex flex-wrap gap-2 mb-6 p-4 bg-gray-50 rounded-lg border">
@@ -993,7 +1026,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                             </button>
                         `:""}
                     </div>
-
+                    
                     <!-- \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u062A\u0635\u0631\u064A\u062D -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="space-y-3">
@@ -1033,19 +1066,19 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                             </div>
                         </div>
                     </div>
-
+                    
                     <!-- \u0648\u0635\u0641 \u0627\u0644\u0639\u0645\u0644 -->
                     <div class="mt-4 bg-white p-4 rounded border">
                         <label class="text-xs text-gray-700 block mb-1" style="color: #374151;">\u0648\u0635\u0641 \u0627\u0644\u0639\u0645\u0644</label>
                         <p style="color: #000000;">${Utils.escapeHTML(e.workDescription||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F")}</p>
                     </div>
-
+                    
                     <!-- \u0641\u0631\u064A\u0642 \u0627\u0644\u0639\u0645\u0644 -->
                     <div class="mt-4 bg-white p-4 rounded border">
                         <label class="text-xs text-gray-700 block mb-2" style="color: #374151;">\u0641\u0631\u064A\u0642 \u0627\u0644\u0639\u0645\u0644</label>
                         <div class="flex flex-wrap gap-2">${n}</div>
                     </div>
-
+                    
                     <!-- \u0645\u0633\u0626\u0648\u0644\u064A \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629 -->
                     <div class="mt-4 grid grid-cols-2 gap-4">
                         <div class="bg-white p-3 rounded border">
@@ -1057,7 +1090,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                             <p class="font-semibold" style="color: #000000;">${Utils.escapeHTML(a?.supervisor2||"-")}</p>
                         </div>
                     </div>
-
+                    
                     <!-- \u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0641\u064A \u0623\u0633\u0641\u0644 \u0627\u0644\u0646\u0645\u0648\u0630\u062C -->
                     <div class="mt-6 pt-4 border-t border-gray-200 flex flex-wrap gap-2 justify-center">
                         <button class="btn-primary btn-sm" onclick="PTW.printPermit('${t}')">
@@ -1078,7 +1111,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                         `:""}
                     </div>
                 </div>
-
+                
                 <div class="modal-footer border-t p-4 bg-gray-50 flex justify-center gap-2 form-actions-centered">
                     <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="min-width: 120px;">
                         <i class="fas fa-times ml-1"></i> \u0625\u063A\u0644\u0627\u0642
@@ -1572,13 +1605,13 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                     }
                 }
             </style>
-
+            
             ${t.permitDisclaimer?`
             <div class="print-disclaimer">
                 ${e(t.permitDisclaimer).replace(/\n/g,"<br>")}
             </div>
             `:""}
-
+            
             <div class="print-section">
                 <div class="print-section-title">\u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0623\u0648\u0644 : \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062A\u0635\u0631\u064A\u062D \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629</div>
                 <div class="print-grid">
@@ -2112,7 +2145,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
             .manual-print-seq-badge .lbl { font-size: 8px; }
             .manual-print-seq-badge .val { font-size: 14px; letter-spacing: 1px; }
             .manual-print-paper-no { font-size: 10px; }
-
+            
             .manual-section-7 .ptw-paper-grid-table,
             .manual-section-9 .ptw-paper-grid-table {
                 flex: 1;
@@ -2474,7 +2507,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                 .manual-permit-same-field-slot input.absolute {
                     box-sizing: border-box;
                 }
-
+                
                 .ptw-manual-form-section {
                     border-radius: 12px;
                     padding: 24px;
@@ -2506,39 +2539,39 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                 .manual-section-1 { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-color: #2196F3; }
                 .manual-section-1 h3 { color: #1565C0; border-color: #2196F3; }
                 .manual-section-1 h3 i { color: #1976D2; background: rgba(33, 150, 243, 0.1); }
-
+                
                 .manual-section-2 { background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%); border-color: #009688; }
                 .manual-section-2 h3 { color: #00695C; border-color: #009688; }
                 .manual-section-2 h3 i { color: #00796B; background: rgba(0, 150, 136, 0.1); }
-
+                
                 .manual-section-3 { background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); border-color: #9C27B0; }
                 .manual-section-3 h3 { color: #6A1B9A; border-color: #9C27B0; }
                 .manual-section-3 h3 i { color: #7B1FA2; background: rgba(156, 39, 176, 0.1); }
-
+                
                 .manual-section-4 { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-color: #FF9800; }
                 .manual-section-4 h3 { color: #E65100; border-color: #FF9800; }
                 .manual-section-4 h3 i { color: #F57C00; background: rgba(255, 152, 0, 0.1); }
-
+                
                 .manual-section-5 { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-color: #4CAF50; }
                 .manual-section-5 h3 { color: #2E7D32; border-color: #4CAF50; }
                 .manual-section-5 h3 i { color: #388E3C; background: rgba(76, 175, 80, 0.1); }
-
+                
                 .manual-section-6 { background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%); border-color: #E91E63; }
                 .manual-section-6 h3 { color: #AD1457; border-color: #E91E63; }
                 .manual-section-6 h3 i { color: #C2185B; background: rgba(233, 30, 99, 0.1); }
-
+                
                 .manual-section-7 { background: linear-gradient(135deg, #efebe9 0%, #d7ccc8 100%); border-color: #795548; }
                 .manual-section-7 h3 { color: #4E342E; border-color: #795548; }
                 .manual-section-7 h3 i { color: #5D4037; background: rgba(121, 85, 72, 0.1); }
-
+                
                 .manual-section-8 { background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%); border-color: #9e9e9e; }
                 .manual-section-8 h3 { color: #424242; border-color: #9e9e9e; }
                 .manual-section-8 h3 i { color: #616161; background: rgba(158, 158, 158, 0.1); }
-
+                
                 .manual-section-9 { background: linear-gradient(135deg, #e1f5fe 0%, #b3e5fc 100%); border-color: #03a9f4; }
                 .manual-section-9 h3 { color: #0277bd; border-color: #03a9f4; }
                 .manual-section-9 h3 i { color: #0288d1; background: rgba(3, 169, 244, 0.1); }
-
+                
                 .manual-section-10 { background: linear-gradient(135deg, #ede7f6 0%, #d1c4e9 100%); border-color: #673ab7; }
                 .manual-section-10 h3 { color: #4527a0; border-color: #673ab7; }
                 .manual-section-10 h3 i { color: #512da8; background: rgba(103, 58, 183, 0.1); }
@@ -3247,7 +3280,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                         <datalist id="manual-approval-datalist-requestingParty">${G}</datalist>
                         <datalist id="manual-approval-datalist-areaManager">${J}</datalist>
                         <datalist id="manual-approval-datalist-maintenanceEngineer">${j}</datalist>
-
+                        
                         <!-- \u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0623\u0648\u0644: \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062A\u0635\u0631\u064A\u062D \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629 -->
                         <div class="ptw-manual-form-section manual-section-1" style="margin-top: 0; border-top-left-radius: 0; border-top-right-radius: 0;">
                             <h3><i class="fas fa-info-circle"></i><span>\u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0623\u0648\u0644 : \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062A\u0635\u0631\u064A\u062D \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629</span></h3>
@@ -3338,7 +3371,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                         <!-- \u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u062B\u0627\u0646\u064A: \u0623\u0633\u0645\u0627\u0621 \u0627\u0644\u0642\u0627\u0626\u0645\u064A\u0646 \u0628\u0627\u0644\u0639\u0645\u0644 (\u062C\u062F\u0648\u0644 \u0643\u0645\u0627 \u0628\u0627\u0644\u0635\u0648\u0631\u0629) -->
                         <div class="ptw-manual-form-section manual-section-2">
                             <h3><i class="fas fa-users"></i><span>\u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u062B\u0627\u0646\u064A : \u0623\u0633\u0645\u0627\u0621 \u0627\u0644\u0642\u0627\u0626\u0645\u064A\u0646 \u0628\u0627\u0644\u0639\u0645\u0644</span></h3>
-
+                            
                             <div class="overflow-x-auto bg-white">
                                 <table class="w-full ptw-paper-grid-table" style="border-collapse: collapse; border: 1px solid #000;">
                                     <thead>
@@ -3489,7 +3522,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                             <p class="text-sm text-gray-600 mb-4 bg-white p-2 rounded border border-gray-100 inline-block">
                                 <i class="fas fa-mouse-pointer text-red-500 ml-1"></i>\u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u062E\u0644\u064A\u0629 \u0641\u064A \u0627\u0644\u0645\u0635\u0641\u0648\u0641\u0629 \u0644\u062A\u062D\u062F\u064A\u062F \u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u0645\u062E\u0627\u0637\u0631
                             </p>
-
+                            
                             <!-- \u0645\u0635\u0641\u0648\u0641\u0629 \u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A\u0629 (\u0627\u0644\u062A\u0635\u0646\u064A\u0641 \u0627\u0644\u0644\u0648\u0646\u064A \u0627\u0644\u0639\u0627\u0644\u0645\u064A) -->
                             <div class="bg-white rounded-lg p-4 border border-gray-200">
                                 <div class="overflow-x-auto">
@@ -3519,7 +3552,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                                         </tbody>
                                     </table>
                                 </div>
-
+                                
                                 <!-- \u0648\u0633\u064A\u0644\u0629 \u0625\u064A\u0636\u0627\u062D \u0627\u0644\u062A\u0635\u0646\u064A\u0641 \u0627\u0644\u0644\u0648\u0646\u064A \u0627\u0644\u0639\u0627\u0644\u0645\u064A -->
                                 <div class="mt-3 flex flex-wrap gap-4 justify-center text-sm">
                                     <span class="inline-flex items-center gap-2"><span class="w-5 h-5 rounded border border-gray-400" style="background: #22c55e;"></span> \u0645\u0646\u062E\u0641\u0636 (1-4)</span>
@@ -3527,7 +3560,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                                     <span class="inline-flex items-center gap-2"><span class="w-5 h-5 rounded border border-gray-400" style="background: #f97316;"></span> \u0645\u0631\u062A\u0641\u0639 (10-16)</span>
                                     <span class="inline-flex items-center gap-2"><span class="w-5 h-5 rounded border border-gray-400" style="background: #dc2626;"></span> \u062D\u0631\u062C (17-25)</span>
                                 </div>
-
+                                
                                 <!-- \u0646\u062A\u064A\u062C\u0629 \u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0645\u062E\u0627\u0637\u0631 -->
                                 <div id="manual-risk-result" class="mt-4 p-4 rounded-lg border-2 ${i?.riskScore?"":"hidden"}" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
                                     <div class="flex items-center justify-between flex-wrap gap-4">
@@ -3546,14 +3579,14 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                                         </div>
                                     </div>
                                 </div>
-
+                                
                                 <!-- \u062D\u0642\u0648\u0644 \u0645\u062E\u0641\u064A\u0629 -->
                                 <input type="hidden" id="manual-risk-likelihood" value="${i?.riskLikelihood||""}">
                                 <input type="hidden" id="manual-risk-consequence" value="${i?.riskConsequence||""}">
                                 <input type="hidden" id="manual-risk-score" value="${i?.riskScore||""}">
                                 <input type="hidden" id="manual-risk-level" value="${i?.riskLevel||""}">
                             </div>
-
+                            
                             <div class="mt-4 bg-red-50 p-4 rounded-lg border border-red-100">
                                 <label class="block text-sm font-bold text-gray-700 mb-2"><i class="fas fa-sticky-note ml-2 text-red-500"></i>\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0645\u062E\u0627\u0637\u0631</label>
                                 <textarea id="manual-risk-notes" class="form-input bg-white" rows="3" placeholder="\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0625\u0636\u0627\u0641\u064A\u0629 \u062D\u0648\u0644 \u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u0627\u0644\u0645\u062D\u062A\u0645\u0644\u0629...">${Utils.escapeHTML(i?.riskNotes||"")}</textarea>
@@ -3563,7 +3596,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                         <!-- \u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0633\u0627\u0628\u0639: \u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F\u0627\u062A (\u0643\u0645\u0627 \u0628\u0627\u0644\u0635\u0648\u0631\u0629) -->
                         <div class="ptw-manual-form-section manual-section-7">
                             <h3><i class="fas fa-signature"></i><span>\u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0633\u0627\u0628\u0639 : \u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F\u0627\u062A</span></h3>
-
+                            
                             <!-- \u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u062A\u0635\u0631\u064A\u062D (\u064A\u0634\u062A\u0631\u0637 \u062C\u0645\u064A\u0639 \u0627\u0644\u062A\u0648\u0642\u064A\u0639\u0627\u062A \u0644\u0628\u062F\u0621 \u0627\u0644\u0639\u0645\u0644) -->
                             <div class="overflow-x-auto bg-white">
                                 <table class="w-full ptw-paper-grid-table" style="border-collapse: collapse; border: 1px solid #000;">
@@ -3632,7 +3665,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                         <!-- \u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u062A\u0627\u0633\u0639: \u0627\u0639\u062A\u0645\u0627\u062F \u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u062A\u0635\u0631\u064A\u062D (\u0646\u0641\u0633 \u062A\u0635\u0645\u064A\u0645 \u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0633\u0627\u0628\u0639 - \u0643\u0645\u0627 \u0628\u0627\u0644\u0635\u0648\u0631\u0629) -->
                         <div class="ptw-manual-form-section manual-section-9">
                             <h3><i class="fas fa-check-circle"></i><span>\u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u062A\u0627\u0633\u0639 : \u0627\u0639\u062A\u0645\u0627\u062F \u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u062A\u0635\u0631\u064A\u062D</span></h3>
-
+                            
                             <!-- \u0627\u0639\u062A\u0645\u0627\u062F \u0627\u063A\u0644\u0627\u0642 \u0627\u0644\u062A\u0635\u0631\u064A\u062D (\u064A\u0634\u062A\u0631\u0637 \u062C\u0645\u064A\u0639 \u0627\u0644\u062A\u0648\u0642\u064A\u0639\u0627\u062A) -->
                             <div class="overflow-x-auto bg-white">
                                 <table class="w-full ptw-paper-grid-table" style="border-collapse: collapse; border: 1px solid #000;">
@@ -3849,10 +3882,13 @@ Stack: `+r.stack)}finally{const r=document.getElementById(e);r&&r.remove()}},col
 `:"")+(s>0?`- \u0623\u062E\u0637\u0627\u0621: ${s} \u0635\u0641`:""))}catch(a){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A:",a),Notification.error(this._t("module.ptw.notify.importErr","\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F: ")+(a.message||this._t("module.ptw.notify.unknownError","\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641")))}},renderList(t={}){const e=t.includeStats!==!1,{source:a,merged:r,permitsFromList:i,permitsFromRegistry:s}=this.getPermitMetricsDataset(),o=a.length>0,l=a.length,n=a.filter(f=>f&&this.isPermitOpenStatus(f.status)).length,p=a.filter(f=>f&&this.isPermitClosedStatus(f.status)).length,d=[...new Set(r.map(f=>(f.workType||"").trim()).filter(Boolean))].sort(),c=[...new Set(r.map(f=>(f.siteName||f.location||"").trim()).filter(Boolean))].sort(),m=[...new Set(r.map(f=>(f.sublocationName||f.sublocation||"").trim()).filter(Boolean))].sort(),u=["\u0645\u0641\u062A\u0648\u062D","\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629","\u0645\u0648\u0627\u0641\u0642 \u0639\u0644\u064A\u0647","\u0645\u0631\u0641\u0648\u0636","\u0645\u063A\u0644\u0642","\u0627\u0643\u062A\u0645\u0644 \u0627\u0644\u0639\u0645\u0644 \u0628\u0634\u0643\u0644 \u0622\u0645\u0646","\u0625\u063A\u0644\u0627\u0642 \u062C\u0628\u0631\u064A","\u0644\u0645 \u064A\u0643\u062A\u0645\u0644 \u0627\u0644\u0639\u0645\u0644"];return`<style>
                 .ptw-permit-list-workspace {
                     --ptl-navy:#102a43; --ptl-navy-2:#173d6c; --ptl-cyan:#0891b2; --ptl-blue:#2563eb;
-                    --ptl-ink:#172033; --ptl-muted:#64748b; display:grid; gap:18px; direction:rtl;
+                    --ptl-ink:#172033; --ptl-muted:#64748b; display:grid; gap:18px; direction:rtl; width:100%; max-width:100%; min-width:0;
                 }
+                .ptw-permit-list-workspace>* { min-width:0; max-width:100%; }
+                .ptw-permit-list-workspace #ptw-stats-section .grid { display:grid!important; grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))!important; gap:12px!important; }
+                .ptw-permit-list-workspace #ptw-stats-section .kpi-card { min-width:0; width:100%; }
                 .ptw-permit-list-workspace>#ptw-stats-section { margin-bottom:0!important; }
-                .ptw-permit-list-card { overflow:hidden; border:1px solid #cbddeb; border-radius:18px; box-shadow:0 13px 30px rgba(15,42,67,.09); }
+                .ptw-permit-list-card { width:100%; max-width:100%; min-width:0; overflow:hidden; border:1px solid #cbddeb; border-radius:18px; box-shadow:0 13px 30px rgba(15,42,67,.09); }
                 .ptw-permit-list-card>.card-header {
                     display:flex; align-items:center; justify-content:space-between; gap:12px; padding:15px 17px;
                     border-bottom:0; background:linear-gradient(125deg,var(--ptl-navy),var(--ptl-navy-2));
@@ -3882,7 +3918,7 @@ Stack: `+r.stack)}finally{const r=document.getElementById(e);r&&r.remove()}},col
                 .ptw-permit-list-card .ptw-filter-reset-btn:disabled { opacity:.45; cursor:not-allowed; transform:none; }
                 .ptw-permit-list-card .ptw-filter-field .text-xs { display:none; }
                 .ptw-permit-list-card>.card-body { padding:0!important; }
-                .ptw-permit-list-card #ptw-table-container { max-height:min(68vh,720px); overflow:auto; scrollbar-width:thin; scrollbar-color:#94a3b8 #e2e8f0; }
+                .ptw-permit-list-card #ptw-table-container { width:100%; max-width:100%; min-width:0; max-height:min(68vh,720px); overflow:auto; scrollbar-width:thin; scrollbar-color:#94a3b8 #e2e8f0; scrollbar-gutter:stable both-edges; }
                 .ptw-permit-list-table { width:max-content!important; min-width:100%; border-collapse:separate!important; border-spacing:0; table-layout:auto; font-size:.8rem; }
                 .ptw-permit-list-table thead { position:sticky; top:0; z-index:8; }
                 .ptw-permit-list-table thead th { position:sticky; top:0; z-index:8; min-width:125px; padding:13px 12px!important; border:0!important; border-left:1px solid rgba(255,255,255,.13)!important; color:#f8fafc!important; background:linear-gradient(180deg,#173d6c,#102a43)!important; font-size:.74rem; font-weight:850!important; line-height:1.45; white-space:normal; vertical-align:middle; box-shadow:inset 0 -3px #22d3ee; }
@@ -4406,39 +4442,39 @@ Stack: `+r.stack)}finally{const r=document.getElementById(e);r&&r.remove()}},col
                         grid-template-columns: repeat(2, minmax(0, 1fr));
                     }
                 }
-
+                
                 .ptw-section-2 { background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%); border-color: #009688; }
                 .ptw-section-2 h3 { color: #00695C; border-color: #009688; }
                 .ptw-section-2 h3 i { color: #00796B; background: rgba(0, 150, 136, 0.1); }
-
+                
                 .ptw-section-3 { background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); border-color: #9C27B0; }
                 .ptw-section-3 h3 { color: #6A1B9A; border-color: #9C27B0; }
                 .ptw-section-3 h3 i { color: #7B1FA2; background: rgba(156, 39, 176, 0.1); }
-
+                
                 .ptw-section-4 { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-color: #FF9800; }
                 .ptw-section-4 h3 { color: #E65100; border-color: #FF9800; }
                 .ptw-section-4 h3 i { color: #F57C00; background: rgba(255, 152, 0, 0.1); }
-
+                
                 .ptw-section-5 { background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%); border-color: #E91E63; }
                 .ptw-section-5 h3 { color: #AD1457; border-color: #E91E63; }
                 .ptw-section-5 h3 i { color: #C2185B; background: rgba(233, 30, 99, 0.1); }
-
+                
                 .ptw-section-6 { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-color: #4CAF50; }
                 .ptw-section-6 h3 { color: #2E7D32; border-color: #4CAF50; }
                 .ptw-section-6 h3 i { color: #388E3C; background: rgba(76, 175, 80, 0.1); }
-
+                
                 .ptw-section-7 { background: linear-gradient(135deg, #efebe9 0%, #d7ccc8 100%); border-color: #795548; }
                 .ptw-section-7 h3 { color: #4E342E; border-color: #795548; }
                 .ptw-section-7 h3 i { color: #5D4037; background: rgba(121, 85, 72, 0.1); }
-
+                
                 .ptw-section-8 { background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%); border-color: #9e9e9e; }
                 .ptw-section-8 h3 { color: #424242; border-color: #9e9e9e; }
                 .ptw-section-8 h3 i { color: #616161; background: rgba(158, 158, 158, 0.1); }
-
+                
                 .ptw-section-9 { background: linear-gradient(135deg, #e1f5fe 0%, #b3e5fc 100%); border-color: #03a9f4; }
                 .ptw-section-9 h3 { color: #0277bd; border-color: #03a9f4; }
                 .ptw-section-9 h3 i { color: #0288d1; background: rgba(3, 169, 244, 0.1); }
-
+                
                 .ptw-closure-approval-table {
                     width: 100%;
                     border-collapse: collapse;
@@ -4650,17 +4686,17 @@ Stack: `+r.stack)}finally{const r=document.getElementById(e);r&&r.remove()}},col
                         ${t?.id||"\u0645\u0633\u0648\u062F\u0629 \u062C\u062F\u064A\u062F\u0629"}
                     </div>
                 </div>
-
+                
                 <div class="card-body p-0">
                     <form id="ptw-form" class="space-y-6">
-
+                        
                         <!-- \u0646\u0635 \u0627\u0644\u0625\u0639\u0644\u0627\u0646/\u0627\u0644\u062A\u0646\u0628\u064A\u0647 -->
                         <div class="ptw-permit-disclaimer" style="margin: 0 24px 0 24px; padding: 0;">
-                            <div class="bg-gradient-to-br from-blue-100 via-indigo-100 to-purple-100 border-r-4 border-l-4 border-b-0 border-t-0 border-blue-600 rounded-t-xl shadow-md transition-all duration-300 p-5 relative overflow-hidden"
+                            <div class="bg-gradient-to-br from-blue-100 via-indigo-100 to-purple-100 border-r-4 border-l-4 border-b-0 border-t-0 border-blue-600 rounded-t-xl shadow-md transition-all duration-300 p-5 relative overflow-hidden" 
                                 style="border-right-width: 4px; border-left-width: 4px; border-bottom-width: 0; border-top-width: 0; position: relative; margin-bottom: 0;">
                                 <!-- \u062E\u0644\u0641\u064A\u0629 \u0632\u062E\u0631\u0641\u064A\u0629 -->
                                 <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600"></div>
-
+                                
                                 <!-- \u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u062A\u062D\u0643\u0645 \u0641\u064A \u062D\u062C\u0645 \u0627\u0644\u062E\u0637 -->
                                 <div class="flex items-center justify-between mb-3 pb-2 border-b border-blue-300">
                                     <div class="flex items-center gap-2">
@@ -4672,34 +4708,34 @@ Stack: `+r.stack)}finally{const r=document.getElementById(e);r&&r.remove()}},col
                                         <span class="text-xs text-gray-600">px</span>
                                     </div>
                                     <div class="flex items-center gap-2">
-                                        <button type="button" id="ptw-disclaimer-font-decrease"
-                                            class="btn-icon btn-icon-secondary text-blue-700 hover:bg-blue-200 border border-blue-400 rounded-lg p-2 transition-all duration-200 hover:scale-110 shadow-sm"
+                                        <button type="button" id="ptw-disclaimer-font-decrease" 
+                                            class="btn-icon btn-icon-secondary text-blue-700 hover:bg-blue-200 border border-blue-400 rounded-lg p-2 transition-all duration-200 hover:scale-110 shadow-sm" 
                                             title="\u062A\u0635\u063A\u064A\u0631 \u0627\u0644\u062E\u0637">
                                             <i class="fas fa-minus"></i>
                                         </button>
-                                        <button type="button" id="ptw-disclaimer-font-reset"
-                                            class="btn-icon btn-icon-secondary text-blue-700 hover:bg-blue-200 border border-blue-400 rounded-lg p-2 transition-all duration-200 hover:scale-110 shadow-sm"
+                                        <button type="button" id="ptw-disclaimer-font-reset" 
+                                            class="btn-icon btn-icon-secondary text-blue-700 hover:bg-blue-200 border border-blue-400 rounded-lg p-2 transition-all duration-200 hover:scale-110 shadow-sm" 
                                             title="\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646">
                                             <i class="fas fa-redo"></i>
                                         </button>
-                                        <button type="button" id="ptw-disclaimer-font-increase"
-                                            class="btn-icon btn-icon-secondary text-blue-700 hover:bg-blue-200 border border-blue-400 rounded-lg p-2 transition-all duration-200 hover:scale-110 shadow-sm"
+                                        <button type="button" id="ptw-disclaimer-font-increase" 
+                                            class="btn-icon btn-icon-secondary text-blue-700 hover:bg-blue-200 border border-blue-400 rounded-lg p-2 transition-all duration-200 hover:scale-110 shadow-sm" 
                                             title="\u062A\u0643\u0628\u064A\u0631 \u0627\u0644\u062E\u0637">
                                             <i class="fas fa-plus"></i>
                                         </button>
                                     </div>
                                 </div>
-
+                                
                                 <!-- \u062D\u0642\u0644 \u0627\u0644\u0646\u0635 -->
-                                <textarea id="ptw-permit-disclaimer-text"
-                                    class="w-full text-center text-gray-900 font-medium leading-relaxed resize-y min-h-[100px] border-2 border-blue-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 p-4 bg-gradient-to-br from-white to-blue-50 shadow-inner transition-all duration-200"
+                                <textarea id="ptw-permit-disclaimer-text" 
+                                    class="w-full text-center text-gray-900 font-medium leading-relaxed resize-y min-h-[100px] border-2 border-blue-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 p-4 bg-gradient-to-br from-white to-blue-50 shadow-inner transition-all duration-200" 
                                     style="font-size: 15px; line-height: 2.2; color: #1e3a5f; text-align: center; font-weight: 500; letter-spacing: 0.3px;"
                                     placeholder="\u0623\u062F\u062E\u0644 \u0646\u0635 \u0627\u0644\u0625\u0639\u0644\u0627\u0646 \u0647\u0646\u0627...">${n(t?.permitDisclaimer||`\u062A\u0645 \u0625\u0635\u062F\u0627\u0631 \u0647\u0630\u0627 \u0627\u0644\u062A\u0635\u0631\u064A\u062D \u0641\u0642\u0637 \u0644\u0644\u0639\u0645\u0644 \u0627\u0644\u0630\u064A \u062A\u0645 \u0648\u0635\u0641\u0647 \u0623\u062F\u0646\u0627\u0647
 \u0648\u0644\u0627 \u064A\u062C\u0648\u0632 \u0628\u0623\u064A \u062D\u0627\u0644 \u0645\u0646 \u0627\u0644\u0623\u062D\u0648\u0627\u0644 \u0627\u0633\u062A\u062E\u062F\u0627\u0645\u0647 \u0644\u0623\u064A \u0639\u0645\u0644 \u0622\u062E\u0631 \u0644\u0645 \u064A\u062A\u0645 \u0648\u0635\u0641\u0647
 \u0648\u0639\u0644\u064A\u0647 \u0641\u0625\u0646\u0647 \u064A\u062C\u0628 \u0627\u0644\u0627\u0644\u062A\u0632\u0627\u0645 \u0628\u0645\u062F\u0629 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u062A\u0635\u0631\u064A\u062D \u0644\u0644\u0639\u0645\u0644 \u0627\u0644\u0645\u0630\u0643\u0648\u0631 \u0623\u062F\u0646\u0627\u0647 \u0648\u0641\u0649 \u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0645\u0635\u0631\u062D \u0644\u0644\u0639\u0645\u0644 \u0641\u064A\u0647 \u0641\u0642\u0637.`)}</textarea>
                             </div>
                         </div>
-
+                        
                         <!-- \u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0623\u0648\u0644: \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629 -->
                         <div class="ptw-form-section ptw-section-1" style="margin-top: 0; border-top-left-radius: 0; border-top-right-radius: 0;">
                              <h3>
@@ -4848,7 +4884,7 @@ Stack: `+r.stack)}finally{const r=document.getElementById(e);r&&r.remove()}},col
                                     </div>
                                 </div>
                             </div>
-
+                            
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 bg-gray-50 p-4 rounded-lg">
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">\u062A\u0641\u0627\u0635\u064A\u0644 \u0623\u0639\u0645\u0627\u0644 \u0627\u0644\u0643\u0647\u0631\u0628\u0627\u0621</label>
@@ -4863,7 +4899,7 @@ Stack: `+r.stack)}finally{const r=document.getElementById(e);r&&r.remove()}},col
                                     <input type="text" id="ptw-other-work-type" class="form-input" value="${n(t?.otherWorkType)}" placeholder="\u0627\u0630\u0643\u0631 \u062A\u0641\u0627\u0635\u064A\u0644 \u0623\u0639\u0645\u0627\u0644 \u0623\u062E\u0631\u0649 (\u0625\u0646 \u0648\u062C\u062F\u062A)">
                                 </div>
                             </div>
-
+                            
                             <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6 bg-yellow-50 p-4 rounded-lg border border-yellow-100">
                                 <div class="md:col-span-4 font-bold text-yellow-800 mb-2 flex items-center">
                                     <i class="fas fa-digging ml-2"></i>
@@ -4970,9 +5006,9 @@ Stack: `+r.stack)}finally{const r=document.getElementById(e);r&&r.remove()}},col
                                                     cells.forEach(cell => {
                                                         const cellLikelihood = cell.getAttribute('data-likelihood') || cell.getAttribute('data-probability');
                                                         const cellConsequence = cell.getAttribute('data-consequence') || cell.getAttribute('data-severity');
-                                                        if (cellLikelihood && cellConsequence &&
+                                                        if (cellLikelihood && cellConsequence && 
                                                             likelihood !== null && consequence !== null &&
-                                                            parseInt(cellLikelihood) === parseInt(likelihood) &&
+                                                            parseInt(cellLikelihood) === parseInt(likelihood) && 
                                                             parseInt(cellConsequence) === parseInt(consequence)) {
                                                             cell.classList.add('selected');
                                                             cell.setAttribute('data-selected', 'true');
@@ -4988,7 +5024,7 @@ Stack: `+r.stack)}finally{const r=document.getElementById(e);r&&r.remove()}},col
                                 <label class="block text-sm font-bold text-gray-700 mb-2">\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0645\u062E\u0627\u0637\u0631</label>
                                 <textarea id="ptw-risk-notes" class="form-input bg-white" rows="3"
                                     placeholder="\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0625\u0636\u0627\u0641\u064A\u0629 \u062D\u0648\u0644 \u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u0627\u0644\u0645\u062D\u062A\u0645\u0644\u0629">${n(t?.riskNotes)}</textarea>
-
+                                
                                 <!-- \u062D\u0642\u0648\u0644 \u0645\u062E\u0641\u064A\u0629 \u0644\u062D\u0641\u0638 \u0642\u064A\u0645 \u0627\u0644\u0645\u0635\u0641\u0648\u0641\u0629 -->
                                 <input type="hidden" id="ptw-risk-likelihood" value="${t?.riskAssessment?.likelihood||""}">
                                 <input type="hidden" id="ptw-risk-consequence" value="${t?.riskAssessment?.consequence||""}">
@@ -5046,7 +5082,7 @@ Stack: `+r.stack)}finally{const r=document.getElementById(e);r&&r.remove()}},col
                                 <i class="fas fa-lock"></i>
                                 <span>\u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u062B\u0627\u0645\u0646 : \u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u062A\u0635\u0631\u064A\u062D</span>
                             </h3>
-
+                            
                             <!-- \u0627\u0644\u0646\u0635 \u0627\u0644\u0648\u0635\u0641\u064A -->
                             <div class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-2 border-blue-200 rounded-xl p-6 mb-6 shadow-md hover:shadow-lg transition-all duration-300" style="display: flex; align-items: center; justify-content: center; min-height: 100px;">
                                 <p class="text-gray-800 text-base leading-relaxed mb-0 font-medium" style="text-align: center; line-height: 2.2; max-width: 90%; color: #1e40af; font-size: 16px; letter-spacing: 0.3px;">
@@ -5055,7 +5091,7 @@ Stack: `+r.stack)}finally{const r=document.getElementById(e);r&&r.remove()}},col
                                     <i class="fas fa-check-circle text-green-600 mr-2" style="font-size: 18px;"></i>
                                 </p>
                             </div>
-
+                            
                             <!-- \u062E\u064A\u0627\u0631\u0627\u062A \u0627\u0644\u0625\u063A\u0644\u0627\u0642 -->
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                 <label class="flex items-center space-x-2 space-x-reverse cursor-pointer bg-white bg-opacity-60 p-3 rounded-lg border border-gray-200 hover:bg-opacity-80 transition-all">
@@ -5071,7 +5107,7 @@ Stack: `+r.stack)}finally{const r=document.getElementById(e);r&&r.remove()}},col
                                     <span class="font-medium text-gray-700">\u0625\u063A\u0644\u0627\u0642 \u062C\u0628\u0631\u064A</span>
                                 </label>
                             </div>
-
+                            
                             <!-- \u062D\u0642\u0648\u0644 \u0627\u0644\u0625\u062F\u062E\u0627\u0644 -->
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
@@ -5741,7 +5777,7 @@ Stack: `+r.stack)}finally{const r=document.getElementById(e);r&&r.remove()}},col
                     <div class="flex justify-between"><span>${t.startDate?Utils.formatDate(t.startDate):"-"}</span> <span class="font-semibold text-gray-500">:\u0627\u0644\u062A\u0627\u0631\u064A\u062E</span></div>
                     <div class="flex justify-between items-center">
                         <span class="badge badge-${this.getStatusBadgeClass(t.status)} px-1 py-0 text-[10px]">${t.status}</span>
-                        <span class="font-semibold text-gray-500">:\u0627\u0644\u062D\u0627\u0644\u0629</span>
+                        <span class="font-semibold text-gray-500">:\u0627\u0644\u062D\u0627\u0644\u0629</span> 
                     </div>
                 </div>
                 <div class="mt-2 text-center pt-2 border-t border-gray-100">
@@ -6060,11 +6096,11 @@ Stack: `+r.stack)}finally{const r=document.getElementById(e);r&&r.remove()}},col
                             </div>
                         </div>
                     `}).join(""));const ot=document.getElementById("ptw-factories-cards");if(ot)if(s===0)ot.innerHTML='<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A</div>';else{const q=this.getSiteOptions();ot.innerHTML=q.map((b,G)=>{const J=b.name.trim(),j=i.filter(nt=>(nt.location||nt.siteName||"").trim()===J),P=j.length,lt=Math.round(P/s*100)||0,Q=j.filter(nt=>this.isPermitOpenStatus(nt?.status)).length,at=j.filter(nt=>this.isPermitClosedStatus(nt?.status)).length,ct=[{primary:"#0284c7",light:"#e0f2fe",progress:"linear-gradient(90deg, #38bdf8 0%, #0284c7 100%)"},{primary:"#059669",light:"#ecfdf5",progress:"linear-gradient(90deg, #34d399 0%, #059669 100%)"},{primary:"#7c3aed",light:"#f5f3ff",progress:"linear-gradient(90deg, #a78bfa 0%, #7c3aed 100%)"}],tt=ct[G%ct.length];return`
-                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);transition:all .2s;cursor:pointer;"
-                             onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.08)';this.style.borderColor='${tt.primary}'"
+                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);transition:all .2s;cursor:pointer;" 
+                             onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.08)';this.style.borderColor='${tt.primary}'" 
                              onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)';this.style.borderColor='#e2e8f0'"
                              onclick="const el = document.getElementById('ptw-af-location'); if(el){el.value='${J}'; el.dispatchEvent(new Event('change'));}">
-
+                            
                             <div style="display:flex;justify-content:space-between;align-items:center;">
                                 <div style="display:flex;align-items:center;gap:8px;">
                                     <div style="width:36px;height:36px;background:${tt.light};border-radius:8px;display:flex;align-items:center;justify-content:center;color:${tt.primary};">
@@ -6074,11 +6110,11 @@ Stack: `+r.stack)}finally{const r=document.getElementById(e);r&&r.remove()}},col
                                 </div>
                                 <span style="font-size:1.15rem;font-weight:900;color:${tt.primary};">${lt}%</span>
                             </div>
-
+                            
                             <div style="width:100%;height:8px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
                                 <div style="width:${lt}%;height:100%;background:${tt.progress};border-radius:9999px;"></div>
                             </div>
-
+                            
                             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px;border-top:1px solid #f1f5f9;padding-top:12px;">
                                 <div style="text-align:center;">
                                     <div style="font-size:0.65rem;color:#64748b;margin-bottom:2px;">\u0627\u0644\u062A\u0635\u0627\u0631\u064A\u062D</div>
