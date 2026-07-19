@@ -516,6 +516,7 @@ const Contractors = {
                 this._isLoading = false;
                 return;
             }
+            section.classList.add('contractors-identity');
 
             // ✅ إصلاح نهائي: حفظ التبويب الحالي قبل إعادة التحميل
             const previousTab = this.currentTab || 'approval-request';
@@ -570,17 +571,21 @@ const Contractors = {
                 : TAB_PENDING_HTML;
 
             const shellHTML = `
-                <div class="section-header">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h1 class="section-title">
-                            <i class="fas fa-users-cog ml-3"></i>
-                            إدارة المقاولين
-                        </h1>
-                        <p class="section-subtitle">إدارة بيانات المقاولين والمتعاقدين</p>
+                <section class="contractors-module-hero" aria-labelledby="contractors-module-title">
+                    <div class="contractors-module-hero__copy">
+                        <span class="contractors-module-hero__icon"><i class="fas fa-building-shield"></i></span>
+                        <div>
+                            <span class="contractors-module-hero__eyebrow">بوابة الحوكمة والتأهيل</span>
+                            <h1 id="contractors-module-title">إدارة المقاولين ومقدمي الخدمات</h1>
+                            <p>دورة موحدة للطلب والاعتماد والتقييم ومتابعة الاشتراطات وتحليل الأداء</p>
+                        </div>
                     </div>
-                </div>
-            </div>
+                    <div class="contractors-module-hero__meta" aria-label="مزايا المديول">
+                        <span><i class="fas fa-route"></i>مسار اعتماد منضبط</span>
+                        <span><i class="fas fa-shield-check"></i>تأهيل قائم على الاشتراطات</span>
+                        <span><i class="fas fa-chart-line"></i>تحليل أداء مباشر</span>
+                    </div>
+                </section>
             
             <div class="mt-6 mb-4">
                 <div class="contractors-tabs-wrapper">
@@ -2611,7 +2616,7 @@ const Contractors = {
 
         return `
             <div style="overflow-x:auto;margin-bottom:1.5rem;">
-                <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1rem;align-items:stretch;min-width:1500px;">
+                <div class="contractors-kpi-grid" style="display:grid;grid-template-columns:repeat(5,minmax(170px,1fr));gap:1rem;align-items:stretch;">
                     <div class="content-card" style="height:100%;min-height:132px;border:2px solid #bfdbfe;border-radius:14px;background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 55%,#ffffff 100%);box-shadow:0 2px 8px rgba(30,64,175,.08);padding:1rem;">
                         <div style="display:flex;align-items:center;justify-content:space-between;height:100%;">
                             <div>
@@ -2806,13 +2811,10 @@ const Contractors = {
         const tableHtml = this.renderApprovedEntitiesTable(filteredRecords, isAdmin);
 
         return `
-            <div class="content-card" id="approved-contractors-card">
+            <div class="content-card contractors-approved-card" id="approved-contractors-card">
                 <div class="card-header">
                     <div class="flex items-center justify-between flex-wrap gap-4">
-                        <h2 class="card-title flex items-center gap-2">
-                            <i class="fas fa-check-circle ml-2"></i>
-                            قائمة المقاولين والموردين المعتمدين
-                        </h2>
+                        <div><h2 class="card-title flex items-center gap-2"><i class="fas fa-check-circle ml-2"></i>قائمة المقاولين والموردين المعتمدين</h2><p style="margin:4px 0 0;color:#d9ebf3;font-size:.68rem;">السجل المرجعي للجهات المؤهلة وحالة الاعتماد وصلاحية المستندات</p></div>
                         <div class="flex items-center gap-2 flex-wrap">
                             ${isAdmin ? `
                             <input type="file" id="import-approved-contractors-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;left:-9999px;">
@@ -4561,13 +4563,10 @@ const Contractors = {
         const pendingEvaluationRequests = isAdmin ? this.getPendingEvaluationApprovalRequests() : [];
 
         return `
-            <div class="content-card" id="contractor-evaluation-card">
+            <div class="content-card contractors-evaluation-card" id="contractor-evaluation-card">
                 <div class="card-header">
                     <div class="flex items-center justify-between flex-wrap gap-4">
-                        <h2 class="card-title flex items-center gap-2">
-                            <i class="fas fa-clipboard-check ml-2"></i>
-                            تقييم وتأهيل المقاولين
-                        </h2>
+                        <div><h2 class="card-title flex items-center gap-2"><i class="fas fa-clipboard-check ml-2"></i>تقييم وتأهيل المقاولين</h2><p style="margin:4px 0 0;color:#d9ebf3;font-size:.68rem;">قياس الأداء، مراجعة طلبات التقييم، وتوثيق نتائج التأهيل</p></div>
                         <div class="flex items-center gap-3 flex-wrap">
                             <select id="contractor-evaluation-filter" class="form-input" style="min-width: 220px;">
                                 <option value="">جميع المقاولين</option>
@@ -4587,31 +4586,22 @@ const Contractors = {
                     </div>
                 </div>
                 <div class="card-body space-y-6">
-                    <div class="border-b pb-4">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                            <i class="fas fa-list ml-2"></i>
-                            طلبات تقييمي
-                        </h3>
+                    <div class="contractors-subsection">
+                        <h3 class="contractors-subsection__title"><i class="fas fa-list"></i>طلبات تقييمي</h3>
                         <div id="my-evaluation-approval-requests-container">
                             ${this.renderApprovalRequestsTable(myEvaluationRequests, false)}
                         </div>
                     </div>
                     ${isAdmin ? `
-                    <div class="border-b pb-4">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                            <i class="fas fa-clipboard-check ml-2"></i>
-                            طلبات تقييم قيد المراجعة (للمدير)
-                        </h3>
+                    <div class="contractors-subsection">
+                        <h3 class="contractors-subsection__title"><i class="fas fa-clipboard-check"></i>طلبات تقييم قيد المراجعة (للمدير)</h3>
                         <div id="pending-evaluation-approval-requests-container">
                             ${this.renderApprovalRequestsTable(pendingEvaluationRequests, true)}
                         </div>
                     </div>
                     ` : ''}
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                            <i class="fas fa-table ml-2"></i>
-                            التقييمات المعتمدة
-                        </h3>
+                    <div class="contractors-subsection">
+                        <h3 class="contractors-subsection__title"><i class="fas fa-table"></i>التقييمات المعتمدة</h3>
                         <div id="contractor-evaluations-container">
                             ${evaluationsTable}
                         </div>
@@ -4808,13 +4798,10 @@ const Contractors = {
         };
 
         return `
-            <div class="content-card">
+            <div class="content-card contractors-requirements-card">
                 <div class="card-header">
                     <div class="flex items-center justify-between">
-                        <h2 class="card-title">
-                            <i class="fas fa-cog ml-2"></i>
-                            إدارة اشتراطات اعتماد المقاولين
-                        </h2>
+                        <div><h2 class="card-title"><i class="fas fa-cog ml-2"></i>إدارة اشتراطات اعتماد المقاولين</h2><p style="margin:4px 0 0;color:#d9ebf3;font-size:.68rem;">حوكمة الوثائق الإلزامية والأولويات ومدد الصلاحية</p></div>
                         <div class="flex items-center gap-3">
                             <button onclick="Contractors.exportRequirementsTemplate()" class="btn-secondary btn-sm">
                                 <i class="fas fa-download ml-2"></i>
@@ -4829,7 +4816,7 @@ const Contractors = {
                 </div>
                 <div class="card-body">
                     <!-- إحصائيات سريعة -->
-                    <div class="grid grid-cols-4 gap-4 mb-6">
+                    <div class="contractors-requirements-kpis mb-6">
                         <div class="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg">
                             <div class="flex items-center justify-between">
                                 <div>
@@ -9521,43 +9508,37 @@ const Contractors = {
         }
 
         return `
-            <div class="content-card">
+            <div class="content-card contractors-workflow-card">
                 <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-paper-plane ml-2"></i>
-                        إرسال طلب اعتماد مقاول أو مقدم خدمة
-                    </h2>
+                    <div class="flex items-center justify-between flex-wrap gap-3">
+                        <h2 class="card-title"><i class="fas fa-paper-plane ml-2"></i>إرسال طلب اعتماد مقاول أو مقدم خدمة</h2>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span style="padding:5px 9px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(255,255,255,.1);font-size:.68rem;font-weight:750;"><i class="fas fa-folder-open ml-1"></i>${myRequests.length} طلب خاص بك</span>
+                            ${isAdmin ? `<span style="padding:5px 9px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(255,255,255,.1);font-size:.68rem;font-weight:750;"><i class="fas fa-hourglass-half ml-1"></i>${pendingRequests.length} للمراجعة</span>` : ''}
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body space-y-6">
-                    <div class="bg-blue-50 border border-blue-200 rounded p-4">
-                        <p class="text-sm text-blue-800">
-                            <i class="fas fa-info-circle ml-2"></i>
-                            يمكنك إرسال طلب اعتماد مقاول أو مقدم خدمة جديد. سيتم إرسال الطلب إلى مدير النظام للمراجعة والموافقة.
-                        </p>
-                    </div>
-                    
-                    <div>
+                    <div class="contractors-request-intro">
+                        <div>
+                            <h3><i class="fas fa-file-signature ml-2" style="color:#0f8b83;"></i>بدء ملف اعتماد جديد</h3>
+                            <p>أدخل بيانات المقاول أو مقدم الخدمة، وأرفق المستندات، ثم أرسله لمسار المراجعة والاعتماد.</p>
+                        </div>
                         <button id="send-approval-request-btn" class="btn-primary">
                             <i class="fas fa-plus ml-2"></i>
                             إرسال طلب اعتماد جديد
                         </button>
                     </div>
 
-                    <div class="border-t pt-4">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                            <i class="fas fa-list ml-2"></i>
-                            طلباتي
-                        </h3>
+                    <div class="contractors-subsection">
+                        <h3 class="contractors-subsection__title"><i class="fas fa-list"></i>طلباتي</h3>
                         <div id="my-approval-requests-container">
                             ${this.renderApprovalRequestsTable(myRequests, false)}
                         </div>
                     </div>
 
-                    <div class="border-t pt-4" id="pending-approval-requests-section" style="display: ${isAdmin ? 'block' : 'none'};">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                            <i class="fas fa-clipboard-check ml-2"></i>
-                            طلبات قيد المراجعة (للمدير)
-                        </h3>
+                    <div class="contractors-subsection" id="pending-approval-requests-section" style="display: ${isAdmin ? 'block' : 'none'};">
+                        <h3 class="contractors-subsection__title"><i class="fas fa-clipboard-check"></i>طلبات قيد المراجعة (للمدير)</h3>
                         <div id="pending-approval-requests-container">
                             ${isAdmin ? this.renderApprovalRequestsTable(pendingRequests, true) : ''}
                         </div>
@@ -12151,7 +12132,7 @@ const Contractors = {
         const periodValues = ['30', '90', '180', '365', '0'];
         const periodBtns = periodValues.map((v, i) => {
             const active = period === v;
-            return `<button type="button" class="ctr-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active ? '#fff' : 'rgba(255,255,255,0.15)'};color:${active ? '#4338ca' : '#fff'};">${periodLabels[i]}</button>`;
+            return `<button type="button" class="ctr-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active ? '#fff' : 'rgba(255,255,255,0.15)'};color:${active ? '#0b2d4f' : '#fff'};">${periodLabels[i]}</button>`;
         }).join('');
 
         return `
@@ -12184,9 +12165,9 @@ const Contractors = {
             <div id="ctr-filter-panel" style="display:none;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin-bottom:16px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
                     <div style="display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-sliders-h" style="color:#6366f1;font-size:14px;"></i>
-                        <span style="font-weight:700;font-size:0.9rem;color:#312e81;">الفلاتر التفاعلية</span>
-                        <span id="ctr-filter-results-count" style="background:#e0e7ff;color:#4338ca;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
+                        <i class="fas fa-sliders-h" style="color:#0f8b83;font-size:14px;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;color:#0b2d4f;">الفلاتر التفاعلية</span>
+                        <span id="ctr-filter-results-count" style="background:#dff4f1;color:#0f766e;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
                     </div>
                     <button type="button" id="ctr-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;">
                         <i class="fas fa-times ml-1"></i>مسح الكل
@@ -15002,6 +14983,93 @@ const Contractors = {
             }
         `;
             document.head.appendChild(style);
+        }
+
+        const identityStyleId = 'contractors-identity-styles';
+        if (!document.getElementById(identityStyleId)) {
+            const identityStyle = document.createElement('style');
+            identityStyle.id = identityStyleId;
+            identityStyle.textContent = `
+                #contractors-section.contractors-identity{--ctr-navy:#0b2d4f;--ctr-blue:#174d78;--ctr-teal:#0f8b83;--ctr-gold:#d99a22;--ctr-ink:#183047;--ctr-muted:#64748b;--ctr-line:#d8e5ec;--ctr-pale:#f4f9fb;color:var(--ctr-ink)}
+                #contractors-section.contractors-identity *{box-sizing:border-box}
+                .contractors-module-hero{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:22px 24px;border:1px solid rgba(15,139,131,.28);border-radius:18px;background:linear-gradient(125deg,var(--ctr-navy),var(--ctr-blue) 61%,#126c68);color:#fff;box-shadow:0 12px 32px rgba(11,45,79,.2)}
+                .contractors-module-hero:after{content:"";position:absolute;inset-inline-end:-74px;top:-112px;width:230px;height:230px;border:31px solid rgba(255,255,255,.055);border-radius:50%;pointer-events:none}
+                .contractors-module-hero__copy{position:relative;z-index:1;display:flex;align-items:center;gap:15px;min-width:min(100%,360px)}
+                .contractors-module-hero__icon{flex:0 0 auto;width:54px;height:54px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.24);border-radius:15px;background:rgba(255,255,255,.12);font-size:23px}
+                .contractors-module-hero__eyebrow{display:block;margin-bottom:3px;color:#8ce9df;font-size:.68rem;font-weight:800;letter-spacing:.04em}
+                .contractors-module-hero h1{margin:0;color:#fff;font-size:1.25rem;font-weight:900;line-height:1.35}
+                .contractors-module-hero p{margin:5px 0 0;color:#d9ebf3;font-size:.76rem}
+                .contractors-module-hero__meta{position:relative;z-index:1;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+                .contractors-module-hero__meta span{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid rgba(255,255,255,.2);border-radius:9px;background:rgba(255,255,255,.1);font-size:.69rem;font-weight:750}
+                .contractors-module-hero__meta i{color:#8ce9df}
+                #contractors-section .contractors-tabs-wrapper{position:sticky;top:0;z-index:20;padding:7px;border:1px solid var(--ctr-line);border-radius:14px;background:rgba(248,252,253,.94);box-shadow:0 5px 18px rgba(15,46,72,.08);backdrop-filter:blur(12px)}
+                #contractors-section .contractors-tabs-container{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:thin;padding:1px}
+                #contractors-section .contractors-tab-btn{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:9px 13px!important;border:1px solid transparent!important;border-radius:10px!important;background:transparent;color:#546b7d!important;font-size:.75rem;font-weight:780!important;white-space:nowrap;transition:background .18s,color .18s,border-color .18s,box-shadow .18s}
+                #contractors-section .contractors-tab-btn:hover{border-color:#c7dce4!important;background:#fff;color:var(--ctr-navy)!important}
+                #contractors-section .contractors-tab-btn.active{border-color:var(--ctr-navy)!important;background:linear-gradient(135deg,var(--ctr-navy),var(--ctr-blue));color:#fff!important;box-shadow:0 5px 13px rgba(11,45,79,.2)}
+                #contractors-section .contractors-tab-btn.active i{color:#76e0d5}
+                #contractors-section #contractors-btn-refresh{margin-inline-start:auto;border-color:#b8d9d6!important;color:var(--ctr-teal)!important;background:#f0fdfa}
+                #contractors-section .contractors-tab-content>.content-card{overflow:hidden;border:1px solid var(--ctr-line);border-radius:16px;background:#fff;box-shadow:0 7px 24px rgba(15,46,72,.07)}
+                #contractors-section .contractors-tab-content>.content-card>.card-header{padding:15px 18px;border:0;background:linear-gradient(125deg,var(--ctr-navy),var(--ctr-blue));color:#fff}
+                #contractors-section .contractors-tab-content>.content-card>.card-header .card-title{margin:0;color:#fff;font-size:.98rem;font-weight:850}
+                #contractors-section .contractors-tab-content>.content-card>.card-header .card-title i{color:#76e0d5}
+                #contractors-section .contractors-tab-content>.content-card>.card-header .btn-secondary{border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff;box-shadow:none}
+                #contractors-section .contractors-tab-content>.content-card>.card-header .btn-success{border-color:#fff;background:#fff;color:#047857;box-shadow:none}
+                #contractors-section .contractors-tab-content>.content-card>.card-header .form-input{min-height:38px;border-color:rgba(255,255,255,.35);background:#fff;color:#263e50}
+                #contractors-section .contractors-tab-content>.content-card>.card-body{padding:18px;background:linear-gradient(180deg,#fff,#fbfdfe)}
+                #contractors-section .contractors-subsection{padding:15px;border:1px solid #e0eaf0;border-radius:13px;background:#fff}
+                #contractors-section .contractors-subsection+.contractors-subsection{margin-top:14px}
+                #contractors-section .contractors-subsection__title{display:flex;align-items:center;gap:8px;margin:0 0 12px;color:var(--ctr-navy);font-size:.86rem;font-weight:850}
+                #contractors-section .contractors-subsection__title i{color:var(--ctr-teal)}
+                #contractors-section .contractors-request-intro{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap;padding:17px 18px;border:1px solid #b8ded9;border-radius:14px;background:linear-gradient(135deg,#effaf8,#f7fbfd)}
+                #contractors-section .contractors-request-intro h3{margin:0 0 4px;color:var(--ctr-navy);font-size:.92rem;font-weight:850}
+                #contractors-section .contractors-request-intro p{margin:0;color:#536b7c;font-size:.74rem}
+                #contractors-section .contractors-request-intro .btn-primary{flex:0 0 auto;background:linear-gradient(135deg,var(--ctr-teal),#0d746e);box-shadow:0 5px 14px rgba(15,139,131,.22)}
+                #contractors-section .table-wrapper{overflow:auto;border:1px solid var(--ctr-line);border-radius:12px;background:#fff;max-height:68vh}
+                #contractors-section .data-table{width:100%;min-width:850px;border-collapse:separate;border-spacing:0}
+                #contractors-section .data-table thead{position:sticky;top:0;z-index:3}
+                #contractors-section .data-table th{padding:12px 10px;border-inline-start:1px solid rgba(255,255,255,.09);border-bottom:2px solid #1fb8ad;background:linear-gradient(180deg,#173f61,#0e324f);color:#fff;font-size:.7rem;font-weight:800;white-space:nowrap;text-align:right}
+                #contractors-section .data-table td{padding:11px 10px;border-bottom:1px solid #e7eef3;color:#344b5f;font-size:.76rem;vertical-align:middle}
+                #contractors-section .data-table tbody tr:nth-child(even){background:#f8fbfd}
+                #contractors-section .data-table tbody tr:hover{background:#edf8f7}
+                #contractors-section .empty-state{padding:42px 18px;text-align:center;color:var(--ctr-muted)}
+                #contractors-section .empty-state i{display:grid;place-items:center;width:56px;height:56px;margin:0 auto 10px;border-radius:16px;background:#e8f5f3;color:var(--ctr-teal)!important;font-size:22px!important}
+                #contractors-section .approved-filters-bar{border-color:#bddbdc;background:linear-gradient(180deg,#f8fcfc,#eff8f7)}
+                #contractors-section .approved-filters-bar__title{color:var(--ctr-navy)}
+                #contractors-section .approved-filters-bar__title i{color:var(--ctr-teal)}
+                #contractors-section .approved-filters-bar__badge{background:var(--ctr-teal)}
+                #contractors-section .approved-filters-bar__search-input:focus,#contractors-section .approved-filters-bar__select:focus{border-color:var(--ctr-teal);box-shadow:0 0 0 3px rgba(15,139,131,.12)}
+                #contractors-section .contractors-kpi-grid{display:grid!important;grid-template-columns:repeat(5,minmax(170px,1fr))!important;min-width:0!important;gap:10px!important}
+                #contractors-section .contractors-kpi-grid>.content-card{min-height:116px!important;border-width:1px!important;border-radius:13px!important;box-shadow:0 4px 14px rgba(15,46,72,.06)!important;contain:none}
+                #contractors-section .contractors-requirements-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+                #contractors-section .requirement-category-group{overflow:hidden;border:1px solid #dce8ee;border-radius:13px;background:#fbfdfe;padding:12px}
+                #contractors-section .requirement-item{border-width:1px!important;border-color:#d9e6ec!important;border-radius:11px!important;box-shadow:0 3px 10px rgba(15,46,72,.05)!important}
+                #contractors-section .requirement-category-filter{border-width:1px!important;background:#fff}
+                #contractors-section .requirement-category-filter.active{background:var(--ctr-navy)!important;border-color:var(--ctr-navy)!important;color:#fff!important}
+                #ctr-analytics-toolbar{background:linear-gradient(125deg,#0b2d4f 0%,#174d78 62%,#126c68 100%)!important;box-shadow:0 8px 24px rgba(11,45,79,.19)!important}
+                #ctr-filter-panel{border-color:#bcd9df!important;background:linear-gradient(180deg,#f9fcfd,#f1f8fa)!important}
+                #ctr-analytics-root .ctr-panel{border-color:#d8e5ec!important;box-shadow:0 5px 18px rgba(15,46,72,.06)!important}
+                #contractor-approval-request-modal .approval-premium-content{border:1px solid #b9d1dc}
+                #contractor-approval-request-modal .approval-premium-header{background:linear-gradient(125deg,#0b2d4f,#174d78 64%,#126c68)!important}
+                #contractor-approval-request-modal .approval-premium-input:focus,#contractor-approval-request-modal .approval-premium-select:focus,#contractor-approval-request-modal .approval-premium-textarea:focus{border-color:#0f8b83!important;box-shadow:0 0 0 3px rgba(15,139,131,.12)!important}
+                @media(max-width:1180px){#contractors-section .contractors-kpi-grid{grid-template-columns:repeat(3,minmax(170px,1fr))!important}.contractors-module-hero__meta{width:100%}}
+                @media(max-width:820px){#contractors-section .contractors-requirements-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#contractors-section .contractors-tab-content>.content-card>.card-header>div{align-items:flex-start;flex-direction:column}#contractors-section .contractors-tab-content>.content-card>.card-header>div>div{width:100%}.contractors-module-hero{padding:18px}.contractors-module-hero__meta span{flex:1;justify-content:center}#contractor-approval-request-modal form div[style*="grid-template-columns:1fr 1fr 1fr"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+                @media(max-width:620px){.contractors-module-hero__copy{align-items:flex-start}.contractors-module-hero__icon{width:46px;height:46px}.contractors-module-hero h1{font-size:1.05rem}.contractors-module-hero__meta{display:grid;grid-template-columns:1fr}.contractors-module-hero__meta span{width:100%}#contractors-section .contractors-kpi-grid,#contractors-section .contractors-requirements-kpis{grid-template-columns:1fr!important}#contractors-section .contractors-tab-content>.content-card>.card-body{padding:12px}#contractors-section .contractors-request-intro .btn-primary{width:100%}#contractor-approval-request-modal .approval-premium-content{max-width:96vw!important}#contractor-approval-request-modal form div[style*="grid-template-columns:1fr 1fr 1fr"],#contractor-approval-request-modal form div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}}
+                @media(prefers-reduced-motion:reduce){#contractors-section .contractors-tab-btn{transition:none}}
+                [data-theme="dark"] #contractors-section.contractors-identity{--ctr-ink:#e6eef5;--ctr-muted:#a7bac9;--ctr-line:#324859}
+                [data-theme="dark"] #contractors-section .contractors-tabs-wrapper,[data-theme="dark"] #contractors-section .contractors-tab-content>.content-card,[data-theme="dark"] #contractors-section .contractors-subsection,[data-theme="dark"] #contractors-section .table-wrapper{background:#132638;border-color:#324859}
+                [data-theme="dark"] #contractors-section .contractors-tab-content>.content-card>.card-body{background:#14283a}
+                [data-theme="dark"] #contractors-section .data-table td{border-color:#31485a;color:#dbe7ef}[data-theme="dark"] #contractors-section .data-table tbody tr:nth-child(even){background:#192f42}[data-theme="dark"] #contractors-section .data-table tbody tr:hover{background:#1b3b42}
+                [data-theme="dark"] #contractors-section .contractors-request-intro,[data-theme="dark"] #contractors-section .approved-filters-bar,[data-theme="dark"] #ctr-filter-panel{background:#183443!important;border-color:#35606a!important}
+                [data-theme="dark"] #contractors-section .contractors-request-intro h3,[data-theme="dark"] #contractors-section .contractors-subsection__title,[data-theme="dark"] #contractors-section .approved-filters-bar__title{color:#e6eef5}
+                [data-theme="dark"] #contractors-section .contractors-request-intro p,[data-theme="dark"] #contractors-section .approved-filters-bar__meta{color:#afc2cf}
+                [data-theme="dark"] #contractors-section .contractors-kpi-grid>.content-card{background:#193549!important;border-color:#3b596b!important}
+                [data-theme="dark"] #contractors-section .contractors-kpi-grid>.content-card p{color:#e4edf4!important}
+                [data-theme="dark"] #contractors-section .contractors-requirements-kpis>div{background:#193549!important;border-color:#3b596b!important}
+                [data-theme="dark"] #contractors-section .contractors-requirements-kpis p{color:#e4edf4!important}
+                [data-theme="dark"] #contractors-section .requirement-category-group,[data-theme="dark"] #contractors-section .requirement-item{background:#183044!important;border-color:#365064!important}
+            `;
+            document.head.appendChild(identityStyle);
         }
 
         const filterStyleId = 'approved-filters-bar-styles';
