@@ -21,6 +21,7 @@ const Clinic = {
 
     _clinicVisitsLoadPromise: null,
     _visitsBackendFetchOk: false,
+    _supplyRequestActionTimeoutMs: 60000,
 
     /**
      * ✅ تحويل المعرف (ID أو Email) إلى اسم المستخدم الكامل
@@ -14701,7 +14702,8 @@ const Clinic = {
                     action: 'approveSupplyRequest',
                     data: {
                         requestId: requestId,
-                        approverData: approverData
+                        approverData: approverData,
+                        __timeoutMs: this._supplyRequestActionTimeoutMs
                     }
                 });
             } else if (isVisitDeletion) {
@@ -14721,6 +14723,17 @@ const Clinic = {
 
             if (result && result.success) {
                 Loading.hide();
+                if (isSupply && Array.isArray(AppState.appData.clinicSupplyRequests)) {
+                    const localRequest = AppState.appData.clinicSupplyRequests.find(item => String(item.id) === String(requestId));
+                    if (localRequest) {
+                        Object.assign(localRequest, {
+                            status: 'approved',
+                            approvedBy: approverData,
+                            approvedById: approverData.id || approverData.email || '',
+                            approvedAt: new Date().toISOString()
+                        });
+                    }
+                }
                 const successMessage = isDeletion
                     ? 'تمت الموافقة على الطلب وحذف الدواء بنجاح'
                     : isSupply
@@ -14812,6 +14825,7 @@ const Clinic = {
                     data: {
                         requestId: requestId,
                         rejectorData: rejectorData,
+                        __timeoutMs: this._supplyRequestActionTimeoutMs,
                         reason: reason || 'لم يتم تحديد سبب'
                     }
                 });
@@ -14849,6 +14863,18 @@ const Clinic = {
 
             if (result && result.success) {
                 Loading.hide();
+                if (requestType === 'supply' && Array.isArray(AppState.appData.clinicSupplyRequests)) {
+                    const localRequest = AppState.appData.clinicSupplyRequests.find(item => String(item.id) === String(requestId));
+                    if (localRequest) {
+                        Object.assign(localRequest, {
+                            status: 'rejected',
+                            rejectedBy: rejectorData,
+                            rejectedById: rejectorData.id || rejectorData.email || '',
+                            rejectedAt: new Date().toISOString(),
+                            rejectionReason: reason || ''
+                        });
+                    }
+                }
                 Notification.success('تم رفض الطلب بنجاح');
 
                 if (requestType === 'timeoff') {
