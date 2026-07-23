@@ -609,6 +609,21 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'cleanupPtwRegistryDatabase': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, removed: 0, kept: 0, message: '' };
+        (function() {
+            try {
+                if (typeof cleanupPtwRegistryDatabase_ === 'function') {
+                    result = cleanupPtwRegistryDatabase_();
+                } else {
+                    result = { success: false, message: 'cleanupPtwRegistryDatabase_ not found' };
+                }
+            } catch (e) {
+                result = { success: false, message: 'فشل تنظيف السجل: ' + (e && e.toString ? e.toString() : e) };
+            }
+        })();
+        return result;
+    },
     // ✅ تتبّع إصدار التطبيق لكل مستخدم
     // 1) reportUserVersion: تُستدعى من الواجهة بعد تسجيل الدخول + heartbeat
     // 2) getAllUserVersions: للمدير لعرض كل المستخدمين وإصداراتهم
