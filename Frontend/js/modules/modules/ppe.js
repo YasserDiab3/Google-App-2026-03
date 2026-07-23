@@ -304,10 +304,6 @@ const PPE = {
                 || (window.AppI18n && window.AppI18n.getCurrentLang && window.AppI18n.getCurrentLang() === 'ar'));
         const esc = (v) => Utils.escapeHTML(v);
 
-        if (ppeList.length === 0) {
-            return `<div class="empty-state"><p class="text-gray-500">${esc(t('module.ppe.empty.noReceipts', 'لا توجد استلامات مسجلة'))}</p></div>`;
-        }
-
         const uniqueTypes = [...new Set(ppeList.map(p => p.equipmentType).filter(Boolean))].sort();
         const uniqueStatuses = ['مستلم', 'قيد التسليم'];
 
@@ -390,8 +386,12 @@ const PPE = {
                             <i class="fas fa-rotate-left ml-1"></i>${esc(t('module.ppe.filter.reset', 'إعادة تعيين الفلاتر'))}
                         </button>
                     </div>
-                </div>
             </div>`;
+
+        if (ppeList.length === 0) {
+            const emptyBlock = `<div class="empty-state"><p class="text-gray-500">${esc(t('module.ppe.empty.noReceipts', 'لا توجد استلامات مسجلة'))}</p></div>`;
+            return receiptsKpiGrid + this._buildExcelToolbarHtml('receipts') + filterRow + emptyBlock;
+        }
 
         const noMatchBlock = (hasFilters && filtered.length === 0) ? `
             <div class="empty-state">
