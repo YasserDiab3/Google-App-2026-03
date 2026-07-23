@@ -699,7 +699,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     </button>
                 </div>
             </div>
-
+            
             <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 iso-quick-stats">
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center iso-stat-card iso-stat-docs">
                     <div class="text-3xl font-bold text-blue-600 mb-2">${(AppState.appData.isoDocuments||[]).length}</div>
@@ -718,7 +718,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <div class="text-sm text-gray-700 font-semibold">${typeof I18n<"u"?I18n.t("module.iso.stats.compliance","\u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u0645\u062A\u062B\u0627\u0644"):"\u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u0645\u062A\u062B\u0627\u0644"}</div>
                 </div>
             </div>
-
+            
             <div class="mt-6 iso-tabs-shell">
                 <div class="flex flex-wrap gap-2 mb-6 border-b pb-2 iso-tabs-nav" role="tablist" aria-label="\u062A\u0628\u0648\u064A\u0628\u0627\u062A \u0646\u0638\u0627\u0645 ISO">
                     <button class="tab-btn ${this.currentTab==="overview"?"active":""}" role="tab" aria-selected="${this.currentTab==="overview"?"true":"false"}" data-tab="overview">
@@ -804,7 +804,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                         </div>
                     </div>
                     <div class="mt-4 text-xs text-gray-500 flex items-center">
-                        <span class="text-blue-600 font-semibold ml-1">${t.length}</span> ${typeof I18n<"u"?I18n.t("module.iso.stats.procedures","\u0625\u062C\u0631\u0627\u0621\u0627\u062A"):"\u0625\u062C\u0631\u0627\u0621\u0627\u062A"} |
+                        <span class="text-blue-600 font-semibold ml-1">${t.length}</span> ${typeof I18n<"u"?I18n.t("module.iso.stats.procedures","\u0625\u062C\u0631\u0627\u0621\u0627\u062A"):"\u0625\u062C\u0631\u0627\u0621\u0627\u062A"} | 
                         <span class="text-indigo-600 font-semibold mx-1">${o.length}</span> ${typeof I18n<"u"?I18n.t("module.iso.stats.forms","\u0646\u0645\u0627\u0630\u062C"):"\u0646\u0645\u0627\u0630\u062C"}
                     </div>
                 </div>
@@ -876,7 +876,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                                     <div class="absolute top-0 left-0 w-full h-full bg-white opacity-20" style="background-image: linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent); background-size: 1rem 1rem; animation: progress-bar-stripes 1s linear infinite;"></div>
                                 </div>
                             </div>
-
+                            
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div class="border border-blue-100 bg-blue-50/30 rounded-xl p-4 hover:shadow-sm transition-all">
                                     <h3 class="font-bold text-blue-800 mb-2 flex items-center">
@@ -921,7 +921,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                                 </div>
                             </li>
                             `:""}
-
+                            
                             ${r>0?`
                             <li class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 cursor-pointer" onclick="ISO.currentTab = 'audit'; ISO.load();">
                                 <div class="mt-0.5 bg-purple-100 text-purple-600 p-2 rounded-lg"><i class="fas fa-calendar-alt"></i></div>
@@ -931,7 +931,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                                 </div>
                             </li>
                             `:""}
-
+                            
                             ${l>0?`
                             <li class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 cursor-pointer" onclick="ISO.currentTab = 'audit'; ISO.load();">
                                 <div class="mt-0.5 bg-amber-100 text-amber-600 p-2 rounded-lg"><i class="fas fa-tools"></i></div>
@@ -941,7 +941,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                                 </div>
                             </li>
                             `:""}
-
+                            
                             ${n===0&&r===0&&l===0?`
                             <li class="p-8 text-center flex flex-col items-center justify-center">
                                 <div class="bg-green-50 text-green-500 p-4 rounded-full mb-3"><i class="fas fa-check-double text-2xl"></i></div>
@@ -953,7 +953,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     </div>
                 </div>
             </div>
-
+            
             <style>
                 @keyframes progress-bar-stripes {
                     from { background-position: 1rem 0; }
@@ -1147,11 +1147,11 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <form id="iso-document-form" class="space-y-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.docCodeLabel","\u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632 *"):"\u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632 *"}</label>
-                            <select id="document-code-select" required class="form-input"
+                            <select id="document-code-select" required class="form-input" 
                                 onchange="ISO.loadDocumentCodeVersion('document')">
                                 <option value="">${typeof I18n<"u"?I18n.t("module.iso.form.selectCodeOption","\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</option>
                                 ${t.map(s=>`
-                                    <option value="${s.code}"
+                                    <option value="${s.code}" 
                                         data-code-id="${s.id}"
                                         ${e?.isoCode===s.code?"selected":""}>
                                         ${Utils.escapeHTML(s.code||"")} - ${Utils.escapeHTML(s.documentName||"")}
@@ -1165,7 +1165,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.docNameLabel","\u0627\u0633\u0645 \u0627\u0644\u0648\u062B\u064A\u0642\u0629 *"):"\u0627\u0633\u0645 \u0627\u0644\u0648\u062B\u064A\u0642\u0629 *"}</label>
-                            <input type="text" id="document-name" required class="form-input"
+                            <input type="text" id="document-name" required class="form-input" 
                                 value="${Utils.escapeHTML(e?.name||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.docNamePlaceholder","\u0627\u0633\u0645 \u0627\u0644\u0648\u062B\u064A\u0642\u0629"):"\u0627\u0633\u0645 \u0627\u0644\u0648\u062B\u064A\u0642\u0629"}">
                         </div>
                         <div>
@@ -1181,22 +1181,22 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.versionLabel","\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 (\u064A\u064F\u0633\u062D\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632)"):"\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 (\u064A\u064F\u0633\u062D\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632)"}</label>
-                            <input type="text" id="document-version" readonly class="form-input bg-gray-100"
+                            <input type="text" id="document-version" readonly class="form-input bg-gray-100" 
                                 value="${Utils.escapeHTML(e?.version||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.versionPlaceholder","\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.issueDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</label>
-                            <input type="text" id="document-issue-date" readonly class="form-input bg-gray-100"
+                            <input type="text" id="document-issue-date" readonly class="form-input bg-gray-100" 
                                 value="${e?.issueDate?Utils.formatDate(e.issueDate):""}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.issueDatePlaceholder","\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.revisionDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"}</label>
-                            <input type="text" id="document-revision-date" readonly class="form-input bg-gray-100"
+                            <input type="text" id="document-revision-date" readonly class="form-input bg-gray-100" 
                                 value="${e?.revisionDate?Utils.formatDate(e.revisionDate):""}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.revisionDatePlaceholder","\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.departmentLabel","\u0627\u0644\u0642\u0633\u0645 *"):"\u0627\u0644\u0642\u0633\u0645 *"}</label>
-                            <input type="text" id="document-department" required class="form-input"
+                            <input type="text" id="document-department" required class="form-input" 
                                 value="${Utils.escapeHTML(e?.department||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.departmentPlaceholder","\u0627\u0644\u0642\u0633\u0645"):"\u0627\u0644\u0642\u0633\u0645"}">
                         </div>
                     </form>
@@ -1218,11 +1218,11 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <form id="iso-procedure-form" class="space-y-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.procCodeLabel","\u0643\u0648\u062F \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632 *"):"\u0643\u0648\u062F \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632 *"}</label>
-                            <select id="procedure-code-select" required class="form-input"
+                            <select id="procedure-code-select" required class="form-input" 
                                 onchange="ISO.loadDocumentCodeVersion('procedure')">
                                 <option value="">${typeof I18n<"u"?I18n.t("module.iso.form.selectCodeOption","\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</option>
                                 ${t.map(s=>`
-                                    <option value="${s.code}"
+                                    <option value="${s.code}" 
                                         data-code-id="${s.id}"
                                         ${e?.isoCode===s.code?"selected":""}>
                                         ${Utils.escapeHTML(s.code||"")} - ${Utils.escapeHTML(s.documentName||"")}
@@ -1236,27 +1236,27 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.procNameLabel","\u0627\u0633\u0645 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 *"):"\u0627\u0633\u0645 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 *"}</label>
-                            <input type="text" id="procedure-name" required class="form-input"
+                            <input type="text" id="procedure-name" required class="form-input" 
                                 value="${Utils.escapeHTML(e?.name||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.procNamePlaceholder","\u0627\u0633\u0645 \u0627\u0644\u0625\u062C\u0631\u0627\u0621"):"\u0627\u0633\u0645 \u0627\u0644\u0625\u062C\u0631\u0627\u0621"}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.departmentLabel","\u0627\u0644\u0642\u0633\u0645 *"):"\u0627\u0644\u0642\u0633\u0645 *"}</label>
-                            <input type="text" id="procedure-department" required class="form-input"
+                            <input type="text" id="procedure-department" required class="form-input" 
                                 value="${Utils.escapeHTML(e?.department||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.departmentPlaceholder","\u0627\u0644\u0642\u0633\u0645"):"\u0627\u0644\u0642\u0633\u0645"}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.versionLabel","\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 (\u064A\u064F\u0633\u062D\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632)"):"\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 (\u064A\u064F\u0633\u062D\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632)"}</label>
-                            <input type="text" id="procedure-version" readonly class="form-input bg-gray-100"
+                            <input type="text" id="procedure-version" readonly class="form-input bg-gray-100" 
                                 value="${Utils.escapeHTML(e?.version||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.versionPlaceholder","\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.issueDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</label>
-                            <input type="text" id="procedure-issue-date" readonly class="form-input bg-gray-100"
+                            <input type="text" id="procedure-issue-date" readonly class="form-input bg-gray-100" 
                                 value="${e?.issueDate?Utils.formatDate(e.issueDate):""}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.issueDatePlaceholder","\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.revisionDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"}</label>
-                            <input type="text" id="procedure-revision-date" readonly class="form-input bg-gray-100"
+                            <input type="text" id="procedure-revision-date" readonly class="form-input bg-gray-100" 
                                 value="${e?.revisionDate?Utils.formatDate(e.revisionDate):""}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.revisionDatePlaceholder","\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"}">
                         </div>
                     </form>
@@ -1278,11 +1278,11 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <form id="iso-form-form" class="space-y-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.frmCodeLabel","\u0643\u0648\u062F \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632 *"):"\u0643\u0648\u062F \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632 *"}</label>
-                            <select id="form-code-select" required class="form-input"
+                            <select id="form-code-select" required class="form-input" 
                                 onchange="ISO.loadDocumentCodeVersion('form')">
                                 <option value="">${typeof I18n<"u"?I18n.t("module.iso.form.selectCodeOption","\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</option>
                                 ${t.map(s=>`
-                                    <option value="${s.code}"
+                                    <option value="${s.code}" 
                                         data-code-id="${s.id}"
                                         ${e?.isoCode===s.code?"selected":""}>
                                         ${Utils.escapeHTML(s.code||"")} - ${Utils.escapeHTML(s.documentName||"")}
@@ -1296,7 +1296,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.frmNameLabel","\u0627\u0633\u0645 \u0627\u0644\u0646\u0645\u0648\u0630\u062C *"):"\u0627\u0633\u0645 \u0627\u0644\u0646\u0645\u0648\u0630\u062C *"}</label>
-                            <input type="text" id="form-name" required class="form-input"
+                            <input type="text" id="form-name" required class="form-input" 
                                 value="${Utils.escapeHTML(e?.name||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.frmNamePlaceholder","\u0627\u0633\u0645 \u0627\u0644\u0646\u0645\u0648\u0630\u062C"):"\u0627\u0633\u0645 \u0627\u0644\u0646\u0645\u0648\u0630\u062C"}">
                         </div>
                         <div>
@@ -1312,17 +1312,17 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.versionLabel","\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 (\u064A\u064F\u0633\u062D\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632)"):"\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 (\u064A\u064F\u0633\u062D\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632)"}</label>
-                            <input type="text" id="form-version" readonly class="form-input bg-gray-100"
+                            <input type="text" id="form-version" readonly class="form-input bg-gray-100" 
                                 value="${Utils.escapeHTML(e?.version||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.versionPlaceholder","\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.issueDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</label>
-                            <input type="text" id="form-issue-date" readonly class="form-input bg-gray-100"
+                            <input type="text" id="form-issue-date" readonly class="form-input bg-gray-100" 
                                 value="${e?.issueDate?Utils.formatDate(e.issueDate):""}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.issueDatePlaceholder","\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.revisionDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"}</label>
-                            <input type="text" id="form-revision-date" readonly class="form-input bg-gray-100"
+                            <input type="text" id="form-revision-date" readonly class="form-input bg-gray-100" 
                                 value="${e?.revisionDate?Utils.formatDate(e.revisionDate):""}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.revisionDatePlaceholder","\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"}">
                         </div>
                     </form>
@@ -1794,7 +1794,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                         `}
                     </div>
                 </div>
-
+                
                 <!-- CAPA Card -->
                 <div class="content-card shadow-lg border-0 rounded-2xl overflow-hidden bg-white flex flex-col">
                     <div class="card-header bg-gradient-to-r from-red-50 to-orange-50 p-5 border-b border-red-100 flex items-center justify-between">
@@ -1878,22 +1878,22 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <form id="hse-objective-form" class="space-y-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.objectives.form.nameLabel","\u0627\u0644\u0647\u062F\u0641 *"):"\u0627\u0644\u0647\u062F\u0641 *"}</label>
-                            <input type="text" id="objective-name" required class="form-input"
+                            <input type="text" id="objective-name" required class="form-input" 
                                 value="${Utils.escapeHTML(e?.name||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.objectives.form.namePlaceholder","\u0645\u062B\u0627\u0644: \u062A\u0642\u0644\u064A\u0644 \u0627\u0644\u0625\u0635\u0627\u0628\u0627\u062A \u0628\u0646\u0633\u0628\u0629 20%"):"\u0645\u062B\u0627\u0644: \u062A\u0642\u0644\u064A\u0644 \u0627\u0644\u0625\u0635\u0627\u0628\u0627\u062A \u0628\u0646\u0633\u0628\u0629 20%"}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.objectives.form.descLabel","\u0627\u0644\u0648\u0635\u0641 *"):"\u0627\u0644\u0648\u0635\u0641 *"}</label>
-                            <textarea id="objective-description" required class="form-input" rows="4"
+                            <textarea id="objective-description" required class="form-input" rows="4" 
                                 placeholder="${typeof I18n<"u"?I18n.t("module.iso.objectives.form.descPlaceholder","\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0644\u0647\u062F\u0641"):"\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0644\u0647\u062F\u0641"}">${Utils.escapeHTML(e?.description||"")}</textarea>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.objectives.form.dueDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621 *"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621 *"}</label>
-                            <input type="date" id="objective-due-date" required class="form-input"
+                            <input type="date" id="objective-due-date" required class="form-input" 
                                 value="${e?.dueDate?new Date(e.dueDate).toISOString().slice(0,10):""}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.objectives.form.respLabel","\u0627\u0644\u0645\u0633\u0624\u0648\u0644 *"):"\u0627\u0644\u0645\u0633\u0624\u0648\u0644 *"}</label>
-                            <input type="text" id="objective-responsible" required class="form-input"
+                            <input type="text" id="objective-responsible" required class="form-input" 
                                 value="${Utils.escapeHTML(e?.responsible||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.objectives.form.respPlaceholder","\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u0624\u0648\u0644"):"\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u0624\u0648\u0644"}">
                         </div>
                     </form>
@@ -1915,12 +1915,12 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <form id="environmental-aspect-form" class="space-y-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.aspects.form.nameLabel","\u0627\u0633\u0645 \u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A *"):"\u0627\u0633\u0645 \u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A *"}</label>
-                            <input type="text" id="aspect-name" required class="form-input"
+                            <input type="text" id="aspect-name" required class="form-input" 
                                 value="${Utils.escapeHTML(e?.name||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.aspects.form.namePlaceholder","\u0645\u062B\u0627\u0644: \u0627\u0633\u062A\u0647\u0644\u0627\u0643 \u0627\u0644\u0645\u064A\u0627\u0647"):"\u0645\u062B\u0627\u0644: \u0627\u0633\u062A\u0647\u0644\u0627\u0643 \u0627\u0644\u0645\u064A\u0627\u0647"}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.aspects.form.descLabel","\u0627\u0644\u0648\u0635\u0641 *"):"\u0627\u0644\u0648\u0635\u0641 *"}</label>
-                            <textarea id="aspect-description" required class="form-input" rows="4"
+                            <textarea id="aspect-description" required class="form-input" rows="4" 
                                 placeholder="${typeof I18n<"u"?I18n.t("module.iso.aspects.form.descPlaceholder","\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A"):"\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A"}">${Utils.escapeHTML(e?.description||"")}</textarea>
                         </div>
                         <div>
@@ -1960,12 +1960,12 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.audit.form.dateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u062F\u0642\u064A\u0642 *"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u062F\u0642\u064A\u0642 *"}</label>
-                            <input type="date" id="audit-date" required class="form-input"
+                            <input type="date" id="audit-date" required class="form-input" 
                                 value="${e?.date?new Date(e.date).toISOString().slice(0,10):""}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.audit.form.auditorLabel","\u0627\u0644\u0645\u062F\u0642\u0642 *"):"\u0627\u0644\u0645\u062F\u0642\u0642 *"}</label>
-                            <input type="text" id="audit-auditor" required class="form-input"
+                            <input type="text" id="audit-auditor" required class="form-input" 
                                 value="${Utils.escapeHTML(e?.auditor||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.audit.form.auditorPlaceholder","\u0627\u0633\u0645 \u0627\u0644\u0645\u062F\u0642\u0642"):"\u0627\u0633\u0645 \u0627\u0644\u0645\u062F\u0642\u0642"}">
                         </div>
                         <div>
@@ -1978,7 +1978,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.audit.form.descLabel","\u0627\u0644\u0648\u0635\u0641"):"\u0627\u0644\u0648\u0635\u0641"}</label>
-                            <textarea id="audit-description" class="form-input" rows="4"
+                            <textarea id="audit-description" class="form-input" rows="4" 
                                 placeholder="${typeof I18n<"u"?I18n.t("module.iso.audit.form.descPlaceholder","\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0644\u062A\u062F\u0642\u064A\u0642"):"\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0644\u062A\u062F\u0642\u064A\u0642"}">${Utils.escapeHTML(e?.description||"")}</textarea>
                         </div>
                     </form>
@@ -2021,12 +2021,12 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <form id="non-conformity-form" class="space-y-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.nc.form.date","\u062A\u0627\u0631\u064A\u062E \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 *"):"\u062A\u0627\u0631\u064A\u062E \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 *"}</label>
-                            <input type="date" id="nc-date" required class="form-input"
+                            <input type="date" id="nc-date" required class="form-input" 
                                 value="${e?.date?new Date(e.date).toISOString().slice(0,10):""}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.nc.form.desc","\u0627\u0644\u0648\u0635\u0641 *"):"\u0627\u0644\u0648\u0635\u0641 *"}</label>
-                            <textarea id="nc-description" required class="form-input" rows="4"
+                            <textarea id="nc-description" required class="form-input" rows="4" 
                                 placeholder="${typeof I18n<"u"?I18n.t("module.iso.nc.form.descPlaceholder","\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629"):"\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629"}">${Utils.escapeHTML(e?.description||"")}</textarea>
                         </div>
                         <div>
@@ -2075,17 +2075,17 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <form id="corrective-action-form" class="space-y-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.ca.form.desc","\u0627\u0644\u0648\u0635\u0641 *"):"\u0627\u0644\u0648\u0635\u0641 *"}</label>
-                            <textarea id="ca-description" required class="form-input" rows="4"
+                            <textarea id="ca-description" required class="form-input" rows="4" 
                                 placeholder="${typeof I18n<"u"?I18n.t("module.iso.ca.form.descPlaceholder","\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A"):"\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A"}">${Utils.escapeHTML(e?.description||"")}</textarea>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.ca.form.responsible","\u0627\u0644\u0645\u0633\u0624\u0648\u0644 *"):"\u0627\u0644\u0645\u0633\u0624\u0648\u0644 *"}</label>
-                            <input type="text" id="ca-responsible" required class="form-input"
+                            <input type="text" id="ca-responsible" required class="form-input" 
                                 value="${Utils.escapeHTML(e?.responsible||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.ca.form.respPlaceholder","\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u0624\u0648\u0644"):"\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u0624\u0648\u0644"}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.ca.form.dueDate","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621 *"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621 *"}</label>
-                            <input type="date" id="ca-due-date" required class="form-input"
+                            <input type="date" id="ca-due-date" required class="form-input" 
                                 value="${e?.dueDate?new Date(e.dueDate).toISOString().slice(0,10):""}">
                         </div>
                         <div>
@@ -2133,18 +2133,18 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     </div>
                     <span class="badge bg-secondary rounded-pill shadow-sm">${i.length}</span>
                 </div>
-
+                
                 <div class="row g-4 mb-4 coding-system-grid">
                     ${i.map(d=>{const n=e.find(l=>l.code===d.defaultCode||l.documentName===d.name);let r=null;if(n){const l=t.filter(c=>c.documentCodeId===n.id&&(c.isActive===!0||c.isActive==="true"));l.length>0&&(l.sort((c,m)=>new Date(m.issueDate||0)-new Date(c.issueDate||0)),r=l[0])}return`
                         <div class="col-12 col-md-6 col-lg-4 col-xl-3 coding-system-col">
                             <div class="card h-100 border-0 shadow-sm hover-shadow transition-all relative overflow-hidden coding-system-form-card ${n?"is-coded":"is-uncoded"}">
                                 <!-- Indicator -->
                                 <div class="position-absolute top-0 bottom-0 ${n?"bg-success":"bg-danger"} coding-system-status-rail" style="width: 4px; ${document.dir==="rtl"?"right: 0;":"left: 0;"}"></div>
-
+                                
                                 <div class="card-body d-flex flex-column coding-system-form-body" style="${document.dir==="rtl"?"padding-right: 1.25rem;":"padding-left: 1.25rem;"}">
                                     <!-- Title -->
                                     <h5 class="card-title font-bold text-gray-800 mb-3" style="line-height: 1.4;">${typeof I18n<"u"?I18n.t(d.i18nKey,d.name):d.name}</h5>
-
+                                    
                                     <!-- Badges -->
                                     <div class="d-flex flex-wrap gap-2 mb-4">
                                         <span class="badge ${n?"bg-success":"bg-danger"} d-flex align-items-center">
@@ -2158,7 +2158,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                                             <i class="fas fa-puzzle-piece text-secondary mx-1"></i> ${d.department}
                                         </span>
                                     </div>
-
+                                    
                                     <!-- Middle Content (Code/Warning) -->
                                     <div class="flex-grow-1 d-flex flex-column justify-content-center mb-4">
                                         ${n?`
@@ -2177,7 +2177,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                                             </div>
                                         `}
                                     </div>
-
+                                    
                                     <!-- Action Button -->
                                     <div class="mt-auto border-top pt-3 coding-system-card-footer">
                                         ${n?`
@@ -2419,8 +2419,8 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <div class="card-body">
                         <div class="mb-4 coding-filter-bar">
                             <div class="coding-filter-label"><i class="fas fa-search"></i><span>\u0627\u0644\u0628\u062D\u062B \u0641\u064A \u0633\u062C\u0644 \u0627\u0644\u0623\u0643\u0648\u0627\u062F</span></div>
-                            <input type="text" id="document-code-search" class="form-input"
-                                placeholder="${typeof I18n<"u"?I18n.t("module.iso.codingCenter.searchPlaceholder","\u0628\u062D\u062B \u0641\u064A \u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A..."):"\u0628\u062D\u062B \u0641\u064A \u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A..."}"
+                            <input type="text" id="document-code-search" class="form-input" 
+                                placeholder="${typeof I18n<"u"?I18n.t("module.iso.codingCenter.searchPlaceholder","\u0628\u062D\u062B \u0641\u064A \u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A..."):"\u0628\u062D\u062B \u0641\u064A \u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A..."}" 
                                 onkeyup="ISO.filterDocumentCodes()">
                         </div>
                         ${s.length===0?`
@@ -2553,14 +2553,14 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     <form id="document-code-form" class="space-y-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.codeLabel","\u0627\u0644\u0643\u0648\u062F *"):"\u0627\u0644\u0643\u0648\u062F *"}</label>
-                            <input type="text" id="doc-code" required class="form-input"
-                                value="${Utils.escapeHTML(e?.code||"")}"
+                            <input type="text" id="doc-code" required class="form-input" 
+                                value="${Utils.escapeHTML(e?.code||"")}" 
                                 placeholder="${typeof I18n<"u"?I18n.t("module.iso.coding.form.codePlaceholder","\u0645\u062B\u0627\u0644: DOC-001, FORM-002"):"\u0645\u062B\u0627\u0644: DOC-001, FORM-002"}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.nameLabel","\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0646\u062F / \u0627\u0644\u0625\u062C\u0631\u0627\u0621 *"):"\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0646\u062F / \u0627\u0644\u0625\u062C\u0631\u0627\u0621 *"}</label>
-                            <input type="text" id="doc-name" required class="form-input"
-                                value="${Utils.escapeHTML(e?.documentName||"")}"
+                            <input type="text" id="doc-name" required class="form-input" 
+                                value="${Utils.escapeHTML(e?.documentName||"")}" 
                                 placeholder="${typeof I18n<"u"?I18n.t("module.iso.coding.form.namePlaceholder","\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0646\u062F"):"\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0646\u062F"}">
                         </div>
                         <div>
@@ -2576,8 +2576,8 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.departmentLabel","\u0627\u0644\u0642\u0633\u0645 *"):"\u0627\u0644\u0642\u0633\u0645 *"}</label>
-                            <input type="text" id="doc-department" required class="form-input"
-                                value="${Utils.escapeHTML(e?.department||"")}"
+                            <input type="text" id="doc-department" required class="form-input" 
+                                value="${Utils.escapeHTML(e?.department||"")}" 
                                 placeholder="${typeof I18n<"u"?I18n.t("module.iso.coding.form.departmentPlaceholder","\u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u062A\u0627\u0628\u0639 \u0644\u0647"):"\u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u062A\u0627\u0628\u0639 \u0644\u0647"}">
                         </div>
                         <div>
@@ -2589,7 +2589,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.descLabel","\u0627\u0644\u0648\u0635\u0641"):"\u0627\u0644\u0648\u0635\u0641"}</label>
-                            <textarea id="doc-description" class="form-input" rows="3"
+                            <textarea id="doc-description" class="form-input" rows="3" 
                                 placeholder="${typeof I18n<"u"?I18n.t("module.iso.coding.form.descPlaceholder","\u0648\u0635\u0641 \u0627\u062E\u062A\u064A\u0627\u0631\u064A \u0644\u0644\u0645\u0633\u062A\u0646\u062F"):"\u0648\u0635\u0641 \u0627\u062E\u062A\u064A\u0627\u0631\u064A \u0644\u0644\u0645\u0633\u062A\u0646\u062F"}">${Utils.escapeHTML(e?.description||"")}</textarea>
                         </div>
                     </form>
@@ -2614,7 +2614,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                             <select id="version-code-id" required class="form-input" ${e?"disabled":""}>
                                 <option value="">${typeof I18n<"u"?I18n.t("module.iso.coding.form.selectCodeOption","\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F"):"\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F"}</option>
                                 ${o.map(i=>`
-                                    <option value="${i.id}"
+                                    <option value="${i.id}" 
                                         ${e?.documentCodeId===i.id||t===i.id?"selected":""}>
                                         ${Utils.escapeHTML(i.code||"")} - ${Utils.escapeHTML(i.documentName||"")}
                                     </option>
@@ -2623,18 +2623,18 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.versionNumLabel","\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 *"):"\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 *"}</label>
-                            <input type="text" id="version-number" required class="form-input"
-                                value="${Utils.escapeHTML(e?.versionNumber||"")}"
+                            <input type="text" id="version-number" required class="form-input" 
+                                value="${Utils.escapeHTML(e?.versionNumber||"")}" 
                                 placeholder="${typeof I18n<"u"?I18n.t("module.iso.coding.form.versionNumPlaceholder","\u0645\u062B\u0627\u0644: 1.0, 2.1"):"\u0645\u062B\u0627\u0644: 1.0, 2.1"}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.issueDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631 *"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631 *"}</label>
-                            <input type="date" id="version-issue-date" required class="form-input"
+                            <input type="date" id="version-issue-date" required class="form-input" 
                                 value="${e?.issueDate?new Date(e.issueDate).toISOString().slice(0,10):""}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.revDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"}</label>
-                            <input type="date" id="version-revision-date" class="form-input"
+                            <input type="date" id="version-revision-date" class="form-input" 
                                 value="${e?.revisionDate?new Date(e.revisionDate).toISOString().slice(0,10):""}">
                         </div>
                         <div>
@@ -2646,13 +2646,13 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.notesLabel","\u0645\u0644\u0627\u062D\u0638\u0629 \u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u0645\u0644\u0627\u062D\u0638\u0629 \u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</label>
-                            <textarea id="version-notes" class="form-input" rows="3"
+                            <textarea id="version-notes" class="form-input" rows="3" 
                                 placeholder="${typeof I18n<"u"?I18n.t("module.iso.coding.form.notesPlaceholder","\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u062D\u0648\u0644 \u0647\u0630\u0627 \u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u062D\u0648\u0644 \u0647\u0630\u0627 \u0627\u0644\u0625\u0635\u062F\u0627\u0631"}">${Utils.escapeHTML(e?.notes||"")}</textarea>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.changeReasonLabel","\u0633\u0628\u0628 \u0627\u0644\u062A\u0639\u062F\u064A\u0644 (\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A)"):"\u0633\u0628\u0628 \u0627\u0644\u062A\u0639\u062F\u064A\u0644 (\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A)"}</label>
-                            <input type="text" id="version-change-reason" class="form-input"
-                                value="${Utils.escapeHTML(e?.changeReason||"")}"
+                            <input type="text" id="version-change-reason" class="form-input" 
+                                value="${Utils.escapeHTML(e?.changeReason||"")}" 
                                 placeholder="${typeof I18n<"u"?I18n.t("module.iso.coding.form.changeReasonPlaceholder","\u0645\u062B\u0627\u0644: \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0628\u0646\u0627\u0621\u064B \u0639\u0644\u0649 \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629 \u0627\u0644\u0633\u0646\u0648\u064A\u0629"):"\u0645\u062B\u0627\u0644: \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0628\u0646\u0627\u0621\u064B \u0639\u0644\u0649 \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629 \u0627\u0644\u0633\u0646\u0648\u064A\u0629"}">
                         </div>
                     </form>
@@ -2707,7 +2707,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                                             <td>${Utils.escapeHTML(i.notes||"-")}</td>
                                             <td>${Utils.escapeHTML(i.changeReason||"-")}</td>
                                             <td>
-                                                <button onclick="ISO.editDocumentVersion('${i.id}'); this.closest('.modal-overlay').remove();"
+                                                <button onclick="ISO.editDocumentVersion('${i.id}'); this.closest('.modal-overlay').remove();" 
                                                     class="btn-icon btn-icon-info" title="${typeof I18n<"u"?I18n.t("module.iso.codingCenter.actions.edit","\u062A\u0639\u062F\u064A\u0644"):"\u062A\u0639\u062F\u064A\u0644"}">
                                                     <i class="fas fa-edit"></i>
                                                 </button>

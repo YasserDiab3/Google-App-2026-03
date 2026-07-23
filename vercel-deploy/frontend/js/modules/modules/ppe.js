@@ -1654,8 +1654,8 @@ const PPE = {
         const stReceived = t('module.ppe.status.received', 'مستلم');
         const stPending = t('module.ppe.status.pending', 'قيد التسليم');
         modal.innerHTML = `
-            <div class="modal-content w-[min(100%,52rem)] max-w-[min(94vw,52rem)]" style="border-radius: 1rem; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
-                <div class="modal-header" style="background: linear-gradient(135deg, #2563eb, #0d9488); color: #ffffff; text-align: center; position: relative; padding: 1.25rem 1.5rem;">
+            <div class="modal-content w-[min(100%,52rem)] max-w-[min(94vw,52rem)] max-h-[90vh] flex flex-col my-auto" style="border-radius: 1rem; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+                <div class="modal-header shrink-0" style="background: linear-gradient(135deg, #2563eb, #0d9488); color: #ffffff; text-align: center; position: relative; padding: 1.25rem 1.5rem;">
                     <h2 class="modal-title" style="margin: 0 auto; font-weight: 700; letter-spacing: 0.03em;">
                         ${isEdit ? ut(t('module.ppe.title.editReceipt', 'تعديل استلام')) : ut(t('module.ppe.title.newReceipt', 'تسجيل استلام جديد'))}
                     </h2>
@@ -1663,8 +1663,8 @@ const PPE = {
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="modal-body bg-gradient-to-b from-slate-50/70 to-white">
-                    <form id="ppe-form" class="space-y-5">
+                <form id="ppe-form" class="flex flex-col flex-1 min-h-0 overflow-hidden m-0">
+                    <div class="modal-body overflow-y-auto flex-1 p-6 space-y-5 bg-gradient-to-b from-slate-50/70 to-white">
                         <section class="rounded-xl border border-blue-200/70 bg-gradient-to-br from-blue-50/70 via-white to-cyan-50/50 p-4 shadow-sm">
                             <div class="flex items-center gap-2 mb-3 text-blue-900">
                                 <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white"><i class="fas fa-user"></i></span>
@@ -1832,14 +1832,14 @@ const PPE = {
                             </div>
                         </div>
                         </section>
-                        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
-                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${ut(t('module.common.cancel', 'إلغاء'))}</button>
-                            <button type="submit" class="btn-primary">
-                                <i class="fas fa-save ml-2"></i>${isEdit ? ut(t('module.common.saveChanges', 'حفظ التعديلات')) : ut(t('module.ppe.btn.saveReceipt', 'تسجيل الاستلام'))}
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    </div>
+                    <div class="flex items-center justify-end gap-3 p-4 bg-white border-t border-slate-200 shrink-0 z-10">
+                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${ut(t('module.common.cancel', 'إلغاء'))}</button>
+                        <button type="submit" class="btn-primary">
+                            <i class="fas fa-save ml-2"></i>${isEdit ? ut(t('module.common.saveChanges', 'حفظ التعديلات')) : ut(t('module.ppe.btn.saveReceipt', 'تسجيل الاستلام'))}
+                        </button>
+                    </div>
+                </form>
             </div>
         `;
         document.body.appendChild(modal);

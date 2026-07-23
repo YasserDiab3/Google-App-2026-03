@@ -217,7 +217,7 @@ const Violations={currentFilters:{search:"",personType:"",violationType:"",sever
                         </button>
                     </div>
                 </div>
-
+                
                 <!-- Tab Content -->
                 <div id="violations-tab-content">
                     <div class="content-card" id="violations-list-tab">
@@ -1006,18 +1006,18 @@ const Violations={currentFilters:{search:"",personType:"",violationType:"",sever
                                     \u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A \u0627\u0644\u0645\u062E\u0627\u0644\u0641 *
                                 </label>
                                 <input type="text" id="violation-employee-code" class="form-input"
-                                    value="${t?.employeeCode||t?.employeeNumber||""}"
+                                    value="${t?.employeeCode||t?.employeeNumber||""}" 
                                     placeholder="\u0623\u062F\u062E\u0644 \u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A (\u0633\u064A\u062A\u0645 \u062A\u0639\u0628\u0626\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B)"
                                     ${n?"required":""}>
                             </div>
                         </div>
-
+                        
                         <!-- \u0627\u0644\u0635\u0641 \u0627\u0644\u062B\u0627\u0646\u064A: \u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641 \u0648\u0627\u0644\u0648\u0638\u064A\u0641\u0629 -->
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label for="violation-person-name" class="block text-sm font-semibold text-gray-700 mb-2" id="violation-person-name-label">\u0627\u0633\u0645 \u0627\u0644\u0645\u062E\u0627\u0644\u0641 *</label>
                                 <input type="text" id="violation-person-name" required class="form-input"
-                                    value="${t?.employeeName||t?.contractorName||""}"
+                                    value="${t?.employeeName||t?.contractorName||""}" 
                                     placeholder="${n?"\u0633\u064A\u062A\u0645 \u0627\u0644\u062A\u0639\u0628\u0626\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B":"\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644"}"
                                     ${n?"readonly":""}
                                     style="display: ${s?"none":"block"};">
@@ -1031,17 +1031,17 @@ const Violations={currentFilters:{search:"",personType:"",violationType:"",sever
                             <div id="violation-employee-position-container" style="display: ${n?"block":"none"};">
                                 <label for="violation-employee-position" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0648\u0638\u064A\u0641\u0629</label>
                                 <input type="text" id="violation-employee-position" class="form-input"
-                                    value="${t?.employeePosition||""}"
+                                    value="${t?.employeePosition||""}" 
                                     placeholder="\u0633\u064A\u062A\u0645 \u0627\u0644\u062A\u0639\u0628\u0626\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B" readonly>
                             </div>
                         </div>
-
+                        
                         <!-- \u0627\u0644\u0635\u0641 \u0627\u0644\u062B\u0627\u0644\u062B: \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0648\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 -->
                         <div class="grid grid-cols-2 gap-4">
                             <div id="violation-employee-department-container" style="display: ${n?"block":"none"};">
                                 <label for="violation-employee-department" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0625\u062F\u0627\u0631\u0629</label>
                                 <input type="text" id="violation-employee-department" class="form-input"
-                                    value="${t?.employeeDepartment||""}"
+                                    value="${t?.employeeDepartment||""}" 
                                     placeholder="\u0633\u064A\u062A\u0645 \u0627\u0644\u062A\u0639\u0628\u0626\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B" readonly>
                             </div>
                             <div>
@@ -1053,7 +1053,7 @@ const Violations={currentFilters:{search:"",personType:"",violationType:"",sever
                         <div id="violation-sequence-info" class="hidden mb-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-900">
                             <i class="fas fa-layer-group ml-2 text-amber-700"></i><span id="violation-sequence-text"></span>
                         </div>
-
+                        
                         <!-- \u0627\u0644\u0635\u0641 \u0627\u0644\u0631\u0627\u0628\u0639: \u0648\u0642\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0648\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 -->
                         <div class="grid grid-cols-2 gap-4">
                             <div>
@@ -1094,13 +1094,13 @@ const Violations={currentFilters:{search:"",personType:"",violationType:"",sever
                                 <div id="violation-contractor-worker-container">
                                     <label for="violation-contractor-worker" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0633\u0645 \u0627\u0644\u0639\u0627\u0645\u0644 \u0627\u0644\u062A\u0627\u0628\u0639 \u0644\u0644\u0645\u0642\u0627\u0648\u0644</label>
                                     <input type="text" id="violation-contractor-worker" class="form-input"
-                                        value="${t?.contractorWorker||""}"
+                                        value="${t?.contractorWorker||""}" 
                                         placeholder="\u0627\u0633\u0645 \u0627\u0644\u0639\u0627\u0645\u0644">
                                 </div>
                                 <div id="violation-contractor-position-container">
                                     <label for="violation-contractor-position" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0648\u0638\u064A\u0641\u0629</label>
                                     <input type="text" id="violation-contractor-position" class="form-input"
-                                        value="${t?.contractorPosition||""}"
+                                        value="${t?.contractorPosition||""}" 
                                         placeholder="\u0648\u0638\u064A\u0641\u0629 \u0627\u0644\u0639\u0627\u0645\u0644">
                                 </div>
                             </div>
@@ -1108,7 +1108,7 @@ const Violations={currentFilters:{search:"",personType:"",violationType:"",sever
                                 <div id="violation-contractor-department-container">
                                     <label for="violation-contractor-department" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0625\u062F\u0627\u0631\u0629</label>
                                     <input type="text" id="violation-contractor-department" class="form-input"
-                                        value="${t?.contractorDepartment||""}"
+                                        value="${t?.contractorDepartment||""}" 
                                         placeholder="\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062A\u0627\u0628\u0639\u0629 \u0644\u0647">
                             </div>
                             <div>
@@ -1127,7 +1127,7 @@ const Violations={currentFilters:{search:"",personType:"",violationType:"",sever
                                 </div>
                             </div>
                         </div>
-
+                        
                         <!-- \u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0648\u0642\u0639 \u0648\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 (\u0644\u0644\u0645\u0648\u0638\u0641) -->
                         <div id="violation-location-fields-container" style="display: ${n?"block":"none"};">
                             <div class="grid grid-cols-2 gap-4">
@@ -1145,7 +1145,7 @@ const Violations={currentFilters:{search:"",personType:"",violationType:"",sever
                                 </div>
                             </div>
                         </div>
-
+                        
                         <!-- \u0627\u0644\u0635\u0641 \u0627\u0644\u062E\u0627\u0645\u0633: \u0627\u0644\u0634\u062F\u0629 \u0648\u0627\u0644\u062D\u0627\u0644\u0629 -->
                         <div class="grid grid-cols-2 gap-4">
                             <div>
@@ -1173,7 +1173,7 @@ const Violations={currentFilters:{search:"",personType:"",violationType:"",sever
                                 </select>
                             </div>
                         </div>
-
+                        
                         <!-- \u0627\u0644\u0635\u0648\u0631\u0629 \u0648\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0648\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630 -->
                             <div class="col-span-2">
                                 <label for="violation-photo-input" class="block text-sm font-semibold text-gray-700 mb-2">
@@ -1512,12 +1512,12 @@ ${a}
                 <div class="card-body">
                     <!-- \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0633\u0631\u064A\u0639\u0629 -->
                     ${this.renderBlacklistStats()}
-
+                    
                     <!-- \u0643\u0631\u0648\u062A \u0639\u0631\u0636 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A -->
                     <div id="blacklist-cards-container" class="mb-6">
                         ${this.renderBlacklistCards()}
                     </div>
-
+                    
                     <!-- \u062C\u062F\u0648\u0644 \u0639\u0631\u0636 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A -->
                     <div id="blacklist-table-container">
                         ${this.renderBlacklistTable()}
@@ -1596,17 +1596,17 @@ ${a}
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-1">
-                                        <button onclick="Violations.editBlacklistRecord('${e.id}')"
+                                        <button onclick="Violations.editBlacklistRecord('${e.id}')" 
                                             class="btn-icon btn-icon-warning text-xs" title="\u062A\u0639\u062F\u064A\u0644">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button onclick="Violations.deleteBlacklistRecord('${e.id}')"
+                                        <button onclick="Violations.deleteBlacklistRecord('${e.id}')" 
                                             class="btn-icon btn-icon-danger text-xs" title="\u062D\u0630\u0641">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
                                 </div>
-
+                                
                                 <div class="space-y-2 text-sm">
                                     <div class="flex items-center gap-2">
                                         <i class="fas fa-id-card text-red-500 dark:text-red-400 w-4"></i>
@@ -1692,8 +1692,8 @@ ${a}
                             <i class="fas fa-hashtag ml-2 text-blue-600"></i>
                             \u0645 (\u0631\u0642\u0645 \u0645\u0633\u0644\u0633\u0644)
                         </label>
-                        <input type="text" id="blacklist-serial" class="form-input"
-                            value="${n&&i.serialNumber||t}"
+                        <input type="text" id="blacklist-serial" class="form-input" 
+                            value="${n&&i.serialNumber||t}" 
                             readonly>
                     </div>
 
@@ -1703,7 +1703,7 @@ ${a}
                             <i class="fas fa-calendar ml-2 text-red-600"></i>
                             \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639 *
                         </label>
-                        <input type="date" id="blacklist-ban-date" required class="form-input"
+                        <input type="date" id="blacklist-ban-date" required class="form-input" 
                             value="${i?.banDate?new Date(i.banDate).toISOString().slice(0,10):""}">
                     </div>
 
@@ -1737,8 +1737,8 @@ ${a}
                             <i class="fas fa-user ml-2 text-purple-600"></i>
                             \u0627\u0644\u0627\u0633\u0645 \u0631\u0628\u0627\u0639\u064A *
                         </label>
-                        <input type="text" id="blacklist-name" required class="form-input"
-                            value="${Utils.escapeHTML(i?.fullName||"")}"
+                        <input type="text" id="blacklist-name" required class="form-input" 
+                            value="${Utils.escapeHTML(i?.fullName||"")}" 
                             placeholder="\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0643\u0627\u0645\u0644">
                     </div>
 
@@ -1748,8 +1748,8 @@ ${a}
                             <i class="fas fa-id-card ml-2 text-orange-600"></i>
                             \u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629 *
                         </label>
-                        <input type="text" id="blacklist-id-number" required class="form-input"
-                            value="${Utils.escapeHTML(i?.idNumber||"")}"
+                        <input type="text" id="blacklist-id-number" required class="form-input" 
+                            value="${Utils.escapeHTML(i?.idNumber||"")}" 
                             placeholder="\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629">
                     </div>
 
@@ -1759,8 +1759,8 @@ ${a}
                             <i class="fas fa-briefcase ml-2 text-indigo-600"></i>
                             \u0627\u0644\u0648\u0638\u064A\u0641\u0629
                         </label>
-                        <input type="text" id="blacklist-job" class="form-input"
-                            value="${Utils.escapeHTML(i?.job||"")}"
+                        <input type="text" id="blacklist-job" class="form-input" 
+                            value="${Utils.escapeHTML(i?.job||"")}" 
                             placeholder="\u0627\u0644\u0648\u0638\u064A\u0641\u0629">
                     </div>
 
@@ -1770,9 +1770,9 @@ ${a}
                             <i class="fas fa-building ml-2 text-cyan-600"></i>
                             \u0627\u0644\u0634\u0631\u0643\u0629 - \u0627\u0644\u0645\u0642\u0627\u0648\u0644
                         </label>
-                        <input type="text" id="blacklist-contractor" class="form-input"
-                            list="blacklist-contractors-list"
-                            value="${Utils.escapeHTML(i?.contractor||"")}"
+                        <input type="text" id="blacklist-contractor" class="form-input" 
+                            list="blacklist-contractors-list" 
+                            value="${Utils.escapeHTML(i?.contractor||"")}" 
                             placeholder="\u0627\u062E\u062A\u0631 \u0623\u0648 \u0627\u0643\u062A\u0628 \u0627\u0633\u0645 \u0627\u0644\u0634\u0631\u0643\u0629/\u0627\u0644\u0645\u0642\u0627\u0648\u0644">
                         <datalist id="blacklist-contractors-list">
                             <!-- \u0633\u064A\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u0627\u064B -->
@@ -1785,9 +1785,9 @@ ${a}
                             <i class="fas fa-building ml-2 text-teal-600"></i>
                             \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062A\u0627\u0628\u0639 \u0644\u0647\u0627
                         </label>
-                        <input type="text" id="blacklist-department" class="form-input"
-                            list="blacklist-departments-list"
-                            value="${Utils.escapeHTML(i?.department||"")}"
+                        <input type="text" id="blacklist-department" class="form-input" 
+                            list="blacklist-departments-list" 
+                            value="${Utils.escapeHTML(i?.department||"")}" 
                             placeholder="\u0627\u062E\u062A\u0631 \u0623\u0648 \u0627\u0643\u062A\u0628 \u0627\u0644\u0625\u062F\u0627\u0631\u0629">
                         <datalist id="blacklist-departments-list">
                             ${o}
@@ -1800,8 +1800,8 @@ ${a}
                             <i class="fas fa-user-shield ml-2 text-yellow-600"></i>
                             \u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639
                         </label>
-                        <input type="text" id="blacklist-banned-by" class="form-input"
-                            value="${Utils.escapeHTML(i?.bannedBy||"")}"
+                        <input type="text" id="blacklist-banned-by" class="form-input" 
+                            value="${Utils.escapeHTML(i?.bannedBy||"")}" 
                             placeholder="\u0627\u0633\u0645 \u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639">
                     </div>
 
@@ -1811,8 +1811,8 @@ ${a}
                             <i class="fas fa-user-edit ml-2 text-gray-600"></i>
                             \u0645\u062D\u0631\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A
                         </label>
-                        <input type="text" id="blacklist-editor" class="form-input"
-                            value="${Utils.escapeHTML(i?.editor||s.name)}"
+                        <input type="text" id="blacklist-editor" class="form-input" 
+                            value="${Utils.escapeHTML(i?.editor||s.name)}" 
                             readonly>
                     </div>
 
@@ -1826,7 +1826,7 @@ ${a}
                         <div id="blacklist-photo-preview" class="mt-2 ${r?"":"hidden"}">
                             <img src="${l?Utils.escapeHTML(l):""}" alt="\u0635\u0648\u0631\u0629 \u0634\u062E\u0635\u064A\u0629"${d}
                                 class="blacklist-form-photo w-32 h-32 object-cover rounded border" id="blacklist-photo-img">
-                            <button type="button" onclick="const blPhotoInput = document.getElementById('blacklist-photo-input'); if (blPhotoInput) blPhotoInput.value=''; const blPhotoPreview = document.getElementById('blacklist-photo-preview'); if (blPhotoPreview) blPhotoPreview.classList.add('hidden');"
+                            <button type="button" onclick="const blPhotoInput = document.getElementById('blacklist-photo-input'); if (blPhotoInput) blPhotoInput.value=''; const blPhotoPreview = document.getElementById('blacklist-photo-preview'); if (blPhotoPreview) blPhotoPreview.classList.add('hidden');" 
                                 class="mt-2 text-sm text-red-600 hover:text-red-800">
                                 <i class="fas fa-trash ml-1"></i>\u062D\u0630\u0641 \u0627\u0644\u0635\u0648\u0631\u0629
                             </button>
@@ -1839,7 +1839,7 @@ ${a}
                             <i class="fas fa-exclamation-triangle ml-2 text-red-600"></i>
                             \u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639 *
                         </label>
-                        <textarea id="blacklist-ban-reason" required class="form-input" rows="3"
+                        <textarea id="blacklist-ban-reason" required class="form-input" rows="3" 
                             placeholder="\u0633\u0628\u0628 \u0645\u0646\u0639 \u0627\u0644\u062F\u062E\u0648\u0644">${Utils.escapeHTML(i?.banReason||"")}</textarea>
                     </div>
 
@@ -1849,7 +1849,7 @@ ${a}
                             <i class="fas fa-sticky-note ml-2 text-gray-600"></i>
                             \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0639\u0627\u0645\u0629
                         </label>
-                        <textarea id="blacklist-notes" class="form-input" rows="3"
+                        <textarea id="blacklist-notes" class="form-input" rows="3" 
                             placeholder="\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0625\u0636\u0627\u0641\u064A\u0629">${Utils.escapeHTML(i?.notes||"")}</textarea>
                     </div>
                 </div>
@@ -1877,7 +1877,7 @@ ${a}
                         <i class="fas fa-list ml-2"></i>\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644
                     </h3>
                     <div class="flex items-center gap-2">
-                        <input type="text" id="blacklist-search" class="form-input"
+                        <input type="text" id="blacklist-search" class="form-input" 
                             placeholder="\u0628\u062D\u062B..." style="width: 250px;">
                         <button id="blacklist-export-pdf" class="btn-secondary">
                             <i class="fas fa-file-pdf ml-2"></i>PDF
@@ -1936,15 +1936,15 @@ ${a}
                                     </td>
                                     <td>
                                         <div class="flex items-center gap-2">
-                                            <button onclick="Violations.viewBlacklistDetails('${e.id}')"
+                                            <button onclick="Violations.viewBlacklistDetails('${e.id}')" 
                                                 class="btn-icon btn-icon-info" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            <button onclick="Violations.editBlacklistRecord('${e.id}')"
+                                            <button onclick="Violations.editBlacklistRecord('${e.id}')" 
                                                 class="btn-icon btn-icon-warning" title="\u062A\u0639\u062F\u064A\u0644">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button onclick="Violations.deleteBlacklistRecord('${e.id}')"
+                                            <button onclick="Violations.deleteBlacklistRecord('${e.id}')" 
                                                 class="btn-icon btn-icon-danger" title="\u062D\u0630\u0641">
                                                 <i class="fas fa-trash"></i>
                                             </button>
@@ -2123,7 +2123,7 @@ ${a}
                 ${e?`
                 <div class="section-title">\u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629</div>
                 <div style="text-align: center; margin: 20px 0;">
-                    <img src="${Utils.escapeHTML(e)}" alt="\u0635\u0648\u0631\u0629 \u0634\u062E\u0635\u064A\u0629" style="max-width: 300px; max-height: 400px; border: 2px solid #ddd; border-radius: 8px; object-fit: contain;"
+                    <img src="${Utils.escapeHTML(e)}" alt="\u0635\u0648\u0631\u0629 \u0634\u062E\u0635\u064A\u0629" style="max-width: 300px; max-height: 400px; border: 2px solid #ddd; border-radius: 8px; object-fit: contain;" 
                          onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22400%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22300%22 height=%22400%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3E\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0648\u0631\u0629%3C/text%3E%3C/svg%3E';">
                 </div>
                 `:""}

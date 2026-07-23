@@ -1714,7 +1714,7 @@ const Incidents={currentEditId:null,currentAttachments:[],reportPreviewModalId:"
                                 <div class="safety-alert-grey-label">\u0623\u064A\u0646</div>
                                 <div class="safety-alert-field" style="margin-top: 10px;">
                                     <input type="text" id="safety-alert-location" class="form-input" 
-                                        value="${Utils.escapeHTML(n?.incidentLocation||a?.location||a?.siteName||"")}"
+                                        value="${Utils.escapeHTML(n?.incidentLocation||a?.location||a?.siteName||"")}" 
                                         placeholder="\u0645\u0643\u0627\u0646 \u0627\u0644\u062D\u0627\u062F\u062B"
                                         style="border: none; width: 100%;">
                                 </div>
@@ -1731,7 +1731,7 @@ const Incidents={currentEditId:null,currentAttachments:[],reportPreviewModalId:"
                                 <div class="safety-alert-grey-label">\u0645\u0646</div>
                                 <div class="safety-alert-field" style="margin-top: 10px;">
                                     <input type="text" id="safety-alert-who" class="form-input" 
-                                        value="${Utils.escapeHTML(n?.who||"")}"
+                                        value="${Utils.escapeHTML(n?.who||"")}" 
                                         placeholder="\u0645\u0646"
                                         style="border: none; width: 100%;">
                                 </div>
@@ -1831,7 +1831,7 @@ const Incidents={currentEditId:null,currentAttachments:[],reportPreviewModalId:"
                                 <div class="safety-alert-grey-label">\u0631\u0642\u0645 \u0627\u0644\u0625\u0634\u0639\u0627\u0631</div>
                                 <div class="safety-alert-field" style="margin-top: 10px;">
                                     <input type="text" id="safety-alert-notification-number" class="form-input" 
-                                        value="${Utils.escapeHTML(n?.notificationNumber||n?.sequentialNumber||a?.notificationNumber||s)}"
+                                        value="${Utils.escapeHTML(n?.notificationNumber||n?.sequentialNumber||a?.notificationNumber||s)}" 
                                         placeholder="\u0631\u0642\u0645 \u0627\u0644\u0625\u0634\u0639\u0627\u0631"
                                         style="border: none; width: 100%;">
                                 </div>
@@ -1840,7 +1840,7 @@ const Incidents={currentEditId:null,currentAttachments:[],reportPreviewModalId:"
                                 <div class="safety-alert-grey-label">\u0625\u0639\u062F\u0627\u062F</div>
                                 <div class="safety-alert-field" style="margin-top: 10px;">
                                     <input type="text" id="safety-alert-prepared-by" class="form-input" 
-                                        value="${Utils.escapeHTML(n?.preparedBy||AppState.currentUser?.name||"")}"
+                                        value="${Utils.escapeHTML(n?.preparedBy||AppState.currentUser?.name||"")}" 
                                         placeholder="\u0625\u0639\u062F\u0627\u062F"
                                         style="border: none; width: 100%;">
                                 </div>
@@ -1849,7 +1849,7 @@ const Incidents={currentEditId:null,currentAttachments:[],reportPreviewModalId:"
                                 <div class="safety-alert-grey-label">\u0627\u0639\u062A\u0645\u0627\u062F</div>
                                 <div class="safety-alert-field" style="margin-top: 10px;">
                                     <input type="text" id="safety-alert-approved-by" class="form-input" 
-                                        value="${Utils.escapeHTML(n?.approvedBy||"")}"
+                                        value="${Utils.escapeHTML(n?.approvedBy||"")}" 
                                         placeholder="\u0627\u0639\u062A\u0645\u0627\u062F"
                                         style="border: none; width: 100%;" ${n?.status==="\u0645\u0639\u062A\u0645\u062F"?"readonly":""}>
                                 </div>
@@ -4446,7 +4446,7 @@ ${a}`),i&&(i.disabled=!1,i.innerHTML.includes("fa-spinner")&&(i.innerHTML='<i cl
                                                 <button 
                                                     class="btn-primary btn-sm" 
                                                     onclick="if(typeof Incidents !== 'undefined' && typeof Incidents.showInvestigationForm === 'function') { 
-                                                        Incidents.showInvestigationForm('${n.id}');
+                                                        Incidents.showInvestigationForm('${n.id}'); 
                                                         this.closest('.modal-overlay').remove(); 
                                                     } else { 
                                                         alert('\u0646\u0645\u0648\u0630\u062C \u0627\u0644\u062A\u062D\u0642\u064A\u0642 \u063A\u064A\u0631 \u0645\u062A\u0627\u062D'); 
