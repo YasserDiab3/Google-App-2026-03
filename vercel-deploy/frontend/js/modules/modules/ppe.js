@@ -311,8 +311,45 @@ const PPE = {
         const uniqueTypes = [...new Set(ppeList.map(p => p.equipmentType).filter(Boolean))].sort();
         const uniqueStatuses = ['مستلم', 'قيد التسليم'];
 
+        const receiptsKpiGrid = `
+            <div class="kpi-grid mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="kpi-card kpi-primary">
+                    <div class="kpi-icon"><i class="fas fa-receipt"></i></div>
+                    <div class="kpi-content">
+                        <div class="kpi-label">${esc(t('module.ppe.kpi.totalReceipts', 'إجمالي الاستلامات'))}</div>
+                        <div class="kpi-value">${ppeList.length}</div>
+                        <div class="kpi-description">${esc(t('module.ppe.kpi.totalReceiptsDesc', 'سجلات الاستلام المسجلة'))}</div>
+                    </div>
+                </div>
+                <div class="kpi-card kpi-success">
+                    <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="kpi-content">
+                        <div class="kpi-label">${esc(t('module.ppe.kpi.receivedItems', 'مهمات تم تسليمها'))}</div>
+                        <div class="kpi-value">${ppeList.filter(i => i.status === 'مستلم').length}</div>
+                        <div class="kpi-description">${esc(t('module.ppe.kpi.receivedItemsDesc', 'استلامات مكتملة وموثقة'))}</div>
+                    </div>
+                </div>
+                <div class="kpi-card kpi-warning">
+                    <div class="kpi-icon"><i class="fas fa-clock"></i></div>
+                    <div class="kpi-content">
+                        <div class="kpi-label">${esc(t('module.ppe.kpi.pendingItems', 'قيد التسليم'))}</div>
+                        <div class="kpi-value">${ppeList.filter(i => i.status === 'قيد التسليم').length}</div>
+                        <div class="kpi-description">${esc(t('module.ppe.kpi.pendingItemsDesc', 'استلامات قيد المتابعة'))}</div>
+                    </div>
+                </div>
+                <div class="kpi-card kpi-info">
+                    <div class="kpi-icon"><i class="fas fa-users"></i></div>
+                    <div class="kpi-content">
+                        <div class="kpi-label">${esc(t('module.ppe.kpi.uniqueEmployees', 'الموظفون المستلمون'))}</div>
+                        <div class="kpi-value">${new Set(ppeList.map(i => i.employeeCode || i.employeeNumber).filter(Boolean)).size}</div>
+                        <div class="kpi-description">${esc(t('module.ppe.kpi.uniqueEmployeesDesc', 'عدد الموظفين المستفيدين'))}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+
         const filterRow = `
-            <div class="ppe-visits-filters-row visits-filters-row" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 16px 20px; margin: 0 0 14px 0; width: 100%; direction: ${isRTL ? 'rtl' : 'ltr'};">
+            <div class="ppe-visits-filters-row visits-filters-row" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 16px 20px; margin: 0 0 14px 0; width: 100%; border: 1px solid #e2e8f0; border-radius: 12px; direction: ${isRTL ? 'rtl' : 'ltr'};">
                 <div class="filters-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; align-items: end;">
                     <div class="filter-field" style="min-width: 180px;">
                         <label class="filter-label" for="ppe-receipts-search">
@@ -367,7 +404,7 @@ const PPE = {
         ` : '';
 
         if (filtered.length === 0) {
-            return this._buildExcelToolbarHtml('receipts') + filterRow + noMatchBlock;
+            return receiptsKpiGrid + this._buildExcelToolbarHtml('receipts') + filterRow + noMatchBlock;
         }
 
         const viewTitle = t('module.common.view', 'عرض');
@@ -430,7 +467,7 @@ const PPE = {
             </table>
         `;
 
-        return this._buildExcelToolbarHtml('receipts') + filterRow + table;
+        return receiptsKpiGrid + this._buildExcelToolbarHtml('receipts') + filterRow + table;
     },
 
     _receiptsFilterTimer: null,
