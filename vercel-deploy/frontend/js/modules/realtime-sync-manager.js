@@ -19,8 +19,8 @@ const realtimeSyncLog = (...args) => {
 const RealtimeSyncManager = {
     // إعدادات النظام
     config: {
-        // فحص التحديثات كل 20 ثانية (20000 ms) - تحسين من 30 ثانية لتسريع المزامنة
-        syncInterval: 20000,
+        // فحص التحديثات كل 90 ثانية (90000 ms) - تحسين للحد من استهلاك الذاكرة والشبكة
+        syncInterval: 90000,
 
         // موديولات أساسية تبقى تحت المتابعة حتى عند التنقل بين الأقسام
         alwaysSyncModules: ['users'],
@@ -85,13 +85,11 @@ const RealtimeSyncManager = {
         enableNotifications: true,
 
         // عرض إشعار بصوت
-        enableSoundNotification: false,
+        // الحد الأدنى للوقت بين مزامنتين للموديول نفسه (10 ثوانٍ)
+        minSyncInterval: 10000,
 
-        // الحد الأدنى للوقت بين مزامنتين للموديول نفسه (5 ثوانٍ) - تحسين من 10 ثوانٍ لتسريع المزامنة
-        minSyncInterval: 5000,
-
-        // فحص مؤشر تحديثات Users — تقليل الضغط على حصة Apps Script (كان 3 ثوانٍ)
-        usersMetaPollInterval: 20000
+        // فحص مؤشر تحديثات Users كل 60 ثانية
+        usersMetaPollInterval: 60000
     },
 
     // حالة النظام
@@ -530,15 +528,32 @@ const RealtimeSyncManager = {
 
         realtimeSyncLog(`🔄 بدء المزامنة التلقائية كل ${this.config.syncInterval / 1000} ثانية`);
 
-        // مزامنة فورية أولى - تقليل التأخير من 500ms إلى 200ms لتسريع التحميل الأولي
-        setTimeout(() => this.syncAll(true), 200);
+        // مزامنة فورية أولى عند الجاهزية
+        setTimeout(() => {
+            if (!document.hidden) {
+                this.syncAll(true);
+            }
+        }, 500);
 
-        // مزامنة دورية
+        // مزامنة دورية (مع التخفيض في حالة التبويب الخفي)
         this.state.intervalId = setInterval(() => {
-            if (this.config.enableAutoSync && !this.state.isSyncing) {
+            if (this.config.enableAutoSync && !this.state.isSyncing && !document.hidden) {
                 this.syncAll(true);
             }
         }, this.config.syncInterval);
+
+        // الاستماع لتغير حالة التبويبة (عند عودة المستخدم للتبويب يُجرى فحص)
+        if (!this._visibilityListenerAdded) {
+            this._visibilityListenerAdded = true;
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden && this.config.enableAutoSync && !this.state.isSyncing) {
+                    const lastSync = this.state.lastSyncTime['users'] || 0;
+                    if (Date.now() - lastSync > this.config.syncInterval) {
+                        this.syncAll(true);
+                    }
+                }
+            });
+        }
 
         this.state.isActive = true;
     },

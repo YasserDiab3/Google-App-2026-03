@@ -123,7 +123,6 @@
          */
         async waitForCSSLoad() {
             return new Promise((resolve) => {
-                // التحقق من أن جميع ملفات CSS تم تحميلها
                 const stylesheets = Array.from(document.styleSheets);
                 let loadedCount = 0;
                 const totalSheets = stylesheets.length;
@@ -133,25 +132,35 @@
                     return;
                 }
                 
+                let isResolved = false;
+                const safeResolve = () => {
+                    if (!isResolved) {
+                        isResolved = true;
+                        resolve();
+                    }
+                };
+
+                // حد أقصى للانتظار 300ms لتفادي التعليق في حلقة غير منتهية
+                const maxTimeout = setTimeout(safeResolve, 300);
+                
                 const checkStylesheets = () => {
+                    if (isResolved) return;
                     let allLoaded = true;
                     for (let i = 0; i < stylesheets.length; i++) {
                         try {
-                            // محاولة الوصول إلى CSS rules - إذا فشل، الملف لم يتم تحميله بعد
                             const rules = stylesheets[i].cssRules || stylesheets[i].rules;
                             if (rules) {
                                 loadedCount++;
                             }
                         } catch (e) {
-                            // إذا كان هناك خطأ CORS أو الملف لم يتم تحميله بعد
                             allLoaded = false;
                         }
                     }
                     
                     if (allLoaded || loadedCount === totalSheets) {
-                        resolve();
+                        clearTimeout(maxTimeout);
+                        safeResolve();
                     } else {
-                        // إعادة المحاولة بعد تأخير قصير
                         requestAnimationFrame(checkStylesheets);
                     }
                 };
@@ -217,23 +226,16 @@
             this.startPhase(this.phases.SERVICES);
             this.updateLoader(35, 'تحميل الخدمات...');
             
-            // انتظار تحميل DataManager (تقليل الوقت إلى 10 ثوانٍ - تحسين الأداء)
-            const dataManager = await this.waitForModule('DataManager', 10000);
+            // انتظار تحميل DataManager (3 ثوانٍ كحد أقصى)
+            const dataManager = await this.waitForModule('DataManager', 3000);
             
             // التحقق من أن DataManager محمل بالكامل وبه الدوال المطلوبة
             if (!dataManager || !dataManager.load || !dataManager.save) {
                 const errorMsg = '⚠️ DataManager لم يتم تحميله بالكامل - بعض الدوال مفقودة';
-                console.error(errorMsg);
+                console.warn(errorMsg);
                 if (window.EnhancedLoader) {
-                    window.EnhancedLoader.addError('فشل تحميل DataManager - يرجى تحديث الصفحة');
+                    window.EnhancedLoader.addError('تحذير: تأخر تحميل DataManager');
                 }
-                // محاولة إعادة تحميل الصفحة بعد 3 ثوانٍ
-                setTimeout(() => {
-                    if (!window.DataManager || !window.DataManager.load) {
-                        console.error('❌ DataManager لا يزال غير محمل - إعادة تحميل الصفحة...');
-                        window.location.reload();
-                    }
-                }, 3000);
             } else {
                 this.updateLoader(45, 'تم تحميل DataManager');
             }
@@ -272,7 +274,6 @@
                             }
                         }
                     } catch (cleanupError) {
-                        // لا نكسر التحميل بسبب فشل cleanup
                         log('⚠️ تعذر تنفيذ تنظيف الحسابات الافتراضية legacy:', cleanupError);
                     }
                     
@@ -286,22 +287,19 @@
                     }
 
                     // ✅ تحسين: تحميل ذكي للبيانات حسب الصلاحيات (بدلاً من تحميل كل شيء)
-                    // هذا يقلل من وقت التحميل الأولي ويحسن الأداء
                     if (typeof Permissions !== 'undefined' && typeof Permissions.getCurrentUserPermissions === 'function') {
                         try {
                             const userPermissions = Permissions.getCurrentUserPermissions();
                             await this.loadDataBasedOnPermissions(userPermissions);
                         } catch (error) {
                             log('⚠️ فشل تحميل البيانات الذكية، سيتم استخدام التحميل التقليدي:', error);
-                            // Fallback للتحميل التقليدي
                             await this.loadSharedDataFallback();
                         }
                     } else {
-                        // Fallback للتحميل التقليدي إذا لم تكن الصلاحيات متوفرة
                         await this.loadSharedDataFallback();
                     }
 
-                    // ✅ إعدادات النماذج (المواقع / المصانع / الأماكن الفرعية) — انتظار ساري حتى لا تُفتح الواجهة قبل جاهزية القائمة
+                    // ✅ إعدادات النماذج (المواقع / المصانع / الأماكن الفرعية)
                     if (typeof Permissions !== 'undefined' && typeof Permissions.initFormSettingsState === 'function') {
                         try {
                             await Permissions.initFormSettingsState();
@@ -330,9 +328,9 @@
             this.startPhase(this.phases.UI);
             this.updateLoader(60, 'تحميل واجهة المستخدم...');
             
-            // تحميل متوازي لواجهة المستخدم (تحسين الأداء)
+            // تحميل متوازي لواجهة المستخدم
             const [uiLoaded, notificationLoaded] = await Promise.all([
-                this.waitForModule('UI', 3000),
+                this.waitForModule('UI', 2000),
                 this.waitForModule('Notification', 2000)
             ]);
             
@@ -343,8 +341,6 @@
                 this.updateLoader(70, 'تم تحميل Notification');
             }
 
-            // إظهار الهيدر مبكراً عند وجود جلسة (بدون انتظار phaseModules/phaseReady)
-            // يقلل تأخر ظهور هيدر لوحة التحكم (شعار الشركة + الاسم)
             try {
                 const mainApp = document.getElementById('main-app');
                 if (mainApp && mainApp.style.display !== 'none' && typeof window.UI !== 'undefined' && window.UI.updateCompanyLogoHeader) {
@@ -366,8 +362,6 @@
             this.startPhase(this.phases.MODULES);
             this.updateLoader(75, 'تحميل الموديولات...');
             
-            // التحقق من أن ملفات auth.js و dashboard.js قد بدأت التحميل
-            // ننتظر قليلاً للتأكد من أن الملفات قد بدأت التحميل
             const authScript = Array.from(document.scripts).find(
                 script => script.src && script.src.includes('auth.js')
             );
@@ -379,21 +373,19 @@
                 await new Promise(resolve => setTimeout(resolve, 30));
             }
             
-            // تحميل متوازي لـ Auth و Dashboard (تحسين الأداء - تقليل وقت الانتظار)
+            // تحميل متوازي لسكرينات Auth و Dashboard (3 ثوانٍ أقصى حد)
             const [authModule, dashboardModule] = await Promise.all([
-                this.waitForModule('Auth', 10000, {
+                this.waitForModule('Auth', 3000, {
                     required: true,
                     checkComplete: (module) => {
-                        // التحقق من أن Auth مكتمل وبه الدوال الأساسية
                         return module && 
                                typeof module.login === 'function' &&
                                typeof module.logout === 'function';
                     }
                 }),
-                this.waitForModule('Dashboard', 10000, {
+                this.waitForModule('Dashboard', 3000, {
                     required: false,
                     checkComplete: (module) => {
-                        // التحقق من أن Dashboard مكتمل وبه الدوال الأساسية
                         return module && typeof module.load === 'function';
                     }
                 })
@@ -401,21 +393,12 @@
             
             if (authModule) {
                 this.updateLoader(85, 'تم تحميل Auth');
-            } else {
-                console.error('❌ فشل تحميل Auth - الموديول ضروري للتطبيق');
-                if (window.EnhancedLoader) {
-                    window.EnhancedLoader.addError('فشل تحميل Auth - يرجى تحديث الصفحة');
-                }
             }
             
             if (dashboardModule) {
                 this.updateLoader(90, 'تم تحميل Dashboard');
-            } else {
-                console.warn('⚠️ تأخر تحميل Dashboard - سيتم تحميله لاحقاً');
             }
             
-            // انتظار تحميل modules-loader.js (يحتوي على جميع الموديولات الأخرى)
-            // نتحقق من وجود أحد الموديولات الرئيسية كدليل على تحميل modules-loader.js
             const modulesLoaderScript = Array.from(document.scripts).find(
                 script => script.src && script.src.includes('modules-loader.js')
             );
@@ -424,24 +407,21 @@
                 await new Promise(resolve => setTimeout(resolve, 30));
             }
             
-            // تحميل متوازي للموديولات الرئيسية (تحسين الأداء - تقليل وقت الانتظار)
-            // الموديولات غير مطلوبة لتسجيل الدخول، لذا ننتظرها بوقت أقل
-            // ✅ إصلاح: زيادة timeout لأن الموديولات تُحمّل بالتسلسل (async=false, defer=true)
-            // Employees هو الموديول #23 من 33، لذا يحتاج وقت أطول
+            // تحميل متوازي للموديولات (2.5-3 ثوانٍ)
             const [usersModule, incidentsModule, employeesModule] = await Promise.all([
-                this.waitForModule('Users', 8000, {
+                this.waitForModule('Users', 2500, {
                     required: false,
                     checkComplete: (module) => {
                         return module && typeof module.load === 'function';
                     }
                 }),
-                this.waitForModule('Incidents', 8000, {
+                this.waitForModule('Incidents', 2500, {
                     required: false,
                     checkComplete: (module) => {
                         return module && typeof module.load === 'function';
                     }
                 }),
-                this.waitForModule('Employees', 10000, {
+                this.waitForModule('Employees', 3000, {
                     required: false,
                     checkComplete: (module) => {
                         return module && typeof module.load === 'function';
@@ -455,7 +435,6 @@
             } else {
                 this.updateLoader(95, 'جاهز للاستخدام');
             }
-            log('ℹ️ تحميل تدريجي: الموديولات الثقيلة (مثل PTW/التدريب/العيادة) تُحمَّل لاحقاً عبر modules-loader حسب الترتيب المحسَّن.');
             
             this.endPhase(this.phases.MODULES);
         },

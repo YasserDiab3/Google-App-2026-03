@@ -10379,6 +10379,7 @@ window.UI = {
         }
 
         this._backgroundSyncInterval = setInterval(() => {
+            if (document.hidden) return;
             if (!AppState.currentUser ||
                 (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && !Utils.hasCloudBackendSync())) {
                 this.stopBackgroundSync();

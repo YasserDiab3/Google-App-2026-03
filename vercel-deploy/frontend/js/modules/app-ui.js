@@ -3702,23 +3702,20 @@ window.UI = {
         // AR → EN
         const arToEn = {
             'الشركة العالمية للانتاج والتصنيع الزراعي': 'International Company for Agricultural Production & Processing (ICAPP)',
-            'إدارة السلامة والصحة المهنية والبيئة': 'HSE Department',
-            'إدارة السلامة والصحة المهنية': 'HSE Department',
+            'إدارة السلامة والصحة المهنية والبيئة': 'Health, Safety & Environment (HSE)',
+            'إدارة السلامة والصحة المهنية': 'Occupational Safety & Health',
             'السلامة والصحة المهنية والبيئة': 'Health, Safety & Environment (HSE)',
             'السلامة والصحة المهنية': 'Occupational Safety & Health',
             'نظام السلامة المهنية': 'Occupational Safety System',
-            'نظام إدارة السلامة والصحة المهنية': 'HSE Management System',
-            'نظام إدارة السلامة والصحة المهنية والبيئة': 'HSE Management System',
         };
 
         // EN → AR (for when user switches back to Arabic)
         const enToAr = {
             'International Company for Agricultural Production & Processing (ICAPP)': 'الشركة العالمية للانتاج والتصنيع الزراعي',
             'HSE Department': 'إدارة السلامة والصحة المهنية والبيئة',
-            'Health, Safety & Environment (HSE)': 'السلامة والصحة المهنية والبيئة',
+            'Health, Safety & Environment (HSE)': 'إدارة السلامة والصحة المهنية والبيئة',
             'Occupational Safety & Health': 'السلامة والصحة المهنية',
             'Occupational Safety System': 'نظام السلامة المهنية',
-            'HSE Management System': 'نظام إدارة السلامة والصحة المهنية',
         };
 
         if (lang === 'en') {
@@ -3732,7 +3729,7 @@ window.UI = {
                 }
             }
             if (norm.includes('إدارة السلامة') || norm.includes('ادارة السلامة') || norm.includes('السلامة والصحة')) {
-                return 'HSE Department';
+                return 'Health, Safety & Environment (HSE)';
             }
             if (norm.includes('الشركة العالمية')) {
                 return 'International Company for Agricultural Production & Processing (ICAPP)';
@@ -3846,7 +3843,7 @@ window.UI = {
 
         const mobileCompanyName = document.getElementById('mobile-company-name');
         if (mobileCompanyName) {
-            mobileCompanyName.textContent = resolvedNameTranslated || (lang === 'en' ? 'Safety System' : 'نظام السلامة المهنية');
+            mobileCompanyName.textContent = resolvedNameTranslated || 'SafetyHub | ICAPP';
             mobileCompanyName.style.fontSize = `${nameFontSize}px`;
         }
     },
@@ -3997,12 +3994,12 @@ window.UI = {
             if (icon && icon.tagName === 'I') {
                 // استبدال <i> القديم بأيقونة Home SVG (يعمل حتى على الصفحات المخبأة القديمة)
                 const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                svg.setAttribute('width', '22');
-                svg.setAttribute('height', '22');
+                svg.setAttribute('width', '28');
+                svg.setAttribute('height', '28');
                 svg.setAttribute('viewBox', '0 0 24 24');
                 svg.setAttribute('aria-hidden', 'true');
                 svg.style.cssText = 'display:block;flex-shrink:0';
-                svg.innerHTML = '<rect x="0" y="0" width="24" height="24" rx="5" fill="#4A90E2"/><path d="M 12,4 L 19,10 L 18,10 L 18,17 L 24,23 L 24,24 L 0,24 L 0,17 L 6,17 L 6,10 L 5,10 Z" fill="rgba(0,0,55,0.15)"/><polygon points="12,4 5,10 19,10" fill="white"/><rect x="6" y="10" width="12" height="7" rx="0.5" fill="white"/>';
+                svg.innerHTML = '<rect x="0" y="0" width="24" height="24" rx="5" fill="#4A90E2"/><path d="M 12,4 L 19,10 L 18,10 L 18,17 L 24,23 L 24,24 L 0,24 L 0,17 L 6,17 L 6,10 L 5,10 Z" fill="rgba(0,0,55,0.15)"/><polygon points="12,4 5,10 19,10" fill="white"/><rect x="6" y="10" width="12" height="7" rx="0.5" fill="white"/><rect x="10" y="14.5" width="4" height="2.5" rx="0.7" fill="#4A90E2"/>';
                 icon.replaceWith(svg);
             }
         }
@@ -4586,7 +4583,7 @@ window.UI = {
                                 id="forgot-password-email" 
                                 required
                                 class="form-input"
-                                placeholder="example@americana.com"
+                                placeholder="example@icapp.com.eg"
                                 autocomplete="email"
                             >
                         </div>
@@ -4676,12 +4673,25 @@ window.UI = {
     showHelpModal() {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
+        const helpLang = localStorage.getItem('language') || 'ar';
+        const helpCopy = helpLang === 'en' ? {
+            title: 'Help', signIn: 'How to sign in', signInSteps: ['Enter your registered email address', 'Enter your password', 'Enable “Remember me” to sign in automatically next time', 'Select “Log in”'],
+            reset: 'Reset your password', resetSteps: ['Select “Forgot password?” below the password field', 'Enter your registered email address', 'Select “Send”', 'You will receive a password reset link by email', 'Follow the email instructions to reset your password'],
+            guide: 'Complete system guide', guideText: 'After signing in, you can find detailed guidance for every module under <strong>Help</strong> in the sidebar (above Settings).',
+            issue: 'If you experience a problem', issueText: 'Please contact the system administrator at:', close: 'Close'
+        } : {
+            title: 'مساعدة', signIn: 'كيفية تسجيل الدخول', signInSteps: ['أدخل بريدك الإلكتروني المسجل في النظام', 'أدخل كلمة المرور الخاصة بك', 'يمكنك تفعيل خيار "تذكرني" لتسجيل الدخول تلقائياً في المرة القادمة', 'اضغط على زر "تسجيل الدخول"'],
+            reset: 'استرجاع كلمة المرور', resetSteps: ['اضغط على رابط "نسيت كلمة المرور؟" الموجود أسفل حقل كلمة المرور', 'أدخل بريدك الإلكتروني المسجل في النظام', 'اضغط على زر "إرسال"', 'ستتلقى رابط إعادة تعيين كلمة المرور على بريدك الإلكتروني', 'اتبع التعليمات في البريد الإلكتروني لإعادة تعيين كلمة المرور'],
+            guide: 'دليل النظام الكامل', guideText: 'بعد تسجيل الدخول ستجد شرحاً تفصيلياً لكل الموديولات في <strong>المساعدة</strong> من القائمة الجانبية (فوق الإعدادات).',
+            issue: 'في حالة وجود أي مشكلة', issueText: 'يُرجى التواصل مع مدير النظام على البريد التالي:', close: 'فهمت'
+        };
+        const renderSteps = (items) => items.map(item => `<li>${item}</li>`).join('');
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 500px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-question-circle ml-2"></i>
-                        مساعدة / Help
+                        ${helpCopy.title}
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
@@ -4692,47 +4702,40 @@ window.UI = {
                         <div>
                             <h3 class="text-lg font-semibold text-gray-800 mb-2">
                                 <i class="fas fa-sign-in-alt ml-2 text-blue-600"></i>
-                                كيفية تسجيل الدخول
+                                ${helpCopy.signIn}
                             </h3>
                             <ol class="list-decimal list-inside space-y-2 text-gray-700 text-sm mr-4">
-                                <li>أدخل بريدك الإلكتروني المسجل في النظام</li>
-                                <li>أدخل كلمة المرور الخاصة بك</li>
-                                <li>يمكنك تفعيل خيار "تذكرني" لتسجيل الدخول تلقائياً في المرة القادمة</li>
-                                <li>اضغط على زر "تسجيل الدخول"</li>
+                                ${renderSteps(helpCopy.signInSteps)}
                             </ol>
                         </div>
                         
                         <div class="border-t pt-4">
                             <h3 class="text-lg font-semibold text-gray-800 mb-2">
                                 <i class="fas fa-key ml-2 text-blue-600"></i>
-                                استرجاع كلمة المرور
+                                ${helpCopy.reset}
                             </h3>
                             <ol class="list-decimal list-inside space-y-2 text-gray-700 text-sm mr-4">
-                                <li>اضغط على رابط "نسيت كلمة المرور؟" الموجود أسفل حقل كلمة المرور</li>
-                                <li>أدخل بريدك الإلكتروني المسجل في النظام</li>
-                                <li>اضغط على زر "إرسال"</li>
-                                <li>ستتلقى رابط إعادة تعيين كلمة المرور على بريدك الإلكتروني</li>
-                                <li>اتبع التعليمات في البريد الإلكتروني لإعادة تعيين كلمة المرور</li>
+                                ${renderSteps(helpCopy.resetSteps)}
                             </ol>
                         </div>
                         
                         <div class="border-t pt-4 bg-teal-50 border border-teal-200 rounded-lg p-4">
                             <h3 class="text-sm font-semibold text-teal-800 mb-2">
                                 <i class="fas fa-book ml-2"></i>
-                                دليل النظام الكامل
+                                ${helpCopy.guide}
                             </h3>
                             <p class="text-sm text-teal-700">
-                                بعد تسجيل الدخول ستجد شرحاً تفصيلياً لكل الموديولات في <strong>المساعدة</strong> من القائمة الجانبية (فوق الإعدادات).
+                                ${helpCopy.guideText}
                             </p>
                         </div>
                         
                         <div class="border-t pt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                             <h3 class="text-sm font-semibold text-yellow-800 mb-2">
                                 <i class="fas fa-envelope ml-2"></i>
-                                في حالة وجود أي مشكلة
+                                ${helpCopy.issue}
                             </h3>
                             <p class="text-sm text-yellow-700 mb-2">
-                                يُرجى التواصل مع مدير النظام على البريد التالي:
+                                ${helpCopy.issueText}
                             </p>
                             <a href="mailto:Yasser.diab@icapp.com.eg" class="text-yellow-600 hover:text-yellow-800 font-semibold hover:underline inline-flex items-center">
                                 <i class="fas fa-envelope ml-2"></i>
@@ -4744,7 +4747,7 @@ window.UI = {
                     <div class="flex justify-center mt-6">
                         <button type="button" class="btn-primary" onclick="this.closest('.modal-overlay').remove()">
                             <i class="fas fa-check ml-2"></i>
-                            فهمت
+                            ${helpCopy.close}
                         </button>
                     </div>
                 </div>
@@ -7590,8 +7593,8 @@ window.UI = {
         homeIcon.className = 'main-menu-icon';
         homeIcon.setAttribute('aria-label', isRTL ? 'القائمة الرئيسية' : 'Main Menu');
         homeIcon.setAttribute('title', isRTL ? 'القائمة الرئيسية' : 'Main Menu');
-        homeIcon.innerHTML = '<i class="fas fa-th-large"></i>';
-        homeIcon.style.cssText = 'width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: var(--primary-color); color: white; border-radius: 12px; cursor: pointer; transition: all 0.3s ease; box-shadow: var(--shadow-md); border: none; font-size: 1.25rem; flex-shrink: 0;';
+        homeIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" aria-hidden="true" style="display:block;flex-shrink:0"><rect x="0" y="0" width="24" height="24" rx="5" fill="#4A90E2"/><path d="M 12,4 L 19,10 L 18,10 L 18,17 L 24,23 L 24,24 L 0,24 L 0,17 L 6,17 L 6,10 L 5,10 Z" fill="rgba(0,0,55,0.15)"/><polygon points="12,4 5,10 19,10" fill="white"/><rect x="6" y="10" width="12" height="7" rx="0.5" fill="white"/><rect x="10" y="14.5" width="4" height="2.5" rx="0.7" fill="#4A90E2"/></svg>';
+        homeIcon.style.cssText = 'width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: var(--btn-primary-bg); color: white; border-radius: 12px; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; box-shadow: 0 2px 8px rgba(var(--sidebar-shadow-rgb), 0.2); border: none; flex-shrink: 0;';
 
         // إضافة معالج الأحداث لأيقونة القائمة الرئيسية
         homeIcon.addEventListener('click', (e) => {
@@ -7603,11 +7606,13 @@ window.UI = {
         // إضافة تأثيرات hover
         homeIcon.addEventListener('mouseenter', function () {
             this.style.transform = 'translateY(-2px)';
-            this.style.boxShadow = 'var(--shadow-lg)';
+            this.style.boxShadow = '0 4px 12px rgba(var(--sidebar-shadow-rgb), 0.3)';
+            this.style.background = 'var(--btn-primary-bg-hover)';
         });
         homeIcon.addEventListener('mouseleave', function () {
             this.style.transform = 'translateY(0)';
-            this.style.boxShadow = 'var(--shadow-md)';
+            this.style.boxShadow = '0 2px 8px rgba(var(--sidebar-shadow-rgb), 0.2)';
+            this.style.background = 'var(--btn-primary-bg)';
         });
 
         // إنشاء أيقونة العودة للقائمة السابقة
@@ -9936,6 +9941,92 @@ window.UI = {
                 Utils.safeWarn('⚠️ تنبيهات طلبات الحضور في الإشعارات:', clinicToErr);
             }
 
+            // 7c. سير موافقات العيادة — طلبات الاحتياجات للمدير ونتائج الطلبات لصاحبها
+            try {
+                const cu = AppState.currentUser || {};
+                const normalizeKey = (value) => String(value || '').trim().toLowerCase();
+                const currentKeys = [cu.id, cu.userId, cu.email].map(normalizeKey).filter(Boolean);
+                const isOwnRequest = (request, kind) => {
+                    if (!request || currentKeys.length === 0) return false;
+                    const owner = kind === 'supply' ? (request.requestedBy || {}) : request;
+                    const keys = kind === 'supply'
+                        ? [request.requestedById, request.requestedByEmail, owner.id, owner.userId, owner.email]
+                        : [request.userId, request.userEmail, request.staffId];
+                    return keys.map(normalizeKey).filter(Boolean).some(key => currentKeys.includes(key));
+                };
+                const openClinicTab = (tab) => {
+                    try {
+                        document.querySelector('a[data-section="clinic"]')?.click();
+                        setTimeout(() => {
+                            if (typeof Clinic === 'undefined') return;
+                            Clinic.state = Clinic.state || {};
+                            Clinic.state.activeTab = tab;
+                            if (typeof Clinic.renderUI === 'function') Clinic.renderUI();
+                        }, 400);
+                    } catch (_e) { /* ignore */ }
+                };
+                const isAdminUser = (cu.role === 'admin') ||
+                    (typeof Permissions !== 'undefined' && Permissions.isCurrentUserAdmin && Permissions.isCurrentUserAdmin());
+                const supplyRequests = Array.isArray(AppState.appData?.clinicSupplyRequests)
+                    ? AppState.appData.clinicSupplyRequests : [];
+                const timeOffRequests = Array.isArray(AppState.appData?.clinicStaffTimeOffRequests)
+                    ? AppState.appData.clinicStaffTimeOffRequests : [];
+
+                if (isAdminUser) {
+                    supplyRequests
+                        .filter(request => request && normalizeKey(request.status || 'pending') === 'pending')
+                        .forEach(request => {
+                            const notificationId = 'clinic-supply-' + (request.id || Date.now());
+                            if (readNotifications.includes(notificationId)) return;
+                            const owner = request.requestedBy || {};
+                            const who = request.requestedByName || owner.name || owner.email || 'مستخدم العيادة';
+                            const quantity = request.quantity ? `${request.quantity} ${request.unit || 'وحدة'}` : '';
+                            notifications.push({
+                                id: notificationId,
+                                type: request.priority === 'urgent' ? 'warning' : 'approval',
+                                title: 'طلب احتياجات جديد — العيادة',
+                                message: `${who}: ${request.itemName || 'صنف غير محدد'}${quantity ? ' — ' + quantity : ''}`,
+                                time: request.createdAt || request.requestDate || new Date(),
+                                icon: 'fa-box-medical',
+                                onClick: () => openClinicTab('approvals')
+                            });
+                        });
+                }
+
+                const resultMeta = {
+                    approved: { label: 'تمت الموافقة', type: 'success', icon: 'fa-circle-check' },
+                    rejected: { label: 'تم الرفض', type: 'error', icon: 'fa-circle-xmark' }
+                };
+                const addOwnerResult = (request, kind) => {
+                    const status = normalizeKey(request?.status);
+                    const meta = resultMeta[status];
+                    if (!meta || !isOwnRequest(request, kind)) return;
+                    const requestId = request.id || Date.now();
+                    const notificationId = `clinic-${kind}-result-${requestId}-${status}`;
+                    if (readNotifications.includes(notificationId)) return;
+                    const isSupply = kind === 'supply';
+                    const typeLabels = { leave: 'الإجازة', permission: 'الإذن', overtime: 'العمل الإضافي' };
+                    const subject = isSupply
+                        ? (request.itemName || 'طلب الاحتياجات')
+                        : (typeLabels[normalizeKey(request.requestType)] || 'طلب الحضور');
+                    const reason = status === 'rejected'
+                        ? (request.rejectionReason || request.reviewNotes || '') : '';
+                    notifications.push({
+                        id: notificationId,
+                        type: meta.type,
+                        title: `${meta.label} على ${isSupply ? 'طلب الاحتياجات' : 'طلب الحضور'}`,
+                        message: `${subject}${reason ? ' — السبب: ' + String(reason).slice(0, 100) : ''}`,
+                        time: request.reviewedAt || request.approvedAt || request.rejectedAt || request.updatedAt || new Date(),
+                        icon: meta.icon,
+                        onClick: () => openClinicTab(isSupply ? 'supply-request' : 'attendance')
+                    });
+                };
+                timeOffRequests.forEach(request => addOwnerResult(request, 'timeoff'));
+                supplyRequests.forEach(request => addOwnerResult(request, 'supply'));
+            } catch (clinicWorkflowErr) {
+                Utils.safeWarn('⚠️ تنبيهات سير موافقات العيادة:', clinicWorkflowErr);
+            }
+
             // ترتيب الإشعارات حسب التاريخ (الأحدث أولاً)
             notifications.sort((a, b) => {
                 const dateA = new Date(a.time);
@@ -10288,6 +10379,7 @@ window.UI = {
         }
 
         this._backgroundSyncInterval = setInterval(() => {
+            if (document.hidden) return;
             if (!AppState.currentUser ||
                 (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && !Utils.hasCloudBackendSync())) {
                 this.stopBackgroundSync();
@@ -11085,7 +11177,7 @@ window.UI = {
                 'login-label-email-text': 'البريد الإلكتروني',
                 'login-label-password-text': 'كلمة المرور',
                 'login-submit-text': 'تسجيل الدخول',
-                'login-help-text': 'مساعدة / Help',
+                'login-help-text': 'مساعدة',
                 'login-forgot-text': 'نسيت كلمة المرور؟',
                 'current-lang-text': 'العربية'
             },

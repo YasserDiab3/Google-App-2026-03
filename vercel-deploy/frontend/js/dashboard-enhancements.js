@@ -306,12 +306,7 @@
             const insideNoGlow = Array.from(noGlowContainers).some(container => container.contains(element));
             const isTopKpiGridCard = element.parentElement && element.parentElement.classList.contains('kpi-grid');
             if (insideNoGlow || isTopKpiGridCard) return;
-            setInterval(() => {
-                element.style.boxShadow = '0 0 30px rgba(245, 87, 108, 0.5)';
-                setTimeout(() => {
-                    element.style.boxShadow = '';
-                }, 1000);
-            }, 3000);
+            element.classList.add('hse-pulse-glow');
         });
     }
 
@@ -463,28 +458,11 @@
         });
     }
 
-    // مرجع للـ interval للتنظيف
-    let realtimeDataInterval = null;
-
-    /**
-     * تحديث الوقت الحقيقي
-     */
     function updateRealTimeData() {
-        // تنظيف الـ interval القديم إذا كان موجوداً
         if (realtimeDataInterval) {
             clearInterval(realtimeDataInterval);
             realtimeDataInterval = null;
         }
-
-        realtimeDataInterval = setInterval(() => {
-            // يمكن تحديث البيانات في الوقت الفعلي هنا
-            // مثال: تحديث عدد المستخدمين النشطين
-            const activeUsersElement = document.getElementById('active-users');
-            if (activeUsersElement) {
-                // تحديث القيمة بشكل عشوائي للتوضيح
-                // في التطبيق الفعلي، يجب جلب البيانات من الخادم
-            }
-        }, 5000);
     }
 
     /**
