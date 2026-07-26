@@ -12057,6 +12057,7 @@ const PTW = {
                     this._t('module.ptw.notify.manualRequiredFieldsDetailed', 'لا يمكن الإرسال قبل استكمال البيانات الأساسية المطلوبة:\n{fields}')
                         .replace('{fields}', missingRequiredFields.map(item => `• ${item.label}`).join('\n'))
                 );
+                this._isSavingManualPermit = false;
                 return;
             }
 
@@ -12305,6 +12306,7 @@ const PTW = {
                     paperPermitInput.focus();
                     paperPermitInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
+                this._isSavingManualPermit = false;
                 return;
             }
 
@@ -12323,7 +12325,61 @@ const PTW = {
                     paperPermitInput.focus();
                     paperPermitInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
+                this._isSavingManualPermit = false;
                 return;
+            }
+
+            // ✅ التحقق من استكمال البيانات والأقسام التكميلية في التصريح اليدوي
+            const incompleteSections = [];
+
+            if (!teamMembers || teamMembers.length === 0) {
+                incompleteSections.push('أسماء وتوقيعات القائمين بالعمل (القسم الرابع)');
+            }
+
+            if (!formData.riskScore) {
+                incompleteSections.push('تقييم المخاطر وتحديد مصفوفة الخطر (القسم الخامس)');
+            }
+
+            const hasIssueApprover = manualApprovals && manualApprovals.some(a => a.name && String(a.name).trim() !== '');
+            if (!hasIssueApprover) {
+                incompleteSections.push('أسماء وتوقيعات معتمدي إصدار التصريح (القسم السابع)');
+            }
+
+            if (!mergedRequiredPPE || mergedRequiredPPE.length === 0) {
+                incompleteSections.push('مهمات الوقاية الشخصية (PPE) المطلوبة (القسم السادس)');
+            }
+
+            const isClosedStatus = ['مغلق', 'اكتمل العمل بشكل آمن', 'ملغى'].includes(formData.status);
+            if (isClosedStatus) {
+                const hasClosureApprover = manualClosureApprovals && manualClosureApprovals.some(a => a.name && String(a.name).trim() !== '');
+                if (!hasClosureApprover) {
+                    incompleteSections.push('اعتمادات وتوقيعات إغلاق التصريح (القسم التاسع)');
+                }
+            }
+
+            if (incompleteSections.length > 0) {
+                const confirmTitle = 'تأكيد حفظ تصريح يدوي غير مكتمل';
+                const confirmMsg = 
+                    'تنبيه: البيانات التالية لم تكتمل بعد في التصريح اليدوي:\n\n' +
+                    incompleteSections.map(s => '• ' + s).join('\n') +
+                    '\n\nهل تريد حفظ التصريح اليدوي رغم عدم استكمال هذه البيانات أم ترغب في التراجع واستكمال البيانات؟';
+
+                let userConfirmed = false;
+                if (typeof Utils !== 'undefined' && typeof Utils.confirmDialog === 'function') {
+                    userConfirmed = await Utils.confirmDialog(
+                        confirmTitle,
+                        confirmMsg,
+                        'نعم، احفظ التصريح',
+                        'إلغاء واستكمال البيانات'
+                    );
+                } else {
+                    userConfirmed = window.confirm(confirmMsg);
+                }
+
+                if (!userConfirmed) {
+                    this._isSavingManualPermit = false;
+                    return;
+                }
             }
 
             // تحويل التاريخ والوقت إلى ISO format

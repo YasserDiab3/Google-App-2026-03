@@ -1127,9 +1127,55 @@ const PTW = {
             // تحديث عرض السجل إذا كان مرئياً
             this.refreshRegistryViewIfVisible();
 
-            // المزامنة مع Google Sheets (فقط إذا لم يتم تخطي المزامنة)
+            // ✅ حماية: لا ترسل بيانات تحتوي على معرفات مؤقتة (TMP) إلى Backend
+            // هذا يمنع إنشاء صفوف في PTWIdMapping عند كل تحميل للصفحة
             if (!skipSync && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
-                await GoogleIntegration.autoSave('PTWRegistry', this.registryData);
+                // فلترة السجلات التي تحتوي على TMP IDs — لا ترسل إلى Backend
+                const hasTmpId = (record) => {
+                    const id = String(record?.id || '').trim();
+                    const permitId = String(record?.permitId || '').trim();
+                    return id.includes('_TMP_') || permitId.includes('_TMP_');
+                };
+                const cleanData = Array.isArray(this.registryData)
+                    ? this.registryData.filter(r => !hasTmpId(r))
+                    : this.registryData;
+                
+                // لا ترسل إذا كل البيانات مؤقتة
+                if (Array.isArray(cleanData) && cleanData.length === 0 && Array.isArray(this.registryData) && this.registryData.length > 0) {
+                    Utils.safeLog('⚠️ saveRegistryData: تم تخطي المزامنة — جميع السجلات تحتوي على معرفات مؤقتة');
+                    return true;
+                }
+                
+                const saveResult = await GoogleIntegration.autoSave('PTWRegistry', cleanData);
+                if (saveResult && saveResult.resolvedPTWRegistry) {
+                    const resolvedReg = saveResult.resolvedPTWRegistry;
+                    const applyResolvedPermitIds = (newPermitId, registryRow) => {
+                        const pid = String(newPermitId || '').trim();
+                        if (!pid) return;
+                        if (registryRow && registryRow.id && Array.isArray(this.registryData)) {
+                            const index = this.registryData.findIndex(r => String(r.paperPermitNumber || '').trim() === String(registryRow.paperPermitNumber || '').trim());
+                            if (index !== -1) {
+                                this.registryData[index] = { ...this.registryData[index], id: registryRow.id, permitId: pid };
+                            }
+                        }
+                        if (typeof AppState !== 'undefined' && AppState.appData && Array.isArray(AppState.appData.ptw)) {
+                            const paperKey = String(registryRow?.paperPermitNumber || '').trim();
+                            if (paperKey) {
+                                const pi = AppState.appData.ptw.findIndex(p => String(p.paperPermitNumber || '').trim() === paperKey);
+                                if (pi !== -1) {
+                                    AppState.appData.ptw[pi] = { ...AppState.appData.ptw[pi], id: pid };
+                                }
+                            }
+                        }
+                    };
+                    
+                    if (Array.isArray(resolvedReg)) {
+                        resolvedReg.forEach(r => applyResolvedPermitIds(r.permitId, r));
+                    } else if (resolvedReg.permitId) {
+                        applyResolvedPermitIds(resolvedReg.permitId, resolvedReg);
+                    }
+                    this.setPtwRegistryState(this.registryData, 'saveRegistryData_resolved');
+                }
             }
             return true;
         } catch (error) {
@@ -1699,33 +1745,60 @@ const PTW = {
 
     sortPermitRecordsNewestFirst(records) {
         if (!Array.isArray(records)) return [];
-        return [...records].sort((a, b) => {
-            const ka = this.getPermitRecordSortKey(a);
-            const kb = this.getPermitRecordSortKey(b);
+        // استخدام Schwartzian transform لتسريع عملية الفرز ومنع تجمد الصفحة
+        const mapped = records.map(r => ({ record: r, key: this.getPermitRecordSortKey(r) }));
+        mapped.sort((a, b) => {
+            const ka = a.key;
+            const kb = b.key;
             if (kb.seq !== ka.seq) return kb.seq - ka.seq;
             if (kb.createdAt !== ka.createdAt) return kb.createdAt - ka.createdAt;
             if (kb.startAt !== ka.startAt) return kb.startAt - ka.startAt;
             if (kb.updatedAt !== ka.updatedAt) return kb.updatedAt - ka.updatedAt;
-            return String(b.id || b.permitId || '').localeCompare(String(a.id || a.permitId || ''), 'en', { numeric: true });
+            return String(b.record.id || b.record.permitId || '').localeCompare(String(a.record.id || a.record.permitId || ''), 'en', { numeric: true });
         });
+        return mapped.map(m => m.record);
     },
 
     getRegistrySanitizedDataset() {
+        if (Array.isArray(this._registrySanitizedCache)) {
+            return this._registrySanitizedCache;
+        }
+
         const localRaw = Array.isArray(this.registryData) ? this.registryData : [];
         const stateRaw = Array.isArray(AppState?.appData?.ptwRegistry) ? AppState.appData.ptwRegistry : [];
-        const localReg = this.sanitizePtwRegistryDataset(localRaw, 'metrics.registryData');
-        const stateReg = this.sanitizePtwRegistryDataset(stateRaw, 'metrics.AppState.ptwRegistry');
-        const useState = stateReg.length > localReg.length;
-        const best = useState ? stateReg : (localReg.length > 0 ? localReg : stateReg);
+        
+        // localRaw and stateRaw are already sanitized by setPtwRegistryState.
+        const useState = stateRaw.length > localRaw.length;
+        const best = useState ? stateRaw : (localRaw.length > 0 ? localRaw : stateRaw);
 
-        if (useState && best.length !== localReg.length) {
+        // Sync local and state to ensure consistency
+        if (useState && best.length !== localRaw.length) {
             this.registryData = best;
-        } else if (!useState && localReg.length > stateReg.length) {
+        } else if (!useState && localRaw.length > stateRaw.length) {
             if (!AppState.appData) AppState.appData = {};
-            AppState.appData.ptwRegistry = [...localReg];
+            AppState.appData.ptwRegistry = [...best];
         }
-        this._registrySanitizedCache = best;
-        return best;
+
+        // ✅ Filter out orphaned duplicate entries for UI rendering without altering raw data cache
+        const ptwList = Array.isArray(AppState?.appData?.ptw) ? AppState.appData.ptw : [];
+        
+        if (ptwList.length === 0) {
+            this._registrySanitizedCache = best;
+            return best;
+        }
+
+        const ptwIds = new Set(ptwList.filter(p => p && typeof p === 'object').map(p => String(p.id || '').trim()).filter(Boolean));
+        
+        const filtered = best.filter(entry => {
+            if (!entry) return false;
+            const pid = String(entry.permitId || '').trim();
+            const id = String(entry.id || '').trim();
+            if (entry.isManualEntry === true || entry.isManualEntry === 'true') return true;
+            return ptwIds.has(pid) || ptwIds.has(id);
+        });
+
+        this._registrySanitizedCache = filtered;
+        return filtered;
     },
 
     _getRegistryRowsCached(force = false) {
@@ -2317,6 +2390,7 @@ const PTW = {
             const entry = this.createRegistryEntry(permit);
             if (entry) {
                 this.registryData.push(entry);
+                this._registrySanitizedCache = null;
                 if (!skipSave) await this.saveRegistryData();
                 Utils.safeLog(`✅ تم تسجيل التصريح #${entry.sequentialNumber} في السجل (ID: ${entry.id})`);
             } else {
@@ -2425,6 +2499,7 @@ const PTW = {
         }
 
         this.registryData[entryIndex] = entry;
+        this._registrySanitizedCache = null;
         if (!skipSave) await this.saveRegistryData();
     },
 
@@ -2435,6 +2510,7 @@ const PTW = {
         const entryIndex = this.registryData.findIndex(r => r.permitId === permitId);
         if (entryIndex !== -1) {
             this.registryData.splice(entryIndex, 1);
+            this._registrySanitizedCache = null;
             await this.saveRegistryData();
         }
     },
@@ -2576,6 +2652,8 @@ const PTW = {
 
     /**
      * مزامنة السجل مع التصاريح الموجودة
+     * ✅ هذه الدالة لا تُستدعى تلقائياً عند فتح المديول — فقط يدوياً
+     * لمنع إنشاء صفوف PTWIdMapping عند كل تحميل
      */
     async syncRegistryWithPermits() {
         const permits = AppState.appData.ptw || [];
@@ -2590,7 +2668,8 @@ const PTW = {
                 dirty = true;
             }
         }
-        if (dirty) await this.saveRegistryData();
+        // ✅ skipSync=true: حفظ محلي فقط، لا ترسل TMP IDs إلى Backend
+        if (dirty) await this.saveRegistryData({ skipSync: true });
     },
 
     /** هل توجد بيانات محلية لعرض فوري دون انتظار الخادم؟ */
@@ -2615,7 +2694,11 @@ const PTW = {
             if (this.currentTab === 'registry') this.setupRegistryEventListeners();
         }
         this._registrySanitizedCache = null;
-        this._mountRegistryTableRows(true);
+        if (this.currentTab === 'registry') {
+            this._mountRegistryTableRows(true);
+        } else if (mount) {
+            mount.setAttribute('data-registry-table-pending', '1');
+        }
         registryContent.removeAttribute('data-registry-lazy');
     },
 
@@ -2626,11 +2709,15 @@ const PTW = {
         const mount = document.getElementById('ptw-registry-table-mount');
         if (!mount || rebuildShell) {
             registryContent.innerHTML = this.renderRegistryContent({ tableMode: 'shell' });
-            this.setupRegistryEventListeners();
+            if (this.currentTab === 'registry') this.setupRegistryEventListeners();
         } else {
             this._registrySanitizedCache = null;
         }
-        this._mountRegistryTableRows(force);
+        if (this.currentTab === 'registry') {
+            this._mountRegistryTableRows(force);
+        } else if (mount) {
+            mount.setAttribute('data-registry-table-pending', '1');
+        }
     },
 
     /** تحديث التبويب النشط بعد مزامنة الخادم — دون حجب العرض الأولي */
@@ -2669,17 +2756,11 @@ const PTW = {
                     Utils.safeWarn('⚠️ تعذر تحميل السجل من Backend:', error);
                 }
                 return false;
-            }).then(() => {
-                // مزامنة أولية فقط إذا السجل فارغ (أول استخدام)
-                // بعد أول تحميل ناجح من Backend، السجل يحتوي على البيانات الصحيحة
-                if (Array.isArray(this.registryData) && this.registryData.length === 0) {
-                    return this.syncRegistryWithPermits().catch(error => {
-                        if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                            Utils.safeWarn('⚠️ تعذر مزامنة السجل مع التصاريح:', error);
-                        }
-                    });
-                }
             })
+            // ✅ إصلاح جذري: لا نستدعي syncRegistryWithPermits تلقائياً عند التحميل
+            // السبب: syncRegistryWithPermits تولّد معرفات مؤقتة (TMP) وترسلها للـ Backend
+            // مما يسبب إنشاء صفوف في PTWIdMapping عند كل تحميل للصفحة
+            // المزامنة يجب أن تحدث فقط عند إنشاء/تعديل تصريح يدوياً
         ];
 
         this._ptwBackendLoadPromise = Promise.all(loadDataPromises)
@@ -3004,7 +3085,11 @@ const PTW = {
                         <p class="section-subtitle">${t('module.ptw.subtitle', 'إصدار ومتابعة تصاريح العمل مع دائرة الاعتمادات')}</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button id="add-ptw-btn" class="btn-primary">
+                        <button type="button" id="add-manual-ptw-btn" class="btn-warning" onclick="PTW.openManualPermitForm()">
+                            <i class="fas fa-edit ml-2"></i>
+                            ${t('module.ptw.btn.addManual', 'إضافة تصريح يدوي')}
+                        </button>
+                        <button type="button" id="add-ptw-btn" class="btn-primary" onclick="PTW.showForm()">
                             <i class="fas fa-plus ml-2"></i>
                             ${t('module.ptw.btn.newPermit', 'إصدار تصريح جديد')}
                         </button>
@@ -3041,6 +3126,33 @@ const PTW = {
             </div>
             
             <style id="ptw-scrollbar-styles">
+                /* حدود مساحة PTW: لا تسمح للجدول العريض بتوسيع المديول خلف القائمة الجانبية */
+                #ptw-section,
+                #ptw-section > *,
+                #ptw-tab-content,
+                #ptw-permits-content,
+                #ptw-registry-content,
+                #ptw-analysis-content,
+                #ptw-approvals-content {
+                    width: 100%;
+                    max-width: 100%;
+                    min-width: 0;
+                    box-sizing: border-box;
+                }
+                #ptw-section { overflow-x: hidden; }
+                #ptw-section .section-header > .flex { min-width: 0; }
+                #ptw-section .section-header > .flex > div { min-width: 0; }
+                #ptw-section .section-header > .flex > div:last-child { flex-wrap: wrap; }
+                #ptw-section .content-card,
+                #ptw-section .card-body { min-width: 0; max-width: 100%; }
+                @media (max-width: 1180px) {
+                    #ptw-section .section-header > .flex { align-items: flex-start; }
+                    #ptw-section .section-header > .flex > div:last-child { width: 100%; }
+                }
+                @media (max-width: 640px) {
+                    #ptw-section .section-header > .flex > div:last-child { display: grid; grid-template-columns: 1fr; }
+                    #ptw-section .section-header > .flex > div:last-child > button { width: 100%; }
+                }
                 /* فلتر احترافي أعلى الجدول (مميز كالملاحظات اليومية) */
                 .ptw-filters-row { position: relative; border-bottom: 1px solid #e2e8f0; }
                 .ptw-filters-grid { width: 100%; }
@@ -3063,6 +3175,9 @@ const PTW = {
                     scroll-behavior: smooth;
                     max-height: 70vh;
                     width: 100%;
+                    max-width: 100%;
+                    min-width: 0;
+                    scrollbar-gutter: stable both-edges;
                 }
                 .ptw-table-wrapper .data-table { direction: rtl; text-align: right; }
                 .ptw-table-wrapper::-webkit-scrollbar { width: 12px; height: 12px; }
@@ -3498,12 +3613,14 @@ const PTW = {
                 .ptw-registry-workspace {
                     --ptr-navy:#102a43; --ptr-navy-2:#173d6c; --ptr-cyan:#0891b2; --ptr-blue:#2563eb;
                     --ptr-line:#d9e5f2; --ptr-soft:#f3f8fd; --ptr-ink:#172033; --ptr-muted:#64748b;
-                    display:grid; gap:18px; direction:rtl;
+                    display:grid; gap:18px; direction:rtl; width:100%; max-width:100%; min-width:0;
                 }
+                .ptw-registry-workspace>* { min-width:0; max-width:100%; }
                 .ptw-registry-toolbar { display:flex!important; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:0!important; padding:13px 15px; border:1px solid #bfdbfe; border-radius:16px; background:linear-gradient(120deg,#eff6ff,#f0fdfa); box-shadow:0 7px 20px rgba(30,64,175,.07); }
                 .ptw-registry-toolbar>div { display:flex; flex-wrap:wrap; gap:8px; }
                 .ptw-registry-toolbar button { min-height:40px; border-radius:10px; font-weight:750; box-shadow:0 4px 12px rgba(15,23,42,.09); }
-                .ptw-registry-kpis { margin-bottom:0!important; }
+                .ptw-registry-kpis { display:grid!important; grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr))!important; gap:12px!important; width:100%; min-width:0; margin-bottom:0!important; }
+                .ptw-registry-kpis>.kpi-card { min-width:0; width:100%; padding:18px; }
                 .ptw-registry-filter-card { margin-bottom:0!important; overflow:hidden; border:1px solid #bae6fd; border-radius:18px; box-shadow:0 10px 26px rgba(14,116,144,.08); }
                 .ptw-registry-filter-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:14px 16px; border-bottom:1px solid #bae6fd; background:linear-gradient(125deg,#0f2942,#164e63); color:#fff; }
                 .ptw-registry-filter-title { display:flex; align-items:center; gap:10px; min-width:0; }
@@ -3526,14 +3643,15 @@ const PTW = {
                 .ptw-registry-filter-field .form-input:focus { border-color:#0891b2; box-shadow:0 0 0 3px rgba(8,145,178,.14); background:#fafeff; }
                 .ptw-registry-filter-field.is-active .form-input { border-color:#0891b2; background:#ecfeff; box-shadow:0 0 0 3px rgba(8,145,178,.09); }
                 .ptw-registry-filter-card #registry-filter-count-wrapper { display:none; }
-                .ptw-registry-table-card { overflow:hidden; border:1px solid #cbddeb; border-radius:18px; box-shadow:0 13px 30px rgba(15,42,67,.09); }
+                .ptw-registry-table-card { width:100%; max-width:100%; min-width:0; overflow:hidden; border:1px solid #cbddeb; border-radius:18px; box-shadow:0 13px 30px rgba(15,42,67,.09); }
                 .ptw-registry-table-card>.card-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:15px 17px; border-bottom:0; background:linear-gradient(125deg,var(--ptr-navy),var(--ptr-navy-2)); }
                 .ptw-registry-table-card .card-title { display:flex; align-items:center; gap:8px; margin:0; color:#fff; font-size:1.08rem; font-weight:850; }
                 .ptw-registry-table-card .card-title i { color:#67e8f9; }
                 .ptw-registry-visible-badge { display:inline-flex; align-items:center; gap:5px; padding:6px 10px; border:1px solid rgba(255,255,255,.25); border-radius:999px; color:#dbeafe; background:rgba(255,255,255,.09); font-size:.73rem; font-weight:750; }
                 .ptw-registry-visible-badge strong { color:#fff; font-size:.88rem; }
                 .ptw-registry-table-card>.card-body { padding:0; }
-                .ptw-registry-table-card .table-responsive,.ptw-registry-table-card .ptw-table-wrapper { max-height:min(68vh,720px); overflow:auto; scrollbar-width:thin; scrollbar-color:#94a3b8 #e2e8f0; }
+                .ptw-registry-table-card .table-responsive { width:100%; max-width:100%; min-width:0; max-height:none; margin:0; overflow:visible; background:transparent; }
+                .ptw-registry-table-card .ptw-table-wrapper { width:100%; max-width:100%; min-width:0; max-height:min(68vh,720px); overflow:auto; scrollbar-width:thin; scrollbar-color:#94a3b8 #e2e8f0; scrollbar-gutter:stable both-edges; }
                 .ptw-registry-table { width:max-content!important; min-width:100%; border-collapse:separate!important; border-spacing:0; table-layout:auto; font-size:.79rem; }
                 .ptw-registry-table thead { position:sticky; top:0; z-index:8; }
                 .ptw-registry-table thead th { position:sticky; top:0; z-index:8; min-width:108px; padding:13px 11px!important; border:0!important; border-left:1px solid rgba(255,255,255,.13)!important; color:#f8fafc!important; background:linear-gradient(180deg,#173d6c,#102a43)!important; font-size:.73rem; font-weight:850!important; line-height:1.45; white-space:normal; vertical-align:middle; box-shadow:inset 0 -3px #22d3ee; }
@@ -3548,7 +3666,7 @@ const PTW = {
                 .ptw-registry-table tbody td:nth-child(11),.ptw-registry-table tbody td:nth-child(12) { min-width:150px; }
                 .ptw-registry-table .badge { display:inline-flex; align-items:center; justify-content:center; min-width:105px; padding:6px 9px; border-radius:999px; font-size:.69rem; font-weight:800; white-space:normal; }
                 .ptw-registry-table td:last-child .btn { min-height:33px; border-radius:8px; white-space:nowrap; box-shadow:0 3px 9px rgba(37,99,235,.16); }
-                @media (max-width:1050px) { .ptw-registry-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+                @media (max-width:1050px) { .ptw-registry-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .ptw-registry-table thead th { min-width:98px; padding:11px 9px!important; font-size:.69rem; } .ptw-registry-table tbody td { padding:10px 8px!important; font-size:.73rem; } }
                 @media (max-width:680px) {
                     .ptw-registry-toolbar { align-items:stretch; }
                     .ptw-registry-toolbar>button,.ptw-registry-toolbar>div,.ptw-registry-toolbar>div>button { width:100%; }
@@ -3556,16 +3674,16 @@ const PTW = {
                     .ptw-registry-filter-summary { width:100%; justify-content:space-between; }
                     .ptw-registry-filter-grid { grid-template-columns:1fr; }
                     .ptw-registry-table-card>.card-header { align-items:flex-start; flex-direction:column; }
-                    .ptw-registry-table-card .table-responsive,.ptw-registry-table-card .ptw-table-wrapper { max-height:72vh; }
+                    .ptw-registry-table-card .ptw-table-wrapper { max-height:72vh; }
                 }
                 @media (prefers-reduced-motion:reduce) { .ptw-registry-filter-field .form-input { transition:none; } }
             </style>
             <div class="ptw-registry-workspace">
             <!-- أزرار التصدير والإدخال -->
             <div class="flex justify-between items-center gap-2 mb-4 ptw-registry-toolbar">
-                <button id="ptw-registry-add-manual" class="btn-success">
+                <button type="button" id="ptw-registry-add-manual" class="btn-warning" onclick="PTW.openManualPermitForm()">
                     <i class="fas fa-plus-circle ml-2"></i>
-                    ${t('module.ptw.registry.addManual', 'إضافة تصريح يدوي / Manual Permit Entry')}
+                    ${t('module.ptw.registry.addManual', 'إضافة تصريح يدوي')}
                 </button>
                 <div class="flex gap-2">
                     <button id="ptw-registry-import-excel" class="btn-secondary">
@@ -6625,7 +6743,7 @@ const PTW = {
             // جمع بيانات النموذج
             const formData = this.collectFormDataForPrint();
             const permitId = this.currentEditId || formData.id || 'NEW';
-            const formCode = 'Form ICP (F14-26-01)';
+            const formCode = `PTW-${permitId.substring(0, 8)}`;
             
             // إنشاء محتوى النموذج للطباعة
             const content = this.generatePrintContent(formData);
@@ -7678,7 +7796,7 @@ const PTW = {
                 width: ${w}px !important;
                 max-width: ${w}px !important;
                 margin: 0 !important;
-                padding: 8px !important;
+                padding: 0 !important;
                 background: #fff !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
@@ -7691,46 +7809,9 @@ const PTW = {
                 zoom: 1 !important;
             }
             .ptw-a4-page {
-                width: ${w}px !important;
-                max-width: ${w}px !important;
                 transform: none !important;
                 zoom: 1 !important;
-                overflow: visible !important;
-                box-sizing: border-box !important;
-                padding: 6px 8px !important;
-                page-break-after: always;
-                break-after: page;
             }
-            .ptw-a4-page:last-child { page-break-after: auto; break-after: auto; }
-            .ptw-paper-header-pdf { display: block; padding: 0; background: transparent; border: none; min-height: 0; margin-bottom: 8px; }
-            .ptw-paper-header-table {
-                width: 100%; border-collapse: collapse; table-layout: fixed;
-                background: #1e3a5f; border-radius: 8px;
-                border: 1px solid rgba(255, 255, 255, 0.18);
-            }
-            .ptw-ph-cell {
-                padding: 10px 12px; vertical-align: middle; color: #fff;
-                letter-spacing: 0 !important; word-spacing: normal !important;
-                font-family: 'Cairo', Tahoma, Arial, sans-serif !important;
-            }
-            .ptw-ph-right { width: 38%; text-align: right; }
-            .ptw-ph-center { width: 32%; text-align: center; }
-            .ptw-ph-left { width: 30%; text-align: left; }
-            .ptw-paper-header-company {
-                letter-spacing: 0 !important; word-spacing: normal !important;
-                word-break: keep-all; white-space: nowrap; unicode-bidi: embed; direction: rtl;
-                line-height: 1.35 !important; transform: none !important;
-            }
-            .ptw-paper-header-dept, .ptw-paper-header-form-title {
-                letter-spacing: 0 !important; word-spacing: normal !important;
-                word-break: normal; white-space: normal; unicode-bidi: embed; direction: rtl;
-                line-height: 1.35 !important; transform: none !important;
-            }
-            .ptw-paper-header-form-subtitle { font-size: 11px; letter-spacing: 0.4px !important; direction: ltr; }
-            .ptw-paper-header-form-title { font-size: 16px; font-weight: 800; }
-            .ptw-paper-header-company { font-size: 14px; font-weight: 700; }
-            .ptw-paper-header-dept { font-size: 10px; }
-            .ptw-paper-header-logo { max-height: 48px; max-width: 110px; }
         `;
     },
 
@@ -7743,11 +7824,14 @@ const PTW = {
                 margin: 0 !important;
                 padding: 0 !important;
                 background: #fff !important;
+                font-size: 9.8px !important;
+                line-height: 1.28 !important;
             }
             .ptw-manual-print {
                 width: ${this.PERMIT_A4_WIDTH_PX}px !important;
                 max-width: ${this.PERMIT_A4_WIDTH_PX}px !important;
                 margin: 0 !important;
+                padding: 0 !important;
             }
             .ptw-a4-page {
                 width: 210mm !important;
@@ -7756,7 +7840,7 @@ const PTW = {
                 min-height: 297mm !important;
                 max-height: 297mm !important;
                 box-sizing: border-box;
-                padding: 9px 15px 60px !important;
+                padding: 9px 15px 60px 15px !important;
                 background: #fff;
                 overflow: hidden;
                 position: relative !important;
@@ -7768,10 +7852,22 @@ const PTW = {
                 flex-direction: column;
             }
             .ptw-a4-page:last-child { page-break-after: auto; break-after: auto; }
-            .ptw-a4-page-sections { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+            .ptw-a4-page-sections {
+                flex: 1 1 auto;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                overflow: hidden;
+            }
             .ptw-a4-page-sections .ptw-manual-form-section {
-                min-height: 0; margin: 0 !important; display: flex; flex-direction: column; justify-content: center;
-                page-break-inside: auto !important; break-inside: auto !important;
+                min-height: 0;
+                margin: 0 !important;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                page-break-inside: auto !important;
+                break-inside: auto !important;
             }
             .ptw-a4-page-sections-1 .manual-section-1 { flex: 2.35 1 0; }
             .ptw-a4-page-sections-1 .manual-section-2 { flex: .82 1 0; }
@@ -7783,71 +7879,101 @@ const PTW = {
             .ptw-a4-page-sections-2 .manual-section-8 { flex: 1.06 1 0; }
             .ptw-a4-page-sections-2 .manual-section-9 { flex: 1.12 1 0; }
             .ptw-a4-page-sections-2 .manual-section-10 { flex: .72 1 0; }
-            .ptw-paper-header { padding: 12px 14px; min-height: 68px; border-radius: 8px; }
-            .ptw-paper-header-pdf { display: block; padding: 0; background: transparent; border: none; min-height: 0; margin-bottom: 8px; }
-            .ptw-paper-header-table { width: 100%; border-collapse: collapse; table-layout: fixed; background: #1e3a5f; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.18); }
-            .ptw-ph-cell { padding: 10px 12px; vertical-align: middle; color: #fff; letter-spacing: 0 !important; word-spacing: normal; }
+            .ptw-paper-header { padding: 4px 6px; min-height: 0; border-radius: 6px; margin-bottom: 2px; }
+            .ptw-paper-header-pdf { display: block; padding: 0; background: transparent; border: none; min-height: 0; margin-bottom: 2px; }
+            .ptw-paper-header-table { width: 100%; border-collapse: collapse; table-layout: fixed; background: #1e3a5f; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.18); }
+            .ptw-ph-cell { padding: 4px 5px; vertical-align: middle; color: #fff; letter-spacing: 0 !important; word-spacing: normal; }
             .ptw-ph-right { width: 38%; text-align: right; }
             .ptw-ph-center { width: 32%; text-align: center; }
             .ptw-ph-left { width: 30%; text-align: left; }
-            .ptw-paper-header-company {
-                letter-spacing: 0 !important; word-break: keep-all; white-space: nowrap; unicode-bidi: embed;
+            .ptw-paper-header-company { letter-spacing: 0 !important; word-break: keep-all; white-space: nowrap; unicode-bidi: embed; font-size: 12px; }
+            .ptw-paper-header-dept, .ptw-paper-header-form-title { letter-spacing: 0 !important; word-break: normal; white-space: normal; unicode-bidi: embed; }
+            .ptw-paper-header-form-subtitle { font-size: 9px; letter-spacing: 0.2px !important; }
+            .ptw-paper-header-form-title { font-size: 13px; padding-bottom: 2px; margin-bottom: 2px; }
+            .ptw-paper-header-dept { font-size: 8px; }
+            .ptw-paper-header-logo { max-height: 32px; max-width: 80px; }
+            .manual-print-disclaimer-wrap { margin-bottom: 2px; border-width: 1px; }
+            .manual-print-disclaimer-text { font-size: 8.5px; line-height: 1.25; padding: 2px 4px; }
+            .manual-print-permit-no { padding: 2px; gap: 3px; }
+            .manual-print-seq-badge { padding: 3px 10px; border-radius: 4px; }
+            .manual-print-seq-badge .lbl { font-size: 8px; }
+            .manual-print-seq-badge .val { font-size: 14px; letter-spacing: 1px; }
+            .manual-print-paper-no { font-size: 10px; }
+            
+            .manual-section-7 .ptw-paper-grid-table,
+            .manual-section-9 .ptw-paper-grid-table {
+                flex: 1;
             }
-            .ptw-paper-header-dept, .ptw-paper-header-form-title {
-                letter-spacing: 0 !important; word-break: normal; white-space: normal; unicode-bidi: embed;
-            }
-            .ptw-paper-header-form-subtitle { font-size: 11px; letter-spacing: 0.4px !important; }
-            .ptw-paper-header-form-title { font-size: 16px; }
-            .ptw-paper-header-company { font-size: 14px; }
-            .ptw-paper-header-dept { font-size: 10px; }
-            .ptw-paper-header-logo { max-height: 48px; max-width: 110px; }
-            .manual-print-disclaimer-wrap { margin-bottom: 8px; }
-            .manual-print-disclaimer-text { font-size: 11px; line-height: 1.6; padding: 10px; }
-            .manual-print-permit-no { padding: 10px; }
-            .manual-print-seq-badge { padding: 8px 20px; }
-            .manual-print-seq-badge .val { font-size: 20px; letter-spacing: 1px; }
-            .ptw-manual-form-section { margin: 5px 0; padding: 9px 11px; border-radius: 8px; page-break-inside: auto; break-inside: auto; }
-            .ptw-manual-form-section h3 { font-size: 12px; margin-bottom: 7px; padding-bottom: 5px; display: block; }
-            .manual-print-field .lbl { font-size: 9px; }
-            .manual-print-field .val { font-size: 10px; }
-            .manual-print-grid { gap: 7px; }
-            .ptw-paper-grid-table { font-size: 9px; }
-            .ptw-paper-grid-table th, .ptw-paper-grid-table td { padding: 4px 5px; }
-            .ptw-manual-ppe-fixed-row { gap: 4px 3px; margin-bottom: 4px; }
-            .ptw-manual-ppe-cell { font-size: 8.5px; padding: 4px 3px; min-height: 24px; line-height: 1.3; letter-spacing: 0; }
-            .ppe-checkbox { width: 11px; height: 11px; border-width: 1.5px; }
-            .ppe-checkbox.checked::after { left: 2px; top: 0; width: 3px; height: 6px; }
-            .manual-risk-matrix { font-size: 8.5px; }
-            .manual-risk-matrix th, .manual-risk-matrix td { padding: 3px; }
-            .manual-risk-badge { width: 40px; height: 40px; font-size: 14px; }
-            .manual-print-req-item { font-size: 9px; padding: 5px; }
-            .manual-print-supervisor-card { padding: 9px 11px; }
-            .manual-print-supervisor-card .val { font-size: 11px; }
-            .manual-work-block { padding: 7px; margin-bottom: 5px; }
-            .manual-work-block h4 { font-size: 11px; margin-bottom: 4px; }
+
+            .ptw-manual-form-section { margin: 10px 0 12px 0 !important; padding: 6px 8px !important; border-radius: 4px; border-width: 1.2px; page-break-inside: avoid !important; break-inside: avoid !important; }
+            .ptw-manual-form-section h3 { font-size: 10.5px; margin: 0 0 5px 0 !important; padding-bottom: 3px !important; gap: 4px; }
+            .manual-print-field { padding: 3px 4px; border-radius: 3px; }
+            .manual-print-field .lbl { font-size: 8px; margin-bottom: 1px; }
+            .manual-print-field .val { font-size: 9px; }
+            .manual-print-grid { gap: 4px; }
+            .manual-print-req-grid { gap: 4px; }
+            .manual-print-req-item { font-size: 8.5px; padding: 2px 3px; border-radius: 3px; }
+            .ptw-paper-grid-table { font-size: 8.5px; }
+            .ptw-paper-grid-table th, .ptw-paper-grid-table td { padding: 3px 4px; }
+            .ptw-paper-grid-table thead th { font-size: 8.8px; }
+            .ptw-manual-ppe-print-matrix, .ptw-manual-equipment-print-matrix { padding: 4px 4px; border-radius: 4px; }
+            .ptw-manual-ppe-fixed-row, .ptw-manual-equipment-fixed-row { gap: 3px 2px; margin-bottom: 3px; }
+            .ptw-manual-ppe-cell, .ptw-manual-equipment-cell { font-size: 7.5px; padding: 1.5px 2px; min-height: 15px; line-height: 1.2; letter-spacing: 0; border-width: 1px; border-radius: 3px; gap: 2px; }
+            .ppe-checkbox, .equipment-checkbox { width: 8px; height: 8px; border-width: 1px; }
+            .ppe-checkbox.checked::after, .equipment-checkbox.checked::after { left: 1.5px; top: 0.5px; width: 3px; height: 5px; border-width: 0 1.5px 1.5px 0; }
+            .ptw-manual-ppe-notes-print, .ptw-manual-equipment-notes-print { margin-top: 4px; padding: 3px 5px; border-radius: 4px; }
+            .ptw-manual-ppe-notes-print .lbl, .ptw-manual-equipment-notes-print .lbl { font-size: 8.5px; margin-bottom: 1.5px; }
+            .ptw-manual-ppe-notes-print .val, .ptw-manual-equipment-notes-print .val { font-size: 9.5px; }
+            .manual-risk-matrix { font-size: 8px; }
+            .manual-risk-matrix th, .manual-risk-matrix td { padding: 2px 2px; }
+            .manual-risk-matrix .risk-cell { padding: 3px 2px; }
+            .manual-risk-summary { margin-top: 4px; padding: 4px 6px; gap: 6px; border-radius: 4px; }
+            .manual-risk-badge { width: 24px; height: 24px; font-size: 10px; }
+            .manual-risk-summary div { font-size: 9px; }
+            .manual-work-block { padding: 4px 5px; margin-bottom: 3px; border-radius: 4px; }
+            .manual-work-block h4 { font-size: 10px; margin: 0 0 3px 0; }
+            .manual-status-pill { padding: 2.5px 6px; font-size: 9px; }
+            .manual-print-supervisors-grid { gap: 5px; }
+            .manual-print-supervisor-card { padding: 3px 4px; border-radius: 4px; }
+            .manual-print-supervisor-card .lbl { font-size: 8px; margin-bottom: 2px; }
+            .manual-print-supervisor-card .val { font-size: 9px; }
+            .ptw-paper-grid-table .approval-name-cell,
+            .ptw-paper-grid-table .approval-sig-cell { min-height: 18px; }
             .ptw-paper-footer {
-                position: absolute !important; bottom: 9px !important; left: 15px !important; right: 15px !important;
-                margin-top: 0 !important; padding-top: 4px; border-top: 1px dashed #cbd5e1;
+                position: absolute !important;
+                bottom: 9px !important;
+                left: 15px !important;
+                right: 15px !important;
+                margin-top: 0 !important;
+                border-top: 1px dashed #cbd5e1;
+                page-break-inside: avoid;
+                break-inside: avoid;
             }
             .ptw-a4-page.ptw-page-tight { font-size: 9.2px !important; line-height: 1.18 !important; }
             .ptw-a4-page.ptw-page-tight .ptw-a4-page-sections { gap: 2px; }
             .ptw-a4-page.ptw-page-tight .ptw-manual-form-section { padding: 4px 6px !important; }
             .ptw-a4-page.ptw-page-tight .ptw-manual-form-section h3 { font-size: 9.5px; margin-bottom: 3px !important; padding-bottom: 2px !important; }
+            .ptw-a4-page.ptw-page-tight .manual-print-field,
+            .ptw-a4-page.ptw-page-tight .manual-work-block { padding: 2px 3px; }
+            .ptw-a4-page.ptw-page-tight .ptw-paper-grid-table th,
+            .ptw-a4-page.ptw-page-tight .ptw-paper-grid-table td { padding: 2px 3px; }
             .ptw-a4-page.ptw-page-ultra-tight { font-size: 8.4px !important; line-height: 1.12 !important; }
             .ptw-a4-page.ptw-page-ultra-tight .ptw-manual-form-section { padding: 3px 5px !important; }
+            .ptw-a4-page.ptw-page-ultra-tight .manual-print-field .val,
+            .ptw-a4-page.ptw-page-ultra-tight .manual-print-supervisor-card .val { font-size: 8px; }
             .ptw-paper-footer-frame {
                 background: linear-gradient(135deg, rgba(59, 130, 246, 0.03), rgba(37, 99, 235, 0.05));
-                border: 1.5px solid rgba(59, 130, 246, 0.15); border-radius: 8px; padding: 8px 12px;
+                border: 1px solid rgba(59, 130, 246, 0.1); border-radius: 4px; padding: 4px 6px;
             }
             .ptw-paper-footer-meta {
-                display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 10px;
-                font-size: 9px; color: #475569; font-weight: 600; padding-bottom: 6px;
-                border-bottom: 1px dashed rgba(148, 163, 184, 0.45); letter-spacing: 0;
+                display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px;
+                font-size: 8.5px; color: #475569; font-weight: 600; padding-bottom: 3px;
+                border-bottom: 1px dashed rgba(148, 163, 184, 0.3); letter-spacing: 0;
             }
             .ptw-pf-item { white-space: nowrap; }
             .ptw-paper-footer-company {
-                display: flex; flex-direction: column; align-items: center; gap: 2px;
-                margin-top: 6px; font-size: 9px; color: #334155; font-weight: 600; letter-spacing: 0;
+                display: flex; flex-direction: column; align-items: center; gap: 1.5px;
+                margin-top: 3px; font-size: 8.5px; color: #334155; font-weight: 600; letter-spacing: 0;
             }
         ` : '';
         return `
@@ -8057,14 +8183,16 @@ const PTW = {
             }
             .ptw-paper-grid-table .approval-name-cell,
             .ptw-paper-grid-table .approval-sig-cell {
-                min-height: 28px; font-weight: 500; color: #111827;
+                min-height: 22px; font-weight: 500; color: #111827;
             }
             @media print {
-                body { padding: 6px; font-size: 10px; }
-                .ptw-manual-form-section { page-break-inside: auto; break-inside: auto; margin: 6px 0; padding: 10px; }
-                .manual-section-7 { page-break-before: always; break-before: page; }
+                body { padding: 2px; font-size: 10px; }
+                .ptw-manual-form-section { page-break-inside: avoid !important; break-inside: avoid !important; margin: 4px 0; padding: 6px; }
                 .ptw-manual-ppe-fixed-row { gap: 6px 3px; }
                 .ptw-paper-footer { page-break-inside: avoid; break-inside: avoid; }
+                table, .manual-risk-matrix { page-break-inside: avoid; break-inside: avoid; }
+                tr, td, th { page-break-inside: avoid; break-inside: avoid; }
+                .ptw-paper-grid-table { page-break-inside: avoid; break-inside: avoid; }
             }
             ${a4Overrides}
         `;
@@ -8424,7 +8552,9 @@ const PTW = {
         }
         const page1Content = `<div class="ptw-a4-page-sections ptw-a4-page-sections-1">${content.slice(0, splitPos)}</div>`;
         const page2Content = `<div class="ptw-a4-page-sections ptw-a4-page-sections-2">${content.slice(splitPos)}</div>`;
-        return `${wrapPage(`${header}${page1Content}`, 1)}${wrapPage(page2Content, 2)}`;
+        const page1 = wrapPage(`${header}${page1Content}`, 1);
+        const page2 = wrapPage(page2Content, 2);
+        return `${page1}${page2}`;
     },
 
     _verifyManualPermitExportHtml_(html) {
@@ -8463,14 +8593,31 @@ const PTW = {
         return review;
     },
 
-    generateManualPermitPrintHTML(entry, options = {}) {
-        const pdfExport = options?.pdfExport === true;
+    async generateManualPermitPrintHTML(entry, options = {}) {
+        const pdfExport = true; // Always force split and page styling for identical print/pdf layout
         const content = this.generateManualPermitPrintContent(entry);
         const displayNo = this.getPermitDisplayNumber(entry);
+        
+        let formCode = entry?.isoCode || 'Form ICP (F14-26-01)';
+        let issueDate = entry?.createdAt || entry?.timeFrom;
+        let revisionDate = entry?.updatedAt || entry?.timeTo || entry?.createdAt;
+        let isoVersion = null;
+        
+        try {
+            if (typeof ISO !== 'undefined' && typeof ISO.getFormCodeDetails === 'function') {
+                const isoDetails = await ISO.getFormCodeDetails('Form ICP (F14-26-01)');
+                if (isoDetails) {
+                    if (isoDetails.versionNumber) isoVersion = isoDetails.versionNumber;
+                    if (isoDetails.issueDate) issueDate = isoDetails.issueDate;
+                    if (isoDetails.revisionDate) revisionDate = isoDetails.revisionDate;
+                }
+            }
+        } catch(e){}
+
         const footerMeta = {
-            formCode: entry?.isoCode || `PTW-MANUAL-${displayNo}`,
-            issueDate: entry?.createdAt || entry?.timeFrom,
-            revisionDate: entry?.updatedAt || entry?.timeTo || entry?.createdAt
+            formCode: isoVersion ? `${formCode} (v${isoVersion})` : formCode,
+            issueDate,
+            revisionDate
         };
         const footer = this.renderPermitSystemFooter(footerMeta);
         const header = this.renderPermitSystemHeader({ forPdf: pdfExport });
@@ -8478,7 +8625,7 @@ const PTW = {
             ? this._splitManualPermitPrintPages_(content, header, footer, true)
             : `${header}${content}${footer}`;
         const exportStyles = pdfExport ? this.getManualPermitPdfExportTechnicalStyles_() : '';
-        const styleBlock = `${this.getManualPermitPrintStyles(false)}${exportStyles}`;
+        const styleBlock = `${this.getManualPermitPrintStyles(pdfExport)}${exportStyles}`;
 
         const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
@@ -8962,7 +9109,7 @@ const PTW = {
         return String(name || 'PTW').replace(/[/\\?%*:|"<>]/g, '-').trim() || 'PTW';
     },
 
-    buildPermitExportPayload(permitId, options = {}) {
+    async buildPermitExportPayload(permitId, options = {}) {
         const forPdf = options?.forPdf !== false;
         const reg = Array.isArray(this.registryData)
             ? this.registryData.find((r) => r.permitId === permitId || r.id === permitId)
@@ -8971,8 +9118,8 @@ const PTW = {
         if (reg?.isManualEntry) {
             const displayNo = this.getPermitDisplayNumber(reg);
             const seq = String(reg.sequentialNumber || displayNo).replace(/\D/g, '').padStart(4, '0') || displayNo;
-            const printHtml = this.generateManualPermitPrintHTML(reg);
-            const html = this.generateManualPermitPrintHTML(reg, { pdfExport: true, skipReview: true });
+            const printHtml = await this.generateManualPermitPrintHTML(reg);
+            const html = await this.generateManualPermitPrintHTML(reg, { pdfExport: true, skipReview: true });
             const review = this._verifyManualPermitExportHtml_(html);
             return {
                 html,
@@ -8990,7 +9137,22 @@ const PTW = {
 
         const registryEntry = reg || this.registryData.find((r) => r.permitId === item.id);
         const displayNo = this.getPermitDisplayNumber(registryEntry || item);
-        const formCode = 'Form ICP (F14-26-01)';
+        let formCode = item.isoCode || 'Form ICP (F14-26-01)';
+        let versionStr = item.version || '1.0';
+        let releaseDate = item.startDate || item.createdAt;
+        let revisionDate = item.updatedAt || item.endDate || item.startDate;
+        
+        try {
+            if (typeof ISO !== 'undefined' && typeof ISO.getFormCodeDetails === 'function') {
+                const isoDetails = await ISO.getFormCodeDetails('Form ICP (F14-26-01)');
+                if (isoDetails) {
+                    if (isoDetails.versionNumber) versionStr = isoDetails.versionNumber;
+                    if (isoDetails.issueDate) releaseDate = isoDetails.issueDate;
+                    if (isoDetails.revisionDate) revisionDate = isoDetails.revisionDate;
+                }
+            }
+        } catch(e){}
+
         const formData = this.getPermitFormDataForPrint(item);
         const content = this.generatePrintContent(formData);
 
@@ -9003,9 +9165,9 @@ const PTW = {
                     false,
                     false,
                     {
-                        version: item.version || '1.0',
-                        releaseDate: item.startDate || item.createdAt,
-                        revisionDate: item.updatedAt || item.endDate || item.startDate,
+                        version: versionStr,
+                        releaseDate: releaseDate,
+                        revisionDate: revisionDate,
                         compactPdfFooter: true,
                         'رقم التصريح': displayNo
                     },
@@ -9051,8 +9213,10 @@ const PTW = {
     /**
      * طباعة التصريح
      */
-    printPermit(permitId) {
-        const payload = this.buildPermitExportPayload(permitId, { forPdf: false });
+    async printPermit(permitId) {
+        Loading.show();
+        const payload = await this.buildPermitExportPayload(permitId, { forPdf: false });
+        Loading.hide();
         if (!payload) {
             Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
             return;
@@ -9113,10 +9277,7 @@ const PTW = {
      */
     setupRegistryEventListeners() {
         // زر إضافة تصريح يدوي
-        const addManualBtn = document.getElementById('ptw-registry-add-manual');
-        if (addManualBtn) {
-            addManualBtn.onclick = () => this.openManualPermitForm();
-        }
+        // زر التصريح اليدوي أصبح يعتمد على onclick مباشرة في الـ HTML
 
         // استيراد Excel
         const importExcelBtn = document.getElementById('ptw-registry-import-excel');
@@ -9357,7 +9518,8 @@ const PTW = {
     getManualFixedEquipmentRowLabels() {
         return [
             ['رافعة', 'سلم متحرك', 'سقالة', 'منصة رفع', 'ونش', 'مضخة', 'خزان', 'خط أنابيب', 'لوحة كهربائية'],
-            ['مولد كهرباء', 'ضاغط هواء', 'ماكينة لحام', 'جلاخة', 'منشار', 'مثقاب كهربائي', 'محرك كهربائي', 'رافعة شوكية', 'أخرى']
+            ['مولد كهرباء', 'ضاغط هواء', 'ماكينة لحام', 'جلاخة', 'منشار', 'مثقاب كهربائي', 'محرك كهربائي', 'رافعة شوكية', 'عدة يدوية خفيفة'],
+            ['صاروخ', 'هيلتى', 'سيزر', 'شحن', 'كابل كهرباء', 'وصلات كهرباء', 'أخرى']
         ];
     },
 
@@ -9372,8 +9534,8 @@ const PTW = {
 
     _splitEquipmentTokens(text) {
         return String(text || '')
-            .split(/[،,]/)
-            .map((s) => s.trim())
+            .split(/[-+،,]/)
+            .map((s) => s.trim().replace(/^[\d\s]+/, ''))
             .filter(Boolean);
     },
 
@@ -9602,7 +9764,26 @@ const PTW = {
      * فتح نموذج إدخال تصريح يدوي
      */
     async openManualPermitForm(entryId = null) {
-        const isEdit = entryId !== null;
+        const ptwManualLoadingId = 'ptw-manual-form-loading-' + Date.now();
+        const ptwManualLoadingOverlay = document.createElement('div');
+        ptwManualLoadingOverlay.id = ptwManualLoadingId;
+        ptwManualLoadingOverlay.className = 'modal-overlay';
+        ptwManualLoadingOverlay.style.zIndex = '999999';
+        ptwManualLoadingOverlay.innerHTML = `
+            <div class="flex items-center justify-center h-full w-full">
+                <div class="bg-white p-6 rounded-xl shadow-2xl flex flex-col items-center">
+                    <div class="w-12 h-12 border-4 border-blue-200 border-t-blue-600 border-solid rounded-full animate-spin mb-4"></div>
+                    <p class="text-gray-700 font-bold text-lg">جاري تجهيز النموذج...</p>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(ptwManualLoadingOverlay);
+
+        try {
+            // Ensure browser paints the loading spinner before heavy synchronous DOM creation
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 50))));
+
+            const isEdit = entryId !== null;
         const existingEntry = entryId ? this.registryData.find(r => r.id === entryId) : null;
 
         // استعادة أسماء القائمين بالعمل من النص المخزن (عند التحميل من قاعدة البيانات)
@@ -11631,6 +11812,17 @@ const PTW = {
             
             await this.saveManualPermitEntry(modal, entryId);
         });
+        } catch (error) {
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('Error opening manual permit form:', error);
+            } else {
+                console.error('Error opening manual permit form:', error);
+            }
+            alert('Error opening form: ' + error.message + '\nStack: ' + error.stack);
+        } finally {
+            const loadingOverlayToRemove = document.getElementById(ptwManualLoadingId);
+            if (loadingOverlayToRemove) loadingOverlayToRemove.remove();
+        }
     },
 
     /**
@@ -11778,14 +11970,16 @@ const PTW = {
         };
     },
 
-    printManualPermitFromModal(modal, entryId = null) {
+    async printManualPermitFromModal(modal, entryId = null) {
         try {
             const data = this.collectManualPermitDataFromModal(modal, entryId);
             if (!data) {
                 Notification.warning(this._t('module.ptw.notify.formNotFound', 'النموذج غير موجود'));
                 return;
             }
-            const htmlContent = this.generateManualPermitPrintHTML(data);
+            Loading.show();
+            const htmlContent = await this.generateManualPermitPrintHTML(data);
+            Loading.hide();
             this.openPermitPrintWindow(htmlContent);
         } catch (error) {
             Utils.safeError('خطأ في طباعة التصريح اليدوي:', error);
@@ -11863,6 +12057,7 @@ const PTW = {
                     this._t('module.ptw.notify.manualRequiredFieldsDetailed', 'لا يمكن الإرسال قبل استكمال البيانات الأساسية المطلوبة:\n{fields}')
                         .replace('{fields}', missingRequiredFields.map(item => `• ${item.label}`).join('\n'))
                 );
+                this._isSavingManualPermit = false;
                 return;
             }
 
@@ -12111,6 +12306,7 @@ const PTW = {
                     paperPermitInput.focus();
                     paperPermitInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
+                this._isSavingManualPermit = false;
                 return;
             }
 
@@ -12129,7 +12325,61 @@ const PTW = {
                     paperPermitInput.focus();
                     paperPermitInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
+                this._isSavingManualPermit = false;
                 return;
+            }
+
+            // ✅ التحقق من استكمال البيانات والأقسام التكميلية في التصريح اليدوي
+            const incompleteSections = [];
+
+            if (!teamMembers || teamMembers.length === 0) {
+                incompleteSections.push('أسماء وتوقيعات القائمين بالعمل (القسم الرابع)');
+            }
+
+            if (!formData.riskScore) {
+                incompleteSections.push('تقييم المخاطر وتحديد مصفوفة الخطر (القسم الخامس)');
+            }
+
+            const hasIssueApprover = manualApprovals && manualApprovals.some(a => a.name && String(a.name).trim() !== '');
+            if (!hasIssueApprover) {
+                incompleteSections.push('أسماء وتوقيعات معتمدي إصدار التصريح (القسم السابع)');
+            }
+
+            if (!mergedRequiredPPE || mergedRequiredPPE.length === 0) {
+                incompleteSections.push('مهمات الوقاية الشخصية (PPE) المطلوبة (القسم السادس)');
+            }
+
+            const isClosedStatus = ['مغلق', 'اكتمل العمل بشكل آمن', 'ملغى'].includes(formData.status);
+            if (isClosedStatus) {
+                const hasClosureApprover = manualClosureApprovals && manualClosureApprovals.some(a => a.name && String(a.name).trim() !== '');
+                if (!hasClosureApprover) {
+                    incompleteSections.push('اعتمادات وتوقيعات إغلاق التصريح (القسم التاسع)');
+                }
+            }
+
+            if (incompleteSections.length > 0) {
+                const confirmTitle = 'تأكيد حفظ تصريح يدوي غير مكتمل';
+                const confirmMsg = 
+                    'تنبيه: البيانات التالية لم تكتمل بعد في التصريح اليدوي:\n\n' +
+                    incompleteSections.map(s => '• ' + s).join('\n') +
+                    '\n\nهل تريد حفظ التصريح اليدوي رغم عدم استكمال هذه البيانات أم ترغب في التراجع واستكمال البيانات؟';
+
+                let userConfirmed = false;
+                if (typeof Utils !== 'undefined' && typeof Utils.confirmDialog === 'function') {
+                    userConfirmed = await Utils.confirmDialog(
+                        confirmTitle,
+                        confirmMsg,
+                        'نعم، احفظ التصريح',
+                        'إلغاء واستكمال البيانات'
+                    );
+                } else {
+                    userConfirmed = window.confirm(confirmMsg);
+                }
+
+                if (!userConfirmed) {
+                    this._isSavingManualPermit = false;
+                    return;
+                }
             }
 
             // تحويل التاريخ والوقت إلى ISO format
@@ -13058,10 +13308,13 @@ const PTW = {
         return `<style>
                 .ptw-permit-list-workspace {
                     --ptl-navy:#102a43; --ptl-navy-2:#173d6c; --ptl-cyan:#0891b2; --ptl-blue:#2563eb;
-                    --ptl-ink:#172033; --ptl-muted:#64748b; display:grid; gap:18px; direction:rtl;
+                    --ptl-ink:#172033; --ptl-muted:#64748b; display:grid; gap:18px; direction:rtl; width:100%; max-width:100%; min-width:0;
                 }
+                .ptw-permit-list-workspace>* { min-width:0; max-width:100%; }
+                .ptw-permit-list-workspace #ptw-stats-section .grid { display:grid!important; grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))!important; gap:12px!important; }
+                .ptw-permit-list-workspace #ptw-stats-section .kpi-card { min-width:0; width:100%; }
                 .ptw-permit-list-workspace>#ptw-stats-section { margin-bottom:0!important; }
-                .ptw-permit-list-card { overflow:hidden; border:1px solid #cbddeb; border-radius:18px; box-shadow:0 13px 30px rgba(15,42,67,.09); }
+                .ptw-permit-list-card { width:100%; max-width:100%; min-width:0; overflow:hidden; border:1px solid #cbddeb; border-radius:18px; box-shadow:0 13px 30px rgba(15,42,67,.09); }
                 .ptw-permit-list-card>.card-header {
                     display:flex; align-items:center; justify-content:space-between; gap:12px; padding:15px 17px;
                     border-bottom:0; background:linear-gradient(125deg,var(--ptl-navy),var(--ptl-navy-2));
@@ -13091,7 +13344,7 @@ const PTW = {
                 .ptw-permit-list-card .ptw-filter-reset-btn:disabled { opacity:.45; cursor:not-allowed; transform:none; }
                 .ptw-permit-list-card .ptw-filter-field .text-xs { display:none; }
                 .ptw-permit-list-card>.card-body { padding:0!important; }
-                .ptw-permit-list-card #ptw-table-container { max-height:min(68vh,720px); overflow:auto; scrollbar-width:thin; scrollbar-color:#94a3b8 #e2e8f0; }
+                .ptw-permit-list-card #ptw-table-container { width:100%; max-width:100%; min-width:0; max-height:min(68vh,720px); overflow:auto; scrollbar-width:thin; scrollbar-color:#94a3b8 #e2e8f0; scrollbar-gutter:stable both-edges; }
                 .ptw-permit-list-table { width:max-content!important; min-width:100%; border-collapse:separate!important; border-spacing:0; table-layout:auto; font-size:.8rem; }
                 .ptw-permit-list-table thead { position:sticky; top:0; z-index:8; }
                 .ptw-permit-list-table thead th { position:sticky; top:0; z-index:8; min-width:125px; padding:13px 12px!important; border:0!important; border-left:1px solid rgba(255,255,255,.13)!important; color:#f8fafc!important; background:linear-gradient(180deg,#173d6c,#102a43)!important; font-size:.74rem; font-weight:850!important; line-height:1.45; white-space:normal; vertical-align:middle; box-shadow:inset 0 -3px #22d3ee; }
@@ -13758,10 +14011,10 @@ const PTW = {
         const settings = AppState?.companySettings || {};
         const companyName = settings.name || settings.companyName || settings.organizationName || 'HSE System';
         const deptName = String(
-            settings.secondaryName || settings.departmentName || settings.managementName || 'إدارة السلامة والصحة المهنية والبيئة'
+            settings.secondaryName || settings.departmentName || settings.managementName || 'إدارة السلامة والصحة المهنية والبيئة المهنية'
         ).trim();
         const esc = (v) => Utils.escapeHTML(v == null ? '' : String(v));
-        const formCode = 'Form ICP (F14-26-01)';
+        const formCode = esc(options.formCode || 'PTW-MANUAL');
         const formatFooterDate = (value) => {
             if (!value) return '—';
             try {
@@ -13784,7 +14037,6 @@ const PTW = {
                         <span class="ptw-pf-item">تاريخ التعديل: ${revisionDate}</span>
                     </div>
                     <div class="ptw-paper-footer-company" dir="rtl">
-                        <span>${esc(companyName)}</span>
                         <span>${esc(deptName)}</span>
                     </div>
                 </div>
@@ -15092,65 +15344,8 @@ const PTW = {
                     newRefreshBtn.addEventListener('click', () => this.refreshCurrentTab());
                 }
             }
-            // زر إصدار تصريح جديد
-            const addBtn = document.getElementById('add-ptw-btn');
-            const addEmptyBtn = document.getElementById('add-ptw-empty-btn');
-            if (addBtn) {
-                // ✅ التحقق من أن العنصر موجود في DOM قبل replaceWith
-                if (addBtn.parentNode && document.body.contains(addBtn)) {
-                    try {
-                        addBtn.replaceWith(addBtn.cloneNode(true));
-                        const newAddBtn = document.getElementById('add-ptw-btn');
-                        if (newAddBtn) {
-                            newAddBtn.addEventListener('click', () => {
-                                Utils.safeLog('🖱️ تم النقر على زر إصدار تصريح جديد');
-                                this.showForm();
-                            });
-                        }
-                    } catch (error) {
-                        Utils.safeWarn('⚠️ خطأ في replaceWith للزر add-ptw-btn:', error);
-                        // استخدام طريقة بديلة: إزالة المستمعين وإضافة مستمع جديد
-                        addBtn.addEventListener('click', () => {
-                            Utils.safeLog('🖱️ تم النقر على زر إصدار تصريح جديد');
-                            this.showForm();
-                        });
-                    }
-                } else {
-                    // العنصر غير موجود في DOM - إضافة مستمع مباشرة
-                    addBtn.addEventListener('click', () => {
-                        Utils.safeLog('🖱️ تم النقر على زر إصدار تصريح جديد');
-                        this.showForm();
-                    });
-                }
-            }
-            if (addEmptyBtn) {
-                // ✅ التحقق من أن العنصر موجود في DOM قبل replaceWith
-                if (addEmptyBtn.parentNode && document.body.contains(addEmptyBtn)) {
-                    try {
-                        addEmptyBtn.replaceWith(addEmptyBtn.cloneNode(true));
-                        const newAddEmptyBtn = document.getElementById('add-ptw-empty-btn');
-                        if (newAddEmptyBtn) {
-                            newAddEmptyBtn.addEventListener('click', () => {
-                                Utils.safeLog('🖱️ تم النقر على زر إصدار تصريح جديد (من القائمة الفارغة)');
-                                this.showForm();
-                            });
-                        }
-                    } catch (error) {
-                        Utils.safeWarn('⚠️ خطأ في replaceWith للزر add-ptw-empty-btn:', error);
-                        // استخدام طريقة بديلة: إضافة مستمع مباشرة
-                        addEmptyBtn.addEventListener('click', () => {
-                            Utils.safeLog('🖱️ تم النقر على زر إصدار تصريح جديد (من القائمة الفارغة)');
-                            this.showForm();
-                        });
-                    }
-                } else {
-                    // العنصر غير موجود في DOM - إضافة مستمع مباشرة
-                    addEmptyBtn.addEventListener('click', () => {
-                        Utils.safeLog('🖱️ تم النقر على زر إصدار تصريح جديد (من القائمة الفارغة)');
-                        this.showForm();
-                    });
-                }
-            }
+            // أزرار إصدار التصاريح (add-ptw-btn, add-manual-ptw-btn) 
+            // تعتمد الآن على سمة onclick مباشرة في الـ HTML لضمان الاستجابة الفورية
 
             const searchInput = document.getElementById('ptw-search');
             const filterStatus = document.getElementById('ptw-filter-status');
@@ -17130,7 +17325,9 @@ const PTW = {
 
     async exportPDF(id) {
         try {
-            const payload = this.buildPermitExportPayload(id);
+            Loading.show();
+            const payload = await this.buildPermitExportPayload(id);
+            Loading.hide();
             if (!payload) {
                 Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
                 return;
@@ -17703,16 +17900,16 @@ const PTW = {
                         ${['30','90','180','365','0'].map((v,i) => {
                             const labels = ['30 يوم','3 أشهر','6 أشهر','سنة','الكل'];
                             const active = (this._ptwPeriod || '0') === v;
-                            return `<button class="ptw-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#1e3a5f':'#fff'};">${labels[i]}</button>`;
+                            return `<button type="button" class="ptw-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#1e3a5f':'#fff'};">${labels[i]}</button>`;
                         }).join('')}
                     </div>
-                    <button id="ptw-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
+                    <button type="button" id="ptw-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
                         <i class="fas fa-sliders-h"></i><span>فلاتر</span><span id="ptw-filter-badge" style="display:none;background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-right:2px;">●</span>
                     </button>
-                    <button id="ptw-export-pdf-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.3);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(0,0,0,0.5)'" onmouseout="this.style.background='rgba(0,0,0,0.3)'">
+                    <button type="button" id="ptw-export-pdf-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.3);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(0,0,0,0.5)'" onmouseout="this.style.background='rgba(0,0,0,0.3)'">
                         <i class="fas fa-file-pdf"></i><span>PDF</span>
                     </button>
-                    <button id="ptw-analytics-refresh" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" title="تحديث"><i class="fas fa-sync-alt"></i></button>
+                    <button type="button" id="ptw-analytics-refresh" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" title="تحديث"><i class="fas fa-sync-alt"></i></button>
                 </div>
             </div>
 
@@ -17724,7 +17921,7 @@ const PTW = {
                         <span style="font-weight:700;font-size:0.9rem;color:#1e3a5f;">الفلاتر التفاعلية</span>
                         <span id="ptw-filter-count" style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
                     </div>
-                    <button id="ptw-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #bfdbfe;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;" onmouseover="this.style.background='#dbeafe';this.style.color='#1d4ed8'" onmouseout="this.style.background='#fff';this.style.color='#64748b'">
+                    <button type="button" id="ptw-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #bfdbfe;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;" onmouseover="this.style.background='#dbeafe';this.style.color='#1d4ed8'" onmouseout="this.style.background='#fff';this.style.color='#64748b'">
                         <i class="fas fa-times ml-1"></i>مسح الكل
                     </button>
                 </div>
@@ -17733,8 +17930,8 @@ const PTW = {
                         {id:'ptw-af-status',    icon:'fas fa-circle',         color:'#10b981', label:'الحالة'},
                         {id:'ptw-af-work-type', icon:'fas fa-fire',            color:'#ef4444', label:'نوع التصريح'},
                         {id:'ptw-af-authorized',icon:'fas fa-user-tie',        color:'#f59e0b', label:'الجهة المصرح لها'},
-                        {id:'ptw-af-requesting',icon:'fas fa-building',        color:'#6366f1', label:'الجهة الطالبة'},
-                        {id:'ptw-af-location',  icon:'fas fa-map-marker-alt', color:'#3b82f6', label:'الموقع'},
+                        {id:'ptw-af-requesting',icon:'fas fa-building',        color:'#6366f1', label:'الإدارة (الجهة الطالبة)'},
+                        {id:'ptw-af-location',  icon:'fas fa-map-marker-alt', color:'#3b82f6', label:'المصنع'},
                     ].map(f => `
                         <div>
                             <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;"><i class="${f.icon}" style="color:${f.color};margin-left:4px;"></i>${f.label}</label>
@@ -17787,6 +17984,20 @@ const PTW = {
                 </div>
             </div>
 
+            <!-- ── Row: تحليل المصانع الرئيسية ── -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-industry" style="color:#0284c7;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">توزيع ونسب التصاريح حسب المصانع الرئيسية</span>
+                    </div>
+                    <span style="font-size:0.72rem;color:#64748b;">انقر على أي مصنع لتصفية لوحة التحكم تلقائياً</span>
+                </div>
+                <div id="ptw-factories-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;padding:16px;background:#f8fafc;">
+                    <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">جارٍ التحميل…</div>
+                </div>
+            </div>
+
             <!-- ── Row 2: الجهة المصرح لها + الجهة الطالبة ── -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
@@ -17802,7 +18013,7 @@ const PTW = {
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-building" style="color:#8b5cf6;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">أكثر الجهات الطالبة (أعلى 10)</span>
+                        <span style="font-weight:700;font-size:0.88rem;">أكثر الإدارات طلباً للتصاريح (أعلى 10)</span>
                     </div>
                     <div style="padding:12px;position:relative;height:280px;">
                         <canvas id="ptw-chart-requesting"></canvas>
@@ -17811,15 +18022,25 @@ const PTW = {
                 </div>
             </div>
 
-            <!-- ── Row 3: الموقع ── -->
-            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
-                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                    <i class="fas fa-map-marker-alt" style="color:#3b82f6;"></i>
-                    <span style="font-weight:700;font-size:0.88rem;">حسب الموقع (أعلى 10)</span>
+            <!-- ── Row 3: المصنع + الإدارات ── -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-map-marker-alt" style="color:#3b82f6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">المصنع (الموقع الفرعي الأكثر نشاطاً - أعلى 10)</span>
+                    </div>
+                    <div id="ptw-locs-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
+                    </div>
                 </div>
-                <div style="padding:12px;position:relative;height:280px;">
-                    <canvas id="ptw-chart-location"></canvas>
-                    <div id="ptw-chart-location-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-hotel" style="color:#2563eb;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">تفاصيل توزيع التصاريح حسب الإدارات</span>
+                    </div>
+                    <div id="ptw-depts-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
+                    </div>
                 </div>
             </div>
 
@@ -17833,7 +18054,7 @@ const PTW = {
                     <div style="display:flex;align-items:center;gap:8px;">
                         <span id="ptw-top-count" style="background:#dbeafe;color:#1e40af;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
                         <button type="button" id="ptw-analysis-export-excel" style="padding:5px 12px;border-radius:8px;border:1px solid #bfdbfe;background:#fff;color:#1d4ed8;font-size:0.75rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;" onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#fff'"><i class="fas fa-file-excel"></i> Excel</button>
-                        <button id="ptw-analysis-add" style="padding:5px 12px;border-radius:8px;border:none;background:#1d4ed8;color:#fff;font-size:0.75rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;" onmouseover="this.style.background='#1e40af'" onmouseout="this.style.background='#1d4ed8'"><i class="fas fa-plus"></i> تحليل جديد</button>
+                        <button type="button" id="ptw-analysis-add" style="padding:5px 12px;border-radius:8px;border:none;background:#1d4ed8;color:#fff;font-size:0.75rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;" onmouseover="this.style.background='#1e40af'" onmouseout="this.style.background='#1d4ed8'"><i class="fas fa-plus"></i> تحليل جديد</button>
                     </div>
                 </div>
                 <div style="overflow-x:auto;">
@@ -17843,8 +18064,8 @@ const PTW = {
                                 <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">وصف العمل</th>
                                 <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">نوع التصريح</th>
                                 <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الجهة المصرح لها</th>
-                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الجهة الطالبة</th>
-                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الموقع</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الإدارة (الجهة الطالبة)</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">المصنع</th>
                                 <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">التاريخ</th>
                                 <th style="padding:10px 12px;text-align:center;font-weight:700;color:#374151;white-space:nowrap;">الحالة</th>
                             </tr>
@@ -17858,26 +18079,65 @@ const PTW = {
         </div>`;
     },
 
-    /**
-     * جلب قائمة التصاريح المدمجة (القائمة + السجل) للتحليل
-     */
     getAnalysisPermits() {
-        const permitsFromList = AppState.appData && AppState.appData.ptw ? AppState.appData.ptw : [];
-        const permitsFromRegistry = (this.registryData || []).map(registryEntry => ({
-            id: registryEntry.permitId || registryEntry.id,
-            workType: Array.isArray(registryEntry.permitType) ? (registryEntry.permitTypeDisplay || registryEntry.permitType.join('، ')) : (registryEntry.permitType || registryEntry.permitTypeDisplay),
-            location: registryEntry.location,
-            siteName: registryEntry.location,
-            sublocation: registryEntry.sublocation,
-            startDate: registryEntry.openDate,
-            endDate: registryEntry.timeTo,
-            status: registryEntry.status,
-            requestingParty: registryEntry.requestingParty,
-            authorizedParty: registryEntry.authorizedParty,
-            workDescription: registryEntry.workDescription,
-            createdAt: registryEntry.createdAt,
-            updatedAt: registryEntry.updatedAt
-        }));
+        const sites = this.getSiteOptions();
+        const cleanPermit = (p) => {
+            if (!p) return p;
+            const rawLoc = String(p.location || p.siteName || '').trim();
+            const locParts = rawLoc.split(' - ');
+            const firstPart = locParts[0]?.trim() || '';
+            
+            // Try to find matching official site
+            let factory = 'غير محدد';
+            const matchedSite = sites.find(s => 
+                s.name.trim() === rawLoc || 
+                s.id === rawLoc || 
+                (p.siteId && s.id === p.siteId) ||
+                (firstPart && s.name.trim() === firstPart) ||
+                (firstPart && s.id === firstPart)
+            );
+            
+            if (matchedSite) {
+                factory = matchedSite.name.trim();
+            } else if (firstPart && firstPart !== '—' && firstPart !== 'undefined') {
+                factory = firstPart;
+            }
+            
+            let sub = p.sublocation?.trim() || locParts[1]?.trim() || '';
+            if (!sub || sub === '—' || sub === 'undefined' || sub === 'غير محدد') {
+                sub = 'موقع عام / غير محدد';
+            }
+            
+            return {
+                ...p,
+                location: factory,
+                siteName: factory,
+                sublocation: sub
+            };
+        };
+
+        const permitsFromList = (AppState.appData && AppState.appData.ptw ? AppState.appData.ptw : []).map(cleanPermit);
+        const permitsFromRegistry = (this.registryData || []).map(registryEntry => {
+            const rawLoc = registryEntry.location || '';
+            const locParts = rawLoc.split(' - ');
+            const factory = locParts[0]?.trim() || 'غير محدد';
+            const sub = registryEntry.sublocation?.trim() || locParts[1]?.trim() || 'غير محدد';
+            return cleanPermit({
+                id: registryEntry.permitId || registryEntry.id,
+                workType: Array.isArray(registryEntry.permitType) ? (registryEntry.permitTypeDisplay || registryEntry.permitType.join('، ')) : (registryEntry.permitType || registryEntry.permitTypeDisplay),
+                location: factory,
+                siteName: factory,
+                sublocation: sub,
+                startDate: registryEntry.openDate,
+                endDate: registryEntry.timeTo,
+                status: registryEntry.status,
+                requestingParty: registryEntry.requestingParty,
+                authorizedParty: registryEntry.authorizedParty,
+                workDescription: registryEntry.workDescription,
+                createdAt: registryEntry.createdAt,
+                updatedAt: registryEntry.updatedAt
+            });
+        });
         return this.mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry);
     },
 
@@ -18137,9 +18397,9 @@ const PTW = {
         const workTypeStr = (p) => Array.isArray(p.workType) ? (p.workType || []).join(sep) : (p.workType || '-');
         const kSeq = t('module.ptw.excelColSeq', 'م');
         const kType = t('module.ptw.excelColPermitType', 'نوع التصريح');
-        const kReq = t('module.ptw.excelColReq', 'الجهة الطالبة');
+        const kReq = t('module.ptw.excelColReq', 'الإدارة (الجهة الطالبة)');
         const kAuth = t('module.ptw.excelColAuth', 'الجهة المصرح لها');
-        const kLoc = t('module.ptw.excelColLoc', 'الموقع');
+        const kLoc = t('module.ptw.excelColLoc', 'المصنع');
         const kDate = t('module.ptw.excelColDate', 'التاريخ');
         const kSt = t('module.ptw.excelColStatus', 'الحالة');
         const kDesc = t('module.ptw.excelColWorkDesc', 'وصف العمل');
@@ -18210,9 +18470,9 @@ const PTW = {
             const closedCount = list.filter(p => { const s = (p.status || '').trim(); return s === 'مغلق' || s === 'اكتمل العمل بشكل آمن' || s === 'إغلاق جبري'; }).length;
             const kSeq = t('module.ptw.excelColSeq', 'م');
             const kType = t('module.ptw.excelColPermitType', 'نوع التصريح');
-            const kReq = t('module.ptw.excelColReq', 'الجهة الطالبة');
+            const kReq = t('module.ptw.excelColReq', 'الإدارة (الجهة الطالبة)');
             const kAuth = t('module.ptw.excelColAuth', 'الجهة المصرح لها');
-            const kLoc = t('module.ptw.excelColLoc', 'الموقع');
+            const kLoc = t('module.ptw.excelColLoc', 'المصنع');
             const kDate = t('module.ptw.excelColDate', 'التاريخ');
             const kSt = t('module.ptw.excelColStatus', 'الحالة');
             const kDesc = t('module.ptw.excelColWorkDesc', 'وصف العمل');
@@ -18406,6 +18666,19 @@ const PTW = {
             return !isNaN(d) && d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth();
         }).length;
 
+        // حساب الإدارة الأكثر نشاطاً
+        const reqCounts = {};
+        t.forEach(p => {
+            const k = (p.requestingParty || '').trim() || 'غير محدد';
+            if (k !== 'غير محدد' && k !== '—') {
+                reqCounts[k] = (reqCounts[k] || 0) + 1;
+            }
+        });
+        const sortedDepts = Object.entries(reqCounts).sort((a,b) => b[1] - a[1]);
+        const topReqEntry = sortedDepts[0];
+        const topReqDept = topReqEntry ? topReqEntry[0] : 'لا يوجد';
+        const topReqCount = topReqEntry ? topReqEntry[1] : 0;
+
         const kpiEl = document.getElementById('ptw-kpi-strip');
         if (kpiEl) {
             const kpis = [
@@ -18416,16 +18689,18 @@ const PTW = {
                 { label:'قيد المراجعة',            value:pending,                         icon:'fas fa-clock',           color:'#b45309', bg:'#fffbeb', border:'#fde68a' },
                 { label:'مرفوضة',                  value:rejected,                        icon:'fas fa-times-circle',    color:'#dc2626', bg:'#fef2f2', border:'#fecaca' },
                 { label:'نسبة الإغلاق',            value:closureRate+'%',                 icon:'fas fa-chart-pie',       color:'#0891b2', bg:'#ecfeff', border:'#a5f3fc' },
+                { label:'الإدارة الأكثر طلباً',    value:topReqCount > 0 ? topReqDept : '—', icon:'fas fa-hotel', color:'#2563eb', bg:'#eff6ff', border:'#bfdbfe', subText: topReqCount > 0 ? `${topReqCount} تصريح` : '' },
                 { label:'هذا الشهر',               value:thisMonth,                       icon:'fas fa-calendar-day',    color:'#db2777', bg:'#fdf2f8', border:'#fbcfe8' },
             ];
             kpiEl.innerHTML = kpis.map(k => `
-                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;min-width:0;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
                     <div style="width:38px;height:38px;background:${k.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                         <i class="${k.icon}" style="color:#fff;font-size:15px;"></i>
                     </div>
-                    <div>
-                        <div style="font-size:1.2rem;font-weight:800;color:${k.color};line-height:1;">${k.value}</div>
-                        <div style="font-size:0.68rem;color:#64748b;margin-top:2px;white-space:nowrap;">${k.label}</div>
+                    <div style="min-width:0;flex:1;">
+                        <div style="font-size:1.1rem;font-weight:800;color:${k.color};line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${k.value}">${k.value}</div>
+                        <div style="font-size:0.68rem;color:#64748b;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${k.label}</div>
+                        ${k.subText ? `<div style="font-size:0.62rem;color:${k.color};opacity:0.8;font-weight:700;">${k.subText}</div>` : ''}
                     </div>
                 </div>`).join('');
         }
@@ -18455,8 +18730,146 @@ const PTW = {
         const reqG = this._ptwGroupBy(t, 'requestingParty', 10);
         this._ptwDrawHBar('ptw-chart-requesting', reqG.labels, reqG.data, 'rgba(139,92,246,0.75)');
 
-        const locG = this._ptwGroupBy(t, 'location', 10);
-        this._ptwDrawHBar('ptw-chart-location', locG.labels, locG.data, 'rgba(59,130,246,0.75)');
+        // حساب الموقع والموقع الفرعي الأكثر
+        const combCounts = {};
+        const officialSiteNames = this.getSiteOptions().map(s => s.name.trim());
+        t.forEach(p => {
+            const loc = String(p.location || p.siteName || 'غير محدد').trim() || 'غير محدد';
+            // Only group if the factory is one of the official ones
+            if (officialSiteNames.includes(loc)) {
+                const sub = String(p.sublocation || 'موقع عام / غير محدد').trim() || 'موقع عام / غير محدد';
+                const key = `${loc} - ${sub}`;
+                combCounts[key] = (combCounts[key] || 0) + 1;
+            }
+        });
+
+        let sortedCombs = Object.entries(combCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10);
+
+        // Sort by Factory name first, so that they are grouped together on the chart
+        sortedCombs.sort((a, b) => {
+            const factoryA = a[0].split(' - ')[0];
+            const factoryB = b[0].split(' - ')[0];
+            if (factoryA !== factoryB) {
+                return factoryA.localeCompare(factoryB, 'ar');
+            }
+            return b[1] - a[1];
+        });
+
+        // ملء قائمة تفاصيل توزيع التصاريح حسب المصنع والموقع الفرعي
+        const locsListEl = document.getElementById('ptw-locs-list');
+        if (locsListEl) {
+            if (total === 0) {
+                locsListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
+            } else {
+                locsListEl.innerHTML = sortedCombs.map(([comb, count]) => {
+                    const parts = comb.split(' - ');
+                    const factory = parts[0] || 'غير محدد';
+                    const sub = parts[1] || 'موقع عام';
+                    const pct = Math.round((count / total) * 100);
+                    return `
+                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
+                                    <span style="background:#e0f2fe;color:#0369a1;font-size:0.68rem;padding:2px 8px;border-radius:6px;font-weight:700;white-space:nowrap;flex-shrink:0;">${Utils.escapeHTML(factory)}</span>
+                                    <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${Utils.escapeHTML(sub)}">${Utils.escapeHTML(sub)}</span>
+                                </div>
+                                <span style="font-size:0.75rem;font-weight:700;color:#0369a1;flex-shrink:0;margin-right:8px;">${count} تصريح (${pct}%)</span>
+                            </div>
+                            <div style="width:100%;height:6px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #38bdf8 0%, #0284c7 100%);border-radius:9999px;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // ملء قائمة تفاصيل توزيع التصاريح حسب الإدارات
+        const deptsListEl = document.getElementById('ptw-depts-list');
+        if (deptsListEl) {
+            if (total === 0) {
+                deptsListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
+            } else {
+                deptsListEl.innerHTML = sortedDepts.map(([dept, count]) => {
+                    const pct = Math.round((count / total) * 100);
+                    return `
+                        <div>
+                            <div style="display:flex;justify-content:space-between;font-size:0.8rem;font-weight:700;color:#374151;margin-bottom:4px;">
+                                <span>${Utils.escapeHTML(dept)}</span>
+                                <span style="color:#2563eb;">${count} تصريح (${pct}%)</span>
+                            </div>
+                            <div style="width:100%;height:8px;background:#e5e7eb;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);border-radius:9999px;transition:width 0.5s ease-in-out;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // ملء كروت المصانع الرئيسية التفاعلية
+        const factoriesCardsEl = document.getElementById('ptw-factories-cards');
+        if (factoriesCardsEl) {
+            if (total === 0) {
+                factoriesCardsEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">لا توجد بيانات</div>`;
+            } else {
+                const officialSites = this.getSiteOptions();
+                factoriesCardsEl.innerHTML = officialSites.map((site, index) => {
+                    const siteName = site.name.trim();
+                    const sitePermits = t.filter(p => (p.location || p.siteName || '').trim() === siteName);
+                    const siteTotal = sitePermits.length;
+                    const sitePct = Math.round((siteTotal / total) * 100) || 0;
+                    const siteOpen = sitePermits.filter(p => this.isPermitOpenStatus(p?.status)).length;
+                    const siteClosed = sitePermits.filter(p => this.isPermitClosedStatus(p?.status)).length;
+                    
+                    const colors = [
+                        { primary: '#0284c7', light: '#e0f2fe', progress: 'linear-gradient(90deg, #38bdf8 0%, #0284c7 100%)' },
+                        { primary: '#059669', light: '#ecfdf5', progress: 'linear-gradient(90deg, #34d399 0%, #059669 100%)' },
+                        { primary: '#7c3aed', light: '#f5f3ff', progress: 'linear-gradient(90deg, #a78bfa 0%, #7c3aed 100%)' }
+                    ];
+                    const theme = colors[index % colors.length];
+                    
+                    return `
+                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);transition:all .2s;cursor:pointer;" 
+                             onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.08)';this.style.borderColor='${theme.primary}'" 
+                             onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)';this.style.borderColor='#e2e8f0'"
+                             onclick="const el = document.getElementById('ptw-af-location'); if(el){el.value='${siteName}'; el.dispatchEvent(new Event('change'));}">
+                            
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div style="width:36px;height:36px;background:${theme.light};border-radius:8px;display:flex;align-items:center;justify-content:center;color:${theme.primary};">
+                                        <i class="fas fa-industry" style="font-size:16px;"></i>
+                                    </div>
+                                    <span style="font-size:0.9rem;font-weight:800;color:#1e293b;">${Utils.escapeHTML(siteName)}</span>
+                                </div>
+                                <span style="font-size:1.15rem;font-weight:900;color:${theme.primary};">${sitePct}%</span>
+                            </div>
+                            
+                            <div style="width:100%;height:8px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${sitePct}%;height:100%;background:${theme.progress};border-radius:9999px;"></div>
+                            </div>
+                            
+                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px;border-top:1px solid #f1f5f9;padding-top:12px;">
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.65rem;color:#64748b;margin-bottom:2px;">التصاريح</div>
+                                    <div style="font-size:0.85rem;font-weight:800;color:#1e293b;">${siteTotal}</div>
+                                </div>
+                                <div style="text-align:center;border-left:1px solid #f1f5f9;border-right:1px solid #f1f5f9;">
+                                    <div style="font-size:0.65rem;color:#d97706;margin-bottom:2px;">مفتوحة</div>
+                                    <div style="font-size:0.85rem;font-weight:800;color:#d97706;">${siteOpen}</div>
+                                </div>
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.65rem;color:#059669;margin-bottom:2px;">مغلقة</div>
+                                    <div style="font-size:0.85rem;font-weight:800;color:#059669;">${siteClosed}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
 
         // ── جدول أحدث التصاريح ──
         const topT = t.slice().sort((a,b) => {
@@ -18556,7 +18969,10 @@ const PTW = {
         fill('ptw-af-work-type', unique(x => Array.isArray(x.workType) ? x.workType.map(w=>(w||'').trim()) : [(x.workType||'').trim()]));
         fill('ptw-af-authorized',unique(x => [String(x.authorizedParty||'').trim()]));
         fill('ptw-af-requesting',unique(x => [String(x.requestingParty||'').trim()]));
-        fill('ptw-af-location',  unique(x => [String(x.location||x.siteName||'').trim()]));
+        
+        const officialSiteNames = this.getSiteOptions().map(s => s.name.trim());
+        const locs = unique(x => [String(x.location||x.siteName||'').trim()]).filter(v => officialSiteNames.includes(v));
+        fill('ptw-af-location',  locs);
     },
 
     // ── مساعد: تطبيق الفلاتر ──
@@ -18762,7 +19178,7 @@ const PTW = {
                 pdf.setFontSize(13); pdf.setFont(undefined, 'bold');
                 pdf.text('Work Permits Analytics Report', margin, 9, { align: 'left' });
                 pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
-                pdf.text('HSE Management System — Permit to Work Analysis Dashboard', margin, 15, { align: 'left' });
+                pdf.text('SafetyHub | ICAPP — Permit to Work Analysis Dashboard', margin, 15, { align: 'left' });
                 pdf.setFontSize(8.5);
                 pdf.text(`${enDate}  ${enTime}`, pdfW - margin, 9, { align: 'right' });
                 pdf.setFontSize(9); pdf.setFont(undefined, 'bold');
@@ -18785,7 +19201,7 @@ const PTW = {
                 pdf.setFillColor(239, 246, 255);
                 pdf.rect(0, footerY, pdfW, footerH, 'F');
                 pdf.setFontSize(7.5); pdf.setTextColor(29, 78, 216); pdf.setFont(undefined, 'bold');
-                pdf.text('HSE Management System', margin, footerY + 5, { align: 'left' });
+                pdf.text('SafetyHub | ICAPP', margin, footerY + 5, { align: 'left' });
                 pdf.setFont(undefined, 'normal'); pdf.setFontSize(6.5); pdf.setTextColor(100, 116, 139);
                 pdf.text('Work Permits Analysis Report — Confidential', margin, footerY + 10, { align: 'left' });
                 pdf.setFontSize(8); pdf.setTextColor(29, 78, 216); pdf.setFont(undefined, 'bold');
