@@ -3207,7 +3207,7 @@ const Permissions = {
     },
 
     /**
-     * تطبيق قيود دور القراءة فقط تلقائياً على عناصر الواجهة
+     * تطبيق قيود دور القراءة فقط تلقائياً على عناصر الواجهة بشكل آمن ومظهر طبيعي
      */
     applyGlobalReadOnlyRestrictions(container = document) {
         const user = AppState.currentUser;
@@ -3215,22 +3215,42 @@ const Permissions = {
 
         const target = container || document;
 
-        // إدراج شريط تنبيه دور القراءة فقط في أعلى المديول الحرفي
-        const sectionCard = target.querySelector?.('.content-card, .section-header, .card-body') || target;
-        if (sectionCard && !target.querySelector?.('.read-only-global-banner')) {
+        // إدراج شريط التنبيه بعد الهيدر مباشرة دون إرباك تصميم وتنسيق الهيدر أو البطاقة
+        const header = target.querySelector?.('.section-header');
+        if (header && header.parentNode && !target.querySelector('.read-only-global-banner')) {
             const banner = document.createElement('div');
             banner.className = 'read-only-global-banner';
-            banner.style.cssText = 'background: #fffbe6; border: 1px solid #ffe58f; color: #d46b08; padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; font-size: 13px; box-shadow: 0 2px 6px rgba(212, 107, 8, 0.08); z-index: 50;';
-            banner.innerHTML = '<i class="fas fa-eye text-lg text-amber-500"></i> <span>حسابك مسجل بدور <strong>"قراءة فقط"</strong> — جميع إجراءات الإضافة والتعديل والحذف والحفظ معطلة للأمان.</span>';
-            if (sectionCard.firstChild) {
-                sectionCard.insertBefore(banner, sectionCard.firstChild);
+            banner.style.cssText = 'background: #fffbe6; border: 1px solid #ffe58f; color: #d46b08; padding: 10px 16px; border-radius: 12px; margin: 12px 0 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; font-size: 13px; box-shadow: 0 2px 6px rgba(212, 107, 8, 0.05); width: 100%; box-sizing: border-box; clear: both;';
+            banner.innerHTML = '<i class="fas fa-eye text-base text-amber-500"></i> <span>حسابك مسجل بدور <strong>"قراءة فقط"</strong> — جميع إجراءات الإضافة والتعديل والحذف والحفظ معطلة للأمان.</span>';
+            if (header.nextSibling) {
+                header.parentNode.insertBefore(banner, header.nextSibling);
             } else {
-                sectionCard.appendChild(banner);
+                header.parentNode.appendChild(banner);
             }
         }
 
+        // في النوافذ المنبثقة Modals
+        const modals = target.classList?.contains('modal-overlay') ? [target] : (target.querySelectorAll?.('.modal-overlay') || []);
+        modals.forEach(modal => {
+            if (!modal.querySelector('.modal-read-only-banner')) {
+                const modalBody = modal.querySelector('.modal-body') || modal.querySelector('.modal-content');
+                if (modalBody) {
+                    const mBanner = document.createElement('div');
+                    mBanner.className = 'modal-read-only-banner';
+                    mBanner.style.cssText = 'background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; font-weight: 700; font-size: 12px; display: flex; align-items: center; gap: 6px;';
+                    mBanner.innerHTML = '<i class="fas fa-lock text-amber-600"></i> تنبيه: أنت في وضع القراءة فقط. الحفظ غير متاح.';
+                    if (modalBody.firstChild) {
+                        modalBody.insertBefore(mBanner, modalBody.firstChild);
+                    } else {
+                        modalBody.appendChild(mBanner);
+                    }
+                }
+            }
+        });
+
         const selectorsToDisable = [
             'button[type="submit"]',
+            'input[type="submit"]',
             '.btn-primary:not([data-allow-read-only="true"])',
             '#add-user-btn',
             '#add-user-empty-btn',
@@ -3239,6 +3259,8 @@ const Permissions = {
             '[data-action="add"]',
             '[data-action="edit"]',
             '[data-action="delete"]',
+            '[data-action="create"]',
+            '[data-action="save"]',
             '.btn-edit',
             '.btn-delete',
             '.btn-danger',
@@ -3254,6 +3276,7 @@ const Permissions = {
                         el.classList.contains('modal-close') ||
                         el.classList.contains('modal-close-btn') ||
                         el.id === 'cancel-user-btn' ||
+                        el.getAttribute('data-allow-read-only') === 'true' ||
                         text.includes('طباعة') ||
                         text.includes('تصدير') ||
                         text.includes('إلغاء') ||
@@ -3271,6 +3294,65 @@ const Permissions = {
                 });
             } catch (e) { /* ignore */ }
         });
+
+        this.setupReadOnlyGlobalListeners();
+    },
+
+    /**
+     * مستمع عام يمنع إرسال النماذج عالمياً لمستخدمي القراءة فقط
+     */
+    setupReadOnlyGlobalListeners() {
+        if (this._readOnlyListenersBound) return;
+        this._readOnlyListenersBound = true;
+
+        if (typeof document !== 'undefined') {
+            document.addEventListener('submit', (e) => {
+                if (this.isReadOnlyRole(AppState.currentUser)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    if (typeof Notification !== 'undefined' && typeof Notification.error === 'function') {
+                        Notification.error('حسابك مسجل بدور "قراءة فقط" ولا يمكن إجراء أي حفظ أو تعديل');
+                    }
+                    return false;
+                }
+            }, true);
+
+            // مراقبة النوافذ المنبثقة وتأمينها تلقائياً عند ظهورها في الصفحة
+            if (typeof window !== 'undefined' && typeof window.MutationObserver !== 'undefined') {
+                const observer = new MutationObserver((mutations) => {
+                    if (!this.isReadOnlyRole(AppState.currentUser)) return;
+                    let shouldApply = false;
+                    mutations.forEach(mutation => {
+                        mutation.addedNodes.forEach(node => {
+                            if (node instanceof HTMLElement && (
+                                node.classList?.contains('modal-overlay') ||
+                                node.querySelector?.('.modal-overlay') ||
+                                node.querySelector?.('button[type="submit"]') ||
+                                node.querySelector?.('.btn-edit')
+                            )) {
+                                shouldApply = true;
+                            }
+                        });
+                    });
+                    if (shouldApply) {
+                        this.applyGlobalReadOnlyRestrictions(document.body);
+                    }
+                });
+
+                const startObserver = () => {
+                    if (document.body) {
+                        observer.observe(document.body, { childList: true, subtree: true });
+                    }
+                };
+
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', startObserver);
+                } else {
+                    startObserver();
+                }
+            }
+        }
     },
 
 
@@ -4177,7 +4259,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.563',
+    appVersion: '1.0.564',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
