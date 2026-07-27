@@ -3152,6 +3152,127 @@ const Permissions = {
         return [];
     },
 
+    /**
+     * هل الدور «قراءة فقط»؟
+     * يدعم مختلف الصيغ (read_only, read-only, ReadOnly, Read Only, قراءة فقط)
+     */
+    isReadOnlyRole(user = AppState.currentUser) {
+        if (!user) return false;
+        // مدير النظام ليس قراءة فقط أبداً
+        if (this.isAdminRole(user.role) || this.isCurrentUserEffectiveAdmin(user)) return false;
+
+        const rawRole = String(user.role || '').toLowerCase().trim().replace(/[\s_\-]/g, '');
+        if (rawRole === 'readonly' || rawRole === 'قراءةفقط') {
+            return true;
+        }
+
+        // فحص كائن الصلاحيات المعياري أيضاً
+        const sp = this.normalizePermissions(user.permissions);
+        if (sp && typeof sp === 'object') {
+            const pRole = String(sp.role || '').toLowerCase().trim().replace(/[\s_\-]/g, '');
+            if (pRole === 'readonly' || pRole === 'قراءةفقط') {
+                return true;
+            }
+        }
+        return false;
+    },
+
+    /** هل يملك المستخدم صلاحية تعديل في المديول؟ */
+    canEdit(moduleKey, user = AppState.currentUser) {
+        if (!user) return false;
+        if (this.isCurrentUserEffectiveAdmin(user)) return true;
+        if (this.isReadOnlyRole(user)) return false;
+        return this.hasAccess(moduleKey || '');
+    },
+
+    /** هل يملك المستخدم صلاحية إضافة في المديول؟ */
+    canAdd(moduleKey, user = AppState.currentUser) {
+        if (!user) return false;
+        if (this.isCurrentUserEffectiveAdmin(user)) return true;
+        if (this.isReadOnlyRole(user)) return false;
+        return this.hasAccess(moduleKey || '');
+    },
+
+    /** هل يملك المستخدم صلاحية حذف في المديول؟ */
+    canDelete(moduleKey, user = AppState.currentUser) {
+        if (!user) return false;
+        if (this.isCurrentUserEffectiveAdmin(user)) return true;
+        if (this.isReadOnlyRole(user)) return false;
+        return this.hasAccess(moduleKey || '');
+    },
+
+    /** هل يملك المستخدم صلاحية إنشاء في المديول؟ */
+    canCreate(moduleKey, user = AppState.currentUser) {
+        return this.canAdd(moduleKey, user);
+    },
+
+    /**
+     * تطبيق قيود دور القراءة فقط تلقائياً على عناصر الواجهة
+     */
+    applyGlobalReadOnlyRestrictions(container = document) {
+        const user = AppState.currentUser;
+        if (!user || !this.isReadOnlyRole(user)) return;
+
+        const target = container || document;
+
+        // إدراج شريط تنبيه دور القراءة فقط في أعلى المديول الحرفي
+        const sectionCard = target.querySelector?.('.content-card, .section-header, .card-body') || target;
+        if (sectionCard && !target.querySelector?.('.read-only-global-banner')) {
+            const banner = document.createElement('div');
+            banner.className = 'read-only-global-banner';
+            banner.style.cssText = 'background: #fffbe6; border: 1px solid #ffe58f; color: #d46b08; padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; font-size: 13px; box-shadow: 0 2px 6px rgba(212, 107, 8, 0.08); z-index: 50;';
+            banner.innerHTML = '<i class="fas fa-eye text-lg text-amber-500"></i> <span>حسابك مسجل بدور <strong>"قراءة فقط"</strong> — جميع إجراءات الإضافة والتعديل والحذف والحفظ معطلة للأمان.</span>';
+            if (sectionCard.firstChild) {
+                sectionCard.insertBefore(banner, sectionCard.firstChild);
+            } else {
+                sectionCard.appendChild(banner);
+            }
+        }
+
+        const selectorsToDisable = [
+            'button[type="submit"]',
+            '.btn-primary:not([data-allow-read-only="true"])',
+            '#add-user-btn',
+            '#add-user-empty-btn',
+            '[id^="add-"]',
+            '[id$="-add-btn"]',
+            '[data-action="add"]',
+            '[data-action="edit"]',
+            '[data-action="delete"]',
+            '.btn-edit',
+            '.btn-delete',
+            '.btn-danger',
+            'button.btn-success',
+            '.btn-warning'
+        ];
+
+        selectorsToDisable.forEach(selector => {
+            try {
+                target.querySelectorAll?.(selector).forEach(el => {
+                    const text = (el.textContent || '').trim();
+                    const isAllowed = el.getAttribute('aria-label') === 'Close' ||
+                        el.classList.contains('modal-close') ||
+                        el.classList.contains('modal-close-btn') ||
+                        el.id === 'cancel-user-btn' ||
+                        text.includes('طباعة') ||
+                        text.includes('تصدير') ||
+                        text.includes('إلغاء') ||
+                        text.includes('إغلاق') ||
+                        text.includes('بحث') ||
+                        text.includes('تصفية');
+
+                    if (isAllowed) return;
+
+                    el.disabled = true;
+                    el.style.opacity = '0.4';
+                    el.style.cursor = 'not-allowed';
+                    el.style.pointerEvents = 'none';
+                    el.title = 'حسابك بقائمة القراءة فقط ولا يمكن إجراء أي تعديلات';
+                });
+            } catch (e) { /* ignore */ }
+        });
+    },
+
 
 
 
@@ -4056,7 +4177,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.561',
+    appVersion: '1.0.563',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -9343,30 +9464,31 @@ if (typeof window !== 'undefined') {
 
     // ✅ دوال مساعدة للتحقق من صلاحيات القراءة فقط
     window.isReadOnlyRole = function(user = AppState.currentUser) {
-        if (!user) return false;
-        const role = (user.role || '').toLowerCase().trim();
-        return role === 'read_only' || role === 'قراءة فقط';
+        return typeof Permissions !== 'undefined' && typeof Permissions.isReadOnlyRole === 'function'
+            ? Permissions.isReadOnlyRole(user)
+            : false;
     };
 
     window.canEdit = function(moduleKey, user = AppState.currentUser) {
-        if (!user) return false;
-        if (Permissions.isAdminRole(user.role)) return true;
-        if (window.isReadOnlyRole(user)) return false;
-        return Permissions.hasAccess(moduleKey || '', user);
+        return typeof Permissions !== 'undefined' && typeof Permissions.canEdit === 'function'
+            ? Permissions.canEdit(moduleKey, user)
+            : false;
     };
 
     window.canAdd = function(moduleKey, user = AppState.currentUser) {
-        if (!user) return false;
-        if (Permissions.isAdminRole(user.role)) return true;
-        if (window.isReadOnlyRole(user)) return false;
-        return Permissions.hasAccess(moduleKey || '', user);
+        return typeof Permissions !== 'undefined' && typeof Permissions.canAdd === 'function'
+            ? Permissions.canAdd(moduleKey, user)
+            : false;
     };
 
     window.canDelete = function(moduleKey, user = AppState.currentUser) {
-        if (!user) return false;
-        if (Permissions.isAdminRole(user.role)) return true;
-        if (window.isReadOnlyRole(user)) return false;
-        return Permissions.hasAccess(moduleKey || '', user);
+        return typeof Permissions !== 'undefined' && typeof Permissions.canDelete === 'function'
+            ? Permissions.canDelete(moduleKey, user)
+            : false;
+    };
+
+    window.canCreate = function(moduleKey, user = AppState.currentUser) {
+        return window.canAdd(moduleKey, user);
     };
 
     // استدعاء تلقائي لتحديث قوائم المصنع/الموقع في جميع الموديولات عند اكتمال تحميل إعدادات النماذج

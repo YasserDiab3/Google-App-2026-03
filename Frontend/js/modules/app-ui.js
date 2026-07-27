@@ -7405,6 +7405,14 @@ window.UI = {
                     Utils.safeWarn('قسم غير معروف:', sectionName);
             }
 
+            // تطبيق قيود دور القراءة فقط تلقائياً إذا كان المستخدم بحالة "قراءة فقط"
+            setTimeout(() => {
+                if (typeof Permissions !== 'undefined' && typeof Permissions.applyGlobalReadOnlyRestrictions === 'function') {
+                    const sectionEl = document.getElementById(`${sectionName}-section`);
+                    Permissions.applyGlobalReadOnlyRestrictions(sectionEl || document);
+                }
+            }, 300);
+
             // التأكد من إضافة أيقونات التنقل بعد تحميل جميع الموديولات
             if (sectionName !== 'dashboard') {
                 setTimeout(() => {
