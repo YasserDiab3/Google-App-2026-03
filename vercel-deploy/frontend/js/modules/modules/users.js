@@ -28,6 +28,146 @@ const Users = {
         if (typeof i18nCore.applyLiteralTranslations === 'function') i18nCore.applyLiteralTranslations(target);
     },
 
+    generateRandomPassword(length = 10) {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&*';
+        let password = '';
+        if (window.crypto && window.crypto.getRandomValues) {
+            const array = new Uint32Array(length);
+            window.crypto.getRandomValues(array);
+            for (let i = 0; i < length; i++) {
+                password += chars[array[i] % chars.length];
+            }
+        } else {
+            for (let i = 0; i < length; i++) {
+                password += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+        }
+        return password;
+    },
+
+    showUserCredentialsModal(creds) {
+        if (!creds || !creds.email) return;
+        const existing = document.getElementById('user-credentials-modal-overlay');
+        if (existing) existing.remove();
+
+        const roleLabels = {
+            admin: '🔴 مدير النظام (Admin)',
+            safety_officer: '🔵 مسئول السلامة (Safety Officer)',
+            user: '🟢 مستخدم عادي (Regular User)',
+            read_only: '🟣 قراءة فقط (Read Only)'
+        };
+        const roleText = roleLabels[creds.role] || creds.role || 'مستخدم';
+        const loginUrl = window.location.origin + window.location.pathname;
+
+        const formattedSummary = `مرحباً ${creds.name || 'المستخدم'}،
+
+تم إنشاء/تحديث حسابك بنجاح في نظام إدارة السلامة والصحة المهنية (ICAPP HSE).
+
+بيانات تسجيل الدخول:
+• البريد الإلكتروني: ${creds.email}
+• كلمة المرور: ${creds.password || '••••••••'}
+• الدور الوظيفي: ${roleText}
+• القسم: ${creds.department || '—'}
+• رابط النظام: ${loginUrl}
+
+يرجى الاحتفاظ بهذه البيانات وتغيير كلمة المرور عند أول تسجيل دخول.`;
+
+        const mailtoSubject = encodeURIComponent(`بيانات حسابك في نظام إدارة السلامة والصحة المهنية - ${creds.name || ''}`);
+        const mailtoBody = encodeURIComponent(formattedSummary);
+        const mailtoUrl = `mailto:${encodeURIComponent(creds.email)}?subject=${mailtoSubject}&body=${mailtoBody}`;
+
+        const modal = document.createElement('div');
+        modal.id = 'user-credentials-modal-overlay';
+        modal.className = 'modal-overlay animate-fade-in';
+        modal.style.zIndex = '9999';
+        modal.style.backdropFilter = 'blur(8px)';
+        modal.innerHTML = `
+            <div class="modal-content animate-scale-up" style="max-width: 580px; width: 95%; border-radius: 20px; padding: 0; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2);">
+                <div style="background: linear-gradient(135deg, #003865 0%, #1d4ed8 50%, #005696 100%); padding: 28px 24px; text-align: center; color: white; position: relative; border-bottom: 3px solid #FFC72C;">
+                    <button type="button" class="modal-close text-white opacity-80 hover:opacity-100" onclick="document.getElementById('user-credentials-modal-overlay')?.remove()" style="position: absolute; left: 16px; top: 16px; background: rgba(255,255,255,0.15); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; color: white;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div style="width: 72px; height: 72px; background: rgba(255,255,255,0.2); backdrop-filter: blur(8px); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; border: 2px solid rgba(255,255,255,0.4); box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+                        <i class="fas fa-user-check text-3xl text-amber-300"></i>
+                    </div>
+                    <h3 style="font-size: 22px; font-weight: 800; margin: 0 0 6px; color: #ffffff;">تم حفظ بيانات الحساب بنجاح!</h3>
+                    <p style="font-size: 13px; opacity: 0.9; margin: 0; color: #e2e8f0;">جاهز لمشاركة بيانات تسجيل الدخول مع المستخدم</p>
+                </div>
+
+                <div style="padding: 24px; background: #ffffff;">
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px dashed #cbd5e1;">
+                            <span style="font-size: 12px; font-weight: 600; color: #64748b;"><i class="fas fa-user ml-1 text-blue-600"></i> الاسم الكامل</span>
+                            <strong style="font-size: 14px; color: #1e293b;">${Utils.escapeHTML(creds.name || '')}</strong>
+                        </div>
+
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px dashed #cbd5e1;">
+                            <span style="font-size: 12px; font-weight: 600; color: #64748b;"><i class="fas fa-envelope ml-1 text-blue-600"></i> البريد الإلكتروني</span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <code style="font-size: 13px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 2px 8px; border-radius: 6px; direction: ltr;">${Utils.escapeHTML(creds.email || '')}</code>
+                                <button type="button" onclick="navigator.clipboard.writeText('${creds.email}').then(() => Notification.success('تم نسخ البريد الإلكتروني')).catch(() => {})" title="نسخ البريد" style="background: #e2e8f0; border: none; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #475569;">
+                                    <i class="fas fa-copy text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px dashed #cbd5e1;">
+                            <span style="font-size: 12px; font-weight: 600; color: #64748b;"><i class="fas fa-key ml-1 text-amber-600"></i> كلمة المرور</span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <code id="cred-modal-pass-text" style="font-size: 15px; font-weight: 800; color: #059669; background: #ecfdf5; padding: 4px 10px; border-radius: 6px; letter-spacing: 1px; direction: ltr;">${Utils.escapeHTML(creds.password || '••••••••')}</code>
+                                <button type="button" onclick="navigator.clipboard.writeText('${creds.password}').then(() => Notification.success('تم نسخ كلمة المرور')).catch(() => {})" title="نسخ كلمة المرور" style="background: #d1fae5; border: none; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #047857;">
+                                    <i class="fas fa-copy text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px dashed #cbd5e1;">
+                            <span style="font-size: 12px; font-weight: 600; color: #64748b;"><i class="fas fa-user-shield ml-1 text-purple-600"></i> الدور والقسم</span>
+                            <span style="font-size: 12px; font-weight: 700; color: #334155; background: #f1f5f9; padding: 3px 10px; border-radius: 20px;">${Utils.escapeHTML(roleText)} - ${Utils.escapeHTML(creds.department || '')}</span>
+                        </div>
+
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 12px; font-weight: 600; color: #64748b;"><i class="fas fa-link ml-1 text-blue-600"></i> رابط النظام</span>
+                            <a href="${loginUrl}" target="_blank" style="font-size: 12px; color: #2563eb; font-weight: 600; text-decoration: underline; direction: ltr;">${loginUrl}</a>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                        <button type="button" id="copy-all-creds-btn" class="btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: linear-gradient(135deg, #003865, #005696); border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; border: none;">
+                            <i class="fas fa-copy"></i>
+                            نسخ بيانات الحساب
+                        </button>
+                        <a href="${mailtoUrl}" class="btn-secondary" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 10px; font-weight: 700; font-size: 13px; text-decoration: none; text-align: center;">
+                            <i class="fas fa-envelope"></i>
+                            مشاركة عبر البريد
+                        </a>
+                    </div>
+
+                    <button type="button" onclick="document.getElementById('user-credentials-modal-overlay')?.remove()" style="width: 100%; padding: 10px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 13px;">
+                        <i class="fas fa-check ml-1"></i> تم والإغلاق
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+
+        const copyAllBtn = modal.querySelector('#copy-all-creds-btn');
+        if (copyAllBtn) {
+            copyAllBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(formattedSummary).then(() => {
+                    Notification.success('تم نسخ كافة بيانات الحساب بنجاح!');
+                }).catch(() => {
+                    Notification.error('تعذر نسخ البيانات تلقائياً');
+                });
+            });
+        }
+    },
+
     // ===== Photo loading guards (avoid repeated 503) =====
     _photoFailKey(photoKey) {
         return `hse_user_photo_failed_${String(photoKey || '').trim()}`;
@@ -364,25 +504,51 @@ const Users = {
                                     required
                                     class="form-input"
                                     value="${userData?.email || ''}"
-                                    placeholder="example@americana.com"
+                                    placeholder="example@icapp.com.eg"
                                     ${isEdit ? 'readonly' : ''}
                                 >
                             </div>
 
                             <div>
                                 <label for="user-password" class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <i class="fas fa-key ml-2"></i>
+                                    <i class="fas fa-key ml-2 text-amber-500"></i>
                                     كلمة المرور ${isEdit ? '(اتركه فارغاً للإبقاء على القديم)' : '*'}
                                 </label>
-                                <input 
-                                    type="password" 
-                                    id="user-password" 
-                                    name="password" 
-                                    autocomplete="current-password"
-                                    ${isEdit ? '' : 'required'}
-                                    class="form-input"
-                                    placeholder="••••••••"
-                                >
+                                <div class="flex items-center gap-2">
+                                    <div class="relative flex-1">
+                                        <input 
+                                            type="password" 
+                                            id="user-password" 
+                                            name="password" 
+                                            autocomplete="new-password"
+                                            ${isEdit ? '' : 'required'}
+                                            class="form-input pr-10"
+                                            placeholder="••••••••"
+                                            style="direction: ltr;"
+                                        >
+                                        <button 
+                                            type="button" 
+                                            id="toggle-password-visibility-btn"
+                                            class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer border-0 bg-transparent"
+                                            title="إظهار / إخفاء كلمة المرور"
+                                        >
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <button 
+                                        type="button" 
+                                        id="generate-password-btn" 
+                                        class="px-3 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 transition flex items-center gap-1.5 text-xs font-bold shadow-sm whitespace-nowrap cursor-pointer"
+                                        title="توليد كلمة مرور عشوائية قوية"
+                                    >
+                                        <i class="fas fa-wand-magic-sparkles text-amber-200"></i>
+                                        توليد كلمة سر
+                                    </button>
+                                </div>
+                                <div id="generated-pass-notice" class="mt-1.5 text-xs font-semibold hidden flex items-center text-emerald-600">
+                                    <i class="fas fa-check-circle ml-1"></i>
+                                    تم توليد كلمة مرور عشوائية بنجاح!
+                                </div>
                             </div>
 
                             <div>
@@ -591,7 +757,7 @@ const Users = {
                                         <span>${Utils.escapeHTML(user.name || '')}</span>
                                     </div>
                                 </td>
-                                <td>${Utils.escapeHTML(user.email || '')}${(user.mfaEnabled === true || user.mfaEnabled === 'true') ? ' <span class="badge badge-info text-xs" title="مصادقة ثنائية"><i class="fas fa-shield-halved"></i> MFA</span>' : ''}</td>
+                                <td>${Utils.escapeHTML(user.email || '')}${(typeof Auth !== 'undefined' && Auth._isMfaEnabledForUser && Auth._isMfaEnabledForUser(user)) ? ' <span class="badge badge-info text-xs" title="مصادقة ثنائية"><i class="fas fa-shield-halved"></i> MFA</span>' : ''}</td>
                                 <td>
                                     <div class="flex items-center gap-2">
                                         <i class="fas fa-lock text-gray-400 text-sm"></i>
@@ -642,7 +808,7 @@ const Users = {
                                         >
                                             <i class="fas fa-key"></i>
                                         </button>
-                                        ${(user.mfaEnabled === true || user.mfaEnabled === 'true') ? `
+                                        ${(typeof Auth !== 'undefined' && Auth._isMfaEnabledForUser && Auth._isMfaEnabledForUser(user)) ? `
                                         <button 
                                             onclick="Users.disableUserMfa('${user.id}', '${user.email}')" 
                                             class="btn-icon btn-icon-secondary"
@@ -770,7 +936,7 @@ const Users = {
     },
 
     async showForm(userData = null) {
-        Utils.safeLog('🔧 عرض نموذج إضافة/تعديل مستخدم:', userData ? 'تعديل' : 'إضافة جديد');
+        Utils.safeLog('🔧 عرض نموذج إضافة/تعديل مستخدم (Modal):', userData ? 'تعديل' : 'إضافة جديد');
         this.currentEditId = userData?.id || null;
         
         // تحميل الصلاحيات التفصيلية الحالية + تطبيع صلاحيات المديولات الأساسية للنموذج
@@ -780,16 +946,13 @@ const Users = {
         if (userData && userData.permissions) {
             let perms;
             try {
-                // استخدام Permissions.normalizePermissions إذا كان متاحاً
                 if (typeof Permissions !== 'undefined' && typeof Permissions.normalizePermissions === 'function') {
                     perms = Permissions.normalizePermissions(userData.permissions);
                 } else if (typeof userData.permissions === 'string') {
-                    // محاولة تحليل JSON
                     const trimmed = userData.permissions.trim();
                     if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
                         perms = JSON.parse(trimmed);
                     } else {
-                        // إذا لم يكن JSON، قد يكون نص عادي - نحاول تحويله إلى كائن
                         try {
                             const lines = trimmed.split('\n').filter(line => line.trim());
                             perms = {};
@@ -809,77 +972,124 @@ const Users = {
                                     }
                                 }
                             });
-                        } catch (parseError) {
-                            perms = {};
-                        }
+                        } catch (parseError) { perms = {}; }
                     }
-                } else {
-                    perms = userData.permissions;
-                }
-            } catch (error) {
-                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                    Utils.safeWarn('⚠️ خطأ في تحليل صلاحيات المستخدم - سيتم استخدام الصلاحيات الافتراضية');
-                }
-                perms = {};
-            }
-            
-            if (!perms || typeof perms !== 'object' || Array.isArray(perms)) {
-                perms = {};
-            }
-            
+                } else { perms = userData.permissions; }
+            } catch (error) { perms = {}; }
+
+            if (!perms || typeof perms !== 'object' || Array.isArray(perms)) { perms = {}; }
+
             const basePermissions = {};
             Object.keys(perms).forEach(key => {
                 const value = perms[key];
                 if (key.endsWith('Permissions') && typeof value === 'object' && !Array.isArray(value)) {
-                    // صلاحيات تفصيلية تُخزَّن في this.currentDetailedPermissions
                     this.currentDetailedPermissions[key] = value;
                 } else if (!key.endsWith('Permissions')) {
-                    // صلاحيات المديولات الأساسية (module -> true/false) تُستخدم لتهيئة Checkboxes
                     basePermissions[key] = value === true;
                 }
             });
 
             normalizedBasePermissions = basePermissions;
         }
-        
-        const content = document.getElementById('users-content');
-        if (content) {
-            const normalizedUserData = userData
-                ? {
-                    ...userData,
-                    // إذا كانت الصلاحيات محفوظة كنص JSON في AppState، نقوم بتمرير نسخة ككائن للنموذج
-                    permissions: normalizedBasePermissions
-                        ?? (userData.permissions && typeof userData.permissions === 'object' && !Array.isArray(userData.permissions)
-                            ? userData.permissions
-                            : {})
-                }
-                : null;
 
-            content.innerHTML = await this.renderForm(normalizedUserData);
-            this.applyModuleI18n(content);
-            this.setupEventListeners();
+        const normalizedUserData = userData
+            ? {
+                ...userData,
+                permissions: normalizedBasePermissions
+                    ?? (userData.permissions && typeof userData.permissions === 'object' && !Array.isArray(userData.permissions)
+                        ? userData.permissions
+                        : {})
+            }
+            : null;
 
-            // تحديث حالة الصلاحيات عند تغيير الدور
-            setTimeout(() => {
-                const roleSelect = document.getElementById('user-role');
-                if (roleSelect) {
-                    roleSelect.addEventListener('change', () => {
-                        this.updatePermissionsUI();
-                    });
-                }
+        // إزالة أي modal سابق
+        const existingModal = document.getElementById('user-form-modal-overlay');
+        if (existingModal) existingModal.remove();
 
-                // تهيئة أزرار تحديد/إلغاء الكل
-                this.setupSelectAllButtons();
+        const isEdit = !!userData;
+        const modal = document.createElement('div');
+        modal.id = 'user-form-modal-overlay';
+        modal.className = 'modal-overlay animate-fade-in';
+        modal.style.zIndex = '9990';
+        modal.style.backdropFilter = 'blur(6px)';
+        modal.innerHTML = `
+            <div class="modal-content animate-scale-up" style="max-width: 840px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; padding: 0; border-radius: 18px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2);">
+                <div class="modal-header" style="background: linear-gradient(135deg, #003865 0%, #005696 100%); color: white; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #FFC72C;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(255,255,255,0.15); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; font-size: 20px; color: #FFC72C;">
+                            <i class="fas fa-${isEdit ? 'user-pen' : 'user-plus'}"></i>
+                        </div>
+                        <div>
+                            <h3 style="margin: 0; font-size: 18px; font-weight: 800; color: white;">
+                                ${isEdit ? 'تعديل بيانات المستخدم' : 'إضافة مستخدم جديد للنظام'}
+                            </h3>
+                            <p style="margin: 2px 0 0; font-size: 12px; color: rgba(255,255,255,0.8);">
+                                ${isEdit ? 'تحديث المعلومات الشخصية والدور والصلاحيات' : 'أدخل بيانات الحساب الجديد وتعيين كلمة السر والصلاحيات المتاحة'}
+                            </p>
+                        </div>
+                    </div>
+                    <button type="button" class="modal-close-btn" onclick="document.getElementById('user-form-modal-overlay')?.remove()" style="background: rgba(255,255,255,0.15); border: none; color: white; border-radius: 50%; width: 34px; height: 34px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 24px; overflow-y: auto; flex: 1; background: #ffffff;">
+                    ${await this.renderForm(normalizedUserData)}
+                </div>
+            </div>
+        `;
 
-                // تهيئة أزرار الصلاحيات التفصيلية
-                this.setupDetailedPermissionsButtons();
+        document.body.appendChild(modal);
+        this.applyModuleI18n(modal);
+        this.setupEventListeners();
 
-                // تحديث حالة الصلاحيات عند التحميل
-                this.updatePermissionsUI();
-            }, 100);
-        } else {
-            Utils.safeError(' لم يتم العثور على users-content');
-        }
+        // ربط أزرار مولد كلمة السر وإعادة تعيين الحقول
+        setTimeout(() => {
+            const genBtn = modal.querySelector('#generate-password-btn');
+            if (genBtn) {
+                genBtn.addEventListener('click', () => {
+                    const passInput = modal.querySelector('#user-password');
+                    if (passInput) {
+                        const newPass = this.generateRandomPassword(10);
+                        passInput.value = newPass;
+                        passInput.type = 'text';
+                        const toggleIcon = modal.querySelector('#toggle-password-visibility-btn i');
+                        if (toggleIcon) toggleIcon.className = 'fas fa-eye-slash text-amber-600';
+                        const notice = modal.querySelector('#generated-pass-notice');
+                        if (notice) notice.classList.remove('hidden');
+                        Notification.success('تم توليد كلمة مرور عشوائية قوية');
+                    }
+                });
+            }
+
+            const toggleBtn = modal.querySelector('#toggle-password-visibility-btn');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', () => {
+                    const passInput = modal.querySelector('#user-password');
+                    if (passInput) {
+                        const isPass = passInput.type === 'password';
+                        passInput.type = isPass ? 'text' : 'password';
+                        const icon = toggleBtn.querySelector('i');
+                        if (icon) icon.className = isPass ? 'fas fa-eye-slash text-amber-600' : 'fas fa-eye text-gray-400';
+                    }
+                });
+            }
+
+            const roleSelect = modal.querySelector('#user-role');
+            if (roleSelect) {
+                roleSelect.addEventListener('change', () => {
+                    this.updatePermissionsUI();
+                });
+            }
+
+            const cancelBtn = modal.querySelector('#cancel-user-btn');
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => modal.remove());
+            }
+
+            this.setupSelectAllButtons();
+            this.setupDetailedPermissionsButtons();
+            this.updatePermissionsUI();
+        }, 100);
     },
 
     updatePermissionsUI() {
@@ -1492,7 +1702,21 @@ const Users = {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
             }
-            
+
+            // إغلاق نافذة الإضافة/التعديل المنبثقة
+            document.getElementById('user-form-modal-overlay')?.remove();
+
+            // عرض بطاقة الحساب الجديدة للمشاركة والنسخ عند الإضافة أو تحديث كلمة المرور
+            if (isNewUser || passwordUpdated) {
+                this.showUserCredentialsModal({
+                    name: formData.name,
+                    email: formData.email,
+                    password: rawPasswordInput || trimmedPasswordInput,
+                    role: formData.role,
+                    department: formData.department
+                });
+            }
+
             this.showList();
         } catch (error) {
             Loading.hide();
@@ -2109,6 +2333,15 @@ const Users = {
             // استخدام Object.assign للأداء الأفضل
             // هذا يضمن عدم فقدان الصلاحيات التفصيلية
             Object.assign(permissions, this.currentDetailedPermissions);
+        }
+
+        // تنظيف الصلاحيات التفصيلية للموديولات غير المحددة
+        if (typeof MODULE_PERMISSIONS_CONFIG !== 'undefined') {
+            MODULE_PERMISSIONS_CONFIG.forEach(module => {
+                if (!permissions[module.key]) {
+                    delete permissions[`${module.key}Permissions`];
+                }
+            });
         }
 
         // ✅ إصلاح: التأكد من إرجاع كائن حتى لو كان فارغاً (وليس undefined)
