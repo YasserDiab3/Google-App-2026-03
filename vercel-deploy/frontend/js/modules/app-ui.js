@@ -10729,8 +10729,6 @@ window.UI = {
         // تحديث nav-item borders
         const navItems = document.querySelectorAll('.nav-item');
         navItems.forEach(item => {
-            // في RTL: الحد على اليمين (الجانب الأيمن من الشاشة)
-            // في LTR: الحد على اليسار (الجانب الأيسر من الشاشة)
             if (isRTL) {
                 item.style.borderRight = '4px solid transparent';
                 item.style.borderLeft = 'none';
@@ -10740,41 +10738,30 @@ window.UI = {
                 item.style.borderRight = 'none';
                 item.style.borderRadius = '0 8px 8px 0';
             }
-        });
 
-        // تحديث أيقونات nav-item
-        // الأيقونة تبقى دائماً في نفس الموضع البصري (الجانب الأيمن) كما في العربية
-        navItems.forEach(item => {
             const icon = item.querySelector('i');
             const textSpan = item.querySelector('span');
-            
-            // إزالة أي order styles سابقة
+
             if (icon) {
                 icon.style.order = '';
-                // في RTL: الأيقونة على اليمين (margin-left)
-                // في LTR: الأيقونة على اليمين أيضاً (margin-right بعد reverse)
                 if (isRTL) {
-                    icon.style.marginLeft = '1rem';
+                    icon.style.marginLeft = '0.75rem';
                     icon.style.marginRight = '0';
                 } else {
-                    icon.style.marginRight = '1rem';
+                    icon.style.marginRight = '0.75rem';
                     icon.style.marginLeft = '0';
                 }
             }
-            
+
             if (textSpan) {
                 textSpan.style.order = '';
                 textSpan.style.flex = '1';
                 textSpan.style.textAlign = isRTL ? 'right' : 'left';
             }
-            
-            // تحديث محاذاة العنصر نفسه
-            // الأيقونة تبقى على اليمين دائماً (كما في العربية)
+
             item.style.textAlign = isRTL ? 'right' : 'left';
-            item.style.justifyContent = 'flex-start'; // دائماً flex-start
-            // في RTL: row (الأيقونة على اليمين، النص على اليسار)
-            // في LTR: row-reverse (الأيقونة على اليمين، النص على اليسار)
-            item.style.flexDirection = isRTL ? 'row' : 'row-reverse';
+            item.style.justifyContent = 'flex-start';
+            item.style.flexDirection = 'row';
         });
         
         // إضافة CSS ديناميكي لتأثير hover و ::before

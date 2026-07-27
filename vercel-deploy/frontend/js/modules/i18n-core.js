@@ -715,6 +715,7 @@
             'module.ptw.title': 'إدارة تصاريح العمل',
             'module.ptw.subtitle': 'إصدار ومتابعة تصاريح العمل مع دائرة الاعتمادات',
             'module.ptw.btn.newPermit': 'إصدار تصريح جديد',
+            'module.ptw.btn.addManual': 'إضافة تصريح يدوي',
             'module.ptw.btn.refreshTitle': 'تحديث المحتوى الحالي',
             'module.ptw.tab.permits': 'قائمة التصاريح',
             'module.ptw.tab.registry': 'سجل حصر التصاريح',
@@ -722,7 +723,9 @@
             'module.ptw.tab.analysis': 'تحليل البيانات',
             'module.ptw.tab.approvals': 'الموافقات',
             'module.ptw.loading.permits': 'جاري تحميل قائمة التصاريح...',
-            'module.ptw.registry.addManual': 'إضافة تصريح يدوي / Manual Permit Entry',
+            'module.ptw.registry.addManual': 'إضافة تصريح يدوي',
+            'module.ptw.form.newManual': 'إصدار تصريح عمل يدوي',
+            'module.ptw.form.editManual': 'تعديل تصريح عمل يدوي',
             'module.ptw.registry.totalRecords': 'إجمالي السجلات',
             'module.ptw.registry.openPermits': 'تصاريح مفتوحة',
             'module.ptw.registry.closedPermits': 'تصاريح مغلقة',
@@ -2003,6 +2006,299 @@
             'module.sc.field.contractorName': 'المقاول',
             'module.sc.field.externalName': 'اسم خارجي',
 
+            'module.iso.title': 'SafetyHub | ICAPP',
+            'module.iso.subtitle': 'SafetyHub | ICAPP - متوافق مع ISO 45001 & ISO 14001',
+            'module.iso.btn.exportCompliance': 'تقرير الامتثال PDF',
+            'module.iso.stats.docs': 'الوثائق',
+            'module.iso.stats.procedures': 'الإجراءات',
+            'module.iso.stats.forms': 'النماذج',
+            'module.iso.stats.compliance': 'معدل الامتثال',
+            'module.iso.tab.overview': 'نظرة عامة',
+            'module.iso.tab.docs': 'الوثائق',
+            'module.iso.tab.procedures': 'الإجراءات',
+            'module.iso.tab.forms': 'النماذج',
+            'module.iso.tab.iso45001': 'ISO 45001',
+            'module.iso.tab.iso14001': 'ISO 14001',
+            'module.iso.tab.audit': 'التدقيق والمراجعة',
+            'module.iso.tab.coding': 'مركز التكويد والإصدار',
+            'module.iso.loading': 'جاري تحميل المحتوى...',
+            'module.iso.error.loading': 'حدث خطأ في تحميل البيانات',
+
+            'module.iso.codingCenter.systemForms.moduleName.PTW': 'تصاريح العمل (PTW)',
+            'module.iso.codingCenter.systemForms.moduleName.Incidents': 'إدارة الحوادث',
+            'module.iso.codingCenter.systemForms.moduleName.NearMiss': 'الحوادث الوشيكة',
+            'module.iso.codingCenter.systemForms.moduleName.Clinic': 'العيادة الطبية',
+            'module.iso.codingCenter.systemForms.moduleName.Observations': 'ملاحظات السلامة (BBS)',
+            'module.iso.codingCenter.systemForms.moduleName.RiskAssessment': 'تقييم المخاطر (JHA)',
+            'module.iso.codingCenter.systemForms.moduleName.Violations': 'المخالفات والإنذارات',
+            'module.iso.codingCenter.systemForms.moduleName.Inspections': 'التفتيش والفحص الدوري',
+            'module.iso.codingCenter.systemForms.moduleName.ToolBoxTalk': 'اجتماعات السلامة (TBT)',
+            'module.iso.codingCenter.systemForms.moduleName.PPE': 'مهمات الوقاية (PPE)',
+            'module.iso.codingCenter.systemForms.moduleName.FireEquipment': 'مكافحة الحريق والطوارئ',
+            'module.iso.codingCenter.systemForms.moduleName.ChemicalSafety': 'السلامة الكيميائية (SDS)',
+            'module.iso.codingCenter.systemForms.moduleName.ChangeManagement': 'إدارة التغيير (MOC)',
+            'module.iso.codingCenter.systemForms.moduleName.ISOQuality': 'نظام الجودة والتدقيق (ISO)',
+            'module.iso.codingCenter.systemForms.moduleName.ISOCAPA': 'الإجراءات التصحيحية (CAPA)',
+            'module.iso.codingCenter.systemForms.moduleName.Trainings': 'التدريب والتوعية',
+
+            'module.iso.manifest.ptw.general': 'تصريح العمل العام',
+            'module.iso.manifest.ptw.hot': 'تصريح العمل الساخن',
+            'module.iso.manifest.ptw.cold': 'تصريح العمل البارد',
+            'module.iso.manifest.ptw.confined': 'تصريح دخول الأماكن المغلقة',
+            'module.iso.manifest.ptw.excavation': 'تصريح الحفريات',
+            'module.iso.manifest.ptw.loto': 'تصريح عزل طاقة (LOTO)',
+            'module.iso.manifest.incident.report': 'تقرير الحوادث',
+            'module.iso.manifest.incident.register': 'سجل الحوادث والإصابات',
+            'module.iso.manifest.nearmiss.report': 'تقرير الحوادث الوشيكة',
+            'module.iso.manifest.nearmiss.register': 'سجل الحوادث الوشيكة',
+            'module.iso.manifest.clinic.register': 'سجل الزيارات الطبية',
+            'module.iso.manifest.clinic.exam': 'نموذج الفحص الطبي',
+            'module.iso.manifest.obs.report': 'الملاحظات اليومية',
+            'module.iso.manifest.obs.bbs': 'بطاقة ملاحظة السلوك (BBS)',
+            'module.iso.manifest.risk.jha': 'تحليل مخاطر العمل (JHA)',
+            'module.iso.manifest.risk.register': 'سجل تقييم المخاطر',
+            'module.iso.manifest.viol.notice': 'إشعار مخالفة',
+            'module.iso.manifest.viol.register': 'سجل المخالفات والإنذارات',
+            'module.iso.manifest.insp.periodic': 'التفتيش الدوري الشامل',
+            'module.iso.manifest.insp.register': 'سجل التفتيش',
+            'module.iso.manifest.insp.daily': 'فحص السلامة اليومي',
+            'module.iso.manifest.insp.scaffold': 'نموذج فحص السقالات',
+            'module.iso.manifest.insp.equip': 'نموذج فحص المعدات',
+            'module.iso.manifest.tbt.form': 'نموذج اجتماع السلامة (TBT)',
+            'module.iso.manifest.tbt.register': 'سجل اجتماعات TBT',
+            'module.iso.manifest.ppe.receive': 'سجل استلام مهمات الوقاية',
+            'module.iso.manifest.ppe.insp': 'نموذج فحص مهمات الوقاية',
+            'module.iso.manifest.fire.insp': 'تفتيش معدات الإطفاء',
+            'module.iso.manifest.fire.drill': 'تقرير تجربة إخلاء',
+            'module.iso.manifest.chem.sds': 'سجل المواد الكيميائية (SDS)',
+            'module.iso.manifest.moc.form': 'إدارة التغيير (MOC)',
+            'module.iso.manifest.iso.legal': 'سجل المتطلبات القانونية',
+            'module.iso.manifest.iso.kpi': 'مؤشرات الأداء (KPIs)',
+            'module.iso.manifest.iso.auditPlan': 'خطة التدقيق الداخلي',
+            'module.iso.manifest.iso.auditRep': 'تقرير التدقيق الداخلي',
+            'module.iso.manifest.capa.nc': 'تقرير حالة عدم المطابقة (NC)',
+            'module.iso.manifest.capa.car': 'الإجراءات التصحيحية (CAR)',
+            'module.iso.manifest.train.plan': 'خطة التدريب السنوية',
+            'module.iso.manifest.train.att': 'سجل حضور تدريب',
+            'module.iso.manifest.train.eval': 'نموذج تقييم تدريب',
+
+            'module.iso.overview.healthTitle': 'مؤشر أداء النظام (Health Score)',
+            'module.iso.overview.healthDesc': 'يقيس هذا المؤشر نسبة اكتمال الوثائق والإجراءات والتدقيق لتطبيق معايير الأيزو.',
+            'module.iso.overview.excellent': 'ممتاز',
+            'module.iso.overview.good': 'جيد',
+            'module.iso.overview.needsImprovement': 'يحتاج تحسين',
+            'module.iso.overview.actionItems': 'مهام عاجلة (Action Items)',
+            'module.iso.overview.noActionItems': 'لا توجد مهام عاجلة حالياً',
+            'module.iso.overview.openNc': 'حالة عدم مطابقة مفتوحة',
+            'module.iso.overview.lateCa': 'إجراء تصحيحي متأخر',
+            'module.iso.overview.recentActivity': 'الأنشطة الأخيرة',
+            'module.iso.overview.noRecentActivity': 'لا توجد أنشطة مسجلة حديثاً',
+            'module.iso.docs.title': 'مركز الوثائق والأدلة (Manuals & Policies)',
+            'module.iso.docs.addBtn': 'إضافة وثيقة',
+            'module.iso.docs.exportExcel': 'تصدير Excel',
+            'module.iso.docs.noData': 'لا توجد وثائق مسجلة',
+            'module.iso.docs.table.code': 'الكود',
+            'module.iso.docs.table.name': 'الاسم',
+            'module.iso.docs.table.type': 'النوع',
+            'module.iso.docs.table.version': 'الإصدار',
+            'module.iso.docs.table.issueDate': 'تاريخ الإصدار',
+            'module.iso.docs.table.status': 'الحالة',
+            'module.iso.docs.table.actions': 'الإجراءات',
+            'module.iso.procedures.title': 'سجل الإجراءات القياسية (SOPs)',
+            'module.iso.procedures.addBtn': 'إضافة إجراء',
+            'module.iso.procedures.noData': 'لا توجد إجراءات مسجلة',
+            'module.iso.procedures.table.code': 'الكود',
+            'module.iso.procedures.table.name': 'الاسم',
+            'module.iso.procedures.table.dept': 'القسم المعني',
+            'module.iso.procedures.table.nextReview': 'تاريخ المراجعة القادم',
+            'module.iso.procedures.table.status': 'الحالة',
+            'module.iso.procedures.needsReview': 'يحتاج مراجعة',
+            'module.iso.forms.title': 'سجل النماذج والسجلات (Forms & Records)',
+            'module.iso.forms.addBtn': 'إضافة نموذج',
+            'module.iso.forms.noData': 'لا توجد نماذج مسجلة',
+            'module.iso.forms.table.code': 'الكود',
+            'module.iso.forms.table.name': 'الاسم',
+            'module.iso.forms.table.retention': 'مدة الحفظ',
+            'module.iso.forms.table.location': 'مكان الحفظ',
+            'module.iso.audit.headerTitle': 'مركز التدقيق والمراجعة (Audits & CAPA)',
+            'module.iso.audit.headerDesc': 'إدارة عمليات التدقيق الداخلي والخارجي ومتابعة حالات عدم المطابقة والإجراءات التصحيحية',
+            'module.iso.audit.auditLogTitle': 'سجل التدقيق (Audit Log)',
+            'module.iso.audit.auditLogDesc': 'عمليات التدقيق المجدولة والمنفذة',
+            'module.iso.audit.addAuditBtn': 'تدقيق جديد',
+            'module.iso.audit.noAudits': 'لا توجد عمليات تدقيق مسجلة',
+            'module.iso.audit.auditCard.internal': 'داخلي',
+            'module.iso.audit.auditCard.external': 'خارجي',
+            'module.iso.audit.auditCard.auditor': 'المدقق:',
+            'module.iso.audit.auditCard.date': 'التاريخ:',
+            'module.iso.audit.capaTitle': 'سجل CAPA',
+            'module.iso.audit.capaDesc': 'الإجراءات التصحيحية والوقائية (حسب ISO 45001)',
+            'module.iso.audit.addNcBtn': 'تسجيل NC',
+            'module.iso.audit.addCaBtn': 'تسجيل CA',
+            'module.iso.audit.noCapa': 'لا توجد سجلات عدم مطابقة أو إجراءات تصحيحية',
+            'module.iso.audit.capaCard.ncType': 'عدم مطابقة (NC)',
+            'module.iso.audit.capaCard.caType': 'إجراء تصحيحي (CA)',
+            'module.iso.coding.headerTitle': 'مركز التكويد والإصدار الموحد',
+            'module.iso.coding.headerDesc': 'إدارة أكواد كافة النماذج والتقارير والسجلات والوثائق بالمنظومة لضمان التوحيد القياسي.',
+            'module.iso.coding.stats.totalCodes': 'إجمالي الأكواد',
+            'module.iso.coding.stats.activeVersions': 'إصدارات نشطة',
+            'module.iso.coding.stats.unassigned': 'نماذج غير مكودة',
+            'module.iso.coding.btn.addCode': 'إضافة كود جديد',
+            'module.iso.coding.btn.exportPdf': 'تصدير PDF',
+            'module.iso.coding.searchPlaceholder': 'ابحث بالكود، الاسم، أو المديول...',
+            'module.iso.coding.allModules': 'جميع المديولات',
+            'module.iso.coding.allTypes': 'جميع الأنواع',
+            'module.iso.coding.docCodesList': 'قائمة أكواد المستندات',
+            'module.iso.coding.noCodes': 'لا توجد أكواد مسجلة',
+            'module.iso.coding.table.code': 'الكود',
+            'module.iso.coding.table.name': 'الاسم / الوصف',
+            'module.iso.coding.table.module': 'المديول',
+            'module.iso.coding.table.type': 'النوع',
+            'module.iso.coding.table.dept': 'الإدارة / القسم',
+            'module.iso.coding.table.versions': 'الإصدارات',
+            'module.iso.coding.table.status': 'الحالة',
+            'module.iso.coding.systemFormsTitle': 'دليل نماذج النظام المدمجة',
+            'module.iso.coding.systemFormsDesc': 'يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد',
+            'module.iso.coding.formCard.coded': 'مكود',
+            'module.iso.coding.formCard.uncoded': 'غير معرّف',
+            'module.iso.coding.formCard.module': 'المديول:',
+            'module.iso.coding.formCard.code': 'الكود:',
+            'module.iso.coding.formCard.version': 'الإصدار:',
+            'module.iso.coding.formCard.noVersion': 'لا يوجد إصدار نشط',
+            'module.iso.coding.formCard.alert': 'قم بتعيين كود ليظهر في تذييل هذا النموذج عند الطباعة',
+            'module.iso.coding.formCard.btnHistory': 'سجل التغييرات',
+            'module.iso.coding.formCard.btnAssign': 'تعيين كود الآن',
+            'module.iso.coding.versionsTitle': 'سجل التغييرات وإصدارات المستند',
+            'module.iso.coding.btn.addVersion': 'إصدار جديد',
+            'module.iso.coding.btn.backToCodes': 'عودة للأكواد',
+            'module.iso.coding.noVersions': 'لا توجد إصدارات مسجلة',
+            'module.iso.coding.versionsTable.code': 'الكود',
+            'module.iso.coding.versionsTable.versionNum': 'رقم الإصدار',
+            'module.iso.coding.versionsTable.issueDate': 'تاريخ الإصدار',
+            'module.iso.coding.versionsTable.revisionDate': 'تاريخ التعديل',
+            'module.iso.coding.versionsTable.status': 'الحالة',
+            'module.iso.form.code': 'كود الوثيقة',
+            'module.iso.form.name': 'اسم الوثيقة',
+            'module.iso.form.type': 'نوع الوثيقة',
+            'module.iso.form.version': 'الإصدار',
+            'module.iso.form.department': 'القسم المعني',
+            'module.iso.form.date': 'تاريخ الإصدار',
+            'module.iso.form.status': 'الحالة',
+            'module.iso.form.notes': 'ملاحظات',
+            'module.iso.form.fileUrl': 'رابط الملف (Google Drive)',
+            'module.iso.form.procName': 'اسم الإجراء',
+            'module.iso.form.procCode': 'كود الإجراء',
+            'module.iso.form.reviewDate': 'تاريخ المراجعة القادم',
+            'module.iso.form.formName': 'اسم النموذج',
+            'module.iso.form.formCode': 'كود النموذج',
+            'module.iso.form.formType': 'نوع النموذج',
+            'module.iso.form.statusActive': 'نشط',
+            'module.iso.form.statusInactive': 'معطل',
+            'module.iso.form.statusReview': 'يحتاج مراجعة',
+            'module.iso.docs.addTitle': 'إضافة وثيقة جديدة',
+            'module.iso.docs.editTitle': 'تعديل الوثيقة',
+            'module.iso.docs.detailsTitle': 'تفاصيل الوثيقة',
+            'module.iso.docs.notFound': 'الوثيقة غير موجودة',
+            'module.iso.procedures.addTitle': 'إضافة إجراء جديد',
+            'module.iso.procedures.editTitle': 'تعديل الإجراء',
+            'module.iso.procedures.detailsTitle': 'تفاصيل الإجراء',
+            'module.iso.procedures.notFound': 'الإجراء غير موجود',
+            'module.iso.forms.addTitle': 'إضافة نموذج جديد',
+            'module.iso.forms.editTitle': 'تعديل النموذج',
+            'module.iso.forms.detailsTitle': 'تفاصيل النموذج',
+            'module.iso.forms.notFound': 'النموذج غير موجود',
+            'module.iso.objectives.addTitle': 'إضافة هدف جديد',
+            'module.iso.objectives.editTitle': 'تعديل الهدف',
+            'module.iso.objectives.form.objective': 'الهدف',
+            'module.iso.objectives.form.target': 'المستهدف',
+            'module.iso.objectives.form.program': 'البرنامج',
+            'module.iso.objectives.form.dueDate': 'تاريخ الاستحقاق',
+            'module.iso.objectives.form.progress': 'نسبة الإنجاز',
+            'module.iso.aspects.addTitle': 'إضافة تقييم بيئي جديد',
+            'module.iso.aspects.editTitle': 'تعديل التقييم البيئي',
+            'module.iso.aspects.form.activity': 'النشاط',
+            'module.iso.aspects.form.aspect': 'المظهر البيئي',
+            'module.iso.aspects.form.impact': 'الأثر البيئي',
+            'module.iso.aspects.form.evaluation': 'التقييم',
+            'module.iso.aspects.form.controls': 'ضوابط التحكم',
+            'module.iso.audit.addTitle': 'إضافة تدقيق جديد',
+            'module.iso.audit.editTitle': 'تعديل التدقيق',
+            'module.iso.audit.detailsTitle': 'تفاصيل التدقيق',
+            'module.iso.audit.notFound': 'التدقيق غير موجود',
+            'module.iso.audit.form.type': 'نوع التدقيق',
+            'module.iso.audit.form.date': 'التاريخ',
+            'module.iso.audit.form.auditor': 'المدقق',
+            'module.iso.audit.form.status': 'الحالة',
+            'module.iso.audit.form.desc': 'الوصف/الملاحظات',
+            'module.iso.nc.addTitle': 'إضافة حالة عدم مطابقة',
+            'module.iso.nc.editTitle': 'تعديل حالة عدم مطابقة',
+            'module.iso.nc.detailsTitle': 'تفاصيل حالة عدم المطابقة',
+            'module.iso.nc.notFound': 'حالة عدم المطابقة غير موجودة',
+            'module.iso.nc.form.date': 'تاريخ عدم المطابقة',
+            'module.iso.nc.form.type': 'النوع',
+            'module.iso.nc.form.desc': 'الوصف',
+            'module.iso.nc.form.rootCause': 'السبب الجذري',
+            'module.iso.nc.form.status': 'الحالة',
+            'module.iso.ca.addTitle': 'إضافة إجراء تصحيحي',
+            'module.iso.ca.editTitle': 'تعديل إجراء تصحيحي',
+            'module.iso.ca.detailsTitle': 'تفاصيل الإجراء التصحيحي',
+            'module.iso.ca.notFound': 'الإجراء التصحيحي غير موجود',
+            'module.iso.ca.form.ncId': 'ارتباط بحالة عدم مطابقة',
+            'module.iso.ca.form.action': 'الإجراء المطلوب',
+            'module.iso.ca.form.responsible': 'المسؤول',
+            'module.iso.ca.form.dueDate': 'تاريخ الاستحقاق',
+            'module.iso.ca.form.status': 'الحالة',
+            'module.iso.ca.form.notes': 'ملاحظات',
+            'module.iso.coding.addCodeTitle': 'إضافة كود مستند جديد',
+            'module.iso.coding.editCodeTitle': 'تعديل كود المستند',
+            'module.iso.coding.form.codeLabel': 'الكود *',
+            'module.iso.coding.form.codePlaceholder': 'مثال: DOC-001, FORM-002',
+            'module.iso.coding.form.nameLabel': 'اسم المستند / الإجراء *',
+            'module.iso.coding.form.namePlaceholder': 'اسم المستند',
+            'module.iso.coding.form.typeLabel': 'نوع المستند *',
+            'module.iso.coding.form.selectTypeOption': 'اختر النوع',
+            'module.iso.coding.form.typeDoc': 'وثيقة',
+            'module.iso.coding.form.typeProc': 'إجراء',
+            'module.iso.coding.form.typeForm': 'نموذج',
+            'module.iso.coding.form.typeReport': 'تقرير',
+            'module.iso.coding.form.typeRecord': 'سجل',
+            'module.iso.coding.form.departmentLabel': 'القسم *',
+            'module.iso.coding.form.departmentPlaceholder': 'القسم التابع له',
+            'module.iso.coding.form.statusLabel': 'الحالة',
+            'module.iso.coding.form.statusActive': 'نشط',
+            'module.iso.coding.form.statusInactive': 'معطل',
+            'module.iso.coding.form.descLabel': 'الوصف',
+            'module.iso.coding.form.descPlaceholder': 'وصف اختياري للمستند',
+            'module.iso.coding.addVersionTitle': 'إضافة إصدار جديد',
+            'module.iso.coding.editVersionTitle': 'تعديل إصدار المستند',
+            'module.iso.coding.form.docCodeLabel': 'كود المستند *',
+            'module.iso.coding.form.selectCodeOption': 'اختر الكود',
+            'module.iso.coding.form.versionNumLabel': 'رقم الإصدار *',
+            'module.iso.coding.form.versionNumPlaceholder': 'مثال: 1.0, 2.1',
+            'module.iso.coding.form.issueDateLabel': 'تاريخ الإصدار *',
+            'module.iso.coding.form.revDateLabel': 'تاريخ التعديل',
+            'module.iso.coding.form.notesLabel': 'ملاحظة الإصدار',
+            'module.iso.coding.form.notesPlaceholder': 'ملاحظات حول هذا الإصدار',
+            'module.iso.coding.form.changeReasonLabel': 'سبب التعديل (سجل التغييرات)',
+            'module.iso.coding.form.changeReasonPlaceholder': 'مثال: تحديث الإجراء بناءً على المراجعة السنوية',
+            'module.iso.coding.fetchVersionsFailed': 'فشل جلب الإصدارات',
+            'module.iso.coding.actions.addVersion': 'إضافة إصدار جديد',
+            'module.iso.common.active': 'نشط',
+            'module.iso.common.inactive': 'غير نشط',
+            'module.iso.common.approved': 'معتمد',
+            'module.iso.common.draft': 'مسودة',
+            'module.iso.common.underReview': 'قيد المراجعة',
+            'module.iso.common.obsolete': 'ملغى',
+            'module.iso.common.open': 'مفتوح',
+            'module.iso.common.closed': 'مغلق',
+            'module.iso.common.edit': 'تعديل',
+            'module.iso.common.delete': 'حذف',
+            'module.iso.export.pdfSuccess': 'تم تصدير البيانات إلى PDF بنجاح',
+            'module.iso.export.excelSuccess': 'تم تصدير البيانات إلى Excel بنجاح',
+            'module.iso.export.noData': 'لا توجد بيانات للتصدير',
+            'module.iso.notify.updateSuccess': 'تم تحديث البيانات',
+            'module.iso.notify.saveSuccess': 'تم الحفظ بنجاح',
+            'module.iso.notify.deleteSuccess': 'تم الحذف بنجاح',
+
             'language.current': 'العربية'
         },
         en: {
@@ -2717,6 +3013,7 @@
             'module.ptw.title': 'Work Permits Management',
             'module.ptw.subtitle': 'Issue and track work permits with approval workflow',
             'module.ptw.btn.newPermit': 'Issue New Permit',
+            'module.ptw.btn.addManual': 'Manual Permit Entry',
             'module.ptw.btn.refreshTitle': 'Refresh current content',
             'module.ptw.tab.permits': 'Permits List',
             'module.ptw.tab.registry': 'Permits Registry',
@@ -2725,6 +3022,8 @@
             'module.ptw.tab.approvals': 'Approvals',
             'module.ptw.loading.permits': 'Loading permits list...',
             'module.ptw.registry.addManual': 'Add Manual Permit Entry',
+            'module.ptw.form.newManual': 'Manual Permit Entry',
+            'module.ptw.form.editManual': 'Edit Manual Permit Entry',
             'module.ptw.registry.totalRecords': 'Total Records',
             'module.ptw.registry.openPermits': 'Open Permits',
             'module.ptw.registry.closedPermits': 'Closed Permits',
@@ -4001,7 +4300,299 @@
             'module.sc.field.contractorName': 'Contractor',
             'module.sc.field.externalName': 'External name',
 
-            'language.current': 'English'
+            'language.current': 'English',
+            'module.iso.title': 'SafetyHub | ICAPP',
+            'module.iso.subtitle': 'SafetyHub | ICAPP - Compatible with ISO 45001 & ISO 14001',
+            'module.iso.btn.exportCompliance': 'Compliance Report PDF',
+            'module.iso.stats.docs': 'Documents',
+            'module.iso.stats.procedures': 'Procedures',
+            'module.iso.stats.forms': 'Forms',
+            'module.iso.stats.compliance': 'Compliance Rate',
+            'module.iso.tab.overview': 'Overview',
+            'module.iso.tab.docs': 'Documents',
+            'module.iso.tab.procedures': 'Procedures',
+            'module.iso.tab.forms': 'Forms',
+            'module.iso.tab.iso45001': 'ISO 45001',
+            'module.iso.tab.iso14001': 'ISO 14001',
+            'module.iso.tab.audit': 'Audits & CAPA',
+            'module.iso.tab.coding': 'Coding & Issuing Center',
+            'module.iso.loading': 'Loading content...',
+            'module.iso.error.loading': 'Error loading data',
+
+            'module.iso.codingCenter.systemForms.moduleName.PTW': 'Permits To Work (PTW)',
+            'module.iso.codingCenter.systemForms.moduleName.Incidents': 'Incidents Management',
+            'module.iso.codingCenter.systemForms.moduleName.NearMiss': 'Near Misses',
+            'module.iso.codingCenter.systemForms.moduleName.Clinic': 'Medical Clinic',
+            'module.iso.codingCenter.systemForms.moduleName.Observations': 'Safety Observations (BBS)',
+            'module.iso.codingCenter.systemForms.moduleName.RiskAssessment': 'Risk Assessment (JHA)',
+            'module.iso.codingCenter.systemForms.moduleName.Violations': 'Violations & Warnings',
+            'module.iso.codingCenter.systemForms.moduleName.Inspections': 'Periodic Inspections',
+            'module.iso.codingCenter.systemForms.moduleName.ToolBoxTalk': 'Tool Box Talks (TBT)',
+            'module.iso.codingCenter.systemForms.moduleName.PPE': 'Personal Protective Equipment',
+            'module.iso.codingCenter.systemForms.moduleName.FireEquipment': 'Fire & Emergency',
+            'module.iso.codingCenter.systemForms.moduleName.ChemicalSafety': 'Chemical Safety (SDS)',
+            'module.iso.codingCenter.systemForms.moduleName.ChangeManagement': 'Management of Change (MOC)',
+            'module.iso.codingCenter.systemForms.moduleName.ISOQuality': 'ISO Quality & Audits',
+            'module.iso.codingCenter.systemForms.moduleName.ISOCAPA': 'Corrective Actions (CAPA)',
+            'module.iso.codingCenter.systemForms.moduleName.Trainings': 'HSE Trainings',
+
+            'module.iso.manifest.ptw.general': 'General Work Permit',
+            'module.iso.manifest.ptw.hot': 'Hot Work Permit',
+            'module.iso.manifest.ptw.cold': 'Cold Work Permit',
+            'module.iso.manifest.ptw.confined': 'Confined Space Entry Permit',
+            'module.iso.manifest.ptw.excavation': 'Excavation Permit',
+            'module.iso.manifest.ptw.loto': 'Lockout / Tagout (LOTO)',
+            'module.iso.manifest.incident.report': 'Incident Report',
+            'module.iso.manifest.incident.register': 'Incidents Register',
+            'module.iso.manifest.nearmiss.report': 'Near Miss Report',
+            'module.iso.manifest.nearmiss.register': 'Near Miss Register',
+            'module.iso.manifest.clinic.register': 'Clinic Visits Log',
+            'module.iso.manifest.clinic.exam': 'Medical Examination Form',
+            'module.iso.manifest.obs.report': 'Daily Observations Log',
+            'module.iso.manifest.obs.bbs': 'BBS Observation Card',
+            'module.iso.manifest.risk.jha': 'Job Hazard Analysis (JHA)',
+            'module.iso.manifest.risk.register': 'Risk Assessment Register',
+            'module.iso.manifest.viol.notice': 'Safety Violation Notice',
+            'module.iso.manifest.viol.register': 'Violations Register',
+            'module.iso.manifest.insp.periodic': 'Periodic Inspection Form',
+            'module.iso.manifest.insp.register': 'Inspections Register',
+            'module.iso.manifest.insp.daily': 'Daily Safety Checklist',
+            'module.iso.manifest.insp.scaffold': 'Scaffolding Inspection',
+            'module.iso.manifest.insp.equip': 'Equipment Inspection Form',
+            'module.iso.manifest.tbt.form': 'Tool Box Talk Form',
+            'module.iso.manifest.tbt.register': 'TBT Meetings Register',
+            'module.iso.manifest.ppe.receive': 'PPE Issue Register',
+            'module.iso.manifest.ppe.insp': 'PPE Inspection Form',
+            'module.iso.manifest.fire.insp': 'Fire Extinguisher Inspection',
+            'module.iso.manifest.fire.drill': 'Evacuation Drill Report',
+            'module.iso.manifest.chem.sds': 'Chemical Register (SDS)',
+            'module.iso.manifest.moc.form': 'Management of Change (MOC)',
+            'module.iso.manifest.iso.legal': 'Legal Requirements Register',
+            'module.iso.manifest.iso.kpi': 'Performance KPIs Report',
+            'module.iso.manifest.iso.auditPlan': 'Internal Audit Plan',
+            'module.iso.manifest.iso.auditRep': 'Internal Audit Report',
+            'module.iso.manifest.capa.nc': 'Non-Conformance Report (NC)',
+            'module.iso.manifest.capa.car': 'Corrective Action Request (CAR)',
+            'module.iso.manifest.train.plan': 'Annual Training Plan',
+            'module.iso.manifest.train.att': 'Training Attendance Log',
+            'module.iso.manifest.train.eval': 'Training Evaluation Form',
+
+            'module.iso.overview.healthTitle': 'System Health Score',
+            'module.iso.overview.healthDesc': 'Measures the completion rate of documents, procedures, and audits to apply ISO standards.',
+            'module.iso.overview.excellent': 'Excellent',
+            'module.iso.overview.good': 'Good',
+            'module.iso.overview.needsImprovement': 'Needs Improvement',
+            'module.iso.overview.actionItems': 'Action Items',
+            'module.iso.overview.noActionItems': 'No action items currently',
+            'module.iso.overview.openNc': 'Open Non-Conformance',
+            'module.iso.overview.lateCa': 'Overdue Corrective Action',
+            'module.iso.overview.recentActivity': 'Recent Activities',
+            'module.iso.overview.noRecentActivity': 'No recent activities recorded',
+            'module.iso.docs.title': 'Documents & Manuals Center',
+            'module.iso.docs.addBtn': 'Add Document',
+            'module.iso.docs.exportExcel': 'Export Excel',
+            'module.iso.docs.noData': 'No documents recorded',
+            'module.iso.docs.table.code': 'Code',
+            'module.iso.docs.table.name': 'Name',
+            'module.iso.docs.table.type': 'Type',
+            'module.iso.docs.table.version': 'Version',
+            'module.iso.docs.table.issueDate': 'Issue Date',
+            'module.iso.docs.table.status': 'Status',
+            'module.iso.docs.table.actions': 'Actions',
+            'module.iso.procedures.title': 'Standard Operating Procedures (SOPs)',
+            'module.iso.procedures.addBtn': 'Add Procedure',
+            'module.iso.procedures.noData': 'No procedures recorded',
+            'module.iso.procedures.table.code': 'Code',
+            'module.iso.procedures.table.name': 'Name',
+            'module.iso.procedures.table.dept': 'Department',
+            'module.iso.procedures.table.nextReview': 'Next Review Date',
+            'module.iso.procedures.table.status': 'Status',
+            'module.iso.procedures.needsReview': 'Needs Review',
+            'module.iso.forms.title': 'Forms & Records Log',
+            'module.iso.forms.addBtn': 'Add Form',
+            'module.iso.forms.noData': 'No forms recorded',
+            'module.iso.forms.table.code': 'Code',
+            'module.iso.forms.table.name': 'Name',
+            'module.iso.forms.table.retention': 'Retention Period',
+            'module.iso.forms.table.location': 'Location',
+            'module.iso.audit.headerTitle': 'Audits & CAPA Center',
+            'module.iso.audit.headerDesc': 'Manage internal/external audits and track non-conformances and corrective actions.',
+            'module.iso.audit.auditLogTitle': 'Audit Log',
+            'module.iso.audit.auditLogDesc': 'Scheduled and executed audits',
+            'module.iso.audit.addAuditBtn': 'New Audit',
+            'module.iso.audit.noAudits': 'No audits recorded',
+            'module.iso.audit.auditCard.internal': 'Internal',
+            'module.iso.audit.auditCard.external': 'External',
+            'module.iso.audit.auditCard.auditor': 'Auditor:',
+            'module.iso.audit.auditCard.date': 'Date:',
+            'module.iso.audit.capaTitle': 'CAPA Log',
+            'module.iso.audit.capaDesc': 'Corrective and Preventive Actions',
+            'module.iso.audit.addNcBtn': 'Record NC',
+            'module.iso.audit.addCaBtn': 'Record CA',
+            'module.iso.audit.noCapa': 'No NC or CA records',
+            'module.iso.audit.capaCard.ncType': 'Non-Conformance (NC)',
+            'module.iso.audit.capaCard.caType': 'Corrective Action (CA)',
+            'module.iso.coding.headerTitle': 'Unified Coding & Issuing Center',
+            'module.iso.coding.headerDesc': 'Manage codes for all system forms, reports, and records for standardization.',
+            'module.iso.coding.stats.totalCodes': 'Total Codes',
+            'module.iso.coding.stats.activeVersions': 'Active Versions',
+            'module.iso.coding.stats.unassigned': 'Unassigned Forms',
+            'module.iso.coding.btn.addCode': 'Add New Code',
+            'module.iso.coding.btn.exportPdf': 'Export PDF',
+            'module.iso.coding.searchPlaceholder': 'Search by code, name, or module...',
+            'module.iso.coding.allModules': 'All Modules',
+            'module.iso.coding.allTypes': 'All Types',
+            'module.iso.coding.docCodesList': 'Document Codes List',
+            'module.iso.coding.noCodes': 'No codes recorded',
+            'module.iso.coding.table.code': 'Code',
+            'module.iso.coding.table.name': 'Name / Description',
+            'module.iso.coding.table.module': 'Module',
+            'module.iso.coding.table.type': 'Type',
+            'module.iso.coding.table.dept': 'Department',
+            'module.iso.coding.table.versions': 'Versions',
+            'module.iso.coding.table.status': 'Status',
+            'module.iso.coding.systemFormsTitle': 'System Forms Directory',
+            'module.iso.coding.systemFormsDesc': 'Key system forms and their coding status.',
+            'module.iso.coding.formCard.coded': 'Coded',
+            'module.iso.coding.formCard.uncoded': 'Unassigned',
+            'module.iso.coding.formCard.module': 'Module:',
+            'module.iso.coding.formCard.code': 'Code:',
+            'module.iso.coding.formCard.version': 'Version:',
+            'module.iso.coding.formCard.noVersion': 'No Active Version',
+            'module.iso.coding.formCard.alert': 'Assign a code to display in the footer when printed.',
+            'module.iso.coding.formCard.btnHistory': 'Change Log',
+            'module.iso.coding.formCard.btnAssign': 'Assign Code Now',
+            'module.iso.coding.versionsTitle': 'Document Versions & Change Log',
+            'module.iso.coding.btn.addVersion': 'New Version',
+            'module.iso.coding.btn.backToCodes': 'Back to Codes',
+            'module.iso.coding.noVersions': 'No versions recorded',
+            'module.iso.coding.versionsTable.code': 'Code',
+            'module.iso.coding.versionsTable.versionNum': 'Version Number',
+            'module.iso.coding.versionsTable.issueDate': 'Issue Date',
+            'module.iso.coding.versionsTable.revisionDate': 'Revision Date',
+            'module.iso.coding.versionsTable.status': 'Status',
+            'module.iso.form.code': 'Document Code',
+            'module.iso.form.name': 'Document Name',
+            'module.iso.form.type': 'Document Type',
+            'module.iso.form.version': 'Version',
+            'module.iso.form.department': 'Department',
+            'module.iso.form.date': 'Issue Date',
+            'module.iso.form.status': 'Status',
+            'module.iso.form.notes': 'Notes',
+            'module.iso.form.fileUrl': 'File URL (Google Drive)',
+            'module.iso.form.procName': 'Procedure Name',
+            'module.iso.form.procCode': 'Procedure Code',
+            'module.iso.form.reviewDate': 'Next Review Date',
+            'module.iso.form.formName': 'Form Name',
+            'module.iso.form.formCode': 'Form Code',
+            'module.iso.form.formType': 'Form Type',
+            'module.iso.form.statusActive': 'Active',
+            'module.iso.form.statusInactive': 'Inactive',
+            'module.iso.form.statusReview': 'Needs Review',
+            'module.iso.docs.addTitle': 'Add New Document',
+            'module.iso.docs.editTitle': 'Edit Document',
+            'module.iso.docs.detailsTitle': 'Document Details',
+            'module.iso.docs.notFound': 'Document not found',
+            'module.iso.procedures.addTitle': 'Add New Procedure',
+            'module.iso.procedures.editTitle': 'Edit Procedure',
+            'module.iso.procedures.detailsTitle': 'Procedure Details',
+            'module.iso.procedures.notFound': 'Procedure not found',
+            'module.iso.forms.addTitle': 'Add New Form',
+            'module.iso.forms.editTitle': 'Edit Form',
+            'module.iso.forms.detailsTitle': 'Form Details',
+            'module.iso.forms.notFound': 'Form not found',
+            'module.iso.objectives.addTitle': 'Add New Objective',
+            'module.iso.objectives.editTitle': 'Edit Objective',
+            'module.iso.objectives.form.objective': 'Objective',
+            'module.iso.objectives.form.target': 'Target',
+            'module.iso.objectives.form.program': 'Program',
+            'module.iso.objectives.form.dueDate': 'Due Date',
+            'module.iso.objectives.form.progress': 'Progress',
+            'module.iso.aspects.addTitle': 'Add Environmental Aspect',
+            'module.iso.aspects.editTitle': 'Edit Environmental Aspect',
+            'module.iso.aspects.form.activity': 'Activity',
+            'module.iso.aspects.form.aspect': 'Environmental Aspect',
+            'module.iso.aspects.form.impact': 'Environmental Impact',
+            'module.iso.aspects.form.evaluation': 'Evaluation',
+            'module.iso.aspects.form.controls': 'Controls',
+            'module.iso.audit.addTitle': 'Add Audit',
+            'module.iso.audit.editTitle': 'Edit Audit',
+            'module.iso.audit.detailsTitle': 'Audit Details',
+            'module.iso.audit.notFound': 'Audit not found',
+            'module.iso.audit.form.type': 'Audit Type',
+            'module.iso.audit.form.date': 'Date',
+            'module.iso.audit.form.auditor': 'Auditor',
+            'module.iso.audit.form.status': 'Status',
+            'module.iso.audit.form.desc': 'Description/Notes',
+            'module.iso.nc.addTitle': 'Add Non-Conformity',
+            'module.iso.nc.editTitle': 'Edit Non-Conformity',
+            'module.iso.nc.detailsTitle': 'Non-Conformity Details',
+            'module.iso.nc.notFound': 'Non-Conformity not found',
+            'module.iso.nc.form.date': 'Date',
+            'module.iso.nc.form.type': 'Type',
+            'module.iso.nc.form.desc': 'Description',
+            'module.iso.nc.form.rootCause': 'Root Cause',
+            'module.iso.nc.form.status': 'Status',
+            'module.iso.ca.addTitle': 'Add Corrective Action',
+            'module.iso.ca.editTitle': 'Edit Corrective Action',
+            'module.iso.ca.detailsTitle': 'Corrective Action Details',
+            'module.iso.ca.notFound': 'Corrective Action not found',
+            'module.iso.ca.form.ncId': 'Link to Non-Conformity',
+            'module.iso.ca.form.action': 'Action Required',
+            'module.iso.ca.form.responsible': 'Responsible',
+            'module.iso.ca.form.dueDate': 'Due Date',
+            'module.iso.ca.form.status': 'Status',
+            'module.iso.ca.form.notes': 'Notes',
+            'module.iso.coding.addCodeTitle': 'Add Document Code',
+            'module.iso.coding.editCodeTitle': 'Edit Document Code',
+            'module.iso.coding.form.codeLabel': 'Code *',
+            'module.iso.coding.form.codePlaceholder': 'e.g. DOC-001, FORM-002',
+            'module.iso.coding.form.nameLabel': 'Document/Procedure Name *',
+            'module.iso.coding.form.namePlaceholder': 'Document Name',
+            'module.iso.coding.form.typeLabel': 'Document Type *',
+            'module.iso.coding.form.selectTypeOption': 'Select Type',
+            'module.iso.coding.form.typeDoc': 'Document',
+            'module.iso.coding.form.typeProc': 'Procedure',
+            'module.iso.coding.form.typeForm': 'Form',
+            'module.iso.coding.form.typeReport': 'Report',
+            'module.iso.coding.form.typeRecord': 'Record',
+            'module.iso.coding.form.departmentLabel': 'Department *',
+            'module.iso.coding.form.departmentPlaceholder': 'Department',
+            'module.iso.coding.form.statusLabel': 'Status',
+            'module.iso.coding.form.statusActive': 'Active',
+            'module.iso.coding.form.statusInactive': 'Inactive',
+            'module.iso.coding.form.descLabel': 'Description',
+            'module.iso.coding.form.descPlaceholder': 'Optional description',
+            'module.iso.coding.addVersionTitle': 'Add Version',
+            'module.iso.coding.editVersionTitle': 'Edit Version',
+            'module.iso.coding.form.docCodeLabel': 'Document Code *',
+            'module.iso.coding.form.selectCodeOption': 'Select Code',
+            'module.iso.coding.form.versionNumLabel': 'Version Number *',
+            'module.iso.coding.form.versionNumPlaceholder': 'e.g. 1.0, 2.1',
+            'module.iso.coding.form.issueDateLabel': 'Issue Date *',
+            'module.iso.coding.form.revDateLabel': 'Revision Date',
+            'module.iso.coding.form.notesLabel': 'Version Notes',
+            'module.iso.coding.form.notesPlaceholder': 'Notes for this version',
+            'module.iso.coding.form.changeReasonLabel': 'Change Reason',
+            'module.iso.coding.form.changeReasonPlaceholder': 'e.g. Update based on annual review',
+            'module.iso.coding.fetchVersionsFailed': 'Failed to fetch versions',
+            'module.iso.coding.actions.addVersion': 'Add New Version',
+            'module.iso.common.active': 'Active',
+            'module.iso.common.inactive': 'Inactive',
+            'module.iso.common.approved': 'Approved',
+            'module.iso.common.draft': 'Draft',
+            'module.iso.common.underReview': 'Under Review',
+            'module.iso.common.obsolete': 'Obsolete',
+            'module.iso.common.open': 'Open',
+            'module.iso.common.closed': 'Closed',
+            'module.iso.common.edit': 'Edit',
+            'module.iso.common.delete': 'Delete',
+            'module.iso.export.pdfSuccess': 'Exported to PDF successfully',
+            'module.iso.export.excelSuccess': 'Exported to Excel successfully',
+            'module.iso.export.noData': 'No data to export',
+            'module.iso.notify.updateSuccess': 'Data updated',
+            'module.iso.notify.saveSuccess': 'Saved successfully',
+            'module.iso.notify.deleteSuccess': 'Deleted successfully'
         }
     };
 
@@ -4513,7 +5104,7 @@
         'إلغاء التعمق:': 'Clear Drill-down:',
         'نظام التنبيهات والطوارئ': 'Alerts and Emergency System',
         'سجل وفحص معدات الحريق': 'Fire Equipment Register and Inspection',
-        'نظام إدارة السلامة والصحة المهنية والبيئة': 'Occupational Safety, Health and Environment Management System',
+        'نظام إدارة السلامة والصحة المهنية والبيئة': 'SafetyHub | ICAPP',
         'نظام تتبع المشاكل وحلولها': 'Issue Tracking and Resolution System',
         'المستندات القانونية والتشريعية': 'Legal and Regulatory Documents',
         'الملاحظات اليومية': 'Daily Observations',
@@ -5191,6 +5782,8 @@
     };
 
     const literalEnToAr = Object.fromEntries(Object.entries(literalArToEn).map(([ar, en]) => [en, ar]));
+    const mapArToEnExact = new Map(Object.entries(literalArToEn));
+    const mapEnToArExact = new Map(Object.entries(literalEnToAr));
 
     function escapeRegExp(text) {
         return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -5271,22 +5864,50 @@
 
     function applyLiteralTranslations(root = document, lang) {
         const selectedLang = lang || getCurrentLang();
-        const map = selectedLang === 'en' ? literalArToEn : literalEnToAr;
+        const isEn = selectedLang === 'en';
+        const exactMap = isEn ? mapArToEnExact : mapEnToArExact;
+        const map = isEn ? literalArToEn : literalEnToAr;
         const target = root || document;
-        const entries = Object.entries(map).sort((a, b) => b[0].length - a[0].length);
 
-        const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
+        const partialEntries = Object.entries(map).filter(([from, to]) => from && from !== to && from.length >= 3);
+
+        const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, {
+            acceptNode(node) {
+                const parent = node.parentElement;
+                if (!parent) return NodeFilter.FILTER_REJECT;
+                const tag = parent.tagName;
+                if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'SVG' || tag === 'CANVAS' || tag === 'CODE' || tag === 'PRE') {
+                    return NodeFilter.FILTER_REJECT;
+                }
+                if (isInsidePeriodicInspectionsSection(parent)) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+                const val = node.nodeValue;
+                if (!val || !val.trim()) return NodeFilter.FILTER_REJECT;
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        });
+
         let node;
         while ((node = walker.nextNode())) {
-            const parentEl = node.parentElement;
-            if (parentEl && isInsidePeriodicInspectionsSection(parentEl)) continue;
             const original = node.nodeValue;
-            if (!original || !original.trim()) continue;
+            const trimmed = original.trim();
+
+            if (exactMap.has(trimmed)) {
+                const replacement = exactMap.get(trimmed);
+                if (replacement && replacement !== trimmed) {
+                    node.nodeValue = original.replace(trimmed, replacement);
+                    continue;
+                }
+            }
+
             let updated = original;
-            entries.forEach(([from, to]) => {
-                if (!from || from === to) return;
-                updated = replaceLiteralSafely(updated, from, to);
-            });
+            for (let i = 0; i < partialEntries.length; i++) {
+                const [from, to] = partialEntries[i];
+                if (updated.includes(from)) {
+                    updated = replaceLiteralSafely(updated, from, to);
+                }
+            }
             if (updated !== original) {
                 node.nodeValue = updated;
             }
@@ -5296,12 +5917,22 @@
             if (isInsidePeriodicInspectionsSection(el)) return;
             ['title', 'placeholder', 'aria-label'].forEach((attr) => {
                 const value = el.getAttribute(attr);
-                if (!value) return;
+                if (!value || !value.trim()) return;
+                const trimmed = value.trim();
+                if (exactMap.has(trimmed)) {
+                    const replacement = exactMap.get(trimmed);
+                    if (replacement && replacement !== trimmed) {
+                        el.setAttribute(attr, value.replace(trimmed, replacement));
+                        return;
+                    }
+                }
                 let updated = value;
-                entries.forEach(([from, to]) => {
-                    if (!from || from === to) return;
-                    updated = replaceLiteralSafely(updated, from, to);
-                });
+                for (let i = 0; i < partialEntries.length; i++) {
+                    const [from, to] = partialEntries[i];
+                    if (updated.includes(from)) {
+                        updated = replaceLiteralSafely(updated, from, to);
+                    }
+                }
                 if (updated !== value) {
                     el.setAttribute(attr, updated);
                 }
@@ -5317,18 +5948,39 @@
     }
 
     let observerAttached = false;
+    let pendingNodes = [];
+    let observerFrame = null;
+
+    function flushPendingI18nNodes() {
+        observerFrame = null;
+        const lang = getCurrentLang();
+        const nodesToProcess = pendingNodes;
+        pendingNodes = [];
+        nodesToProcess.forEach((node) => {
+            if (node && node.isConnected) {
+                applyI18n(node, lang);
+                applyLiteralTranslations(node, lang);
+            }
+        });
+    }
+
     function observeDomForI18n() {
         if (observerAttached || !global.MutationObserver || !document?.body) return;
         observerAttached = true;
         const observer = new MutationObserver((mutations) => {
             const lang = getCurrentLang();
+            let addedCount = 0;
             mutations.forEach((mutation) => {
                 mutation.addedNodes.forEach((node) => {
                     if (!(node instanceof HTMLElement)) return;
                     applyI18n(node, lang);
-                    applyLiteralTranslations(node, lang);
+                    pendingNodes.push(node);
+                    addedCount++;
                 });
             });
+            if (addedCount > 0 && !observerFrame) {
+                observerFrame = requestAnimationFrame ? requestAnimationFrame(flushPendingI18nNodes) : setTimeout(flushPendingI18nNodes, 50);
+            }
         });
         observer.observe(document.body, { childList: true, subtree: true });
     }

@@ -5782,6 +5782,8 @@
     };
 
     const literalEnToAr = Object.fromEntries(Object.entries(literalArToEn).map(([ar, en]) => [en, ar]));
+    const mapArToEnExact = new Map(Object.entries(literalArToEn));
+    const mapEnToArExact = new Map(Object.entries(literalEnToAr));
 
     function escapeRegExp(text) {
         return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -5862,22 +5864,50 @@
 
     function applyLiteralTranslations(root = document, lang) {
         const selectedLang = lang || getCurrentLang();
-        const map = selectedLang === 'en' ? literalArToEn : literalEnToAr;
+        const isEn = selectedLang === 'en';
+        const exactMap = isEn ? mapArToEnExact : mapEnToArExact;
+        const map = isEn ? literalArToEn : literalEnToAr;
         const target = root || document;
-        const entries = Object.entries(map).sort((a, b) => b[0].length - a[0].length);
 
-        const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
+        const partialEntries = Object.entries(map).filter(([from, to]) => from && from !== to && from.length >= 3);
+
+        const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, {
+            acceptNode(node) {
+                const parent = node.parentElement;
+                if (!parent) return NodeFilter.FILTER_REJECT;
+                const tag = parent.tagName;
+                if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'SVG' || tag === 'CANVAS' || tag === 'CODE' || tag === 'PRE') {
+                    return NodeFilter.FILTER_REJECT;
+                }
+                if (isInsidePeriodicInspectionsSection(parent)) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+                const val = node.nodeValue;
+                if (!val || !val.trim()) return NodeFilter.FILTER_REJECT;
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        });
+
         let node;
         while ((node = walker.nextNode())) {
-            const parentEl = node.parentElement;
-            if (parentEl && isInsidePeriodicInspectionsSection(parentEl)) continue;
             const original = node.nodeValue;
-            if (!original || !original.trim()) continue;
+            const trimmed = original.trim();
+
+            if (exactMap.has(trimmed)) {
+                const replacement = exactMap.get(trimmed);
+                if (replacement && replacement !== trimmed) {
+                    node.nodeValue = original.replace(trimmed, replacement);
+                    continue;
+                }
+            }
+
             let updated = original;
-            entries.forEach(([from, to]) => {
-                if (!from || from === to) return;
-                updated = replaceLiteralSafely(updated, from, to);
-            });
+            for (let i = 0; i < partialEntries.length; i++) {
+                const [from, to] = partialEntries[i];
+                if (updated.includes(from)) {
+                    updated = replaceLiteralSafely(updated, from, to);
+                }
+            }
             if (updated !== original) {
                 node.nodeValue = updated;
             }
@@ -5887,12 +5917,22 @@
             if (isInsidePeriodicInspectionsSection(el)) return;
             ['title', 'placeholder', 'aria-label'].forEach((attr) => {
                 const value = el.getAttribute(attr);
-                if (!value) return;
+                if (!value || !value.trim()) return;
+                const trimmed = value.trim();
+                if (exactMap.has(trimmed)) {
+                    const replacement = exactMap.get(trimmed);
+                    if (replacement && replacement !== trimmed) {
+                        el.setAttribute(attr, value.replace(trimmed, replacement));
+                        return;
+                    }
+                }
                 let updated = value;
-                entries.forEach(([from, to]) => {
-                    if (!from || from === to) return;
-                    updated = replaceLiteralSafely(updated, from, to);
-                });
+                for (let i = 0; i < partialEntries.length; i++) {
+                    const [from, to] = partialEntries[i];
+                    if (updated.includes(from)) {
+                        updated = replaceLiteralSafely(updated, from, to);
+                    }
+                }
                 if (updated !== value) {
                     el.setAttribute(attr, updated);
                 }
@@ -5908,18 +5948,39 @@
     }
 
     let observerAttached = false;
+    let pendingNodes = [];
+    let observerFrame = null;
+
+    function flushPendingI18nNodes() {
+        observerFrame = null;
+        const lang = getCurrentLang();
+        const nodesToProcess = pendingNodes;
+        pendingNodes = [];
+        nodesToProcess.forEach((node) => {
+            if (node && node.isConnected) {
+                applyI18n(node, lang);
+                applyLiteralTranslations(node, lang);
+            }
+        });
+    }
+
     function observeDomForI18n() {
         if (observerAttached || !global.MutationObserver || !document?.body) return;
         observerAttached = true;
         const observer = new MutationObserver((mutations) => {
             const lang = getCurrentLang();
+            let addedCount = 0;
             mutations.forEach((mutation) => {
                 mutation.addedNodes.forEach((node) => {
                     if (!(node instanceof HTMLElement)) return;
                     applyI18n(node, lang);
-                    applyLiteralTranslations(node, lang);
+                    pendingNodes.push(node);
+                    addedCount++;
                 });
             });
+            if (addedCount > 0 && !observerFrame) {
+                observerFrame = requestAnimationFrame ? requestAnimationFrame(flushPendingI18nNodes) : setTimeout(flushPendingI18nNodes, 50);
+            }
         });
         observer.observe(document.body, { childList: true, subtree: true });
     }
