@@ -14241,8 +14241,7 @@ const Contractors = {
 
         const collectEntityNames = (record) => {
             if (!record || typeof record !== 'object') return [];
-            // ✅ Fix: Collect all possible name fields from violation record
-            const allNameFields = ['contractorName', 'companyName', 'company', 'contractorCompany', 'name', 'externalName', 'entityName'];
+            const allNameFields = ['contractorName', 'companyName', 'company', 'contractorCompany', 'name', 'externalName', 'entityName', 'violatorCompany', 'contractor', 'requestingParty', 'authorizedParty'];
             return allNameFields
                 .map((field) => record[field])
                 .filter((value) => value !== undefined && value !== null && String(value).trim() !== '')
@@ -14251,29 +14250,19 @@ const Contractors = {
         };
 
         const matchesNameValue = (value) => {
+            if (value === undefined || value === null) return false;
             const normalized = normalizeValue(value);
             if (normalized && exactNameSet.has(normalized)) return true;
             const canonical = canonicalizeName(value);
-            if (canonical && canonicalNameSet.has(canonical)) return true;
-            
-            // ✅ Fix: Add partial name matching as fallback
-            // Check if any contractor name contains the record name or vice versa
-            for (const contractorName of exactNameSet) {
-                if (contractorName.includes(normalized) || normalized.includes(contractorName)) {
-                    return true;
-                }
-            }
-            for (const contractorCanonical of canonicalNameSet) {
-                if (contractorCanonical.includes(canonical) || canonical.includes(contractorCanonical)) {
-                    return true;
-                }
-            }
-            return false;
+            return !!(canonical && canonicalNameSet.has(canonical));
         };
 
         const matchesContractor = (record) => {
             if (!record || typeof record !== 'object') return false;
-            return matchesNameValue(record.contractorName) || matchesNameValue(record.companyName) || matchesNameValue(record.company);
+            const recordIds = collectRecordIds(record);
+            if (recordIds.some(id => idsSet.has(id))) return true;
+            const names = collectEntityNames(record);
+            return names.some(matchesNameValue);
         };
 
         return {
@@ -14283,7 +14272,7 @@ const Contractors = {
             canonicalNameSet,
             contractorName,
             matchesContractor,
-            hasAnyRecordIds() { return idsSet.size > 0; },
+            hasAnyRecordIds(record) { return collectRecordIds(record).length > 0; },
             matchesNameValue,
             matchFieldsByName(record) {
                 if (!record || typeof record !== 'object') return null;
@@ -14303,25 +14292,25 @@ const Contractors = {
                     return false;
                 }
                 const recordIds = collectRecordIds(record);
-                const hasRecordIds = recordIds.length > 0;
-                const idsMatch = recordIds.some((id) => idsSet.has(id));
-                if (hasRecordIds && !idsMatch) return false;
-                // ✅ Fix: Use improved collectEntityNames
+                if (recordIds.length > 0 && recordIds.some((id) => idsSet.has(id))) {
+                    return true;
+                }
                 const entityNames = collectEntityNames(record);
-                const hasEntityNames = entityNames.length > 0;
-                const namesMatch = entityNames.some(matchesNameValue);
-                if (hasEntityNames && !namesMatch) return false;
-                // Explicit contractor IDs are authoritative across modules.
-                if (hasRecordIds) return idsMatch;
-                if (hasEntityNames) return namesMatch;
+                if (entityNames.length > 0 && entityNames.some(matchesNameValue)) {
+                    return true;
+                }
                 return matchesContractor(record);
             },
             evaluationBelongsToContractor(record) {
                 if (!record || typeof record !== 'object') return false;
                 const recordIds = collectRecordIds(record);
-                if (recordIds.some((id) => idsSet.has(id))) return true;
+                if (recordIds.length > 0 && recordIds.some((id) => idsSet.has(id))) {
+                    return true;
+                }
                 const entityNames = collectEntityNames(record);
-                if (entityNames.some(matchesNameValue)) return true;
+                if (entityNames.length > 0 && entityNames.some(matchesNameValue)) {
+                    return true;
+                }
                 return matchesContractor(record);
             }
         };

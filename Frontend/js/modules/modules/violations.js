@@ -2259,7 +2259,7 @@ const Violations = {
                 const idMatches = recordId && targetIds.has(recordId);
 
                 if (idMatches) {
-                    return !recordName || !targetName || recordName === targetName;
+                    return true;
                 }
                 return !!targetName && recordName === targetName;
             }

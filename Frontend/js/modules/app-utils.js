@@ -1,4 +1,4 @@
-﻿/* ========================================
+/* ========================================
    نظام السلامة المهنية - أمريكانا HSE
    app-utils.js - الدوال المساعدة والثوابت
    ======================================== */
@@ -4056,7 +4056,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.551',
+    appVersion: '1.0.553',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -5018,6 +5018,8 @@ const Utils = {
         if (!normalized) return '';
         return normalized
             .replace(/["'`.,،؛:(){}\[\]<>_\-\/\\|]+/g, ' ')
+            .replace(/\b(wll|llc|ltd|inc|corp|corporation|co|company|contracting|contractors|group)\b/gi, ' ')
+            .replace(/(شركة|مؤسسة|مجموعة|للمقاولات|المقاولون|المحدودة|ذ\.م\.م|ذمم|ش\.م\.م)/gi, ' ')
             .replace(/\s+/g, ' ')
             .trim();
     },
@@ -5175,13 +5177,14 @@ const Utils = {
         };
         const collectContractorEntityNames = (record) => {
             if (!record || typeof record !== 'object') return [];
-            return ['contractorName', 'companyName', 'company', 'contractorCompany', 'name', 'externalName']
+            return ['contractorName', 'companyName', 'company', 'contractorCompany', 'name', 'externalName', 'entityName', 'violatorCompany', 'contractor', 'requestingParty', 'authorizedParty']
                 .map(field => record[field])
                 .filter(value => value !== undefined && value !== null)
                 .map(value => String(value).replace(/\s+/g, ' ').trim())
                 .filter(Boolean);
         };
         const matchesNameValue = (value) => {
+            if (value === undefined || value === null) return false;
             const normalized = normalizeValue(value);
             if (normalized && exactNameSet.has(normalized)) return true;
             const canonical = canonicalizeName(value);
@@ -5200,7 +5203,6 @@ const Utils = {
             if (!record || typeof record !== 'object') return false;
             const recordIds = collectRecordIds(record);
             if (recordIds.some(id => idsSet.has(id))) return true;
-            if (recordIds.length > 0) return false;
             return collectRecordNames(record).some(matchesNameValue);
         };
 
@@ -5235,25 +5237,25 @@ const Utils = {
                     return false;
                 }
                 const recordIds = collectRecordIds(record);
-                const hasRecordIds = recordIds.length > 0;
-                const idsMatch = recordIds.some(id => idsSet.has(id));
-                if (hasRecordIds && !idsMatch) return false;
+                if (recordIds.length > 0 && recordIds.some(id => idsSet.has(id))) {
+                    return true;
+                }
                 const entityNames = collectContractorEntityNames(record);
-                const hasEntityNames = entityNames.length > 0;
-                const namesMatch = entityNames.some(matchesNameValue);
-                if (hasEntityNames && !namesMatch) return false;
-                // Prefer explicit IDs as source of truth across modules/sheets.
-                // Name mismatches (spacing/spelling variants) should not hide valid records.
-                if (hasRecordIds) return idsMatch;
-                if (hasEntityNames) return namesMatch;
+                if (entityNames.length > 0 && entityNames.some(matchesNameValue)) {
+                    return true;
+                }
                 return matchesContractor(record);
             },
             evaluationBelongsToContractor(record) {
                 if (!record || typeof record !== 'object') return false;
                 const recordIds = collectRecordIds(record);
-                if (recordIds.some(id => idsSet.has(id))) return true;
+                if (recordIds.length > 0 && recordIds.some(id => idsSet.has(id))) {
+                    return true;
+                }
                 const entityNames = collectContractorEntityNames(record);
-                if (entityNames.some(matchesNameValue)) return true;
+                if (entityNames.length > 0 && entityNames.some(matchesNameValue)) {
+                    return true;
+                }
                 return matchesContractor(record);
             }
         };
