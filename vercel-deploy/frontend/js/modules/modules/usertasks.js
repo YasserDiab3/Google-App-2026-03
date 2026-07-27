@@ -504,77 +504,79 @@ const UserTasks = {
      */
     async render() {
         const stats = this.getStats();
+        const completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
 
         return `
-            <div class="section-header">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h1 class="section-title">
-                            <i class="fas fa-tasks ml-3"></i>
-                            مهام المستخدمين
+            <div class="section-header" style="background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%); border-radius: 16px; padding: 24px 32px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(99, 102, 241, 0.25);">
+                <div class="flex items-center justify-between flex-wrap gap-3">
+                    <div class="text-center w-full" style="flex-grow: 1; min-width: 200px;">
+                        <h1 class="section-title" style="color: white; font-size: 2rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 8px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-tasks ml-3" style="font-size: 1.8rem;"></i>
+                            ${this.t('module.userTasks.title', 'مهام المستخدمين')}
                         </h1>
-                        <p class="section-subtitle">${this.t('module.userTasks.adminSubtitle', 'إدارة ومتابعة مهام المستخدمين')}</p>
+                        <p class="section-subtitle" style="color: rgba(255,255,255,0.9); font-size: 1rem; margin: 0;">${this.t('module.userTasks.adminSubtitle', 'إدارة ومتابعة مهام المستخدمين')}</p>
                     </div>
-                    <div class="flex gap-2">
-                        <button id="export-tasks-pdf-btn" class="btn-secondary">
+                    <div class="flex flex-shrink-0 flex-wrap gap-2 justify-center">
+                        <button id="export-tasks-pdf-btn" style="background: rgba(255,255,255,0.18); color: #fff; border: 2px solid rgba(255,255,255,0.4); padding: 12px 18px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
                             <i class="fas fa-file-pdf ml-2"></i>
-                            تقرير PDF
+                            ${this.t('module.userTasks.exportPdf', 'تقرير PDF')}
                         </button>
-                        <button id="export-tasks-excel-btn" class="btn-success">
+                        <button id="export-tasks-excel-btn" style="background: rgba(255,255,255,0.18); color: #fff; border: 2px solid rgba(255,255,255,0.4); padding: 12px 18px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
                             <i class="fas fa-file-excel ml-2"></i>
-                            تصدير Excel
+                            ${this.t('module.userTasks.exportExcel', 'تصدير Excel')}
                         </button>
-                        <button id="add-task-btn" class="btn-primary">
+                        <button id="add-task-btn" style="background: white; color: #6366f1; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease; cursor: pointer;">
                             <i class="fas fa-plus ml-2"></i>
-                            إضافة مهمة جديدة
+                            ${this.t('module.userTasks.addTask', 'إضافة مهمة جديدة')}
                         </button>
                     </div>
                 </div>
             </div>
             
             <!-- إحصائيات -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-                <div class="content-card">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-sm">
-                            <i class="fas fa-tasks text-2xl"></i>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mt-6">
+                <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(59,130,246,0.1); border-right: 4px solid #3b82f6; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(59,130,246,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(59,130,246,0.1)'">
+                    <div style="display:flex;align-items:center;gap:16px;">
+                        <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(59,130,246,0.35);flex-shrink:0;">
+                            <i class="fas fa-tasks" style="color:#fff;font-size:1.2rem;"></i>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">${this.t('module.userTasks.totalTasks', 'إجمالي المهام')}</p>
-                            <p class="text-2xl font-bold text-gray-900" id="total-tasks-count">${stats.total}</p>
+                            <p style="font-size:0.82rem;color:#64748b;margin:0 0 4px;font-weight:600;">${this.t('module.userTasks.totalTasks', 'إجمالي المهام')}</p>
+                            <p style="font-size:1.75rem;font-weight:800;color:#1e40af;margin:0;line-height:1;" id="total-tasks-count">${stats.total}</p>
                         </div>
                     </div>
                 </div>
-                <div class="content-card">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-xl bg-green-100 text-green-600 flex items-center justify-center shadow-sm">
-                            <i class="fas fa-check-circle text-2xl"></i>
+                <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(16,185,129,0.1); border-right: 4px solid #10b981; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(16,185,129,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(16,185,129,0.1)'">
+                    <div style="display:flex;align-items:center;gap:16px;">
+                        <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(16,185,129,0.35);flex-shrink:0;">
+                            <i class="fas fa-check-circle" style="color:#fff;font-size:1.2rem;"></i>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">${this.t('module.userTasks.completedTasks', 'مهام مكتملة')}</p>
-                            <p class="text-2xl font-bold text-gray-900" id="completed-tasks-count">${stats.completed}</p>
+                            <p style="font-size:0.82rem;color:#64748b;margin:0 0 4px;font-weight:600;">${this.t('module.userTasks.completedTasks', 'مهام مكتملة')}</p>
+                            <p style="font-size:1.75rem;font-weight:800;color:#065f46;margin:0;line-height:1;" id="completed-tasks-count">${stats.completed}</p>
+                            <p style="font-size:0.72rem;color:#10b981;margin:2px 0 0;font-weight:600;">${completionRate}% ${this.t('module.userTasks.completionRate', 'نسبة الإنجاز')}</p>
                         </div>
                     </div>
                 </div>
-                <div class="content-card">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-xl bg-yellow-100 text-yellow-600 flex items-center justify-center shadow-sm">
-                            <i class="fas fa-clock text-2xl"></i>
+                <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(245,158,11,0.1); border-right: 4px solid #f59e0b; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(245,158,11,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(245,158,11,0.1)'">
+                    <div style="display:flex;align-items:center;gap:16px;">
+                        <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(245,158,11,0.35);flex-shrink:0;">
+                            <i class="fas fa-clock" style="color:#fff;font-size:1.2rem;"></i>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">${this.t('module.userTasks.inProgress', 'قيد التنفيذ')}</p>
-                            <p class="text-2xl font-bold text-gray-900" id="in-progress-tasks-count">${stats.inProgress}</p>
+                            <p style="font-size:0.82rem;color:#64748b;margin:0 0 4px;font-weight:600;">${this.t('module.userTasks.inProgress', 'قيد التنفيذ')}</p>
+                            <p style="font-size:1.75rem;font-weight:800;color:#92400e;margin:0;line-height:1;" id="in-progress-tasks-count">${stats.inProgress}</p>
                         </div>
                     </div>
                 </div>
-                <div class="content-card">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shadow-sm">
-                            <i class="fas fa-exclamation-triangle text-2xl"></i>
+                <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(239,68,68,0.1); border-right: 4px solid #ef4444; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(239,68,68,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(239,68,68,0.1)'">
+                    <div style="display:flex;align-items:center;gap:16px;">
+                        <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(239,68,68,0.35);flex-shrink:0;">
+                            <i class="fas fa-exclamation-triangle" style="color:#fff;font-size:1.2rem;"></i>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">${this.t('module.userTasks.overdueTasks', 'مهام متأخرة')}</p>
-                            <p class="text-2xl font-bold text-gray-900" id="overdue-tasks-count">${stats.overdue}</p>
+                            <p style="font-size:0.82rem;color:#64748b;margin:0 0 4px;font-weight:600;">${this.t('module.userTasks.overdueTasks', 'مهام متأخرة')}</p>
+                            <p style="font-size:1.75rem;font-weight:800;color:#991b1b;margin:0;line-height:1;" id="overdue-tasks-count">${stats.overdue}</p>
                         </div>
                     </div>
                 </div>
@@ -632,8 +634,8 @@ const UserTasks = {
                     <div id="tasks-list-container">
                         <div class="empty-state">
                             <div style="width: 300px; margin: 0 auto 16px;">
-                                <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
-                                    <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
+                                <div style="width: 100%; height: 6px; background: rgba(99, 102, 241, 0.2); border-radius: 3px; overflow: hidden;">
+                                    <div style="height: 100%; background: linear-gradient(90deg, #6366f1, #4338ca, #6366f1); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                 </div>
                             </div>
                             <p class="text-gray-500">${this.t('module.userTasks.loading', 'جاري التحميل...')}</p>
@@ -667,25 +669,26 @@ const UserTasks = {
                 return dueDate < now;
             }).length
         };
+        const completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
 
         return `
-            <div class="section-header">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h1 class="section-title">
-                            <i class="fas fa-tasks ml-3"></i>
-                            مهامي
+            <div class="section-header" style="background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%); border-radius: 16px; padding: 24px 32px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(99, 102, 241, 0.25);">
+                <div class="flex items-center justify-between flex-wrap gap-3">
+                    <div class="text-center w-full" style="flex-grow: 1; min-width: 200px;">
+                        <h1 class="section-title" style="color: white; font-size: 2rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 8px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-tasks ml-3" style="font-size: 1.8rem;"></i>
+                            ${this.t('module.userTasks.myTasks', 'مهامي')}
                         </h1>
-                        <p class="section-subtitle">${this.t('module.userTasks.userSubtitle', 'عرض وإدارة مهامك الشخصية')}</p>
+                        <p class="section-subtitle" style="color: rgba(255,255,255,0.9); font-size: 1rem; margin: 0;">${this.t('module.userTasks.userSubtitle', 'عرض وإدارة مهامك الشخصية')}</p>
                     </div>
-                    <div class="flex gap-2">
-                        <button id="user-refresh-tasks-btn" class="btn-secondary">
+                    <div class="flex flex-shrink-0 flex-wrap gap-2 justify-center">
+                        <button id="user-refresh-tasks-btn" style="background: rgba(255,255,255,0.18); color: #fff; border: 2px solid rgba(255,255,255,0.4); padding: 12px 18px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
                             <i class="fas fa-sync-alt ml-2"></i>
-                            تحديث
+                            ${this.t('module.userTasks.refresh', 'تحديث')}
                         </button>
-                        <button id="user-export-tasks-pdf-btn" class="btn-info">
+                        <button id="user-export-tasks-pdf-btn" style="background: white; color: #6366f1; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease; cursor: pointer;">
                             <i class="fas fa-file-pdf ml-2"></i>
-                            تصدير PDF
+                            ${this.t('module.userTasks.exportPdf', 'تصدير PDF')}
                         </button>
                     </div>
                 </div>
@@ -693,76 +696,76 @@ const UserTasks = {
 
             <!-- إحصائيات المهام -->
             <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mt-6">
-                <div class="content-card">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-sm">
-                            <i class="fas fa-tasks text-2xl"></i>
+                <div style="background: white; border-radius: 16px; padding: 18px; box-shadow: 0 4px 16px rgba(59,130,246,0.1); border-right: 4px solid #3b82f6; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(59,130,246,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(59,130,246,0.1)'">
+                    <div style="display:flex;align-items:center;gap:14px;">
+                        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(59,130,246,0.35);flex-shrink:0;">
+                            <i class="fas fa-tasks" style="color:#fff;font-size:1.1rem;"></i>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">${this.t('module.userTasks.totalTasks', 'إجمالي المهام')}</p>
-                            <p class="text-2xl font-bold text-gray-900" id="user-total-tasks">${stats.total}</p>
+                            <p style="font-size:0.78rem;color:#64748b;margin:0 0 3px;font-weight:600;">${this.t('module.userTasks.totalTasks', 'إجمالي المهام')}</p>
+                            <p style="font-size:1.5rem;font-weight:800;color:#1e40af;margin:0;line-height:1;" id="user-total-tasks">${stats.total}</p>
                         </div>
                     </div>
                 </div>
-                <div class="content-card">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shadow-sm">
-                            <i class="fas fa-star text-2xl"></i>
+                <div style="background: white; border-radius: 16px; padding: 18px; box-shadow: 0 4px 16px rgba(139,92,246,0.1); border-right: 4px solid #8b5cf6; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(139,92,246,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(139,92,246,0.1)'">
+                    <div style="display:flex;align-items:center;gap:14px;">
+                        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(139,92,246,0.35);flex-shrink:0;">
+                            <i class="fas fa-star" style="color:#fff;font-size:1.1rem;"></i>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">${this.t('module.userTasks.newTasks', 'مهام جديدة')}</p>
-                            <p class="text-2xl font-bold text-gray-900" id="user-new-tasks">${stats.new}</p>
+                            <p style="font-size:0.78rem;color:#64748b;margin:0 0 3px;font-weight:600;">${this.t('module.userTasks.newTasks', 'مهام جديدة')}</p>
+                            <p style="font-size:1.5rem;font-weight:800;color:#5b21b6;margin:0;line-height:1;" id="user-new-tasks">${stats.new}</p>
                         </div>
                     </div>
                 </div>
-                <div class="content-card">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-xl bg-yellow-100 text-yellow-600 flex items-center justify-center shadow-sm">
-                            <i class="fas fa-clock text-2xl"></i>
+                <div style="background: white; border-radius: 16px; padding: 18px; box-shadow: 0 4px 16px rgba(245,158,11,0.1); border-right: 4px solid #f59e0b; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(245,158,11,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(245,158,11,0.1)'">
+                    <div style="display:flex;align-items:center;gap:14px;">
+                        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(245,158,11,0.35);flex-shrink:0;">
+                            <i class="fas fa-clock" style="color:#fff;font-size:1.1rem;"></i>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">قيد التنفيذ</p>
-                            <p class="text-2xl font-bold text-gray-900" id="user-in-progress-tasks">${stats.inProgress}</p>
+                            <p style="font-size:0.78rem;color:#64748b;margin:0 0 3px;font-weight:600;">${this.t('module.userTasks.inProgress', 'قيد التنفيذ')}</p>
+                            <p style="font-size:1.5rem;font-weight:800;color:#92400e;margin:0;line-height:1;" id="user-in-progress-tasks">${stats.inProgress}</p>
                         </div>
                     </div>
                 </div>
-                <div class="content-card">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-xl bg-green-100 text-green-600 flex items-center justify-center shadow-sm">
-                            <i class="fas fa-check-circle text-2xl"></i>
+                <div style="background: white; border-radius: 16px; padding: 18px; box-shadow: 0 4px 16px rgba(16,185,129,0.1); border-right: 4px solid #10b981; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(16,185,129,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(16,185,129,0.1)'">
+                    <div style="display:flex;align-items:center;gap:14px;">
+                        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(16,185,129,0.35);flex-shrink:0;">
+                            <i class="fas fa-check-circle" style="color:#fff;font-size:1.1rem;"></i>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">مكتملة</p>
-                            <p class="text-2xl font-bold text-gray-900" id="user-completed-tasks">${stats.completed}</p>
+                            <p style="font-size:0.78rem;color:#64748b;margin:0 0 3px;font-weight:600;">${this.t('module.userTasks.completed', 'مكتملة')}</p>
+                            <p style="font-size:1.5rem;font-weight:800;color:#065f46;margin:0;line-height:1;" id="user-completed-tasks">${stats.completed}</p>
+                            <p style="font-size:0.68rem;color:#10b981;margin:2px 0 0;font-weight:600;">${completionRate}%</p>
                         </div>
                     </div>
                 </div>
-                <div class="content-card">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shadow-sm">
-                            <i class="fas fa-exclamation-triangle text-2xl"></i>
+                <div style="background: white; border-radius: 16px; padding: 18px; box-shadow: 0 4px 16px rgba(239,68,68,0.1); border-right: 4px solid #ef4444; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(239,68,68,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(239,68,68,0.1)'">
+                    <div style="display:flex;align-items:center;gap:14px;">
+                        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(239,68,68,0.35);flex-shrink:0;">
+                            <i class="fas fa-exclamation-triangle" style="color:#fff;font-size:1.1rem;"></i>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">متأخرة</p>
-                            <p class="text-2xl font-bold text-gray-900" id="user-overdue-tasks">${stats.overdue}</p>
+                            <p style="font-size:0.78rem;color:#64748b;margin:0 0 3px;font-weight:600;">${this.t('module.userTasks.overdue', 'متأخرة')}</p>
+                            <p style="font-size:1.5rem;font-weight:800;color:#991b1b;margin:0;line-height:1;" id="user-overdue-tasks">${stats.overdue}</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- رسالة المزامنة التلقائية -->
-            <div class="content-card mt-6 bg-blue-50 border-blue-200">
-                <div class="flex items-center gap-3">
-                    <i class="fas fa-info-circle text-blue-600 text-xl"></i>
-                    <div>
-                        <p class="text-sm font-semibold text-blue-800">تحديث تلقائي</p>
-                        <p class="text-xs text-blue-600">سيتم تحديث قائمة المهام تلقائياً كل 30 ثانية</p>
-                    </div>
-                    <div class="mr-auto">
-                        <span class="text-xs text-blue-600" id="last-sync-time">آخر تحديث: الآن</span>
-                    </div>
+            <div style="margin-top:20px;background:linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(139,92,246,0.06) 100%);border:1.5px solid rgba(99,102,241,0.2);border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:14px;backdrop-filter:blur(8px);">
+                <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#4338ca);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(99,102,241,0.3);">
+                    <i class="fas fa-sync-alt" style="color:#fff;font-size:0.85rem;animation:spin 3s linear infinite;"></i>
                 </div>
+                <div style="flex:1;">
+                    <p style="font-size:0.85rem;font-weight:700;color:#4338ca;margin:0;">${this.t('module.userTasks.autoUpdate', 'تحديث تلقائي')}</p>
+                    <p style="font-size:0.75rem;color:#6366f1;margin:2px 0 0;">${this.t('module.userTasks.autoUpdateDesc', 'سيتم تحديث قائمة المهام تلقائياً كل 30 ثانية')}</p>
+                </div>
+                <span style="font-size:0.75rem;color:#6366f1;font-weight:600;white-space:nowrap;" id="last-sync-time">${this.t('module.userTasks.lastUpdate', 'آخر تحديث')}: ${this.t('module.userTasks.now', 'الآن')}</span>
             </div>
+            <style>#user-tasks-section .fa-sync-alt{animation:none}@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}</style>
 
             ${this._filterPanelStyles()}
 
@@ -810,11 +813,11 @@ const UserTasks = {
                     <div id="user-tasks-list-container">
                         <div class="empty-state">
                             <div style="width: 300px; margin: 0 auto 16px;">
-                                <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
-                                    <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
+                                <div style="width: 100%; height: 6px; background: rgba(99, 102, 241, 0.2); border-radius: 3px; overflow: hidden;">
+                                    <div style="height: 100%; background: linear-gradient(90deg, #6366f1, #4338ca, #6366f1); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                 </div>
                             </div>
-                            <p class="text-gray-500">جاري التحميل...</p>
+                            <p class="text-gray-500">${this.t('module.userTasks.loading', 'جاري التحميل...')}</p>
                         </div>
                     </div>
                 </div>
