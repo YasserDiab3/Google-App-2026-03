@@ -11127,6 +11127,11 @@ window.UI = {
             i18nCore.observeDomForI18n();
         }
 
+        // تحديث شريط وضع القراءة فقط ليعكس اللغة المختارة فورياً
+        if (typeof Permissions !== 'undefined' && typeof Permissions.applyGlobalReadOnlyRestrictions === 'function') {
+            try { Permissions.applyGlobalReadOnlyRestrictions(document); } catch (e) {}
+        }
+
         // تحديث نصوص تسجيل الدخول إذا كنا في شاشة الدخول
         this.updateLoginScreenTexts(lang);
 
