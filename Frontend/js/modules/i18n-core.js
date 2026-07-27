@@ -4770,6 +4770,7 @@
         'تحديث الصفحة الآن': 'Reload Page Now',
         'لاحقاً': 'Later',
         'حسابك مسجل بدور "قراءة فقط" — جميع إجراءات الإضافة والتعديل والحذف والحفظ معطلة للأمان.': 'Your account is registered as "Read Only" — all add, edit, delete, and save actions are disabled for safety.',
+        'حسابك مسجل بدور "Read Only" — جميع إجراءات الإضافة والتعديل والحذف والحفظ معطلة للأمان.': 'Your account is registered as "Read Only" — all add, edit, delete, and save actions are disabled for safety.',
         'تنبيه: أنت في وضع القراءة فقط. الحفظ غير متاح.': 'Notice: You are in Read Only mode. Saving is disabled.',
         'حسابك مسجل بدور "قراءة فقط" ولا يمكن إجراء أي حفظ أو تعديل': 'Your account is registered as "Read Only" and cannot perform any save or edit action',
         'الحالة': 'Status',

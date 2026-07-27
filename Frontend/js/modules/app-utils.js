@@ -3214,6 +3214,15 @@ const Permissions = {
         if (!user || !this.isReadOnlyRole(user)) return;
 
         const target = container || document;
+        const isEn = typeof I18n !== 'undefined' && typeof I18n.isEn === 'function' && I18n.isEn();
+
+        const globalText = isEn
+            ? 'Your account is registered as <strong>"Read Only"</strong> — all add, edit, delete, and save actions are disabled for safety.'
+            : 'حسابك مسجل بدور <strong>"قراءة فقط"</strong> — جميع إجراءات الإضافة والتعديل والحذف والحفظ معطلة للأمان.';
+
+        const modalText = isEn
+            ? 'Notice: You are in Read Only mode. Saving is disabled.'
+            : 'تنبيه: أنت في وضع القراءة فقط. الحفظ غير متاح.';
 
         // إدراج شريط التنبيه بعد الهيدر مباشرة دون إرباك تصميم وتنسيق الهيدر أو البطاقة
         const header = target.querySelector?.('.section-header');
@@ -3221,11 +3230,14 @@ const Permissions = {
             const banner = document.createElement('div');
             banner.className = 'read-only-global-banner';
             banner.style.cssText = 'background: #fffbe6; border: 1px solid #ffe58f; color: #d46b08; padding: 10px 16px; border-radius: 12px; margin: 12px 0 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; font-size: 13px; box-shadow: 0 2px 6px rgba(212, 107, 8, 0.05); width: 100%; box-sizing: border-box; clear: both;';
-            banner.innerHTML = '<i class="fas fa-eye text-base text-amber-500"></i> <span data-i18n="read_only_global_notice">حسابك مسجل بدور <strong>"قراءة فقط"</strong> — جميع إجراءات الإضافة والتعديل والحذف والحفظ معطلة للأمان.</span>';
+            banner.innerHTML = `<i class="fas fa-eye text-base text-amber-500"></i> <span data-i18n="read_only_global_notice">${globalText}</span>`;
             if (header.nextSibling) {
                 header.parentNode.insertBefore(banner, header.nextSibling);
             } else {
                 header.parentNode.appendChild(banner);
+            }
+            if (typeof I18n !== 'undefined' && typeof I18n.applyTranslations === 'function') {
+                try { I18n.applyTranslations(banner); } catch (e) {}
             }
         }
 
@@ -3238,11 +3250,14 @@ const Permissions = {
                     const mBanner = document.createElement('div');
                     mBanner.className = 'modal-read-only-banner';
                     mBanner.style.cssText = 'background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; font-weight: 700; font-size: 12px; display: flex; align-items: center; gap: 6px;';
-                    mBanner.innerHTML = '<i class="fas fa-lock text-amber-600"></i> <span data-i18n="modal_read_only_notice">تنبيه: أنت في وضع القراءة فقط. الحفظ غير متاح.</span>';
+                    mBanner.innerHTML = `<i class="fas fa-lock text-amber-600"></i> <span data-i18n="modal_read_only_notice">${modalText}</span>`;
                     if (modalBody.firstChild) {
                         modalBody.insertBefore(mBanner, modalBody.firstChild);
                     } else {
                         modalBody.appendChild(mBanner);
+                    }
+                    if (typeof I18n !== 'undefined' && typeof I18n.applyTranslations === 'function') {
+                        try { I18n.applyTranslations(mBanner); } catch (e) {}
                     }
                 }
             }
@@ -4259,7 +4274,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.568',
+    appVersion: '1.0.570',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
