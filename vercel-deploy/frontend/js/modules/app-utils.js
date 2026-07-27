@@ -3226,7 +3226,13 @@ const Permissions = {
 
         // إدراج شريط التنبيه بعد الهيدر مباشرة دون إرباك تصميم وتنسيق الهيدر أو البطاقة
         const header = target.querySelector?.('.section-header');
-        if (header && header.parentNode && !target.querySelector('.read-only-global-banner')) {
+        const existingBanner = target.querySelector?.('.read-only-global-banner') || document.querySelector('.read-only-global-banner');
+        if (existingBanner) {
+            existingBanner.innerHTML = `<i class="fas fa-eye text-base text-amber-500"></i> <span data-i18n="read_only_global_notice">${globalText}</span>`;
+            if (typeof I18n !== 'undefined' && typeof I18n.applyTranslations === 'function') {
+                try { I18n.applyTranslations(existingBanner); } catch (e) {}
+            }
+        } else if (header && header.parentNode) {
             const banner = document.createElement('div');
             banner.className = 'read-only-global-banner';
             banner.style.cssText = 'background: #fffbe6; border: 1px solid #ffe58f; color: #d46b08; padding: 10px 16px; border-radius: 12px; margin: 12px 0 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; font-size: 13px; box-shadow: 0 2px 6px rgba(212, 107, 8, 0.05); width: 100%; box-sizing: border-box; clear: both;';
@@ -4274,7 +4280,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.578',
+    appVersion: '1.0.580',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
