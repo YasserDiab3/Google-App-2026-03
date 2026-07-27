@@ -6035,7 +6035,8 @@
         applyLiteralTranslations,
         observeDomForI18n,
         getCurrentLang,
-        getCurrentLanguage: getCurrentLang
+        getCurrentLanguage: getCurrentLang,
+        isEn: () => getCurrentLang() === 'en'
     };
 
     // Expose a dedicated namespace to avoid collisions with legacy window.I18n in app-utils.

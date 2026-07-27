@@ -4274,7 +4274,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.574',
+    appVersion: '1.0.576',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -11177,6 +11177,14 @@ const I18n = {
      */
     isRTL() {
         return this.getCurrentLanguage() === 'ar';
+    },
+
+    /**
+     * التحقق مما إذا كانت اللغة الحالية إنجليزية
+     * @returns {boolean}
+     */
+    isEn() {
+        return this.getCurrentLanguage() === 'en';
     },
 
     /**
