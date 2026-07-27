@@ -2686,7 +2686,7 @@ window.UI = {
         if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(sessionShownKey) === v) return;
         try { if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(sessionShownKey, v); } catch (e) {}
 
-        const isEn = typeof I18n !== 'undefined' && typeof I18n.isEn === 'function' && I18n.isEn();
+        const isEn = typeof I18n !== 'undefined' && typeof I18n.isEn === 'function' ? I18n.isEn() : (localStorage.getItem('language') === 'en');
         const safeVersion = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(v) : v;
 
         const titleText = isEn ? 'New System Update' : 'هناك تحديث جديد';
@@ -2700,15 +2700,15 @@ window.UI = {
 
         const notesListHtml = isEn ? `
             <ul style="margin: 0.5rem 0 0; padding-left: 1.2rem; font-size: 0.85rem; color: var(--gray-600, #4b5563); line-height: 1.6; list-style-type: disc;">
-                <li data-i18n="update_modal_notes_1">Enforced Read-Only role security guards across all modules and popups.</li>
-                <li data-i18n="update_modal_notes_2">Full bilingual support for language switching and instant AR/EN keys.</li>
-                <li data-i18n="update_modal_notes_3">Optimized search performance, system responsiveness, and session safety.</li>
+                <li>Enforced Read-Only role security guards across all modules and popups.</li>
+                <li>Full bilingual support for language switching and instant AR/EN keys.</li>
+                <li>Optimized search performance, system responsiveness, and session safety.</li>
             </ul>
         ` : `
             <ul style="margin: 0.5rem 0 0; padding-right: 1.2rem; font-size: 0.85rem; color: var(--gray-600, #4b5563); line-height: 1.6; list-style-type: disc;">
-                <li data-i18n="update_modal_notes_1">تطبيق قيود وتأمين دور "قراءة فقط" عبر كافة المديولات والنوافذ المنبثقة.</li>
-                <li data-i18n="update_modal_notes_2">دعم كامل لتبديل لغة الواجهة ومفاتيح الترجمة الفورية باللغتين العربية والإنجليزية.</li>
-                <li data-i18n="update_modal_notes_3">تحسين استجابة البحث والأداء العام وإدارة الجلسات في الواجهة.</li>
+                <li>تطبيق قيود وتأمين دور "قراءة فقط" عبر كافة المديولات والنوافذ المنبثقة.</li>
+                <li>دعم كامل لتبديل لغة الواجهة ومفاتيح الترجمة الفورية باللغتين العربية والإنجليزية.</li>
+                <li>تحسين استجابة البحث والأداء العام وإدارة الجلسات في الواجهة.</li>
             </ul>
         `;
 
@@ -2717,29 +2717,30 @@ window.UI = {
         modal.setAttribute('role', 'dialog');
         modal.setAttribute('aria-modal', 'true');
         modal.setAttribute('aria-label', titleText);
+        modal.setAttribute('data-no-literal-translate', 'true');
         modal.className = 'hse-update-message-modal';
         modal.style.cssText = 'position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);padding:1rem;';
         modal.innerHTML = `
-            <div class="hse-update-message-card" style="background:var(--bg-primary,#fff);color:var(--text-primary,#111);max-width:460px;width:100%;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);padding:1.5rem;text-align:${isEn ? 'left' : 'right'};direction:${isEn ? 'ltr' : 'rtl'};">
+            <div class="hse-update-message-card" data-no-literal-translate="true" style="background:var(--bg-primary,#fff);color:var(--text-primary,#111);max-width:460px;width:100%;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);padding:1.5rem;text-align:${isEn ? 'left' : 'right'};direction:${isEn ? 'ltr' : 'rtl'};">
                 <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
                     <span style="width:48px;height:48px;border-radius:50%;background:var(--primary-color,#2563eb);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-sync-alt" style="font-size:1.25rem;"></i></span>
                     <div>
-                        <h2 style="margin:0;font-size:1.25rem;font-weight:700;" data-i18n="update_modal_title">${titleText}</h2>
-                        <p style="margin:2px 0 0;font-size:0.85rem;color:var(--gray-500,#6b7280);"><span data-i18n="update_modal_version_prefix">${versionPrefix}</span> <strong>${safeVersion}</strong></p>
+                        <h2 style="margin:0;font-size:1.25rem;font-weight:700;">${titleText}</h2>
+                        <p style="margin:2px 0 0;font-size:0.85rem;color:var(--gray-500,#6b7280);"><span>${versionPrefix}</span> <strong>${safeVersion}</strong></p>
                     </div>
                 </div>
 
                 <div style="background:var(--bg-secondary,#f9fafb);border:1px solid var(--border-color,#e5e7eb);border-radius:12px;padding:0.9rem;margin:1rem 0;">
                     <div style="font-weight:700;font-size:0.9rem;color:var(--primary-color,#2563eb);display:flex;align-items:center;gap:6px;">
                         <i class="fas fa-magic"></i>
-                        <span data-i18n="update_modal_summary_heading">${notesTitle}</span>
+                        <span>${notesTitle}</span>
                     </div>
                     ${notesListHtml}
                 </div>
 
                 <div style="display:flex;gap:0.5rem;margin-top:1.25rem;flex-direction:${isEn ? 'row' : 'row-reverse'};">
-                    <button type="button" id="hse-update-message-reload" class="btn-primary" style="flex:1;" data-i18n="update_modal_reload_btn">${reloadText}</button>
-                    <button type="button" id="hse-update-message-later" class="btn-secondary" style="flex:1;" data-i18n="update_modal_later_btn">${laterText}</button>
+                    <button type="button" id="hse-update-message-reload" class="btn-primary" style="flex:1;">${reloadText}</button>
+                    <button type="button" id="hse-update-message-later" class="btn-secondary" style="flex:1;">${laterText}</button>
                 </div>
             </div>`;
         document.body.appendChild(modal);

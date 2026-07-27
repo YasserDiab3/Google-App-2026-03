@@ -5902,13 +5902,14 @@
         const map = isEn ? literalArToEn : literalEnToAr;
         const target = root || document;
 
-        const partialEntries = Object.entries(map).filter(([from, to]) => from && from !== to && from.length >= 3);
+        // partialEntries: allow multi-word or distinct phrases to avoid single-word sentence corruption
+        const partialEntries = Object.entries(map).filter(([from, to]) => from && from !== to && from.includes(' ') && from.length >= 8);
 
         const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, {
             acceptNode(node) {
                 const parent = node.parentElement;
                 if (!parent) return NodeFilter.FILTER_REJECT;
-                if (parent.closest('[data-i18n]')) {
+                if (parent.closest('[data-i18n]') || parent.closest('[data-no-literal-translate]') || parent.closest('.hse-update-message-modal')) {
                     return NodeFilter.FILTER_REJECT;
                 }
                 const tag = parent.tagName;
