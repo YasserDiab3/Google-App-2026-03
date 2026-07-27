@@ -1687,11 +1687,24 @@ const Violations = {
             const severityFilter = filters.severity || '';
             const statusFilter = filters.status || '';
 
+            let contractorMatchers = [];
+            if (searchFilter && typeof Utils !== 'undefined' && typeof Utils.findApprovedContractorByTerm === 'function') {
+                const approvedList = [
+                    ...(AppState?.appData?.approvedContractors || []),
+                    ...(AppState?.appData?.contractors || [])
+                ].filter(Boolean);
+                const searchRes = Utils.findApprovedContractorByTerm(searchFilter, approvedList);
+                const matchedContractors = (searchRes.matches && searchRes.matches.length > 0)
+                    ? searchRes.matches
+                    : (searchRes.contractor ? [searchRes.contractor] : []);
+                contractorMatchers = matchedContractors.map(c => Utils.buildContractorIdentityMatcher(c, searchFilter));
+            }
+
             return violations.filter(violation => {
                 if (!violation) return false;
 
-                if (personFilter === 'employee' && !violation.employeeName) return false;
-                if (personFilter === 'contractor' && !violation.contractorName) return false;
+                if (personFilter === 'employee' && !violation.employeeName && violation.personType !== 'employee') return false;
+                if (personFilter === 'contractor' && !violation.contractorName && !violation.contractorCode && !violation.contractorId && violation.personType !== 'contractor') return false;
 
                 if (typeFilter) {
                     const violationType = (violation.violationType || '').trim().toLowerCase();
@@ -1701,10 +1714,17 @@ const Violations = {
                 if (severityFilter && (violation.severity || '') !== severityFilter) return false;
                 if (statusFilter && (violation.status || '') !== statusFilter) return false;
                 if (searchFilter) {
-                    const searchableText = Object.values(violation || {})
-                        .map((value) => String(value == null ? '' : value).toLowerCase())
-                        .join(' ');
-                    if (!searchableText.includes(searchFilter)) return false;
+                    let matchesSearch = false;
+                    if (contractorMatchers.length > 0 && contractorMatchers.some(m => m.violationBelongsToContractor(violation))) {
+                        matchesSearch = true;
+                    }
+                    if (!matchesSearch) {
+                        const searchableText = Object.values(violation || {})
+                            .map((value) => String(value == null ? '' : value).toLowerCase())
+                            .join(' ');
+                        matchesSearch = searchableText.includes(searchFilter);
+                    }
+                    if (!matchesSearch) return false;
                 }
 
                 return true;
@@ -2115,7 +2135,7 @@ const Violations = {
 
     renderContractorViolationsList() {
         const violations = this.getFilteredViolations().filter(v =>
-            v.contractorName || v.personType === 'contractor'
+            v.contractorName || v.contractorCode || v.contractorId || v.personType === 'contractor'
         );
         if (violations.length === 0) {
             return `<div class="empty-state"><p class="text-gray-500">لا توجد مخالفات للمقاولين</p></div>`;
