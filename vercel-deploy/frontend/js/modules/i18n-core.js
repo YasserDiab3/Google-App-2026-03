@@ -5863,7 +5863,12 @@
         target.querySelectorAll?.('[data-i18n]').forEach((el) => {
             const key = el.getAttribute('data-i18n');
             if (!key) return;
-            el.textContent = t(key, selectedLang, el.textContent || '');
+            const val = t(key, selectedLang, el.innerHTML || el.textContent || '');
+            if (val && val.includes('<') && val.includes('>')) {
+                el.innerHTML = val;
+            } else {
+                el.textContent = val;
+            }
         });
 
         target.querySelectorAll?.('[data-i18n-title]').forEach((el) => {
@@ -5903,6 +5908,9 @@
             acceptNode(node) {
                 const parent = node.parentElement;
                 if (!parent) return NodeFilter.FILTER_REJECT;
+                if (parent.closest('[data-i18n]')) {
+                    return NodeFilter.FILTER_REJECT;
+                }
                 const tag = parent.tagName;
                 if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'SVG' || tag === 'CANVAS' || tag === 'CODE' || tag === 'PRE') {
                     return NodeFilter.FILTER_REJECT;
