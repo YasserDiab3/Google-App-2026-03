@@ -59,18 +59,23 @@ const Users = {
         const roleText = roleLabels[creds.role] || creds.role || 'مستخدم';
         const loginUrl = window.location.origin + window.location.pathname;
 
-        const formattedSummary = `مرحباً ${creds.name || 'المستخدم'}،
-
-تم إنشاء/تحديث حسابك بنجاح في نظام إدارة السلامة والصحة المهنية (ICAPP HSE).
-
-بيانات تسجيل الدخول:
-• البريد الإلكتروني: ${creds.email}
-• كلمة المرور: ${creds.password || '••••••••'}
-• الدور الوظيفي: ${roleText}
-• القسم: ${creds.department || '—'}
-• رابط النظام: ${loginUrl}
-
-يرجى الاحتفاظ بهذه البيانات وتغيير كلمة المرور عند أول تسجيل دخول.`;
+        const formattedSummary = 
+            `السلام عليكم ورحمة الله وبركاته،\r\n\r\n` +
+            `عزيزي/عزيزتي: ${creds.name || 'المستخدم'}\r\n\r\n` +
+            `تم إنشاء/تحديث حسابكم بنجاح في نظام إدارة السلامة والصحة المهنية (ICAPP HSE).\r\n\r\n` +
+            `──────────────────────────────\r\n` +
+            `📋 بيانات تسجيل الدخول الخاصة بك:\r\n` +
+            `──────────────────────────────\r\n` +
+            `👤 الاسم الكامل: ${creds.name || '—'}\r\n` +
+            `✉️ البريد الإلكتروني: ${creds.email}\r\n` +
+            `🔑 كلمة المرور: ${creds.password || '••••••••'}\r\n` +
+            `🛡️ الدور الوظيفي: ${roleText}\r\n` +
+            `🏢 القسم / الإدارة: ${creds.department || '—'}\r\n` +
+            `🌐 رابط الدخول للنظام: ${loginUrl}\r\n` +
+            `──────────────────────────────\r\n\r\n` +
+            `⚠️ ملاحظة أمنية: يرجى الاحتفاظ بهذه البيانات وتغيير كلمة المرور الخاصة بك عند أول تسجيل دخول.\r\n\r\n` +
+            `مع تحيات،\r\n` +
+            `إدارة السلامة والصحة المهنية (ICAPP HSE)`;
 
         const mailtoSubject = encodeURIComponent(`بيانات حسابك في نظام إدارة السلامة والصحة المهنية - ${creds.name || ''}`);
         const mailtoBody = encodeURIComponent(formattedSummary);
