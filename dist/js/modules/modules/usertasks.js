@@ -117,7 +117,7 @@ const UserTasks={cache:{members:null,tasks:new Map,lastLoad:null},config:{cacheT
                             </button>
                         </div>
                     </div>
-                `}t.innerHTML=s,this.applyModuleI18n(t);try{if(e){this.setupEventListeners();try{setTimeout(()=>{this.loadMembers().catch(()=>{})},0)}catch(a){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0623\u0639\u0636\u0627\u0621 \u0627\u0644\u0623\u0648\u0644\u064A:",a)}setTimeout(()=>{this.loadMembers().then(()=>{}).catch(a=>{Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0623\u0639\u0636\u0627\u0621:",a)})},100)}else{this.setupUserDashboardListeners();try{setTimeout(()=>{this.loadUserTasks().catch(()=>{})},0)}catch(a){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0623\u0648\u0644\u064A:",a)}setTimeout(()=>{this.loadUserTasks().then(()=>{}).catch(a=>{Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645:",a)})},100)}}catch(a){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0647\u064A\u0626\u0629 \u0627\u0644\u0623\u062D\u062F\u0627\u062B:",a)}try{this.startAutoSync()}catch(a){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A\u0629:",a)}}catch(e){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646:",e),t.innerHTML=`
+                `}t.innerHTML=s,this.applyModuleI18n(t);try{e?(this.setupEventListeners(),this.loadMembers().catch(a=>{Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0623\u0639\u0636\u0627\u0621:",a)})):(this.setupUserDashboardListeners(),this.loadUserTasks().catch(a=>{Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645:",a)}))}catch(a){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0647\u064A\u0626\u0629 \u0627\u0644\u0623\u062D\u062F\u0627\u062B:",a)}try{this.startAutoSync()}catch(a){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A\u0629:",a)}}catch(e){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646:",e),t.innerHTML=`
                 <div class="section-header">
                     <h1 class="section-title">
                         <i class="fas fa-tasks ml-3"></i>
@@ -165,7 +165,7 @@ const UserTasks={cache:{members:null,tasks:new Map,lastLoad:null},config:{cacheT
             </div>
             
             <!-- \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mt-6">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
                 <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(59,130,246,0.1); border-right: 4px solid #3b82f6; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(59,130,246,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(59,130,246,0.1)'">
                     <div style="display:flex;align-items:center;gap:16px;">
                         <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(59,130,246,0.35);flex-shrink:0;">
@@ -298,7 +298,7 @@ const UserTasks={cache:{members:null,tasks:new Map,lastLoad:null},config:{cacheT
             </div>
 
             <!-- \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0627\u0644\u0645\u0647\u0627\u0645 -->
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mt-6">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-6">
                 <div style="background: white; border-radius: 16px; padding: 18px; box-shadow: 0 4px 16px rgba(59,130,246,0.1); border-right: 4px solid #3b82f6; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(59,130,246,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(59,130,246,0.1)'">
                     <div style="display:flex;align-items:center;gap:14px;">
                         <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(59,130,246,0.35);flex-shrink:0;">

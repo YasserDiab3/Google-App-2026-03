@@ -254,48 +254,14 @@ const UserTasks = {
             try {
                 if (isAdmin) {
                     this.setupEventListeners();
-                    
-                    // تحميل البيانات فوراً بعد عرض الواجهة (حتى لو كانت البيانات فارغة)
-                    // هذا يضمن عدم بقاء الواجهة فارغة بعد التحميل
-                    try {
-                        setTimeout(() => {
-                            this.loadMembers().catch(() => {});
-                        }, 0);
-                    } catch (error) {
-                        Utils.safeWarn('⚠️ خطأ في تحميل الأعضاء الأولي:', error);
-                    }
-                    
-                    // تحميل البيانات بشكل غير متزامن بعد عرض الواجهة (للتحديث)
-                    setTimeout(() => {
-                        this.loadMembers().then(() => {
-                            // تحديث الواجهة بعد تحميل البيانات لضمان عرض البيانات المحدثة
-                            // الواجهة يتم تحديثها تلقائياً في loadMembers
-                        }).catch(error => {
-                            Utils.safeWarn('⚠️ خطأ في تحميل الأعضاء:', error);
-                        });
-                    }, 100);
+                    this.loadMembers().catch(error => {
+                        Utils.safeWarn('⚠️ خطأ في تحميل الأعضاء:', error);
+                    });
                 } else {
                     this.setupUserDashboardListeners();
-                    
-                    // تحميل البيانات فوراً بعد عرض الواجهة (حتى لو كانت البيانات فارغة)
-                    // هذا يضمن عدم بقاء الواجهة فارغة بعد التحميل
-                    try {
-                        setTimeout(() => {
-                            this.loadUserTasks().catch(() => {});
-                        }, 0);
-                    } catch (error) {
-                        Utils.safeWarn('⚠️ خطأ في تحميل مهام المستخدم الأولي:', error);
-                    }
-                    
-                    // تحميل البيانات بشكل غير متزامن بعد عرض الواجهة (للتحديث)
-                    setTimeout(() => {
-                        this.loadUserTasks().then(() => {
-                            // تحديث الواجهة بعد تحميل البيانات لضمان عرض البيانات المحدثة
-                            // الواجهة يتم تحديثها تلقائياً في loadUserTasks
-                        }).catch(error => {
-                            Utils.safeWarn('⚠️ خطأ في تحميل مهام المستخدم:', error);
-                        });
-                    }, 100);
+                    this.loadUserTasks().catch(error => {
+                        Utils.safeWarn('⚠️ خطأ في تحميل مهام المستخدم:', error);
+                    });
                 }
             } catch (error) {
                 Utils.safeWarn('⚠️ خطأ في تهيئة الأحداث:', error);
@@ -534,7 +500,7 @@ const UserTasks = {
             </div>
             
             <!-- إحصائيات -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mt-6">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
                 <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(59,130,246,0.1); border-right: 4px solid #3b82f6; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(59,130,246,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(59,130,246,0.1)'">
                     <div style="display:flex;align-items:center;gap:16px;">
                         <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(59,130,246,0.35);flex-shrink:0;">
@@ -695,7 +661,7 @@ const UserTasks = {
             </div>
 
             <!-- إحصائيات المهام -->
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mt-6">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-6">
                 <div style="background: white; border-radius: 16px; padding: 18px; box-shadow: 0 4px 16px rgba(59,130,246,0.1); border-right: 4px solid #3b82f6; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(59,130,246,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(59,130,246,0.1)'">
                     <div style="display:flex;align-items:center;gap:14px;">
                         <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(59,130,246,0.35);flex-shrink:0;">
