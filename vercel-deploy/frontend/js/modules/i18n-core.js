@@ -5948,7 +5948,41 @@
         'أكتوبر': 'October',
         'نوفمبر': 'November',
         'ديسمبر': 'December',
-        'ج.م': 'EGP'
+        'ج.م': 'EGP',
+
+        // System-wide Status Badges & Roles
+        'قيد الانتظار': 'Pending',
+        'قيد الاعتماد': 'Pending Approval',
+        'تحت المراجعة': 'Under Review',
+        'مقبول': 'Approved',
+        'متم الشفاء': 'Recovered',
+        'إجازة مرضية': 'Sick Leave',
+        'غير مكتمل': 'Incomplete',
+        'نشط': 'Active',
+        'غير نشط': 'Inactive',
+        'مسؤول السلامة': 'Safety Officer',
+        'أخصائي السلامة': 'Safety Specialist',
+        'مدير السلامة': 'Safety Manager',
+        'مدير النظام': 'System Administrator',
+        'مستخدم عادي': 'Regular User',
+        'قراءة فقط': 'Read Only',
+
+        // Common Actions & Notifications
+        'تأكيد الحذف': 'Confirm Deletion',
+        'هل أنت تأكد من عملية الحذف؟': 'Are you sure you want to delete this item?',
+        'جاري حفظ التعديلات...': 'Saving changes...',
+        'تم الحفظ بنجاح': 'Saved successfully',
+        'حدث خطأ أثناء الحفظ': 'An error occurred while saving',
+        'لا توجد بيانات متاحة': 'No data available',
+        'لا توجد نتائج مطابقة': 'No matching results',
+        'إصابات الموظفين': 'Employee Injuries',
+        'إصابات المقاولين': 'Contractor Injuries',
+        'سجل الحوادث': 'Incidents Registry',
+        'تصاريح العمل': 'Work Permits',
+        'الفحوصات الدورية': 'Periodic Inspections',
+        'مهمات الوقاية': 'PPE Inventory',
+        'المخالفات السلامية': 'Safety Violations',
+        'سجل التردد الطاقم الطبي': 'Clinic Attendance Log'
     };
 
     const literalEnToAr = Object.fromEntries(Object.entries(literalArToEn).map(([ar, en]) => [en, ar]));
