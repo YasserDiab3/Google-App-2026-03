@@ -5637,7 +5637,12 @@ window.UI = {
     async renderMyProfileSection() {
         const section = document.getElementById('profile-section');
         if (!section) return;
-        const t = (k, f) => (typeof this._t === 'function' ? this._t(k, f) : f);
+        const t = (k, f) => {
+            if (window.AppI18n && typeof window.AppI18n.t === 'function') {
+                return window.AppI18n.t(k, null, f || k);
+            }
+            return f || k;
+        };
         const esc = (v) => (typeof Utils !== 'undefined' && typeof Utils.escapeHTML === 'function')
             ? Utils.escapeHTML(String(v ?? ''))
             : String(v ?? '');
@@ -5663,11 +5668,11 @@ window.UI = {
                     ? `<a class="profile-em-link" href="tel:${esc(tel)}">${esc(ph)}</a>`
                     : esc(ph);
                 const inner = lab
-                    ? `<span class="profile-em-label">${esc(lab)}</span><span class="profile-em-sep"> </span>${link}${it?.source === 'plan' ? ` <span class="profile-em-badge">${t('module.profile.fromPlans', 'من خطط طوارئ')}</span>` : ''}`
+                    ? `<span class="profile-em-label">${esc(lab)}</span><span class="profile-em-sep"> </span>${link}${it?.source === 'plan' ? ` <span class="profile-em-badge" data-i18n="module.profile.fromPlans">${t('module.profile.fromPlans', 'من خطط طوارئ')}</span>` : ''}`
                     : link;
                 return `<span class="profile-chip profile-chip--em">${inner}</span>`;
             }).join('')
-            : `<span class="text-slate-500">${t('module.profile.noEmergencyPhones', 'لا توجد أرقام طوارئ متاحة حالياً')}</span>`;
+            : `<span class="text-slate-500" data-i18n="module.profile.noEmergencyPhones">${t('module.profile.noEmergencyPhones', 'لا توجد أرقام طوارئ متاحة حالياً')}</span>`;
         const isAdmin = typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserAdmin === 'function' && Permissions.isCurrentUserAdmin();
         const mfaStatus = (typeof Auth !== 'undefined' && typeof Auth.getCurrentUserMfaStatus === 'function')
             ? Auth.getCurrentUserMfaStatus()
@@ -5686,18 +5691,18 @@ window.UI = {
                     <td class="profile-admin-td">${esc(r.label || '')}</td>
                     <td class="profile-admin-td" dir="ltr"><a class="profile-em-link" href="tel:${esc(tel)}">${esc(ph)}</a></td>
                     <td class="profile-admin-td">${esc(r.sortOrder ?? '')}</td>
-                    <td class="profile-admin-td">${isOn ? t('module.profile.activeY', 'مفعّل') : t('module.profile.inactiveN', 'معطّل')}</td>
+                    <td class="profile-admin-td">${isOn ? `<span data-i18n="module.profile.activeY">${t('module.profile.activeY', 'مفعّل')}</span>` : `<span data-i18n="module.profile.inactiveN">${t('module.profile.inactiveN', 'معطّل')}</span>`}</td>
                     <td class="profile-admin-td"><button type="button" class="btn-danger btn-xs profile-app-em-del" data-id="${esc(r.id || '')}"><i class="fas fa-trash"></i></button></td>
                 </tr>`;
             }).filter(Boolean).join('')
             : '';
         const adminTbody = isAdmin
             ? (adminTableRows
-                || `<tr><td colspan="5" class="profile-admin-empty text-slate-500">${t('module.profile.noAppEmergency', 'لا توجد سجلات بعد. أضف أول رقم أدناه.')}</td></tr>`)
+                || `<tr><td colspan="5" class="profile-admin-empty text-slate-500" data-i18n="module.profile.noAppEmergency">${t('module.profile.noAppEmergency', 'لا توجد سجلات بعد. أضف أول رقم أدناه.')}</td></tr>`)
             : '';
         const hireRow = (profile.hireDateDisplay)
-            ? `<div class="profile-hire-pill"><span class="profile-hire-label">${t('module.profile.hireDate', 'تاريخ التعيين')}</span><strong class="profile-hire-val">${esc(profile.hireDateDisplay)}</strong>
-                ${profile.tenureText ? `<span class="profile-tenure">${t('module.profile.seniority', 'الأقدمية')}: ${esc(profile.tenureText)}</span>` : ''}</div>`
+            ? `<div class="profile-hire-pill"><span class="profile-hire-label" data-i18n="module.profile.hireDate">${t('module.profile.hireDate', 'تاريخ التعيين')}</span><strong class="profile-hire-val">${esc(profile.hireDateDisplay)}</strong>
+                ${profile.tenureText ? `<span class="profile-tenure"><span data-i18n="module.profile.seniority">${t('module.profile.seniority', 'الأقدمية')}</span>: ${esc(profile.tenureText)}</span>` : ''}</div>`
             : '';
         const pickHttpUrl = (s) => {
             const u = String(s || '').trim();
@@ -5747,24 +5752,24 @@ window.UI = {
         const avatarDisplay = hasProfileAvatar ? '' : 'display:none;';
         const iconDisplay = hasProfileAvatar ? 'display:none;' : '';
         const personalRows = [
-            [t('module.profile.employeeNumber', 'الكود الوظيفي'), profile.employeeNumber || '-'],
-            [t('module.profile.personalName', 'الاسم'), profile.fullName || '-'],
-            [t('module.profile.personalJob', 'الوظيفة'), profile.position || '-'],
-            [t('module.profile.phone', 'رقم الهاتف'), profile.phone || '-'],
-            [t('module.profile.personalFactory', 'المصنع'), profile.branch || profile.department || '-'],
-            [t('module.profile.personalAddress', 'العنوان'), profile.location || '-'],
-            [t('module.profile.hireDate', 'تاريخ التعيين'), profile.hireDateDisplay || '-'],
-            [t('module.profile.seniority', 'مدة العمل (الأقدمية)'), profile.tenureText || (profile.hireDateDisplay ? '—' : '-')]
+            ['module.profile.employeeNumber', 'الكود الوظيفي', profile.employeeNumber || '-'],
+            ['module.profile.personalName', 'الاسم', profile.fullName || '-'],
+            ['module.profile.personalJob', 'الوظيفة', profile.position || '-'],
+            ['module.profile.phone', 'رقم الهاتف', profile.phone || '-'],
+            ['module.profile.personalFactory', 'المصنع', profile.branch || profile.department || '-'],
+            ['module.profile.personalAddress', 'العنوان', profile.location || '-'],
+            ['module.profile.hireDate', 'تاريخ التعيين', profile.hireDateDisplay || '-'],
+            ['module.profile.seniority', 'مدة العمل (الأقدمية)', profile.tenureText || (profile.hireDateDisplay ? '—' : '-')]
         ];
         const personalInfoHtml = personalRows.map((entry, idx) => {
-            const val = String(entry[1] ?? '-');
+            const val = String(entry[2] ?? '-');
             const isLtr = idx === 0 || idx === 3 || /\d/.test(val);
-            return `<div><span>${esc(entry[0])}</span><strong ${isLtr ? 'dir="ltr"' : ''}>${esc(val)}</strong></div>`;
+            return `<div><span data-i18n="${entry[0]}">${esc(t(entry[0], entry[1]))}</span><strong ${isLtr ? 'dir="ltr"' : ''}>${esc(val)}</strong></div>`;
         }).join('');
 
         section.innerHTML = `
             <div class="section-header">
-                <h2 class="section-title"><i class="fas fa-id-card ml-2"></i>${t('nav.profile', 'ملفي الشخصي')}</h2>
+                <h2 class="section-title"><i class="fas fa-id-card ml-2"></i><span data-i18n="nav.profile">${t('nav.profile', 'ملفي الشخصي')}</span></h2>
             </div>
             <div class="profile-dashboard-grid">
                 <div class="content-card profile-hero-card profile-linkedin-shell">
@@ -5779,10 +5784,10 @@ window.UI = {
                             <p class="profile-hero-meta">${esc(profile.branch || profile.department || t('module.profile.noDepartment', 'قسم غير محدد'))}</p>
                             ${hireRow}
                             <div class="profile-actions">
-                                <button id="profile-change-photo-btn" class="btn-secondary btn-sm"><i class="fas fa-camera ml-1"></i>${t('module.profile.changePhoto', 'تغيير الصورة')}</button>
-                                <button id="profile-change-password-btn" class="btn-primary btn-sm"><i class="fas fa-key ml-1"></i>${t('module.profile.changePassword', 'تغيير كلمة المرور')}</button>
+                                <button id="profile-change-photo-btn" class="btn-secondary btn-sm"><i class="fas fa-camera ml-1"></i><span data-i18n="module.profile.changePhoto">${t('module.profile.changePhoto', 'تغيير الصورة')}</span></button>
+                                <button id="profile-change-password-btn" class="btn-primary btn-sm"><i class="fas fa-key ml-1"></i><span data-i18n="module.profile.changePassword">${t('module.profile.changePassword', 'تغيير كلمة المرور')}</span></button>
                                 <button id="profile-mfa-btn" class="btn-secondary btn-sm" type="button">
-                                    <i class="fas fa-shield-halved ml-1"></i>${mfaStatus.enabled ? t('module.profile.mfaManage', 'إدارة المصادقة الثنائية') : t('module.profile.mfaEnable', 'تفعيل المصادقة الثنائية')}
+                                    <i class="fas fa-shield-halved ml-1"></i><span data-i18n="${mfaStatus.enabled ? 'module.profile.mfaManage' : 'module.profile.mfaEnable'}">${mfaStatus.enabled ? t('module.profile.mfaManage', 'إدارة المصادقة الثنائية') : t('module.profile.mfaEnable', 'تفعيل المصادقة الثنائية')}</span>
                                 </button>
                                 ${teamsLinkHtml}
                                 ${whatsappLinkHtml}
@@ -5793,21 +5798,21 @@ window.UI = {
                 </div>
 
                 <div class="content-card profile-card profile-personal-card">
-                    <div class="card-header"><h3 class="card-title">${t('module.profile.personalInfo', 'البيانات الشخصية')}</h3></div>
+                    <div class="card-header"><h3 class="card-title" data-i18n="module.profile.personalInfo">${t('module.profile.personalInfo', 'البيانات الشخصية')}</h3></div>
                     <div class="card-body profile-info-list">
                         ${personalInfoHtml}
                     </div>
                 </div>
 
                 <div class="content-card profile-card">
-                    <div class="card-header"><h3 class="card-title">${t('module.profile.professionalStats', 'تفاصيل مهنية')}</h3></div>
+                    <div class="card-header"><h3 class="card-title" data-i18n="module.profile.professionalStats">${t('module.profile.professionalStats', 'تفاصيل مهنية')}</h3></div>
                     <div class="card-body profile-kpi-grid">
-                        <div class="profile-kpi"><span>${t('module.profile.trainingSessions', 'الدورات التدريبية')}</span><strong>${esc(stats.trainingSessions || 0)}</strong></div>
-                        <div class="profile-kpi"><span>${t('module.profile.trainingHours', 'ساعات التدريب')}</span><strong>${esc(stats.trainingHours || 0)}</strong></div>
-                        <div class="profile-kpi"><span>${t('module.profile.violationsCount', 'عدد المخالفات')}</span><strong>${esc(stats.violationsCount || 0)}</strong></div>
-                        <div class="profile-kpi"><span>${t('module.profile.openViolations', 'المخالفات المفتوحة')}</span><strong>${esc(stats.openViolations || 0)}</strong></div>
-                        <div class="profile-kpi"><span>${t('module.profile.ppeTotal', 'إجمالي مهمات الوقاية')}</span><strong>${esc(stats.ppeTotalQuantity || 0)}</strong></div>
-                        <div class="profile-kpi"><span>${t('module.profile.clinicVisits', 'زيارات العيادة')}</span><strong>${esc(stats.clinicVisitsCount || 0)}</strong></div>
+                        <div class="profile-kpi"><span data-i18n="module.profile.trainingSessions">${t('module.profile.trainingSessions', 'الدورات التدريبية')}</span><strong>${esc(stats.trainingSessions || 0)}</strong></div>
+                        <div class="profile-kpi"><span data-i18n="module.profile.trainingHours">${t('module.profile.trainingHours', 'ساعات التدريب')}</span><strong>${esc(stats.trainingHours || 0)}</strong></div>
+                        <div class="profile-kpi"><span data-i18n="module.profile.violationsCount">${t('module.profile.violationsCount', 'عدد المخالفات')}</span><strong>${esc(stats.violationsCount || 0)}</strong></div>
+                        <div class="profile-kpi"><span data-i18n="module.profile.openViolations">${t('module.profile.openViolations', 'المخالفات المفتوحة')}</span><strong>${esc(stats.openViolations || 0)}</strong></div>
+                        <div class="profile-kpi"><span data-i18n="module.profile.ppeTotal">${t('module.profile.ppeTotal', 'إجمالي مهمات الوقاية')}</span><strong>${esc(stats.ppeTotalQuantity || 0)}</strong></div>
+                        <div class="profile-kpi"><span data-i18n="module.profile.clinicVisits">${t('module.profile.clinicVisits', 'زيارات العيادة')}</span><strong>${esc(stats.clinicVisitsCount || 0)}</strong></div>
                     </div>
                 </div>
 
@@ -6057,6 +6062,10 @@ window.UI = {
         paintQr(false);
 
         this._scheduleProfileStatsEnrichment();
+
+        if (window.AppI18n && typeof window.AppI18n.applyModuleI18n === 'function') {
+            window.AppI18n.applyModuleI18n(section);
+        }
     },
 
     /**

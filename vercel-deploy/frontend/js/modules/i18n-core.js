@@ -5982,7 +5982,29 @@
         'الفحوصات الدورية': 'Periodic Inspections',
         'مهمات الوقاية': 'PPE Inventory',
         'المخالفات السلامية': 'Safety Violations',
-        'سجل التردد الطاقم الطبي': 'Clinic Attendance Log'
+        'سجل التردد الطاقم الطبي': 'Clinic Attendance Log',
+
+        // Profile Details
+        'الكود الوظيفي': 'Employee Code',
+        'الرقم الوظيفي': 'Employee Number',
+        'البيانات الشخصية': 'Personal Details',
+        'تفاصيل مهنية': 'Professional Details',
+        'رقم الهاتف': 'Phone Number',
+        'المصنع': 'Factory / Branch',
+        'العنوان': 'Address / Location',
+        'تاريخ التعيين': 'Hire Date',
+        'مدة العمل (الأقدمية)': 'Length of Service (Seniority)',
+        'الأقدمية': 'Seniority',
+        'الدورات التدريبية': 'Training Courses',
+        'ساعات التدريب': 'Training Hours',
+        'عدد المخالفات': 'Total Violations',
+        'المخالفات المفتوحة': 'Open Violations',
+        'إجمالي مهمات الوقاية': 'Total PPE Items',
+        'زيارات العيادة': 'Clinic Visits',
+        'أرقام الطوارئ': 'Emergency Numbers',
+        'بطاقة الأعمال عبر QR': 'Public Card via QR',
+        'تغيير كلمة المرور': 'Change Password',
+        'تغيير الصورة': 'Change Photo'
     };
 
     const literalEnToAr = Object.fromEntries(Object.entries(literalArToEn).map(([ar, en]) => [en, ar]));
