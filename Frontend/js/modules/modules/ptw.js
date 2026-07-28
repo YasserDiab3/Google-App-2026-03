@@ -2848,6 +2848,7 @@ const PTW = {
 
     /** بطاقات الإحصائيات الكاملة (تُحمَّل بعد الجدول) */
     renderListStatsSection() {
+        const t = (k, f) => this._t(k, f);
         const { source: sourceItems, merged: allItems, permitsFromList, permitsFromRegistry } = this.getPermitMetricsDataset();
         const totalCount = sourceItems.length;
         const openCount = sourceItems.filter(p => p && this.isPermitOpenStatus(p.status)).length;
@@ -2855,7 +2856,7 @@ const PTW = {
 
         const workTypeStats = {};
         allItems.forEach(item => {
-            const workType = item.workType || 'غير محدد';
+            const workType = item.workType || t('module.ptw.common.notSpecified', 'غير محدد');
             if (!workTypeStats[workType]) {
                 workTypeStats[workType] = { total: 0, open: 0, closed: 0 };
             }
@@ -2871,6 +2872,14 @@ const PTW = {
         const sortedWorkTypes = Object.entries(workTypeStats).sort((a, b) => b[1].total - a[1].total);
         const topWorkType = sortedWorkTypes.length > 0 ? sortedWorkTypes[0] : null;
         const workTypesCount = Object.keys(workTypeStats).length;
+
+        const countsSubtext = t('module.ptw.stats.countsListAndRegistry', '{listCount} قائمة + {registryCount} سجل')
+            .replace('{listCount}', permitsFromList.length)
+            .replace('{registryCount}', permitsFromRegistry.length);
+
+        const diffTypesSubtext = t('module.ptw.stats.differentTypesCount', '{n} نوع مختلف')
+            .replace('{n}', workTypesCount);
+
         const workTypeCardHTML = `
             <div class="relative ptw-work-type-card rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1 overflow-hidden group">
                 <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -2883,8 +2892,8 @@ const PTW = {
                                 <i class="fas fa-tags text-white text-xl"></i>
                             </div>
                             <div>
-                                <h3 class="text-lg font-bold text-white mb-1 drop-shadow-md">أنواع التصاريح</h3>
-                                <p class="text-xs text-purple-100 font-medium">${workTypesCount} نوع مختلف</p>
+                                <h3 class="text-lg font-bold text-white mb-1 drop-shadow-md">${t('module.ptw.stats.permitTypesTitle', 'أنواع التصاريح')}</h3>
+                                <p class="text-xs text-purple-100 font-medium">${diffTypesSubtext}</p>
                             </div>
                         </div>
                     </div>
@@ -2896,21 +2905,21 @@ const PTW = {
                             <div class="flex items-center justify-between gap-2 flex-wrap">
                             <div class="ptw-stat-badge ptw-stat-open flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm">
                                 <div class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                                <span class="text-orange-700 font-bold text-sm">مفتوح: ${topWorkType[1].open}</span>
+                                <span class="text-orange-700 font-bold text-sm">${t('module.ptw.stats.openBadge', 'مفتوح: {n}').replace('{n}', topWorkType[1].open)}</span>
                             </div>
                                 <div class="ptw-stat-badge ptw-stat-closed flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm">
                                     <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-                                    <span class="text-green-700 font-bold text-sm">مغلق: ${topWorkType[1].closed}</span>
+                                    <span class="text-green-700 font-bold text-sm">${t('module.ptw.stats.closedBadge', 'مغلق: {n}').replace('{n}', topWorkType[1].closed)}</span>
                                 </div>
                                 <div class="ptw-stat-badge ptw-stat-total flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm">
                                     <div class="w-2 h-2 bg-gray-600 rounded-full"></div>
-                                    <span class="text-gray-800 font-bold text-sm">إجمالي: ${topWorkType[1].total}</span>
+                                    <span class="text-gray-800 font-bold text-sm">${t('module.ptw.stats.totalBadge', 'إجمالي: {n}').replace('{n}', topWorkType[1].total)}</span>
                                 </div>
                             </div>
                         ` : `
                             <div class="ptw-card-text text-center py-4 text-gray-500">
                                 <i class="fas fa-info-circle text-2xl mb-2"></i>
-                                <p class="text-sm">لا توجد أنواع تصاريح حالياً</p>
+                                <p class="text-sm">${t('module.ptw.stats.noTypesFound', 'لا توجد أنواع تصاريح حالياً')}</p>
                             </div>
                         `}
                     </div>
@@ -2921,7 +2930,7 @@ const PTW = {
         return `
             <div class="content-card mb-6" id="ptw-stats-section">
                 <div class="card-header">
-                    <h2 class="card-title"><i class="fas fa-chart-bar ml-2"></i>عدادات الحالة</h2>
+                    <h2 class="card-title"><i class="fas fa-chart-bar ml-2"></i>${t('module.ptw.stats.statusCounters', 'عدادات الحالة')}</h2>
                 </div>
                 <div class="card-body">
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
@@ -2931,7 +2940,7 @@ const PTW = {
                                     <i class="fas fa-unlock-alt text-white text-2xl"></i>
                                 </div>
                                 <div class="text-5xl font-extrabold text-white mb-3 drop-shadow-lg" id="ptw-open-count">${openCount}</div>
-                                <div class="text-base font-bold text-orange-50">عدد التصاريح المفتوحة</div>
+                                <div class="text-base font-bold text-orange-50">${t('module.ptw.stats.openPermitsCount', 'عدد التصاريح المفتوحة')}</div>
                             </div>
                         </div>
                         <div class="relative ptw-stat-card ptw-stat-card-closed rounded-2xl p-6 text-center shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 overflow-hidden group">
@@ -2940,7 +2949,7 @@ const PTW = {
                                     <i class="fas fa-lock text-white text-2xl"></i>
                                 </div>
                                 <div class="text-5xl font-extrabold text-white mb-3 drop-shadow-lg" id="ptw-closed-count">${closedCount}</div>
-                                <div class="text-base font-bold text-green-50">عدد التصاريح المغلقة</div>
+                                <div class="text-base font-bold text-green-50">${t('module.ptw.stats.closedPermitsCount', 'عدد التصاريح المغلقة')}</div>
                             </div>
                         </div>
                         <div class="relative ptw-stat-card ptw-stat-card-total rounded-2xl p-6 text-center shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 overflow-hidden group">
@@ -2949,11 +2958,11 @@ const PTW = {
                                     <i class="fas fa-clipboard-list text-white text-2xl"></i>
                                 </div>
                                 <div class="text-5xl font-extrabold text-white mb-3 drop-shadow-lg" id="ptw-total-count">${totalCount}</div>
-                                <div class="text-base font-bold text-gray-100">إجمالي التصاريح</div>
+                                <div class="text-base font-bold text-gray-100">${t('module.ptw.stats.totalPermits', 'إجمالي التصاريح')}</div>
                                 <div class="mt-3 bg-white/15 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-white/25">
                                     <div class="text-xs text-gray-100 font-medium">
                                         <i class="fas fa-database text-xs ml-1"></i>
-                                        ${permitsFromList.length} قائمة + ${permitsFromRegistry.length} سجل
+                                        ${countsSubtext}
                                     </div>
                                 </div>
                             </div>
@@ -2969,13 +2978,13 @@ const PTW = {
                                         <i class="fas fa-tags text-white text-xl"></i>
                                     </div>
                                     <div>
-                                        <h3 class="text-2xl font-bold text-white mb-1 drop-shadow-md">جميع أنواع التصاريح</h3>
-                                        <p class="text-sm text-purple-100">تفاصيل شاملة لجميع الأنواع</p>
+                                        <h3 class="text-2xl font-bold text-white mb-1 drop-shadow-md">${t('module.ptw.stats.allPermitTypesHeader', 'جميع أنواع التصاريح')}</h3>
+                                        <p class="text-sm text-purple-100">${t('module.ptw.stats.allPermitTypesSubtitle', 'تفاصيل شاملة لجميع الأنواع')}</p>
                                     </div>
                                 </div>
                                 <div class="bg-white/25 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30 shadow-lg">
                                     <span class="text-lg font-bold text-white">${Object.keys(workTypeStats).length}</span>
-                                    <span class="text-sm text-purple-100 font-medium mr-1">نوع</span>
+                                    <span class="text-sm text-purple-100 font-medium mr-1">${t('module.ptw.stats.typeUnit', 'نوع')}</span>
                                 </div>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="ptw-work-types-stats">
@@ -2995,11 +3004,11 @@ const PTW = {
                                             <div class="flex items-center gap-2 flex-wrap">
                                                 <div class="ptw-stat-badge ptw-stat-open flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shadow-sm">
                                                     <div class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                                                    <span class="text-orange-700 font-bold text-xs">مفتوح: ${stats.open}</span>
+                                                    <span class="text-orange-700 font-bold text-xs">${t('module.ptw.stats.openBadge', 'مفتوح: {n}').replace('{n}', stats.open)}</span>
                                                 </div>
                                                 <div class="ptw-stat-badge ptw-stat-closed flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shadow-sm">
                                                     <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-                                                    <span class="text-green-700 font-bold text-xs">مغلق: ${stats.closed}</span>
+                                                    <span class="text-green-700 font-bold text-xs">${t('module.ptw.stats.closedBadge', 'مغلق: {n}').replace('{n}', stats.closed)}</span>
                                                 </div>
                                             </div>
                                         </div>
