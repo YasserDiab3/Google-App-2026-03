@@ -6002,9 +6002,38 @@
         'إجمالي مهمات الوقاية': 'Total PPE Items',
         'زيارات العيادة': 'Clinic Visits',
         'أرقام الطوارئ': 'Emergency Numbers',
-        'بطاقة الأعمال عبر QR': 'Public Card via QR',
         'تغيير كلمة المرور': 'Change Password',
-        'تغيير الصورة': 'Change Photo'
+        'تغيير الصورة': 'Change Photo',
+
+        // Incident Reports & Preview Terms
+        'تقرير الحوادث - آخر ٣ سنوات': 'Incidents Report - Last 3 Years',
+        'معاينة تقرير الحوادث': 'Incident Report Preview',
+        'ملخص الأداء لآخر ٣ سنوات': 'Performance Summary (Last 3 Years)',
+        'سجل الحوادث السنوي (آخر ٣ سنوات)': 'Annual Incidents Log (Last 3 Years)',
+        'سجل الحوادث التفصيلي (آخر ٣ سنوات)': 'Detailed Incidents Log (Last 3 Years)',
+        'عدد الحوادث المسجلة خلال الفترة المحددة': 'Recorded incidents count during selected period',
+        'الحوادث المغلقة': 'Closed Incidents',
+        'متوسط الحوادث السنوي': 'Annual Incident Average',
+        'محسوب على أساس ثلاث سنوات': 'Calculated on a 3-year basis',
+        'معدل التحسين (آخر سنة)': 'Improvement Rate (Last Year)',
+        'انخفاض في عدد الحوادث مقارنة بالعام السابق': 'Decrease in incidents compared to previous year',
+        'زيادة في عدد الحوادث مقارنة بالعام السابق': 'Increase in incidents compared to previous year',
+        'لا توجد بيانات للمقارنة': 'No data available for comparison',
+        'توزيع الحوادث حسب الشدة': 'Incidents Distribution by Severity',
+        'سجل الحوادث التفصيلي': 'Detailed Incidents Log',
+        'السجل التفصيلي': 'Detailed Log',
+        'ملخص سنوي': 'Annual Summary',
+        'المؤشر': 'Metric',
+        'القيمة': 'Value',
+        'تفاصيل': 'Details',
+        'الفترة': 'Period',
+        'معاينة التقرير': 'Preview Report',
+        'قائمة الحوادث': 'Incidents List',
+        'حالة الحادث': 'Incident Status',
+        'بحث سريع': 'Quick Search',
+        'جميع الحالات': 'All Statuses',
+        'قيد التحقيق': 'Under Investigation',
+        'تحقيق منتهي': 'Investigation Completed'
     };
 
     const literalEnToAr = Object.fromEntries(Object.entries(literalArToEn).map(([ar, en]) => [en, ar]));

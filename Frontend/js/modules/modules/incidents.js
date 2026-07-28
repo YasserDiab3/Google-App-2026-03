@@ -6818,6 +6818,9 @@ const Incidents = {
         `;
 
         document.body.appendChild(modal);
+        if (typeof window.AppI18n !== 'undefined' && typeof window.AppI18n.applyModuleI18n === 'function') {
+            window.AppI18n.applyModuleI18n(modal);
+        }
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });

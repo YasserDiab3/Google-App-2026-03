@@ -2905,7 +2905,7 @@ ${a}`),i&&(i.disabled=!1,i.innerHTML.includes("fa-spinner")&&(i.innerHTML='<i cl
                     </button>
                 </div>
             </div>
-        `,document.body.appendChild(i),i.addEventListener("click",n=>{n.target===i&&i.remove()})},exportIncidentsReport(e="pdf"){const t=this.buildReportContent(),i=`
+        `,document.body.appendChild(i),typeof window.AppI18n<"u"&&typeof window.AppI18n.applyModuleI18n=="function"&&window.AppI18n.applyModuleI18n(i),i.addEventListener("click",n=>{n.target===i&&i.remove()})},exportIncidentsReport(e="pdf"){const t=this.buildReportContent(),i=`
             ${t.headerSection}
             ${t.summarySection}
             ${t.severitySection}
