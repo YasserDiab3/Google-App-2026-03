@@ -1935,7 +1935,7 @@ const PTW = {
                     <td>${Utils.escapeHTML(registryDateDisplay)}</td>
                     <td title="${Utils.escapeHTML(permitTypeDisplay)}">${Utils.escapeHTML(permitTypeShort)}</td>
                     <td>${Utils.escapeHTML(entry.requestingParty)}</td>
-                    <td>${Utils.escapeHTML(entry.location)}</td>
+                    <td title="${Utils.escapeHTML(entry.location || '')}">${Utils.escapeHTML(entry.location || '')}</td>
                     <td>${Utils.escapeHTML(timeFromDisplay)}</td>
                     <td>${Utils.escapeHTML(timeToDisplay)}</td>
                     <td class="font-semibold">${Utils.escapeHTML(String(totalDisp))}</td>
@@ -3663,6 +3663,7 @@ const PTW = {
                 .ptw-registry-table tbody td:first-child { position:sticky; right:0; z-index:4; min-width:78px; color:#1d4ed8!important; background:#eff6ff!important; font-family:Consolas,'Courier New',monospace; font-size:.86rem; text-align:center; box-shadow:-5px 0 12px rgba(15,23,42,.04); }
                 .ptw-registry-table tbody td:last-child { position:sticky; left:0; z-index:4; min-width:118px; background:#f8fafc!important; box-shadow:5px 0 12px rgba(15,23,42,.07); }
                 .ptw-registry-table tbody td:nth-child(3),.ptw-registry-table tbody td:nth-child(10) { min-width:190px; max-width:260px; }
+                .ptw-registry-table thead th:nth-child(5),.ptw-registry-table tbody td:nth-child(5) { min-width:65px!important; max-width:95px!important; width:85px!important; white-space:nowrap!important; overflow:hidden!important; text-overflow:ellipsis!important; font-size:.78rem!important; }
                 .ptw-registry-table tbody td:nth-child(11),.ptw-registry-table tbody td:nth-child(12) { min-width:150px; }
                 .ptw-registry-table .badge { display:inline-flex; align-items:center; justify-content:center; min-width:105px; padding:6px 9px; border-radius:999px; font-size:.69rem; font-weight:800; white-space:normal; }
                 .ptw-registry-table td:last-child .btn { min-height:33px; border-radius:8px; white-space:nowrap; box-shadow:0 3px 9px rgba(37,99,235,.16); }
@@ -13356,6 +13357,7 @@ const PTW = {
                 .ptw-permit-list-table tbody td:first-child { position:sticky; right:0; z-index:4; min-width:190px; max-width:260px; color:#0f3d68; background:#eff6ff!important; font-weight:750; box-shadow:-5px 0 12px rgba(15,23,42,.04); }
                 .ptw-permit-list-table tbody td:last-child { position:sticky; left:0; z-index:4; min-width:190px; background:#f8fafc!important; box-shadow:5px 0 12px rgba(15,23,42,.07); }
                 .ptw-permit-list-table tbody td:nth-child(6) { min-width:145px; }
+                .ptw-permit-list-table thead th:nth-child(2),.ptw-permit-list-table tbody td:nth-child(2),.ptw-permit-list-table thead th:nth-child(3),.ptw-permit-list-table tbody td:nth-child(3) { min-width:65px!important; max-width:95px!important; width:85px!important; white-space:nowrap!important; overflow:hidden!important; text-overflow:ellipsis!important; font-size:.78rem!important; }
                 .ptw-permit-list-table tbody td:nth-child(7) { min-width:175px; }
                 .ptw-permit-list-table .badge { display:inline-flex; align-items:center; justify-content:center; min-width:72px; margin:2px 0; padding:5px 9px; border-radius:999px; font-size:.69rem; font-weight:800; white-space:normal; }
                 .ptw-permit-list-table td:last-child>div { flex-wrap:nowrap!important; justify-content:center; gap:5px!important; }
@@ -17797,8 +17799,8 @@ const PTW = {
                     return `
                     <tr>
                         <td>${Utils.escapeHTML(item.workType || '')}</td>
-                        <td>${Utils.escapeHTML(item.siteName || item.location || '')}</td>
-                        <td>${Utils.escapeHTML(item.sublocationName || item.sublocation || '-')}</td>
+                        <td title="${Utils.escapeHTML(item.siteName || item.location || '')}">${Utils.escapeHTML(item.siteName || item.location || '')}</td>
+                        <td title="${Utils.escapeHTML(item.sublocationName || item.sublocation || '')}">${Utils.escapeHTML(item.sublocationName || item.sublocation || '-')}</td>
                         <td>${item.startDate ? Utils.formatDate(item.startDate) : '-'}</td>
                         <td>${item.endDate ? Utils.formatDate(item.endDate) : '-'}</td>
                         <td>
