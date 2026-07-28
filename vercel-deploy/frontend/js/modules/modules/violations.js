@@ -115,7 +115,7 @@ const Violations = {
         // الجنيه المصري: بدون كسور. الدولار: حتى منزلتين عشريتين
         const formatted = currency === 'USD'
             ? converted.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
-            : converted.toLocaleString('ar-EG', { maximumFractionDigits: 0 });
+            : converted.toLocaleString('en-US', { maximumFractionDigits: 0 });
         return currency === 'USD' ? `${formatted} $` : `${formatted} ${symbol}`;
     },
 
@@ -777,7 +777,7 @@ const Violations = {
                 'rejected': '<span style="background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:700;">مرفوض</span>'
             }[r.status] || `<span style="background:#e5e7eb;color:#374151;padding:3px 10px;border-radius:12px;font-size:0.75rem;">${r.status}</span>`;
 
-            const dateStr = r.createdAt ? new Date(r.createdAt).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+            const dateStr = r.createdAt ? new Date(r.createdAt).toLocaleString('ar-EG-u-nu-latn', { dateStyle: 'short', timeStyle: 'short' }) : '—';
             const approvers = Array.isArray(r.approvers) ? r.approvers : [];
             const currentIdx = parseInt(r.currentApproverIndex, 10) || 0;
 
@@ -795,8 +795,8 @@ const Violations = {
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;font-size:0.82rem;color:#4b5563;background:#f9fafb;padding:10px;border-radius:8px;margin-bottom:10px;">
                         <div><strong>الموقع:</strong> ${Utils.escapeHTML(vd.violationLocation || '—')}</div>
                         <div><strong>الشدة:</strong> ${Utils.escapeHTML(vd.severity || '—')}</div>
-                        <div><strong>التاريخ:</strong> ${vd.violationDate ? new Date(vd.violationDate).toLocaleDateString('ar-EG') : '—'}</div>
-                        <div><strong>الغرامة:</strong> ${vd.fineAmount ? Number(vd.fineAmount).toLocaleString('ar-EG') + ' ج.م' : '—'}</div>
+                        <div><strong>التاريخ:</strong> ${vd.violationDate ? new Date(vd.violationDate).toLocaleDateString('ar-EG-u-nu-latn') : '—'}</div>
+                        <div><strong>الغرامة:</strong> ${vd.fineAmount ? Number(vd.fineAmount).toLocaleString('en-US') + ' ج.م' : '—'}</div>
                     </div>
                     ${approvers.length > 0 ? `
                         <div style="font-size:0.78rem;color:#6b7280;margin-bottom:8px;">
@@ -2314,7 +2314,7 @@ const Violations = {
             const year = date.getFullYear();
             const month = date.getMonth() + 1;
             const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-            const monthLabel = date.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long' });
+            const monthLabel = date.toLocaleDateString('ar-SA-u-nu-latn', { year: 'numeric', month: 'long' });
             months.push({ value: monthKey, label: monthLabel });
         }
 
@@ -2514,7 +2514,7 @@ const Violations = {
             if (dateRangeType === 'month' && month) {
                 const [y, m] = month.split('-');
                 const d = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1);
-                periodInfo = d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long' });
+                periodInfo = d.toLocaleDateString('ar-SA-u-nu-latn', { year: 'numeric', month: 'long' });
             } else if (dateRangeType === 'custom' && fromDate && toDate) {
                 periodInfo = `من ${Utils.formatDate(fromDate)} إلى ${Utils.formatDate(toDate)}`;
             }
@@ -2956,7 +2956,7 @@ const Violations = {
         if (!root) return;
         const t = (key, fallback) => this._t(key, fallback);
         const lang = window.AppI18n && typeof window.AppI18n.getCurrentLang === 'function' ? window.AppI18n.getCurrentLang() : 'ar';
-        const dateLocale = lang === 'en' ? 'en-US' : 'ar-SA';
+        const dateLocale = lang === 'en' ? 'en-US' : 'ar-SA-u-nu-latn';
 
         // ── 1. جمع البيانات وتطبيع السجلات ──
         const period = parseInt(this._violPeriod || '0', 10);
@@ -3232,7 +3232,7 @@ const Violations = {
         if (!canvas) return;
         const t = (key, fallback) => this._t(key, fallback);
         const lang = window.AppI18n && typeof window.AppI18n.getCurrentLang === 'function' ? window.AppI18n.getCurrentLang() : 'ar';
-        const dateLocale = lang === 'en' ? 'en-US' : 'ar-SA';
+        const dateLocale = lang === 'en' ? 'en-US' : 'ar-SA-u-nu-latn';
         const now = new Date();
         const months = [];
         for (let i = 11; i >= 0; i--) {
@@ -3306,7 +3306,7 @@ const Violations = {
         // ✅ تنسيق tooltip حسب العملة (بدون كسور للجنيه، حتى منزلتين للدولار)
         const fmt = (v) => currency === 'USD'
             ? v.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
-            : v.toLocaleString('ar-EG', { maximumFractionDigits: 0 });
+            : v.toLocaleString('en-US', { maximumFractionDigits: 0 });
         this._violCharts[canvasId] = new Chart(canvas, {
             type: 'bar',
             data: { labels, datasets: [{ data, backgroundColor: 'rgba(217,119,6,0.75)', borderRadius:5, borderSkipped:false }] },
@@ -3574,7 +3574,7 @@ const Violations = {
         const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(v) : String(v ?? '');
         const period = esc(this._getViolAnalyticsPeriodLabel_());
         const countText = esc(document.getElementById('viol-filter-count')?.textContent?.trim() || '');
-        const exportDate = esc(new Date().toLocaleString('ar-SA', { hour: '2-digit', minute: '2-digit', year: 'numeric', month: 'long', day: 'numeric' }));
+        const exportDate = esc(new Date().toLocaleString('ar-SA-u-nu-latn', { hour: '2-digit', minute: '2-digit', year: 'numeric', month: 'long', day: 'numeric' }));
         return `
         <div class="ia-export-legend" dir="rtl" style="margin-top:12px;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
             <div style="font-weight:700;font-size:12px;color:#475569;margin-bottom:10px;">ملخص التقرير</div>
@@ -5591,7 +5591,7 @@ const Violations = {
             if (!value) return '—';
             const date = new Date(value);
             if (Number.isNaN(date.getTime())) return String(value);
-            return date.toLocaleString('ar-EG', {
+            return date.toLocaleString('ar-EG-u-nu-latn', {
                 year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
             });
         };
