@@ -2746,13 +2746,13 @@ const Violations = {
                         <i class="fas fa-chart-bar" style="font-size:20px;"></i>
                     </div>
                     <div>
-                        <h2 style="margin:0;font-size:1.15rem;font-weight:700;">${t('module.violations.analytics.title', 'لوحة تحليل المخالفات')}</h2>
-                        <p style="margin:0;font-size:0.75rem;opacity:0.85;">${t('module.violations.analytics.subtitle', 'تحليل شامل وفوري • فلاتر تفاعلية • تصدير PDF')}</p>
+                        <h2 style="margin:0;font-size:1.3rem;font-weight:800;">${t('module.violations.analytics.title', 'لوحة تحليل المخالفات')}</h2>
+                        <p style="margin:4px 0 0 0;font-size:0.9rem;font-weight:500;opacity:0.95;">${t('module.violations.analytics.subtitle', 'تحليل شامل وفوري • فلاتر تفاعلية • تصدير PDF')}</p>
                     </div>
                 </div>
-                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                    <span style="font-size:0.72rem;opacity:0.85;margin-left:2px;">${t('module.violations.analytics.period', 'الفترة:')}</span>
-                    <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <span style="font-size:0.85rem;font-weight:700;opacity:0.95;margin-left:2px;">${t('module.violations.analytics.period', 'الفترة:')}</span>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap;">
                         ${['30','90','180','365','0'].map((v,i) => {
                             const labels = [
                                 t('module.violations.analytics.period.30d', '30 يوم'),
@@ -2762,22 +2762,22 @@ const Violations = {
                                 t('module.violations.analytics.period.all', 'الكل')
                             ];
                             const active = (this._violPeriod || '0') === v;
-                            return `<button class="viol-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#991b1b':'#fff'};">${labels[i]}</button>`;
+                            return `<button class="viol-period-btn" data-period="${v}" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;font-size:0.85rem;font-weight:700;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.18)'};color:${active?'#991b1b':'#fff'};">${labels[i]}</button>`;
                         }).join('')}
                     </div>
-                    <button id="viol-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
-                        <i class="fas fa-sliders-h"></i><span>${t('module.violations.analytics.filters', 'فلاتر')}</span><span id="viol-filter-badge" style="display:none;background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-right:2px;">●</span>
+                    <button id="viol-toggle-filters-btn" style="padding:7px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.85rem;font-weight:700;transition:all .2s;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+                        <i class="fas fa-sliders-h"></i><span>${t('module.violations.analytics.filters', 'فلاتر')}</span><span id="viol-filter-badge" style="display:none;background:#fbbf24;color:#78350f;font-size:0.72rem;padding:2px 6px;border-radius:10px;margin-right:2px;">●</span>
                     </button>
                     <!-- ✅ تبديل العملة EGP ⇄ USD -->
-                    <div style="display:inline-flex;align-items:center;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.4);border-radius:8px;overflow:hidden;">
-                        <button id="viol-curr-egp" data-curr="EGP" class="viol-curr-btn" style="padding:6px 10px;border:none;cursor:pointer;background:${currentCurrency==='EGP'?'#fff':'transparent'};color:${currentCurrency==='EGP'?'#991b1b':'#fff'};font-size:0.78rem;font-weight:700;transition:all .15s;" title="${t('module.violations.analytics.currency.egp_long', 'جنيه مصري')}">${t('module.violations.analytics.currency.egp_short', 'ج.م')}</button>
-                        <button id="viol-curr-usd" data-curr="USD" class="viol-curr-btn" style="padding:6px 10px;border:none;cursor:pointer;background:${currentCurrency==='USD'?'#fff':'transparent'};color:${currentCurrency==='USD'?'#991b1b':'#fff'};font-size:0.78rem;font-weight:700;transition:all .15s;" title="${t('module.violations.analytics.currency.usd_long', 'دولار أمريكي')}">$</button>
-                        <button id="viol-curr-rate-btn" style="padding:6px 8px;border:none;border-right:1px solid rgba(255,255,255,0.25);cursor:pointer;background:transparent;color:#fff;font-size:0.78rem;transition:all .15s;" title="${t('module.violations.analytics.currency.rate_edit', 'تعديل سعر الصرف')}" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='transparent'"><i class="fas fa-cog"></i></button>
+                    <div style="display:inline-flex;align-items:center;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.4);border-radius:8px;overflow:hidden;">
+                        <button id="viol-curr-egp" data-curr="EGP" class="viol-curr-btn" style="padding:7px 12px;border:none;cursor:pointer;background:${currentCurrency==='EGP'?'#fff':'transparent'};color:${currentCurrency==='EGP'?'#991b1b':'#fff'};font-size:0.85rem;font-weight:800;transition:all .15s;" title="${t('module.violations.analytics.currency.egp_long', 'جنيه مصري')}">${t('module.violations.analytics.currency.egp_short', 'ج.م')}</button>
+                        <button id="viol-curr-usd" data-curr="USD" class="viol-curr-btn" style="padding:7px 12px;border:none;cursor:pointer;background:${currentCurrency==='USD'?'#fff':'transparent'};color:${currentCurrency==='USD'?'#991b1b':'#fff'};font-size:0.85rem;font-weight:800;transition:all .15s;" title="${t('module.violations.analytics.currency.usd_long', 'دولار أمريكي')}">$</button>
+                        <button id="viol-curr-rate-btn" style="padding:7px 10px;border:none;border-right:1px solid rgba(255,255,255,0.25);cursor:pointer;background:transparent;color:#fff;font-size:0.85rem;transition:all .15s;" title="${t('module.violations.analytics.currency.rate_edit', 'تعديل سعر الصرف')}" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='transparent'"><i class="fas fa-cog"></i></button>
                     </div>
-                    <button id="viol-export-pdf-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.3);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(0,0,0,0.5)'" onmouseout="this.style.background='rgba(0,0,0,0.3)'">
+                    <button id="viol-export-pdf-btn" style="padding:7px 16px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.35);color:#fff;font-size:0.85rem;font-weight:700;transition:all .2s;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='rgba(0,0,0,0.55)'" onmouseout="this.style.background='rgba(0,0,0,0.35)'">
                         <i class="fas fa-file-pdf"></i><span>PDF</span>
                     </button>
-                    <button id="viol-analytics-refresh" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" title="${t('module.common.refresh', 'تحديث')}">
+                    <button id="viol-analytics-refresh" style="padding:7px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.18);color:#fff;font-size:0.85rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.35)'" onmouseout="this.style.background='rgba(255,255,255,0.18)'" title="${t('module.common.refresh', 'تحديث')}">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                 </div>
@@ -2787,15 +2787,15 @@ const Violations = {
             <div id="viol-filter-panel" style="display:none;background:#fef2f2;border:1.5px solid #fecaca;border-radius:12px;padding:18px 20px;margin-bottom:16px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
                     <div style="display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-sliders-h" style="color:#dc2626;font-size:14px;"></i>
-                        <span style="font-weight:700;font-size:0.9rem;color:#7f1d1d;">${t('module.violations.analytics.filters.interactive', 'الفلاتر التفاعلية')}</span>
-                        <span id="viol-filter-count" style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
+                        <i class="fas fa-sliders-h" style="color:#dc2626;font-size:16px;"></i>
+                        <span style="font-weight:800;font-size:1.05rem;color:#7f1d1d;">${t('module.violations.analytics.filters.interactive', 'الفلاتر التفاعلية')}</span>
+                        <span id="viol-filter-count" style="background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:12px;font-size:0.82rem;font-weight:700;"></span>
                     </div>
-                    <button id="viol-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #fecaca;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;" onmouseover="this.style.background='#fee2e2';this.style.color='#dc2626'" onmouseout="this.style.background='#fff';this.style.color='#64748b'">
+                    <button id="viol-filter-reset-btn" style="padding:6px 14px;border-radius:8px;border:1px solid #fecaca;background:#fff;color:#475569;font-size:0.82rem;font-weight:700;cursor:pointer;" onmouseover="this.style.background='#fee2e2';this.style.color='#dc2626'" onmouseout="this.style.background='#fff';this.style.color='#475569'">
                         <i class="fas fa-times ml-1"></i>${t('module.common.reset', 'مسح الكل')}
                     </button>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
                     ${[
                         {id:'viol-af-factory', icon:'fas fa-industry',          color:'#ec4899', label:t('module.violations.analytics.filter.factory', 'المصنع الرئيسي')},
                         {id:'viol-af-ptype',   icon:'fas fa-id-badge',          color:'#6366f1', label:t('module.violations.analytics.filter.personType', 'نوع الشخص')},
@@ -2805,10 +2805,10 @@ const Violations = {
                         {id:'viol-af-loc',     icon:'fas fa-map-marker-alt',    color:'#3b82f6', label:t('module.violations.analytics.filter.location', 'الموقع الفرعي')},
                     ].map(f => `
                         <div>
-                            <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
-                                <i class="${f.icon}" style="color:${f.color};margin-left:4px;"></i>${f.label}
+                            <label style="font-size:0.85rem;font-weight:700;color:#334155;display:block;margin-bottom:6px;">
+                                <i class="${f.icon}" style="color:${f.color};margin-left:5px;"></i>${f.label}
                             </label>
-                            <select id="${f.id}" style="width:100%;padding:7px 10px;border:1.5px solid #fecaca;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;" onfocus="this.style.borderColor='#dc2626'" onblur="this.style.borderColor='#fecaca'">
+                            <select id="${f.id}" style="width:100%;padding:8px 12px;border:1.5px solid #fecaca;border-radius:8px;font-size:0.92rem;font-weight:600;background:#fff;color:#1e293b;cursor:pointer;" onfocus="this.style.borderColor='#dc2626'" onblur="this.style.borderColor='#fecaca'">
                                 <option value="">${t('module.common.all', 'الكل')}</option>
                             </select>
                         </div>
@@ -2822,147 +2822,147 @@ const Violations = {
             </div>
 
             <!-- ── المصنع الرئيسي (توزيع ونسب المخالفات) ── -->
-            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
-                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-industry" style="color:#ec4899;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">${t('module.violations.analytics.chart.byFactory', 'توزيع ونسب المخالفات حسب المصانع الرئيسية')}</span>
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:18px;">
+                <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-industry" style="color:#ec4899;font-size:1.15rem;"></i>
+                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.byFactory', 'توزيع ونسب المخالفات حسب المصانع الرئيسية')}</span>
                     </div>
-                    <span id="viol-factory-total-badge" style="background:#fdf2f8;color:#be185d;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
+                    <span id="viol-factory-total-badge" style="background:#fdf2f8;color:#be185d;padding:4px 12px;border-radius:12px;font-size:0.85rem;font-weight:700;"></span>
                 </div>
-                <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;align-items:center;">
-                    <div style="position:relative;height:240px;">
+                <div style="padding:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:24px;align-items:center;">
+                    <div style="position:relative;height:260px;">
                         <canvas id="viol-chart-factory"></canvas>
-                        <div id="viol-chart-factory-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                        <div id="viol-chart-factory-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
                     </div>
-                    <div id="viol-factory-breakdown-list" style="display:flex;flex-direction:column;gap:10px;max-height:240px;overflow-y:auto;padding-left:4px;">
+                    <div id="viol-factory-breakdown-list" style="display:flex;flex-direction:column;gap:12px;max-height:260px;overflow-y:auto;padding-left:4px;">
                         <!-- dynamic factory breakdown items -->
                     </div>
                 </div>
             </div>
 
             <!-- ── Row 1: الحالة + الشدة ── -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;margin-bottom:18px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-tasks" style="color:#3b82f6;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">${t('module.violations.analytics.chart.status', 'التوزيع حسب الحالة')}</span>
+                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-tasks" style="color:#3b82f6;font-size:1.15rem;"></i>
+                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.status', 'التوزيع حسب الحالة')}</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:240px;">
+                    <div style="padding:14px;position:relative;height:250px;">
                         <canvas id="viol-chart-status"></canvas>
-                        <div id="viol-chart-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                        <div id="viol-chart-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-exclamation-circle" style="color:#ef4444;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">${t('module.violations.analytics.chart.severity', 'التوزيع حسب درجة الشدة')}</span>
+                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-exclamation-circle" style="color:#ef4444;font-size:1.15rem;"></i>
+                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.severity', 'التوزيع حسب درجة الشدة')}</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:240px;">
+                    <div style="padding:14px;position:relative;height:250px;">
                         <canvas id="viol-chart-sev"></canvas>
-                        <div id="viol-chart-sev-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                        <div id="viol-chart-sev-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
                     </div>
                 </div>
             </div>
 
             <!-- ── الاتجاه الزمني ── -->
-            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
-                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                    <i class="fas fa-chart-area" style="color:#8b5cf6;"></i>
-                    <span style="font-weight:700;font-size:0.88rem;">${t('module.violations.analytics.chart.trend', 'الاتجاه الزمني للمخالفات (آخر 12 شهر)')}</span>
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:18px;">
+                <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
+                    <i class="fas fa-chart-area" style="color:#8b5cf6;font-size:1.15rem;"></i>
+                    <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.trend', 'الاتجاه الزمني للمخالفات (آخر 12 شهر)')}</span>
                 </div>
-                <div style="padding:12px;position:relative;height:260px;">
+                <div style="padding:14px;position:relative;height:270px;">
                     <canvas id="viol-chart-trend"></canvas>
-                    <div id="viol-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                    <div id="viol-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
                 </div>
             </div>
 
             <!-- ── Row 2: نوع المخالفة + الموقع ── -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;margin-bottom:18px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-tag" style="color:#dc2626;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">${t('module.violations.analytics.chart.byType', 'حسب نوع المخالفة (أعلى 10)')}</span>
+                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-tag" style="color:#dc2626;font-size:1.15rem;"></i>
+                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.byType', 'حسب نوع المخالفة (أعلى 10)')}</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:280px;">
+                    <div style="padding:14px;position:relative;height:290px;">
                         <canvas id="viol-chart-type"></canvas>
-                        <div id="viol-chart-type-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                        <div id="viol-chart-type-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-map-marker-alt" style="color:#f59e0b;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">${t('module.violations.analytics.chart.byLocation', 'حسب الموقع (أعلى 8)')}</span>
+                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-map-marker-alt" style="color:#f59e0b;font-size:1.15rem;"></i>
+                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.byLocation', 'حسب الموقع (أعلى 8)')}</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:280px;">
+                    <div style="padding:14px;position:relative;height:290px;">
                         <canvas id="viol-chart-loc"></canvas>
-                        <div id="viol-chart-loc-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                        <div id="viol-chart-loc-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
                     </div>
                 </div>
             </div>
 
             <!-- ── Row 3: أكثر الموظفين + أكثر المقاولين ── -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;margin-bottom:18px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-user-tie" style="color:#6366f1;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">${t('module.violations.analytics.chart.topEmployees', 'أكثر الموظفين مخالفةً (أعلى 10)')}</span>
+                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-user-tie" style="color:#6366f1;font-size:1.15rem;"></i>
+                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.topEmployees', 'أكثر الموظفين مخالفةً (أعلى 10)')}</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:280px;">
+                    <div style="padding:14px;position:relative;height:290px;">
                         <canvas id="viol-chart-emp"></canvas>
-                        <div id="viol-chart-emp-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">${t('module.violations.analytics.chart.noEmpViolations', 'لا توجد مخالفات موظفين')}</div>
+                        <div id="viol-chart-emp-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.chart.noEmpViolations', 'لا توجد مخالفات موظفين')}</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-users-cog" style="color:#f97316;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">${t('module.violations.analytics.chart.topContractors', 'أكثر المقاولين مخالفةً (أعلى 10)')}</span>
+                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-users-cog" style="color:#f97316;font-size:1.15rem;"></i>
+                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.topContractors', 'أكثر المقاولين مخالفةً (أعلى 10)')}</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:280px;">
+                    <div style="padding:14px;position:relative;height:290px;">
                         <canvas id="viol-chart-con"></canvas>
-                        <div id="viol-chart-con-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">${t('module.violations.analytics.chart.noConViolations', 'لا توجد مخالفات مقاولين')}</div>
+                        <div id="viol-chart-con-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.chart.noConViolations', 'لا توجد مخالفات مقاولين')}</div>
                     </div>
                 </div>
             </div>
 
             <!-- ── مخطط الغرامات حسب نوع المخالفة ── -->
-            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
-                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                    <i class="fas fa-coins" style="color:#d97706;"></i>
-                    <span style="font-weight:700;font-size:0.88rem;">${t('module.violations.analytics.chart.finesByType', 'إجمالي الغرامات حسب نوع المخالفة ({currency})').replace('{currency}', this.getCurrencyLabel('long') === 'دولار أمريكي' ? t('module.violations.analytics.currency.usd_long', 'دولار أمريكي') : t('module.violations.analytics.currency.egp_long', 'جنيه مصري'))}</span>
-                    <span style="font-size:0.72rem;color:#94a3b8;margin-right:auto;">${t('module.violations.analytics.top10Types', '(أعلى 10 أنواع)')}</span>
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:18px;">
+                <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
+                    <i class="fas fa-coins" style="color:#d97706;font-size:1.15rem;"></i>
+                    <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.finesByType', 'إجمالي الغرامات حسب نوع المخالفة ({currency})').replace('{currency}', this.getCurrencyLabel('long') === 'دولار أمريكي' ? t('module.violations.analytics.currency.usd_long', 'دولار أمريكي') : t('module.violations.analytics.currency.egp_long', 'جنيه مصري'))}</span>
+                    <span style="font-size:0.82rem;font-weight:600;color:#64748b;margin-right:auto;">${t('module.violations.analytics.top10Types', '(أعلى 10 أنواع)')}</span>
                 </div>
-                <div style="padding:12px;position:relative;height:260px;">
+                <div style="padding:14px;position:relative;height:270px;">
                     <canvas id="viol-chart-fines"></canvas>
-                    <div id="viol-chart-fines-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">${t('module.violations.analytics.chart.noFinesData', 'لا توجد بيانات غرامات')}</div>
+                    <div id="viol-chart-fines-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.chart.noFinesData', 'لا توجد بيانات غرامات')}</div>
                 </div>
             </div>
 
             <!-- ── جدول أشد المخالفات ── -->
             <div class="content-card" style="padding:0;overflow:hidden;">
-                <div style="padding:13px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-fire" style="color:#dc2626;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">${t('module.violations.analytics.table.criticalTitle', 'أشد المخالفات (عالية الشدة — غير محلولة)')}</span>
+                <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-fire" style="color:#dc2626;font-size:1.15rem;"></i>
+                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.table.criticalTitle', 'أشد المخالفات (عالية الشدة — غير محلولة)')}</span>
                     </div>
-                    <span id="viol-critical-count" style="background:#fef2f2;color:#b91c1c;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
+                    <span id="viol-critical-count" style="background:#fef2f2;color:#b91c1c;padding:4px 12px;border-radius:20px;font-size:0.85rem;font-weight:700;"></span>
                 </div>
                 <div style="overflow-x:auto;">
-                    <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
                         <thead>
-                            <tr style="background:#fafafa;border-bottom:2px solid #f1f5f9;">
-                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">${t('module.violations.analytics.table.date', 'التاريخ')}</th>
-                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">${t('module.violations.analytics.table.name', 'الاسم')}</th>
-                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">${t('module.violations.analytics.table.personType', 'نوع الشخص')}</th>
-                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">${t('module.violations.analytics.table.type', 'نوع المخالفة')}</th>
-                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">${t('module.violations.analytics.table.location', 'الموقع')}</th>
-                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">${t('module.violations.analytics.table.severity', 'الشدة')}</th>
-                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">${t('module.violations.analytics.table.status', 'الحالة')}</th>
-                                <th style="padding:10px 12px;text-align:center;font-weight:700;color:#374151;white-space:nowrap;">${t('module.violations.analytics.table.fine', 'الغرامة ({currency})').replace('{currency}', this.getCurrencyLabel('short'))}</th>
+                            <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${t('module.violations.analytics.table.date', 'التاريخ')}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${t('module.violations.analytics.table.name', 'الاسم')}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${t('module.violations.analytics.table.personType', 'نوع الشخص')}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${t('module.violations.analytics.table.type', 'نوع المخالفة')}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${t('module.violations.analytics.table.location', 'الموقع')}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${t('module.violations.analytics.table.severity', 'الشدة')}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${t('module.violations.analytics.table.status', 'الحالة')}</th>
+                                <th style="padding:12px 14px;text-align:center;font-weight:800;color:#0f172a;white-space:nowrap;">${t('module.violations.analytics.table.fine', 'الغرامة ({currency})').replace('{currency}', this.getCurrencyLabel('short'))}</th>
                             </tr>
                         </thead>
                         <tbody id="viol-critical-tbody">
-                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#94a3b8;">${t('module.common.loading', 'جارٍ التحميل…')}</td></tr>
+                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.common.loading', 'جارٍ التحميل…')}</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -3025,13 +3025,13 @@ const Violations = {
                 { id:'thisMonth',   label:t('module.violations.analytics.kpi.thisMonth', 'هذا الشهر'),            value:thisMonth.toLocaleString('en-US'),     icon:'fas fa-calendar-day',       color:'#8b5cf6', bg:'#f5f3ff', border:'#ddd6fe' },
             ];
             kpiEl.innerHTML = kpis.map(k => `
-                <div class="viol-kpi-card" data-kpi="${k.id}" title="انقر للتصفية التفاعلية حسب هذا المعيار" style="background:${k.bg};border:1.5px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:pointer;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
-                    <div style="width:38px;height:38px;background:${k.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i class="${k.icon}" style="color:#fff;font-size:15px;"></i>
+                <div class="viol-kpi-card" data-kpi="${k.id}" title="انقر للتصفية التفاعلية حسب هذا المعيار" style="background:${k.bg};border:1.5px solid ${k.border};border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;transition:all .2s;cursor:pointer;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="width:42px;height:42px;background:${k.color};border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="${k.icon}" style="color:#fff;font-size:17px;"></i>
                     </div>
                     <div>
-                        <div style="font-size:1.2rem;font-weight:800;color:${k.color};line-height:1;">${k.value}</div>
-                        <div style="font-size:0.68rem;color:#64748b;margin-top:2px;white-space:nowrap;">${k.label}</div>
+                        <div style="font-size:1.4rem;font-weight:800;color:${k.color};line-height:1.1;">${k.value}</div>
+                        <div style="font-size:0.82rem;font-weight:700;color:#475569;margin-top:4px;white-space:nowrap;">${k.label}</div>
                     </div>
                 </div>`).join('');
         }
@@ -3285,20 +3285,20 @@ const Violations = {
                 const fineStr = fineSum > 0 ? this.formatFineAmount(fineSum) : '';
 
                 return `
-                <div class="viol-factory-item" data-factory="${Utils.escapeHTML(facName)}" title="انقر لتصفية التحليلات حسب مصنع ${Utils.escapeHTML(facName)}" style="background:#fafafa;border:1px solid #f1f5f9;border-radius:10px;padding:9px 12px;cursor:pointer;transition:all 0.2s ease;" onmouseover="this.style.background='#fdf2f8';this.style.borderColor='#fbcfe8';" onmouseout="this.style.background='#fafafa';this.style.borderColor='#f1f5f9';">
-                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
-                        <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:0.82rem;color:#374151;">
-                            <span style="width:10px;height:10px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0;"></span>
-                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;" title="${Utils.escapeHTML(facName)}">${Utils.escapeHTML(facName)}</span>
+                <div class="viol-factory-item" data-factory="${Utils.escapeHTML(facName)}" title="انقر لتصفية التحليلات حسب مصنع ${Utils.escapeHTML(facName)}" style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:12px;padding:11px 14px;cursor:pointer;transition:all 0.2s ease;box-shadow:0 1px 3px rgba(0,0,0,0.03);" onmouseover="this.style.background='#fdf2f8';this.style.borderColor='#fbcfe8';" onmouseout="this.style.background='#ffffff';this.style.borderColor='#e2e8f0';">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">
+                        <div style="display:flex;align-items:center;gap:10px;font-weight:800;font-size:0.95rem;color:#0f172a;">
+                            <span style="width:12px;height:12px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0;box-shadow:0 0 6px ${color};"></span>
+                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;" title="${Utils.escapeHTML(facName)}">${Utils.escapeHTML(facName)}</span>
                         </div>
-                        <div style="display:flex;align-items:center;gap:6px;font-size:0.78rem;">
-                            <span style="font-weight:800;color:#991b1b;">${cnt.toLocaleString('en-US')}</span>
-                            <span style="color:#94a3b8;font-size:0.72rem;">(${pct}%)</span>
-                            ${fineStr ? `<span style="background:#fffbeb;color:#b45309;padding:1px 6px;border-radius:6px;font-weight:700;font-size:0.68rem;">${fineStr}</span>` : ''}
+                        <div style="display:flex;align-items:center;gap:8px;font-size:0.88rem;">
+                            <span style="font-weight:800;color:#be185d;font-size:1.05rem;">${cnt.toLocaleString('en-US')}</span>
+                            <span style="color:#64748b;font-size:0.85rem;font-weight:700;">(${pct}%)</span>
+                            ${fineStr ? `<span style="background:#fffbeb;color:#b45309;padding:2px 8px;border-radius:8px;font-weight:700;font-size:0.8rem;">${fineStr}</span>` : ''}
                         </div>
                     </div>
-                    <div style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
-                        <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;transition:width 0.5s ease;"></div>
+                    <div style="height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
+                        <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width 0.5s ease;"></div>
                     </div>
                 </div>`;
             }).join('');
@@ -3339,8 +3339,8 @@ const Violations = {
             options: {
                 responsive: true, maintainAspectRatio: false, cutout: '62%',
                 plugins: {
-                    legend: { position:'bottom', labels:{ padding:10, font:{size:11}, usePointStyle:true, boxWidth:9 } },
-                    tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} (${total>0?((ctx.parsed/total)*100).toFixed(1):0}%)` } }
+                    legend: { position:'bottom', labels:{ padding:12, font:{size:13, weight:'bold', family:"'Cairo', sans-serif"}, usePointStyle:true, boxWidth:10 } },
+                    tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed.toLocaleString('en-US')} (${total>0?((ctx.parsed/total)*100).toFixed(1):0}%)` } }
                 }
             }
         });
@@ -3366,10 +3366,10 @@ const Violations = {
             data: { labels, datasets: [{ data, backgroundColor: color || 'rgba(220,38,38,0.75)', borderRadius: 5, borderSkipped: false }] },
             options: {
                 indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                plugins: { legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ` ${ctx.parsed.x}` } } },
+                plugins: { legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ` ${ctx.parsed.x.toLocaleString('en-US')}` } } },
                 scales: {
-                    x: { beginAtZero:true, ticks:{ precision:0, font:{size:11} }, grid:{color:'#f1f5f9'} },
-                    y: { ticks:{ font:{size:11}, callback: v => String(labels[v]).length>18 ? String(labels[v]).slice(0,17)+'…' : labels[v] } }
+                    x: { beginAtZero:true, ticks:{ precision:0, font:{size:12, weight:'bold'} }, grid:{color:'#f1f5f9'} },
+                    y: { ticks:{ font:{size:12, weight:'bold', family:"'Cairo', sans-serif"}, callback: v => String(labels[v]).length>22 ? String(labels[v]).slice(0,21)+'…' : labels[v] } }
                 }
             }
         });
