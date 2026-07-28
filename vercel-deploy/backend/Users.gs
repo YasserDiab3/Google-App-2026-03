@@ -57,6 +57,7 @@ function markUsersUpdated_() {
     try {
         PropertiesService.getScriptProperties().setProperty('users_last_updated', String(Date.now()));
         PropertiesService.getScriptProperties().setProperty('users_last_updated_iso', new Date().toISOString());
+        invalidateUsersAuthCache_();
     } catch (e) {
         Logger.log('Warning: could not set users_last_updated: ' + e.toString());
     }
@@ -552,6 +553,17 @@ function normalizeSheetScalarField_(val) {
     return String(val).trim();
 }
 
+var USERS_AUTH_CACHE_KEY_ = 'users_auth_map_v2';
+
+function invalidateUsersAuthCache_() {
+    try {
+        CacheService.getScriptCache().remove(USERS_AUTH_CACHE_KEY_);
+        if (typeof __AUTH_ACTOR_RECORD_CACHE_ !== 'undefined') {
+            __AUTH_ACTOR_RECORD_CACHE_ = {};
+        }
+    } catch (e) { /* ignore */ }
+}
+
 /**
  * جلب سجل مستخدم من ورقة Users للتحقق من الصلاحيات من المصدر الرسمي (مع كاش readFromSheet).
  * @param {string} email
@@ -561,17 +573,43 @@ function getUserRecordFromUsersSheetByEmail_(email) {
     try {
         var e = normalizeSheetScalarField_(email).toLowerCase();
         if (!e) return null;
+
+        var cache = CacheService.getScriptCache();
+        var cachedMapRaw = cache.get(USERS_AUTH_CACHE_KEY_);
+        if (cachedMapRaw) {
+            try {
+                var map = JSON.parse(cachedMapRaw);
+                if (map && map[e]) {
+                    return map[e];
+                }
+            } catch (pErr) { /* ignore cache parse error */ }
+        }
+
         var spreadsheetId = getSpreadsheetId();
         // Skip security filter to get passwordHash for authentication
         var users = readFromSheet('Users', spreadsheetId, true);
         if (!users || !Array.isArray(users)) return null;
+
+        var targetUser = null;
+        var usersMap = {};
         for (var i = 0; i < users.length; i++) {
             var u = users[i];
             if (!u) continue;
             var rowEmail = normalizeSheetScalarField_(u.email).toLowerCase();
-            if (rowEmail && rowEmail === e) return u;
+            if (rowEmail) {
+                usersMap[rowEmail] = u;
+                if (rowEmail === e) targetUser = u;
+            }
         }
-        return null;
+
+        try {
+            var jsonStr = JSON.stringify(usersMap);
+            if (jsonStr.length < 95000) {
+                cache.put(USERS_AUTH_CACHE_KEY_, jsonStr, 600);
+            }
+        } catch (cErr) { /* ignore cache write error */ }
+
+        return targetUser;
     } catch (err) {
         Logger.log('getUserRecordFromUsersSheetByEmail_: ' + err.toString());
         return null;
