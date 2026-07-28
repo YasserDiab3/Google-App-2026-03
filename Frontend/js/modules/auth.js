@@ -393,7 +393,7 @@ window.Auth = {
                 Utils.safeLog('🔒 محاولة تسجيل الدخول عبر الخادم...');
                 loginResult = await GoogleIntegration.sendRequest({
                     action: 'login',
-                    data: { email, password }
+                    data: { email, password, __timeoutMs: 25000, __highPriority: true }
                 });
 
                 if (loginResult && loginResult.success) {
@@ -555,7 +555,7 @@ window.Auth = {
         try {
             verifyResult = await GoogleIntegration.sendRequest({
                 action: 'verifyMfaLogin',
-                data: { email, code: otp, challengeToken: token }
+                data: { email, code: otp, challengeToken: token, __timeoutMs: 25000, __highPriority: true }
             });
         } catch (err) {
             const msg = 'تعذر الاتصال بالخادم لإكمال المصادقة الثنائية';
