@@ -2797,11 +2797,12 @@ const Violations = {
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
                     ${[
+                        {id:'viol-af-factory', icon:'fas fa-industry',          color:'#ec4899', label:t('module.violations.analytics.filter.factory', 'المصنع الرئيسي')},
                         {id:'viol-af-ptype',   icon:'fas fa-id-badge',          color:'#6366f1', label:t('module.violations.analytics.filter.personType', 'نوع الشخص')},
                         {id:'viol-af-type',    icon:'fas fa-tag',               color:'#dc2626', label:t('module.violations.analytics.filter.type', 'نوع المخالفة')},
                         {id:'viol-af-sev',     icon:'fas fa-exclamation-circle', color:'#f59e0b', label:t('module.violations.analytics.filter.severity', 'درجة الشدة')},
                         {id:'viol-af-status',  icon:'fas fa-circle',            color:'#10b981', label:t('module.violations.analytics.filter.status', 'الحالة')},
-                        {id:'viol-af-loc',     icon:'fas fa-map-marker-alt',    color:'#3b82f6', label:t('module.violations.analytics.filter.location', 'الموقع')},
+                        {id:'viol-af-loc',     icon:'fas fa-map-marker-alt',    color:'#3b82f6', label:t('module.violations.analytics.filter.location', 'الموقع الفرعي')},
                     ].map(f => `
                         <div>
                             <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
@@ -2815,9 +2816,29 @@ const Violations = {
                 </div>
             </div>
 
-            <!-- ── KPI Cards ── -->
+            <!-- ── KPI Cards (تفاعلية عند النقر) ── -->
             <div id="viol-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:20px;">
                 <div style="text-align:center;padding:16px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
+            </div>
+
+            <!-- ── المصنع الرئيسي (توزيع ونسب المخالفات) ── -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-industry" style="color:#ec4899;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">${t('module.violations.analytics.chart.byFactory', 'توزيع ونسب المخالفات حسب المصانع الرئيسية')}</span>
+                    </div>
+                    <span id="viol-factory-total-badge" style="background:#fdf2f8;color:#be185d;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
+                </div>
+                <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;align-items:center;">
+                    <div style="position:relative;height:240px;">
+                        <canvas id="viol-chart-factory"></canvas>
+                        <div id="viol-chart-factory-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                    </div>
+                    <div id="viol-factory-breakdown-list" style="display:flex;flex-direction:column;gap:10px;max-height:240px;overflow-y:auto;padding-left:4px;">
+                        <!-- dynamic factory breakdown items -->
+                    </div>
+                </div>
             </div>
 
             <!-- ── Row 1: الحالة + الشدة ── -->
@@ -2993,18 +3014,18 @@ const Violations = {
         const kpiEl = document.getElementById('viol-kpi-strip');
         if (kpiEl) {
             const kpis = [
-                { label:t('module.violations.analytics.kpi.total', 'إجمالي المخالفات'),    value:total,                                              icon:'fas fa-exclamation-circle', color:'#dc2626', bg:'#fef2f2', border:'#fecaca' },
-                { label:t('module.violations.analytics.kpi.employees', 'مخالفات الموظفين'),    value:empViol.length,                                     icon:'fas fa-user-tie',           color:'#6366f1', bg:'#eef2ff', border:'#c7d2fe' },
-                { label:t('module.violations.analytics.kpi.contractors', 'مخالفات المقاولين'),   value:conViol.length,                                     icon:'fas fa-users-cog',          color:'#f97316', bg:'#fff7ed', border:'#fed7aa' },
-                { label:t('module.violations.analytics.kpi.highSeverity', 'عالية الشدة'),          value:highSev,                                           icon:'fas fa-bomb',               color:'#b91c1c', bg:'#fef2f2', border:'#fca5a5' },
-                { label:t('module.violations.analytics.kpi.resolved', 'محلولة'),               value:resolved,                                          icon:'fas fa-check-circle',       color:'#10b981', bg:'#ecfdf5', border:'#a7f3d0' },
-                { label:t('module.violations.analytics.kpi.unresolved', 'غير محلولة'),           value:unresol,                                           icon:'fas fa-times-circle',       color:'#f59e0b', bg:'#fffbeb', border:'#fde68a' },
-                { label:t('module.violations.analytics.kpi.resolRate', 'معدل الحل'),            value:resolRate+'%',                                     icon:'fas fa-chart-pie',          color:'#0ea5e9', bg:'#f0f9ff', border:'#bae6fd' },
-                { label:t('module.violations.analytics.kpi.totalFines', 'إجمالي الغرامات'),      value: totalFines > 0 ? this.formatFineAmount(totalFines) : '—', icon:'fas fa-coins', color:'#d97706', bg:'#fffbeb', border:'#fde68a' },
-                { label:t('module.violations.analytics.kpi.thisMonth', 'هذا الشهر'),            value:thisMonth,                                         icon:'fas fa-calendar-day',       color:'#8b5cf6', bg:'#f5f3ff', border:'#ddd6fe' },
+                { id:'total',       label:t('module.violations.analytics.kpi.total', 'إجمالي المخالفات'),    value:total.toLocaleString('en-US'),    icon:'fas fa-exclamation-circle', color:'#dc2626', bg:'#fef2f2', border:'#fecaca' },
+                { id:'employees',   label:t('module.violations.analytics.kpi.employees', 'مخالفات الموظفين'),    value:empViol.length.toLocaleString('en-US'), icon:'fas fa-user-tie',           color:'#6366f1', bg:'#eef2ff', border:'#c7d2fe' },
+                { id:'contractors', label:t('module.violations.analytics.kpi.contractors', 'مخالفات المقاولين'),   value:conViol.length.toLocaleString('en-US'), icon:'fas fa-users-cog',          color:'#f97316', bg:'#fff7ed', border:'#fed7aa' },
+                { id:'highSev',     label:t('module.violations.analytics.kpi.highSeverity', 'عالية الشدة'),          value:highSev.toLocaleString('en-US'),       icon:'fas fa-bomb',               color:'#b91c1c', bg:'#fef2f2', border:'#fca5a5' },
+                { id:'resolved',    label:t('module.violations.analytics.kpi.resolved', 'محلولة'),               value:resolved.toLocaleString('en-US'),      icon:'fas fa-check-circle',       color:'#10b981', bg:'#ecfdf5', border:'#a7f3d0' },
+                { id:'unresolved',  label:t('module.violations.analytics.kpi.unresolved', 'غير محلولة'),           value:unresol.toLocaleString('en-US'),       icon:'fas fa-times-circle',       color:'#f59e0b', bg:'#fffbeb', border:'#fde68a' },
+                { id:'resolRate',   label:t('module.violations.analytics.kpi.resolRate', 'معدل الحل'),            value:resolRate.toLocaleString('en-US')+'%', icon:'fas fa-chart-pie',          color:'#0ea5e9', bg:'#f0f9ff', border:'#bae6fd' },
+                { id:'totalFines',  label:t('module.violations.analytics.kpi.totalFines', 'إجمالي الغرامات'),      value: totalFines > 0 ? this.formatFineAmount(totalFines) : '—', icon:'fas fa-coins', color:'#d97706', bg:'#fffbeb', border:'#fde68a' },
+                { id:'thisMonth',   label:t('module.violations.analytics.kpi.thisMonth', 'هذا الشهر'),            value:thisMonth.toLocaleString('en-US'),     icon:'fas fa-calendar-day',       color:'#8b5cf6', bg:'#f5f3ff', border:'#ddd6fe' },
             ];
             kpiEl.innerHTML = kpis.map(k => `
-                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                <div class="viol-kpi-card" data-kpi="${k.id}" title="انقر للتصفية التفاعلية حسب هذا المعيار" style="background:${k.bg};border:1.5px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:pointer;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
                     <div style="width:38px;height:38px;background:${k.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                         <i class="${k.icon}" style="color:#fff;font-size:15px;"></i>
                     </div>
@@ -3023,6 +3044,9 @@ const Violations = {
         }
 
         // ── 7. الرسوم البيانية ──
+        // 🏭 المصنع الرئيسي (توزيع ونسب المخالفات)
+        this._vDrawFactoryBreakdown('viol-chart-factory', 'viol-factory-breakdown-list', viol);
+
         // الحالة
         const statusG = this._vGroupBy(viol, 'status');
         const statusColors = { 'محلول':'rgba(16,185,129,0.85)', 'غير محلول':'rgba(239,68,68,0.85)', 'قيد المراجعة':'rgba(245,158,11,0.85)' };
@@ -3115,18 +3139,26 @@ const Violations = {
         return { labels: entries.map(e=>e[0]), data: entries.map(e=>e[1]) };
     },
 
+    // ── مساعد: استخراج اسم المصنع الرئيسي ──
+    _vGetFactoryName(record) {
+        if (!record || typeof record !== 'object') return 'غير محدد';
+        return String(record.factory || record.violationLocation || record.violationPlace || 'غير محدد').trim() || 'غير محدد';
+    },
+
     // ── مساعد: تطبيق الفلاتر التفاعلية ──
     _vApplyFilters(viol) {
         const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+        const fFactory= get('viol-af-factory');
         const fPtype  = get('viol-af-ptype');
         const fType   = get('viol-af-type');
         const fSev    = get('viol-af-sev');
         const fStatus = get('viol-af-status');
         const fLoc    = get('viol-af-loc');
-        const hasAny  = [fPtype,fType,fSev,fStatus,fLoc].some(v => v !== '');
+        const hasAny  = [fFactory,fPtype,fType,fSev,fStatus,fLoc].some(v => v !== '');
         const badge = document.getElementById('viol-filter-badge');
         if (badge) badge.style.display = hasAny ? 'inline' : 'none';
         return viol.filter(v => {
+            if (fFactory&& this._vGetFactoryName(v) !== fFactory) return false;
             if (fPtype  && String(v.personType||'').trim()          !== fPtype)  return false;
             if (fType   && String(v.violationType||'').trim()        !== fType)   return false;
             if (fSev    && String(v.severity||'').trim()             !== fSev)    return false;
@@ -3161,10 +3193,128 @@ const Violations = {
             `;
         }
 
+        fill('viol-af-factory',unique(v => this._vGetFactoryName(v)));
         fill('viol-af-type',   unique(v => String(v.violationType||'').trim()));
         fill('viol-af-sev',    unique(v => String(v.severity||'').trim()), 'module.violations.severity.');
         fill('viol-af-status', unique(v => String(v.status||'').trim()), 'module.violations.status.');
         fill('viol-af-loc',    unique(v => String(v.violationLocation||'').trim()));
+    },
+
+    // ── مساعد: رسم وتفصيل توزيع المصنع الرئيسي ──
+    _vDrawFactoryBreakdown(canvasId, listContainerId, viol) {
+        const canvas = document.getElementById(canvasId);
+        const emptyEl = document.getElementById(canvasId + '-empty');
+        const listEl = document.getElementById(listContainerId);
+        const badgeEl = document.getElementById('viol-factory-total-badge');
+        if (!canvas) return;
+        
+        const t = (key, fallback) => this._t(key, fallback);
+        const total = viol.length;
+        if (badgeEl) badgeEl.textContent = `${total.toLocaleString('en-US')} ${t('module.violations.analytics.violationUnit', 'مخالفة')}`;
+
+        // التجميع حسب المصنع الرئيسي
+        const factoryMap = {};
+        viol.forEach(v => {
+            const fac = this._vGetFactoryName(v);
+            if (!factoryMap[fac]) factoryMap[fac] = { count: 0, fineSum: 0 };
+            factoryMap[fac].count += 1;
+            factoryMap[fac].fineSum += (Number(v.fineAmount) || 0);
+        });
+
+        const sorted = Object.entries(factoryMap).sort((a, b) => b[1].count - a[1].count);
+        const labels = sorted.map(e => e[0]);
+        const data = sorted.map(e => e[1].count);
+        const factoryColors = [
+            'rgba(236,72,153,0.85)', 'rgba(99,102,241,0.85)', 'rgba(245,158,11,0.85)', 
+            'rgba(16,185,129,0.85)', 'rgba(59,130,246,0.85)', 'rgba(139,92,246,0.85)',
+            'rgba(239,68,68,0.85)',  'rgba(20,184,166,0.85)', 'rgba(107,114,128,0.85)'
+        ];
+
+        if (!data.length || total === 0) {
+            canvas.style.display = 'none';
+            if (emptyEl) emptyEl.style.display = 'flex';
+            if (listEl) listEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:20px;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>`;
+            return;
+        }
+
+        if (emptyEl) emptyEl.style.display = 'none';
+        canvas.style.display = '';
+
+        // 1. رسم Doughnut Chart للمصانع
+        if (!this._violCharts) this._violCharts = {};
+        const prev = this._violCharts[canvasId];
+        if (prev) { try { prev.destroy(); } catch(e){} }
+
+        this._violCharts[canvasId] = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels,
+                datasets: [{
+                    data,
+                    backgroundColor: labels.map((_, i) => factoryColors[i % factoryColors.length]),
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '65%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                const val = ctx.parsed;
+                                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
+                                return ` ${ctx.label}: ${val.toLocaleString('en-US')} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // 2. قائمة التفاصيل والنسب المئوية مع الفلترة التفاعلية بالنقر
+        if (listEl) {
+            listEl.innerHTML = sorted.map((item, idx) => {
+                const facName = item[0];
+                const cnt = item[1].count;
+                const fineSum = item[1].fineSum;
+                const pct = total > 0 ? ((cnt / total) * 100).toFixed(1) : 0;
+                const color = factoryColors[idx % factoryColors.length];
+                const fineStr = fineSum > 0 ? this.formatFineAmount(fineSum) : '';
+
+                return `
+                <div class="viol-factory-item" data-factory="${Utils.escapeHTML(facName)}" title="انقر لتصفية التحليلات حسب مصنع ${Utils.escapeHTML(facName)}" style="background:#fafafa;border:1px solid #f1f5f9;border-radius:10px;padding:9px 12px;cursor:pointer;transition:all 0.2s ease;" onmouseover="this.style.background='#fdf2f8';this.style.borderColor='#fbcfe8';" onmouseout="this.style.background='#fafafa';this.style.borderColor='#f1f5f9';">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+                        <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:0.82rem;color:#374151;">
+                            <span style="width:10px;height:10px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0;"></span>
+                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;" title="${Utils.escapeHTML(facName)}">${Utils.escapeHTML(facName)}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;font-size:0.78rem;">
+                            <span style="font-weight:800;color:#991b1b;">${cnt.toLocaleString('en-US')}</span>
+                            <span style="color:#94a3b8;font-size:0.72rem;">(${pct}%)</span>
+                            ${fineStr ? `<span style="background:#fffbeb;color:#b45309;padding:1px 6px;border-radius:6px;font-weight:700;font-size:0.68rem;">${fineStr}</span>` : ''}
+                        </div>
+                    </div>
+                    <div style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+                        <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;transition:width 0.5s ease;"></div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            // ربط أحداث النقر على المصنع في القائمة
+            listEl.querySelectorAll('.viol-factory-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    const fac = el.getAttribute('data-factory');
+                    const select = document.getElementById('viol-af-factory');
+                    if (select) {
+                        select.value = select.value === fac ? '' : fac;
+                        this.updateViolationAnalytics();
+                    }
+                });
+            });
+        }
     },
 
     // ── مساعد: رسم Doughnut ──
@@ -3708,7 +3858,7 @@ const Violations = {
         const resetBtn = document.getElementById('viol-filter-reset-btn');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
-                ['viol-af-ptype','viol-af-type','viol-af-sev','viol-af-status','viol-af-loc'].forEach(id => {
+                ['viol-af-factory','viol-af-ptype','viol-af-type','viol-af-sev','viol-af-status','viol-af-loc'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.value = '';
                 });
@@ -3717,9 +3867,38 @@ const Violations = {
         }
 
         // قوائم الفلاتر
-        ['viol-af-ptype','viol-af-type','viol-af-sev','viol-af-status','viol-af-loc'].forEach(id => {
+        ['viol-af-factory','viol-af-ptype','viol-af-type','viol-af-sev','viol-af-status','viol-af-loc'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', () => this.updateViolationAnalytics());
+        });
+
+        // ✅ التفاعلية المباشرة لكروت KPI عند النقر
+        root.querySelectorAll('.viol-kpi-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const kpi = card.getAttribute('data-kpi');
+                if (kpi === 'total') {
+                    ['viol-af-factory','viol-af-ptype','viol-af-type','viol-af-sev','viol-af-status','viol-af-loc'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.value = '';
+                    });
+                } else if (kpi === 'employees') {
+                    const el = document.getElementById('viol-af-ptype');
+                    if (el) el.value = el.value === 'employee' ? '' : 'employee';
+                } else if (kpi === 'contractors') {
+                    const el = document.getElementById('viol-af-ptype');
+                    if (el) el.value = el.value === 'contractor' ? '' : 'contractor';
+                } else if (kpi === 'highSev') {
+                    const el = document.getElementById('viol-af-sev');
+                    if (el) el.value = el.value === 'عالية' ? '' : 'عالية';
+                } else if (kpi === 'resolved') {
+                    const el = document.getElementById('viol-af-status');
+                    if (el) el.value = el.value === 'محلول' ? '' : 'محلول';
+                } else if (kpi === 'unresolved') {
+                    const el = document.getElementById('viol-af-status');
+                    if (el) el.value = el.value === 'غير محلول' ? '' : 'غير محلول';
+                }
+                this.updateViolationAnalytics();
+            });
         });
 
         // ✅ أزرار تبديل العملة (EGP / USD)
