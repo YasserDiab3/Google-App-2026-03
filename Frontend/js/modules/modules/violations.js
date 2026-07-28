@@ -1336,24 +1336,25 @@ const Violations = {
                 });
             }
 
+            const t = (k, f) => this._t(k, f);
             section.innerHTML = `
             <div class="section-header" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); border-radius: 16px; padding: 24px 32px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(220, 38, 38, 0.25);">
                 <div class="flex items-center justify-between flex-wrap gap-3">
                     <div class="text-center w-full" style="flex-grow: 1; min-width: 200px;">
                         <h1 class="section-title" style="color: white; font-size: 2rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 8px; display: flex; align-items: center; justify-content: center;">
                             <i class="fas fa-exclamation-triangle ml-3" style="font-size: 1.8rem;"></i>
-                            سجل المخالفات
+                            ${t('module.violations.title', 'سجل المخالفات')}
                         </h1>
-                        <p class="section-subtitle" style="color: rgba(255,255,255,0.9); font-size: 1rem; margin: 0;">تسجيل ومتابعة مخالفات الموظفين والمقاولين</p>
+                        <p class="section-subtitle" style="color: rgba(255,255,255,0.9); font-size: 1rem; margin: 0;">${t('module.violations.subtitle', 'تسجيل ومتابعة مخالفات الموظفين والمقاولين')}</p>
                     </div>
                     <div class="flex flex-shrink-0 flex-wrap gap-2 justify-center">
                         <button type="button" id="add-violation-btn" class="btn-primary" style="background: white; color: #dc2626; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease;">
                             <i class="fas fa-plus ml-2"></i>
-                            تسجيل مخالفة جديدة
+                            ${t('module.violations.btn.new', 'تسجيل مخالفة جديدة')}
                         </button>
-                        <button type="button" id="viol-approvals-btn" onclick="Violations.showViolationApprovalsManager()" style="background: rgba(255,255,255,0.18); color: #fff; border: 2px solid rgba(255,255,255,0.4); padding: 12px 18px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;" title="دائرة اعتماد المخالفات">
+                        <button type="button" id="viol-approvals-btn" onclick="Violations.showViolationApprovalsManager()" style="background: rgba(255,255,255,0.18); color: #fff; border: 2px solid rgba(255,255,255,0.4); padding: 12px 18px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;" title="${t('module.violations.btn.approvals', 'دائرة اعتماد المخالفات')}">
                             <i class="fas fa-clipboard-check ml-2"></i>
-                            دائرة الاعتماد
+                            ${t('module.violations.btn.approvals', 'دائرة الاعتماد')}
                         </button>
                     </div>
                 </div>
@@ -1363,22 +1364,22 @@ const Violations = {
                 <div class="tabs-container mb-4">
                     <div class="tabs-nav" style="flex-wrap: nowrap; overflow-x: auto; overflow-y: visible; min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box;">
                         <button class="tab-btn active" data-tab="all" onclick="Violations.switchTab('all')" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
-                            <i class="fas fa-list ml-2"></i>جميع المخالفات
+                            <i class="fas fa-list ml-2"></i>${t('module.violations.tab.all', 'جميع المخالفات')}
                         </button>
                         <button class="tab-btn" data-tab="employees" onclick="Violations.switchTab('employees')" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
-                            <i class="fas fa-user-tie ml-2"></i>مخالفات الموظفين
+                            <i class="fas fa-user-tie ml-2"></i>${t('module.violations.tab.employees', 'مخالفات الموظفين')}
                         </button>
                         <button class="tab-btn" data-tab="contractors" onclick="Violations.switchTab('contractors')" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
-                            <i class="fas fa-users-cog ml-2"></i>مخالفات المقاولين
+                            <i class="fas fa-users-cog ml-2"></i>${t('module.violations.tab.contractors', 'مخالفات المقاولين')}
                         </button>
                         <button class="tab-btn" data-tab="analytics" onclick="Violations.switchTab('analytics')" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
-                            <i class="fas fa-chart-bar ml-2"></i>تحليل البيانات
+                            <i class="fas fa-chart-bar ml-2"></i>${t('module.violations.tab.analytics', 'تحليل البيانات')}
                         </button>
                         <button class="tab-btn" data-tab="blacklist" onclick="Violations.switchTabAsync('blacklist')" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
-                            <i class="fas fa-user-slash ml-2"></i>سجل الممنوعين من الدخول – Blacklist
+                            <i class="fas fa-user-slash ml-2"></i>${t('module.violations.tab.blacklist', 'سجل الممنوعين من الدخول – Blacklist')}
                         </button>
-                        <button id="violations-btn-refresh" type="button" class="tab-btn" onclick="Violations.refreshModule()" title="تحديث البيانات" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
-                            <i class="fas fa-sync-alt ml-2"></i>تحديث
+                        <button id="violations-btn-refresh" type="button" class="tab-btn" onclick="Violations.refreshModule()" title="${t('module.common.refresh', 'تحديث البيانات')}" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
+                            <i class="fas fa-sync-alt ml-2"></i>${t('module.common.refresh', 'تحديث')}
                         </button>
                     </div>
                 </div>
