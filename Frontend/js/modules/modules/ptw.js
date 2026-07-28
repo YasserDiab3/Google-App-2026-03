@@ -13484,6 +13484,7 @@ const PTW = {
 
     updateKPIs() {
         try {
+            const t = (k, f) => this._t(k, f);
             const { source: sourceItems, merged: allItems, permitsFromList, permitsFromRegistry } = this.getPermitMetricsDataset();
             const totalCount = sourceItems.length;
             const openCount = sourceItems.filter(p => p && this.isPermitOpenStatus(p.status)).length;
@@ -13500,13 +13501,14 @@ const PTW = {
             if (totalCountEl) {
                 totalCountEl.textContent = fmt(totalCount);
                 // تحديث النص التوضيحي
-                const parentCard = totalCountEl.closest('.bg-gradient-to-br');
+                const parentCard = totalCountEl.closest('.relative.ptw-stat-card');
                 if (parentCard) {
-                    const subtitle = parentCard.querySelector('.text-xs.text-gray-600');
+                    const subtitle = parentCard.querySelector('.text-xs.text-gray-100');
                     if (subtitle) {
-                        subtitle.textContent = permitsFromRegistry.length > 0
-                            ? `سجل PTWRegistry: ${fmt(permitsFromRegistry.length)} صف`
-                            : `من ${fmt(permitsFromList.length)} قائمة PTW`;
+                        const countsSubtext = t('module.ptw.stats.countsListAndRegistry', '{listCount} قائمة + {registryCount} سجل')
+                            .replace('{listCount}', permitsFromList.length)
+                            .replace('{registryCount}', permitsFromRegistry.length);
+                        subtitle.innerHTML = `<i class="fas fa-database text-xs ml-1"></i> ${countsSubtext}`;
                     }
                 }
             }
@@ -13514,7 +13516,7 @@ const PTW = {
             // حساب إحصائيات أنواع التصاريح
             const workTypeStats = {};
             allItems.forEach(item => {
-                const workType = item.workType || 'غير محدد';
+                const workType = item.workType || t('module.ptw.common.notSpecified', 'غير محدد');
                 if (!workTypeStats[workType]) {
                     workTypeStats[workType] = {
                         total: 0,
@@ -13537,36 +13539,43 @@ const PTW = {
             const topWorkType = sortedWorkTypes.length > 0 ? sortedWorkTypes[0] : null;
             
             // البحث عن كارت أنواع التصاريح في الصف الأول
-            const workTypeCard = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-4 .bg-gradient-to-br.from-purple-50');
+            const workTypeCard = document.querySelector('.ptw-work-type-card');
             if (workTypeCard && topWorkType) {
+                const diffTypesSubtext = t('module.ptw.stats.differentTypesCount', '{n} نوع مختلف')
+                    .replace('{n}', Object.keys(workTypeStats).length);
                 workTypeCard.innerHTML = `
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center gap-2">
-                            <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
-                                <i class="fas fa-tags text-white text-lg"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-base font-bold text-purple-800">أنواع التصاريح</h3>
-                                <p class="text-xs text-purple-600">${Object.keys(workTypeStats).length} نوع</p>
+                    <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                    <div class="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
+                    <div class="relative z-10">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-14 h-14 bg-white/25 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 border border-white/30">
+                                    <i class="fas fa-tags text-white text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-white mb-1 drop-shadow-md">${t('module.ptw.stats.permitTypesTitle', 'أنواع التصاريح')}</h3>
+                                    <p class="text-xs text-purple-100 font-medium">${diffTypesSubtext}</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="bg-white rounded-lg p-4 border border-purple-200">
-                        <div class="font-semibold text-gray-800 text-sm mb-3 line-clamp-2" title="${Utils.escapeHTML(topWorkType[0])}">
-                            ${Utils.escapeHTML(topWorkType[0].length > 50 ? topWorkType[0].substring(0, 50) + '...' : topWorkType[0])}
-                        </div>
-                        <div class="flex items-center justify-between gap-3 text-xs">
-                            <div class="flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded-md">
-                                <i class="fas fa-circle text-blue-500 text-[8px]"></i>
-                                <span class="text-blue-700 font-semibold">مفتوح: ${topWorkType[1].open}</span>
+                        <div class="ptw-card-inner rounded-xl p-4 shadow-lg backdrop-blur-sm">
+                            <div class="ptw-card-text font-bold text-base mb-4 line-clamp-2" title="${Utils.escapeHTML(topWorkType[0])}">
+                                ${Utils.escapeHTML(topWorkType[0].length > 50 ? topWorkType[0].substring(0, 50) + '...' : topWorkType[0])}
                             </div>
-                            <div class="flex items-center gap-1.5 bg-green-50 px-2 py-1 rounded-md">
-                                <i class="fas fa-circle text-green-500 text-[8px]"></i>
-                                <span class="text-green-700 font-semibold">مغلق: ${topWorkType[1].closed}</span>
-                            </div>
-                            <div class="flex items-center gap-1.5 bg-gray-100 px-2 py-1 rounded-md">
-                                <i class="fas fa-circle text-gray-500 text-[8px]"></i>
-                                <span class="text-gray-700 font-semibold">إجمالي: ${topWorkType[1].total}</span>
+                            <div class="flex items-center justify-between gap-2 flex-wrap">
+                                <div class="ptw-stat-badge ptw-stat-open flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm">
+                                    <div class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                                    <span class="text-orange-700 font-bold text-sm">${t('module.ptw.stats.openBadge', 'مفتوح: {n}').replace('{n}', topWorkType[1].open)}</span>
+                                </div>
+                                <div class="ptw-stat-badge ptw-stat-closed flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm">
+                                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    <span class="text-green-700 font-bold text-sm">${t('module.ptw.stats.closedBadge', 'مغلق: {n}').replace('{n}', topWorkType[1].closed)}</span>
+                                </div>
+                                <div class="ptw-stat-badge ptw-stat-total flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm">
+                                    <div class="w-2 h-2 bg-gray-600 rounded-full"></div>
+                                    <span class="text-gray-800 font-bold text-sm">${t('module.ptw.stats.totalBadge', 'إجمالي: {n}').replace('{n}', topWorkType[1].total)}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -13575,27 +13584,35 @@ const PTW = {
 
             // تحديث كرت أنواع التصاريح الكامل (للتفاصيل)
             const workTypesContainer = document.getElementById('ptw-work-types-stats');
-            if (workTypesContainer && sortedWorkTypes.length > 1) {
+            if (workTypesContainer && sortedWorkTypes.length > 0) {
                 workTypesContainer.innerHTML = sortedWorkTypes.map(([type, stats]) => `
-                    <div class="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
-                        <div class="flex-1">
-                            <div class="font-semibold text-gray-800 text-sm mb-1 line-clamp-1" title="${Utils.escapeHTML(type)}">${Utils.escapeHTML(type)}</div>
-                            <div class="flex items-center gap-3 text-xs text-gray-600">
-                                <span class="flex items-center gap-1">
-                                    <i class="fas fa-circle text-blue-500 text-[8px]"></i>
-                                    مفتوح: ${stats.open}
-                                </span>
-                                <span class="flex items-center gap-1">
-                                    <i class="fas fa-circle text-green-500 text-[8px]"></i>
-                                    مغلق: ${stats.closed}
-                                </span>
-                                <span class="flex items-center gap-1">
-                                    <i class="fas fa-circle text-gray-500 text-[8px]"></i>
-                                    إجمالي: ${stats.total}
-                                </span>
+                    <div class="group relative ptw-work-type-item backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
+                        <div class="relative z-10">
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex-1 min-w-0">
+                                    <div class="ptw-work-type-name font-bold text-sm mb-2 line-clamp-2 leading-tight" title="${Utils.escapeHTML(type)}">
+                                        ${Utils.escapeHTML(type)}
+                                    </div>
+                                </div>
+                                <div class="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white text-xl font-extrabold rounded-lg px-3 py-1.5 shadow-md ml-3 min-w-[3rem] text-center">
+                                    ${stats.total}
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <div class="ptw-stat-badge ptw-stat-open flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shadow-sm">
+                                    <div class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                                    <span class="text-orange-700 font-bold text-xs">${t('module.ptw.stats.openBadge', 'مفتوح: {n}').replace('{n}', stats.open)}</span>
+                                </div>
+                                <div class="ptw-stat-badge ptw-stat-closed flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shadow-sm">
+                                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    <span class="text-green-700 font-bold text-xs">${t('module.ptw.stats.closedBadge', 'مغلق: {n}').replace('{n}', stats.closed)}</span>
+                                </div>
+                                <div class="ptw-stat-badge ptw-stat-total flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shadow-sm">
+                                    <div class="w-2 h-2 bg-gray-500 rounded-full"></div>
+                                    <span class="text-gray-700 font-bold text-xs">${t('module.ptw.stats.totalBadge', 'إجمالي: {n}').replace('{n}', stats.total)}</span>
+                                </div>
                             </div>
                         </div>
-                        <div class="text-xl font-bold text-primary-600 ml-3">${stats.total}</div>
                     </div>
                 `).join('');
             }
