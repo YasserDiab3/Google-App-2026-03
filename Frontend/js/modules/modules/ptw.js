@@ -531,6 +531,40 @@ const PTW = {
     },
 
     /**
+     * ترجمة اسم نوع العمل حسب لغة التطبيق الحالية
+     * يبحث عن مفتاح i18n مناسب بناءً على النص العربي الأصلي
+     */
+    _getWorkTypeDisplayName(arabicWorkType) {
+        if (!arabicWorkType) return this._t('module.ptw.workType.notSpecified', 'غير محدد');
+        const raw = String(arabicWorkType).trim();
+        // خريطة: نص عربي → مفتاح i18n
+        const nameToKey = {
+            'أعمال ساخنة': 'module.ptw.workType.hotWork',
+            'أعمال باردة': 'module.ptw.workType.coldWork',
+            'أعمال كهربائية': 'module.ptw.workType.electricalWork',
+            'أعمال في الأماكن المغلقة': 'module.ptw.workType.confinedSpace',
+            'أعمال في الارتفاعات': 'module.ptw.workType.workAtHeight',
+            'العمل على ارتفاعات': 'module.ptw.workType.workAtHeight',
+            'أعمال على ارتفاع': 'module.ptw.workType.workAtHeight',
+            'أعمال حفر': 'module.ptw.workType.excavation',
+            'خطة الرفع': 'module.ptw.workType.liftingPlan',
+            'دخول مقاول': 'module.ptw.workType.contractorPTW',
+            'عزل مصادر الطاقة': 'module.ptw.workType.loto',
+            'أعمال أخرى': 'module.ptw.workType.other',
+            'غير محدد': 'module.ptw.workType.notSpecified',
+            'Not specified': 'module.ptw.workType.notSpecified',
+        };
+        // بحث مباشر
+        if (nameToKey[raw]) return this._t(nameToKey[raw], raw);
+        // بحث جزئي (مثلاً "أعمال ساخنة أعمال في الارتفاعات" → نحاول أول تطابق)
+        for (const [arName, key] of Object.entries(nameToKey)) {
+            if (raw.includes(arName)) return this._t(key, raw);
+        }
+        // لا يوجد تطابق — نعيد النص كما هو
+        return raw;
+    },
+
+    /**
      * الحصول على اختصار نوع العمل
      */
     getWorkTypePrefix(workType) {
@@ -2900,7 +2934,7 @@ const PTW = {
                     <div class="ptw-card-inner rounded-xl p-4 shadow-lg backdrop-blur-sm">
                         ${topWorkType ? `
                             <div class="ptw-card-text font-bold text-base mb-4 line-clamp-2" title="${Utils.escapeHTML(topWorkType[0])}">
-                                ${Utils.escapeHTML(topWorkType[0].length > 50 ? topWorkType[0].substring(0, 50) + '...' : topWorkType[0])}
+                                ${Utils.escapeHTML((() => { const dn = this._getWorkTypeDisplayName(topWorkType[0]); return dn.length > 50 ? dn.substring(0, 50) + '...' : dn; })())}
                             </div>
                             <div class="flex items-center justify-between gap-2 flex-wrap">
                             <div class="ptw-stat-badge ptw-stat-open flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm">
@@ -2994,7 +3028,7 @@ const PTW = {
                                             <div class="flex items-start justify-between mb-3">
                                                 <div class="flex-1 min-w-0">
                                                     <div class="ptw-work-type-name font-bold text-sm mb-2 line-clamp-2 leading-tight" title="${Utils.escapeHTML(type)}">
-                                                        ${Utils.escapeHTML(type)}
+                                                        ${Utils.escapeHTML(this._getWorkTypeDisplayName(type))}
                                                     </div>
                                                 </div>
                                                 <div class="ptw-work-type-total-badge ml-3">
@@ -13561,7 +13595,7 @@ const PTW = {
                         </div>
                         <div class="ptw-card-inner rounded-xl p-4 shadow-lg backdrop-blur-sm">
                             <div class="ptw-card-text font-bold text-base mb-4 line-clamp-2" title="${Utils.escapeHTML(topWorkType[0])}">
-                                ${Utils.escapeHTML(topWorkType[0].length > 50 ? topWorkType[0].substring(0, 50) + '...' : topWorkType[0])}
+                                ${Utils.escapeHTML((() => { const dn = this._getWorkTypeDisplayName(topWorkType[0]); return dn.length > 50 ? dn.substring(0, 50) + '...' : dn; })())}
                             </div>
                             <div class="flex items-center justify-between gap-2 flex-wrap">
                                 <div class="ptw-stat-badge ptw-stat-open flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm">
@@ -13591,7 +13625,7 @@ const PTW = {
                             <div class="flex items-start justify-between mb-3">
                                 <div class="flex-1 min-w-0">
                                     <div class="ptw-work-type-name font-bold text-sm mb-2 line-clamp-2 leading-tight" title="${Utils.escapeHTML(type)}">
-                                        ${Utils.escapeHTML(type)}
+                                        ${Utils.escapeHTML(this._getWorkTypeDisplayName(type))}
                                     </div>
                                 </div>
                                 <div class="ptw-work-type-total-badge ml-3">
