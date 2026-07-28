@@ -282,25 +282,25 @@ const buildRoleDefaults = (enabledKeys = []) => {
     return permissions;
 };
 
-// ⚠️ ملاحظة أمنية مهمة: لا يتم إضافة أي صلاحيات افتراضية تلقائياً
-// الصلاحيات تُمنح فقط من قبل مدير النظام من خلال إدارة المستخدمين
-// هذا يضمن السيطرة الكاملة على الصلاحيات من قبل المدير
-//
-// ⚠️ تحذير: DEFAULT_ROLE_PERMISSIONS لا يتم استخدامه في hasAccess أو getEffectivePermissions
-// هذا الكائن موجود فقط للتوافق مع الكود القديم أو للاستخدام المستقبلي
-// لا يتم استخدامه تلقائياً لمنح أي صلاحيات - جميع الصلاحيات يجب منحها صراحةً من قبل المدير
+// ✅ الصلاحيات الافتراضية لكل دور (تُستخدم كـ fallback في حال عدم وجود تخصيص صريح للمستخدم)
+const NON_ADMIN_MODULE_KEYS = MODULE_PERMISSIONS_CONFIG.filter(m => !m.adminOnly).map(m => m.key);
+const BASIC_USER_MODULE_KEYS = [
+    'dashboard', 'user-tasks', 'incidents', 'nearmiss', 'daily-observations',
+    'sop-jha', 'emergency', 'safety-calendar', 'ai-assistant', 'profile', 'help'
+];
+
 const DEFAULT_ROLE_PERMISSIONS = {
-    // مدير النظام - صلاحيات كاملة على كل الموديولات (يتم التحقق منها في hasAccess مباشرة)
+    // مدير النظام - صلاحيات كاملة على كل الموديولات
     admin: buildRoleDefaults(MODULE_PERMISSIONS_CONFIG.map(m => m.key)),
 
-    // مسئول السلامة - لا توجد صلاحيات افتراضية، يجب منحها من قبل مدير النظام
-    safety_officer: buildRoleDefaults([]),
+    // مسئول السلامة - الوصول لجميع موديولات السلامة غير الخاصة بالإدارة العليا
+    safety_officer: buildRoleDefaults(NON_ADMIN_MODULE_KEYS),
 
-    // المستخدم العادي - لا توجد صلاحيات افتراضية، يجب منحها من قبل مدير النظام
-    user: buildRoleDefaults([]),
+    // المستخدم العادي - الموديولات التفاعلية الأساسية
+    user: buildRoleDefaults(BASIC_USER_MODULE_KEYS),
 
-    // دور القراءة فقط - يمكنه العرض فقط بدون إضافة أو تعديل أو حذف
-    read_only: buildRoleDefaults([])
+    // دور القراءة فقط - جميع الموديولات غير الخاصة بالإدارة العليا
+    read_only: buildRoleDefaults(NON_ADMIN_MODULE_KEYS)
 };
 
 // ✅ قائمة الأدوار المتاحة في النظام
@@ -2998,7 +2998,7 @@ const Permissions = {
             return { __isAdmin: true, canViewAll: true };
         }
         const eff = this.getEffectivePermissions(user);
-        const can = (key) => eff && eff[key] === true;
+        const can = (key) => (eff && eff[key] === true) || this.hasAccess(key);
         return {
             canViewIncidents: can('incidents') || can('nearmiss'),
             canViewContractors: can('contractors'),
@@ -3067,8 +3067,7 @@ const Permissions = {
             return true;
         }
 
-        // التحقق من الصلاحيات المخصصة للمستخدم (الممنوحة من قبل مدير النظام فقط)
-        // ⚠️ لا يتم استخدام DEFAULT_ROLE_PERMISSIONS هنا - فقط الصلاحيات الممنوحة صراحةً
+        // التحقق من الصلاحيات المخصصة للمستخدم (الممنوحة صراحةً)
         const effectivePermissions = this.getEffectivePermissions(user);
         if (Object.prototype.hasOwnProperty.call(effectivePermissions, moduleName)) {
             const hasAccess = effectivePermissions[moduleName] === true;
@@ -3078,10 +3077,17 @@ const Permissions = {
             return hasAccess;
         }
 
-        // ⚠️ لا توجد صلاحيات افتراضية - يجب منحها من قبل مدير النظام فقط
-        if (AppState.debugMode) {
-            Utils.safeLog(`❌ hasAccess(${moduleName}): لا توجد صلاحية - يجب منحها من قبل المدير`);
+        // fallback إلى الصلاحيات الافتراضية للدور في حال عدم وجود تخصيص صريح
+        const userRole = String(user.role || 'user').toLowerCase().trim();
+        const roleDefaults = DEFAULT_ROLE_PERMISSIONS[userRole] || DEFAULT_ROLE_PERMISSIONS['user'] || {};
+        if (Object.prototype.hasOwnProperty.call(roleDefaults, moduleName)) {
+            const hasAccess = roleDefaults[moduleName] === true;
+            if (AppState.debugMode) {
+                Utils.safeLog(`🔍 hasAccess(${moduleName}): ${hasAccess ? '✅ مسموح' : '❌ غير مسموح'} (من صلاحيات الدور الافتراضية)`);
+            }
+            return hasAccess;
         }
+
         return false;
     },
 
@@ -4280,7 +4286,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.594',
+    appVersion: '1.0.595',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
