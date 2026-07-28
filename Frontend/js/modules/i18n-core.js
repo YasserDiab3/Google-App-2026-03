@@ -6100,21 +6100,41 @@
         const map = isEn ? literalArToEn : literalEnToAr;
         const target = root || document;
 
-        // partialEntries: allow multi-word or distinct phrases to avoid single-word sentence corruption
-        const partialEntries = Object.entries(map).filter(([from, to]) => from && from !== to && from.includes(' ') && from.length >= 8);
+        const translateTextWithPunctuation = (text) => {
+            if (!text || !text.trim()) return null;
+            const trimmed = text.trim();
+
+            if (exactMap.has(trimmed)) {
+                return exactMap.get(trimmed);
+            }
+
+            // Normalization: Strip trailing colons, asterisks, question marks
+            const match = trimmed.match(/^([\s\S]*?)([\s:*؟?]+)$/);
+            if (match) {
+                const base = match[1].trim();
+                const suffix = match[2];
+                if (exactMap.has(base)) {
+                    return exactMap.get(base) + suffix;
+                }
+            }
+
+            return null;
+        };
+
+        // partialEntries: sort by length descending to match longer expressions first
+        const partialEntries = Object.entries(map)
+            .filter(([from, to]) => from && from !== to && from.length >= 2)
+            .sort((a, b) => b[0].length - a[0].length);
 
         const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, {
             acceptNode(node) {
                 const parent = node.parentElement;
                 if (!parent) return NodeFilter.FILTER_REJECT;
-                if (parent.closest('[data-i18n]') || parent.closest('[data-no-literal-translate]') || parent.closest('.hse-update-message-modal')) {
+                if (parent.hasAttribute('data-i18n') || parent.closest('[data-no-literal-translate]') || parent.closest('.hse-update-message-modal')) {
                     return NodeFilter.FILTER_REJECT;
                 }
                 const tag = parent.tagName;
                 if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'SVG' || tag === 'CANVAS' || tag === 'CODE' || tag === 'PRE') {
-                    return NodeFilter.FILTER_REJECT;
-                }
-                if (isInsidePeriodicInspectionsSection(parent)) {
                     return NodeFilter.FILTER_REJECT;
                 }
                 const val = node.nodeValue;
@@ -6126,14 +6146,10 @@
         let node;
         while ((node = walker.nextNode())) {
             const original = node.nodeValue;
-            const trimmed = original.trim();
-
-            if (exactMap.has(trimmed)) {
-                const replacement = exactMap.get(trimmed);
-                if (replacement && replacement !== trimmed) {
-                    node.nodeValue = original.replace(trimmed, replacement);
-                    continue;
-                }
+            const translated = translateTextWithPunctuation(original);
+            if (translated && translated !== original.trim()) {
+                node.nodeValue = original.replace(original.trim(), translated);
+                continue;
             }
 
             let updated = original;
@@ -6148,18 +6164,28 @@
             }
         }
 
-        target.querySelectorAll?.('[title], [placeholder], [aria-label]').forEach((el) => {
-            if (isInsidePeriodicInspectionsSection(el)) return;
+        // Translate option text, title, placeholder, aria-label
+        target.querySelectorAll?.('option, [title], [placeholder], [aria-label]').forEach((el) => {
+            if (el.hasAttribute('data-i18n') || el.closest('[data-no-literal-translate]')) return;
+
+            if (el.tagName === 'OPTION') {
+                const text = el.textContent;
+                if (text && text.trim()) {
+                    const translated = translateTextWithPunctuation(text);
+                    if (translated && translated !== text.trim()) {
+                        el.textContent = translated;
+                    }
+                }
+                return;
+            }
+
             ['title', 'placeholder', 'aria-label'].forEach((attr) => {
                 const value = el.getAttribute(attr);
                 if (!value || !value.trim()) return;
-                const trimmed = value.trim();
-                if (exactMap.has(trimmed)) {
-                    const replacement = exactMap.get(trimmed);
-                    if (replacement && replacement !== trimmed) {
-                        el.setAttribute(attr, value.replace(trimmed, replacement));
-                        return;
-                    }
+                const translated = translateTextWithPunctuation(value);
+                if (translated && translated !== value.trim()) {
+                    el.setAttribute(attr, translated);
+                    return;
                 }
                 let updated = value;
                 for (let i = 0; i < partialEntries.length; i++) {
