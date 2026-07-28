@@ -548,20 +548,27 @@ const Users = {
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
                         <!-- Password & Auto-generator -->
                         <div style="grid-column: 1 / -1;">
-                            <label for="user-password" style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;">
-                                <i class="fas fa-key ml-1 text-amber-500"></i> كلمة المرور ${isEdit ? '<span style="color: #64748b; font-weight: normal;">(اتركه فارغاً للإبقاء على كلمة السر الحالية)</span>' : '<span style="color: #ef4444;">*</span>'}
-                            </label>
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                <label for="user-password" style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">
+                                    <i class="fas fa-key ml-1 text-amber-500"></i> كلمة المرور ${isEdit ? '' : '<span style="color: #ef4444;">*</span>'}
+                                </label>
+                                ${isEdit ? `
+                                    <label style="font-size: 12px; font-weight: 700; color: #2563eb; cursor: pointer; display: flex; align-items: center; gap: 6px; background: #eff6ff; padding: 4px 10px; border-radius: 6px; border: 1px solid #bfdbfe;">
+                                        <input type="checkbox" id="change-password-toggle" style="width: 15px; height: 15px; accent-color: #2563eb; cursor: pointer;">
+                                        تغيير كلمة المرور للمستخدم
+                                    </label>
+                                ` : ''}
+                            </div>
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <div style="position: relative; flex: 1;">
                                     <input 
                                         type="password" 
                                         id="user-password" 
                                         name="password" 
-                                        autocomplete="new-password"
-                                        ${isEdit ? '' : 'required'}
+                                        autocomplete="off"
+                                        ${isEdit ? 'disabled placeholder="كلمة المرور القديمة محفوظة ومحمية تلقائياً (حدد الخيار أعلاه للتغيير)"' : 'required placeholder="••••••••"'}
                                         class="form-input"
-                                        placeholder="••••••••"
-                                        style="direction: ltr; padding-left: 40px; border-radius: 8px; border-color: #cbd5e1;"
+                                        style="direction: ltr; padding-left: 40px; border-radius: 8px; border-color: #cbd5e1; background: ${isEdit ? '#f8fafc' : '#ffffff'};"
                                     >
                                     <button 
                                         type="button" 
@@ -575,6 +582,7 @@ const Users = {
                                 <button 
                                     type="button" 
                                     id="generate-password-btn" 
+                                    ${isEdit ? 'disabled style="display: none;"' : ''}
                                     style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: white; border: none; border-radius: 8px; padding: 10px 16px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 4px rgba(217, 119, 6, 0.2);"
                                     title="توليد كلمة مرور عشوائية قوية وحفظها"
                                 >
@@ -1091,6 +1099,24 @@ const Users = {
                 });
             }
 
+            const changePassToggle = modal.querySelector('#change-password-toggle');
+            if (changePassToggle) {
+                changePassToggle.addEventListener('change', (e) => {
+                    const passInput = modal.querySelector('#user-password');
+                    const genBtn = modal.querySelector('#generate-password-btn');
+                    if (passInput) {
+                        passInput.disabled = !e.target.checked;
+                        passInput.style.background = e.target.checked ? '#ffffff' : '#f8fafc';
+                        passInput.placeholder = e.target.checked ? 'أدخل كلمة المرور الجديدة (6 أحرف على الأقل)' : 'كلمة المرور القديمة محفوظة ومحمية تلقائياً (حدد الخيار أعلاه للتغيير)';
+                        if (!e.target.checked) passInput.value = '';
+                    }
+                    if (genBtn) {
+                        genBtn.disabled = !e.target.checked;
+                        genBtn.style.display = e.target.checked ? 'flex' : 'none';
+                    }
+                });
+            }
+
             const toggleBtn = modal.querySelector('#toggle-password-visibility-btn');
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', () => {
@@ -1459,7 +1485,9 @@ const Users = {
         }
 
         const isNewUser = !this.currentEditId;
-        const passwordUpdated = trimmedPasswordInput.length > 0;
+        const changePassToggle = document.getElementById('change-password-toggle');
+        const isExplicitPasswordChange = isNewUser || !!(changePassToggle && changePassToggle.checked);
+        const passwordUpdated = isExplicitPasswordChange && trimmedPasswordInput.length > 0;
         const previousUser = this.currentEditId
             ? AppState.appData.users.find(u => u.id === this.currentEditId)
             : null;
