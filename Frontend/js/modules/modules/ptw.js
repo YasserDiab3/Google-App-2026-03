@@ -2997,7 +2997,7 @@ const PTW = {
                                                         ${Utils.escapeHTML(type)}
                                                     </div>
                                                 </div>
-                                                <div class="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white text-xl font-extrabold rounded-lg px-3 py-1.5 shadow-md ml-3 min-w-[3rem] text-center">
+                                                <div class="ptw-work-type-total-badge ml-3">
                                                     ${stats.total}
                                                 </div>
                                             </div>
@@ -13594,7 +13594,7 @@ const PTW = {
                                         ${Utils.escapeHTML(type)}
                                     </div>
                                 </div>
-                                <div class="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white text-xl font-extrabold rounded-lg px-3 py-1.5 shadow-md ml-3 min-w-[3rem] text-center">
+                                <div class="ptw-work-type-total-badge ml-3">
                                     ${stats.total}
                                 </div>
                             </div>

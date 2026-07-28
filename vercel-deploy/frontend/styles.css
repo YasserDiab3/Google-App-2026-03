@@ -13363,6 +13363,19 @@ body {
     color: #f3f4f6;
 }
 
+/* شارة إجمالي عدد النوع */
+.ptw-work-type-total-badge {
+    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+    color: #ffffff !important;
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    border-radius: 8px !important;
+    padding: 6px 12px !important;
+    min-width: 3rem !important;
+    text-align: center !important;
+    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3) !important;
+}
+
 /* شارات الإحصائيات */
 .ptw-stat-badge {
     border: 1px solid;

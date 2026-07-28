@@ -254,7 +254,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                                                         ${Utils.escapeHTML(f)}
                                                     </div>
                                                 </div>
-                                                <div class="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white text-xl font-extrabold rounded-lg px-3 py-1.5 shadow-md ml-3 min-w-[3rem] text-center">
+                                                <div class="ptw-work-type-total-badge ml-3">
                                                     ${x.total}
                                                 </div>
                                             </div>
@@ -4121,7 +4121,7 @@ Stack: `+r.stack)}finally{const r=document.getElementById(e);r&&r.remove()}},col
                                         ${Utils.escapeHTML(b)}
                                     </div>
                                 </div>
-                                <div class="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white text-xl font-extrabold rounded-lg px-3 py-1.5 shadow-md ml-3 min-w-[3rem] text-center">
+                                <div class="ptw-work-type-total-badge ml-3">
                                     ${k.total}
                                 </div>
                             </div>
