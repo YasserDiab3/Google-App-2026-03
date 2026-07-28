@@ -2351,22 +2351,20 @@ const Users = {
     collectPermissions() {
         const permissions = {};
         
-        // استخدام querySelectorAll مرة واحدة فقط وتحسين الأداء
-        const checkboxes = document.querySelectorAll('.user-permission-checkbox:checked:not([disabled])');
-        
-        // استخدام for...of بدلاً من forEach للأداء الأفضل
-        for (const checkbox of checkboxes) {
-            const module = checkbox.getAttribute('data-module');
-            if (module) {
-                permissions[module] = true;
-            }
+        // جميع الموديولات المتاحة غير الخاصة بالإدارة العليا
+        if (typeof MODULE_PERMISSIONS_CONFIG !== 'undefined' && Array.isArray(MODULE_PERMISSIONS_CONFIG)) {
+            MODULE_PERMISSIONS_CONFIG.forEach(module => {
+                if (!module.adminOnly) {
+                    const checkbox = document.querySelector(`.user-permission-checkbox[data-module="${module.key}"]`);
+                    if (checkbox && !checkbox.disabled) {
+                        permissions[module.key] = checkbox.checked;
+                    }
+                }
+            });
         }
 
-        // ✅ إصلاح: إضافة الصلاحيات التفصيلية بشكل صحيح
-        // التأكد من دمج الصلاحيات التفصيلية مع الصلاحيات الأساسية
+        // إضافة الصلاحيات التفصيلية بشكل صحيح
         if (this.currentDetailedPermissions && typeof this.currentDetailedPermissions === 'object') {
-            // استخدام Object.assign للأداء الأفضل
-            // هذا يضمن عدم فقدان الصلاحيات التفصيلية
             Object.assign(permissions, this.currentDetailedPermissions);
         }
 
@@ -2379,9 +2377,7 @@ const Users = {
             });
         }
 
-        // ✅ إصلاح: التأكد من إرجاع كائن حتى لو كان فارغاً (وليس undefined)
-        // هذا يضمن عدم فقدان الصلاحيات عند الحفظ
-        return Object.keys(permissions).length > 0 ? permissions : {};
+        return permissions;
     },
 
     setupPhotoPreview() {

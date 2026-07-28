@@ -3069,6 +3069,19 @@ const Permissions = {
 
         // التحقق من الصلاحيات المخصصة للمستخدم (الممنوحة صراحةً)
         const effectivePermissions = this.getEffectivePermissions(user);
+        const hasAnyExplicitPermission = effectivePermissions &&
+            typeof effectivePermissions === 'object' &&
+            !Array.isArray(effectivePermissions) &&
+            Object.keys(effectivePermissions).some(k => !k.endsWith('Permissions') && k !== '__isAdmin');
+
+        if (hasAnyExplicitPermission) {
+            const hasAccess = effectivePermissions[moduleName] === true;
+            if (AppState.debugMode) {
+                Utils.safeLog(`🔍 hasAccess(${moduleName}): ${hasAccess ? '✅ مسموح' : '❌ غير مسموح'} (من الصلاحيات الفعالة المخصصة)`);
+            }
+            return hasAccess;
+        }
+
         if (Object.prototype.hasOwnProperty.call(effectivePermissions, moduleName)) {
             const hasAccess = effectivePermissions[moduleName] === true;
             if (AppState.debugMode) {
@@ -4286,7 +4299,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.612',
+    appVersion: '1.0.616',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
