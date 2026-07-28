@@ -1013,7 +1013,7 @@ const UserTasks = {
                     </div>
                 </div>
             ` : ''}
-            <div class="space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 ${paginatedTasks.map(task => {
             const isOverdue = task.dueDate && new Date(task.dueDate) < now &&
                 task.status !== 'مكتمل' && task.status !== 'completed';
@@ -1024,25 +1024,26 @@ const UserTasks = {
                     'badge-secondary';
 
             return `
-                        <div class="content-card ${isOverdue ? 'border-red-300 bg-red-50' : ''}" data-task-id="${task.id}" data-search="${(task.title || task.taskTitle || '').toLowerCase()} ${(task.description || task.taskDescription || '').toLowerCase()}">
-                            <div class="flex items-start justify-between gap-4">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2 mb-2">
-                                        <h3 class="font-semibold text-gray-900">${Utils.escapeHTML(task.title || task.taskTitle || '')}</h3>
+                        <div class="content-card hover:shadow-lg transition-all flex flex-col justify-between p-4 ${isOverdue ? 'border-red-300 bg-red-50/70' : ''}" data-task-id="${task.id}" data-search="${(task.title || task.taskTitle || '').toLowerCase()} ${(task.description || task.taskDescription || '').toLowerCase()}">
+                            <div>
+                                <div class="flex items-start justify-between gap-2 mb-3">
+                                    <h3 class="font-bold text-gray-900 text-base leading-snug flex-1">${Utils.escapeHTML(task.title || task.taskTitle || '')}</h3>
+                                    <div class="flex flex-wrap gap-1 justify-end flex-shrink-0">
                                         <span class="badge ${priorityClass}">${Utils.escapeHTML(task.priority || 'متوسط')}</span>
                                         <span class="badge ${statusClass}">${Utils.escapeHTML(task.status || 'جديدة')}</span>
                                         ${isOverdue ? '<span class="badge badge-danger">متأخرة</span>' : ''}
                                     </div>
-                                    ${task.description || task.taskDescription ? `
-                                        <p class="text-sm text-gray-600 mb-2">${Utils.escapeHTML((task.description || task.taskDescription).substring(0, 150))}${(task.description || task.taskDescription).length > 150 ? '...' : ''}</p>
-                                    ` : ''}
-                                    <div class="flex items-center gap-4 text-xs text-gray-500">
-                                        ${task.dueDate ? `<span><i class="fas fa-calendar ml-1"></i>تاريخ الاستحقاق: ${Utils.formatDate(task.dueDate)}</span>` : ''}
-                                        ${task.taskType ? `<span><i class="fas fa-tag ml-1"></i>${Utils.escapeHTML(task.taskType)}</span>` : ''}
-                                        ${task.createdAt ? `<span><i class="fas fa-clock ml-1"></i>تاريخ الإضافة: ${Utils.formatDate(task.createdAt)}</span>` : ''}
-                                    </div>
                                 </div>
-                                <div class="flex gap-2">
+                                ${task.description || task.taskDescription ? `
+                                    <p class="text-sm text-gray-600 mb-3 line-clamp-2">${Utils.escapeHTML((task.description || task.taskDescription).substring(0, 150))}${(task.description || task.taskDescription).length > 150 ? '...' : ''}</p>
+                                ` : ''}
+                            </div>
+                            <div class="pt-3 border-t border-gray-100 flex items-center justify-between gap-2 mt-2">
+                                <div class="space-y-1 text-xs text-gray-500">
+                                    ${task.dueDate ? `<div class="flex items-center"><i class="fas fa-calendar ml-1 text-blue-500"></i><span>${Utils.formatDate(task.dueDate)}</span></div>` : ''}
+                                    ${task.taskType ? `<div class="flex items-center"><i class="fas fa-tag ml-1 text-purple-500"></i><span>${Utils.escapeHTML(task.taskType)}</span></div>` : ''}
+                                </div>
+                                <div class="flex gap-1.5 flex-shrink-0">
                                     <button onclick="UserTasks.viewUserTask('${task.id}')" class="btn-icon btn-icon-info" title="عرض التفاصيل">
                                         <i class="fas fa-eye"></i>
                                     </button>

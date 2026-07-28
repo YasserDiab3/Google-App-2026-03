@@ -471,27 +471,28 @@ const UserTasks={cache:{members:null,tasks:new Map,lastLoad:null},config:{cacheT
                     </div>
                 </div>
             `:""}
-            <div class="space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 ${d.map(o=>{const c=o.dueDate&&new Date(o.dueDate)<n&&o.status!=="\u0645\u0643\u062A\u0645\u0644"&&o.status!=="completed",p=o.priority==="\u0639\u0627\u0644\u064A"?"badge-danger":o.priority==="\u0645\u0646\u062E\u0641\u0636"?"badge-success":"badge-warning",u=o.status==="\u0645\u0643\u062A\u0645\u0644"||o.status==="completed"?"badge-success":o.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"||o.status==="in-progress"?"badge-info":"badge-secondary";return`
-                        <div class="content-card ${c?"border-red-300 bg-red-50":""}" data-task-id="${o.id}" data-search="${(o.title||o.taskTitle||"").toLowerCase()} ${(o.description||o.taskDescription||"").toLowerCase()}">
-                            <div class="flex items-start justify-between gap-4">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2 mb-2">
-                                        <h3 class="font-semibold text-gray-900">${Utils.escapeHTML(o.title||o.taskTitle||"")}</h3>
+                        <div class="content-card hover:shadow-lg transition-all flex flex-col justify-between p-4 ${c?"border-red-300 bg-red-50/70":""}" data-task-id="${o.id}" data-search="${(o.title||o.taskTitle||"").toLowerCase()} ${(o.description||o.taskDescription||"").toLowerCase()}">
+                            <div>
+                                <div class="flex items-start justify-between gap-2 mb-3">
+                                    <h3 class="font-bold text-gray-900 text-base leading-snug flex-1">${Utils.escapeHTML(o.title||o.taskTitle||"")}</h3>
+                                    <div class="flex flex-wrap gap-1 justify-end flex-shrink-0">
                                         <span class="badge ${p}">${Utils.escapeHTML(o.priority||"\u0645\u062A\u0648\u0633\u0637")}</span>
                                         <span class="badge ${u}">${Utils.escapeHTML(o.status||"\u062C\u062F\u064A\u062F\u0629")}</span>
                                         ${c?'<span class="badge badge-danger">\u0645\u062A\u0623\u062E\u0631\u0629</span>':""}
                                     </div>
-                                    ${o.description||o.taskDescription?`
-                                        <p class="text-sm text-gray-600 mb-2">${Utils.escapeHTML((o.description||o.taskDescription).substring(0,150))}${(o.description||o.taskDescription).length>150?"...":""}</p>
-                                    `:""}
-                                    <div class="flex items-center gap-4 text-xs text-gray-500">
-                                        ${o.dueDate?`<span><i class="fas fa-calendar ml-1"></i>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642: ${Utils.formatDate(o.dueDate)}</span>`:""}
-                                        ${o.taskType?`<span><i class="fas fa-tag ml-1"></i>${Utils.escapeHTML(o.taskType)}</span>`:""}
-                                        ${o.createdAt?`<span><i class="fas fa-clock ml-1"></i>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0636\u0627\u0641\u0629: ${Utils.formatDate(o.createdAt)}</span>`:""}
-                                    </div>
                                 </div>
-                                <div class="flex gap-2">
+                                ${o.description||o.taskDescription?`
+                                    <p class="text-sm text-gray-600 mb-3 line-clamp-2">${Utils.escapeHTML((o.description||o.taskDescription).substring(0,150))}${(o.description||o.taskDescription).length>150?"...":""}</p>
+                                `:""}
+                            </div>
+                            <div class="pt-3 border-t border-gray-100 flex items-center justify-between gap-2 mt-2">
+                                <div class="space-y-1 text-xs text-gray-500">
+                                    ${o.dueDate?`<div class="flex items-center"><i class="fas fa-calendar ml-1 text-blue-500"></i><span>${Utils.formatDate(o.dueDate)}</span></div>`:""}
+                                    ${o.taskType?`<div class="flex items-center"><i class="fas fa-tag ml-1 text-purple-500"></i><span>${Utils.escapeHTML(o.taskType)}</span></div>`:""}
+                                </div>
+                                <div class="flex gap-1.5 flex-shrink-0">
                                     <button onclick="UserTasks.viewUserTask('${o.id}')" class="btn-icon btn-icon-info" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
                                         <i class="fas fa-eye"></i>
                                     </button>
