@@ -2880,13 +2880,20 @@ const Violations = {
             <!-- ── Row 2: نوع المخالفة + الموقع ── -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;margin-bottom:18px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
-                        <i class="fas fa-tag" style="color:#dc2626;font-size:1.15rem;"></i>
-                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.byType', 'حسب نوع المخالفة (أعلى 10)')}</span>
+                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <i class="fas fa-tag" style="color:#dc2626;font-size:1.15rem;"></i>
+                            <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.byType', 'حسب نوع المخالفة (أعلى 10)')}</span>
+                        </div>
+                        <span id="viol-type-total-badge" style="background:#fef2f2;color:#b91c1c;padding:4px 12px;border-radius:12px;font-size:0.82rem;font-weight:700;"></span>
                     </div>
-                    <div style="padding:14px;position:relative;height:290px;">
-                        <canvas id="viol-chart-type"></canvas>
-                        <div id="viol-chart-type-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                    <div style="padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;align-items:center;">
+                        <div style="position:relative;height:240px;">
+                            <canvas id="viol-chart-type"></canvas>
+                            <div id="viol-chart-type-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                        </div>
+                        <div id="viol-type-breakdown-list" style="display:flex;flex-direction:column;gap:10px;max-height:260px;overflow-y:auto;padding-left:4px;">
+                        </div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
@@ -3060,9 +3067,8 @@ const Violations = {
         // الاتجاه الزمني
         this._vDrawTrend('viol-chart-trend', violByPeriod);
 
-        // نوع المخالفة
-        const typeG = this._vGroupBy(viol, 'violationType', 10);
-        this._vDrawHBar('viol-chart-type', typeG.labels, typeG.data, 'rgba(220,38,38,0.75)');
+        // نوع المخالفة (توزيع تفاعلي مع Doughnut + قائمة)
+        this._vDrawTypeBreakdown('viol-chart-type', 'viol-type-breakdown-list', viol, 10);
 
         // الموقع
         const locG = this._vGroupBy(viol, 'violationLocation', 8);
@@ -3198,6 +3204,120 @@ const Violations = {
         fill('viol-af-sev',    unique(v => String(v.severity||'').trim()), 'module.violations.severity.');
         fill('viol-af-status', unique(v => String(v.status||'').trim()), 'module.violations.status.');
         fill('viol-af-loc',    unique(v => String(v.violationLocation||'').trim()));
+    },
+
+    // ── مساعد: رسم وتفصيل توزيع نوع المخالفة ──
+    _vDrawTypeBreakdown(canvasId, listContainerId, viol, limit) {
+        const canvas  = document.getElementById(canvasId);
+        const emptyEl = document.getElementById(canvasId + '-empty');
+        const listEl  = document.getElementById(listContainerId);
+        const badgeEl = document.getElementById('viol-type-total-badge');
+        if (!canvas) return;
+
+        const t = (key, fallback) => this._t(key, fallback);
+        const total = viol.length;
+        if (badgeEl) badgeEl.textContent = `${total.toLocaleString('en-US')} ${t('module.violations.analytics.violationUnit', 'مخالفة')}`;
+
+        // تجميع حسب نوع المخالفة
+        const typeMap = {};
+        viol.forEach(v => {
+            const tp = String(v.violationType || 'غير محدد').trim() || 'غير محدد';
+            if (!typeMap[tp]) typeMap[tp] = 0;
+            typeMap[tp]++;
+        });
+
+        let sorted = Object.entries(typeMap).sort((a, b) => b[1] - a[1]);
+        if (limit > 0) sorted = sorted.slice(0, limit);
+
+        const labels = sorted.map(e => e[0]);
+        const data   = sorted.map(e => e[1]);
+        const typeColors = [
+            'rgba(220,38,38,0.85)',  'rgba(234,88,12,0.85)',  'rgba(202,138,4,0.85)',
+            'rgba(22,163,74,0.85)',  'rgba(2,132,199,0.85)',  'rgba(99,102,241,0.85)',
+            'rgba(168,85,247,0.85)', 'rgba(236,72,153,0.85)', 'rgba(20,184,166,0.85)',
+            'rgba(107,114,128,0.85)'
+        ];
+
+        if (!data.length || total === 0) {
+            canvas.style.display = 'none';
+            if (emptyEl) emptyEl.style.display = 'flex';
+            if (listEl) listEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.92rem;padding:20px;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>`;
+            return;
+        }
+        if (emptyEl) emptyEl.style.display = 'none';
+        canvas.style.display = '';
+
+        // 1. Doughnut
+        if (!this._violCharts) this._violCharts = {};
+        const prev = this._violCharts[canvasId];
+        if (prev) { try { prev.destroy(); } catch(e){} }
+
+        this._violCharts[canvasId] = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels,
+                datasets: [{
+                    data,
+                    backgroundColor: labels.map((_, i) => typeColors[i % typeColors.length]),
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '60%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                const val = ctx.parsed;
+                                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
+                                return ` ${ctx.label}: ${val.toLocaleString('en-US')} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // 2. قائمة Progress Bars مع فلترة تفاعلية
+        if (listEl) {
+            listEl.innerHTML = sorted.map((item, idx) => {
+                const typeName = item[0];
+                const cnt  = item[1];
+                const pct  = total > 0 ? ((cnt / total) * 100).toFixed(1) : 0;
+                const color = typeColors[idx % typeColors.length];
+                const rank  = idx + 1;
+                return `
+                <div class="viol-type-item" data-vtype="${Utils.escapeHTML(typeName)}" title="انقر لتصفية حسب نوع ${Utils.escapeHTML(typeName)}" style="background:#fff;border:1.5px solid #f1f5f9;border-radius:12px;padding:10px 14px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='#fef2f2';this.style.borderColor='#fca5a5';" onmouseout="this.style.background='#fff';this.style.borderColor='#f1f5f9';">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="width:22px;height:22px;border-radius:50%;background:${color};color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${rank}</span>
+                            <span style="font-weight:800;font-size:0.88rem;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px;" title="${Utils.escapeHTML(typeName)}">${Utils.escapeHTML(typeName)}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;white-space:nowrap;">
+                            <span style="font-weight:800;font-size:1.0rem;color:${color.replace('0.85','1')};">${cnt.toLocaleString('en-US')}</span>
+                            <span style="font-size:0.82rem;font-weight:700;color:#64748b;">(${pct}%)</span>
+                        </div>
+                    </div>
+                    <div style="height:7px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
+                        <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width 0.6s ease;"></div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            listEl.querySelectorAll('.viol-type-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    const vtype = el.getAttribute('data-vtype');
+                    const sel = document.getElementById('viol-af-type');
+                    if (sel) {
+                        sel.value = sel.value === vtype ? '' : vtype;
+                        this.updateViolationAnalytics();
+                    }
+                });
+            });
+        }
     },
 
     // ── مساعد: رسم وتفصيل توزيع المصنع الرئيسي ──
