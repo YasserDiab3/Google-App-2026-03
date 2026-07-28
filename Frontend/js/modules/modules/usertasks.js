@@ -661,60 +661,62 @@ const UserTasks = {
             </div>
 
             <!-- إحصائيات المهام -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-6">
-                <div style="background: white; border-radius: 16px; padding: 18px; box-shadow: 0 4px 16px rgba(59,130,246,0.1); border-right: 4px solid #3b82f6; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(59,130,246,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(59,130,246,0.1)'">
-                    <div style="display:flex;align-items:center;gap:14px;">
-                        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(59,130,246,0.35);flex-shrink:0;">
-                            <i class="fas fa-tasks" style="color:#fff;font-size:1.1rem;"></i>
+            <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-top: 24px;">
+                <div style="background: white; border-radius: 16px; padding: 14px 12px; box-shadow: 0 4px 16px rgba(59,130,246,0.1); border-right: 4px solid #3b82f6; transition: transform 0.2s, box-shadow 0.2s; min-width: 0;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(59,130,246,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(59,130,246,0.1)'">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(59,130,246,0.35);flex-shrink:0;">
+                            <i class="fas fa-tasks" style="color:#fff;font-size:1rem;"></i>
                         </div>
-                        <div>
-                            <p style="font-size:0.78rem;color:#64748b;margin:0 0 3px;font-weight:600;">${this.t('module.userTasks.totalTasks', 'إجمالي المهام')}</p>
-                            <p style="font-size:1.5rem;font-weight:800;color:#1e40af;margin:0;line-height:1;" id="user-total-tasks">${stats.total}</p>
-                        </div>
-                    </div>
-                </div>
-                <div style="background: white; border-radius: 16px; padding: 18px; box-shadow: 0 4px 16px rgba(139,92,246,0.1); border-right: 4px solid #8b5cf6; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(139,92,246,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(139,92,246,0.1)'">
-                    <div style="display:flex;align-items:center;gap:14px;">
-                        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(139,92,246,0.35);flex-shrink:0;">
-                            <i class="fas fa-star" style="color:#fff;font-size:1.1rem;"></i>
-                        </div>
-                        <div>
-                            <p style="font-size:0.78rem;color:#64748b;margin:0 0 3px;font-weight:600;">${this.t('module.userTasks.newTasks', 'مهام جديدة')}</p>
-                            <p style="font-size:1.5rem;font-weight:800;color:#5b21b6;margin:0;line-height:1;" id="user-new-tasks">${stats.new}</p>
+                        <div style="min-width:0;overflow:hidden;">
+                            <p style="font-size:0.75rem;color:#64748b;margin:0 0 2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.t('module.userTasks.totalTasks', 'إجمالي المهام')}</p>
+                            <p style="font-size:1.4rem;font-weight:800;color:#1e40af;margin:0;line-height:1;" id="user-total-tasks">${stats.total}</p>
                         </div>
                     </div>
                 </div>
-                <div style="background: white; border-radius: 16px; padding: 18px; box-shadow: 0 4px 16px rgba(245,158,11,0.1); border-right: 4px solid #f59e0b; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(245,158,11,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(245,158,11,0.1)'">
-                    <div style="display:flex;align-items:center;gap:14px;">
-                        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(245,158,11,0.35);flex-shrink:0;">
-                            <i class="fas fa-clock" style="color:#fff;font-size:1.1rem;"></i>
+                <div style="background: white; border-radius: 16px; padding: 14px 12px; box-shadow: 0 4px 16px rgba(139,92,246,0.1); border-right: 4px solid #8b5cf6; transition: transform 0.2s, box-shadow 0.2s; min-width: 0;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(139,92,246,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(139,92,246,0.1)'">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(139,92,246,0.35);flex-shrink:0;">
+                            <i class="fas fa-star" style="color:#fff;font-size:1rem;"></i>
                         </div>
-                        <div>
-                            <p style="font-size:0.78rem;color:#64748b;margin:0 0 3px;font-weight:600;">${this.t('module.userTasks.inProgress', 'قيد التنفيذ')}</p>
-                            <p style="font-size:1.5rem;font-weight:800;color:#92400e;margin:0;line-height:1;" id="user-in-progress-tasks">${stats.inProgress}</p>
-                        </div>
-                    </div>
-                </div>
-                <div style="background: white; border-radius: 16px; padding: 18px; box-shadow: 0 4px 16px rgba(16,185,129,0.1); border-right: 4px solid #10b981; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(16,185,129,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(16,185,129,0.1)'">
-                    <div style="display:flex;align-items:center;gap:14px;">
-                        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(16,185,129,0.35);flex-shrink:0;">
-                            <i class="fas fa-check-circle" style="color:#fff;font-size:1.1rem;"></i>
-                        </div>
-                        <div>
-                            <p style="font-size:0.78rem;color:#64748b;margin:0 0 3px;font-weight:600;">${this.t('module.userTasks.completed', 'مكتملة')}</p>
-                            <p style="font-size:1.5rem;font-weight:800;color:#065f46;margin:0;line-height:1;" id="user-completed-tasks">${stats.completed}</p>
-                            <p style="font-size:0.68rem;color:#10b981;margin:2px 0 0;font-weight:600;">${completionRate}%</p>
+                        <div style="min-width:0;overflow:hidden;">
+                            <p style="font-size:0.75rem;color:#64748b;margin:0 0 2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.t('module.userTasks.newTasks', 'مهام جديدة')}</p>
+                            <p style="font-size:1.4rem;font-weight:800;color:#5b21b6;margin:0;line-height:1;" id="user-new-tasks">${stats.new}</p>
                         </div>
                     </div>
                 </div>
-                <div style="background: white; border-radius: 16px; padding: 18px; box-shadow: 0 4px 16px rgba(239,68,68,0.1); border-right: 4px solid #ef4444; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(239,68,68,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(239,68,68,0.1)'">
-                    <div style="display:flex;align-items:center;gap:14px;">
-                        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(239,68,68,0.35);flex-shrink:0;">
-                            <i class="fas fa-exclamation-triangle" style="color:#fff;font-size:1.1rem;"></i>
+                <div style="background: white; border-radius: 16px; padding: 14px 12px; box-shadow: 0 4px 16px rgba(245,158,11,0.1); border-right: 4px solid #f59e0b; transition: transform 0.2s, box-shadow 0.2s; min-width: 0;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(245,158,11,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(245,158,11,0.1)'">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(245,158,11,0.35);flex-shrink:0;">
+                            <i class="fas fa-clock" style="color:#fff;font-size:1rem;"></i>
                         </div>
-                        <div>
-                            <p style="font-size:0.78rem;color:#64748b;margin:0 0 3px;font-weight:600;">${this.t('module.userTasks.overdue', 'متأخرة')}</p>
-                            <p style="font-size:1.5rem;font-weight:800;color:#991b1b;margin:0;line-height:1;" id="user-overdue-tasks">${stats.overdue}</p>
+                        <div style="min-width:0;overflow:hidden;">
+                            <p style="font-size:0.75rem;color:#64748b;margin:0 0 2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.t('module.userTasks.inProgress', 'قيد التنفيذ')}</p>
+                            <p style="font-size:1.4rem;font-weight:800;color:#92400e;margin:0;line-height:1;" id="user-in-progress-tasks">${stats.inProgress}</p>
+                        </div>
+                    </div>
+                </div>
+                <div style="background: white; border-radius: 16px; padding: 14px 12px; box-shadow: 0 4px 16px rgba(16,185,129,0.1); border-right: 4px solid #10b981; transition: transform 0.2s, box-shadow 0.2s; min-width: 0;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(16,185,129,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(16,185,129,0.1)'">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(16,185,129,0.35);flex-shrink:0;">
+                            <i class="fas fa-check-circle" style="color:#fff;font-size:1rem;"></i>
+                        </div>
+                        <div style="min-width:0;overflow:hidden;">
+                            <p style="font-size:0.75rem;color:#64748b;margin:0 0 2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.t('module.userTasks.completed', 'مكتملة')}</p>
+                            <div style="display:flex;align-items:baseline;gap:6px;">
+                                <p style="font-size:1.4rem;font-weight:800;color:#065f46;margin:0;line-height:1;" id="user-completed-tasks">${stats.completed}</p>
+                                <p style="font-size:0.65rem;color:#10b981;margin:0;font-weight:700;">${completionRate}%</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="background: white; border-radius: 16px; padding: 14px 12px; box-shadow: 0 4px 16px rgba(239,68,68,0.1); border-right: 4px solid #ef4444; transition: transform 0.2s, box-shadow 0.2s; min-width: 0;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(239,68,68,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(239,68,68,0.1)'">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(239,68,68,0.35);flex-shrink:0;">
+                            <i class="fas fa-exclamation-triangle" style="color:#fff;font-size:1rem;"></i>
+                        </div>
+                        <div style="min-width:0;overflow:hidden;">
+                            <p style="font-size:0.75rem;color:#64748b;margin:0 0 2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.t('module.userTasks.overdue', 'متأخرة')}</p>
+                            <p style="font-size:1.4rem;font-weight:800;color:#991b1b;margin:0;line-height:1;" id="user-overdue-tasks">${stats.overdue}</p>
                         </div>
                     </div>
                 </div>
