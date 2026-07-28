@@ -188,12 +188,37 @@ function isMfaEnabledForUser_(user) {
     return v === true || v === 'true' || v === 1 || v === '1' || v === 'TRUE';
 }
 
-function createMfaChallenge_(email) {
+function createMfaChallenge_(email, userRecord) {
     var e = String(email || '').trim().toLowerCase();
     if (!e) return '';
-    var token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+    var nowHex = Date.now().toString(16);
+    var rand = Utilities.getUuid().replace(/-/g, '');
+    var key = ensureMfaEncryptionKey_();
+    var sigBytes = Utilities.computeHmacSignature(
+        Utilities.MacAlgorithm.HMAC_SHA_256,
+        e + ':' + nowHex + ':' + rand,
+        key
+    );
+    var sigHex = sigBytes.map(function(b) {
+        return ('0' + (b & 0xff).toString(16)).slice(-2);
+    }).join('');
+    var token = nowHex + '_' + rand + '_' + sigHex;
+
     var cache = CacheService.getScriptCache();
     cache.put('mfa_ch_' + token, e, MFA_CHALLENGE_TTL_SEC_);
+    if (userRecord && userRecord.mfaSecretEnc) {
+        try {
+            var cachedData = {
+                email: e,
+                userId: userRecord.id,
+                mfaSecretEnc: userRecord.mfaSecretEnc,
+                safeUser: (typeof buildSafeUserFromRecord_ === 'function') ? buildSafeUserFromRecord_(userRecord) : null
+            };
+            cache.put('mfa_user_' + token, JSON.stringify(cachedData), MFA_CHALLENGE_TTL_SEC_);
+        } catch (ex) {
+            Logger.log('createMfaChallenge_ cache user error: ' + ex.toString());
+        }
+    }
     return token;
 }
 
@@ -201,12 +226,40 @@ function consumeMfaChallenge_(token, email) {
     var t = String(token || '').trim();
     var e = String(email || '').trim().toLowerCase();
     if (!t || !e) return false;
+
     var cache = CacheService.getScriptCache();
     var key = 'mfa_ch_' + t;
     var stored = cache.get(key);
-    if (!stored || String(stored).toLowerCase() !== e) return false;
-    cache.remove(key);
-    return true;
+    if (stored && String(stored).toLowerCase() === e) {
+        cache.remove(key);
+        return true;
+    }
+
+    // Fallback: Verify stateless HMAC signature if CacheService lost key
+    var parts = t.split('_');
+    if (parts.length === 3) {
+        var nowHex = parts[0];
+        var rand = parts[1];
+        var sigHex = parts[2];
+        var issueTime = parseInt(nowHex, 16);
+        var now = Date.now();
+        if (!isNaN(issueTime) && (now - issueTime) <= (MFA_CHALLENGE_TTL_SEC_ * 1000) && (issueTime <= now + 60000)) {
+            var keyStr = ensureMfaEncryptionKey_();
+            var expectedBytes = Utilities.computeHmacSignature(
+                Utilities.MacAlgorithm.HMAC_SHA_256,
+                e + ':' + nowHex + ':' + rand,
+                keyStr
+            );
+            var expectedHex = expectedBytes.map(function(b) {
+                return ('0' + (b & 0xff).toString(16)).slice(-2);
+            }).join('');
+            if (expectedHex === sigHex) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 function checkMfaRateLimit_(email) {

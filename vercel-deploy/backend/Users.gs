@@ -496,7 +496,7 @@ function deleteUserFromSheet(userId, userData) {
 function sanitizeUserRecordForClient_(user, isAdmin, actorEmail) {
     if (!user || typeof user !== 'object') return null;
     var out = {};
-    var safeFields = ['id', 'name', 'email', 'department', 'active', 'role', 'jobTitle', 'phone', 'photo', 'isOnline', 'lastLogin', 'passwordChanged', 'forcePasswordChange', 'updatedAt', 'createdAt'];
+    var safeFields = ['id', 'name', 'email', 'department', 'active', 'role', 'jobTitle', 'phone', 'photo', 'isOnline', 'lastLogin', 'passwordChanged', 'forcePasswordChange', 'updatedAt', 'createdAt', 'mfaEnabled'];
     for (var i = 0; i < safeFields.length; i++) {
         var f = safeFields[i];
         if (user[f] !== undefined) out[f] = user[f];
@@ -779,7 +779,7 @@ function loginUser(email, password) {
         // MFA: إذا مفعّل — لا نُكمل الجلسة حتى التحقق من TOTP
         if (typeof isMfaEnabledForUser_ === 'function' && isMfaEnabledForUser_(user)) {
             var challengeToken = (typeof createMfaChallenge_ === 'function')
-                ? createMfaChallenge_(e)
+                ? createMfaChallenge_(e, user)
                 : '';
             if (!challengeToken) {
                 return { success: false, message: 'تعذر بدء خطوة المصادقة الثنائية. حاول لاحقاً.' };
@@ -840,12 +840,30 @@ function verifyMfaLogin(challengeToken, email, code) {
             return { success: false, message: 'انتهت صلاحية جلسة المصادقة. أعد تسجيل الدخول.' };
         }
 
-        var user = getUserRecordFromUsersSheetByEmail_(e);
-        if (!user || !isMfaEnabledForUser_(user)) {
-            return { success: false, message: 'المصادقة الثنائية غير مفعّلة لهذا الحساب' };
+        var cachedUserPayload = null;
+        try {
+            var cache = CacheService.getScriptCache();
+            var raw = cache.get('mfa_user_' + token);
+            if (raw) cachedUserPayload = JSON.parse(raw);
+        } catch (cErr) { /* ignore */ }
+
+        var user = null;
+        var secretEnc = '';
+        var safeUser = null;
+
+        if (cachedUserPayload && cachedUserPayload.email === e && cachedUserPayload.mfaSecretEnc) {
+            secretEnc = cachedUserPayload.mfaSecretEnc;
+            safeUser = cachedUserPayload.safeUser;
+            user = { id: cachedUserPayload.userId, email: e };
+        } else {
+            user = getUserRecordFromUsersSheetByEmail_(e);
+            if (!user || !isMfaEnabledForUser_(user)) {
+                return { success: false, message: 'المصادقة الثنائية غير مفعّلة لهذا الحساب' };
+            }
+            secretEnc = String(user.mfaSecretEnc || '').trim();
+            safeUser = buildSafeUserFromRecord_(user);
         }
 
-        var secretEnc = String(user.mfaSecretEnc || '').trim();
         var secret = (typeof decryptMfaSecret_ === 'function') ? decryptMfaSecret_(secretEnc) : '';
         if (!secret || typeof verifyTotpCode_ !== 'function' || !verifyTotpCode_(secret, otp)) {
             if (typeof recordMfaFailure_ === 'function') recordMfaFailure_(e);
@@ -857,20 +875,22 @@ function verifyMfaLogin(challengeToken, email, code) {
 
         if (typeof clearMfaFailures_ === 'function') clearMfaFailures_(e);
 
-        try {
-            _fastTouchUserLoginFields_(user.id, {
-                lastLogin: new Date().toISOString(),
-                isOnline: false,
-                activeSessionId: ''
-            });
-        } catch (loginTimeError) {
-            Logger.log('Warning: Could not update lastLogin after MFA: ' + loginTimeError.toString());
+        if (user && user.id) {
+            try {
+                _fastTouchUserLoginFields_(user.id, {
+                    lastLogin: new Date().toISOString(),
+                    isOnline: false,
+                    activeSessionId: ''
+                });
+            } catch (loginTimeError) {
+                Logger.log('Warning: Could not update lastLogin after MFA: ' + loginTimeError.toString());
+            }
         }
 
         return {
             success: true,
             message: 'تم تسجيل الدخول بنجاح',
-            user: buildSafeUserFromRecord_(user)
+            user: safeUser
         };
     } catch (error) {
         Logger.log('verifyMfaLogin error: ' + error.toString());
