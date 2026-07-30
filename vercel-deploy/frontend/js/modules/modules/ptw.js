@@ -2800,6 +2800,10 @@ const PTW = {
                 ]);
             } finally {
                 this._refreshActiveTabAfterBackendSync();
+                this.updateKPIs();
+                if (typeof Dashboard !== 'undefined' && typeof Dashboard.renderUI === 'function') {
+                    try { Dashboard.renderUI(); } catch (_e) {}
+                }
                 this._ptwBackendLoadPromise = null;
                 this._backendSyncStarted = false;
             }
@@ -2842,7 +2846,7 @@ const PTW = {
             const hydrateStats = () => {
                 if (!document.getElementById('ptw-permits-content')) return;
                 const statsSection = document.getElementById('ptw-stats-section');
-                if (!statsSection || statsSection.getAttribute('data-stats-pending') !== '1') return;
+                if (!statsSection) return;
                 try {
                     const statsHtml = this.renderListStatsSection();
                     if (statsHtml) statsSection.outerHTML = statsHtml;
@@ -2853,11 +2857,7 @@ const PTW = {
                 }
             };
 
-            if (typeof requestIdleCallback === 'function') {
-                requestIdleCallback(hydrateStats, { timeout: 1200 });
-            } else {
-                requestAnimationFrame(() => setTimeout(hydrateStats, 0));
-            }
+            hydrateStats();
         } catch (error) {
             Utils.safeWarn('⚠️ خطأ في تحميل القائمة:', error);
             permitsContent.innerHTML = `
