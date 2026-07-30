@@ -3269,7 +3269,7 @@ const PTW = {
                 this._startPtwBackendSync();
                 this._hydrateMapCoordinatesFromLocal();
                 this._scheduleMapCoordinatesBackgroundSync();
-            }, 1500);
+            }, 0);
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
                 Utils.safeError('❌ خطأ في تحميل مديول PTW:', error);

@@ -18191,7 +18191,10 @@ const Clinic = {
         panel.querySelectorAll('.clinic-attendance-period-btn').forEach(btn => {
             btn.addEventListener('click', () => applyPeriodPreset(btn.dataset.period || 'all'));
         });
-        panel.querySelector('#clinic-attendance-shift-rules-btn')?.addEventListener('click', () => this.showClinicShiftSettingsModal());
+        panel.querySelector('#clinic-attendance-shift-rules-btn')?.addEventListener('click', () => {
+            console.log('Shift rules button clicked');
+            this.showClinicShiftSettingsModal();
+        });
         panel.querySelector('#clinic-attendance-export-btn')?.addEventListener('click', () => this.exportAttendanceToExcel());
         panel.querySelector('#clinic-attendance-pdf-btn')?.addEventListener('click', () => this.exportAttendanceToPDF());
         panel.querySelector('#clinic-open-timeoff-request')?.addEventListener('click', () => this.showTimeOffRequestForm());
