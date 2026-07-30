@@ -271,12 +271,12 @@ const PeriodicInspections = {
     },
 
     _t(key, fallback = '') {
-        try {
-            const i18nObj = window.AppI18n || window.I18n;
-            if (i18nObj && typeof i18nObj.t === 'function') {
-                return i18nObj.t(key, fallback);
-            }
-        } catch (_) {}
+        if (window.AppI18n && typeof window.AppI18n.t === 'function') {
+            return window.AppI18n.t(key, fallback);
+        }
+        if (typeof I18n !== 'undefined' && I18n && typeof I18n.t === 'function') {
+            return I18n.t(key, fallback);
+        }
         return fallback;
     },
 
@@ -853,14 +853,6 @@ const PeriodicInspections = {
                 ${content}
             </div>
         `;
-            try {
-                const i18nObj = window.AppI18n || window.I18n;
-                if (i18nObj) {
-                    if (typeof i18nObj.applyI18n === 'function') i18nObj.applyI18n(section);
-                    if (typeof i18nObj.applyLiteralTranslations === 'function') i18nObj.applyLiteralTranslations(section);
-                }
-            } catch (e) {}
-
             try {
                 this.setupEventListeners();
             } catch (error) {
@@ -6482,7 +6474,7 @@ const PeriodicInspections = {
                                                 <div style="height:100%;background:linear-gradient(90deg,#3b82f6,#2563eb,#3b82f6);background-size:200% 100%;border-radius:3px;animation:loadingProgress 1.4s ease-in-out infinite;"></div>
                                             </div>
                                         </div>
-                                        <p class="text-gray-500" style="font-size:0.9rem;" data-i18n="module.periodic.dsc.loadingDsc">${this._t('module.periodic.dsc.loadingDsc', 'جاري تحميل بيانات قائمة المرور اليومي للسلامة...')}</p>
+                                        <p class="text-gray-500" style="font-size:0.9rem;">جاري تحميل بيانات قائمة المرور اليومي للسلامة...</p>
                                     </div>
                                 </div>
                             </div>`;
@@ -6499,7 +6491,7 @@ const PeriodicInspections = {
                         contentContainer.innerHTML = `
                             <div class="content-card"><div class="card-body">
                                 <div class="empty-state" style="padding:2.5rem 1rem;text-align:center;">
-                                    <p class="text-gray-500" data-i18n="module.periodic.tab.equipmentDatabaseLoading">${this._t('module.periodic.tab.equipmentDatabaseLoading', 'جاري تحميل قاعدة بيانات المعدات...')}</p>
+                                    <p class="text-gray-500">جاري تحميل قاعدة بيانات المعدات...</p>
                                 </div>
                             </div></div>`;
                     }
@@ -6525,15 +6517,6 @@ const PeriodicInspections = {
             const showingLoader = needsBackgroundDscFetch && !(Array.isArray(dscArrNow) && dscArrNow.length > 0);
             if (html && !showingLoader) {
                 contentContainer.innerHTML = html;
-                
-                try {
-                    const i18nObj = window.AppI18n || window.I18n;
-                    if (i18nObj && typeof i18nObj.applyI18n === 'function') {
-                        const fullSection = document.getElementById('periodic-inspections-section');
-                        i18nObj.applyI18n(fullSection || contentContainer);
-                    }
-                } catch (e) {}
-                
                 this.setupEventListeners();
                 // ✅ رسم مخططات تحليل البيانات بعد inject الـ HTML (نفس نمط clinic/obs)
                 if (this.state.currentTab === 'daily-safety-analytics') {

@@ -1,4 +1,4 @@
-﻿// دالة log في النطاق العام — تُغطَّى داخل الـ IIFE بنسخة أكثر تفصيلاً
+// دالة log في النطاق العام — تُغطَّى داخل الـ IIFE بنسخة أكثر تفصيلاً
 // ضرورية لـ handleLogin والدوال الخارج عن الـ IIFE
 var log = function() {
     try {
@@ -801,7 +801,7 @@ async function proceedAfterLoginSuccess(result, submitBtn, originalBtnText) {
             }, 300);
             await Promise.race([
                 window.UI.showMainApp(),
-                new Promise(function (_, reject) { setTimeout(function () { reject(new Error('showMainApp timeout')); }, 2500); })
+                new Promise(function (_, reject) { setTimeout(function () { reject(new Error('showMainApp timeout')); }, 12000); })
             ]);
             clearTimeout(warnTimer);
         } catch (err) {

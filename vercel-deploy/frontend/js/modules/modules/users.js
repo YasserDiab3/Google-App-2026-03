@@ -571,7 +571,7 @@ const Users = {
                                 }).join('')}
                             </datalist>
                             <p id="user-emp-link-hint" style="margin: 4px 0 0; font-size: 11px; color: #64748b;">
-                                عند اختيار كود موظف، يتم جلب اسمه وإدارته تلقائياً وتوحيد ملفه الشخصي.
+                                عند اختيار كود موظف، يتم ربط الملف الشخصي دون تغيير اسم المستخدم تلقائياً.
                             </p>
                         </div>
                     </div>
@@ -1410,7 +1410,7 @@ const Users = {
                     statusBadge.style.color = '#64748b';
                 }
                 if (hintEl) {
-                    hintEl.textContent = 'عند اختيار كود موظف، يتم جلب اسمه وإدارته تلقائياً وتوحيد ملفه الشخصي.';
+                    hintEl.innerHTML = 'عند اختيار كود موظف، يتم ربط الملف الشخصي دون تغيير اسم المستخدم تلقائياً.';
                     hintEl.style.color = '#64748b';
                 }
                 return;
@@ -1448,7 +1448,7 @@ const Users = {
                         statusBadge.style.color = '#991b1b';
                     }
                     if (hintEl) {
-                        hintEl.textContent = `⚠️ هذا الكود الوظيفي مرتبط بحساب مستخدم آخر مسبقاً (${existingLinkUser.name || existingLinkUser.email}).`;
+                        hintEl.innerHTML = `⚠️ هذا الكود الوظيفي مرتبط بحساب مستخدم آخر مسبقاً (${Utils.escapeHTML(existingLinkUser.name || existingLinkUser.email)}).`;
                         hintEl.style.color = '#dc2626';
                     }
                     return;
@@ -1457,11 +1457,12 @@ const Users = {
                 const empName = emp.name || emp.employeeName || '';
                 const empDept = emp.department || emp.section || '';
 
-                if (nameInput && empName && (!nameInput.value.trim() || nameInput.getAttribute('data-auto-filled') === 'true' || confirm(`هل ترغب بتحديث اسم المستخدم إلى "${empName}"؟`))) {
+                // تعبئة الاسم والقطاع فقط إذا كانت الحقول فارغة تماماً عند إضافة مستخدم جديد
+                if (nameInput && empName && !nameInput.value.trim()) {
                     nameInput.value = empName;
                     nameInput.setAttribute('data-auto-filled', 'true');
                 }
-                if (deptInput && empDept && (!deptInput.value.trim() || deptInput.getAttribute('data-auto-filled') === 'true' || confirm(`هل ترغب بتحديث الإدارة إلى "${empDept}"؟`))) {
+                if (deptInput && empDept && !deptInput.value.trim()) {
                     deptInput.value = empDept;
                     deptInput.setAttribute('data-auto-filled', 'true');
                 }
@@ -1471,9 +1472,35 @@ const Users = {
                     statusBadge.style.background = '#dcfce7';
                     statusBadge.style.color = '#166534';
                 }
+
                 if (hintEl) {
-                    hintEl.textContent = `✅ تم الربط ببيانات الموظف: ${empName} (${empDept || 'بدون قسم'}).`;
+                    const currentName = nameInput ? nameInput.value.trim() : '';
+                    const isDifferentName = empName && currentName && empName !== currentName;
+
+                    let htmlHint = `✅ تم الربط ببيانات الموظف: <strong>${Utils.escapeHTML(empName)}</strong> (${Utils.escapeHTML(empDept || 'بدون قسم')}).`;
+                    if (isDifferentName) {
+                        htmlHint += ` <button type="button" id="btn-sync-emp-name-inline" style="margin-right: 6px; padding: 2px 8px; border-radius: 6px; background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s;"><i class="fas fa-sync-alt ml-1"></i> تغيير الاسم إلى "${Utils.escapeHTML(empName)}"</button>`;
+                    }
+                    hintEl.innerHTML = htmlHint;
                     hintEl.style.color = '#16a34a';
+
+                    const syncBtn = document.getElementById('btn-sync-emp-name-inline');
+                    if (syncBtn) {
+                        syncBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            if (nameInput) {
+                                nameInput.value = empName;
+                                nameInput.setAttribute('data-auto-filled', 'false');
+                            }
+                            if (deptInput && empDept) {
+                                deptInput.value = empDept;
+                            }
+                            if (typeof Notification !== 'undefined') {
+                                Notification.success(`تم تحديث اسم المستخدم إلى "${empName}"`);
+                            }
+                            handleLookup();
+                        });
+                    }
                 }
             } else {
                 if (statusBadge) {
@@ -1482,12 +1509,13 @@ const Users = {
                     statusBadge.style.color = '#92400e';
                 }
                 if (hintEl) {
-                    hintEl.textContent = 'لم يتم العثور على موظف مطابق لهذا الكود في قاعدة بيانات الموظفين.';
+                    hintEl.innerHTML = 'لم يتم العثور على موظف مطابق لهذا الكود في قاعدة بيانات الموظفين.';
                     hintEl.style.color = '#d97706';
                 }
             }
         };
 
+        empCodeInput.addEventListener('input', handleLookup);
         empCodeInput.addEventListener('change', handleLookup);
         empCodeInput.addEventListener('blur', handleLookup);
     },

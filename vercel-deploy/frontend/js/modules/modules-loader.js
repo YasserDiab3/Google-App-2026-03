@@ -282,6 +282,27 @@ function loadModule(moduleName, retryCount) {
                     }
                 }, 100);
                 return;
+            } else if (moduleName === 'ptw') {
+                // ✅ التحقق من تحميل موديول تصاريح العمل (PTW)
+                let checkCount = 0;
+                const maxChecks = 20; // 20 × 100ms = 2 ثوان
+                const checkInterval = setInterval(() => {
+                    checkCount++;
+                    if (typeof window.PTW !== 'undefined' && typeof window.PTW.load === 'function') {
+                        log(`✅ PTW متاح على window.PTW مع دالة load`);
+                        clearInterval(checkInterval);
+                        safeResolve();
+                    } else if (checkCount >= maxChecks) {
+                        if (typeof window.PTW !== 'undefined') {
+                            logError(`⚠️ PTW متاح لكن دالة load غير موجودة أو ليست function`);
+                        } else {
+                            logError(`⚠️ PTW غير متاح على window بعد ${maxChecks} محاولة`);
+                        }
+                        clearInterval(checkInterval);
+                        safeResolve();
+                    }
+                }, 100);
+                return;
             }
 
             // ✅ للمواديل الأخرى: انتظار قصير ثم resolve

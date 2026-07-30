@@ -341,17 +341,146 @@ const Training = {
                     border-radius: 9px !important;
                 }
                 .training-workspace #training-tab-content canvas { max-width: 100% !important; }
-                .training-workspace #training-tab-content[data-tab="contractors"] .contractor-analytics-shell-card{overflow:hidden;border-color:#c9ddd8!important;background:#edf5f3!important;box-shadow:0 16px 36px rgba(7,59,58,.11)!important}.training-workspace #training-tab-content[data-tab="contractors"] .contractor-analytics-card-header{padding:clamp(17px,2vw,24px)!important;border-bottom:4px solid var(--training-gold)!important;background:radial-gradient(circle at 10% -30%,rgba(45,212,191,.23),transparent 34%),linear-gradient(120deg,#062f2f,var(--training-petrol-2) 76%,#12675f)!important}.training-workspace #training-tab-content[data-tab="contractors"] .contractor-analytics-card-header::before{display:none}
-                .training-workspace .contractor-analytics-header-layout{display:flex;align-items:center;justify-content:space-between;gap:18px;min-width:0}.training-workspace .contractor-analytics-heading{min-width:0}.training-workspace .contractor-analytics-eyebrow{display:inline-flex;align-items:center;gap:7px;margin-bottom:6px;color:#99f6e4;font-size:.61rem;font-weight:900;letter-spacing:.11em;text-transform:uppercase}.training-workspace .contractor-analytics-card-header .card-title{display:flex;align-items:center;gap:10px;margin:0!important;color:#fff!important;font-size:clamp(1.05rem,1.8vw,1.35rem)!important}.training-workspace .contractor-analytics-card-header .card-title i{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;margin:0!important;border:1px solid rgba(255,255,255,.18);border-radius:11px;background:rgba(255,255,255,.1);color:#fde68a}.training-workspace .contractor-analytics-heading p{margin:7px 0 0;color:rgba(255,255,255,.68);font-size:.76rem;line-height:1.65}.training-workspace .contractor-analytics-header-tools{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}.training-workspace .contractor-analytics-live-pill{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:7px 11px;border:1px solid rgba(153,246,228,.28);border-radius:999px;background:rgba(15,118,110,.38);color:#ccfbf1;font-size:.68rem;font-weight:800}.training-workspace .contractor-analytics-live-pill::before{content:"";width:7px;height:7px;border-radius:50%;background:#5eead4;box-shadow:0 0 0 4px rgba(94,234,212,.13)}.training-workspace #contractor-analytics-reset-btn{min-height:38px;padding:8px 13px!important;border:1px solid rgba(255,255,255,.22)!important;border-radius:10px!important;background:rgba(255,255,255,.1)!important;color:#fff!important;box-shadow:none!important}.training-workspace #contractor-analytics-reset-btn:hover{background:rgba(255,255,255,.18)!important}.training-workspace .contractor-analytics-card-body{padding:clamp(12px,1.8vw,18px)!important}.training-workspace #contractor-analytics-dashboard{min-width:0;contain:layout style}.training-workspace .contractor-analytics-section{display:flex!important;flex-direction:column;gap:14px!important;min-width:0;font-family:inherit}
-                .training-workspace .contractor-analytics-snapshot{order:0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:11px 14px;border:1px solid #cadeda;border-radius:12px;background:linear-gradient(110deg,#fff,#f4faf8);color:#49635f}.training-workspace .contractor-analytics-snapshot-copy{display:flex;align-items:center;gap:9px;min-width:0;font-size:.74rem}.training-workspace .contractor-analytics-snapshot-copy i{color:var(--training-teal)}.training-workspace .contractor-analytics-filter-count{padding:5px 9px;border-radius:999px;background:#e3f4f0;color:#0b625c;font-size:.66rem;font-weight:900}.training-workspace .contractor-analytics-kpi-grid{order:1;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}.training-workspace .contractor-analytics-kpi-card{position:relative;overflow:hidden;min-width:0;min-height:92px;padding:14px!important;border:1px solid #d5e5e1;border-radius:13px;background:#fff!important;box-shadow:0 6px 16px rgba(7,59,58,.065)!important}.training-workspace .contractor-analytics-kpi-card::after{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:4px;background:var(--kpi-accent,#0f766e)}.training-workspace .contractor-analytics-kpi-card .kpi-label{margin-bottom:9px;color:#627773!important;font-size:.67rem;font-weight:850}.training-workspace .contractor-analytics-kpi-card .kpi-label i{display:inline-flex;align-items:center;justify-content:center;width:25px;height:25px;border-radius:7px;background:color-mix(in srgb,var(--kpi-accent,#0f766e) 12%,white);color:var(--kpi-accent,#0f766e)}.training-workspace .contractor-analytics-kpi-card .kpi-value{color:#163c39!important;font-size:clamp(1.15rem,2vw,1.55rem);font-weight:900;font-variant-numeric:tabular-nums}.training-workspace .contractor-analytics-kpi-card.kpi-purple{--kpi-accent:#7c3aed}.training-workspace .contractor-analytics-kpi-card.kpi-green{--kpi-accent:#059669}.training-workspace .contractor-analytics-kpi-card.kpi-amber{--kpi-accent:#d97706}.training-workspace .contractor-analytics-kpi-card.kpi-blue{--kpi-accent:#2563eb}.training-workspace .contractor-analytics-kpi-card.kpi-pink{--kpi-accent:#be185d}.training-workspace .contractor-analytics-kpi-card.kpi-indigo{--kpi-accent:#4f46e5}
-                .training-workspace .contractor-analytics-slicers{order:2;padding:16px 17px;border:1px solid #cfdfdc;border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(7,59,58,.055)}.training-workspace .contractor-analytics-slicers-header{margin-bottom:13px;padding-bottom:11px;border-color:#e1ece9}.training-workspace .contractor-analytics-slicers-title{color:var(--training-petrol);font-size:.82rem;font-weight:900}.training-workspace .contractor-analytics-slicers-title i{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;background:#e7f5f2;color:var(--training-teal)}.training-workspace .contractor-analytics-slicers-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:11px;margin:0}.training-workspace .contractor-analytics-slicers-grid .search-full{grid-column:span 2}.training-workspace .contractor-analytics-slicers-grid .filter-group{gap:6px;min-width:0}.training-workspace .contractor-analytics-slicers-grid .filter-group label{color:#405b57;font-size:.68rem;font-weight:850}.training-workspace .contractor-analytics-slicers-grid .filter-group label i{color:var(--training-teal)}.training-workspace .contractor-analytics-slicers-grid .filter-group select,.training-workspace .contractor-analytics-slicers-grid .filter-group input{width:100%;min-width:0;min-height:41px;padding:8px 10px;border:1.5px solid #c9dcd8;border-radius:9px;font-size:.76rem;transition:border-color .16s ease,box-shadow .16s ease}.training-workspace .contractor-analytics-slicers-grid .filter-group select:focus,.training-workspace .contractor-analytics-slicers-grid .filter-group input:focus{border-color:var(--training-teal);box-shadow:0 0 0 3px rgba(15,118,110,.11);transform:none}
-                .training-workspace .contractor-analytics-tabs-bar{order:3;padding:10px;border:0;border-radius:13px;background:var(--training-petrol);box-shadow:0 8px 20px rgba(7,59,58,.13)}.training-workspace .contractor-analytics-tabs-bar .tabs-row{gap:9px}.training-workspace .contractor-analytics-tabs-bar .tabs-group{gap:6px}.training-workspace .contractor-analytics-tab{min-height:39px;padding:8px 13px;border:1px solid rgba(255,255,255,.14);border-radius:9px;background:rgba(255,255,255,.075);color:rgba(255,255,255,.78);font-size:.72rem;font-weight:800;box-shadow:none}.training-workspace .contractor-analytics-tab:hover{border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.14);color:#fff}.training-workspace .contractor-analytics-tab.active{border-color:#f3ca59;background:linear-gradient(135deg,#edc653,#c9961e);color:#203d39;box-shadow:0 5px 12px rgba(0,0,0,.18)}.training-workspace .contractor-analytics-sort-box{min-height:39px;padding:5px 8px;border-color:rgba(255,255,255,.15);background:rgba(255,255,255,.08)}.training-workspace .contractor-analytics-sort-box label{color:rgba(255,255,255,.72)}.training-workspace .contractor-analytics-sort-box label i{color:#fde68a}.training-workspace .contractor-analytics-sort-box select{min-height:30px!important;border:0!important;background:#fff;color:#274945;font-size:.69rem}.training-workspace .contractor-analytics-content{order:4;min-width:0;min-height:280px;padding:14px;border:1px solid #cfdfdc;border-radius:14px;background:#fff;box-shadow:0 7px 20px rgba(7,59,58,.06)}.training-workspace .contractor-analytics-pivot-wrap,.training-workspace .contractor-analytics-details-wrap{max-width:100%;border-color:#cddfdb;border-radius:11px;box-shadow:none;scrollbar-color:#6f9d96 #e8f1ef}.training-workspace .contractor-analytics-pivot-table tr{transition:background-color .14s ease}.training-workspace .contractor-analytics-pivot-table tr:hover{transform:none!important}.training-workspace .contractor-analytics-pivot-table tr:focus-visible{outline:3px solid rgba(215,169,47,.55);outline-offset:-3px}.training-workspace .contractor-analytics-pivot-table .label-cell{color:#0d625c;font-weight:800}.training-workspace .contractor-analytics-pivot-table .label-cell .dot{background:var(--training-gold)}.training-workspace .contractor-analytics-pivot-footnote{color:#69807c}
-                @media(max-width:1180px){.training-workspace .contractor-analytics-kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.training-workspace .contractor-analytics-slicers-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:760px){.training-workspace .contractor-analytics-header-layout{align-items:flex-start;flex-direction:column}.training-workspace .contractor-analytics-header-tools{width:100%;justify-content:stretch}.training-workspace #contractor-analytics-reset-btn{flex:1}.training-workspace .contractor-analytics-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.training-workspace .contractor-analytics-slicers-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.training-workspace .contractor-analytics-slicers-grid .search-full{grid-column:1/-1}.training-workspace .contractor-analytics-tabs-bar .tabs-row{align-items:stretch}.training-workspace .contractor-analytics-tabs-bar .tabs-group{display:grid;grid-template-columns:1fr;width:100%}.training-workspace .contractor-analytics-sort-group,.training-workspace .contractor-analytics-sort-box{width:100%}.training-workspace .contractor-analytics-content{padding:9px}.training-workspace .contractor-analytics-details-footer{align-items:flex-start;flex-direction:column}}@media(max-width:480px){.training-workspace .contractor-analytics-live-pill{display:none}.training-workspace .contractor-analytics-kpi-grid,.training-workspace .contractor-analytics-slicers-grid{grid-template-columns:1fr}.training-workspace .contractor-analytics-slicers-grid .search-full{grid-column:auto}.training-workspace .contractor-analytics-kpi-card{min-height:72px;flex-direction:row;align-items:center;justify-content:space-between}.training-workspace .contractor-analytics-kpi-card .kpi-label{margin:0}.training-workspace .contractor-analytics-snapshot{align-items:flex-start;flex-direction:column}}
-                .training-workspace .contractor-analytics-kpi-grid,.training-workspace .contractor-analytics-slicers-grid{display:grid}.training-workspace .contractor-analytics-slicers-header,.training-workspace .contractor-analytics-tabs-bar .tabs-row,.training-workspace .contractor-analytics-tabs-bar .tabs-group,.training-workspace .contractor-analytics-sort-group,.training-workspace .contractor-analytics-sort-box,.training-workspace .contractor-analytics-details-footer{display:flex;align-items:center}.training-workspace .contractor-analytics-slicers-header,.training-workspace .contractor-analytics-tabs-bar .tabs-row,.training-workspace .contractor-analytics-details-footer{justify-content:space-between}.training-workspace .contractor-analytics-tabs-bar .tabs-row,.training-workspace .contractor-analytics-tabs-bar .tabs-group,.training-workspace .contractor-analytics-sort-group,.training-workspace .contractor-analytics-sort-box,.training-workspace .contractor-analytics-details-footer{gap:8px;flex-wrap:wrap}.training-workspace .contractor-analytics-slicers-grid .filter-group{display:flex;flex-direction:column}.training-workspace .contractor-analytics-details-footer{margin-top:9px;color:#69807c;font-size:.7rem}.training-workspace .contractor-analytics-empty{display:grid;min-height:220px;place-items:center;align-content:center;gap:8px;border:2px dashed #bad7d1;border-radius:12px;background:#f4faf8;color:#57716c;text-align:center}.training-workspace .contractor-analytics-empty i{color:#75aaa1;font-size:2rem}
-                .training-workspace #training-tab-content[data-tab=attendance] .attendance-analytics-shell-card{overflow:hidden;border-color:#c9ddd8!important;background:#edf5f3!important;box-shadow:0 16px 36px rgba(7,59,58,.11)!important}.training-workspace #training-tab-content[data-tab=attendance] .attendance-analytics-card-header{padding:clamp(17px,2vw,24px)!important;border-bottom:4px solid var(--training-gold)!important;background:radial-gradient(circle at 10% -30%,rgba(45,212,191,.23),transparent 34%),linear-gradient(120deg,#062f2f,var(--training-petrol-2) 76%,#12675f)!important}.training-workspace #training-tab-content[data-tab=attendance] .attendance-analytics-card-header::before{display:none}.training-workspace #attendance-analytics-reset-btn{min-height:38px;padding:8px 13px!important;border:1px solid rgba(255,255,255,.22)!important;border-radius:10px!important;background:rgba(255,255,255,.1)!important;color:#fff!important;box-shadow:none!important}.training-workspace #attendance-analytics-dashboard{min-width:0;contain:layout style}.training-workspace .attendance-details-wrap{overflow:auto;max-height:450px}
-                .training-workspace .attendance-month-filter-card{overflow:hidden;border-color:#cbdedb!important;background:linear-gradient(115deg,#fff,#f2f8f6)!important}.training-workspace .attendance-month-filter-card .card-body{padding:14px 17px!important}.training-workspace .attendance-month-filter-layout{display:flex;align-items:center;justify-content:space-between;gap:16px}.training-workspace .attendance-month-filter-copy{display:flex;align-items:center;gap:11px;min-width:0;color:var(--training-petrol)}.training-workspace .attendance-month-filter-copy>i{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:10px;background:#e3f3ef;color:var(--training-teal)}.training-workspace .attendance-month-filter-copy div{display:grid;gap:2px}.training-workspace .attendance-month-filter-copy strong{font-size:.78rem;font-weight:900}.training-workspace .attendance-month-filter-copy span{color:var(--training-muted);font-size:.67rem}.training-workspace .attendance-month-filter-controls{display:flex;align-items:center;gap:8px}.training-workspace .attendance-month-filter-controls label{color:#4b625e;font-size:.7rem;font-weight:850}.training-workspace .attendance-month-filter-controls select{width:190px;min-height:39px;border-color:#bfd5d0;border-radius:9px}.training-workspace .attendance-registry-card{border-color:#cbdedb!important}.training-workspace .attendance-registry-header{border-bottom:3px solid var(--training-gold)!important}.training-workspace .attendance-registry-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}.training-workspace .attendance-registry-actions button{min-height:39px}
-                .training-workspace .attendance-registry-filters{display:grid;grid-template-columns:auto minmax(260px,1fr) minmax(180px,240px);align-items:end;gap:11px;margin-bottom:15px;padding:13px;border:1px solid #d2e2df;border-radius:12px;background:#f6faf9}.training-workspace .attendance-registry-filter-title{display:inline-flex;align-items:center;gap:7px;min-height:41px;color:var(--training-petrol);font-size:.74rem;font-weight:900}.training-workspace .attendance-registry-filter-title i{color:var(--training-teal)}.training-workspace .attendance-registry-search-wrap{position:relative;min-width:0}.training-workspace .attendance-registry-search-wrap>i{position:absolute;z-index:1;inset-inline-start:12px;top:50%;color:#6f8782;font-size:.75rem;transform:translateY(-50%)}.training-workspace .attendance-registry-search-wrap input{width:100%!important;max-width:none!important;min-height:41px;padding-inline-start:34px!important}.training-workspace .attendance-registry-filters>select{width:100%!important;max-width:none!important;min-height:41px}.training-workspace #attendance-registry-table{min-width:1580px}
-                @media(max-width:760px){.training-workspace #attendance-analytics-reset-btn{flex:1}.training-workspace .attendance-month-filter-layout{align-items:flex-start;flex-direction:column}.training-workspace .attendance-month-filter-controls{width:100%;flex-wrap:wrap}.training-workspace .attendance-month-filter-controls select{flex:1;width:auto;min-width:160px}.training-workspace .attendance-registry-filters{grid-template-columns:1fr}.training-workspace .attendance-registry-filter-title{min-height:auto}.training-workspace .attendance-registry-actions{width:100%;justify-content:stretch}.training-workspace .attendance-registry-actions button{flex:1 1 145px}}
+                .training-workspace #training-tab-content[data-tab="contractors"] .contractor-analytics-shell-card {
+                    overflow: hidden;
+                    border-color: #c9ddd8 !important;
+                    background: #edf5f3 !important;
+                    box-shadow: 0 16px 36px rgba(7,59,58,.11) !important;
+                }
+                .training-workspace #training-tab-content[data-tab="contractors"] .contractor-analytics-card-header {
+                    padding: clamp(17px,2vw,24px) !important;
+                    border-bottom: 4px solid var(--training-gold) !important;
+                    background:
+                        radial-gradient(circle at 10% -30%,rgba(45,212,191,.23),transparent 34%),
+                        linear-gradient(120deg,#062f2f,var(--training-petrol-2) 76%,#12675f) !important;
+                }
+                .training-workspace #training-tab-content[data-tab="contractors"] .contractor-analytics-card-header::before { display: none; }
+                .training-workspace .contractor-analytics-header-layout {
+                    display: flex;align-items: center;justify-content: space-between;gap: 18px;min-width: 0;
+                }
+                .training-workspace .contractor-analytics-heading { min-width: 0; }
+                .training-workspace .contractor-analytics-eyebrow {
+                    display: inline-flex;align-items: center;gap: 7px;margin-bottom: 6px;color: #99f6e4;
+                    font-size: .61rem;font-weight: 900;letter-spacing: .11em;text-transform: uppercase;
+                }
+                .training-workspace .contractor-analytics-card-header .card-title {
+                    display: flex;align-items: center;gap: 10px;margin: 0 !important;color: #fff !important;
+                    font-size: clamp(1.05rem,1.8vw,1.35rem) !important;
+                }
+                .training-workspace .contractor-analytics-card-header .card-title i {
+                    display: inline-flex;align-items: center;justify-content: center;width: 38px;height: 38px;margin: 0 !important;
+                    border: 1px solid rgba(255,255,255,.18);border-radius: 11px;background: rgba(255,255,255,.1);color: #fde68a;
+                }
+                .training-workspace .contractor-analytics-heading p { margin: 7px 0 0;color: rgba(255,255,255,.68);font-size: .76rem;line-height: 1.65; }
+                .training-workspace .contractor-analytics-header-tools { display: flex;align-items: center;justify-content: flex-end;gap: 9px;flex-wrap: wrap; }
+                .training-workspace .contractor-analytics-live-pill {
+                    display: inline-flex;align-items: center;gap: 7px;min-height: 36px;padding: 7px 11px;
+                    border: 1px solid rgba(153,246,228,.28);border-radius: 999px;background: rgba(15,118,110,.38);color: #ccfbf1;font-size: .68rem;font-weight: 800;
+                }
+                .training-workspace .contractor-analytics-live-pill::before { content: "";width: 7px;height: 7px;border-radius: 50%;background: #5eead4;box-shadow: 0 0 0 4px rgba(94,234,212,.13); }
+                .training-workspace #contractor-analytics-reset-btn,
+                .training-workspace #attendance-analytics-reset-btn {
+                    min-height: 38px;padding: 8px 13px !important;border: 1px solid rgba(255,255,255,.22) !important;
+                    border-radius: 10px !important;background: rgba(255,255,255,.1) !important;color: #fff !important;box-shadow: none !important;
+                }
+                .training-workspace #contractor-analytics-reset-btn:hover,
+                .training-workspace #attendance-analytics-reset-btn:hover { background: rgba(255,255,255,.18) !important; }
+                .training-workspace .contractor-analytics-card-body { padding: clamp(12px,1.8vw,18px) !important; }
+                .training-workspace #contractor-analytics-dashboard { min-width: 0;contain: layout style; }
+                .training-workspace .contractor-analytics-section { display: flex !important;flex-direction: column;gap: 14px !important;min-width: 0;font-family: inherit; }
+                .training-workspace .contractor-analytics-snapshot {
+                    order: 0;display: flex;align-items: center;justify-content: space-between;gap: 12px;flex-wrap: wrap;
+                    padding: 11px 14px;border: 1px solid #cadeda;border-radius: 12px;background: linear-gradient(110deg,#fff,#f4faf8);color: #49635f;
+                }
+                .training-workspace .contractor-analytics-snapshot-copy { display: flex;align-items: center;gap: 9px;min-width: 0;font-size: .74rem; }
+                .training-workspace .contractor-analytics-snapshot-copy i { color: var(--training-teal); }
+                .training-workspace .contractor-analytics-filter-count { padding: 5px 9px;border-radius: 999px;background: #e3f4f0;color: #0b625c;font-size: .66rem;font-weight: 900; }
+                .training-workspace .contractor-analytics-kpi-grid { order: 1;display: grid;grid-template-columns: repeat(6,minmax(0,1fr));gap: 10px; }
+                .training-workspace .contractor-analytics-kpi-card {
+                    position: relative;overflow: hidden;min-width: 0;min-height: 92px;padding: 14px !important;
+                    border: 1px solid #d5e5e1;border-radius: 13px;background: #fff !important;box-shadow: 0 6px 16px rgba(7,59,58,.065) !important;
+                }
+                .training-workspace .contractor-analytics-kpi-card::after { content: "";position: absolute;inset-block: 0;inset-inline-start: 0;width: 4px;background: var(--kpi-accent,#0f766e); }
+                .training-workspace .contractor-analytics-kpi-card .kpi-label { margin-bottom: 9px;color: #627773 !important;font-size: .67rem;font-weight: 850; }
+                .training-workspace .contractor-analytics-kpi-card .kpi-label i { display: inline-flex;align-items: center;justify-content: center;width: 25px;height: 25px;border-radius: 7px;background: color-mix(in srgb,var(--kpi-accent,#0f766e) 12%,white);color: var(--kpi-accent,#0f766e); }
+                .training-workspace .contractor-analytics-kpi-card .kpi-value { color: #163c39 !important;font-size: clamp(1.15rem,2vw,1.55rem);font-weight: 900;font-variant-numeric: tabular-nums; }
+                .training-workspace .contractor-analytics-kpi-card.kpi-purple{--kpi-accent:#7c3aed}.training-workspace .contractor-analytics-kpi-card.kpi-green{--kpi-accent:#059669}.training-workspace .contractor-analytics-kpi-card.kpi-amber{--kpi-accent:#d97706}.training-workspace .contractor-analytics-kpi-card.kpi-blue{--kpi-accent:#2563eb}.training-workspace .contractor-analytics-kpi-card.kpi-pink{--kpi-accent:#be185d}.training-workspace .contractor-analytics-kpi-card.kpi-indigo{--kpi-accent:#4f46e5}
+                .training-workspace .contractor-analytics-slicers { order: 2;padding: 16px 17px;border: 1px solid #cfdfdc;border-radius: 14px;background: #fff;box-shadow: 0 6px 18px rgba(7,59,58,.055); }
+                .training-workspace .contractor-analytics-slicers-header { display: flex;align-items: center;justify-content: space-between;margin-bottom: 13px;padding-bottom: 11px;border-color: #e1ece9; }
+                .training-workspace .contractor-analytics-slicers-title { color: var(--training-petrol);font-size: .82rem;font-weight: 900; }
+                .training-workspace .contractor-analytics-slicers-title i { display: inline-flex;align-items: center;justify-content: center;width: 30px;height: 30px;border-radius: 8px;background: #e7f5f2;color: var(--training-teal); }
+                .training-workspace .contractor-analytics-slicers-grid { display: grid;grid-template-columns: repeat(6,minmax(0,1fr));gap: 11px;margin: 0; }
+                .training-workspace .contractor-analytics-slicers-grid .search-full { grid-column: span 2; }
+                .training-workspace .contractor-analytics-slicers-grid .filter-group { display: flex;flex-direction: column;gap: 6px;min-width: 0; }
+                .training-workspace .contractor-analytics-slicers-grid .filter-group label { color: #405b57;font-size: .68rem;font-weight: 850; }
+                .training-workspace .contractor-analytics-slicers-grid .filter-group label i { color: var(--training-teal); }
+                .training-workspace .contractor-analytics-slicers-grid .filter-group select,.training-workspace .contractor-analytics-slicers-grid .filter-group input { width: 100%;min-width: 0;min-height: 41px;padding: 8px 10px;border: 1.5px solid #c9dcd8;border-radius: 9px;font-size: .76rem;transition: border-color .16s ease,box-shadow .16s ease; }
+                .training-workspace .contractor-analytics-slicers-grid .filter-group select:focus,.training-workspace .contractor-analytics-slicers-grid .filter-group input:focus { border-color: var(--training-teal);box-shadow: 0 0 0 3px rgba(15,118,110,.11);transform: none; }
+                .training-workspace .contractor-analytics-tabs-bar { order: 3;padding: 10px;border: 0;border-radius: 13px;background: var(--training-petrol);box-shadow: 0 8px 20px rgba(7,59,58,.13); }
+                .training-workspace .contractor-analytics-tabs-bar .tabs-row { display: flex;align-items: center;justify-content: space-between;gap: 9px;flex-wrap: wrap; }
+                .training-workspace .contractor-analytics-tabs-bar .tabs-group { display: flex;align-items: center;gap: 6px;flex-wrap: wrap; }
+                .training-workspace .contractor-analytics-tab { min-height: 39px;padding: 8px 13px;border: 1px solid rgba(255,255,255,.14);border-radius: 9px;background: rgba(255,255,255,.075);color: rgba(255,255,255,.78);font-size: .72rem;font-weight: 800;box-shadow: none; }
+                .training-workspace .contractor-analytics-tab:hover { border-color: rgba(255,255,255,.3);background: rgba(255,255,255,.14);color: #fff; }
+                .training-workspace .contractor-analytics-tab.active { border-color: #f3ca59;background: linear-gradient(135deg,#edc653,#c9961e);color: #203d39;box-shadow: 0 5px 12px rgba(0,0,0,.18); }
+                .training-workspace .contractor-analytics-sort-box { min-height: 39px;padding: 5px 8px;border-color: rgba(255,255,255,.15);background: rgba(255,255,255,.08); }
+                .training-workspace .contractor-analytics-sort-group,.training-workspace .contractor-analytics-sort-box { display: flex;align-items: center;gap: 7px;flex-wrap: wrap; }
+                .training-workspace .contractor-analytics-sort-box label { color: rgba(255,255,255,.72); }.training-workspace .contractor-analytics-sort-box label i{color:#fde68a}
+                .training-workspace .contractor-analytics-sort-box select { min-height: 30px !important;border: 0 !important;background: #fff;color: #274945;font-size: .69rem; }
+                .training-workspace .contractor-analytics-content { order: 4;min-width: 0;min-height: 280px;padding: 14px;border: 1px solid #cfdfdc;border-radius: 14px;background: #fff;box-shadow: 0 7px 20px rgba(7,59,58,.06); }
+                .training-workspace .contractor-analytics-pivot-wrap,.training-workspace .contractor-analytics-details-wrap { max-width: 100%;border-color: #cddfdb;border-radius: 11px;box-shadow: none;scrollbar-color: #6f9d96 #e8f1ef; }
+                .training-workspace .contractor-analytics-pivot-table tr { transition: background-color .14s ease; }.training-workspace .contractor-analytics-pivot-table tr:hover{transform:none!important}
+                .training-workspace .contractor-analytics-pivot-table tr:focus-visible { outline: 3px solid rgba(215,169,47,.55);outline-offset: -3px; }
+                .training-workspace .contractor-analytics-pivot-table .label-cell { color: #0d625c;font-weight: 800; }.training-workspace .contractor-analytics-pivot-table .label-cell .dot{background:var(--training-gold)}
+                .training-workspace .contractor-analytics-pivot-footnote { color: #69807c; }
+                .training-workspace .contractor-analytics-details-footer { display: flex;align-items: center;justify-content: space-between;gap: 10px;margin-top: 9px;flex-wrap: wrap;color: #69807c;font-size: .7rem; }
+                .training-workspace .contractor-analytics-empty { display: grid;min-height: 220px;place-items: center;align-content: center;gap: 8px;border: 2px dashed #bad7d1;border-radius: 12px;background: #f4faf8;color: #57716c;text-align: center; }
+                .training-workspace .contractor-analytics-empty i { color: #75aaa1;font-size: 2rem; }
+                .training-workspace #training-tab-content[data-tab="attendance"] .attendance-analytics-shell-card {
+                    overflow: hidden;
+                    border-color: #c9ddd8 !important;
+                    background: #edf5f3 !important;
+                    box-shadow: 0 16px 36px rgba(7,59,58,.11) !important;
+                }
+                .training-workspace #training-tab-content[data-tab="attendance"] .attendance-analytics-card-header {
+                    padding: clamp(17px,2vw,24px) !important;
+                    border-bottom: 4px solid var(--training-gold) !important;
+                    background: radial-gradient(circle at 10% -30%,rgba(45,212,191,.23),transparent 34%),linear-gradient(120deg,#062f2f,var(--training-petrol-2) 76%,#12675f) !important;
+                }
+                .training-workspace #training-tab-content[data-tab="attendance"] .attendance-analytics-card-header::before { display: none; }
+                .training-workspace #attendance-analytics-dashboard { min-width: 0;contain: layout style; }
+                .training-workspace .attendance-details-wrap { overflow: auto;max-height: 450px; }
+                .training-workspace .attendance-month-filter-card {
+                    overflow: hidden;border-color: #cbdedb !important;background: linear-gradient(115deg,#fff,#f2f8f6) !important;
+                }
+                .training-workspace .attendance-month-filter-card .card-body { padding: 14px 17px !important; }
+                .training-workspace .attendance-month-filter-layout { display: flex;align-items: center;justify-content: space-between;gap: 16px; }
+                .training-workspace .attendance-month-filter-copy { display: flex;align-items: center;gap: 11px;min-width: 0;color: var(--training-petrol); }
+                .training-workspace .attendance-month-filter-copy > i { display: inline-flex;align-items: center;justify-content: center;width: 38px;height: 38px;border-radius: 10px;background: #e3f3ef;color: var(--training-teal); }
+                .training-workspace .attendance-month-filter-copy div { display: grid;gap: 2px; }
+                .training-workspace .attendance-month-filter-copy strong { font-size: .78rem;font-weight: 900; }
+                .training-workspace .attendance-month-filter-copy span { color: var(--training-muted);font-size: .67rem; }
+                .training-workspace .attendance-month-filter-controls { display: flex;align-items: center;gap: 8px; }
+                .training-workspace .attendance-month-filter-controls label { color: #4b625e;font-size: .7rem;font-weight: 850; }
+                .training-workspace .attendance-month-filter-controls select { width: 190px;min-height: 39px;border-color: #bfd5d0;border-radius: 9px; }
+                .training-workspace .attendance-month-filter-controls button { min-height: 39px;border-radius: 9px !important; }
+                .training-workspace .attendance-registry-card { border-color: #cbdedb !important; }
+                .training-workspace .attendance-registry-header { border-bottom: 3px solid var(--training-gold) !important; }
+                .training-workspace .attendance-registry-actions { display: flex;align-items: center;justify-content: flex-end;gap: 8px;flex-wrap: wrap; }
+                .training-workspace .attendance-registry-actions button { min-height: 39px; }
+                .training-workspace .attendance-registry-filters {
+                    display: grid;grid-template-columns: auto minmax(260px,1fr) minmax(180px,240px);align-items: end;gap: 11px;margin-bottom: 15px;padding: 13px;
+                    border: 1px solid #d2e2df;border-radius: 12px;background: #f6faf9;
+                }
+                .training-workspace .attendance-registry-filter-title { display: inline-flex;align-items: center;gap: 7px;min-height: 41px;color: var(--training-petrol);font-size: .74rem;font-weight: 900; }
+                .training-workspace .attendance-registry-filter-title i { color: var(--training-teal); }
+                .training-workspace .attendance-registry-search-wrap { position: relative;min-width: 0; }
+                .training-workspace .attendance-registry-search-wrap > i { position: absolute;z-index: 1;inset-inline-start: 12px;top: 50%;color: #6f8782;font-size: .75rem;transform: translateY(-50%); }
+                .training-workspace .attendance-registry-search-wrap input { width: 100% !important;max-width: none !important;min-height: 41px;padding-inline-start: 34px !important; }
+                .training-workspace .attendance-registry-filters > select { width: 100% !important;max-width: none !important;min-height: 41px; }
+                .training-workspace #attendance-registry-table { min-width: 1580px; }
+                @media(max-width:1180px){.training-workspace .contractor-analytics-kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.training-workspace .contractor-analytics-slicers-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+                @media(max-width:760px){.training-workspace .contractor-analytics-header-layout{align-items:flex-start;flex-direction:column}.training-workspace .contractor-analytics-header-tools{width:100%;justify-content:stretch}.training-workspace #contractor-analytics-reset-btn,.training-workspace #attendance-analytics-reset-btn{flex:1}.training-workspace .contractor-analytics-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.training-workspace .contractor-analytics-slicers-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.training-workspace .contractor-analytics-slicers-grid .search-full{grid-column:1/-1}.training-workspace .contractor-analytics-tabs-bar .tabs-row{align-items:stretch}.training-workspace .contractor-analytics-tabs-bar .tabs-group{display:grid;grid-template-columns:1fr;width:100%}.training-workspace .contractor-analytics-sort-group,.training-workspace .contractor-analytics-sort-box{width:100%}.training-workspace .contractor-analytics-content{padding:9px}.training-workspace .contractor-analytics-details-footer{align-items:flex-start;flex-direction:column}.training-workspace .attendance-month-filter-layout{align-items:flex-start;flex-direction:column}.training-workspace .attendance-month-filter-controls{width:100%;flex-wrap:wrap}.training-workspace .attendance-month-filter-controls select{flex:1;width:auto;min-width:160px}.training-workspace .attendance-registry-filters{grid-template-columns:1fr}.training-workspace .attendance-registry-filter-title{min-height:auto}.training-workspace .attendance-registry-actions{width:100%;justify-content:stretch}.training-workspace .attendance-registry-actions button{flex:1 1 145px}}
+                @media(max-width:480px){.training-workspace .contractor-analytics-live-pill{display:none}.training-workspace .contractor-analytics-kpi-grid,.training-workspace .contractor-analytics-slicers-grid{grid-template-columns:1fr}.training-workspace .contractor-analytics-slicers-grid .search-full{grid-column:auto}.training-workspace .contractor-analytics-kpi-card{min-height:72px;flex-direction:row;align-items:center;justify-content:space-between}.training-workspace .contractor-analytics-kpi-card .kpi-label{margin:0}.training-workspace .contractor-analytics-snapshot{align-items:flex-start;flex-direction:column}}
                 .training-workspace #training-tab-content .legal-kpi-grid { gap: 12px; }
                 .training-workspace #training-tab-content .legal-kpi-card {
                     border: 1px solid var(--training-line) !important;
@@ -372,8 +501,22 @@ const Training = {
                 [data-theme="dark"] .training-workspace #training-tab-content table tbody td { border-color: #2f4c49 !important; background: #142927; color: #e4efed; }
                 [data-theme="dark"] .training-workspace #training-tab-content table tbody tr:nth-child(even) td { background: #18312f; }
                 [data-theme="dark"] .training-workspace #training-tab-content table tbody tr:hover td { background: #38412d !important; }
-                [data-theme="dark"] .training-workspace .contractor-analytics-snapshot,[data-theme="dark"] .training-workspace .contractor-analytics-slicers,[data-theme="dark"] .training-workspace .contractor-analytics-kpi-card,[data-theme="dark"] .training-workspace .contractor-analytics-content{border-color:#365b57;background:#142927!important;color:#e4efed}[data-theme="dark"] .training-workspace .contractor-analytics-kpi-card .kpi-value,[data-theme="dark"] .training-workspace .contractor-analytics-slicers-title,[data-theme="dark"] .training-workspace .contractor-analytics-slicers-grid .filter-group label{color:#e4efed!important}[data-theme="dark"] .training-workspace .contractor-analytics-filter-count{background:#1c4541;color:#a7f3d0}
-                [data-theme=dark] .training-workspace .attendance-month-filter-card,[data-theme=dark] .training-workspace .attendance-registry-filters{border-color:#365b57!important;background:#142927!important;color:#e4efed}[data-theme=dark] .training-workspace .attendance-month-filter-copy,[data-theme=dark] .training-workspace .attendance-month-filter-controls label,[data-theme=dark] .training-workspace .attendance-registry-filter-title{color:#e4efed}[data-theme=dark] .training-workspace .attendance-analytics-section select,[data-theme=dark] .training-workspace .attendance-analytics-section input,[data-theme=dark] .training-workspace .attendance-month-filter-controls select,[data-theme=dark] .training-workspace .attendance-registry-filters input,[data-theme=dark] .training-workspace .attendance-registry-filters select{border-color:#456763!important;background:#0d201f!important;color:#eef7f5!important}[data-theme=dark] .training-workspace .attendance-analytics-section .label-cell,[data-theme=dark] .training-workspace .attendance-analytics-section .contractor-analytics-pivot-footnote,[data-theme=dark] .training-workspace .attendance-analytics-section .contractor-analytics-details-footer{color:#c6d9d5!important}
+                [data-theme="dark"] .training-workspace .contractor-analytics-snapshot,[data-theme="dark"] .training-workspace .contractor-analytics-slicers,[data-theme="dark"] .training-workspace .contractor-analytics-kpi-card,[data-theme="dark"] .training-workspace .contractor-analytics-content { border-color:#365b57;background:#142927 !important;color:#e4efed }
+                [data-theme="dark"] .training-workspace .contractor-analytics-kpi-card .kpi-value,[data-theme="dark"] .training-workspace .contractor-analytics-slicers-title,[data-theme="dark"] .training-workspace .contractor-analytics-slicers-grid .filter-group label { color:#e4efed !important }
+                [data-theme="dark"] .training-workspace .contractor-analytics-filter-count { background:#1c4541;color:#a7f3d0 }
+                [data-theme="dark"] .training-workspace .attendance-month-filter-card,
+                [data-theme="dark"] .training-workspace .attendance-registry-filters { border-color:#365b57 !important;background:#142927 !important;color:#e4efed }
+                [data-theme="dark"] .training-workspace .attendance-month-filter-copy,
+                [data-theme="dark"] .training-workspace .attendance-month-filter-controls label,
+                [data-theme="dark"] .training-workspace .attendance-registry-filter-title { color:#e4efed }
+                [data-theme="dark"] .training-workspace .attendance-analytics-section select,
+                [data-theme="dark"] .training-workspace .attendance-analytics-section input,
+                [data-theme="dark"] .training-workspace .attendance-month-filter-controls select,
+                [data-theme="dark"] .training-workspace .attendance-registry-filters input,
+                [data-theme="dark"] .training-workspace .attendance-registry-filters select { border-color:#456763 !important;background:#0d201f !important;color:#eef7f5 !important; }
+                [data-theme="dark"] .training-workspace .attendance-analytics-section .label-cell,
+                [data-theme="dark"] .training-workspace .attendance-analytics-section .contractor-analytics-pivot-footnote,
+                [data-theme="dark"] .training-workspace .attendance-analytics-section .contractor-analytics-details-footer { color:#c6d9d5 !important; }
                 @media (max-width: 1180px) {
                     .training-workspace .training-hero-layout { align-items: flex-start; flex-direction: column; }
                     .training-workspace .training-hero-actions { justify-content: flex-start; width: 100%; }
@@ -411,7 +554,6 @@ const Training = {
             </style>
         `;
     },
-
     currentEditId: null,
     trainingAnalysisCharts: null,
     /** يمنع طلبات متوازية متعددة لنفس تحميل بيانات التدريب */
@@ -1836,9 +1978,14 @@ const Training = {
             currentDashboard.innerHTML = this.renderContractorAnalyticsDashboard(model, state);
             this.bindContractorAnalyticsEvents(monthFilter);
         };
-        if (this._contractorAnalyticsRenderFrame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(this._contractorAnalyticsRenderFrame);
-        if (typeof requestAnimationFrame === 'function') this._contractorAnalyticsRenderFrame = requestAnimationFrame(render);
-        else render();
+        if (this._contractorAnalyticsRenderFrame && typeof cancelAnimationFrame === 'function') {
+            cancelAnimationFrame(this._contractorAnalyticsRenderFrame);
+        }
+        if (typeof requestAnimationFrame === 'function') {
+            this._contractorAnalyticsRenderFrame = requestAnimationFrame(render);
+        } else {
+            render();
+        }
     },
 
     bindContractorAnalyticsEvents(monthFilter = '') {
@@ -9749,13 +9896,14 @@ const Training = {
                         <i class="fas fa-times ml-1"></i>مسح الكل
                     </button>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
                     ${[
                         {id:'train-af-status',   icon:'fas fa-circle',            color:'#10b981', label:'الحالة'},
                         {id:'train-af-type',     icon:'fas fa-tag',               color:'#4f46e5', label:'نوع التدريب'},
                         {id:'train-af-trainer',  icon:'fas fa-chalkboard-teacher', color:'#f59e0b', label:'المدرب'},
                         {id:'train-af-factory',  icon:'fas fa-industry',           color:'#6366f1', label:'المصنع'},
                         {id:'train-af-location', icon:'fas fa-map-marker-alt',    color:'#3b82f6', label:'الموقع'},
+                        {id:'train-af-dept',     icon:'fas fa-users-cog',          color:'#ec4899', label:'الإدارة'},
                     ].map(f => `
                         <div>
                             <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;"><i class="${f.icon}" style="color:${f.color};margin-left:4px;"></i>${f.label}</label>
@@ -9808,6 +9956,20 @@ const Training = {
                 </div>
             </div>
 
+            <!-- ── Row: تحليل المصانع الرئيسية ── -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-industry" style="color:#0284c7;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">توزيع ونسب البرامج التدريبية حسب المصانع الرئيسية</span>
+                    </div>
+                    <span style="font-size:0.72rem;color:#64748b;">انقر على أي مصنع لتصفية لوحة التحكم تلقائياً</span>
+                </div>
+                <div id="train-factories-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;padding:16px;background:#f8fafc;">
+                    <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">جارٍ التحميل…</div>
+                </div>
+            </div>
+
             <!-- ── Row 2: المدربون + المواضيع ── -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
@@ -9815,9 +9977,8 @@ const Training = {
                         <i class="fas fa-chalkboard-teacher" style="color:#f59e0b;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">أكثر المدربين (أعلى 10)</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="train-chart-trainer"></canvas>
-                        <div id="train-chart-trainer-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    <div id="train-trainers-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
@@ -9825,33 +9986,30 @@ const Training = {
                         <i class="fas fa-book" style="color:#10b981;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">أكثر المواضيع (أعلى 10)</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="train-chart-topic"></canvas>
-                        <div id="train-chart-topic-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    <div id="train-topics-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
                     </div>
                 </div>
             </div>
 
-            <!-- ── Row 3: المصنع + الموقع ── -->
+            <!-- ── Row 3: المصنع + توزيع المتدربين حسب الإدارات ── -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-industry" style="color:#6366f1;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">حسب المصنع (أعلى 8)</span>
+                        <i class="fas fa-map-marker-alt" style="color:#3b82f6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">المصنع (الموقع الفرعي الأكثر نشاطاً - أعلى 10)</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="train-chart-factory"></canvas>
-                        <div id="train-chart-factory-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    <div id="train-locs-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-map-marker-alt" style="color:#3b82f6;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">حسب الموقع (أعلى 8)</span>
+                        <i class="fas fa-users-cog" style="color:#4f46e5;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">تفاصيل توزيع المتدربين حسب الإدارات</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="train-chart-location"></canvas>
-                        <div id="train-chart-location-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    <div id="train-depts-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
                     </div>
                 </div>
             </div>
@@ -14225,12 +14383,59 @@ const Training = {
         try { this.ensureData(); } catch(e) {}
         const period  = parseInt(this._trainPeriod || '0', 10);
         // دمج برامج الموظفين والمقاولين مع تطبيع حقول العرض
-        const _norm = x => ({
-            ...x,
-            _locationDisplay: x.locationName || (x.location && x.factory ? (this.getPlaceName ? this.getPlaceName(x.location, x.factory) : x.location) : x.location) || 'غير محدد',
-            _factoryDisplay:  x.factoryName  || x.factory || 'غير محدد',
-            _trainer:         x.trainer || x.conductedBy || 'غير محدد',
-        });
+        const sites = this.getSiteOptions();
+        const _norm = x => {
+            const rawFactory = String(x.factoryName || x.factory || '').trim();
+            const rawLoc = String(x.locationName || x.location || '').trim();
+            
+            let factory = 'غير محدد';
+            const locParts = rawLoc.split(' - ');
+            const factoryParts = rawFactory.split(' - ');
+            const firstPartFactory = factoryParts[0]?.trim() || '';
+            const firstPartLoc = locParts[0]?.trim() || '';
+            
+            const matchedSite = sites.find(s => 
+                s.name.trim() === rawFactory || 
+                s.id === rawFactory || 
+                s.name.trim() === rawLoc ||
+                s.id === rawLoc ||
+                (firstPartFactory && s.name.trim() === firstPartFactory) ||
+                (firstPartFactory && s.id === firstPartFactory) ||
+                (firstPartLoc && s.name.trim() === firstPartLoc) ||
+                (firstPartLoc && s.id === firstPartLoc)
+            );
+            
+            if (matchedSite) {
+                factory = matchedSite.name.trim();
+            } else if (firstPartFactory && firstPartFactory !== '—' && firstPartFactory !== 'undefined' && firstPartFactory !== 'غير محدد') {
+                factory = firstPartFactory;
+            } else if (firstPartLoc && firstPartLoc !== '—' && firstPartLoc !== 'undefined' && firstPartLoc !== 'غير محدد') {
+                const matchedSiteLoc = sites.find(s => s.name.trim() === firstPartLoc || s.id === firstPartLoc);
+                if (matchedSiteLoc) {
+                    factory = matchedSiteLoc.name.trim();
+                } else {
+                    factory = firstPartLoc;
+                }
+            }
+            
+            let sub = x.locationName || x.location || '';
+            const subParts = sub.split(' - ');
+            let sublocation = subParts[1]?.trim() || subParts[0]?.trim() || '';
+            if (sublocation === factory || !sublocation || sublocation === '—' || sublocation === 'undefined' || sublocation === 'غير محدد') {
+                sublocation = 'موقع عام / غير محدد';
+            }
+            
+            const rawTopic = String(x.topic || x.name || x.subject || '').trim();
+            const cleanTopic = (rawTopic === '' || rawTopic === '—' || rawTopic === 'undefined' || rawTopic === 'null') ? 'غير محدد' : rawTopic;
+
+            return {
+                ...x,
+                _factoryDisplay: factory,
+                _locationDisplay: sublocation,
+                _trainer: x.trainer || x.conductedBy || 'غير محدد',
+                _topicDisplay: cleanTopic
+            };
+        };
         const allT    = (AppState.appData?.training || []).concat(AppState.appData?.contractorTrainings || []).concat(
             (AppState.appData?.legalTrainings || []).map(lt => ({
                 ...lt,
@@ -14318,17 +14523,249 @@ const Training = {
 
         this._tDrawTrend('train-chart-trend', t);
 
-        const trainerG = this._tGroupBy(t, '_trainer', 10);
-        this._tDrawHBar('train-chart-trainer', trainerG.labels, trainerG.data, 'rgba(245,158,11,0.75)');
+        // ملء قائمة أكثر المدربين (تفاعلية)
+        const trainersListEl = document.getElementById('train-trainers-list');
+        if (trainersListEl) {
+            if (total === 0) {
+                trainersListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
+            } else {
+                const trainerG = this._tGroupBy(t, '_trainer', 10);
+                trainersListEl.innerHTML = trainerG.labels.map((label, idx) => {
+                    const count = trainerG.data[idx];
+                    const pct = Math.round((count / total) * 100);
+                    return `
+                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;cursor:pointer;transition:all .2s;" 
+                             onmouseover="this.style.transform='translateX(-2px)';" onmouseout="this.style.transform='';"
+                             data-value="${Utils.escapeHTML(label)}"
+                             onclick="const el = document.getElementById('train-af-trainer'); if(el){el.value=this.getAttribute('data-value'); el.dispatchEvent(new Event('change'));}">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${Utils.escapeHTML(label)}">${Utils.escapeHTML(label)}</span>
+                                <span style="font-size:0.75rem;font-weight:700;color:#f59e0b;flex-shrink:0;">${count} برنامج (${pct}%)</span>
+                            </div>
+                            <div style="width:100%;height:6px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #fcd34d 0%, #f59e0b 100%);border-radius:9999px;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
 
-        const topicG = this._tGroupBy(t, 'topic', 10);
-        this._tDrawHBar('train-chart-topic', topicG.labels, topicG.data, 'rgba(16,185,129,0.75)');
+        // ملء قائمة أكثر المواضيع (تفاعلية)
+        const topicsListEl = document.getElementById('train-topics-list');
+        if (topicsListEl) {
+            if (total === 0) {
+                topicsListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
+            } else {
+                // تصفية أي مواضيع "غير محدد" من الظهور
+                const topicG = this._tGroupBy(t.filter(x => x._topicDisplay !== 'غير محدد'), '_topicDisplay', 10);
+                topicsListEl.innerHTML = topicG.labels.map((label, idx) => {
+                    const count = topicG.data[idx];
+                    const pct = Math.round((count / total) * 100);
+                    return `
+                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;cursor:pointer;transition:all .2s;" 
+                             onmouseover="this.style.transform='translateX(-2px)';" onmouseout="this.style.transform='';"
+                             data-value="${Utils.escapeHTML(label)}"
+                             onclick="const searchInput = document.getElementById('training-search-input'); if(searchInput){searchInput.value=this.getAttribute('data-value'); searchInput.dispatchEvent(new Event('input'));}">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${Utils.escapeHTML(label)}">${Utils.escapeHTML(label)}</span>
+                                <span style="font-size:0.75rem;font-weight:700;color:#10b981;flex-shrink:0;">${count} برنامج (${pct}%)</span>
+                            </div>
+                            <div style="width:100%;height:6px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #6ee7b7 0%, #10b981 100%);border-radius:9999px;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
 
-        const factG = this._tGroupBy(t, '_factoryDisplay', 8);
-        this._tDrawHBar('train-chart-factory', factG.labels, factG.data, 'rgba(99,102,241,0.75)');
+        // ملء كروت المصانع الرئيسية التفاعلية للتدريب
+        const factoriesCardsEl = document.getElementById('train-factories-cards');
+        if (factoriesCardsEl) {
+            if (total === 0) {
+                factoriesCardsEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">لا توجد بيانات</div>`;
+            } else {
+                const officialSites = this.getSiteOptions();
+                factoriesCardsEl.innerHTML = officialSites.map((site, index) => {
+                    const siteName = site.name.trim();
+                    const sitePermits = t.filter(p => (p._factoryDisplay || '').trim() === siteName);
+                    const siteTotal = sitePermits.length;
+                    const sitePct = Math.round((siteTotal / total) * 100) || 0;
+                    const siteCompleted = sitePermits.filter(p => p.status === 'مكتمل').length;
+                    const sitePlanned = sitePermits.filter(p => p.status === 'مخطط' || p.status === 'قادم').length;
+                    
+                    const colors = [
+                        { primary: '#4f46e5', light: '#eef2ff', progress: 'linear-gradient(90deg, #818cf8 0%, #4f46e5 100%)' },
+                        { primary: '#10b981', light: '#ecfdf5', progress: 'linear-gradient(90deg, #34d399 0%, #10b981 100%)' },
+                        { primary: '#f59e0b', light: '#fffbeb', progress: 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)' }
+                    ];
+                    const theme = colors[index % colors.length];
+                    
+                    return `
+                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);transition:all .2s;cursor:pointer;" 
+                             onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.08)';this.style.borderColor='${theme.primary}'" 
+                             onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)';this.style.borderColor='#e2e8f0'"
+                             onclick="const el = document.getElementById('train-af-factory'); if(el){el.value='${siteName}'; el.dispatchEvent(new Event('change'));}">
+                            
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div style="width:36px;height:36px;background:${theme.light};border-radius:8px;display:flex;align-items:center;justify-content:center;color:${theme.primary};">
+                                        <i class="fas fa-industry" style="font-size:16px;"></i>
+                                    </div>
+                                    <span style="font-size:0.9rem;font-weight:800;color:#1e293b;">${Utils.escapeHTML(siteName)}</span>
+                                </div>
+                                <span style="font-size:1.15rem;font-weight:900;color:${theme.primary};">${sitePct}%</span>
+                            </div>
+                            
+                            <div style="width:100%;height:8px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${sitePct}%;height:100%;background:${theme.progress};border-radius:9999px;"></div>
+                            </div>
+                            
+                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px;border-top:1px solid #f1f5f9;padding-top:12px;">
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.65rem;color:#64748b;margin-bottom:2px;">البرامج</div>
+                                    <div style="font-size:0.85rem;font-weight:800;color:#1e293b;">${siteTotal}</div>
+                                </div>
+                                <div style="text-align:center;border-left:1px solid #f1f5f9;border-right:1px solid #f1f5f9;">
+                                    <div style="font-size:0.65rem;color:#10b981;margin-bottom:2px;">مكتملة</div>
+                                    <div style="font-size:0.85rem;font-weight:800;color:#10b981;">${siteCompleted}</div>
+                                </div>
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.65rem;color:#f59e0b;margin-bottom:2px;">مخططة</div>
+                                    <div style="font-size:0.85rem;font-weight:800;color:#f59e0b;">${sitePlanned}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
 
-        const locG = this._tGroupBy(t, '_locationDisplay', 8);
-        this._tDrawHBar('train-chart-location', locG.labels, locG.data, 'rgba(59,130,246,0.75)');
+        // حساب الموقع والموقع الفرعي الأكثر نشاطاً في التدريب
+        const combCounts = {};
+        const officialSiteNames = this.getSiteOptions().map(s => s.name.trim());
+        t.forEach(p => {
+            const loc = String(p._factoryDisplay || 'غير محدد').trim() || 'غير محدد';
+            if (officialSiteNames.includes(loc)) {
+                const sub = String(p._locationDisplay || 'موقع عام / غير محدد').trim() || 'موقع عام / غير محدد';
+                const key = `${loc} - ${sub}`;
+                combCounts[key] = (combCounts[key] || 0) + 1;
+            }
+        });
+
+        let sortedCombs = Object.entries(combCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10);
+
+        sortedCombs.sort((a, b) => {
+            const factoryA = a[0].split(' - ')[0];
+            const factoryB = b[0].split(' - ')[0];
+            if (factoryA !== factoryB) {
+                return factoryA.localeCompare(factoryB, 'ar');
+            }
+            return b[1] - a[1];
+        });
+
+        const locsListEl = document.getElementById('train-locs-list');
+        if (locsListEl) {
+            if (total === 0) {
+                locsListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
+            } else {
+                locsListEl.innerHTML = sortedCombs.map(([comb, count]) => {
+                    const parts = comb.split(' - ');
+                    const factory = parts[0] || 'غير محدد';
+                    const sub = parts[1] || 'موقع عام';
+                    const pct = Math.round((count / total) * 100);
+                    return `
+                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;cursor:pointer;transition:all .2s;" 
+                             onmouseover="this.style.transform='translateX(-2px)';" onmouseout="this.style.transform='';"
+                             data-value="${Utils.escapeHTML(sub)}"
+                             onclick="const el = document.getElementById('train-af-location'); if(el){el.value=this.getAttribute('data-value'); el.dispatchEvent(new Event('change'));}">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
+                                    <span style="background:#e0f2fe;color:#0369a1;font-size:0.68rem;padding:2px 8px;border-radius:6px;font-weight:700;white-space:nowrap;flex-shrink:0;">${Utils.escapeHTML(factory)}</span>
+                                    <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${Utils.escapeHTML(sub)}">${Utils.escapeHTML(sub)}</span>
+                                </div>
+                                <span style="font-size:0.75rem;font-weight:700;color:#0369a1;flex-shrink:0;margin-right:8px;">${count} برنامج (${pct}%)</span>
+                            </div>
+                            <div style="width:100%;height:6px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #38bdf8 0%, #0284c7 100%);border-radius:9999px;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // حساب المتدربين حسب الإدارات من سجل الحضور الفعلي والبيانات المحلية
+        const deptCounts = {};
+        let totalTrainees = 0;
+
+        const filteredTrainIds = new Set(t.map(x => String(x.id).trim()));
+        const filteredTrainTopics = new Set(t.map(x => String(x.topic || x.name || '').trim().toLowerCase()));
+
+        const allAttendance = AppState.appData.trainingAttendance || [];
+        const matchedAttendance = allAttendance.filter(r => 
+            (r.trainingId && filteredTrainIds.has(String(r.trainingId).trim())) ||
+            (r.topic && filteredTrainTopics.has(String(r.topic).trim().toLowerCase()))
+        );
+
+        // 1. حساب من سجل الحضور الفعلي الموثق
+        matchedAttendance.forEach(r => {
+            const dept = String(r.department || 'غير محدد').trim() || 'غير محدد';
+            const cleanDept = (dept === 'undefined' || dept === 'null' || dept === '—' || dept === '') ? 'غير محدد' : dept;
+            deptCounts[cleanDept] = (deptCounts[cleanDept] || 0) + 1;
+            totalTrainees++;
+        });
+
+        // 2. حساب الحضور المخزن محلياً في الجلسة لتفادي النقص
+        t.forEach(x => {
+            const localParts = this.getParticipantsArray(x);
+            localParts.forEach(p => {
+                if (p && typeof p === 'object') {
+                    const isAlreadyCounted = matchedAttendance.some(r => 
+                        (r.trainingId === x.id || r.topic === x.name) && 
+                        (r.employeeName === p.name || r.employeeCode === p.code)
+                    );
+                    if (!isAlreadyCounted) {
+                        const dept = String(p.department || p.dept || 'غير محدد').trim() || 'غير محدد';
+                        const cleanDept = (dept === 'undefined' || dept === 'null' || dept === '—' || dept === '' || dept === 'غير حدد') ? 'غير محدد' : dept;
+                        deptCounts[cleanDept] = (deptCounts[cleanDept] || 0) + 1;
+                        totalTrainees++;
+                    }
+                }
+            });
+        });
+
+        const sortedDepts = Object.entries(deptCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10);
+
+        const deptsListEl = document.getElementById('train-depts-list');
+        if (deptsListEl) {
+            if (totalTrainees === 0) {
+                deptsListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات حضور</div>`;
+            } else {
+                deptsListEl.innerHTML = sortedDepts.map(([dept, count]) => {
+                    const pct = Math.round((count / totalTrainees) * 100);
+                    return `
+                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;cursor:pointer;transition:all .2s;" 
+                             onmouseover="this.style.transform='translateX(-2px)';" onmouseout="this.style.transform='';"
+                             data-value="${Utils.escapeHTML(dept)}"
+                             onclick="const el = document.getElementById('train-af-dept'); if(el){el.value=this.getAttribute('data-value'); el.dispatchEvent(new Event('change'));}">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${Utils.escapeHTML(dept)}">${Utils.escapeHTML(dept)}</span>
+                                <span style="font-size:0.75rem;font-weight:700;color:#4f46e5;flex-shrink:0;">${count} متدرب (${pct}%)</span>
+                            </div>
+                            <div style="width:100%;height:6px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #818cf8 0%, #4f46e5 100%);border-radius:9999px;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
 
         this._tDrawParticipants('train-chart-participants', t);
 
@@ -14441,8 +14878,17 @@ const Training = {
         fill('train-af-status',   unique(x => String(x.status||'').trim()));
         fill('train-af-type',     unique(x => String(x.trainingType||'').trim()));
         fill('train-af-trainer',  unique(x => String(x._trainer||'').trim()));
-        fill('train-af-factory',  unique(x => String(x._factoryDisplay||'').trim()));
+        
+        const officialSiteNames = this.getSiteOptions().map(s => s.name.trim());
+        const locs = unique(x => String(x._factoryDisplay||'').trim()).filter(v => officialSiteNames.includes(v));
+        fill('train-af-factory',  locs);
+        
         fill('train-af-location', unique(x => String(x._locationDisplay||'').trim()));
+
+        // ملء مرشح الإدارة
+        const allAttendance = AppState.appData.trainingAttendance || [];
+        const depts = [...new Set(allAttendance.map(r => String(r.department || '').trim()).filter(v => v && v !== 'غير محدد' && v !== '—'))].sort();
+        fill('train-af-dept', depts);
     },
 
     // ── مساعد: تطبيق الفلاتر ──
@@ -14453,7 +14899,8 @@ const Training = {
         const fTrainer  = get('train-af-trainer');
         const fFactory  = get('train-af-factory');
         const fLocation = get('train-af-location');
-        const hasAny    = [fStatus, fType, fTrainer, fFactory, fLocation].some(v => v !== '');
+        const fDept     = get('train-af-dept');
+        const hasAny    = [fStatus, fType, fTrainer, fFactory, fLocation, fDept].some(v => v !== '');
         const badge = document.getElementById('train-filter-badge');
         if (badge) badge.style.display = hasAny ? 'inline' : 'none';
         return records.filter(x => {
@@ -14462,6 +14909,16 @@ const Training = {
             if (fTrainer  && String(x._trainer||'').trim()           !== fTrainer)  return false;
             if (fFactory  && String(x._factoryDisplay||'').trim()    !== fFactory)  return false;
             if (fLocation && String(x._locationDisplay||'').trim()   !== fLocation) return false;
+            if (fDept) {
+                const parts = this.getParticipantsArray(x);
+                const hasDeptLocal = parts.some(p => p && String(p.department || p.dept || '').trim() === fDept);
+                const allAttendance = AppState.appData.trainingAttendance || [];
+                const hasDeptAttendance = allAttendance.some(r => 
+                    (r.trainingId === x.id || r.topic === x.name) && 
+                    String(r.department || '').trim() === fDept
+                );
+                if (!hasDeptLocal && !hasDeptAttendance) return false;
+            }
             return true;
         });
     },
@@ -14561,6 +15018,15 @@ const Training = {
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
+                onClick: (event, elements) => {
+                    if (elements && elements.length > 0) {
+                        const index = elements[0].index;
+                        const clickedMonth = months[index];
+                        const mStr = `${clickedMonth.year}-${String(clickedMonth.month + 1).padStart(2, '0')}`;
+                        this._trainMonthFilter = this._trainMonthFilter === mStr ? '' : mStr;
+                        this.updateTrainingAnalyticsDashboard();
+                    }
+                },
                 plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } },
                 scales: { x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45 } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f8fafc' } } }
             }
@@ -14597,11 +15063,23 @@ const Training = {
             type: 'bar',
             data: {
                 labels: months.map(m => m.label),
-                datasets: [{ label: 'المشاركون', data: counts, backgroundColor: 'rgba(236,72,153,0.7)', borderRadius: 6, borderSkipped: false }]
+                datasets: [
+                    { label: 'المشاركون', data: counts, backgroundColor: counts.map(c => c === Math.max(...counts) ? 'rgba(236,72,153,0.85)' : 'rgba(236,72,153,0.5)'), borderRadius: 6, borderSkipped: false, order: 1 },
+                    { label: 'الاتجاه', data: counts, type: 'line', borderColor: 'rgba(236,72,153,0.95)', backgroundColor: 'rgba(236,72,153,0.08)', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#ec4899', tension: 0.4, fill: true, order: 0 }
+                ]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} متدرب` } } },
+                onClick: (event, elements) => {
+                    if (elements && elements.length > 0) {
+                        const index = elements[0].index;
+                        const clickedMonth = months[index];
+                        const mStr = `${clickedMonth.year}-${String(clickedMonth.month + 1).padStart(2, '0')}`;
+                        this._trainMonthFilter = this._trainMonthFilter === mStr ? '' : mStr;
+                        this.updateTrainingAnalyticsDashboard();
+                    }
+                },
+                plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } },
                 scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f8fafc' } } }
             }
         });
@@ -14693,7 +15171,7 @@ const Training = {
                 pdf.text('Training Analytics Report', margin, 9, { align: 'left' });
                 pdf.setFontSize(8);
                 pdf.setFont(undefined, 'normal');
-                pdf.text('HSE Management System — Training Analysis Dashboard', margin, 15, { align: 'left' });
+                pdf.text('SafetyHub | ICAPP — Training Analysis Dashboard', margin, 15, { align: 'left' });
                 // التاريخ + الصفحة (يمين — English date format)
                 // (enDate/enTime defined above)
                 pdf.setFontSize(8.5);
@@ -14724,7 +15202,7 @@ const Training = {
                 pdf.setFontSize(7.5);
                 pdf.setTextColor(67, 56, 202); // indigo-700
                 pdf.setFont(undefined, 'bold');
-                pdf.text('HSE Management System', margin, footerY + 5, { align: 'left' });
+                pdf.text('SafetyHub | ICAPP', margin, footerY + 5, { align: 'left' });
                 pdf.setFont(undefined, 'normal');
                 pdf.setFontSize(6.5);
                 pdf.setTextColor(100, 116, 139);
@@ -14790,16 +15268,17 @@ const Training = {
         const resetBtn = document.getElementById('train-filter-reset-btn');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
-                ['train-af-status','train-af-type','train-af-trainer','train-af-factory','train-af-location'].forEach(id => {
+                ['train-af-status','train-af-type','train-af-trainer','train-af-factory','train-af-location','train-af-dept'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.value = '';
                 });
+                this._trainMonthFilter = '';
                 this.updateTrainingAnalyticsDashboard();
             });
         }
 
         // قوائم الفلاتر
-        ['train-af-status','train-af-type','train-af-trainer','train-af-factory','train-af-location'].forEach(id => {
+        ['train-af-status','train-af-type','train-af-trainer','train-af-factory','train-af-location','train-af-dept'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', () => this.updateTrainingAnalyticsDashboard());
         });
@@ -14863,181 +15342,12 @@ const Training = {
         return { total: items.length, compliant, nonCompliant, expiringSoon, planned, completed, overdue, complianceRate };
     },
 
-    _legalRegisterSubTab: 'register',
-
-    LEGAL_LAW_TYPES: [
-        { value: 'law', label: 'قانون' },
-        { value: 'regulation', label: 'لائحة / قرار وزاري' },
-        { value: 'decree', label: 'مرسوم' },
-        { value: 'standard', label: 'مواصفة قياسية' },
-        { value: 'code', label: 'كود / دليل' },
-        { value: 'other', label: 'أخرى' }
-    ],
-
-    LEGAL_REGISTER_STATUSES: [
-        { value: 'applicable', label: 'نافذ', color: 'green' },
-        { value: 'amended', label: 'معدل', color: 'amber' },
-        { value: 'repealed', label: 'ملغي', color: 'red' },
-        { value: 'pending', label: 'قيد الإصدار', color: 'blue' }
-    ],
-
-    LEGAL_PRIORITIES: [
-        { value: 'high', label: 'عالية', color: 'red' },
-        { value: 'medium', label: 'متوسطة', color: 'amber' },
-        { value: 'low', label: 'منخفضة', color: 'green' }
-    ],
-
-    LEGAL_REGISTER_CATEGORIES: [
-        { value: 'labor', label: 'قوانين العمل' },
-        { value: 'safety', label: 'السلامة والصحة المهنية' },
-        { value: 'environment', label: 'البيئة' },
-        { value: 'civil_defense', label: 'الدفاع المدني والحريق' },
-        { value: 'social_insurance', label: 'التأمينات الاجتماعية' },
-        { value: 'tax', label: 'الضرائب' },
-        { value: 'municipal', label: 'القوانين البلدية' },
-        { value: 'industry', label: 'القوانين الصناعية' },
-        { value: 'quality', label: 'الجودة والمواصفات' },
-        { value: 'other', label: 'أخرى' }
-    ],
-
-    getLegalRegisterStats() {
-        const items = AppState.appData.legalRegister || [];
-        let applicable = 0, amended = 0, repealed = 0, pending = 0;
-        let high = 0, medium = 0, low = 0;
-        let withAmendments = 0;
-        items.forEach(r => {
-            const s = r.status || '';
-            if (s === 'applicable') applicable++;
-            else if (s === 'amended') amended++;
-            else if (s === 'repealed') repealed++;
-            else if (s === 'pending') pending++;
-            const p = r.priority || '';
-            if (p === 'high') high++;
-            else if (p === 'medium') medium++;
-            else if (p === 'low') low++;
-            let amds = r.amendments;
-            if (typeof amds === 'string') { try { amds = JSON.parse(amds); } catch (e) { amds = []; } }
-            if (Array.isArray(amds) && amds.length > 0) withAmendments++;
-        });
-        const total = items.length;
-        const complianceRate = total > 0 ? Math.round(((applicable + amended) / total) * 100) : 0;
-        return { total, applicable, amended, repealed, pending, high, medium, low, withAmendments, complianceRate };
-    },
+    
 
     renderLegalTrainingTab() {
         const stats = this.getLegalTrainingStats();
-        const regStats = this.getLegalRegisterStats();
-        const activeSub = this._legalRegisterSubTab || 'register';
         return `
-            <div class="legal-sub-tabs">
-                <button class="legal-sub-tab ${activeSub === 'register' ? 'active' : ''}" data-sub="register">
-                    <i class="fas fa-balance-scale ml-2"></i>سجل التشريعات والقوانين
-                </button>
-                <button class="legal-sub-tab ${activeSub === 'training' ? 'active' : ''}" data-sub="training">
-                    <i class="fas fa-gavel ml-2"></i>التدريبات القانونية
-                </button>
-            </div>
-
-            <div id="legal-register-section" class="${activeSub === 'register' ? '' : 'hidden'}">
-                <div class="lr-kpi-grid">
-                    <div class="lr-kpi-card lr-kpi-blue">
-                        <div class="flex items-center gap-3">
-                            <div class="kpi-icon-wrap"><i class="fas fa-book"></i></div>
-                            <div class="min-w-0">
-                                <p class="kpi-label">إجمالي التشريعات</p>
-                                <p class="kpi-value" id="lr-total-count">${regStats.total}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="lr-kpi-card lr-kpi-green">
-                        <div class="flex items-center gap-3">
-                            <div class="kpi-icon-wrap"><i class="fas fa-check-circle"></i></div>
-                            <div class="min-w-0">
-                                <p class="kpi-label">نافذ</p>
-                                <p class="kpi-value" id="lr-applicable-count">${regStats.applicable}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="lr-kpi-card lr-kpi-amber">
-                        <div class="flex items-center gap-3">
-                            <div class="kpi-icon-wrap"><i class="fas fa-pen"></i></div>
-                            <div class="min-w-0">
-                                <p class="kpi-label">معدل</p>
-                                <p class="kpi-value" id="lr-amended-count">${regStats.amended}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="lr-kpi-card lr-kpi-red">
-                        <div class="flex items-center gap-3">
-                            <div class="kpi-icon-wrap"><i class="fas fa-ban"></i></div>
-                            <div class="min-w-0">
-                                <p class="kpi-label">ملغي</p>
-                                <p class="kpi-value" id="lr-repealed-count">${regStats.repealed}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="lr-kpi-card lr-kpi-purple">
-                        <div class="flex items-center gap-3">
-                            <div class="kpi-icon-wrap"><i class="fas fa-percentage"></i></div>
-                            <div class="min-w-0">
-                                <p class="kpi-label">نسبة الامتثال</p>
-                                <p class="kpi-value" id="lr-compliance-rate">${regStats.complianceRate}%</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="lr-filters-bar">
-                    <div class="filter-group">
-                        <label>التصنيف:</label>
-                        <select id="lr-category-filter" class="form-input" style="max-width: 200px;">
-                            <option value="">الكل</option>
-                            ${this.LEGAL_REGISTER_CATEGORIES.map(c => `<option value="${c.value}">${c.label}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label>الحالة:</label>
-                        <select id="lr-status-filter" class="form-input" style="max-width: 160px;">
-                            <option value="">الكل</option>
-                            ${this.LEGAL_REGISTER_STATUSES.map(s => `<option value="${s.value}">${s.label}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label>الأولوية:</label>
-                        <select id="lr-priority-filter" class="form-input" style="max-width: 160px;">
-                            <option value="">الكل</option>
-                            ${this.LEGAL_PRIORITIES.map(p => `<option value="${p.value}">${p.label}</option>`).join('')}
-                        </select>
-                    </div>
-                    <button id="lr-reset-filter-btn" class="btn-secondary btn-sm">
-                        <i class="fas fa-redo ml-2"></i>إعادة تعيين
-                    </button>
-                    <button id="lr-add-btn" class="btn-primary btn-sm">
-                        <i class="fas fa-plus ml-2"></i>إضافة تشريع
-                    </button>
-                </div>
-
-                <div class="lr-table-card">
-                    <div class="card-header">
-                        <div class="legal-header-row">
-                            <div class="legal-title-section">
-                                <h3 class="card-title"><i class="fas fa-balance-scale ml-2"></i>سجل حصر التشريعات والقوانين</h3>
-                            </div>
-                            <div class="legal-header-actions">
-                                <div class="legal-search-wrapper">
-                                    <i class="fas fa-search legal-search-icon"></i>
-                                    <input type="text" id="lr-search" class="legal-search-input" placeholder="بحث في التشريعات...">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body" id="lr-container">
-                        <div class="text-center py-8 text-gray-500">جاري تحميل السجل…</div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="legal-training-section" class="${activeSub === 'training' ? '' : 'hidden'}">
+            <div id="legal-training-section">
                 <div class="legal-kpi-grid">
                     <div class="legal-kpi-card kpi-blue">
                         <div class="flex items-center gap-3">
@@ -15705,597 +16015,7 @@ const Training = {
     // سجل التشريعات والقوانين (Legal Register)
     // ============================================
 
-    loadLegalRegisterList() {
-        const container = document.getElementById('lr-container');
-        if (!container) return;
-
-        const stats = this.getLegalRegisterStats();
-        const ids = ['lr-total-count', 'lr-applicable-count', 'lr-amended-count', 'lr-repealed-count', 'lr-compliance-rate'];
-        const vals = [stats.total, stats.applicable, stats.amended, stats.repealed, stats.complianceRate + '%'];
-        ids.forEach((id, i) => { const el = document.getElementById(id); if (el) el.textContent = vals[i]; });
-
-        let items = AppState.appData.legalRegister || [];
-        const catFilter = document.getElementById('lr-category-filter');
-        const statusFilter = document.getElementById('lr-status-filter');
-        const priorityFilter = document.getElementById('lr-priority-filter');
-        const searchInput = document.getElementById('lr-search');
-
-        if (catFilter && catFilter.value) items = items.filter(r => r.category === catFilter.value);
-        if (statusFilter && statusFilter.value) items = items.filter(r => r.status === statusFilter.value);
-        if (priorityFilter && priorityFilter.value) items = items.filter(r => r.priority === priorityFilter.value);
-        if (searchInput && searchInput.value.trim()) {
-            const q = searchInput.value.trim().toLowerCase();
-            items = items.filter(r =>
-                (r.title || '').toLowerCase().includes(q) ||
-                (r.legalReference || '').toLowerCase().includes(q) ||
-                (r.issuingAuthority || '').toLowerCase().includes(q) ||
-                (r.lawNumber || '').toLowerCase().includes(q)
-            );
-        }
-
-        if (items.length === 0) {
-            container.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fas fa-balance-scale text-4xl mb-3 text-gray-300"></i><p>لا توجد تشريعات مسجلة</p></div>';
-            this._bindLegalRegisterEvents();
-            return;
-        }
-
-        const statusBadge = (status) => {
-            const map = {
-                'applicable': '<span class="lr-badge lr-badge-green">نافذ</span>',
-                'amended': '<span class="lr-badge lr-badge-amber">معدل</span>',
-                'repealed': '<span class="lr-badge lr-badge-red">ملغي</span>',
-                'pending': '<span class="lr-badge lr-badge-blue">قيد الإصدار</span>'
-            };
-            return map[status] || '<span class="lr-badge lr-badge-gray">—</span>';
-        };
-
-        const priorityBadge = (priority) => {
-            const map = {
-                'high': '<span class="lr-priority lr-priority-high">عالية</span>',
-                'medium': '<span class="lr-priority lr-priority-medium">متوسطة</span>',
-                'low': '<span class="lr-priority lr-priority-low">منخفضة</span>'
-            };
-            return map[priority] || '<span class="lr-priority">—</span>';
-        };
-
-        const lawTypeLabel = (type) => {
-            const found = this.LEGAL_LAW_TYPES.find(t => t.value === type);
-            return found ? found.label : type || '—';
-        };
-
-        const countAmendments = (record) => {
-            let amds = record.amendments;
-            if (typeof amds === 'string') { try { amds = JSON.parse(amds); } catch (e) { amds = []; } }
-            return Array.isArray(amds) ? amds.length : 0;
-        };
-
-        const rows = items.map(r => {
-            const amdCount = countAmendments(r);
-            return `
-            <tr>
-                <td class="text-sm font-mono text-gray-500">${r.id || '—'}</td>
-                <td class="text-sm font-medium">${r.title || '—'}</td>
-                <td class="text-sm text-gray-600">${r.issuingAuthority || '—'}</td>
-                <td class="text-sm text-gray-600">${lawTypeLabel(r.lawType)} ${r.lawNumber ? 'رقم ' + r.lawNumber : ''} ${r.lawYear ? '(' + r.lawYear + ')' : ''}</td>
-                <td class="text-sm text-gray-600">${r.legalReference || '—'}</td>
-                <td>${statusBadge(r.status)}</td>
-                <td>${priorityBadge(r.priority)}</td>
-                <td class="text-sm text-center">${r.issueDate || '—'}</td>
-                <td class="text-sm text-center">
-                    <button class="lr-amd-btn" onclick="Training.showLegalAmendments('${r.id}')" title="عرض التحديثات القانونية">
-                        <i class="fas fa-history"></i>
-                        ${amdCount > 0 ? `<span class="lr-amd-badge">${amdCount}</span>` : ''}
-                    </button>
-                </td>
-                <td>
-                    <div class="flex items-center gap-1">
-                        <button class="btn-icon btn-sm" onclick="Training.showLegalRegisterForm('${r.id}')" title="تعديل">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-icon btn-sm text-red-600" onclick="Training.deleteLegalRegisterRecord('${r.id}')" title="حذف">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>`;
-        }).join('');
-
-        container.innerHTML = `
-            <div style="overflow-x: auto;">
-                <table class="data-table lr-data-table">
-                    <thead>
-                        <tr>
-                            <th>المعرف</th>
-                            <th>التشريع / القانون</th>
-                            <th>جهة الإصدار</th>
-                            <th>النوع / الرقم</th>
-                            <th>المرجع</th>
-                            <th>الحالة</th>
-                            <th>الأولوية</th>
-                            <th>تاريخ الإصدار</th>
-                            <th>التحديثات</th>
-                            <th>إجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                </table>
-            </div>
-        `;
-        this._bindLegalRegisterEvents();
-    },
-
-    _bindLegalRegisterEvents() {
-        const catFilter = document.getElementById('lr-category-filter');
-        const statusFilter = document.getElementById('lr-status-filter');
-        const priorityFilter = document.getElementById('lr-priority-filter');
-        const searchInput = document.getElementById('lr-search');
-        const resetBtn = document.getElementById('lr-reset-filter-btn');
-        const addBtn = document.getElementById('lr-add-btn');
-
-        const reload = () => this.loadLegalRegisterList();
-
-        if (catFilter) catFilter.onchange = reload;
-        if (statusFilter) statusFilter.onchange = reload;
-        if (priorityFilter) priorityFilter.onchange = reload;
-        if (searchInput) searchInput.oninput = Utils.debounce ? Utils.debounce(reload, 300) : reload;
-        if (resetBtn) resetBtn.onclick = () => {
-            if (catFilter) catFilter.value = '';
-            if (statusFilter) statusFilter.value = '';
-            if (priorityFilter) priorityFilter.value = '';
-            if (searchInput) searchInput.value = '';
-            reload();
-        };
-        if (addBtn) addBtn.onclick = () => this.showLegalRegisterForm();
-    },
-
-    showLegalRegisterForm(editId) {
-        this.ensureData();
-        let existing = null;
-        if (editId) existing = (AppState.appData.legalRegister || []).find(r => r.id === editId);
-        const isEdit = !!existing;
-        const val = (f, def) => (existing && existing[f] != null) ? existing[f] : (def || '');
-
-        const lawTypeOpts = '<option value="">اختر النوع</option>' + this.LEGAL_LAW_TYPES.map(t =>
-            `<option value="${t.value}" ${val('lawType') === t.value ? 'selected' : ''}>${t.label}</option>`
-        ).join('');
-
-        const statusOpts = this.LEGAL_REGISTER_STATUSES.map(s =>
-            `<option value="${s.value}" ${val('status', 'applicable') === s.value ? 'selected' : ''}>${s.label}</option>`
-        ).join('');
-
-        const priorityOpts = this.LEGAL_PRIORITIES.map(p =>
-            `<option value="${p.value}" ${val('priority', 'medium') === p.value ? 'selected' : ''}>${p.label}</option>`
-        ).join('');
-
-        const catOpts = '<option value="">اختر التصنيف</option>' + this.LEGAL_REGISTER_CATEGORIES.map(c =>
-            `<option value="${c.value}" ${val('category') === c.value ? 'selected' : ''}>${c.label}</option>`
-        ).join('');
-
-        const html = `
-            <div class="modal-overlay active" id="lr-modal">
-                <div class="modal-content" style="max-width: 860px; max-height: 92vh; overflow-y: auto;">
-                    <div class="lr-modal-header">
-                        <h3><i class="fas fa-balance-scale"></i>${isEdit ? 'تعديل' : 'إضافة'} سجل تشريع وقانون</h3>
-                        <button class="modal-close" onclick="document.getElementById('lr-modal').remove()">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <form id="lr-form" onsubmit="Training.handleLegalRegisterSubmit(event)">
-                        <input type="hidden" id="lr-edit-id" value="${editId || ''}">
-                        <div class="modal-body">
-                            <div class="lr-form-section">
-                                <div class="section-title"><i class="fas fa-info-circle"></i>معلومات أساسية</div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div class="form-group col-span-2">
-                                        <label class="form-label">عنوان التشريع / القانون <span class="text-red-500">*</span></label>
-                                        <input type="text" id="lr-title" class="form-input" value="${val('title')}" required placeholder="مثال: قانون العمل رقم 12 لسنة 2003">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">جهة الإصدار <span class="text-red-500">*</span></label>
-                                        <input type="text" id="lr-issuingAuthority" class="form-input" value="${val('issuingAuthority')}" required placeholder="مثال: وزارة القوى العاملة">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">نوع التشريع <span class="text-red-500">*</span></label>
-                                        <select id="lr-lawType" class="form-input" required>${lawTypeOpts}</select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">رقم القانون / القرار</label>
-                                        <input type="text" id="lr-lawNumber" class="form-input" value="${val('lawNumber')}" placeholder="مثال: 12">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">سنة الإصدار</label>
-                                        <input type="text" id="lr-lawYear" class="form-input" value="${val('lawYear')}" placeholder="مثال: 2003">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">التصنيف <span class="text-red-500">*</span></label>
-                                        <select id="lr-category" class="form-input" required>${catOpts}</select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="lr-form-section">
-                                <div class="section-title"><i class="fas fa-calendar-alt"></i>التواريخ</div>
-                                <div class="grid grid-cols-3 gap-4">
-                                    <div class="form-group">
-                                        <label class="form-label">تاريخ الإصدار</label>
-                                        <input type="date" id="lr-issueDate" class="form-input" value="${val('issueDate')}">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">تاريخ النفاذ</label>
-                                        <input type="date" id="lr-effectiveDate" class="form-input" value="${val('effectiveDate')}">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">تاريخ المراجعة القادم</label>
-                                        <input type="date" id="lr-nextReviewDate" class="form-input" value="${val('nextReviewDate')}">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="lr-form-section">
-                                <div class="section-title"><i class="fas fa-file-alt"></i>التفاصيل القانونية</div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div class="form-group">
-                                        <label class="form-label">المرجع القانوني</label>
-                                        <input type="text" id="lr-legalReference" class="form-input" value="${val('legalReference')}" placeholder="مثال: قانون العمل">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">المواد / البنود</label>
-                                        <input type="text" id="lr-legalArticles" class="form-input" value="${val('legalArticles')}" placeholder="مثال: 208، 209، 210">
-                                    </div>
-                                    <div class="form-group col-span-2">
-                                        <label class="form-label">نطاق التطبيق</label>
-                                        <input type="text" id="lr-scopeOfApplication" class="form-input" value="${val('scopeOfApplication')}" placeholder="مثال: جميع المنشآت الخاضعة للقانون">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">الجهة المسؤولة</label>
-                                        <input type="text" id="lr-responsibleDepartment" class="form-input" value="${val('responsibleDepartment')}" placeholder="مثال: إدارة الموارد البشرية">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">الأولوية</label>
-                                        <select id="lr-priority" class="form-input">${priorityOpts}</select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">الحالة</label>
-                                        <select id="lr-status" class="form-input">${statusOpts}</select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">تاريخ المراجعة القادم</label>
-                                        <input type="date" id="lr-nextReviewDate2" class="form-input" value="${val('nextReviewDate')}">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="lr-form-section">
-                                <div class="section-title"><i class="fas fa-align-left"></i>ملخص وملاحظات</div>
-                                <div class="form-group">
-                                    <textarea id="lr-summary" class="form-input" rows="3" placeholder="ملخص التشريع ومتطلباته">${val('summary')}</textarea>
-                                </div>
-                                <div class="form-group" style="margin-top: 12px;">
-                                    <textarea id="lr-notes" class="form-input" rows="2" placeholder="ملاحظات إضافية">${val('notes')}</textarea>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn-secondary" onclick="document.getElementById('lr-modal').remove()">إلغاء</button>
-                            <button type="submit" class="btn-primary">
-                                <i class="fas fa-save ml-2"></i>${isEdit ? 'حفظ التعديلات' : 'إضافة التشريع'}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        `;
-
-        const existingModal = document.getElementById('lr-modal');
-        if (existingModal) existingModal.remove();
-        document.body.insertAdjacentHTML('beforeend', html);
-    },
-
-    async handleLegalRegisterSubmit(e) {
-        e.preventDefault();
-        const editId = document.getElementById('lr-edit-id')?.value;
-        const isEdit = !!editId;
-
-        const g = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
-
-        const data = {
-            title: g('lr-title'),
-            issuingAuthority: g('lr-issuingAuthority'),
-            lawType: g('lr-lawType'),
-            lawNumber: g('lr-lawNumber'),
-            lawYear: g('lr-lawYear'),
-            category: g('lr-category'),
-            issueDate: g('lr-issueDate'),
-            effectiveDate: g('lr-effectiveDate'),
-            nextReviewDate: g('lr-nextReviewDate') || g('lr-nextReviewDate2'),
-            legalReference: g('lr-legalReference'),
-            legalArticles: g('lr-legalArticles'),
-            scopeOfApplication: g('lr-scopeOfApplication'),
-            responsibleDepartment: g('lr-responsibleDepartment'),
-            priority: g('lr-priority'),
-            status: g('lr-status'),
-            summary: g('lr-summary'),
-            notes: g('lr-notes')
-        };
-
-        if (!data.title || !data.issuingAuthority || !data.lawType || !data.category) {
-            if (typeof Notification !== 'undefined' && Notification.error)
-                Notification.error('يرجى ملء الحقول المطلوبة: العنوان، جهة الإصدار، النوع، التصنيف');
-            return;
-        }
-
-        const modal = document.getElementById('lr-modal');
-
-        try {
-            if (isEdit) {
-                data.id = editId;
-                data.updatedAt = new Date().toISOString();
-                const items = AppState.appData.legalRegister || [];
-                const idx = items.findIndex(r => r.id === editId);
-                if (idx !== -1) {
-                    const existingAmendments = items[idx].amendments || [];
-                    data.amendments = existingAmendments;
-                    Object.assign(items[idx], data);
-                    this._legalRegisterLocalSaveTime = Date.now();
-                }
-                if (modal) modal.remove();
-                this.loadLegalRegisterList();
-                if (typeof Notification !== 'undefined' && Notification.success)
-                    Notification.success('تم تحديث السجل القانوني بنجاح');
-                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                    GoogleIntegration.sendRequest({
-                        action: 'updateLegalRegister',
-                        data: { registerId: editId, updateData: data }
-                    }).catch(() => {});
-                }
-            } else {
-                data.createdAt = new Date().toISOString();
-                data.updatedAt = data.createdAt;
-                data.amendments = [];
-                if (!AppState.appData.legalRegister) AppState.appData.legalRegister = [];
-                const tempId = 'LR-LOCAL-' + Date.now();
-                data.id = tempId;
-                AppState.appData.legalRegister.unshift(data);
-                this._legalRegisterLocalSaveTime = Date.now();
-                if (modal) modal.remove();
-                this.loadLegalRegisterList();
-                if (typeof Notification !== 'undefined' && Notification.success)
-                    Notification.success('جاري حفظ السجل القانوني...');
-                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                    const serverData = Object.assign({}, data);
-                    delete serverData.id;
-                    GoogleIntegration.sendRequest({
-                        action: 'addLegalRegister',
-                        data: serverData
-                    }).then(resp => {
-                        if (resp && resp.success && resp.data && resp.data.id) {
-                            const items = AppState.appData.legalRegister || [];
-                            const localIdx = items.findIndex(r => r.id === tempId);
-                            if (localIdx !== -1) items[localIdx].id = resp.data.id;
-                            if (typeof Notification !== 'undefined' && Notification.success)
-                                Notification.success('تم حفظ السجل القانوني بنجاح ✅');
-                        }
-                    }).catch(err => Utils.safeWarn('⚠️ خطأ في حفظ السجل القانوني:', err));
-                }
-            }
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
-        } catch (error) {
-            Utils.safeError('❌ خطأ في حفظ السجل القانوني:', error);
-            if (typeof Notification !== 'undefined' && Notification.error)
-                Notification.error('حدث خطأ أثناء الحفظ');
-        }
-    },
-
-    async deleteLegalRegisterRecord(registerId) {
-        if (!confirm('هل أنت متأكد من حذف هذا السجل القانوني؟')) return;
-        try {
-            const items = AppState.appData.legalRegister || [];
-            AppState.appData.legalRegister = items.filter(r => r.id !== registerId);
-            this._legalRegisterLocalSaveTime = Date.now();
-            if (typeof DataManager !== 'undefined' && DataManager.save) DataManager.save();
-            this.loadLegalRegisterList();
-            if (typeof Notification !== 'undefined' && Notification.success)
-                Notification.success('تم حذف السجل القانوني');
-            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                GoogleIntegration.sendRequest({
-                    action: 'deleteLegalRegister',
-                    data: { registerId }
-                }).catch(err => Utils.safeWarn('⚠️ تعذر حذف السجل القانوني من الخادم:', err));
-            }
-        } catch (error) {
-            Utils.safeError('❌ خطأ في حذف السجل القانوني:', error);
-        }
-    },
-
-    // آلية التحديثات القانونية (Amendments)
-
-    showLegalAmendments(registerId) {
-        this.ensureData();
-        const record = (AppState.appData.legalRegister || []).find(r => r.id === registerId);
-        if (!record) { if (typeof Notification !== 'undefined' && Notification.error) Notification.error('السجل القانوني غير موجود'); return; }
-
-        let amendments = record.amendments;
-        if (typeof amendments === 'string') { try { amendments = JSON.parse(amendments); } catch (e) { amendments = []; } }
-        if (!Array.isArray(amendments)) amendments = [];
-
-        const html = `
-            <div class="modal-overlay active" id="lr-amendments-modal">
-                <div class="modal-content" style="max-width: 780px; max-height: 90vh; overflow-y: auto;">
-                    <div class="lr-modal-header lr-modal-header-alt">
-                        <h3><i class="fas fa-history"></i>التحديثات القانونية</h3>
-                        <button class="modal-close" onclick="document.getElementById('lr-amendments-modal').remove()">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="lr-amd-record-info">
-                            <div><i class="fas fa-file-alt"></i> ${record.title || '—'}</div>
-                            <div><i class="fas fa-hashtag"></i> ${record.id || ''}</div>
-                        </div>
-
-                        ${amendments.length === 0 ? `
-                            <div class="lr-amd-empty">
-                                <i class="fas fa-history text-4xl text-gray-300 mb-3"></i>
-                                <p>لا توجد تحديثات قانونية مسجلة لهذا التشريع</p>
-                            </div>
-                        ` : `
-                            <div class="lr-amd-timeline">
-                                ${amendments.map((a, i) => {
-                                    const side = i % 2 === 0 ? 'right' : 'left';
-                                    return `
-                                    <div class="lr-amd-item lr-amd-${side}">
-                                        <div class="lr-amd-dot"></div>
-                                        <div class="lr-amd-content">
-                                            <div class="lr-amd-header">
-                                                <span class="lr-amd-num">تحديث ${a.amendmentNumber || i + 1}</span>
-                                                <span class="lr-amd-date">${a.date || ''}</span>
-                                            </div>
-                                            <h4 class="lr-amd-title">${a.title || 'تحديث'}</h4>
-                                            <p class="lr-amd-desc">${a.description || ''}</p>
-                                            ${a.affectedArticles ? `<div class="lr-amd-articles"><i class="fas fa-gavel"></i> المواد المتأثرة: ${a.affectedArticles}</div>` : ''}
-                                            ${a.newRequirements ? `<div class="lr-amd-req"><i class="fas fa-clipboard-list"></i> المتطلبات الجديدة: ${a.newRequirements}</div>` : ''}
-                                            ${a.referenceLaw ? `<div class="lr-amd-ref"><i class="fas fa-book"></i> المرجع: ${a.referenceLaw}</div>` : ''}
-                                        </div>
-                                    </div>`;
-                                }).join('')}
-                            </div>
-                        `}
-
-                        <button id="lr-add-amendment-btn" class="btn-primary btn-sm" style="width: 100%; justify-content: center; margin-top: 16px;">
-                            <i class="fas fa-plus ml-2"></i>إضافة تحديث قانوني
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        const existingModal = document.getElementById('lr-amendments-modal');
-        if (existingModal) existingModal.remove();
-        document.body.insertAdjacentHTML('beforeend', html);
-
-        document.getElementById('lr-add-amendment-btn').onclick = () => {
-            document.getElementById('lr-amendments-modal').remove();
-            this.showLegalAmendmentForm(registerId);
-        };
-    },
-
-    showLegalAmendmentForm(registerId) {
-        this.ensureData();
-        const html = `
-            <div class="modal-overlay active" id="lr-amd-form-modal">
-                <div class="modal-content" style="max-width: 640px;">
-                    <div class="lr-modal-header lr-modal-header-alt">
-                        <h3><i class="fas fa-plus-circle"></i>إضافة تحديث قانوني</h3>
-                        <button class="modal-close" onclick="document.getElementById('lr-amd-form-modal').remove()">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <form id="lr-amd-form" onsubmit="Training.handleAmendmentSubmit(event, '${registerId}')">
-                        <input type="hidden" id="lr-amd-registerId" value="${registerId}">
-                        <div class="modal-body">
-                            <div class="lr-form-section">
-                                <div class="form-group">
-                                    <label class="form-label">رقم التحديث <span class="text-red-500">*</span></label>
-                                    <input type="text" id="lr-amd-number" class="form-input" required placeholder="مثال: 1">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">تاريخ التحديث</label>
-                                    <input type="date" id="lr-amd-date" class="form-input">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">عنوان التحديث <span class="text-red-500">*</span></label>
-                                    <input type="text" id="lr-amd-title" class="form-input" required placeholder="مثال: تعديل المادة 208 من قانون العمل">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">وصف التحديث</label>
-                                    <textarea id="lr-amd-description" class="form-input" rows="3" placeholder="شرح التعديلات والتحديثات"></textarea>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">المواد المتأثرة</label>
-                                    <input type="text" id="lr-amd-articles" class="form-input" placeholder="مثال: 208، 209، 210">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">المتطلبات الجديدة</label>
-                                    <textarea id="lr-amd-requirements" class="form-input" rows="2" placeholder="المتطلبات الجديدة الناتجة عن التعديل"></textarea>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">المرجع القانوني للتعديل</label>
-                                    <input type="text" id="lr-amd-reference" class="form-input" placeholder="مثال: قانون رقم 180 لسنة 2023">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn-secondary" onclick="document.getElementById('lr-amd-form-modal').remove()">إلغاء</button>
-                            <button type="submit" class="btn-primary">
-                                <i class="fas fa-save ml-2"></i>إضافة التحديث
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        `;
-
-        const existingModal = document.getElementById('lr-amd-form-modal');
-        if (existingModal) existingModal.remove();
-        document.body.insertAdjacentHTML('beforeend', html);
-    },
-
-    async handleAmendmentSubmit(e, registerId) {
-        e.preventDefault();
-        const g = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
-
-        const amendment = {
-            id: 'AMD-' + Date.now(),
-            amendmentNumber: g('lr-amd-number'),
-            date: g('lr-amd-date'),
-            title: g('lr-amd-title'),
-            description: g('lr-amd-description'),
-            affectedArticles: g('lr-amd-articles'),
-            newRequirements: g('lr-amd-requirements'),
-            referenceLaw: g('lr-amd-reference'),
-            createdAt: new Date().toISOString()
-        };
-
-        if (!amendment.title || !amendment.amendmentNumber) {
-            if (typeof Notification !== 'undefined' && Notification.error)
-                Notification.error('يرجى إدخال رقم التحديث والعنوان');
-            return;
-        }
-
-        const items = AppState.appData.legalRegister || [];
-        const record = items.find(r => r.id === registerId);
-        if (!record) {
-            if (typeof Notification !== 'undefined' && Notification.error)
-                Notification.error('السجل القانوني غير موجود');
-            return;
-        }
-
-        let amendments = record.amendments;
-        if (typeof amendments === 'string') { try { amendments = JSON.parse(amendments); } catch (e) { amendments = []; } }
-        if (!Array.isArray(amendments)) amendments = [];
-
-        amendments.push(amendment);
-        record.amendments = amendments;
-        record.updatedAt = new Date().toISOString();
-
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
-
-        const modal = document.getElementById('lr-amd-form-modal');
-        if (modal) modal.remove();
-
-        this.loadLegalRegisterList();
-        if (typeof Notification !== 'undefined' && Notification.success)
-            Notification.success('تم إضافة التحديث القانوني بنجاح');
-
-        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-            GoogleIntegration.sendRequest({
-                action: 'updateLegalRegister',
-                data: { registerId, updateData: { amendments: JSON.stringify(amendments), updatedAt: record.updatedAt } }
-            }).catch(() => {});
-        }
-
-        this.showLegalAmendments(registerId);
-    },
+    
 
     exportLegalTrainingExcel() {
         try {

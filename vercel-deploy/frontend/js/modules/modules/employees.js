@@ -6270,7 +6270,7 @@ const Employees = {
 };
 
 Employees.getExternalWorkforceExportHeaderInfo = function (reportTitle, exportDate = new Date()) {
-    const companyName = String(AppState?.companySettings?.name || AppState?.companyName || 'Americana HSE Management System').trim();
+    const companyName = String(AppState?.companySettings?.name || AppState?.companyName || 'SafetyHub | ICAPP').trim();
     const secondaryName = String(AppState?.companySettings?.secondaryName || 'إدارة السلامة والصحة المهنية والبيئة').trim();
     const exportDateTime = (typeof Utils !== 'undefined' && typeof Utils.formatDateTime === 'function')
         ? Utils.formatDateTime(exportDate)

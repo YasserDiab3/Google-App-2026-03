@@ -149,15 +149,101 @@ const LegalDocuments = {
                         </div>
                     </div>
                     <div class="legal-tab-panel" data-tab-panel="inventory" style="display: ${this.state.activeTab === 'inventory' ? 'block' : 'none'}">
-                        <div class="content-card">
-                            <div class="card-body">
-                                <div class="empty-state">
-                                    <div style="width: 300px; margin: 0 auto 16px;">
-                                        <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
-                                            <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
+                        <div id="legal-register-section">
+                            <div class="legal-kpi-grid">
+                                <div class="legal-kpi-card kpi-blue">
+                                    <div class="flex items-center gap-3">
+                                        <div class="kpi-icon-wrap"><i class="fas fa-balance-scale"></i></div>
+                                        <div class="min-w-0">
+                                            <p class="kpi-label">إجمالي التشريعات</p>
+                                            <p class="kpi-value" id="lr-total-count">0</p>
                                         </div>
                                     </div>
-                                    <p class="text-gray-500">جاري تحميل سجل الحصر...</p>
+                                </div>
+                                <div class="legal-kpi-card kpi-green">
+                                    <div class="flex items-center gap-3">
+                                        <div class="kpi-icon-wrap"><i class="fas fa-check-circle"></i></div>
+                                        <div class="min-w-0">
+                                            <p class="kpi-label">نافذ</p>
+                                            <p class="kpi-value" id="lr-applicable-count">0</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="legal-kpi-card kpi-amber">
+                                    <div class="flex items-center gap-3">
+                                        <div class="kpi-icon-wrap"><i class="fas fa-edit"></i></div>
+                                        <div class="min-w-0">
+                                            <p class="kpi-label">معدل</p>
+                                            <p class="kpi-value" id="lr-amended-count">0</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="legal-kpi-card kpi-red">
+                                    <div class="flex items-center gap-3">
+                                        <div class="kpi-icon-wrap"><i class="fas fa-times-circle"></i></div>
+                                        <div class="min-w-0">
+                                            <p class="kpi-label">ملغي</p>
+                                            <p class="kpi-value" id="lr-repealed-count">0</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="legal-kpi-card kpi-purple">
+                                    <div class="flex items-center gap-3">
+                                        <div class="kpi-icon-wrap"><i class="fas fa-percentage"></i></div>
+                                        <div class="min-w-0">
+                                            <p class="kpi-label">نسبة النفاذ</p>
+                                            <p class="kpi-value" id="lr-compliance-rate">0%</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="legal-filters-bar">
+                                <div class="filter-group">
+                                    <label>التصنيف:</label>
+                                    <select id="lr-category-filter" class="form-input" style="max-width: 200px;">
+                                        <option value="">الكل</option>
+                                        ${this.LEGAL_REGISTER_CATEGORIES ? this.LEGAL_REGISTER_CATEGORIES.map(c => `<option value="${c.value}">${c.label}</option>`).join('') : ''}
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label>الحالة:</label>
+                                    <select id="lr-status-filter" class="form-input" style="max-width: 160px;">
+                                        <option value="">الكل</option>
+                                        ${this.LEGAL_REGISTER_STATUSES ? this.LEGAL_REGISTER_STATUSES.map(s => `<option value="${s.value}">${s.label}</option>`).join('') : ''}
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label>الأولوية:</label>
+                                    <select id="lr-priority-filter" class="form-input" style="max-width: 160px;">
+                                        <option value="">الكل</option>
+                                        ${this.LEGAL_PRIORITIES ? this.LEGAL_PRIORITIES.map(p => `<option value="${p.value}">${p.label}</option>`).join('') : ''}
+                                    </select>
+                                </div>
+                                <button id="lr-reset-filter-btn" class="btn-secondary btn-sm">
+                                    <i class="fas fa-redo ml-2"></i>إعادة تعيين
+                                </button>
+                                <button id="lr-add-btn" class="btn-primary btn-sm">
+                                    <i class="fas fa-plus ml-2"></i>إضافة تشريع
+                                </button>
+                            </div>
+
+                            <div class="lr-table-card">
+                                <div class="card-header">
+                                    <div class="legal-header-row">
+                                        <div class="legal-title-section">
+                                            <h3 class="card-title"><i class="fas fa-balance-scale ml-2"></i>سجل حصر التشريعات والقوانين</h3>
+                                        </div>
+                                        <div class="legal-header-actions">
+                                            <div class="legal-search-wrapper">
+                                                <i class="fas fa-search legal-search-icon"></i>
+                                                <input type="text" id="lr-search" class="legal-search-input" placeholder="بحث في التشريعات...">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body" id="lr-container">
+                                    <div class="text-center py-8 text-gray-500">جاري تحميل السجل…</div>
                                 </div>
                             </div>
                         </div>
@@ -223,7 +309,7 @@ const LegalDocuments = {
                         inventoryPanel.innerHTML = inventoryContent;
                         
                         if (this.state.activeTab === 'inventory') {
-                            this.loadInventoryList();
+                            this.loadLegalRegisterList();
                         }
                     }
                 } catch (error) {
@@ -929,7 +1015,7 @@ const LegalDocuments = {
             this.loadLegalDocumentsList();
             this.checkExpiringDocuments();
         } else if (active === 'inventory') {
-            this.loadInventoryList();
+            this.loadLegalRegisterList();
         }
     },
 
@@ -1632,332 +1718,854 @@ const LegalDocuments = {
         Notification.success('تم حفظ إعدادات متابعة التحديثات القانونية بنجاح');
     },
 
-    // ===== سجل حصر التشريعات والقوانين =====
-    async renderInventoryTab() {
-        return `
-            <div class="content-card">
-                <div class="card-header">
-                    <div class="flex items-center justify-between">
-                        <h2 class="card-title">
-                            <i class="fas fa-clipboard-list ml-2"></i>سجل حصر التشريعات والقوانين
-                        </h2>
-                        <div class="flex gap-2">
-                            <button id="export-legal-inventory-excel-btn" class="btn-success">
-                                <i class="fas fa-file-excel ml-2"></i>تصدير Excel
-                            </button>
-                            <button id="add-legal-inventory-btn" class="btn-primary">
-                                <i class="fas fa-plus ml-2"></i>إضافة سجل جديد
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div id="legal-inventory-table-container">
-                        <div class="empty-state">
-                            <div style="width: 300px; margin: 0 auto 16px;">
-                                <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
-                                    <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
-                                </div>
-                            </div>
-                            <p class="text-gray-500">جاري التحميل...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+    LEGAL_LAW_TYPES: [
+        { value: 'law', label: 'قانون' },
+        { value: 'regulation', label: 'لائحة / قرار وزاري' },
+        { value: 'decree', label: 'مرسوم' },
+        { value: 'standard', label: 'مواصفة قياسية' },
+        { value: 'code', label: 'كود / دليل' },
+        { value: 'other', label: 'أخرى' }
+    ],
+
+    LEGAL_REGISTER_STATUSES: [
+        { value: 'applicable', label: 'نافذ', color: 'green' },
+        { value: 'amended', label: 'معدل', color: 'amber' },
+        { value: 'repealed', label: 'ملغي', color: 'red' },
+        { value: 'pending', label: 'قيد الإصدار', color: 'blue' }
+    ],
+
+    LEGAL_PRIORITIES: [
+        { value: 'high', label: 'عالية', color: 'red' },
+        { value: 'medium', label: 'متوسطة', color: 'amber' },
+        { value: 'low', label: 'منخفضة', color: 'green' }
+    ],
+
+    LEGAL_REGISTER_CATEGORIES: [
+        { value: 'labor', label: 'قوانين العمل' },
+        { value: 'safety', label: 'السلامة والصحة المهنية' },
+        { value: 'environment', label: 'البيئة' },
+        { value: 'civil_defense', label: 'الدفاع المدني والحريق' },
+        { value: 'social_insurance', label: 'التأمينات الاجتماعية' },
+        { value: 'tax', label: 'الضرائب' },
+        { value: 'municipal', label: 'القوانين البلدية' },
+        { value: 'industry', label: 'القوانين الصناعية' },
+        { value: 'quality', label: 'الجودة والمواصفات' },
+        { value: 'other', label: 'أخرى' }
+    ],
+
+    getLegalRegisterStats() {
+        const items = AppState.appData.legalRegister || [];
+        let applicable = 0, amended = 0, repealed = 0, pending = 0;
+        let high = 0, medium = 0, low = 0;
+        let withAmendments = 0;
+        items.forEach(r => {
+            const s = r.status || '';
+            if (s === 'applicable') applicable++;
+            else if (s === 'amended') amended++;
+            else if (s === 'repealed') repealed++;
+            else if (s === 'pending') pending++;
+            const p = r.priority || '';
+            if (p === 'high') high++;
+            else if (p === 'medium') medium++;
+            else if (p === 'low') low++;
+            let amds = r.amendments;
+            if (typeof amds === 'string') { try { amds = JSON.parse(amds); } catch (e) { amds = []; } }
+            if (Array.isArray(amds) && amds.length > 0) withAmendments++;
+        });
+        const total = items.length;
+        const complianceRate = total > 0 ? Math.round(((applicable + amended) / total) * 100) : 0;
+        return { total, applicable, amended, repealed, pending, high, medium, low, withAmendments, complianceRate };
     },
 
-    async loadInventoryList() {
-        const container = document.getElementById('legal-inventory-table-container');
+
+    loadLegalRegisterList() {
+        const container = document.getElementById('lr-container');
         if (!container) return;
 
-        if (!AppState.appData.legalInventory) {
-            AppState.appData.legalInventory = [];
+        const stats = this.getLegalRegisterStats();
+        const ids = ['lr-total-count', 'lr-applicable-count', 'lr-amended-count', 'lr-repealed-count', 'lr-compliance-rate'];
+        const vals = [stats.total, stats.applicable, stats.amended, stats.repealed, stats.complianceRate + '%'];
+        ids.forEach((id, i) => { const el = document.getElementById(id); if (el) el.textContent = vals[i]; });
+
+        let items = AppState.appData.legalRegister || [];
+        const catFilter = document.getElementById('lr-category-filter');
+        const statusFilter = document.getElementById('lr-status-filter');
+        const priorityFilter = document.getElementById('lr-priority-filter');
+        const searchInput = document.getElementById('lr-search');
+
+        if (catFilter && catFilter.value) items = items.filter(r => r.category === catFilter.value);
+        if (statusFilter && statusFilter.value) items = items.filter(r => r.status === statusFilter.value);
+        if (priorityFilter && priorityFilter.value) items = items.filter(r => r.priority === priorityFilter.value);
+        if (searchInput && searchInput.value.trim()) {
+            const q = searchInput.value.trim().toLowerCase();
+            items = items.filter(r =>
+                (r.title || '').toLowerCase().includes(q) ||
+                (r.legalReference || '').toLowerCase().includes(q) ||
+                (r.issuingAuthority || '').toLowerCase().includes(q) ||
+                (r.lawNumber || '').toLowerCase().includes(q)
+            );
         }
 
-        const inventory = AppState.appData.legalInventory || [];
-
-        if (inventory.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-clipboard-list text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">لا توجد سجلات في حصر التشريعات والقوانين</p>
-                    <button id="add-legal-inventory-empty-btn" class="btn-primary mt-4">
-                        <i class="fas fa-plus ml-2"></i>
-                        إضافة سجل جديد
-                    </button>
-                </div>
-            `;
-            // ربط حدث الزر الذي تم إنشاؤه ديناميكياً
-            setTimeout(() => {
-                const addEmptyBtn = document.getElementById('add-legal-inventory-empty-btn');
-                if (addEmptyBtn) {
-                    addEmptyBtn.addEventListener('click', () => this.showInventoryForm());
-                }
-            }, 50);
+        if (items.length === 0) {
+            container.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fas fa-balance-scale text-4xl mb-3 text-gray-300"></i><p>لا توجد تشريعات مسجلة</p></div>';
+            this._bindLegalRegisterEvents();
             return;
         }
 
+        const statusBadge = (status) => {
+            const map = {
+                'applicable': '<span class="lr-badge lr-badge-green">نافذ</span>',
+                'amended': '<span class="lr-badge lr-badge-amber">معدل</span>',
+                'repealed': '<span class="lr-badge lr-badge-red">ملغي</span>',
+                'pending': '<span class="lr-badge lr-badge-blue">قيد الإصدار</span>'
+            };
+            return map[status] || '<span class="lr-badge lr-badge-gray">—</span>';
+        };
+
+        const priorityBadge = (priority) => {
+            const map = {
+                'high': '<span class="lr-priority lr-priority-high">عالية</span>',
+                'medium': '<span class="lr-priority lr-priority-medium">متوسطة</span>',
+                'low': '<span class="lr-priority lr-priority-low">منخفضة</span>'
+            };
+            return map[priority] || '<span class="lr-priority">—</span>';
+        };
+
+        const lawTypeLabel = (type) => {
+            const found = this.LEGAL_LAW_TYPES.find(t => t.value === type);
+            return found ? found.label : type || '—';
+        };
+
+        const countAmendments = (record) => {
+            let amds = record.amendments;
+            if (typeof amds === 'string') { try { amds = JSON.parse(amds); } catch (e) { amds = []; } }
+            return Array.isArray(amds) ? amds.length : 0;
+        };
+
+        const rows = items.map(r => {
+            const amdCount = countAmendments(r);
+            return `
+            <tr>
+                <td class="text-sm font-mono text-gray-500">${r.id || '—'}</td>
+                <td class="text-sm font-medium">${r.title || '—'}</td>
+                <td class="text-sm text-gray-600">${r.issuingAuthority || '—'}</td>
+                <td class="text-sm text-gray-600">${lawTypeLabel(r.lawType)} ${r.lawNumber ? 'رقم ' + r.lawNumber : ''} ${r.lawYear ? '(' + r.lawYear + ')' : ''}</td>
+                <td class="text-sm text-gray-600">${r.legalReference || '—'}</td>
+                <td>${statusBadge(r.status)}</td>
+                <td>${priorityBadge(r.priority)}</td>
+                <td class="text-sm text-center">${r.issueDate || '—'}</td>
+                <td class="text-sm text-center">
+                    <button class="lr-amd-btn" onclick="LegalDocuments.showLegalAmendments('${r.id}')" title="عرض التحديثات القانونية">
+                        <i class="fas fa-history"></i>
+                        ${amdCount > 0 ? `<span class="lr-amd-badge">${amdCount}</span>` : ''}
+                    </button>
+                </td>
+                <td>
+                    <div class="flex items-center gap-1">
+                        <button class="btn-icon btn-sm" onclick="LegalDocuments.showLegalRegisterForm('${r.id}')" title="تعديل">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon btn-sm text-red-600" onclick="LegalDocuments.deleteLegalRegisterRecord('${r.id}')" title="حذف">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+
         container.innerHTML = `
-            <div class="table-wrapper" style="overflow-x: auto;">
-                <table class="data-table">
+            <div style="overflow-x: auto;">
+                <table class="data-table lr-data-table">
                     <thead>
                         <tr>
-                            <th>م</th>
-                            <th>رقم المادة / القانون</th>
-                            <th>تاريخ الإصدار</th>
+                            <th>المعرف</th>
+                            <th>التشريع / القانون</th>
                             <th>جهة الإصدار</th>
-                            <th>بيان الالتزام</th>
-                            <th>المسئول</th>
-                            <th>موقف التطبيق</th>
-                            <th>الإجراءات</th>
+                            <th>النوع / الرقم</th>
+                            <th>المرجع</th>
+                            <th>الحالة</th>
+                            <th>الأولوية</th>
+                            <th>تاريخ الإصدار</th>
+                            <th>التحديثات</th>
+                            <th>إجراءات</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        ${inventory.map((item, index) => {
-                            const statusClass = item.applicationStatus === 'مطبق' ? 'badge-success' : 
-                                                item.applicationStatus === 'قيد التطبيق' ? 'badge-warning' : 
-                                                'badge-danger';
-                            return `
-                                <tr>
-                                    <td class="text-center">${index + 1}</td>
-                                    <td>${Utils.escapeHTML(item.lawNumber || '')}</td>
-                                    <td>${item.issueDate ? Utils.formatDate(item.issueDate) : '-'}</td>
-                                    <td>${Utils.escapeHTML(item.issuingAuthority || '')}</td>
-                                    <td>${Utils.escapeHTML(item.complianceStatement || '')}</td>
-                                    <td>${Utils.escapeHTML(item.responsible || '')}</td>
-                                    <td>
-                                        <span class="badge ${statusClass}">
-                                            ${Utils.escapeHTML(item.applicationStatus || 'غير محدد')}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="flex items-center gap-2">
-                                            <button onclick="LegalDocuments.editInventoryItem('${item.id}')" class="btn-icon btn-icon-primary" title="تعديل">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button onclick="LegalDocuments.deleteInventoryItem('${item.id}')" class="btn-icon btn-icon-danger" title="حذف">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
+                    <tbody>${rows}</tbody>
                 </table>
             </div>
         `;
+        this._bindLegalRegisterEvents();
     },
 
-    async showInventoryForm(data = null) {
-        const isEdit = !!data;
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
-            <div class="modal-content" style="max-width: 900px;">
-                <div class="modal-header">
-                    <h2 class="modal-title">${isEdit ? 'تعديل سجل حصر التشريعات والقوانين' : 'إضافة سجل جديد'}</h2>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="legal-inventory-form" class="space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">رقم المادة / القانون *</label>
-                                <input type="text" id="inventory-law-number" required class="form-input"
-                                    value="${Utils.escapeHTML(data?.lawNumber || '')}" placeholder="رقم المادة أو القانون">
+    _bindLegalRegisterEvents() {
+        const catFilter = document.getElementById('lr-category-filter');
+        const statusFilter = document.getElementById('lr-status-filter');
+        const priorityFilter = document.getElementById('lr-priority-filter');
+        const searchInput = document.getElementById('lr-search');
+        const resetBtn = document.getElementById('lr-reset-filter-btn');
+        const addBtn = document.getElementById('lr-add-btn');
+
+        const reload = () => this.loadLegalRegisterList();
+
+        if (catFilter) catFilter.onchange = reload;
+        if (statusFilter) statusFilter.onchange = reload;
+        if (priorityFilter) priorityFilter.onchange = reload;
+        if (searchInput) searchInput.oninput = Utils.debounce ? Utils.debounce(reload, 300) : reload;
+        if (resetBtn) resetBtn.onclick = () => {
+            if (catFilter) catFilter.value = '';
+            if (statusFilter) statusFilter.value = '';
+            if (priorityFilter) priorityFilter.value = '';
+            if (searchInput) searchInput.value = '';
+            reload();
+        };
+        if (addBtn) addBtn.onclick = () => this.showLegalRegisterForm();
+    },
+
+    showLegalRegisterForm(editId) {
+        this.ensureData();
+        let existing = null;
+        if (editId) existing = (AppState.appData.legalRegister || []).find(r => r.id === editId);
+        const isEdit = !!existing;
+        const val = (f, def) => (existing && existing[f] != null) ? existing[f] : (def || '');
+
+        const lawTypeOpts = '<option value="">اختر النوع</option>' + this.LEGAL_LAW_TYPES.map(t =>
+            `<option value="${t.value}" ${val('lawType') === t.value ? 'selected' : ''}>${t.label}</option>`
+        ).join('');
+
+        const statusOpts = this.LEGAL_REGISTER_STATUSES.map(s =>
+            `<option value="${s.value}" ${val('status', 'applicable') === s.value ? 'selected' : ''}>${s.label}</option>`
+        ).join('');
+
+        const priorityOpts = this.LEGAL_PRIORITIES.map(p =>
+            `<option value="${p.value}" ${val('priority', 'medium') === p.value ? 'selected' : ''}>${p.label}</option>`
+        ).join('');
+
+        const catOpts = '<option value="">اختر التصنيف</option>' + this.LEGAL_REGISTER_CATEGORIES.map(c =>
+            `<option value="${c.value}" ${val('category') === c.value ? 'selected' : ''}>${c.label}</option>`
+        ).join('');
+
+        const html = `
+            <div class="modal-overlay active" id="lr-modal">
+                <div class="modal-content" style="max-width: 860px; max-height: 92vh; overflow-y: auto;">
+                    <div class="lr-modal-header">
+                        <h3><i class="fas fa-balance-scale"></i>${isEdit ? 'تعديل' : 'إضافة'} سجل تشريع وقانون</h3>
+                        <button class="modal-close" onclick="document.getElementById('lr-modal').remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <form id="lr-form" onsubmit="LegalDocuments.handleLegalRegisterSubmit(event)">
+                        <input type="hidden" id="lr-edit-id" value="${editId || ''}">
+                        <div class="modal-body">
+                            <div class="lr-form-section">
+                                <div class="section-title"><i class="fas fa-info-circle"></i>معلومات أساسية</div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="form-group col-span-2">
+                                        <label class="form-label">عنوان التشريع / القانون <span class="text-red-500">*</span></label>
+                                        <input type="text" id="lr-title" class="form-input" value="${val('title')}" required placeholder="مثال: قانون العمل رقم 12 لسنة 2003">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">جهة الإصدار <span class="text-red-500">*</span></label>
+                                        <input type="text" id="lr-issuingAuthority" class="form-input" value="${val('issuingAuthority')}" required placeholder="مثال: وزارة القوى العاملة">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">نوع التشريع <span class="text-red-500">*</span></label>
+                                        <select id="lr-lawType" class="form-input" required>${lawTypeOpts}</select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">رقم القانون / القرار</label>
+                                        <input type="text" id="lr-lawNumber" class="form-input" value="${val('lawNumber')}" placeholder="مثال: 12">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">سنة الإصدار</label>
+                                        <input type="text" id="lr-lawYear" class="form-input" value="${val('lawYear')}" placeholder="مثال: 2003">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">التصنيف <span class="text-red-500">*</span></label>
+                                        <select id="lr-category" class="form-input" required>${catOpts}</select>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الإصدار *</label>
-                                <input type="date" id="inventory-issue-date" required class="form-input"
-                                    value="${data?.issueDate ? new Date(data.issueDate).toISOString().slice(0, 10) : ''}">
+
+                            <div class="lr-form-section">
+                                <div class="section-title"><i class="fas fa-calendar-alt"></i>التواريخ</div>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div class="form-group">
+                                        <label class="form-label">تاريخ الإصدار</label>
+                                        <input type="date" id="lr-issueDate" class="form-input" value="${val('issueDate')}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">تاريخ النفاذ</label>
+                                        <input type="date" id="lr-effectiveDate" class="form-input" value="${val('effectiveDate')}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">تاريخ المراجعة القادم</label>
+                                        <input type="date" id="lr-nextReviewDate" class="form-input" value="${val('nextReviewDate')}">
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">جهة الإصدار *</label>
-                                <input type="text" id="inventory-issuing-authority" required class="form-input"
-                                    value="${Utils.escapeHTML(data?.issuingAuthority || '')}" placeholder="جهة الإصدار">
+
+                            <div class="lr-form-section">
+                                <div class="section-title"><i class="fas fa-file-alt"></i>التفاصيل القانونية</div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="form-group">
+                                        <label class="form-label">المرجع القانوني</label>
+                                        <input type="text" id="lr-legalReference" class="form-input" value="${val('legalReference')}" placeholder="مثال: قانون العمل">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">المواد / البنود</label>
+                                        <input type="text" id="lr-legalArticles" class="form-input" value="${val('legalArticles')}" placeholder="مثال: 208، 209، 210">
+                                    </div>
+                                    <div class="form-group col-span-2">
+                                        <label class="form-label">نطاق التطبيق</label>
+                                        <input type="text" id="lr-scopeOfApplication" class="form-input" value="${val('scopeOfApplication')}" placeholder="مثال: جميع المنشآت الخاضعة للقانون">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">الجهة المسؤولة</label>
+                                        <input type="text" id="lr-responsibleDepartment" class="form-input" value="${val('responsibleDepartment')}" placeholder="مثال: إدارة الموارد البشرية">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">الأولوية</label>
+                                        <select id="lr-priority" class="form-input">${priorityOpts}</select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">الحالة</label>
+                                        <select id="lr-status" class="form-input">${statusOpts}</select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">تاريخ المراجعة القادم</label>
+                                        <input type="date" id="lr-nextReviewDate2" class="form-input" value="${val('nextReviewDate')}">
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">المسئول *</label>
-                                <input type="text" id="inventory-responsible" required class="form-input"
-                                    value="${Utils.escapeHTML(data?.responsible || '')}" placeholder="اسم المسئول">
-                            </div>
-                            <div class="col-span-2">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">بيان الالتزام *</label>
-                                <textarea id="inventory-compliance-statement" required class="form-input" rows="3"
-                                    placeholder="بيان الالتزام">${Utils.escapeHTML(data?.complianceStatement || '')}</textarea>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">موقف التطبيق *</label>
-                                <select id="inventory-application-status" required class="form-input">
-                                    <option value="">اختر موقف التطبيق</option>
-                                    <option value="مطبق" ${data?.applicationStatus === 'مطبق' ? 'selected' : ''}>مطبق</option>
-                                    <option value="قيد التطبيق" ${data?.applicationStatus === 'قيد التطبيق' ? 'selected' : ''}>قيد التطبيق</option>
-                                    <option value="غير مطبق" ${data?.applicationStatus === 'غير مطبق' ? 'selected' : ''}>غير مطبق</option>
-                                </select>
+
+                            <div class="lr-form-section">
+                                <div class="section-title"><i class="fas fa-align-left"></i>ملخص وملاحظات</div>
+                                <div class="form-group">
+                                    <textarea id="lr-summary" class="form-input" rows="3" placeholder="ملخص التشريع ومتطلباته">${val('summary')}</textarea>
+                                </div>
+                                <div class="form-group" style="margin-top: 12px;">
+                                    <textarea id="lr-notes" class="form-input" rows="2" placeholder="ملاحظات إضافية">${val('notes')}</textarea>
+                                </div>
                             </div>
                         </div>
-                        <div class="flex items-center justify-end gap-4 pt-4 border-t">
-                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                        <div class="modal-footer">
+                            <button type="button" class="btn-secondary" onclick="document.getElementById('lr-modal').remove()">إلغاء</button>
                             <button type="submit" class="btn-primary">
-                                <i class="fas fa-save ml-2"></i>${isEdit ? 'حفظ التعديلات' : 'إضافة السجل'}
+                                <i class="fas fa-save ml-2"></i>${isEdit ? 'حفظ التعديلات' : 'إضافة التشريع'}
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
         `;
-        document.body.appendChild(modal);
 
-        const form = modal.querySelector('#legal-inventory-form');
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.handleInventorySubmit(data?.id, modal);
-        });
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
+        const existingModal = document.getElementById('lr-modal');
+        if (existingModal) existingModal.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
     },
 
-    async handleInventorySubmit(editId, modal) {
-        if (!AppState.appData.legalInventory) {
-            AppState.appData.legalInventory = [];
-        }
+    async handleLegalRegisterSubmit(e) {
+        e.preventDefault();
+        const editId = document.getElementById('lr-edit-id')?.value;
+        const isEdit = !!editId;
 
-        // Helper function to safely get element value
-        const getElementValue = (id) => {
-            const element = document.getElementById(id);
-            return element ? element.value.trim() : '';
+        const g = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+
+        const data = {
+            title: g('lr-title'),
+            issuingAuthority: g('lr-issuingAuthority'),
+            lawType: g('lr-lawType'),
+            lawNumber: g('lr-lawNumber'),
+            lawYear: g('lr-lawYear'),
+            category: g('lr-category'),
+            issueDate: g('lr-issueDate'),
+            effectiveDate: g('lr-effectiveDate'),
+            nextReviewDate: g('lr-nextReviewDate') || g('lr-nextReviewDate2'),
+            legalReference: g('lr-legalReference'),
+            legalArticles: g('lr-legalArticles'),
+            scopeOfApplication: g('lr-scopeOfApplication'),
+            responsibleDepartment: g('lr-responsibleDepartment'),
+            priority: g('lr-priority'),
+            status: g('lr-status'),
+            summary: g('lr-summary'),
+            notes: g('lr-notes')
         };
 
-        const issueDateElement = document.getElementById('inventory-issue-date');
-        let issueDateISO;
-        if (issueDateElement && issueDateElement.value) {
-            try {
-                issueDateISO = new Date(issueDateElement.value).toISOString();
-            } catch (error) {
-                issueDateISO = new Date().toISOString();
-            }
-        } else {
-            issueDateISO = new Date().toISOString();
+        if (!data.title || !data.issuingAuthority || !data.lawType || !data.category) {
+            if (typeof Notification !== 'undefined' && Notification.error)
+                Notification.error('يرجى ملء الحقول المطلوبة: العنوان، جهة الإصدار، النوع، التصنيف');
+            return;
         }
 
-        const formData = {
-            id: editId || Utils.generateId('LEGAL-INV'),
-            lawNumber: getElementValue('inventory-law-number'),
-            issueDate: issueDateISO,
-            issuingAuthority: getElementValue('inventory-issuing-authority'),
-            complianceStatement: getElementValue('inventory-compliance-statement'),
-            responsible: getElementValue('inventory-responsible'),
-            applicationStatus: getElementValue('inventory-application-status'),
-            createdAt: editId ? AppState.appData.legalInventory?.find(d => d.id === editId)?.createdAt : new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
+        const modal = document.getElementById('lr-modal');
 
-        Loading.show();
         try {
-            if (editId) {
-                const index = AppState.appData.legalInventory.findIndex(d => d.id === editId);
-                if (index !== -1) {
-                    AppState.appData.legalInventory[index] = formData;
-                    Notification.success('تم تحديث السجل بنجاح');
+            if (isEdit) {
+                data.id = editId;
+                data.updatedAt = new Date().toISOString();
+                const items = AppState.appData.legalRegister || [];
+                const idx = items.findIndex(r => r.id === editId);
+                if (idx !== -1) {
+                    const existingAmendments = items[idx].amendments || [];
+                    data.amendments = existingAmendments;
+                    Object.assign(items[idx], data);
+                    this._legalRegisterLocalSaveTime = Date.now();
+                }
+                if (modal) modal.remove();
+                this.loadLegalRegisterList();
+                if (typeof Notification !== 'undefined' && Notification.success)
+                    Notification.success('تم تحديث السجل القانوني بنجاح');
+                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                    GoogleIntegration.sendRequest({
+                        action: 'updateLegalRegister',
+                        data: { registerId: editId, updateData: data }
+                    }).catch(() => {});
                 }
             } else {
-                AppState.appData.legalInventory.push(formData);
-                Notification.success('تم إضافة السجل بنجاح');
+                data.createdAt = new Date().toISOString();
+                data.updatedAt = data.createdAt;
+                data.amendments = [];
+                if (!AppState.appData.legalRegister) AppState.appData.legalRegister = [];
+                const tempId = 'LR-LOCAL-' + Date.now();
+                data.id = tempId;
+                AppState.appData.legalRegister.unshift(data);
+                this._legalRegisterLocalSaveTime = Date.now();
+                if (modal) modal.remove();
+                this.loadLegalRegisterList();
+                if (typeof Notification !== 'undefined' && Notification.success)
+                    Notification.success('جاري حفظ السجل القانوني...');
+                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                    const serverData = Object.assign({}, data);
+                    delete serverData.id;
+                    GoogleIntegration.sendRequest({
+                        action: 'addLegalRegister',
+                        data: serverData
+                    }).then(resp => {
+                        if (resp && resp.success && resp.data && resp.data.id) {
+                            const items = AppState.appData.legalRegister || [];
+                            const localIdx = items.findIndex(r => r.id === tempId);
+                            if (localIdx !== -1) items[localIdx].id = resp.data.id;
+                            if (typeof Notification !== 'undefined' && Notification.success)
+                                Notification.success('تم حفظ السجل القانوني بنجاح ✅');
+                        }
+                    }).catch(err => Utils.safeWarn('⚠️ خطأ في حفظ السجل القانوني:', err));
+                }
             }
-
-            // حفظ البيانات باستخدام window.DataManager
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
-            } else {
-                Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-            }
-            await GoogleIntegration.autoSave('LegalInventory', AppState.appData.legalInventory);
-
-            Loading.hide();
-            modal.remove();
-            this.loadInventoryList();
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
         } catch (error) {
-            Loading.hide();
-            Notification.error('حدث خطأ: ' + error.message);
+            Utils.safeError('❌ خطأ في حفظ السجل القانوني:', error);
+            if (typeof Notification !== 'undefined' && Notification.error)
+                Notification.error('حدث خطأ أثناء الحفظ');
         }
     },
 
-    async editInventoryItem(id) {
-        const item = AppState.appData.legalInventory?.find(d => d.id === id);
-        if (item) await this.showInventoryForm(item);
-    },
-
-    async deleteInventoryItem(id) {
-        if (!confirm('هل أنت متأكد من حذف هذا السجل؟')) return;
-        Loading.show();
+    async deleteLegalRegisterRecord(registerId) {
+        if (!confirm('هل أنت متأكد من حذف هذا السجل القانوني؟')) return;
         try {
-            AppState.appData.legalInventory = AppState.appData.legalInventory.filter(d => d.id !== id);
-            // حفظ البيانات باستخدام window.DataManager
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
-            } else {
-                Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+            const items = AppState.appData.legalRegister || [];
+            AppState.appData.legalRegister = items.filter(r => r.id !== registerId);
+            this._legalRegisterLocalSaveTime = Date.now();
+            if (typeof DataManager !== 'undefined' && DataManager.save) DataManager.save();
+            this.loadLegalRegisterList();
+            if (typeof Notification !== 'undefined' && Notification.success)
+                Notification.success('تم حذف السجل القانوني');
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                GoogleIntegration.sendRequest({
+                    action: 'deleteLegalRegister',
+                    data: { registerId }
+                }).catch(err => Utils.safeWarn('⚠️ تعذر حذف السجل القانوني من الخادم:', err));
             }
-            Loading.hide();
-            Notification.success('تم حذف السجل بنجاح');
-            this.loadInventoryList();
         } catch (error) {
-            Loading.hide();
-            Notification.error('حدث خطأ: ' + error.message);
+            Utils.safeError('❌ خطأ في حذف السجل القانوني:', error);
         }
     },
 
-    async exportInventoryToExcel() {
-        try {
-            Loading.show();
+    // آلية التحديثات القانونية (Amendments)
 
-            if (typeof XLSX === 'undefined') {
-                Loading.hide();
-                Notification.error('مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة');
+    showLegalAmendments(registerId) {
+        this.ensureData();
+        const record = (AppState.appData.legalRegister || []).find(r => r.id === registerId);
+        if (!record) { if (typeof Notification !== 'undefined' && Notification.error) Notification.error('السجل القانوني غير موجود'); return; }
+
+        let amendments = record.amendments;
+        if (typeof amendments === 'string') { try { amendments = JSON.parse(amendments); } catch (e) { amendments = []; } }
+        if (!Array.isArray(amendments)) amendments = [];
+
+        const html = `
+            <div class="modal-overlay active" id="lr-amendments-modal">
+                <div class="modal-content" style="max-width: 780px; max-height: 90vh; overflow-y: auto;">
+                    <div class="lr-modal-header lr-modal-header-alt">
+                        <h3><i class="fas fa-history"></i>التحديثات القانونية</h3>
+                        <button class="modal-close" onclick="document.getElementById('lr-amendments-modal').remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="lr-amd-record-info">
+                            <div><i class="fas fa-file-alt"></i> ${record.title || '—'}</div>
+                            <div><i class="fas fa-hashtag"></i> ${record.id || ''}</div>
+                        </div>
+
+                        ${amendments.length === 0 ? `
+                            <div class="lr-amd-empty">
+                                <i class="fas fa-history text-4xl text-gray-300 mb-3"></i>
+                                <p>لا توجد تحديثات قانونية مسجلة لهذا التشريع</p>
+                            </div>
+                        ` : `
+                            <div class="lr-amd-timeline">
+                                ${amendments.map((a, i) => {
+                                    const side = i % 2 === 0 ? 'right' : 'left';
+                                    return `
+                                    <div class="lr-amd-item lr-amd-${side}">
+                                        <div class="lr-amd-dot"></div>
+                                        <div class="lr-amd-content">
+                                            <div class="lr-amd-header">
+                                                <span class="lr-amd-num">تحديث ${a.amendmentNumber || i + 1}</span>
+                                                <span class="lr-amd-date">${a.date || ''}</span>
+                                            </div>
+                                            <h4 class="lr-amd-title">${a.title || 'تحديث'}</h4>
+                                            <p class="lr-amd-desc">${a.description || ''}</p>
+                                            ${a.affectedArticles ? `<div class="lr-amd-articles"><i class="fas fa-gavel"></i> المواد المتأثرة: ${a.affectedArticles}</div>` : ''}
+                                            ${a.newRequirements ? `<div class="lr-amd-req"><i class="fas fa-clipboard-list"></i> المتطلبات الجديدة: ${a.newRequirements}</div>` : ''}
+                                            ${a.referenceLaw ? `<div class="lr-amd-ref"><i class="fas fa-book"></i> المرجع: ${a.referenceLaw}</div>` : ''}
+                                        </div>
+                                    </div>`;
+                                }).join('')}
+                            </div>
+                        `}
+
+                        <button id="lr-add-amendment-btn" class="btn-primary btn-sm" style="width: 100%; justify-content: center; margin-top: 16px;">
+                            <i class="fas fa-plus ml-2"></i>إضافة تحديث قانوني
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const existingModal = document.getElementById('lr-amendments-modal');
+        if (existingModal) existingModal.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+
+        document.getElementById('lr-add-amendment-btn').onclick = () => {
+            document.getElementById('lr-amendments-modal').remove();
+            this.showLegalAmendmentForm(registerId);
+        };
+    },
+
+    showLegalAmendmentForm(registerId) {
+        this.ensureData();
+        const html = `
+            <div class="modal-overlay active" id="lr-amd-form-modal">
+                <div class="modal-content" style="max-width: 640px;">
+                    <div class="lr-modal-header lr-modal-header-alt">
+                        <h3><i class="fas fa-plus-circle"></i>إضافة تحديث قانوني</h3>
+                        <button class="modal-close" onclick="document.getElementById('lr-amd-form-modal').remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <form id="lr-amd-form" onsubmit="LegalDocuments.handleAmendmentSubmit(event, '${registerId}')">
+                        <input type="hidden" id="lr-amd-registerId" value="${registerId}">
+                        <div class="modal-body">
+                            <div class="lr-form-section">
+                                <div class="form-group">
+                                    <label class="form-label">رقم التحديث <span class="text-red-500">*</span></label>
+                                    <input type="text" id="lr-amd-number" class="form-input" required placeholder="مثال: 1">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">تاريخ التحديث</label>
+                                    <input type="date" id="lr-amd-date" class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">عنوان التحديث <span class="text-red-500">*</span></label>
+                                    <input type="text" id="lr-amd-title" class="form-input" required placeholder="مثال: تعديل المادة 208 من قانون العمل">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">وصف التحديث</label>
+                                    <textarea id="lr-amd-description" class="form-input" rows="3" placeholder="شرح التعديلات والتحديثات"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">المواد المتأثرة</label>
+                                    <input type="text" id="lr-amd-articles" class="form-input" placeholder="مثال: 208، 209، 210">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">المتطلبات الجديدة</label>
+                                    <textarea id="lr-amd-requirements" class="form-input" rows="2" placeholder="المتطلبات الجديدة الناتجة عن التعديل"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">المرجع القانوني للتعديل</label>
+                                    <input type="text" id="lr-amd-reference" class="form-input" placeholder="مثال: قانون رقم 180 لسنة 2023">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn-secondary" onclick="document.getElementById('lr-amd-form-modal').remove()">إلغاء</button>
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-save ml-2"></i>إضافة التحديث
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        const existingModal = document.getElementById('lr-amd-form-modal');
+        if (existingModal) existingModal.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+    },
+
+    async handleAmendmentSubmit(e, registerId) {
+        e.preventDefault();
+        const g = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+
+        const amendment = {
+            id: 'AMD-' + Date.now(),
+            amendmentNumber: g('lr-amd-number'),
+            date: g('lr-amd-date'),
+            title: g('lr-amd-title'),
+            description: g('lr-amd-description'),
+            affectedArticles: g('lr-amd-articles'),
+            newRequirements: g('lr-amd-requirements'),
+            referenceLaw: g('lr-amd-reference'),
+            createdAt: new Date().toISOString()
+        };
+
+        if (!amendment.title || !amendment.amendmentNumber) {
+            if (typeof Notification !== 'undefined' && Notification.error)
+                Notification.error('يرجى إدخال رقم التحديث والعنوان');
+            return;
+        }
+
+        const items = AppState.appData.legalRegister || [];
+        const record = items.find(r => r.id === registerId);
+        if (!record) {
+            if (typeof Notification !== 'undefined' && Notification.error)
+                Notification.error('السجل القانوني غير موجود');
+            return;
+        }
+
+        let amendments = record.amendments;
+        if (typeof amendments === 'string') { try { amendments = JSON.parse(amendments); } catch (e) { amendments = []; } }
+        if (!Array.isArray(amendments)) amendments = [];
+
+        amendments.push(amendment);
+        record.amendments = amendments;
+        record.updatedAt = new Date().toISOString();
+
+        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+
+        const modal = document.getElementById('lr-amd-form-modal');
+        if (modal) modal.remove();
+
+        this.loadLegalRegisterList();
+        if (typeof Notification !== 'undefined' && Notification.success)
+            Notification.success('تم إضافة التحديث القانوني بنجاح');
+
+        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+            GoogleIntegration.sendRequest({
+                action: 'updateLegalRegister',
+                data: { registerId, updateData: { amendments: JSON.stringify(amendments), updatedAt: record.updatedAt } }
+            }).catch(() => {});
+        }
+
+        this.showLegalAmendments(registerId);
+    },
+
+    exportLegalTrainingExcel() {
+        try {
+            this.ensureData();
+            const items = AppState.appData.legalTrainings || [];
+            if (items.length === 0) {
+                if (typeof Notification !== 'undefined' && Notification.warning) {
+                    Notification.warning('لا توجد بيانات للتصدير');
+                }
                 return;
             }
 
-            const inventory = AppState.appData.legalInventory || [];
+            const headers = ['الرقم', 'عنوان التدريب', 'التصنيف', 'المرجع القانوني', 'المادة/البند', 'الدورية', 'الفئة المستهدفة', 'القسم', 'المصنع', 'التاريخ المخطط', 'التاريخ الفعلي', 'المدرب', 'مؤهلات المدرب', 'المدة (ساعة)', 'المشاركين', 'الحالة', 'حالة الامتثال', 'تاريخ الانتهاء', 'الاستحقاق التالي', 'يتطلب شهادة', 'عقوبة عدم الامتثال', 'ملاحظات'];
 
-            const excelData = inventory.map((item, index) => ({
-                'م': index + 1,
-                'رقم المادة / القانون': item.lawNumber || '',
-                'تاريخ الإصدار': item.issueDate ? Utils.formatDate(item.issueDate) : '',
-                'جهة الإصدار': item.issuingAuthority || '',
-                'بيان الالتزام': item.complianceStatement || '',
-                'المسئول': item.responsible || '',
-                'موقف التطبيق': item.applicationStatus || ''
-            }));
+            const rows = items.map(t => [
+                t.id || '', t.title || '', t.category || '', t.legalReference || '', t.legalArticle || '',
+                t.frequency || '', t.targetGroup || '', t.department || '', t.factory || '',
+                t.scheduledDate || '', t.actualDate || '', t.trainer || '', t.trainerQualification || '',
+                t.duration || '', t.participantsCount || '', t.status || '', t.complianceStatus || '',
+                t.expiryDate || '', t.nextDueDate || '', t.certificateRequired || '', t.penaltyForNonCompliance || '', t.notes || ''
+            ]);
 
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(excelData);
-
-            ws['!cols'] = [
-                { wch: 5 }, { wch: 25 }, { wch: 15 }, { wch: 25 },
-                { wch: 40 }, { wch: 20 }, { wch: 15 }
-            ];
-
-            XLSX.utils.book_append_sheet(wb, ws, 'سجل حصر التشريعات');
-
-            const date = new Date().toISOString().slice(0, 10);
-            const filename = `سجل_حصر_التشريعات_والقوانين_${date}.xlsx`;
-
-            XLSX.writeFile(wb, filename);
-
-            Loading.hide();
-            Notification.success('تم تصدير سجل حصر التشريعات والقوانين بنجاح');
+            if (typeof XLSX !== 'undefined') {
+                const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'التدريبات القانونية');
+                XLSX.writeFile(wb, 'التدريبات_القانونية_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+            } else {
+                Utils.safeWarn('مكتبة XLSX غير متوفرة');
+            }
         } catch (error) {
-            Loading.hide();
-            Utils.safeError('خطأ في تصدير Excel:', error);
-            Notification.error('فشل تصدير Excel: ' + error.message);
+            Utils.safeError('❌ خطأ في تصدير Excel:', error);
         }
-    }
+    },
+
+    async exportLegalTrainingPdf() {
+        try {
+            this.ensureData();
+            const items = AppState.appData.legalTrainings || [];
+            if (items.length === 0) {
+                if (typeof Notification !== 'undefined' && Notification.warning) {
+                    Notification.warning('لا توجد بيانات للتصدير');
+                }
+                return;
+            }
+
+            const origBtn = document.getElementById('export-legal-training-pdf-btn');
+            if (origBtn) { origBtn.disabled = true; origBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-1"></i> جاري التصدير...'; }
+
+            const loadLib = (src, check) => new Promise((res, rej) => {
+                if (check()) return res();
+                const s = document.createElement('script'); s.src = src; s.onload = () => res(); s.onerror = () => rej(); document.head.appendChild(s);
+            });
+
+            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', () => typeof html2canvas !== 'undefined');
+            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => typeof window.jspdf !== 'undefined');
+
+            const stats = this.getLegalTrainingStats();
+            const container = document.getElementById('legal-training-container');
+            const origHtml = container ? container.innerHTML : '';
+
+            const companyName = (AppState && AppState.companySettings && AppState.companySettings.name)
+                ? String(AppState.companySettings.name).trim()
+                : (AppState && AppState.companyName) ? String(AppState.companyName).trim() : '';
+            const logoUrl = (AppState && (AppState.companyLogo || (AppState.companySettings && AppState.companySettings.logo)))
+                ? (AppState.companyLogo || AppState.companySettings.logo || '') : '';
+            const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="" style="max-height:50px; max-width:130px; object-fit:contain;">` : '';
+
+            const reportHtml = `
+                <div dir="rtl" style="font-family: 'Segoe UI', Tahoma, sans-serif; padding: 30px; background: #fff; direction: rtl;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #1e40af; padding-bottom: 16px; margin-bottom: 20px;">
+                        <div style="text-align: right;">
+                            ${companyName ? `<div style="font-size: 18px; font-weight: 700; color: #1e40af; margin-bottom: 4px; white-space: nowrap; word-break: keep-all;">${companyName}</div>` : ''}
+                            <h1 style="font-size: 20px; color: #1e293b; margin: 0 0 2px;">تقرير التدريبات القانونية</h1>
+                            <p style="font-size: 12px; color: #64748b; margin: 0;">الامتثال للقوانين المصرية — Egyptian Law Compliance</p>
+                        </div>
+                        ${logoHtml ? `<div style="flex-shrink: 0;">${logoHtml}</div>` : ''}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; gap: 12px; flex-wrap: wrap;">
+                        <div style="background: #f8fafc; padding: 12px 18px; border-radius: 10px; flex: 1; min-width: 140px; border: 1px solid #e2e8f0;">
+                            <p style="font-size: 11px; color: #64748b; margin: 0 0 2px;">التاريخ</p>
+                            <p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${new Date().toLocaleDateString('ar-EG')}</p>
+                        </div>
+                        <div style="background: #f8fafc; padding: 12px 18px; border-radius: 10px; flex: 1; min-width: 140px; border: 1px solid #e2e8f0;">
+                            <p style="font-size: 11px; color: #64748b; margin: 0 0 2px;">إجمالي السجلات</p>
+                            <p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${items.length}</p>
+                        </div>
+                        <div style="background: #f8fafc; padding: 12px 18px; border-radius: 10px; flex: 1; min-width: 140px; border: 1px solid #e2e8f0;">
+                            <p style="font-size: 11px; color: #64748b; margin: 0 0 2px;">نسبة الامتثال</p>
+                            <p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${stats.complianceRate}%</p>
+                        </div>
+                        <div style="background: #f8fafc; padding: 12px 18px; border-radius: 10px; flex: 1; min-width: 140px; border: 1px solid #e2e8f0;">
+                            <p style="font-size: 11px; color: #64748b; margin: 0 0 2px;">ممتثل / غير ممتثل</p>
+                            <p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${stats.compliant} / ${stats.nonCompliant}</p>
+                        </div>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                        <thead>
+                            <tr style="background: #1e40af; color: #fff;">
+                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: center;">#</th>
+                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: right;">عنوان التدريب</th>
+                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: right;">التصنيف</th>
+                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: right;">المرجع القانوني</th>
+                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: center;">الدورية</th>
+                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: center;">التاريخ المخطط</th>
+                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: center;">الحالة</th>
+                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: center;">الامتثال</th>
+                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: center;">تاريخ الانتهاء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${items.map((t, i) => `
+                                <tr style="background: ${i % 2 === 0 ? '#fff' : '#f8fafc'};">
+                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center; color: #64748b;">${i + 1}</td>
+                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right; font-weight: 600;">${t.title || '—'}</td>
+                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right; color: #475569;">${t.category || '—'}</td>
+                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right; color: #475569;">${t.legalReference || '—'}</td>
+                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center;">${t.frequency || '—'}</td>
+                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center;">${t.scheduledDate || '—'}</td>
+                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center;">
+                                        <span style="display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
+                                            background: ${t.status === 'مكتمل' ? '#dcfce7' : t.status === 'مخطط' ? '#dbeafe' : t.status === 'قيد التنفيذ' ? '#fef3c7' : '#f1f5f9'};
+                                            color: ${t.status === 'مكتمل' ? '#166534' : t.status === 'مخطط' ? '#1e40af' : t.status === 'قيد التنفيذ' ? '#92400e' : '#475569'};">
+                                            ${t.status || '—'}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center;">
+                                        <span style="display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
+                                            background: ${t.complianceStatus === 'ممتثل' ? '#dcfce7' : t.complianceStatus === 'غير ممتثل' ? '#fecaca' : t.complianceStatus === 'قارب على الانتهاء' ? '#fef3c7' : '#dbeafe'};
+                                            color: ${t.complianceStatus === 'ممتثل' ? '#166534' : t.complianceStatus === 'غير ممتثل' ? '#991b1b' : t.complianceStatus === 'قارب على الانتهاء' ? '#92400e' : '#1e40af'};">
+                                            ${t.complianceStatus || '—'}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center;">${t.expiryDate || '—'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <div style="margin-top: 20px; text-align: center; color: #94a3b8; font-size: 11px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+                        تم التصدير في ${new Date().toLocaleString('ar-EG')} — نظام إدارة HSE
+                    </div>
+                </div>
+            `;
+
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position: absolute; left: -9999px; top: 0; z-index: -1;';
+            wrapper.innerHTML = reportHtml;
+            document.body.appendChild(wrapper);
+
+            try {
+                const canvas = await html2canvas(wrapper, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                const pW = pdf.internal.pageSize.getWidth();
+                const pH = pdf.internal.pageSize.getHeight();
+                const mg = 8;
+                const cW = pW - mg * 2;
+                const ratio = cW / canvas.width;
+                const pgH = pH - mg * 2;
+                const pgPx = pgH / ratio;
+                const total = Math.ceil(canvas.height / pgPx);
+
+                for (let p = 0; p < total; p++) {
+                    if (p > 0) pdf.addPage();
+                    const sc = document.createElement('canvas');
+                    const sH = Math.min(pgPx, canvas.height - p * pgPx);
+                    sc.width = canvas.width;
+                    sc.height = sH;
+                    sc.getContext('2d').drawImage(canvas, 0, p * pgPx, canvas.width, sH, 0, 0, canvas.width, sH);
+                    pdf.addImage(sc.toDataURL('image/jpeg', 0.95), 'JPEG', mg, mg, cW, sH * ratio);
+                    pdf.setDrawColor(37, 99, 235);
+                    pdf.setLineWidth(0.3);
+                    pdf.line(mg, pH - mg + 1, pW - mg, pH - mg + 1);
+                    pdf.setTextColor(148, 163, 184);
+                    pdf.setFontSize(7);
+                    pdf.text(new Date().toISOString().slice(0, 10), mg, pH - 3);
+                    pdf.text(`${p + 1} / ${total}`, pW - mg, pH - 3, { align: 'right' });
+                }
+
+                pdf.save(`Legal_Trainings_${new Date().toISOString().slice(0, 10)}.pdf`);
+                if (typeof Notification !== 'undefined' && Notification.success) {
+                    Notification.success('تم تصدير تقرير PDF بنجاح');
+                }
+            } finally {
+                document.body.removeChild(wrapper);
+            }
+        } catch (error) {
+            Utils.safeError('❌ خطأ في تصدير PDF:', error);
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('تعذر تصدير PDF');
+            }
+        } finally {
+            const btn = document.getElementById('export-legal-training-pdf-btn');
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf ml-1" style="font-size: 14px;"></i>PDF'; }
+        }
+    },
+
 };
 
 // ===== Export module to global scope =====

@@ -580,38 +580,30 @@
                     }
                     function startObservers() {
                         runThumbnailFallbacks();
+                        var pendingMutations = false;
                         var obs = new MutationObserver(function (mutations) {
-                            mutations.forEach(function (m) {
-                                if (m.addedNodes && m.addedNodes.length)
-                                    for (
-                                        var j = 0;
-                                        j < m.addedNodes.length;
-                                        j++
-                                    ) {
-                                        var n = m.addedNodes[j];
-                                        if (n.nodeType === 1) {
-                                            runThumbnailFallbacks(n);
+                            if (pendingMutations) return;
+                            pendingMutations = true;
+                            requestAnimationFrame(function () {
+                                pendingMutations = false;
+                                mutations.forEach(function (m) {
+                                    if (m.addedNodes && m.addedNodes.length) {
+                                        for (var j = 0; j < m.addedNodes.length; j++) {
+                                            var n = m.addedNodes[j];
+                                            if (n.nodeType === 1) {
+                                                runThumbnailFallbacks(n);
+                                            }
                                         }
                                     }
-                                if (
-                                    m.type === "attributes" &&
-                                    m.attributeName === "src" &&
-                                    m.target.tagName === "IMG"
-                                ) {
-                                    var img = m.target;
-                                    if (img.getAttribute("data-fm-map-image")) return;
-                                    if (
-                                        img.src &&
-                                        img.src.indexOf(
-                                            "drive.google.com",
-                                        ) !== -1
-                                    ) {
-                                        img.removeAttribute(
-                                            "data-drive-thumbnail-handled",
-                                        );
-                                        addThumbnailFallback(img);
+                                    if (m.type === "attributes" && m.attributeName === "src" && m.target.tagName === "IMG") {
+                                        var img = m.target;
+                                        if (img.getAttribute("data-fm-map-image")) return;
+                                        if (img.src && img.src.indexOf("drive.google.com") !== -1) {
+                                            img.removeAttribute("data-drive-thumbnail-handled");
+                                            addThumbnailFallback(img);
+                                        }
                                     }
-                                }
+                                });
                             });
                         });
                         obs.observe(document.body, {
@@ -1184,7 +1176,7 @@
         />
         <meta
             name="description"
-            content="نظام إدارة السلامة المهنية للشركة العالمية للانتاج والتصنيع الزراعي - HSE Management System"
+            content="SafetyHub | ICAPP"
         />
         <meta
             name="keywords"
@@ -1202,14 +1194,36 @@
         <meta property="og:type" content="website" />
         <meta
             property="og:title"
-            content="HSE Management System - نظام السلامة المهنية"
+            content="SafetyHub | ICAPP"
         />
         <meta
             property="og:description"
-            content="نظام إدارة السلامة المهنية للشركة العالمية للانتاج والتصنيع الزراعي"
+            content="SafetyHub | ICAPP"
         />
 
-        <title>HSE Management System - نظام السلامة المهنية</title>
+        <meta name="application-name" content="SafetyHub | ICAPP | Designed &amp; Developed by HSEHub360.Com" />
+        <meta name="apple-mobile-web-app-title" content="SafetyHub | ICAPP" />
+        <title>SafetyHub | ICAPP | Designed &amp; Developed by HSEHub360.Com</title>
+        <script>
+            (function enforceSafetyHubDocumentTitle() {
+                var canonicalTitle = "SafetyHub | ICAPP | Designed & Developed by HSEHub360.Com";
+                var applyCanonicalTitle = function () {
+                    if (document.title !== canonicalTitle) document.title = canonicalTitle;
+                };
+                applyCanonicalTitle();
+                var titleElement = document.querySelector("title");
+                if (titleElement && typeof MutationObserver !== "undefined") {
+                    new MutationObserver(applyCanonicalTitle).observe(titleElement, {
+                        childList: true,
+                        characterData: true,
+                        subtree: true,
+                    });
+                }
+                document.addEventListener("DOMContentLoaded", applyCanonicalTitle, { once: true });
+                document.addEventListener("visibilitychange", applyCanonicalTitle);
+                window.addEventListener("pageshow", applyCanonicalTitle);
+            })();
+        </script>
 
         <!-- ========================================
          ✅ قمع ULTRA-AGGRESSIVE لأخطاء uploadmanager.js:518
@@ -8700,6 +8714,7 @@
 
         <!-- Behavior Monitoring (overview cards, filters, modals) -->
         <link rel="stylesheet" href="css/behavior-monitoring.css?v=20260506-1" />
+        <link rel="stylesheet" href="css/viewport-layout-guard.css?v=20260719-1" />
 
         <!-- SheetJS for Excel import -->
         <script>
@@ -8823,7 +8838,7 @@
                         var link = document.createElement("link");
                         link.rel = "manifest";
                         // مسار نسبي ليعمل من الجذر (Vercel) أو من /Frontend/
-                        link.href = "manifest.json";
+                        link.href = "manifest.json?v=20260718-brand-title-v2";
                         link.id = "pwa-manifest-link";
                         link.onerror = function () {
                             if (
@@ -8868,7 +8883,7 @@
 
     <body class="font-cairo bg-gray-50" data-theme="light">
         <!-- رابط تخطي للمحتوى الرئيسي (إمكانية الوصول) -->
-        <a href="#main-content" class="skip-link">تخطي إلى المحتوى الرئيسي</a>
+        <a href="#main-content" id="login-skip-link" class="skip-link">تخطي إلى المحتوى الرئيسي</a>
         <div
             id="hse-offline-banner"
             role="status"
@@ -8971,10 +8986,19 @@
                             ></i>
                         </div>
                         <h1
-                            class="text-3xl font-bold text-gray-800 mb-2"
                             id="login-title"
+                            style="
+                                font-size: clamp(0.9rem, 3.2vw, 1.2rem);
+                                font-weight: 800;
+                                letter-spacing: 0.05em;
+                                color: #1e3a8a;
+                                line-height: 1.35;
+                                margin-bottom: 0.4rem;
+                                text-shadow: 0 1px 2px rgba(30,58,138,0.08);
+                                text-align: center;
+                            "
                         >
-                            نظام إدارة السلامة والصحة المهنية
+                            SafetyHub | ICAPP
                         </h1>
                         <p
                             class="text-sm font-semibold text-blue-600 mt-1"
@@ -8983,9 +9007,17 @@
                             الشركة العالمية للانتاج والتصنيع الزراعي
                         </p>
                         <p
-                            class="text-xs font-semibold text-gray-500 mt-1"
                             id="login-company-secondary-name"
-                            style="display: none"
+                            style="
+                                display: none;
+                                font-size: 0.8125rem;
+                                font-weight: 700;
+                                color: #1d4ed8;
+                                letter-spacing: 0.05em;
+                                margin-top: 0.3rem;
+                                padding: 2px 10px;
+                                border-inline-start: 3px solid #3b82f6;
+                            "
                         ></p>
                     </header>
 
@@ -9007,7 +9039,7 @@
                                 name="username"
                                 required
                                 class="form-input"
-                                placeholder="example@americana.com"
+                                placeholder="example@icapp.com.eg"
                                 autocomplete="username"
                             />
                         </div>
@@ -9068,6 +9100,7 @@
                                 id="forgot-password-link"
                                 class="text-sm text-blue-600 hover:text-blue-800"
                                 aria-label="نسيت كلمة المرور"
+                                style="display: none !important;"
                                 ><span id="login-forgot-text"
                                     >نسيت كلمة المرور؟</span
                                 ></a
@@ -9137,7 +9170,7 @@
                                 class="fas fa-question-circle ml-2"
                                 aria-hidden="true"
                             ></i>
-                            <span id="login-help-text">مساعدة / Help</span>
+                            <span id="login-help-text">مساعدة</span>
                         </button>
 
                         <!-- Language selector dropdown -->
@@ -9195,30 +9228,36 @@
                     <!-- Login Footer -->
                     <footer class="login-footer">
                         <div class="login-footer-content">
-                            <div class="login-footer-row">
-                                <span id="login-footer-copyright"
-                                    >© Yasser Diab — كل الحقوق محفوظة 2025</span
+                            <div class="login-footer-contact-row">
+                                <a
+                                    href="mailto:Yasser.diab@icapp.com.eg"
+                                    class="login-footer-contact-btn email-btn"
+                                    title="تواصل عبر البريد الإلكتروني"
                                 >
-                                <span class="login-footer-separator">|</span>
-                                <span class="login-footer-login-count">
-                                    <span>👥</span>
-                                    <span id="login-footer-count-label"
-                                        >عدد تسجيل الدخول للمستخدمين:</span
-                                    >
-                                    <span
-                                        id="login-count"
-                                        class="login-count-number"
-                                        >0</span
-                                    >
-                                </span>
+                                    <i class="fas fa-envelope" aria-hidden="true"></i>
+                                    <span id="login-footer-email-btn-text">البريد الإلكتروني</span>
+                                </a>
+                                <a
+                                    href="https://teams.microsoft.com/l/chat/0/0?users=Yasser.diab@icapp.com.eg"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="login-footer-contact-btn teams-btn"
+                                    title="تواصل عبر مايكروسوفت تيمز"
+                                >
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block; vertical-align: middle;">
+                                        <path d="M7.5 7.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM11.5 10H3.5A2.5 2.5 0 0 0 1 12.5V15h11v-2.5A2.5 2.5 0 0 0 11.5 10z" fill="#5F69D9" />
+                                        <rect x="9" y="3.5" width="14" height="14" rx="2.5" fill="#4B53BC" />
+                                        <path d="M14.5 7h4v1.8h-1.3v5.4h-1.4V8.8h-1.3V7z" fill="#ffffff" />
+                                    </svg>
+                                    <span id="login-footer-teams-btn-text">MS Teams</span>
+                                </a>
+                            </div>
+                            <div class="login-footer-copyright-row">
+                                <span class="login-footer-author">Yasser Diab ©</span>
+                                <span class="login-footer-copyright-separator">|</span>
+                                <span id="login-footer-copyright">كل الحقوق محفوظة 2025</span>
                             </div>
                             <div class="login-footer-row">
-                                <span
-                                    id="login-footer-trial"
-                                    class="login-footer-trial-badge"
-                                    >نسخة تجريبية</span
-                                >
-                                <span class="login-footer-separator">|</span>
                                 <a
                                     href="#"
                                     id="privacy-policy-link"
@@ -9248,10 +9287,12 @@
                 var loginTranslations = {
                     ar: {
                         loginScreenAria: "شاشة تسجيل الدخول",
-                        title: "نظام إدارة السلامة والصحة المهنية",
+                        title: "SafetyHub | ICAPP",
+                        companyName: "الشركة العالمية للانتاج والتصنيع الزراعي",
+                        companySecondary: "إدارة السلامة والصحة المهنية والبيئة",
                         labelEmail: "البريد الإلكتروني",
                         labelPassword: "كلمة المرور",
-                        placeholderEmail: "example@americana.com",
+                        placeholderEmail: "example@icapp.com.eg",
                         placeholderPassword: "••••••••",
                         passwordToggleAria: "إظهار/إخفاء كلمة المرور",
                         remember: "تذكرني",
@@ -9260,20 +9301,27 @@
                         forgotAria: "نسيت كلمة المرور",
                         submit: "تسجيل الدخول",
                         submitAria: "تسجيل الدخول",
-                        help: "مساعدة / Help",
+                        help: "مساعدة",
                         helpAria: "مساعدة",
                         footerCopyright:
-                            "© Yasser Diab — كل الحقوق محفوظة 2025",
+                            "كل الحقوق محفوظة 2025",
                         footerCountLabel: "عدد تسجيل الدخول للمستخدمين:",
-                        footerTrial: "نسخة تجريبية",
+                        footerTrial: "",
                         footerPrivacy: "سياسة الخصوصية",
+                        footerEmail: "البريد الإلكتروني",
+                        footerTeams: "MS Teams",
                         langToggleAria: "تبديل اللغة",
+                        langMenuAria: "قائمة اختيار اللغة",
+                        skipLink: "تخطي إلى المحتوى الرئيسي",
+                        versionAria: "إصدار النظام",
                         langCurrent: "AR",
                         langOther: "EN",
                     },
                     en: {
                         loginScreenAria: "Login screen",
-                        title: "Occupational Health and Safety Management System",
+                        title: "SafetyHub | ICAPP",
+                        companyName: "International Company for Agricultural Production & Processing (ICAPP)",
+                        companySecondary: "Health, Safety & Environment (HSE)",
                         labelEmail: "Email",
                         labelPassword: "Password",
                         placeholderEmail: "example@company.com",
@@ -9288,11 +9336,16 @@
                         help: "Help",
                         helpAria: "Help",
                         footerCopyright:
-                            "© Yasser Diab — All rights reserved 2025",
+                            "All rights reserved 2025",
                         footerCountLabel: "User logins count:",
-                        footerTrial: "Trial version",
+                        footerTrial: "",
                         footerPrivacy: "Privacy Policy",
+                        footerEmail: "Email Support",
+                        footerTeams: "MS Teams",
                         langToggleAria: "Switch language",
+                        langMenuAria: "Language selection menu",
+                        skipLink: "Skip to main content",
+                        versionAria: "System version",
                         langCurrent: "EN",
                         langOther: "AR",
                     },
@@ -9322,6 +9375,23 @@
                     var byId = function (id) {
                         return document.getElementById(id);
                     };
+                    if (byId("login-company-name")) {
+                        var cName = byId("login-company-name").textContent ? byId("login-company-name").textContent.trim() : "";
+                        if (!cName || cName === "الشركة العالمية للانتاج والتصنيع الزراعي" || cName === "International Company for Agricultural Production & Processing (ICAPP)") {
+                            byId("login-company-name").textContent = t.companyName;
+                        }
+                    }
+                    if (byId("login-company-secondary-name")) {
+                        var cSec = byId("login-company-secondary-name").textContent ? byId("login-company-secondary-name").textContent.trim() : "";
+                        if (!cSec || cSec === "إدارة السلامة والصحة المهنية" || cSec === "إدارة السلامة والصحة المهنية والبيئة" || cSec === "HSE Department" || cSec === "Health, Safety & Environment (HSE)") {
+                            byId("login-company-secondary-name").textContent = t.companySecondary;
+                            if (t.companySecondary) {
+                                byId("login-company-secondary-name").style.display = "block";
+                            } else {
+                                byId("login-company-secondary-name").style.display = "none";
+                            }
+                        }
+                    }
                     if (byId("login-title"))
                         byId("login-title").textContent = t.title;
                     if (byId("login-label-email-text"))
@@ -9359,6 +9429,16 @@
                     if (helpB) helpB.setAttribute("aria-label", t.helpAria);
                     if (byId("login-help-text"))
                         byId("login-help-text").textContent = t.help;
+                    if (byId("login-mfa-hint"))
+                        byId("login-mfa-hint").textContent = lang === "ar"
+                            ? "أدخل رمز المصادقة الثنائية من تطبيق المصادقة (6 أرقام)"
+                            : "Enter the six-digit verification code from your authenticator app";
+                    if (byId("login-mfa-label"))
+                        byId("login-mfa-label").textContent = lang === "ar" ? "رمز المصادقة" : "Verification code";
+                    if (byId("login-mfa-verify-text"))
+                        byId("login-mfa-verify-text").textContent = lang === "ar" ? "تأكيد الرمز" : "Verify code";
+                    if (byId("login-mfa-back-text"))
+                        byId("login-mfa-back-text").textContent = lang === "ar" ? "رجوع" : "Back";
                     if (byId("login-footer-copyright"))
                         byId("login-footer-copyright").textContent =
                             t.footerCopyright;
@@ -9370,11 +9450,23 @@
                     if (byId("login-footer-privacy"))
                         byId("login-footer-privacy").textContent =
                             t.footerPrivacy;
+                    if (byId("login-footer-email-btn-text"))
+                        byId("login-footer-email-btn-text").textContent =
+                            t.footerEmail;
+                    if (byId("login-footer-teams-btn-text"))
+                        byId("login-footer-teams-btn-text").textContent =
+                            t.footerTeams;
                     if (byId("login-language-toggle-btn"))
                         byId("login-language-toggle-btn").setAttribute(
                             "aria-label",
                             t.langToggleAria,
                         );
+                    if (byId("login-language-dropdown"))
+                        byId("login-language-dropdown").setAttribute("aria-label", t.langMenuAria);
+                    if (byId("login-skip-link"))
+                        byId("login-skip-link").textContent = t.skipLink;
+                    if (byId("login-footer-version"))
+                        byId("login-footer-version").setAttribute("aria-label", t.versionAria);
                     var currentLangText = byId("current-lang-text");
                     if (currentLangText)
                         currentLangText.textContent = lang === "ar" ? "العربية" : "English";
@@ -9414,7 +9506,7 @@
                         var portal = document.createElement("div");
                         portal.id = overlayId;
                         portal.setAttribute("role", "menu");
-                        portal.setAttribute("aria-label", "قائمة اختيار اللغة");
+                        portal.setAttribute("aria-label", document.documentElement.lang === "en" ? "Language selection menu" : "قائمة اختيار اللغة");
                         portal.style.cssText =
                             "position:fixed;z-index:999999;min-width:" + Math.max(rect.width, 120) + "px;max-width:280px;" +
                             "background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.15);" +
@@ -10302,7 +10394,7 @@
                     </button>
                     <div class="mobile-topbar-title">
                         <span id="mobile-company-name"
-                            >نظام السلامة المهنية</span
+                            >SafetyHub | ICAPP</span
                         >
                         <small
                             id="mobile-user-name"
@@ -12728,7 +12820,7 @@
         <!-- 3. UI (UI rendering and DOM manipulation) -->
         <script src="js/modules/i18n-core.js?v=20260430-5" defer></script>
         <!-- Training قبل app-ui: loadSectionData/refreshCurrentSection قد تُستدعى قبل نهاية سلسلة الموديولات -->
-        <script src="js/modules/modules/training.js?v=20260524-list-format" defer></script>
+        <script src="js/modules/modules/training.js?v=20260719-employee-analytics-v3" defer></script>
         <script src="js/modules/app-ui.js?v=20260501-3" defer></script>
 
         <!-- 4. Modules (Auth, Dashboard, Users, etc.) -->
@@ -12743,32 +12835,32 @@
         <!-- ✅ لوحة متابعة إصدارات المستخدمين (admin) — تستخدم google-integration الذي حُمّل أعلاه -->
         <script src="js/modules/modules/user-versions-admin.js" defer></script>
         <script src="js/modules/modules/investigation-rca.js" defer></script>
-        <script src="js/modules/modules/incidents.js?v=20260525-registry-dedupe" defer></script>
+        <script src="js/modules/modules/incidents.js?v=20260719-incident-forms-v1" defer></script>
         <script src="js/modules/modules/nearmiss.js" defer></script>
-        <script src="js/modules/modules/ptw.js?v=20260523-ptw-analytics-redesign" defer></script>
+        <script src="js/modules/modules/ptw.js?v=20260718-ptw-list-v5" defer></script>
         <script src="js/modules/modules/reports.js" defer></script>
         <script src="js/modules/modules/help-content-en.js" defer></script>
         <script src="js/modules/modules/help.js" defer></script>
         <script src="js/modules/modules/settings.js?v=20260426-2" defer></script>
-        <script src="js/modules/modules/clinic.js?v=20260524-med-unified" defer></script>
+        <script src="js/modules/modules/clinic.js?v=20260718-visit-reason-suggest-v1" defer></script>
         <script src="js/modules/modules/fireequipment.js" defer></script>
-        <script src="js/modules/modules/ppe.js" defer></script>
+        <script src="js/modules/modules/ppe.js?v=20260723-ppe-identity-v2" defer></script>
         <script src="js/modules/modules/periodic-equipment.js?v=20260626-1" defer></script>
         <script src="js/modules/modules/periodicinspections.js?v=20260626-dsc-reprocess" defer></script>
         <script src="js/modules/modules/contractors.js?v=20260626-analytics-kpi" defer></script>
-        <script src="js/modules/modules/violations.js?v=20260525-approval-circuit" defer></script>
+        <script src="js/modules/modules/violations.js?v=20260718-report-image-v2" defer></script>
         <script src="js/modules/modules/employees.js" defer></script>
         <script src="js/modules/modules/behaviormonitoring.js" defer></script>
         <script src="js/modules/modules/chemicalsafety.js" defer></script>
         <script src="js/modules/modules/dailyobservations.js?v=20260402-1" defer></script>
         <script src="js/modules/modules/safetycalendar.js?v=20260620-13" defer></script>
-        <script src="js/modules/modules/iso.js" defer></script>
+        <script src="js/modules/modules/iso.js?v=20260719-coding-governance-v4" defer></script>
         <script src="js/modules/modules/emergency.js?v=20260501-2" defer></script>
         <script src="js/modules/modules/safetybudget.js" defer></script>
         <script src="js/modules/modules/actiontrackingregister.js" defer></script>
         <script src="js/modules/modules/hse.js" defer></script>
         <script src="js/modules/modules/safetyperformancekpis.js" defer></script>
-        <script src="js/modules/modules/sustainability.js" defer></script>
+        <script src="js/modules/modules/sustainability.js?v=20260718-sustainability-identity-v1" defer></script>
         <script src="js/modules/modules/riskassessment.js" defer></script>
         <script src="js/modules/modules/riskmatrix.js" defer></script>
         <script src="js/modules/modules/legaldocuments.js" defer></script>
@@ -12908,7 +13000,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.408-20260705";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.646-20260730";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +
@@ -13525,4 +13617,3 @@
         </script>
     </body>
 </html>
-

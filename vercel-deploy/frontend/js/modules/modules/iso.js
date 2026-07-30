@@ -2,59 +2,766 @@
  * ISO Module
  * ØªÙ… Ø§Ø³ØªØ®Ø±Ø§Ø¬Ù‡ Ù…Ù† app-modules.js
  */
-// ===== HSE Management System Module (نظام إدارة السلامة والصحة المهنية والبيئة) =====
+// ===== SafetyHub | ICAPP Module =====
 const ISO = {
     currentTab: 'overview',
 
     SystemFormsManifest: [
-        { id: 'ptw', name: 'تصريح العمل', module: 'PTW', type: 'نموذج', defaultCode: 'Form ICP (F14-26-01)', department: 'HSE' },
-        { id: 'incident', name: 'تقرير الحوادث', module: 'Incidents', type: 'تقرير', defaultCode: 'INC-REP-01', department: 'HSE' },
-        { id: 'nearmiss', name: 'تقرير الحوادث الوشيكة', module: 'NearMiss', type: 'تقرير', defaultCode: 'NM-REP-01', department: 'HSE' },
-        { id: 'clinic', name: 'سجل الزيارات الطبية', module: 'Clinic', type: 'سجل', defaultCode: 'CLN-FRM-01', department: 'Medical' },
-        { id: 'observation', name: 'الملاحظات اليومية', module: 'Observations', type: 'نموذج', defaultCode: 'OBS-FRM-01', department: 'HSE' },
-        { id: 'risk', name: 'تقييم المخاطر (JHA)', module: 'RiskAssessment', type: 'نموذج', defaultCode: 'JHA-FRM-01', department: 'HSE' },
-        { id: 'violation', name: 'إشعار مخالفة', module: 'Violations', type: 'نموذج', defaultCode: 'VIO-FRM-01', department: 'HSE' },
-        { id: 'inspection', name: 'التفتيش الدوري', module: 'Inspections', type: 'نموذج', defaultCode: 'INSP-FRM-01', department: 'HSE' },
-        { id: 'dscl', name: 'فحص السلامة اليومي', module: 'Daily Check List', type: 'نموذج', defaultCode: 'DSCL-FRM-01', department: 'HSE' },
-        { id: 'tbt', name: 'اجتماع السلامة (TBT)', module: 'ToolBox Talk', type: 'نموذج', defaultCode: 'TBT-FRM-01', department: 'HSE' },
-        { id: 'ppe', name: 'سجل مهمات الوقاية', module: 'PPE', type: 'سجل', defaultCode: 'PPE-REG-01', department: 'HSE' },
-        { id: 'fire', name: 'تفتيش معدات الإطفاء', module: 'Fire Equipment', type: 'نموذج', defaultCode: 'FIRE-INSP-01', department: 'HSE' },
-        { id: 'sds', name: 'صحيفة بيانات السلامة', module: 'Chemical Safety', type: 'وثيقة', defaultCode: 'SDS-DOC-01', department: 'HSE' },
-        { id: 'moc', name: 'إدارة التغيير (MOC)', module: 'Change Management', type: 'نموذج', defaultCode: 'MOC-FRM-01', department: 'HSE' },
-        { id: 'legal', name: 'المتطلبات القانونية', module: 'Legal Documents', type: 'سجل', defaultCode: 'LEG-REG-01', department: 'HSE' },
-        { id: 'kpi', name: 'مؤشرات الأداء (KPIs)', module: 'Performance KPIs', type: 'تقرير', defaultCode: 'KPI-REP-01', department: 'HSE' },
-        { id: 'training', name: 'سجل التدريب', module: 'Trainings', type: 'سجل', defaultCode: 'TRN-REG-01', department: 'HSE' },
-        { id: 'audit', name: 'تقرير التدقيق', module: 'ISO / Audits', type: 'تقرير', defaultCode: 'AUD-REP-01', department: 'HSE' },
-        { id: 'nc', name: 'تقرير عدم المطابقة (NC)', module: 'ISO / CAPA', type: 'نموذج', defaultCode: 'NC-FRM-01', department: 'HSE' },
-        { id: 'ca', name: 'الإجراءات التصحيحية (CA)', module: 'ISO / CAPA', type: 'نموذج', defaultCode: 'CA-FRM-01', department: 'HSE' }
+        // PTW
+        { id: 'ptw', name: 'تصريح العمل العام', i18nKey: 'module.iso.manifest.ptw.general', module: 'PTW', type: 'نموذج', defaultCode: 'PTW-GEN-01', department: 'HSE' },
+        { id: 'ptw-hot', name: 'تصريح العمل الساخن', i18nKey: 'module.iso.manifest.ptw.hot', module: 'PTW', type: 'نموذج', defaultCode: 'PTW-HOT-01', department: 'HSE' },
+        { id: 'ptw-cold', name: 'تصريح العمل البارد', i18nKey: 'module.iso.manifest.ptw.cold', module: 'PTW', type: 'نموذج', defaultCode: 'PTW-COLD-01', department: 'HSE' },
+        { id: 'ptw-confined', name: 'تصريح دخول الأماكن المغلقة', i18nKey: 'module.iso.manifest.ptw.confined', module: 'PTW', type: 'نموذج', defaultCode: 'PTW-CONF-01', department: 'HSE' },
+        { id: 'ptw-excavation', name: 'تصريح الحفريات', i18nKey: 'module.iso.manifest.ptw.excavation', module: 'PTW', type: 'نموذج', defaultCode: 'PTW-EXC-01', department: 'HSE' },
+        { id: 'ptw-electrical', name: 'تصريح عزل طاقة (LOTO)', i18nKey: 'module.iso.manifest.ptw.loto', module: 'PTW', type: 'نموذج', defaultCode: 'PTW-LOTO-01', department: 'HSE' },
+
+        // Incidents
+        { id: 'incident', name: 'تقرير الحوادث', i18nKey: 'module.iso.manifest.incident.report', module: 'Incidents', type: 'تقرير', defaultCode: 'INC-REP-01', department: 'HSE' },
+        { id: 'incident-reg', name: 'سجل الحوادث والإصابات', i18nKey: 'module.iso.manifest.incident.register', module: 'Incidents', type: 'سجل', defaultCode: 'INC-REG-01', department: 'HSE' },
+
+        // NearMiss
+        { id: 'nearmiss', name: 'تقرير الحوادث الوشيكة', i18nKey: 'module.iso.manifest.nearmiss.report', module: 'NearMiss', type: 'تقرير', defaultCode: 'NM-REP-01', department: 'HSE' },
+        { id: 'nearmiss-reg', name: 'سجل الحوادث الوشيكة', i18nKey: 'module.iso.manifest.nearmiss.register', module: 'NearMiss', type: 'سجل', defaultCode: 'NM-REG-01', department: 'HSE' },
+
+        // Clinic
+        { id: 'clinic', name: 'سجل الزيارات الطبية', i18nKey: 'module.iso.manifest.clinic.register', module: 'Clinic', type: 'سجل', defaultCode: 'CLN-REG-01', department: 'Medical' },
+        { id: 'clinic-exam', name: 'نموذج الفحص الطبي', i18nKey: 'module.iso.manifest.clinic.exam', module: 'Clinic', type: 'نموذج', defaultCode: 'CLN-FRM-01', department: 'Medical' },
+
+        // Observations
+        { id: 'observation', name: 'الملاحظات اليومية', i18nKey: 'module.iso.manifest.obs.report', module: 'Observations', type: 'نموذج', defaultCode: 'OBS-FRM-01', department: 'HSE' },
+        { id: 'observation-bbs', name: 'بطاقة ملاحظة السلوك (BBS)', i18nKey: 'module.iso.manifest.obs.bbs', module: 'Observations', type: 'بطاقة', defaultCode: 'OBS-BBS-01', department: 'HSE' },
+
+        // Risk Assessment
+        { id: 'risk-jha', name: 'تحليل مخاطر العمل (JHA)', i18nKey: 'module.iso.manifest.risk.jha', module: 'RiskAssessment', type: 'نموذج', defaultCode: 'JHA-FRM-01', department: 'HSE' },
+        { id: 'risk-reg', name: 'سجل تقييم المخاطر', i18nKey: 'module.iso.manifest.risk.register', module: 'RiskAssessment', type: 'سجل', defaultCode: 'RISK-REG-01', department: 'HSE' },
+
+        // Violations
+        { id: 'violation', name: 'إشعار مخالفة', i18nKey: 'module.iso.manifest.viol.notice', module: 'Violations', type: 'نموذج', defaultCode: 'VIO-FRM-01', department: 'HSE' },
+        { id: 'violation-reg', name: 'سجل المخالفات والإنذارات', i18nKey: 'module.iso.manifest.viol.register', module: 'Violations', type: 'سجل', defaultCode: 'VIO-REG-01', department: 'HSE' },
+
+        // Inspections & Checklists
+        { id: 'inspection', name: 'التفتيش الدوري الشامل', i18nKey: 'module.iso.manifest.insp.periodic', module: 'Inspections', type: 'نموذج', defaultCode: 'INSP-FRM-01', department: 'HSE' },
+        { id: 'inspection-reg', name: 'سجل التفتيش', i18nKey: 'module.iso.manifest.insp.register', module: 'Inspections', type: 'سجل', defaultCode: 'INSP-REG-01', department: 'HSE' },
+        { id: 'dscl', name: 'فحص السلامة اليومي', i18nKey: 'module.iso.manifest.insp.daily', module: 'Inspections', type: 'نموذج', defaultCode: 'DSCL-FRM-01', department: 'HSE' },
+        { id: 'scaffold-insp', name: 'نموذج فحص السقالات', i18nKey: 'module.iso.manifest.insp.scaffold', module: 'Inspections', type: 'نموذج', defaultCode: 'SCAFF-INSP-01', department: 'HSE' },
+        { id: 'equip-insp', name: 'نموذج فحص المعدات', i18nKey: 'module.iso.manifest.insp.equip', module: 'Inspections', type: 'نموذج', defaultCode: 'EQP-INSP-01', department: 'HSE' },
+
+        // TBT
+        { id: 'tbt', name: 'نموذج اجتماع السلامة (TBT)', i18nKey: 'module.iso.manifest.tbt.form', module: 'ToolBox Talk', type: 'نموذج', defaultCode: 'TBT-FRM-01', department: 'HSE' },
+        { id: 'tbt-reg', name: 'سجل اجتماعات TBT', i18nKey: 'module.iso.manifest.tbt.register', module: 'ToolBox Talk', type: 'سجل', defaultCode: 'TBT-REG-01', department: 'HSE' },
+
+        // PPE
+        { id: 'ppe-receive', name: 'سجل استلام مهمات الوقاية', i18nKey: 'module.iso.manifest.ppe.receive', module: 'PPE', type: 'سجل', defaultCode: 'PPE-REG-01', department: 'HSE' },
+        { id: 'ppe-insp', name: 'نموذج فحص مهمات الوقاية', i18nKey: 'module.iso.manifest.ppe.insp', module: 'PPE', type: 'نموذج', defaultCode: 'PPE-INSP-01', department: 'HSE' },
+
+        // Fire & Emergency
+        { id: 'fire-insp', name: 'تفتيش معدات الإطفاء', i18nKey: 'module.iso.manifest.fire.insp', module: 'Fire Equipment', type: 'نموذج', defaultCode: 'FIRE-INSP-01', department: 'HSE' },
+        { id: 'drill-report', name: 'تقرير تجربة إخلاء', i18nKey: 'module.iso.manifest.fire.drill', module: 'Fire Equipment', type: 'تقرير', defaultCode: 'DRILL-REP-01', department: 'HSE' },
+
+        // Chemicals & MOC
+        { id: 'sds', name: 'سجل المواد الكيميائية (SDS)', i18nKey: 'module.iso.manifest.chem.sds', module: 'Chemical Safety', type: 'وثيقة', defaultCode: 'SDS-REG-01', department: 'HSE' },
+        { id: 'moc', name: 'إدارة التغيير (MOC)', i18nKey: 'module.iso.manifest.moc.form', module: 'Change Management', type: 'نموذج', defaultCode: 'MOC-FRM-01', department: 'HSE' },
+
+        // ISO & Quality
+        { id: 'legal', name: 'سجل المتطلبات القانونية', i18nKey: 'module.iso.manifest.iso.legal', module: 'ISO / Quality', type: 'سجل', defaultCode: 'LEG-REG-01', department: 'HSE' },
+        { id: 'kpi', name: 'مؤشرات الأداء (KPIs)', i18nKey: 'module.iso.manifest.iso.kpi', module: 'ISO / Quality', type: 'تقرير', defaultCode: 'KPI-REP-01', department: 'HSE' },
+        { id: 'audit-plan', name: 'خطة التدقيق الداخلي', i18nKey: 'module.iso.manifest.iso.auditPlan', module: 'ISO / Quality', type: 'وثيقة', defaultCode: 'AUD-PLN-01', department: 'HSE' },
+        { id: 'audit-report', name: 'تقرير التدقيق الداخلي', i18nKey: 'module.iso.manifest.iso.auditRep', module: 'ISO / Quality', type: 'تقرير', defaultCode: 'AUD-REP-01', department: 'HSE' },
+        
+        // CAPA
+        { id: 'nc', name: 'تقرير حالة عدم المطابقة (NC)', i18nKey: 'module.iso.manifest.capa.nc', module: 'ISO / CAPA', type: 'نموذج', defaultCode: 'NC-FRM-01', department: 'HSE' },
+        { id: 'ca', name: 'الإجراءات التصحيحية (CAR)', i18nKey: 'module.iso.manifest.capa.car', module: 'ISO / CAPA', type: 'نموذج', defaultCode: 'CAR-FRM-01', department: 'HSE' },
+
+        // Trainings
+        { id: 'training-plan', name: 'خطة التدريب السنوية', i18nKey: 'module.iso.manifest.train.plan', module: 'Trainings', type: 'وثيقة', defaultCode: 'TRN-PLN-01', department: 'HSE' },
+        { id: 'training-att', name: 'سجل حضور تدريب', i18nKey: 'module.iso.manifest.train.att', module: 'Trainings', type: 'سجل', defaultCode: 'TRN-ATT-01', department: 'HSE' },
+        { id: 'training-eval', name: 'نموذج تقييم تدريب', i18nKey: 'module.iso.manifest.train.eval', module: 'Trainings', type: 'نموذج', defaultCode: 'TRN-EVAL-01', department: 'HSE' }
     ],
 
     renderIdentityStyles_() {
         return `
             <style id="iso-professional-identity-styles">
-                .iso-workspace{--iso-petrol:#073b3a;--iso-petrol-2:#0b5551;--iso-teal:#0f766e;--iso-mint:#2db9a8;--iso-gold:#e4b64f;--iso-ink:#172334;--iso-muted:#64748b;--iso-line:#d8e6e3;--iso-surface:#fff;font-family:"Cairo","Segoe UI",Tahoma,sans-serif}
-                .iso-workspace .iso-hero-header{position:relative;overflow:hidden;margin-bottom:18px;padding:22px 24px;border:1px solid rgba(255,255,255,.12);border-radius:18px;background:radial-gradient(circle at 8% 10%,rgba(228,182,79,.22),transparent 27%),linear-gradient(125deg,#052f31 0%,var(--iso-petrol-2) 68%,#0b6660 100%);color:#fff;box-shadow:0 18px 38px rgba(7,59,58,.22)}
-                .iso-workspace .iso-hero-header:after{content:"ISO";position:absolute;inset-inline-end:24px;bottom:-20px;color:rgba(255,255,255,.055);font:900 6.4rem/1 "Segoe UI",sans-serif;letter-spacing:-.08em;pointer-events:none}
-                .iso-workspace .iso-hero-header>div{position:relative;z-index:1;width:100%;gap:16px}.iso-workspace .iso-hero-header .section-title{display:flex;align-items:center;gap:11px;margin:0 0 5px;color:#fff!important;font-size:1.45rem;font-weight:900;text-shadow:0 2px 7px rgba(0,0,0,.22)}
-                .iso-workspace .iso-hero-header .section-title i{display:inline-flex;align-items:center;justify-content:center;width:43px;height:43px;margin:0!important;border:1px solid rgba(255,255,255,.2);border-radius:12px;background:rgba(255,255,255,.12);color:#fde68a}.iso-workspace .iso-hero-header .section-subtitle{margin:0;color:rgba(255,255,255,.78)!important;font-size:.79rem;font-weight:600}
-                .iso-workspace .iso-hero-header .btn-success{min-height:43px;padding-inline:17px;border:1px solid rgba(255,255,255,.45);border-radius:11px;background:#fff!important;color:var(--iso-petrol)!important;font-size:.8rem;font-weight:800;box-shadow:0 8px 20px rgba(0,0,0,.16)}
-                .iso-workspace .iso-quick-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin:0 0 18px!important}.iso-workspace .iso-stat-card{--stat-accent:var(--iso-teal);position:relative;overflow:hidden;min-height:108px;padding:16px 17px!important;border:1px solid var(--iso-line)!important;border-radius:15px!important;background:linear-gradient(145deg,#fff,#f5faf9)!important;text-align:start!important;box-shadow:0 9px 23px rgba(7,59,58,.075);transition:.2s ease}
-                .iso-workspace .iso-stat-card:before{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:4px;background:var(--stat-accent)}.iso-workspace .iso-stat-card:after{content:"";position:absolute;inset-inline-end:-24px;bottom:-30px;width:86px;height:86px;border-radius:50%;background:color-mix(in srgb,var(--stat-accent) 9%,transparent)}.iso-workspace .iso-stat-card:hover{border-color:#b7d1cc!important;box-shadow:0 13px 28px rgba(7,59,58,.12);transform:translateY(-2px)}
-                .iso-workspace .iso-stat-card>div:first-child{position:relative;z-index:1;margin-bottom:5px!important;color:var(--stat-accent)!important;font:900 1.85rem/1.1 "Segoe UI","Cairo",sans-serif}.iso-workspace .iso-stat-card>div:last-child{position:relative;z-index:1;color:#425466!important;font-size:.75rem!important;font-weight:800!important}.iso-workspace .iso-stat-docs{--stat-accent:#2563eb}.iso-workspace .iso-stat-procedures{--stat-accent:#059669}.iso-workspace .iso-stat-forms{--stat-accent:#d97706}.iso-workspace .iso-stat-compliance{--stat-accent:#7c3aed}
-                .iso-workspace .iso-tabs-shell{position:relative;overflow:hidden;padding:8px;border:1px solid rgba(255,255,255,.11);border-radius:18px;background:radial-gradient(circle at 92% 0%,rgba(45,185,168,.2),transparent 26%),linear-gradient(125deg,var(--iso-petrol),var(--iso-petrol-2));box-shadow:0 14px 32px rgba(7,59,58,.18)}
-                .iso-workspace .iso-tabs-nav{position:relative;z-index:1;display:flex;flex-wrap:nowrap!important;gap:7px!important;margin:0!important;padding:0 0 2px!important;overflow-x:auto;border:0!important;background:transparent;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.36) transparent}.iso-workspace .iso-tabs-nav .tab-btn{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;min-height:48px;min-width:max-content;padding:10px 14px;gap:8px;border:1px solid rgba(255,255,255,.14);border-radius:11px;background:rgba(255,255,255,.075);color:rgba(255,255,255,.82);font-size:.8rem;font-weight:750;white-space:nowrap;box-shadow:none;transition:.18s ease}
-                .iso-workspace .iso-tabs-nav .tab-btn:before{display:none}.iso-workspace .iso-tabs-nav .tab-btn i{display:inline-flex;align-items:center;justify-content:center;width:29px;height:29px;margin:0!important;border-radius:8px;background:rgba(255,255,255,.12);color:#a7f3d0;font-size:.76rem}.iso-workspace .iso-tabs-nav .tab-btn[data-tab=forms] i{color:#fde68a}.iso-workspace .iso-tabs-nav .tab-btn[data-tab=iso45001] i{color:#bfdbfe}.iso-workspace .iso-tabs-nav .tab-btn[data-tab=iso14001] i{color:#bbf7d0}.iso-workspace .iso-tabs-nav .tab-btn[data-tab=audit] i{color:#ddd6fe}
-                .iso-workspace .iso-tabs-nav .tab-btn:hover{background:rgba(255,255,255,.14);color:#fff;transform:translateY(-1px)}.iso-workspace .iso-tabs-nav .tab-btn.active{border-color:#fff;background:#fff;color:var(--iso-petrol);box-shadow:0 8px 22px rgba(0,0,0,.18);transform:translateY(-1px)}.iso-workspace .iso-tabs-nav .tab-btn.active i{background:#e6f7f3;color:var(--iso-teal)}
-                .iso-workspace .iso-tab-content{min-height:240px;margin-top:18px;animation:isoSurfaceIn .24s ease-out}@keyframes isoSurfaceIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}.iso-workspace .iso-tab-content .content-card{overflow:hidden!important;border:1px solid var(--iso-line)!important;border-radius:16px!important;background:var(--iso-surface)!important;box-shadow:0 10px 28px rgba(7,59,58,.08)!important;transform:none!important}.iso-workspace .iso-tab-content .content-card:hover{box-shadow:0 14px 32px rgba(7,59,58,.11)!important;transform:none!important}
-                .iso-workspace .iso-tab-content .card-header{position:relative;padding:17px 20px!important;border-bottom:1px solid #d8e6e3!important;background:linear-gradient(115deg,#eaf5f3,#fff 66%,#f7fbfa)!important;color:var(--iso-petrol)!important}.iso-workspace .iso-tab-content .card-header:before{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:5px;background:linear-gradient(180deg,var(--iso-mint),var(--iso-teal))}.iso-workspace .iso-tab-content[data-tab=documents] .card-header:before{background:linear-gradient(#60a5fa,#2563eb)}.iso-workspace .iso-tab-content[data-tab=procedures] .card-header:before{background:linear-gradient(#34d399,#059669)}.iso-workspace .iso-tab-content[data-tab=forms] .card-header:before{background:linear-gradient(#fbbf24,#d97706)}.iso-workspace .iso-tab-content[data-tab=iso45001] .card-header:before{background:linear-gradient(#38bdf8,#0369a1)}.iso-workspace .iso-tab-content[data-tab=iso14001] .card-header:before{background:linear-gradient(#4ade80,#15803d)}.iso-workspace .iso-tab-content[data-tab=audit] .card-header:before{background:linear-gradient(#a78bfa,#6d28d9)}.iso-workspace .iso-tab-content[data-tab=coding-center] .card-header:before{background:linear-gradient(#facc15,#a16207)}
-                .iso-workspace .iso-tab-content .card-title{color:var(--iso-petrol)!important;font-size:1rem!important;font-weight:850!important}.iso-workspace .iso-tab-content .card-header p{color:var(--iso-muted)!important}.iso-workspace .iso-tab-content .card-header button{min-height:39px;border:1px solid #b9d3ce!important;border-radius:10px!important;background:#fff!important;color:var(--iso-petrol)!important;font-size:.76rem;font-weight:800;box-shadow:0 5px 13px rgba(7,59,58,.1)!important}
-                .iso-workspace .iso-tab-content .form-input,.iso-workspace .iso-tab-content input:not([type=checkbox]):not([type=radio]):not([type=file]),.iso-workspace .iso-tab-content select{border-color:#c6d9d5;border-radius:10px}.iso-workspace .iso-tab-content .form-input:focus,.iso-workspace .iso-tab-content input:not([type=checkbox]):not([type=radio]):not([type=file]):focus,.iso-workspace .iso-tab-content select:focus{border-color:var(--iso-teal);box-shadow:0 0 0 3px rgba(15,118,110,.12);outline:none}
-                .iso-workspace .iso-tab-content .overflow-x-auto:has(>table),.iso-workspace .iso-tab-content .table-responsive:has(>table){overflow:auto;border:1px solid #d7e5e2;border-radius:13px;background:#fff;scrollbar-width:thin;scrollbar-color:#8eb2ab #edf5f3}.iso-workspace .iso-tab-content table{width:100%;margin:0;border:0!important;border-collapse:separate!important;border-spacing:0;color:var(--iso-ink);font-size:.78rem}.iso-workspace .iso-tab-content table thead th{position:sticky;top:0;z-index:3;padding:13px 12px!important;border:0!important;border-inline-end:1px solid rgba(255,255,255,.11)!important;border-bottom:3px solid var(--iso-gold)!important;border-radius:0!important;background:linear-gradient(var(--iso-petrol-2),var(--iso-petrol))!important;color:#fff!important;font-size:.73rem!important;font-weight:850!important;line-height:1.5;text-align:center!important;white-space:nowrap}.iso-workspace .iso-tab-content table tbody td{padding:11px 12px!important;border:0!important;border-inline-end:1px solid #edf3f2!important;border-bottom:1px solid #e4eeec!important;background:#fff;color:var(--iso-ink);vertical-align:middle;line-height:1.65}.iso-workspace .iso-tab-content table tbody tr:nth-child(even) td{background:#f7fbfa}.iso-workspace .iso-tab-content table tbody tr:hover td{background:#fff9e9!important}.iso-workspace .iso-tab-content table button{display:inline-flex;align-items:center;justify-content:center;min-width:34px;min-height:34px;border-radius:9px!important}
-                .iso-workspace .iso-standard-dashboard,.iso-workspace .iso-coding-center{color:var(--iso-ink)!important}.iso-workspace .iso-standard-dashboard .text-gray-700,.iso-workspace .iso-standard-dashboard h3,.iso-workspace .iso-standard-dashboard h4,.iso-workspace .iso-coding-center .text-gray-700,.iso-workspace .iso-coding-center .text-blue-800,.iso-workspace .iso-coding-center .text-green-800,.iso-workspace .iso-coding-center .text-purple-800{color:var(--iso-ink)!important}.iso-workspace .iso-standard-dashboard .bg-blue-50,.iso-workspace .iso-standard-dashboard .bg-green-50,.iso-workspace .iso-coding-center>.flex>.grid>div{border-color:#d4e4e1!important;background:#fff!important;color:var(--iso-ink)!important;box-shadow:0 8px 20px rgba(7,59,58,.07)}
-                .iso-professional-modal{--iso-petrol:#073b3a;--iso-petrol-2:#0b5551;--iso-teal:#0f766e;--iso-gold:#e4b64f;position:fixed!important;inset:0!important;z-index:10050!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:16px!important;background:rgba(4,26,25,.7)!important;backdrop-filter:blur(6px)}.iso-professional-modal .modal-content{display:flex!important;overflow:hidden!important;width:min(100%,820px)!important;max-width:none!important;max-height:calc(100dvh - 32px)!important;flex-direction:column!important;border:1px solid rgba(255,255,255,.3)!important;border-radius:19px!important;background:#f6faf9!important;color:#172334!important;box-shadow:0 30px 80px rgba(0,20,19,.34)!important}.iso-professional-modal .modal-header{min-height:70px;padding:18px 22px!important;border:0!important;border-bottom:3px solid var(--iso-gold)!important;background:linear-gradient(135deg,var(--iso-petrol),var(--iso-petrol-2))!important;color:#fff!important}.iso-professional-modal .modal-header *{color:#fff!important}.iso-professional-modal .modal-body{overflow:auto!important;padding:22px!important;background:#f6faf9!important;color:#172334!important}.iso-professional-modal label{color:#304741!important;font-weight:800!important}.iso-professional-modal input:not([type=checkbox]):not([type=radio]),.iso-professional-modal select,.iso-professional-modal textarea{min-height:43px;border:1px solid #bfd3cf!important;border-radius:10px!important;background:#fff!important;color:#172334!important}.iso-professional-modal input:focus,.iso-professional-modal select:focus,.iso-professional-modal textarea:focus{border-color:var(--iso-teal)!important;outline:0!important;box-shadow:0 0 0 3px rgba(15,118,110,.14)!important}.iso-professional-modal .modal-footer{gap:9px;padding:14px 22px!important;border-top:1px solid #d8e5e2!important;background:#eef5f3!important}.iso-professional-modal .modal-footer button{min-height:41px;border-radius:10px!important;font-weight:850!important}
-                [data-theme=dark] .iso-workspace{--iso-ink:#e5efed;--iso-muted:#abc0bc;--iso-line:#365b57;--iso-surface:#142927}[data-theme=dark] .iso-workspace .iso-stat-card,[data-theme=dark] .iso-workspace .iso-tab-content .content-card,[data-theme=dark] .iso-workspace .iso-tab-content .card-header{background:#142927!important;color:#e5efed!important}[data-theme=dark] .iso-workspace .iso-stat-card>div:last-child,[data-theme=dark] .iso-workspace .iso-tab-content .card-title,[data-theme=dark] .iso-workspace .iso-tab-content .card-header p{color:#e5efed!important}[data-theme=dark] .iso-workspace .iso-tab-content table tbody td{border-color:#2e4c49!important;background:#142927;color:#e5efed}[data-theme=dark] .iso-workspace .iso-tab-content table tbody tr:nth-child(even) td{background:#18312f}[data-theme=dark] .iso-workspace .iso-tab-content table tbody tr:hover td{background:#38412d!important}
-                [data-theme=dark] .iso-workspace .iso-standard-dashboard .bg-blue-50,[data-theme=dark] .iso-workspace .iso-standard-dashboard .bg-green-50,[data-theme=dark] .iso-workspace .iso-coding-center>.flex>.grid>div{border-color:#365b57!important;background:#142927!important;color:#e5efed!important}[data-theme=dark] .iso-workspace .iso-standard-dashboard .text-gray-700,[data-theme=dark] .iso-workspace .iso-standard-dashboard h3,[data-theme=dark] .iso-workspace .iso-standard-dashboard h4,[data-theme=dark] .iso-workspace .iso-coding-center .text-gray-700,[data-theme=dark] .iso-workspace .iso-coding-center .text-blue-800,[data-theme=dark] .iso-workspace .iso-coding-center .text-green-800,[data-theme=dark] .iso-workspace .iso-coding-center .text-purple-800{color:#e5efed!important}[data-theme=dark] .iso-professional-modal .modal-content,[data-theme=dark] .iso-professional-modal .modal-body{background:#102321!important;color:#e8f2f0!important}[data-theme=dark] .iso-professional-modal label{color:#d8e8e5!important}[data-theme=dark] .iso-professional-modal input:not([type=checkbox]):not([type=radio]),[data-theme=dark] .iso-professional-modal select,[data-theme=dark] .iso-professional-modal textarea{border-color:#426560!important;background:#172f2c!important;color:#eef7f5!important}[data-theme=dark] .iso-professional-modal .modal-footer{border-color:#365550!important;background:#132a27!important}
-                @media(max-width:980px){.iso-workspace .iso-quick-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:768px){.iso-workspace .iso-hero-header{padding:18px;border-radius:15px}.iso-workspace .iso-hero-header>div{align-items:flex-start;flex-direction:column}.iso-workspace .iso-hero-header .btn-success{width:100%}.iso-workspace .iso-tabs-shell{padding:6px;border-radius:14px}.iso-workspace .iso-tabs-nav .tab-btn{min-height:43px;padding:8px 11px;font-size:.74rem}.iso-workspace .iso-tabs-nav .tab-btn i{width:26px;height:26px}.iso-workspace .iso-tab-content .card-header{align-items:flex-start!important;gap:12px;flex-direction:column!important}.iso-workspace .iso-tab-content .card-header button{width:100%;justify-content:center}.iso-workspace .iso-tab-content .card-body{padding:13px}}@media(max-width:480px){.iso-workspace .iso-quick-stats{grid-template-columns:1fr}.iso-workspace .iso-stat-card{min-height:92px}.iso-workspace .iso-hero-header:after{display:none}}@media(prefers-reduced-motion:reduce){.iso-workspace *,.iso-workspace :before,.iso-workspace :after{transition:none!important;animation:none!important}}
+                .iso-workspace {
+                    --iso-petrol: #073b3a;
+                    --iso-petrol-2: #0b5551;
+                    --iso-teal: #0f766e;
+                    --iso-mint: #2db9a8;
+                    --iso-gold: #e4b64f;
+                    --iso-ink: #172334;
+                    --iso-muted: #64748b;
+                    --iso-line: #d8e6e3;
+                    --iso-surface: #ffffff;
+                    --iso-canvas: #f4f9f8;
+                    font-family: "Cairo", "Segoe UI", Tahoma, sans-serif;
+                }
+                .iso-workspace .iso-hero-header {
+                    position: relative;
+                    overflow: hidden;
+                    margin-bottom: 18px;
+                    padding: 22px 24px;
+                    border: 1px solid rgba(255,255,255,.12);
+                    border-radius: 18px;
+                    background:
+                        radial-gradient(circle at 8% 10%, rgba(228,182,79,.22), transparent 27%),
+                        linear-gradient(125deg, #052f31 0%, var(--iso-petrol-2) 68%, #0b6660 100%);
+                    color: #fff;
+                    box-shadow: 0 18px 38px rgba(7,59,58,.22);
+                }
+                .iso-workspace .iso-hero-header::after {
+                    content: "ISO";
+                    position: absolute;
+                    inset-inline-end: 24px;
+                    bottom: -20px;
+                    color: rgba(255,255,255,.055);
+                    font-family: "Segoe UI", sans-serif;
+                    font-size: 6.4rem;
+                    font-weight: 900;
+                    line-height: 1;
+                    letter-spacing: -.08em;
+                    pointer-events: none;
+                }
+                .iso-workspace .iso-hero-header > div {
+                    position: relative;
+                    z-index: 1;
+                    width: 100%;
+                    gap: 16px;
+                }
+                .iso-workspace .iso-hero-header .section-title {
+                    display: flex;
+                    align-items: center;
+                    gap: 11px;
+                    margin: 0 0 5px;
+                    color: #fff !important;
+                    font-size: 1.45rem;
+                    font-weight: 900;
+                    text-shadow: 0 2px 7px rgba(0,0,0,.22);
+                }
+                .iso-workspace .iso-hero-header .section-title i {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 43px;
+                    height: 43px;
+                    margin: 0 !important;
+                    border: 1px solid rgba(255,255,255,.2);
+                    border-radius: 12px;
+                    background: rgba(255,255,255,.12);
+                    color: #fde68a;
+                    backdrop-filter: blur(4px);
+                }
+                .iso-workspace .iso-hero-header .section-subtitle {
+                    margin: 0;
+                    color: rgba(255,255,255,.78) !important;
+                    font-size: .79rem;
+                    font-weight: 600;
+                }
+                .iso-workspace .iso-hero-header .btn-success {
+                    min-height: 43px;
+                    padding-inline: 17px;
+                    border: 1px solid rgba(255,255,255,.45);
+                    border-radius: 11px;
+                    background: #fff !important;
+                    color: var(--iso-petrol) !important;
+                    font-size: .8rem;
+                    font-weight: 800;
+                    box-shadow: 0 8px 20px rgba(0,0,0,.16);
+                }
+                .iso-workspace .iso-quick-stats {
+                    display: grid;
+                    grid-template-columns: repeat(4, minmax(0,1fr));
+                    gap: 13px;
+                    margin: 0 0 18px !important;
+                }
+                .iso-workspace .iso-stat-card {
+                    position: relative;
+                    overflow: hidden;
+                    min-height: 108px;
+                    padding: 16px 17px !important;
+                    border: 1px solid var(--iso-line) !important;
+                    border-radius: 15px !important;
+                    background: linear-gradient(145deg, #fff 0%, #f5faf9 100%) !important;
+                    text-align: start !important;
+                    box-shadow: 0 9px 23px rgba(7,59,58,.075);
+                    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+                }
+                .iso-workspace .iso-stat-card::before {
+                    content: "";
+                    position: absolute;
+                    inset-block: 0;
+                    inset-inline-start: 0;
+                    width: 4px;
+                    background: var(--stat-accent, var(--iso-teal));
+                }
+                .iso-workspace .iso-stat-card::after {
+                    content: "";
+                    position: absolute;
+                    inset-inline-end: -24px;
+                    bottom: -30px;
+                    width: 86px;
+                    height: 86px;
+                    border-radius: 50%;
+                    background: color-mix(in srgb, var(--stat-accent, var(--iso-teal)) 9%, transparent);
+                }
+                .iso-workspace .iso-stat-card:hover {
+                    border-color: #b7d1cc !important;
+                    box-shadow: 0 13px 28px rgba(7,59,58,.12);
+                    transform: translateY(-2px);
+                }
+                .iso-workspace .iso-stat-card > div:first-child {
+                    position: relative;
+                    z-index: 1;
+                    margin-bottom: 5px !important;
+                    color: var(--stat-accent, var(--iso-teal)) !important;
+                    font-family: "Segoe UI", "Cairo", sans-serif;
+                    font-size: 1.85rem !important;
+                    font-weight: 900 !important;
+                    line-height: 1.1;
+                }
+                .iso-workspace .iso-stat-card > div:last-child {
+                    position: relative;
+                    z-index: 1;
+                    color: #425466 !important;
+                    font-size: .75rem !important;
+                    font-weight: 800 !important;
+                }
+                .iso-workspace .iso-stat-docs { --stat-accent: #2563eb; }
+                .iso-workspace .iso-stat-procedures { --stat-accent: #059669; }
+                .iso-workspace .iso-stat-forms { --stat-accent: #d97706; }
+                .iso-workspace .iso-stat-compliance { --stat-accent: #7c3aed; }
+                .iso-workspace .iso-tabs-shell {
+                    position: relative;
+                    overflow: hidden;
+                    padding: 8px;
+                    border: 1px solid rgba(255,255,255,.11);
+                    border-radius: 18px;
+                    background:
+                        radial-gradient(circle at 92% 0%, rgba(45,185,168,.2), transparent 26%),
+                        linear-gradient(125deg, var(--iso-petrol) 0%, var(--iso-petrol-2) 100%);
+                    box-shadow: 0 14px 32px rgba(7,59,58,.18);
+                }
+                .iso-workspace .iso-tabs-nav {
+                    position: relative;
+                    z-index: 1;
+                    display: flex;
+                    flex-wrap: nowrap !important;
+                    gap: 7px !important;
+                    margin: 0 !important;
+                    padding: 0 0 2px !important;
+                    overflow-x: auto;
+                    border: 0 !important;
+                    background: transparent;
+                    scrollbar-width: thin;
+                    scrollbar-color: rgba(255,255,255,.36) transparent;
+                }
+                .iso-workspace .iso-tabs-nav .tab-btn {
+                    flex: 0 0 auto;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 48px;
+                    min-width: max-content;
+                    padding: 10px 14px;
+                    gap: 8px;
+                    border: 1px solid rgba(255,255,255,.14);
+                    border-radius: 11px;
+                    background: rgba(255,255,255,.075);
+                    color: rgba(255,255,255,.82);
+                    font-size: .8rem;
+                    font-weight: 750;
+                    line-height: 1.2;
+                    white-space: nowrap;
+                    box-shadow: none;
+                    transition: transform .18s ease, color .18s ease, background .18s ease, box-shadow .18s ease;
+                }
+                .iso-workspace .iso-tabs-nav .tab-btn::before { display: none; }
+                .iso-workspace .iso-tabs-nav .tab-btn i {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 29px;
+                    height: 29px;
+                    margin: 0 !important;
+                    border-radius: 8px;
+                    background: rgba(255,255,255,.12);
+                    color: #a7f3d0;
+                    font-size: .76rem;
+                }
+                .iso-workspace .iso-tabs-nav .tab-btn[data-tab="forms"] i { color: #fde68a; }
+                .iso-workspace .iso-tabs-nav .tab-btn[data-tab="iso45001"] i { color: #bfdbfe; }
+                .iso-workspace .iso-tabs-nav .tab-btn[data-tab="iso14001"] i { color: #bbf7d0; }
+                .iso-workspace .iso-tabs-nav .tab-btn[data-tab="audit"] i { color: #ddd6fe; }
+                .iso-workspace .iso-tabs-nav .tab-btn:hover {
+                    background: rgba(255,255,255,.14);
+                    color: #fff;
+                    transform: translateY(-1px);
+                }
+                .iso-workspace .iso-tabs-nav .tab-btn.active {
+                    border-color: #fff;
+                    background: #fff;
+                    color: var(--iso-petrol);
+                    box-shadow: 0 8px 22px rgba(0,0,0,.18);
+                    transform: translateY(-1px);
+                }
+                .iso-workspace .iso-tabs-nav .tab-btn.active i {
+                    background: #e6f7f3;
+                    color: var(--iso-teal);
+                }
+                .iso-workspace .iso-tab-content {
+                    min-height: 240px;
+                    margin-top: 18px;
+                    animation: isoSurfaceIn .24s ease-out;
+                }
+                @keyframes isoSurfaceIn {
+                    from { opacity: 0; transform: translateY(5px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .iso-workspace .iso-tab-content .content-card {
+                    overflow: hidden !important;
+                    border: 1px solid var(--iso-line) !important;
+                    border-radius: 16px !important;
+                    background: var(--iso-surface) !important;
+                    box-shadow: 0 10px 28px rgba(7,59,58,.08) !important;
+                    transform: none !important;
+                }
+                .iso-workspace .iso-tab-content .content-card:hover {
+                    box-shadow: 0 14px 32px rgba(7,59,58,.11) !important;
+                    transform: none !important;
+                }
+                .iso-workspace .iso-tab-content .content-card > .card-header,
+                .iso-workspace .iso-tab-content .card-header {
+                    position: relative;
+                    padding: 17px 20px !important;
+                    border-bottom: 1px solid #d8e6e3 !important;
+                    background: linear-gradient(115deg, #eaf5f3 0%, #fff 66%, #f7fbfa 100%) !important;
+                    color: var(--iso-petrol) !important;
+                }
+                .iso-workspace .iso-tab-content .card-header::before {
+                    content: "";
+                    position: absolute;
+                    inset-block: 0;
+                    inset-inline-start: 0;
+                    width: 5px;
+                    background: linear-gradient(180deg, var(--iso-mint), var(--iso-teal));
+                }
+                .iso-workspace .iso-tab-content[data-tab="documents"] .card-header::before { background: linear-gradient(180deg,#60a5fa,#2563eb); }
+                .iso-workspace .iso-tab-content[data-tab="procedures"] .card-header::before { background: linear-gradient(180deg,#34d399,#059669); }
+                .iso-workspace .iso-tab-content[data-tab="forms"] .card-header::before { background: linear-gradient(180deg,#fbbf24,#d97706); }
+                .iso-workspace .iso-tab-content[data-tab="iso45001"] .card-header::before { background: linear-gradient(180deg,#38bdf8,#0369a1); }
+                .iso-workspace .iso-tab-content[data-tab="iso14001"] .card-header::before { background: linear-gradient(180deg,#4ade80,#15803d); }
+                .iso-workspace .iso-tab-content[data-tab="audit"] .card-header::before { background: linear-gradient(180deg,#a78bfa,#6d28d9); }
+                .iso-workspace .iso-tab-content[data-tab="coding-center"] .card-header::before { background: linear-gradient(180deg,#facc15,#a16207); }
+                .iso-workspace .iso-tab-content .card-title {
+                    color: var(--iso-petrol) !important;
+                    font-size: 1rem !important;
+                    font-weight: 850 !important;
+                }
+                .iso-workspace .iso-tab-content .card-header p { color: var(--iso-muted) !important; }
+                .iso-workspace .iso-tab-content .card-header .btn,
+                .iso-workspace .iso-tab-content .card-header .btn-primary,
+                .iso-workspace .iso-tab-content .card-header .btn-success,
+                .iso-workspace .iso-tab-content .card-header button {
+                    min-height: 39px;
+                    border: 1px solid #b9d3ce !important;
+                    border-radius: 10px !important;
+                    background: #fff !important;
+                    color: var(--iso-petrol) !important;
+                    font-size: .76rem;
+                    font-weight: 800;
+                    box-shadow: 0 5px 13px rgba(7,59,58,.1) !important;
+                }
+                .iso-workspace .iso-tab-content .form-input,
+                .iso-workspace .iso-tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+                .iso-workspace .iso-tab-content select {
+                    border-color: #c6d9d5;
+                    border-radius: 10px;
+                }
+                .iso-workspace .iso-tab-content .form-input:focus,
+                .iso-workspace .iso-tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+                .iso-workspace .iso-tab-content select:focus {
+                    border-color: var(--iso-teal);
+                    box-shadow: 0 0 0 3px rgba(15,118,110,.12);
+                    outline: none;
+                }
+                .iso-workspace .iso-tab-content .overflow-x-auto:has(> table),
+                .iso-workspace .iso-tab-content .table-responsive:has(> table) {
+                    overflow: auto;
+                    border: 1px solid #d7e5e2;
+                    border-radius: 13px;
+                    background: #fff;
+                    scrollbar-width: thin;
+                    scrollbar-color: #8eb2ab #edf5f3;
+                }
+                .iso-workspace .iso-tab-content table {
+                    width: 100%;
+                    margin: 0;
+                    border: 0 !important;
+                    border-collapse: separate !important;
+                    border-spacing: 0;
+                    color: var(--iso-ink);
+                    font-size: .78rem;
+                }
+                .iso-workspace .iso-tab-content table thead th {
+                    position: sticky;
+                    top: 0;
+                    z-index: 3;
+                    padding: 13px 12px !important;
+                    border: 0 !important;
+                    border-inline-end: 1px solid rgba(255,255,255,.11) !important;
+                    border-bottom: 3px solid var(--iso-gold) !important;
+                    border-radius: 0 !important;
+                    background: linear-gradient(180deg, var(--iso-petrol-2) 0%, var(--iso-petrol) 100%) !important;
+                    color: #fff !important;
+                    font-size: .73rem !important;
+                    font-weight: 850 !important;
+                    line-height: 1.5;
+                    text-align: center !important;
+                    white-space: nowrap;
+                    text-shadow: 0 1px 1px rgba(0,0,0,.2);
+                }
+                .iso-workspace .iso-tab-content table tbody td {
+                    padding: 11px 12px !important;
+                    border: 0 !important;
+                    border-inline-end: 1px solid #edf3f2 !important;
+                    border-bottom: 1px solid #e4eeec !important;
+                    background: #fff;
+                    color: var(--iso-ink);
+                    vertical-align: middle;
+                    line-height: 1.65;
+                }
+                .iso-workspace .iso-tab-content table tbody tr:nth-child(even) td { background: #f7fbfa; }
+                .iso-workspace .iso-tab-content table tbody tr:hover td { background: #fff9e9 !important; }
+                .iso-workspace .iso-tab-content table button {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-width: 34px;
+                    min-height: 34px;
+                    border-radius: 9px !important;
+                }
+                /* ISO assurance dashboards: explicit surfaces prevent utility-color conflicts. */
+                .iso-workspace .iso-standard-dashboard {
+                    display: grid;
+                    gap: 18px;
+                    color: var(--iso-ink);
+                }
+                .iso-workspace .iso-standard-dashboard > .card {
+                    overflow: hidden;
+                    border: 1px solid #cfe0dd !important;
+                    border-radius: 17px !important;
+                    background: var(--iso-surface) !important;
+                    box-shadow: 0 12px 30px rgba(7,59,58,.08) !important;
+                }
+                .iso-workspace .iso-standard-dashboard > .card:first-child {
+                    border: 0 !important;
+                    background: linear-gradient(135deg, var(--iso-petrol) 0%, var(--iso-petrol-2) 68%, #12796f 100%) !important;
+                    box-shadow: 0 16px 38px rgba(7,59,58,.2) !important;
+                }
+                .iso-workspace .iso-standard-dashboard > .card:first-child .card-header,
+                .iso-workspace .iso-standard-dashboard > .card:first-child .card-body {
+                    border-color: rgba(255,255,255,.16) !important;
+                    background: transparent !important;
+                    color: #fff !important;
+                }
+                .iso-workspace .iso-standard-dashboard > .card:first-child .card-header::before { display: none; }
+                .iso-workspace .iso-standard-dashboard > .card:first-child .card-title,
+                .iso-workspace .iso-standard-dashboard > .card:first-child h2,
+                .iso-workspace .iso-standard-dashboard > .card:first-child h3,
+                .iso-workspace .iso-standard-dashboard > .card:first-child p,
+                .iso-workspace .iso-standard-dashboard > .card:first-child .text-muted,
+                .iso-workspace .iso-standard-dashboard > .card:first-child .text-dark { color: #fff !important; }
+                .iso-workspace .iso-standard-dashboard > .mb-4[style*="grid-template-columns"] {
+                    grid-template-columns: repeat(4, minmax(0,1fr)) !important;
+                    gap: 13px !important;
+                }
+                .iso-workspace .iso-standard-dashboard .card {
+                    border: 1px solid #d8e6e3 !important;
+                    border-radius: 14px !important;
+                    background: #fff !important;
+                    color: var(--iso-ink) !important;
+                    box-shadow: 0 7px 20px rgba(7,59,58,.06) !important;
+                }
+                .iso-workspace .iso-standard-dashboard .card-header {
+                    border-bottom: 1px solid #dfeae8 !important;
+                    background: linear-gradient(180deg,#fff 0%,#f4f9f8 100%) !important;
+                    color: var(--iso-ink) !important;
+                }
+                .iso-workspace .iso-standard-dashboard .card-body,
+                .iso-workspace .iso-standard-dashboard .bg-white { background: #fff !important; }
+                .iso-workspace .iso-standard-dashboard h4,
+                .iso-workspace .iso-standard-dashboard h5,
+                .iso-workspace .iso-standard-dashboard h6,
+                .iso-workspace .iso-standard-dashboard .text-dark { color: var(--iso-ink) !important; }
+                .iso-workspace .iso-standard-dashboard .text-muted,
+                .iso-workspace .iso-standard-dashboard .small { color: var(--iso-muted) !important; }
+                .iso-workspace .iso-standard-dashboard .progress {
+                    overflow: hidden;
+                    height: 8px;
+                    border-radius: 999px;
+                    background: #e5efed !important;
+                }
+                .iso-workspace .iso-standard-dashboard table { border-radius: 12px; }
+
+                /* Coding center follows the same controlled-document visual language. */
+                .iso-workspace .iso-coding-center {
+                    padding: 2px;
+                    color: var(--iso-ink) !important;
+                }
+                .iso-workspace .iso-coding-center > .flex > .grid > div {
+                    min-height: 84px;
+                    border: 1px solid #d4e4e1 !important;
+                    border-inline-start: 4px solid var(--iso-teal) !important;
+                    border-radius: 13px !important;
+                    background: #fff !important;
+                    color: var(--iso-ink) !important;
+                    box-shadow: 0 8px 20px rgba(7,59,58,.07);
+                }
+                .iso-workspace .iso-coding-center > .flex > .grid > div:nth-child(2) { border-inline-start-color: #229765 !important; }
+                .iso-workspace .iso-coding-center > .flex > .grid > div:nth-child(3) { border-inline-start-color: #8b5cc7 !important; }
+                .iso-workspace .iso-coding-center .text-gray-900,
+                .iso-workspace .iso-coding-center .text-gray-800,
+                .iso-workspace .iso-coding-center .text-gray-700,
+                .iso-workspace .iso-coding-center .text-blue-800,
+                .iso-workspace .iso-coding-center .text-green-800,
+                .iso-workspace .iso-coding-center .text-purple-800 { color: var(--iso-ink) !important; }
+                .iso-workspace .iso-coding-center .text-gray-600,
+                .iso-workspace .iso-coding-center .text-gray-500 { color: var(--iso-muted) !important; }
+                .iso-workspace .iso-coding-center .content-card,
+                .iso-workspace .iso-coding-center .content-card .card-body,
+                .iso-workspace .iso-coding-center .empty-state {
+                    border-color: #d6e4e1 !important;
+                    background: #fff !important;
+                    color: var(--iso-ink) !important;
+                }
+
+                /* One professional, responsive form system for every ISO workflow. */
+                .iso-professional-modal {
+                    --iso-petrol: #073b3a;
+                    --iso-petrol-2: #0b5551;
+                    --iso-teal: #0f766e;
+                    --iso-gold: #e4b64f;
+                    position: fixed !important;
+                    inset: 0 !important;
+                    z-index: 10050 !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    padding: 16px !important;
+                    background: rgba(4,26,25,.7) !important;
+                    backdrop-filter: blur(6px);
+                }
+                .iso-professional-modal .modal-content {
+                    --iso-modal-width: 820px;
+                    display: flex !important;
+                    overflow: hidden !important;
+                    width: min(100%, var(--iso-modal-width)) !important;
+                    max-width: none !important;
+                    max-height: calc(100dvh - 32px) !important;
+                    flex-direction: column !important;
+                    border: 1px solid rgba(255,255,255,.32) !important;
+                    border-radius: 19px !important;
+                    background: #f6faf9 !important;
+                    color: #172334 !important;
+                    box-shadow: 0 30px 80px rgba(0,20,19,.34) !important;
+                }
+                .iso-professional-modal .modal-content[style*="900px"] { --iso-modal-width: 980px; }
+                .iso-professional-modal .modal-content[style*="700px"] { --iso-modal-width: 790px; }
+                .iso-professional-modal .modal-content[style*="600px"] { --iso-modal-width: 690px; }
+                .iso-professional-modal .modal-header {
+                    position: relative;
+                    min-height: 72px;
+                    padding: 18px 22px !important;
+                    border: 0 !important;
+                    border-bottom: 3px solid var(--iso-gold) !important;
+                    background: linear-gradient(135deg,var(--iso-petrol) 0%,var(--iso-petrol-2) 100%) !important;
+                    color: #fff !important;
+                }
+                .iso-professional-modal .modal-title,
+                .iso-professional-modal .modal-header h2,
+                .iso-professional-modal .modal-header h3,
+                .iso-professional-modal .modal-header h4,
+                .iso-professional-modal .modal-header p { margin: 0; color: #fff !important; }
+                .iso-professional-modal .modal-title { font-size: 1.08rem !important; font-weight: 900 !important; }
+                .iso-professional-modal .modal-close,
+                .iso-professional-modal .btn-close {
+                    position: relative;
+                    display: inline-flex !important;
+                    width: 38px !important;
+                    min-width: 38px !important;
+                    height: 38px !important;
+                    align-items: center;
+                    justify-content: center;
+                    border: 1px solid rgba(255,255,255,.34) !important;
+                    border-radius: 11px !important;
+                    background: rgba(255,255,255,.12) !important;
+                    color: #fff !important;
+                    opacity: 1 !important;
+                    box-shadow: none !important;
+                }
+                .iso-professional-modal .btn-close::after { content: "\\00d7"; color: #fff; font-size: 1.5rem; line-height: 1; }
+                .iso-professional-modal .modal-body {
+                    overflow: auto !important;
+                    padding: 22px !important;
+                    background: #f6faf9 !important;
+                    color: #172334 !important;
+                    scrollbar-width: thin;
+                    scrollbar-color: #88aaa4 #e6efed;
+                }
+                .iso-professional-modal form,
+                .iso-professional-modal .space-y-3,
+                .iso-professional-modal .space-y-4 { color: #172334 !important; }
+                .iso-professional-modal .row { row-gap: 15px; }
+                .iso-professional-modal label,
+                .iso-professional-modal .form-label { margin-bottom: 7px; color: #304741 !important; font-size: .8rem; font-weight: 800 !important; }
+                .iso-professional-modal input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+                .iso-professional-modal select,
+                .iso-professional-modal textarea,
+                .iso-professional-modal .form-control,
+                .iso-professional-modal .form-select {
+                    min-height: 43px;
+                    border: 1px solid #bfd3cf !important;
+                    border-radius: 10px !important;
+                    background: #fff !important;
+                    color: #172334 !important;
+                    box-shadow: inset 0 1px 2px rgba(7,59,58,.03) !important;
+                }
+                .iso-professional-modal textarea { min-height: 92px; resize: vertical; }
+                .iso-professional-modal input:focus,
+                .iso-professional-modal select:focus,
+                .iso-professional-modal textarea:focus {
+                    border-color: var(--iso-teal) !important;
+                    outline: 0 !important;
+                    box-shadow: 0 0 0 3px rgba(15,118,110,.14) !important;
+                }
+                .iso-professional-modal input[readonly],
+                .iso-professional-modal input:disabled,
+                .iso-professional-modal select:disabled,
+                .iso-professional-modal textarea:disabled { background: #e9f0ee !important; color: #657a76 !important; }
+                .iso-professional-modal .space-y-3 > div,
+                .iso-professional-modal .space-y-4 > div:not(.row) {
+                    border: 1px solid #dbe7e4;
+                    border-radius: 11px;
+                    background: #fff;
+                }
+                .iso-professional-modal .modal-footer {
+                    gap: 9px;
+                    padding: 14px 22px !important;
+                    border: 0 !important;
+                    border-top: 1px solid #d8e5e2 !important;
+                    background: #eef5f3 !important;
+                }
+                .iso-professional-modal .modal-footer .btn,
+                .iso-professional-modal .modal-footer button {
+                    min-height: 41px;
+                    padding-inline: 17px;
+                    border-radius: 10px !important;
+                    font-weight: 850 !important;
+                }
+                [data-theme="dark"] .iso-workspace {
+                    --iso-ink: #e5efed;
+                    --iso-muted: #abc0bc;
+                    --iso-line: #365b57;
+                    --iso-surface: #142927;
+                    --iso-canvas: #0e1d1c;
+                }
+                [data-theme="dark"] .iso-workspace .iso-stat-card,
+                [data-theme="dark"] .iso-workspace .iso-tab-content .content-card,
+                [data-theme="dark"] .iso-workspace .iso-tab-content .card-header {
+                    background: #142927 !important;
+                    color: #e5efed !important;
+                }
+                [data-theme="dark"] .iso-workspace .iso-stat-card > div:last-child,
+                [data-theme="dark"] .iso-workspace .iso-tab-content .card-title,
+                [data-theme="dark"] .iso-workspace .iso-tab-content .card-header p { color: #e5efed !important; }
+                [data-theme="dark"] .iso-workspace .iso-tab-content table tbody td {
+                    border-color: #2e4c49 !important;
+                    background: #142927;
+                    color: #e5efed;
+                }
+                [data-theme="dark"] .iso-workspace .iso-tab-content table tbody tr:nth-child(even) td { background: #18312f; }
+                [data-theme="dark"] .iso-workspace .iso-tab-content table tbody tr:hover td { background: #38412d !important; }
+                [data-theme="dark"] .iso-workspace .iso-tab-content .form-input,
+                [data-theme="dark"] .iso-workspace .iso-tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+                [data-theme="dark"] .iso-workspace .iso-tab-content select {
+                    border-color: #456763;
+                    background: #0d201f;
+                    color: #eef7f5;
+                }
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard .card,
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard .card-body,
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard .card-header,
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard .bg-white,
+                [data-theme="dark"] .iso-workspace .iso-coding-center > .flex > .grid > div,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .content-card,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .content-card .card-body,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .empty-state {
+                    border-color: #365b57 !important;
+                    background: #142927 !important;
+                    color: #e5efed !important;
+                }
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard h4,
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard h5,
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard h6,
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard .text-dark,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .text-gray-900,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .text-gray-800,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .text-gray-700,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .text-blue-800,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .text-green-800,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .text-purple-800 { color: #e5efed !important; }
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard .text-muted,
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard .small,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .text-gray-600,
+                [data-theme="dark"] .iso-workspace .iso-coding-center .text-gray-500 { color: #abc0bc !important; }
+                [data-theme="dark"] .iso-workspace .iso-standard-dashboard .progress { background: #294440 !important; }
+                [data-theme="dark"] .iso-professional-modal .modal-content,
+                [data-theme="dark"] .iso-professional-modal .modal-body { background: #102321 !important; color: #e8f2f0 !important; }
+                [data-theme="dark"] .iso-professional-modal label,
+                [data-theme="dark"] .iso-professional-modal .form-label,
+                [data-theme="dark"] .iso-professional-modal form { color: #d8e8e5 !important; }
+                [data-theme="dark"] .iso-professional-modal input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+                [data-theme="dark"] .iso-professional-modal select,
+                [data-theme="dark"] .iso-professional-modal textarea,
+                [data-theme="dark"] .iso-professional-modal .form-control,
+                [data-theme="dark"] .iso-professional-modal .form-select,
+                [data-theme="dark"] .iso-professional-modal .space-y-3 > div,
+                [data-theme="dark"] .iso-professional-modal .space-y-4 > div:not(.row) {
+                    border-color: #426560 !important;
+                    background: #172f2c !important;
+                    color: #eef7f5 !important;
+                }
+                [data-theme="dark"] .iso-professional-modal .modal-footer { border-color: #365550 !important; background: #132a27 !important; }
+                @media (max-width: 980px) {
+                    .iso-workspace .iso-quick-stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+                    .iso-workspace .iso-standard-dashboard > .mb-4[style*="grid-template-columns"] { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+                }
+                @media (max-width: 768px) {
+                    .iso-workspace .iso-hero-header { padding: 18px; border-radius: 15px; }
+                    .iso-workspace .iso-hero-header > div { align-items: flex-start; flex-direction: column; }
+                    .iso-workspace .iso-hero-header .btn-success { width: 100%; }
+                    .iso-workspace .iso-tabs-shell { padding: 6px; border-radius: 14px; }
+                    .iso-workspace .iso-tabs-nav .tab-btn { min-height: 43px; padding: 8px 11px; font-size: .74rem; }
+                    .iso-workspace .iso-tabs-nav .tab-btn i { width: 26px; height: 26px; }
+                    .iso-workspace .iso-tab-content .card-header { align-items: flex-start !important; gap: 12px; flex-direction: column !important; }
+                    .iso-workspace .iso-tab-content .card-header > div { align-items: flex-start; }
+                    .iso-workspace .iso-tab-content .card-header button { width: 100%; justify-content: center; }
+                    .iso-workspace .iso-tab-content .card-body { padding: 13px; }
+                    .iso-professional-modal { align-items: flex-end !important; padding: 8px !important; }
+                    .iso-professional-modal .modal-content { max-height: calc(100dvh - 16px) !important; border-radius: 17px 17px 10px 10px !important; }
+                    .iso-professional-modal .modal-header { min-height: 64px; padding: 15px 16px !important; }
+                    .iso-professional-modal .modal-body { padding: 16px !important; }
+                    .iso-professional-modal .modal-footer { padding: 12px 16px !important; }
+                    .iso-professional-modal .modal-footer .btn,
+                    .iso-professional-modal .modal-footer button { flex: 1 1 130px; }
+                }
+                @media (max-width: 480px) {
+                    .iso-workspace .iso-quick-stats { grid-template-columns: 1fr; }
+                    .iso-workspace .iso-stat-card { min-height: 92px; }
+                    .iso-workspace .iso-hero-header::after { display: none; }
+                    .iso-workspace .iso-standard-dashboard > .mb-4[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .iso-workspace *, .iso-workspace *::before, .iso-workspace *::after { transition: none !important; animation: none !important; }
+                }
             </style>
         `;
     },
@@ -80,12 +787,12 @@ const ISO = {
                     <div>
                         <h1 class="section-title">
                             <i class="fas fa-shield-alt ml-3"></i>
-                            نظام إدارة السلامة والصحة المهنية والبيئة
+                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.title', 'SafetyHub | ICAPP') : 'SafetyHub | ICAPP'}
                         </h1>
-                        <p class="section-subtitle">HSE Management System - متوافق مع ISO 45001 & ISO 14001</p>
+                        <p class="section-subtitle">${typeof I18n !== 'undefined' ? I18n.t('module.iso.subtitle', 'SafetyHub | ICAPP - متوافق مع ISO 45001 & ISO 14001') : 'SafetyHub | ICAPP - متوافق مع ISO 45001 & ISO 14001'}</p>
                     </div>
                     <button id="export-compliance-report-btn" class="btn-success">
-                        <i class="fas fa-file-pdf ml-2"></i>تقرير الامتثال PDF
+                        <i class="fas fa-file-pdf ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.btn.exportCompliance', 'تقرير الامتثال PDF') : 'تقرير الامتثال PDF'}
                     </button>
                 </div>
             </div>
@@ -93,47 +800,47 @@ const ISO = {
             <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 iso-quick-stats">
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center iso-stat-card iso-stat-docs">
                     <div class="text-3xl font-bold text-blue-600 mb-2">${(AppState.appData.isoDocuments || []).length}</div>
-                    <div class="text-sm text-gray-700 font-semibold">الوثائق</div>
+                    <div class="text-sm text-gray-700 font-semibold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.docs', 'الوثائق') : 'الوثائق'}</div>
                 </div>
                 <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center iso-stat-card iso-stat-procedures">
                     <div class="text-3xl font-bold text-green-600 mb-2">${(AppState.appData.isoProcedures || []).length}</div>
-                    <div class="text-sm text-gray-700 font-semibold">الإجراءات</div>
+                    <div class="text-sm text-gray-700 font-semibold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.procedures', 'الإجراءات') : 'الإجراءات'}</div>
                 </div>
                 <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center iso-stat-card iso-stat-forms">
                     <div class="text-3xl font-bold text-yellow-600 mb-2">${(AppState.appData.isoForms || []).length}</div>
-                    <div class="text-sm text-gray-700 font-semibold">النماذج</div>
+                    <div class="text-sm text-gray-700 font-semibold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.forms', 'النماذج') : 'النماذج'}</div>
                 </div>
                 <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center iso-stat-card iso-stat-compliance">
                     <div class="text-3xl font-bold text-purple-600 mb-2">${this.calculateComplianceRate()}%</div>
-                    <div class="text-sm text-gray-700 font-semibold">معدل الامتثال</div>
+                    <div class="text-sm text-gray-700 font-semibold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.compliance', 'معدل الامتثال') : 'معدل الامتثال'}</div>
                 </div>
             </div>
             
             <div class="mt-6 iso-tabs-shell">
-                <div class="flex gap-2 mb-6 border-b iso-tabs-nav" role="tablist" aria-label="تبويبات نظام ISO">
+                <div class="flex flex-wrap gap-2 mb-6 border-b pb-2 iso-tabs-nav" role="tablist" aria-label="تبويبات نظام ISO">
                     <button class="tab-btn ${this.currentTab === 'overview' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'overview' ? 'true' : 'false'}" data-tab="overview">
-                        <i class="fas fa-chart-pie ml-2"></i>نظرة عامة
+                        <i class="fas fa-chart-pie mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.overview', 'نظرة عامة') : 'نظرة عامة'}
                     </button>
                     <button class="tab-btn ${this.currentTab === 'documents' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'documents' ? 'true' : 'false'}" data-tab="documents">
-                        <i class="fas fa-file-alt ml-2"></i>الوثائق
+                        <i class="fas fa-file-alt mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.docs', 'الوثائق') : 'الوثائق'}
                     </button>
                     <button class="tab-btn ${this.currentTab === 'procedures' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'procedures' ? 'true' : 'false'}" data-tab="procedures">
-                        <i class="fas fa-tasks ml-2"></i>الإجراءات
+                        <i class="fas fa-tasks mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.procedures', 'الإجراءات') : 'الإجراءات'}
                     </button>
                     <button class="tab-btn ${this.currentTab === 'forms' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'forms' ? 'true' : 'false'}" data-tab="forms">
-                        <i class="fas fa-file-signature ml-2"></i>النماذج
+                        <i class="fas fa-file-signature mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.forms', 'النماذج') : 'النماذج'}
                     </button>
                     <button class="tab-btn ${this.currentTab === 'iso45001' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'iso45001' ? 'true' : 'false'}" data-tab="iso45001">
-                        <i class="fas fa-hard-hat ml-2"></i>ISO 45001
+                        <i class="fas fa-hard-hat mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.iso45001', 'ISO 45001') : 'ISO 45001'}
                     </button>
                     <button class="tab-btn ${this.currentTab === 'iso14001' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'iso14001' ? 'true' : 'false'}" data-tab="iso14001">
-                        <i class="fas fa-leaf ml-2"></i>ISO 14001
+                        <i class="fas fa-leaf mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.iso14001', 'ISO 14001') : 'ISO 14001'}
                     </button>
                     <button class="tab-btn ${this.currentTab === 'audit' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'audit' ? 'true' : 'false'}" data-tab="audit">
-                        <i class="fas fa-clipboard-check ml-2"></i>التدقيق والمراجعة
+                        <i class="fas fa-clipboard-check mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.audit', 'التدقيق والمراجعة') : 'التدقيق والمراجعة'}
                     </button>
                     <button class="tab-btn ${this.currentTab === 'coding-center' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'coding-center' ? 'true' : 'false'}" data-tab="coding-center">
-                        <i class="fas fa-code ml-2"></i>مركز التكويد والإصدار
+                        <i class="fas fa-code mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.coding', 'مركز التكويد والإصدار') : 'مركز التكويد والإصدار'}
                     </button>
                 </div>
                 <div id="iso-content" class="iso-tab-content" data-tab="${this.currentTab}">
@@ -145,7 +852,7 @@ const ISO = {
                                         <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                     </div>
                                 </div>
-                                <p class="text-gray-500">جاري تحميل المحتوى...</p>
+                                <p class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.loading', 'جاري تحميل المحتوى...') : 'جاري تحميل المحتوى...'}</p>
                             </div>
                         </div>
                     </div>
@@ -278,7 +985,7 @@ const ISO = {
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                     <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 mb-1">إجمالي الوثائق</p>
+                            <p class="text-sm font-medium text-gray-500 mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.docs', 'إجمالي الوثائق') : 'إجمالي الوثائق'}</p>
                             <h3 class="text-3xl font-bold text-gray-800">${totalDocs}</h3>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
@@ -286,8 +993,8 @@ const ISO = {
                         </div>
                     </div>
                     <div class="mt-4 text-xs text-gray-500 flex items-center">
-                        <span class="text-blue-600 font-semibold ml-1">${procedures.length}</span> إجراءات | 
-                        <span class="text-indigo-600 font-semibold mx-1">${forms.length}</span> نماذج
+                        <span class="text-blue-600 font-semibold ml-1">${procedures.length}</span> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.procedures', 'إجراءات') : 'إجراءات'} | 
+                        <span class="text-indigo-600 font-semibold mx-1">${forms.length}</span> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.forms', 'نماذج') : 'نماذج'}
                     </div>
                 </div>
 
@@ -296,7 +1003,7 @@ const ISO = {
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-red-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                     <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 mb-1">حالات عدم المطابقة المفتوحة</p>
+                            <p class="text-sm font-medium text-gray-500 mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.openNc', 'حالات عدم المطابقة المفتوحة') : 'حالات عدم المطابقة المفتوحة'}</p>
                             <h3 class="text-3xl font-bold text-gray-800">${openNCs}</h3>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center text-white shadow-lg shadow-red-200">
@@ -313,7 +1020,7 @@ const ISO = {
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-purple-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                     <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 mb-1">عمليات تدقيق قادمة</p>
+                            <p class="text-sm font-medium text-gray-500 mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.auditLogTitle', 'عمليات تدقيق قادمة') : 'عمليات تدقيق قادمة'}</p>
                             <h3 class="text-3xl font-bold text-gray-800">${pendingAudits}</h3>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-purple-200">
@@ -330,7 +1037,7 @@ const ISO = {
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-amber-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                     <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 mb-1">إجراءات تصحيحية مفتوحة</p>
+                            <p class="text-sm font-medium text-gray-500 mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.lateCa', 'إجراءات تصحيحية مفتوحة') : 'إجراءات تصحيحية مفتوحة'}</p>
                             <h3 class="text-3xl font-bold text-gray-800">${openActions}</h3>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-amber-200">
@@ -349,7 +1056,7 @@ const ISO = {
                 <div class="lg:col-span-2 space-y-6">
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                         <div class="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
-                            <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-shield-check text-blue-600 ml-2"></i>مستوى الامتثال للنظام (QMS Health)</h2>
+                            <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-shield-check text-blue-600 ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.healthTitle', 'مستوى الامتثال للنظام (QMS Health)') : 'مستوى الامتثال للنظام (QMS Health)'}</h2>
                             <span class="text-2xl font-bold ${complianceScore >= 80 ? 'text-green-500' : (complianceScore >= 50 ? 'text-amber-500' : 'text-red-500')}">${complianceScore}%</span>
                         </div>
                         <div class="p-6">
@@ -364,9 +1071,9 @@ const ISO = {
                                     <h3 class="font-bold text-blue-800 mb-2 flex items-center">
                                         <i class="fas fa-hard-hat text-blue-500 ml-2"></i> ISO 45001
                                     </h3>
-                                    <p class="text-xs text-gray-600 mb-3">نظام إدارة السلامة والصحة المهنية</p>
+                                    <p class="text-xs text-gray-600 mb-3">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.healthDesc', 'SafetyHub | ICAPP') : 'SafetyHub | ICAPP'}</p>
                                     <div class="flex justify-between items-center text-sm">
-                                        <span class="text-gray-500">المتطلبات</span>
+                                        <span class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.excellent', 'المتطلبات') : 'المتطلبات'}</span>
                                         <span class="font-semibold text-blue-700">مغطاة</span>
                                     </div>
                                 </div>
@@ -374,9 +1081,9 @@ const ISO = {
                                     <h3 class="font-bold text-green-800 mb-2 flex items-center">
                                         <i class="fas fa-leaf text-green-500 ml-2"></i> ISO 14001
                                     </h3>
-                                    <p class="text-xs text-gray-600 mb-3">نظام الإدارة البيئية</p>
+                                    <p class="text-xs text-gray-600 mb-3">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.healthDesc', 'نظام الإدارة البيئية') : 'نظام الإدارة البيئية'}</p>
                                     <div class="flex justify-between items-center text-sm">
-                                        <span class="text-gray-500">المتطلبات</span>
+                                        <span class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.excellent', 'المتطلبات') : 'المتطلبات'}</span>
                                         <span class="font-semibold text-green-700">مغطاة</span>
                                     </div>
                                 </div>
@@ -389,7 +1096,7 @@ const ISO = {
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
                     <div class="p-5 border-b border-gray-50 bg-gradient-to-r from-rose-50 to-orange-50">
                         <h2 class="text-lg font-bold text-gray-800 flex items-center">
-                            <i class="fas fa-bell text-rose-500 ml-2 animate-pulse"></i>مهام تتطلب الانتباه
+                            <i class="fas fa-bell text-rose-500 ml-2 animate-pulse"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.actionItems', 'مهام تتطلب الانتباه') : 'مهام تتطلب الانتباه'}
                         </h2>
                     </div>
                     <div class="p-0 flex-1 overflow-y-auto" style="max-height: 400px;">
@@ -398,7 +1105,7 @@ const ISO = {
                             <li class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 cursor-pointer" onclick="ISO.currentTab = 'audit'; ISO.load();">
                                 <div class="mt-0.5 bg-red-100 text-red-600 p-2 rounded-lg"><i class="fas fa-exclamation-circle"></i></div>
                                 <div>
-                                    <p class="text-sm font-semibold text-gray-800">يوجد ${openNCs} حالة عدم مطابقة مفتوحة</p>
+                                    <p class="text-sm font-semibold text-gray-800">يوجد ${openNCs} ${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.openNc', 'حالة عدم مطابقة مفتوحة') : 'حالة عدم مطابقة مفتوحة'}</p>
                                     <p class="text-xs text-gray-500 mt-1">يجب مراجعتها وإغلاقها لتجنب التأثير على مستوى الامتثال.</p>
                                 </div>
                             </li>
@@ -408,7 +1115,7 @@ const ISO = {
                             <li class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 cursor-pointer" onclick="ISO.currentTab = 'audit'; ISO.load();">
                                 <div class="mt-0.5 bg-purple-100 text-purple-600 p-2 rounded-lg"><i class="fas fa-calendar-alt"></i></div>
                                 <div>
-                                    <p class="text-sm font-semibold text-gray-800">يوجد ${pendingAudits} عملية تدقيق قادمة</p>
+                                    <p class="text-sm font-semibold text-gray-800">يوجد ${pendingAudits} ${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.auditLogTitle', 'عملية تدقيق قادمة') : 'عملية تدقيق قادمة'}</p>
                                     <p class="text-xs text-gray-500 mt-1">يرجى مراجعة الجدول الزمني وتجهيز الوثائق المطلوبة.</p>
                                 </div>
                             </li>
@@ -418,7 +1125,7 @@ const ISO = {
                             <li class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 cursor-pointer" onclick="ISO.currentTab = 'audit'; ISO.load();">
                                 <div class="mt-0.5 bg-amber-100 text-amber-600 p-2 rounded-lg"><i class="fas fa-tools"></i></div>
                                 <div>
-                                    <p class="text-sm font-semibold text-gray-800">يوجد ${openActions} إجراء تصحيحي معلق</p>
+                                    <p class="text-sm font-semibold text-gray-800">يوجد ${openActions} ${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.lateCa', 'إجراء تصحيحي معلق') : 'إجراء تصحيحي معلق'}</p>
                                     <p class="text-xs text-gray-500 mt-1">تابع مع المسؤولين لإغلاق الإجراءات التصحيحية المفتوحة.</p>
                                 </div>
                             </li>
@@ -427,8 +1134,8 @@ const ISO = {
                             ${(openNCs === 0 && pendingAudits === 0 && openActions === 0) ? `
                             <li class="p-8 text-center flex flex-col items-center justify-center">
                                 <div class="bg-green-50 text-green-500 p-4 rounded-full mb-3"><i class="fas fa-check-double text-2xl"></i></div>
-                                <p class="text-gray-600 font-semibold text-sm">النظام في حالة ممتازة</p>
-                                <p class="text-gray-400 text-xs mt-1">لا توجد أي مهام متأخرة أو معلقة تتطلب الانتباه حالياً.</p>
+                                <p class="text-gray-600 font-semibold text-sm">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.excellent', 'النظام في حالة ممتازة') : 'النظام في حالة ممتازة'}</p>
+                                <p class="text-gray-400 text-xs mt-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.noActionItems', 'لا توجد أي مهام متأخرة أو معلقة تتطلب الانتباه حالياً.') : 'لا توجد أي مهام متأخرة أو معلقة تتطلب الانتباه حالياً.'}</p>
                             </li>
                             ` : ''}
                         </ul>
@@ -455,19 +1162,19 @@ const ISO = {
                             <i class="fas fa-file-alt text-xl text-white"></i>
                         </div>
                         <div>
-                            <h2 class="card-title text-white m-0 text-xl font-bold">إدارة الوثائق (Document Control)</h2>
+                            <h2 class="card-title text-white m-0 text-xl font-bold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.title', 'إدارة الوثائق (Document Control)') : 'إدارة الوثائق (Document Control)'}</h2>
                             <p class="text-blue-100 text-sm m-0 opacity-80">سجل الوثائق المعتمدة في النظام</p>
                         </div>
                     </div>
                     <button id="add-document-btn" class="btn bg-white text-blue-700 hover:bg-blue-50 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all hover:shadow-md">
-                        <i class="fas fa-plus"></i>إضافة وثيقة
+                        <i class="fas fa-plus"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.addBtn', 'إضافة وثيقة') : 'إضافة وثيقة'}
                     </button>
                 </div>
                 <div class="card-body p-0">
                     ${documents.length === 0 ? `
                         <div class="p-12 text-center flex flex-col items-center justify-center bg-gray-50/50">
                             <div class="w-20 h-20 bg-blue-50 text-blue-300 rounded-full flex items-center justify-center mb-4"><i class="fas fa-folder-open text-3xl"></i></div>
-                            <h3 class="text-gray-700 font-bold text-lg mb-1">لا توجد وثائق مسجلة</h3>
+                            <h3 class="text-gray-700 font-bold text-lg mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.noData', 'لا توجد وثائق مسجلة') : 'لا توجد وثائق مسجلة'}</h3>
                             <p class="text-gray-500 text-sm">قم بإضافة أول وثيقة لبدء بناء مكتبة النظام</p>
                         </div>
                     ` : `
@@ -475,12 +1182,12 @@ const ISO = {
                             <table class="w-full text-right border-collapse">
                                 <thead>
                                     <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
-                                        <th class="p-3 font-semibold text-right rounded-tr-lg">كود ISO</th>
-                                        <th class="p-3 font-semibold text-right">اسم الوثيقة</th>
-                                        <th class="p-3 font-semibold text-right">النوع</th>
-                                        <th class="p-3 font-semibold text-center">الإصدار</th>
-                                        <th class="p-3 font-semibold text-center">الحالة</th>
-                                        <th class="p-3 font-semibold text-center rounded-tl-lg">الإجراءات</th>
+                                        <th class="p-3 font-semibold text-right rounded-tr-lg">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.code', 'كود ISO') : 'كود ISO'}</th>
+                                        <th class="p-3 font-semibold text-right">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.name', 'اسم الوثيقة') : 'اسم الوثيقة'}</th>
+                                        <th class="p-3 font-semibold text-right">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.type', 'النوع') : 'النوع'}</th>
+                                        <th class="p-3 font-semibold text-center">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.version', 'الإصدار') : 'الإصدار'}</th>
+                                        <th class="p-3 font-semibold text-center">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.status', 'الحالة') : 'الحالة'}</th>
+                                        <th class="p-3 font-semibold text-center rounded-tl-lg">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.actions', 'الإجراءات') : 'الإجراءات'}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -523,19 +1230,19 @@ const ISO = {
                             <i class="fas fa-project-diagram text-xl text-white"></i>
                         </div>
                         <div>
-                            <h2 class="card-title text-white m-0 text-xl font-bold">إدارة الإجراءات (Procedures)</h2>
+                            <h2 class="card-title text-white m-0 text-xl font-bold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.title', 'إدارة الإجراءات (Procedures)') : 'إدارة الإجراءات (Procedures)'}</h2>
                             <p class="text-emerald-100 text-sm m-0 opacity-80">إجراءات العمل القياسية (SOPs)</p>
                         </div>
                     </div>
                     <button id="add-procedure-btn" class="btn bg-white text-emerald-700 hover:bg-emerald-50 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all hover:shadow-md">
-                        <i class="fas fa-plus"></i>إضافة إجراء
+                        <i class="fas fa-plus"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.addBtn', 'إضافة إجراء') : 'إضافة إجراء'}
                     </button>
                 </div>
                 <div class="card-body p-0">
                     ${procedures.length === 0 ? `
                         <div class="p-12 text-center flex flex-col items-center justify-center bg-gray-50/50">
                             <div class="w-20 h-20 bg-emerald-50 text-emerald-300 rounded-full flex items-center justify-center mb-4"><i class="fas fa-network-wired text-3xl"></i></div>
-                            <h3 class="text-gray-700 font-bold text-lg mb-1">لا توجد إجراءات مسجلة</h3>
+                            <h3 class="text-gray-700 font-bold text-lg mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.noData', 'لا توجد إجراءات مسجلة') : 'لا توجد إجراءات مسجلة'}</h3>
                             <p class="text-gray-500 text-sm">قم بإضافة أول إجراء (SOP) لتنظيم العمل</p>
                         </div>
                     ` : `
@@ -543,11 +1250,11 @@ const ISO = {
                             <table class="w-full text-right border-collapse">
                                 <thead>
                                     <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
-                                        <th class="p-3 font-semibold text-right rounded-tr-lg">كود الإجراء</th>
-                                        <th class="p-3 font-semibold text-right">اسم الإجراء</th>
-                                        <th class="p-3 font-semibold text-right">القسم المالك</th>
-                                        <th class="p-3 font-semibold text-center">المراجعة القادمة</th>
-                                        <th class="p-3 font-semibold text-center rounded-tl-lg">الإجراءات</th>
+                                        <th class="p-3 font-semibold text-right rounded-tr-lg">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.code', 'كود الإجراء') : 'كود الإجراء'}</th>
+                                        <th class="p-3 font-semibold text-right">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.name', 'اسم الإجراء') : 'اسم الإجراء'}</th>
+                                        <th class="p-3 font-semibold text-right">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.dept', 'القسم المالك') : 'القسم المالك'}</th>
+                                        <th class="p-3 font-semibold text-center">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.nextReview', 'المراجعة القادمة') : 'المراجعة القادمة'}</th>
+                                        <th class="p-3 font-semibold text-center rounded-tl-lg">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.actions', 'الإجراءات') : 'الإجراءات'}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -595,19 +1302,19 @@ const ISO = {
                             <i class="fas fa-file-signature text-xl text-white"></i>
                         </div>
                         <div>
-                            <h2 class="card-title text-white m-0 text-xl font-bold">النماذج القياسية (Forms)</h2>
+                            <h2 class="card-title text-white m-0 text-xl font-bold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.title', 'النماذج القياسية (Forms)') : 'النماذج القياسية (Forms)'}</h2>
                             <p class="text-amber-100 text-sm m-0 opacity-80">سجل النماذج المعتمدة لجمع البيانات</p>
                         </div>
                     </div>
                     <button id="add-form-btn" class="btn bg-white text-orange-700 hover:bg-orange-50 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all hover:shadow-md">
-                        <i class="fas fa-plus"></i>إضافة نموذج
+                        <i class="fas fa-plus"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.addBtn', 'إضافة نموذج') : 'إضافة نموذج'}
                     </button>
                 </div>
                 <div class="card-body p-0">
                     ${forms.length === 0 ? `
                         <div class="p-12 text-center flex flex-col items-center justify-center bg-gray-50/50">
                             <div class="w-20 h-20 bg-orange-50 text-orange-300 rounded-full flex items-center justify-center mb-4"><i class="fas fa-clipboard-list text-3xl"></i></div>
-                            <h3 class="text-gray-700 font-bold text-lg mb-1">لا توجد نماذج مسجلة</h3>
+                            <h3 class="text-gray-700 font-bold text-lg mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.noData', 'لا توجد نماذج مسجلة') : 'لا توجد نماذج مسجلة'}</h3>
                             <p class="text-gray-500 text-sm">قم بإضافة أول نموذج ليكون متاحاً للطباعة والاستخدام</p>
                         </div>
                     ` : `
@@ -615,10 +1322,10 @@ const ISO = {
                             <table class="w-full text-right border-collapse">
                                 <thead>
                                     <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
-                                        <th class="p-3 font-semibold text-right rounded-tr-lg">الكود المرجعي</th>
-                                        <th class="p-3 font-semibold text-right">اسم النموذج</th>
-                                        <th class="p-3 font-semibold text-right">نوع النموذج</th>
-                                        <th class="p-3 font-semibold text-center rounded-tl-lg">الإجراءات</th>
+                                        <th class="p-3 font-semibold text-right rounded-tr-lg">${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.table.code', 'الكود المرجعي') : 'الكود المرجعي'}</th>
+                                        <th class="p-3 font-semibold text-right">${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.table.name', 'اسم النموذج') : 'اسم النموذج'}</th>
+                                        <th class="p-3 font-semibold text-right">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.type', 'نوع النموذج') : 'نوع النموذج'}</th>
+                                        <th class="p-3 font-semibold text-center rounded-tl-lg">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.actions', 'الإجراءات') : 'الإجراءات'}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -685,7 +1392,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل وثيقة' : 'إضافة وثيقة جديدة'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.documents.editTitle', 'تعديل وثيقة') : 'تعديل وثيقة') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.documents.addTitle', 'إضافة وثيقة جديدة') : 'إضافة وثيقة جديدة')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -693,10 +1400,10 @@ const ISO = {
                 <div class="modal-body">
                     <form id="iso-document-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">كود المستند من المركز *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.docCodeLabel', 'كود المستند من المركز *') : 'كود المستند من المركز *'}</label>
                             <select id="document-code-select" required class="form-input" 
                                 onchange="ISO.loadDocumentCodeVersion('document')">
-                                <option value="">اختر الكود من مركز التكويد والإصدار</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.selectCodeOption', 'اختر الكود من مركز التكويد والإصدار') : 'اختر الكود من مركز التكويد والإصدار'}</option>
                                 ${documentCodes.map(code => `
                                     <option value="${code.code}" 
                                         data-code-id="${code.id}"
@@ -707,50 +1414,50 @@ const ISO = {
                             </select>
                             <p class="text-xs text-gray-500 mt-1">
                                 <i class="fas fa-info-circle ml-1"></i>
-                                يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.
+                                ${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.codeHint', 'يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.') : 'يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.'}
                             </p>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">اسم الوثيقة *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.docNameLabel', 'اسم الوثيقة *') : 'اسم الوثيقة *'}</label>
                             <input type="text" id="document-name" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="اسم الوثيقة">
+                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.docNamePlaceholder', 'اسم الوثيقة') : 'اسم الوثيقة'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">النوع *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeLabel', 'النوع *') : 'النوع *'}</label>
                             <select id="document-type" required class="form-input">
-                                <option value="">اختر النوع</option>
-                                <option value="سياسة" ${data?.type === 'سياسة' ? 'selected' : ''}>سياسة</option>
-                                <option value="إجراء" ${data?.type === 'إجراء' ? 'selected' : ''}>إجراء</option>
-                                <option value="تعليمات" ${data?.type === 'تعليمات' ? 'selected' : ''}>تعليمات</option>
-                                <option value="دليل" ${data?.type === 'دليل' ? 'selected' : ''}>دليل</option>
-                                <option value="أخرى" ${data?.type === 'أخرى' ? 'selected' : ''}>أخرى</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.selectTypeOption', 'اختر النوع') : 'اختر النوع'}</option>
+                                <option value="سياسة" ${data?.type === 'سياسة' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typePolicy', 'سياسة') : 'سياسة'}</option>
+                                <option value="إجراء" ${data?.type === 'إجراء' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeProcedure', 'إجراء') : 'إجراء'}</option>
+                                <option value="تعليمات" ${data?.type === 'تعليمات' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeInstructions', 'تعليمات') : 'تعليمات'}</option>
+                                <option value="دليل" ${data?.type === 'دليل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeManual', 'دليل') : 'دليل'}</option>
+                                <option value="أخرى" ${data?.type === 'أخرى' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeOther', 'أخرى') : 'أخرى'}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">رقم الإصدار (يُسحب تلقائياً من المركز)</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.versionLabel', 'رقم الإصدار (يُسحب تلقائياً من المركز)') : 'رقم الإصدار (يُسحب تلقائياً من المركز)'}</label>
                             <input type="text" id="document-version" readonly class="form-input bg-gray-100" 
-                                value="${Utils.escapeHTML(data?.version || '')}" placeholder="سيتم جلب الإصدار تلقائياً">
+                                value="${Utils.escapeHTML(data?.version || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.versionPlaceholder', 'سيتم جلب الإصدار تلقائياً') : 'سيتم جلب الإصدار تلقائياً'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الإصدار</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.issueDateLabel', 'تاريخ الإصدار') : 'تاريخ الإصدار'}</label>
                             <input type="text" id="document-issue-date" readonly class="form-input bg-gray-100" 
-                                value="${data?.issueDate ? Utils.formatDate(data.issueDate) : ''}" placeholder="سيتم جلب تاريخ الإصدار تلقائياً">
+                                value="${data?.issueDate ? Utils.formatDate(data.issueDate) : ''}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.issueDatePlaceholder', 'سيتم جلب تاريخ الإصدار تلقائياً') : 'سيتم جلب تاريخ الإصدار تلقائياً'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ التعديل</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.revisionDateLabel', 'تاريخ التعديل') : 'تاريخ التعديل'}</label>
                             <input type="text" id="document-revision-date" readonly class="form-input bg-gray-100" 
-                                value="${data?.revisionDate ? Utils.formatDate(data.revisionDate) : ''}" placeholder="سيتم جلب تاريخ التعديل تلقائياً">
+                                value="${data?.revisionDate ? Utils.formatDate(data.revisionDate) : ''}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.revisionDatePlaceholder', 'سيتم جلب تاريخ التعديل تلقائياً') : 'سيتم جلب تاريخ التعديل تلقائياً'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">القسم *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.departmentLabel', 'القسم *') : 'القسم *'}</label>
                             <input type="text" id="document-department" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.department || '')}" placeholder="القسم">
+                                value="${Utils.escapeHTML(data?.department || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.departmentPlaceholder', 'القسم') : 'القسم'}">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-document-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-document-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -859,7 +1566,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل إجراء' : 'إضافة إجراء جديد'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.editTitle', 'تعديل إجراء') : 'تعديل إجراء') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.addTitle', 'إضافة إجراء جديد') : 'إضافة إجراء جديد')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -867,10 +1574,10 @@ const ISO = {
                 <div class="modal-body">
                     <form id="iso-procedure-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">كود الإجراء من المركز *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.procCodeLabel', 'كود الإجراء من المركز *') : 'كود الإجراء من المركز *'}</label>
                             <select id="procedure-code-select" required class="form-input" 
                                 onchange="ISO.loadDocumentCodeVersion('procedure')">
-                                <option value="">اختر الكود من مركز التكويد والإصدار</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.selectCodeOption', 'اختر الكود من مركز التكويد والإصدار') : 'اختر الكود من مركز التكويد والإصدار'}</option>
                                 ${documentCodes.map(code => `
                                     <option value="${code.code}" 
                                         data-code-id="${code.id}"
@@ -881,39 +1588,39 @@ const ISO = {
                             </select>
                             <p class="text-xs text-gray-500 mt-1">
                                 <i class="fas fa-info-circle ml-1"></i>
-                                يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.
+                                ${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.codeHint', 'يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.') : 'يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.'}
                             </p>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">اسم الإجراء *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.procNameLabel', 'اسم الإجراء *') : 'اسم الإجراء *'}</label>
                             <input type="text" id="procedure-name" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="اسم الإجراء">
+                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.procNamePlaceholder', 'اسم الإجراء') : 'اسم الإجراء'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">القسم *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.departmentLabel', 'القسم *') : 'القسم *'}</label>
                             <input type="text" id="procedure-department" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.department || '')}" placeholder="القسم">
+                                value="${Utils.escapeHTML(data?.department || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.departmentPlaceholder', 'القسم') : 'القسم'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">رقم الإصدار (يُسحب تلقائياً من المركز)</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.versionLabel', 'رقم الإصدار (يُسحب تلقائياً من المركز)') : 'رقم الإصدار (يُسحب تلقائياً من المركز)'}</label>
                             <input type="text" id="procedure-version" readonly class="form-input bg-gray-100" 
-                                value="${Utils.escapeHTML(data?.version || '')}" placeholder="سيتم جلب الإصدار تلقائياً">
+                                value="${Utils.escapeHTML(data?.version || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.versionPlaceholder', 'سيتم جلب الإصدار تلقائياً') : 'سيتم جلب الإصدار تلقائياً'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الإصدار</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.issueDateLabel', 'تاريخ الإصدار') : 'تاريخ الإصدار'}</label>
                             <input type="text" id="procedure-issue-date" readonly class="form-input bg-gray-100" 
-                                value="${data?.issueDate ? Utils.formatDate(data.issueDate) : ''}" placeholder="سيتم جلب تاريخ الإصدار تلقائياً">
+                                value="${data?.issueDate ? Utils.formatDate(data.issueDate) : ''}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.issueDatePlaceholder', 'سيتم جلب تاريخ الإصدار تلقائياً') : 'سيتم جلب تاريخ الإصدار تلقائياً'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ التعديل</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.revisionDateLabel', 'تاريخ التعديل') : 'تاريخ التعديل'}</label>
                             <input type="text" id="procedure-revision-date" readonly class="form-input bg-gray-100" 
-                                value="${data?.revisionDate ? Utils.formatDate(data.revisionDate) : ''}" placeholder="سيتم جلب تاريخ التعديل تلقائياً">
+                                value="${data?.revisionDate ? Utils.formatDate(data.revisionDate) : ''}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.revisionDatePlaceholder', 'سيتم جلب تاريخ التعديل تلقائياً') : 'سيتم جلب تاريخ التعديل تلقائياً'}">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-procedure-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-procedure-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -1008,7 +1715,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل نموذج' : 'إضافة نموذج جديد'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.editTitle', 'تعديل نموذج') : 'تعديل نموذج') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.addTitle', 'إضافة نموذج جديد') : 'إضافة نموذج جديد')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1016,10 +1723,10 @@ const ISO = {
                 <div class="modal-body">
                     <form id="iso-form-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">كود النموذج من المركز *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.frmCodeLabel', 'كود النموذج من المركز *') : 'كود النموذج من المركز *'}</label>
                             <select id="form-code-select" required class="form-input" 
                                 onchange="ISO.loadDocumentCodeVersion('form')">
-                                <option value="">اختر الكود من مركز التكويد والإصدار</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.selectCodeOption', 'اختر الكود من مركز التكويد والإصدار') : 'اختر الكود من مركز التكويد والإصدار'}</option>
                                 ${documentCodes.map(code => `
                                     <option value="${code.code}" 
                                         data-code-id="${code.id}"
@@ -1030,45 +1737,45 @@ const ISO = {
                             </select>
                             <p class="text-xs text-gray-500 mt-1">
                                 <i class="fas fa-info-circle ml-1"></i>
-                                يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.
+                                ${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.codeHint', 'يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.') : 'يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.'}
                             </p>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">اسم النموذج *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.frmNameLabel', 'اسم النموذج *') : 'اسم النموذج *'}</label>
                             <input type="text" id="form-name" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="اسم النموذج">
+                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.frmNamePlaceholder', 'اسم النموذج') : 'اسم النموذج'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">النوع *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeLabel', 'النوع *') : 'النوع *'}</label>
                             <select id="form-type" required class="form-input">
-                                <option value="">اختر النوع</option>
-                                <option value="تسجيل" ${data?.type === 'تسجيل' ? 'selected' : ''}>تسجيل</option>
-                                <option value="تقرير" ${data?.type === 'تقرير' ? 'selected' : ''}>تقرير</option>
-                                <option value="حص" ${data?.type === 'حص' ? 'selected' : ''}>حص</option>
-                                <option value="تدريب" ${data?.type === 'تدريب' ? 'selected' : ''}>تدريب</option>
-                                <option value="أخرى" ${data?.type === 'أخرى' ? 'selected' : ''}>أخرى</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.selectTypeOption', 'اختر النوع') : 'اختر النوع'}</option>
+                                <option value="تسجيل" ${data?.type === 'تسجيل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeRecord', 'تسجيل') : 'تسجيل'}</option>
+                                <option value="تقرير" ${data?.type === 'تقرير' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeReport', 'تقرير') : 'تقرير'}</option>
+                                <option value="حص" ${data?.type === 'حص' || data?.type === 'فحص' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeInspection', 'فحص') : 'فحص'}</option>
+                                <option value="تدريب" ${data?.type === 'تدريب' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeTraining', 'تدريب') : 'تدريب'}</option>
+                                <option value="أخرى" ${data?.type === 'أخرى' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeOther', 'أخرى') : 'أخرى'}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">رقم الإصدار (يُسحب تلقائياً من المركز)</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.versionLabel', 'رقم الإصدار (يُسحب تلقائياً من المركز)') : 'رقم الإصدار (يُسحب تلقائياً من المركز)'}</label>
                             <input type="text" id="form-version" readonly class="form-input bg-gray-100" 
-                                value="${Utils.escapeHTML(data?.version || '')}" placeholder="سيتم جلب الإصدار تلقائياً">
+                                value="${Utils.escapeHTML(data?.version || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.versionPlaceholder', 'سيتم جلب الإصدار تلقائياً') : 'سيتم جلب الإصدار تلقائياً'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الإصدار</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.issueDateLabel', 'تاريخ الإصدار') : 'تاريخ الإصدار'}</label>
                             <input type="text" id="form-issue-date" readonly class="form-input bg-gray-100" 
-                                value="${data?.issueDate ? Utils.formatDate(data.issueDate) : ''}" placeholder="سيتم جلب تاريخ الإصدار تلقائياً">
+                                value="${data?.issueDate ? Utils.formatDate(data.issueDate) : ''}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.issueDatePlaceholder', 'سيتم جلب تاريخ الإصدار تلقائياً') : 'سيتم جلب تاريخ الإصدار تلقائياً'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ التعديل</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.revisionDateLabel', 'تاريخ التعديل') : 'تاريخ التعديل'}</label>
                             <input type="text" id="form-revision-date" readonly class="form-input bg-gray-100" 
-                                value="${data?.revisionDate ? Utils.formatDate(data.revisionDate) : ''}" placeholder="سيتم جلب تاريخ التعديل تلقائياً">
+                                value="${data?.revisionDate ? Utils.formatDate(data.revisionDate) : ''}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.revisionDatePlaceholder', 'سيتم جلب تاريخ التعديل تلقائياً') : 'سيتم جلب تاريخ التعديل تلقائياً'}">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-form-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-form-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -1193,7 +1900,7 @@ const ISO = {
     async viewDocument(id) {
         const doc = AppState.appData.isoDocuments.find(d => d.id === id);
         if (!doc) {
-            Notification.error('الوثيقة غير موجودة');
+            Notification.error(typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.notFound', 'الوثيقة غير موجودة') : 'الوثيقة غير موجودة');
             return;
         }
 
@@ -1202,24 +1909,24 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">تفاصيل الوثيقة</h2>
+                    <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.detailsTitle', 'تفاصيل الوثيقة') : 'تفاصيل الوثيقة'}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-3">
-                        <div><strong>كود ISO:</strong> ${Utils.escapeHTML(doc.isoCode || '')}</div>
-                        <div><strong>اسم الوثيقة:</strong> ${Utils.escapeHTML(doc.name || '')}</div>
-                        <div><strong>النوع:</strong> ${Utils.escapeHTML(doc.type || '')}</div>
-                        <div><strong>الإصدار:</strong> ${Utils.escapeHTML(doc.version || '')}</div>
-                        <div><strong>القسم:</strong> ${Utils.escapeHTML(doc.department || '')}</div>
-                        <div><strong>تاريخ الإنشاء:</strong> ${Utils.formatDate(doc.createdAt)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.code', 'كود ISO:') : 'كود ISO:'}</strong> ${Utils.escapeHTML(doc.isoCode || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.name', 'اسم الوثيقة:') : 'اسم الوثيقة:'}</strong> ${Utils.escapeHTML(doc.name || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.type', 'النوع:') : 'النوع:'}</strong> ${Utils.escapeHTML(doc.type || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.version', 'الإصدار:') : 'الإصدار:'}</strong> ${Utils.escapeHTML(doc.version || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.dept', 'القسم:') : 'القسم:'}</strong> ${Utils.escapeHTML(doc.department || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.createdAt', 'تاريخ الإنشاء:') : 'تاريخ الإنشاء:'}</strong> ${Utils.formatDate(doc.createdAt)}</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
-                    <button type="button" onclick="ISO.showDocumentForm(${JSON.stringify(doc).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">تعديل</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
+                    <button type="button" onclick="ISO.showDocumentForm(${JSON.stringify(doc).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}</button>
                 </div>
             </div>
         `;
@@ -1232,7 +1939,7 @@ const ISO = {
     async viewProcedure(id) {
         const procedure = AppState.appData.isoProcedures.find(p => p.id === id);
         if (!procedure) {
-            Notification.error('الإجراء غير موجود');
+            Notification.error(typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.notFound', 'الإجراء غير موجود') : 'الإجراء غير موجود');
             return;
         }
 
@@ -1241,23 +1948,23 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">تفاصيل الإجراء</h2>
+                    <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.detailsTitle', 'تفاصيل الإجراء') : 'تفاصيل الإجراء'}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-3">
-                        <div><strong>كود ISO:</strong> ${Utils.escapeHTML(procedure.isoCode || '')}</div>
-                        <div><strong>اسم الإجراء:</strong> ${Utils.escapeHTML(procedure.name || '')}</div>
-                        <div><strong>القسم:</strong> ${Utils.escapeHTML(procedure.department || '')}</div>
-                        <div><strong>الإصدار:</strong> ${Utils.escapeHTML(procedure.version || '')}</div>
-                        <div><strong>تاريخ الإنشاء:</strong> ${Utils.formatDate(procedure.createdAt)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.code', 'كود ISO:') : 'كود ISO:'}</strong> ${Utils.escapeHTML(procedure.isoCode || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.name', 'اسم الإجراء:') : 'اسم الإجراء:'}</strong> ${Utils.escapeHTML(procedure.name || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.dept', 'القسم:') : 'القسم:'}</strong> ${Utils.escapeHTML(procedure.department || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.version', 'الإصدار:') : 'الإصدار:'}</strong> ${Utils.escapeHTML(procedure.version || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.createdAt', 'تاريخ الإنشاء:') : 'تاريخ الإنشاء:'}</strong> ${Utils.formatDate(procedure.createdAt)}</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
-                    <button type="button" onclick="ISO.showProcedureForm(${JSON.stringify(procedure).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">تعديل</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
+                    <button type="button" onclick="ISO.showProcedureForm(${JSON.stringify(procedure).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}</button>
                 </div>
             </div>
         `;
@@ -1270,7 +1977,7 @@ const ISO = {
     async viewForm(id) {
         const form = AppState.appData.isoForms.find(f => f.id === id);
         if (!form) {
-            Notification.error('النموذج غير موجود');
+            Notification.error(typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.notFound', 'النموذج غير موجود') : 'النموذج غير موجود');
             return;
         }
 
@@ -1279,22 +1986,22 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">تفاصيل النموذج</h2>
+                    <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.detailsTitle', 'تفاصيل النموذج') : 'تفاصيل النموذج'}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-3">
-                        <div><strong>كود ISO:</strong> ${Utils.escapeHTML(form.isoCode || '')}</div>
-                        <div><strong>اسم النموذج:</strong> ${Utils.escapeHTML(form.name || '')}</div>
-                        <div><strong>النوع:</strong> ${Utils.escapeHTML(form.type || '')}</div>
-                        <div><strong>تاريخ الإنشاء:</strong> ${Utils.formatDate(form.createdAt)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.table.code', 'كود ISO:') : 'كود ISO:'}</strong> ${Utils.escapeHTML(form.isoCode || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.table.name', 'اسم النموذج:') : 'اسم النموذج:'}</strong> ${Utils.escapeHTML(form.name || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.type', 'النوع:') : 'النوع:'}</strong> ${Utils.escapeHTML(form.type || '')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.createdAt', 'تاريخ الإنشاء:') : 'تاريخ الإنشاء:'}</strong> ${Utils.formatDate(form.createdAt)}</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
-                    <button type="button" onclick="ISO.showFormForm(${JSON.stringify(form).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">تعديل</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
+                    <button type="button" onclick="ISO.showFormForm(${JSON.stringify(form).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}</button>
                 </div>
             </div>
         `;
@@ -1307,44 +2014,182 @@ const ISO = {
     async renderISO45001() {
         const objectives = AppState.appData.hseObjectives || [];
         const riskAssessments = AppState.appData.hseRiskAssessments || [];
+        
+        // Calculate statistics
+        const highRisks = riskAssessments.filter(r => r.riskLevel === 'عالي' || r.riskLevel === 'High').length;
+        const mediumRisks = riskAssessments.filter(r => r.riskLevel === 'متوسط' || r.riskLevel === 'Medium').length;
+        const lowRisks = riskAssessments.filter(r => r.riskLevel === 'منخفض' || r.riskLevel === 'Low').length;
+        
+        const completedObjectives = objectives.filter(o => o.progress >= 100).length;
+
+        // Generate Risk Table Rows
+        const riskRows = riskAssessments.length > 0 ? riskAssessments.map(r => `
+            <tr>
+                <td class="align-middle fw-bold text-dark">${Utils.escapeHTML(r.activity)}</td>
+                <td class="align-middle">${Utils.escapeHTML(r.hazards)}</td>
+                <td class="align-middle">
+                    <span class="badge ${r.riskLevel === 'عالي' || r.riskLevel === 'High' ? 'bg-danger' : (r.riskLevel === 'متوسط' || r.riskLevel === 'Medium' ? 'bg-warning text-dark' : 'bg-success')} rounded-pill px-3">
+                        ${Utils.escapeHTML(r.riskLevel)}
+                    </span>
+                </td>
+                <td class="align-middle text-muted small">${Utils.escapeHTML(r.controlMeasures)}</td>
+                <td class="align-middle text-center">
+                    <button class="btn btn-sm btn-outline-primary rounded-circle" onclick="ISO.showHSERiskAssessmentForm(${JSON.stringify(r).replace(/"/g, '&quot;')})" title="تعديل">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger rounded-circle ms-1" onclick="ISO.deleteHSERiskAssessment('${r.id}')" title="حذف">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('') : `<tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-info-circle fs-4 mb-2 d-block"></i>لا توجد تقييمات مخاطر مسجلة حتى الآن</td></tr>`;
+
+        // Generate Objectives Table Rows
+        const objectiveRows = objectives.length > 0 ? objectives.map(o => `
+            <tr>
+                <td class="align-middle fw-bold text-dark">${Utils.escapeHTML(o.title)}</td>
+                <td class="align-middle">${Utils.escapeHTML(o.target)}</td>
+                <td class="align-middle">
+                    <div class="d-flex align-items-center">
+                        <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                            <div class="progress-bar ${o.progress >= 100 ? 'bg-success' : 'bg-primary'}" role="progressbar" style="width: ${o.progress}%;" aria-valuenow="${o.progress}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <span class="small fw-bold ${o.progress >= 100 ? 'text-success' : 'text-primary'}">${o.progress}%</span>
+                    </div>
+                </td>
+                <td class="align-middle text-center">
+                    <button class="btn btn-sm btn-outline-primary rounded-circle" onclick="ISO.showHSEObjectiveForm(${JSON.stringify(o).replace(/"/g, '&quot;')})" title="تعديل">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger rounded-circle ms-1" onclick="ISO.deleteHSEObjective('${o.id}')" title="حذف">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('') : `<tr><td colspan="4" class="text-center text-muted py-4"><i class="fas fa-bullseye fs-4 mb-2 d-block"></i>لا توجد أهداف مسجلة حتى الآن</td></tr>`;
 
         return `
-            <div class="content-card iso-standard-dashboard iso-45001-dashboard">
-                <div class="card-header">
-                    <h2 class="card-title"><i class="fas fa-hard-hat ml-2"></i>ISO 45001 - السلامة والصحة المهنية</h2>
-                </div>
-                <div class="card-body">
-                    <div class="space-y-4">
-                        <p class="text-gray-700">
-                            يركز هذا القسم على متطلبات نظام إدارة السلامة والصحة المهنية (OH&S) وقًا لمعيار ISO 45001.
-                            يهد إلى تمكين المنظمة من توير أماكن عمل آمنة وصحية، ومنع الإصابات والأمراض المرتبطة بالعمل،
-                            بالإضاة إلى التحسين المستمر لأداء السلامة والصحة المهنية.
+            <div class="iso-dashboard iso-standard-dashboard iso-45001-dashboard">
+                <!-- Header -->
+                <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; overflow: hidden;">
+                    <div class="card-header bg-primary text-white p-4 border-0" style="background: linear-gradient(135deg, #0f172a 0%, #334155 100%) !important;">
+                        <h3 class="card-title text-white d-flex align-items-center fw-bold m-0" style="font-size: 1.5rem;">
+                            <i class="fas fa-hard-hat mx-3 text-warning fs-3"></i>
+                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.compliance.iso45001Title', 'SafetyHub | ICAPP (ISO 45001)') : 'SafetyHub | ICAPP (ISO 45001)'}
+                        </h3>
+                        <p class="text-white-50 small mt-2 mb-0 px-2" style="max-width: 800px;">
+                            يهدف هذا النظام إلى توفير أماكن عمل آمنة وصحية، ومنع الإصابات والأمراض المرتبطة بالعمل، والتحسين المستمر لأداء السلامة والصحة المهنية.
                         </p>
-                        <h3 class="font-semibold text-lg mt-4 mb-2">العناصر الرئيسية:</h3>
-                        <ul class="list-disc list-inside text-gray-700 space-y-2">
-                            <li>السياق التنظيمي</li>
-                            <li>القيادة ومشاركة العاملين</li>
-                            <li>التخطيط (تحديد المخاطر والرص، الأهدا)</li>
-                            <li>الدعم (الموارد، الكاءة، الوعي، الاتصال، المعلومات الموثقة)</li>
-                            <li>التشغيل (التخطيط والتحكم التشغيلي، إدارة التغيير، المشتريات، المقاولون، الاستعداد للطوارئ)</li>
-                            <li>تقييم الأداء (المراقبة والقياس، تقييم الامتثال، التدقيق الداخلي، مراجعة الإدارة)</li>
-                            <li>التحسين (عدم المطابقة والإجراءات التصحيحية، التحسين المستمر)</li>
-                        </ul>
-                        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="bg-blue-50 border border-blue-200 rounded p-4">
-                                <h4 class="font-semibold text-blue-800 mb-2">الأهدا (${objectives.length})</h4>
-                                <p class="text-sm text-gray-700 mb-3">إدارة أهدا السلامة والصحة المهنية</p>
-                                <button class="btn-secondary w-full" onclick="ISO.showHSEObjectiveForm()">
-                                    <i class="fas fa-bullseye ml-2"></i>إدارة الأهدا
-                                </button>
+                    </div>
+                </div>
+
+                <!-- KPIs -->
+                <div class="mb-4" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #ef4444 !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-danger bg-opacity-10 text-danger rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-exclamation-triangle fs-6"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">مخاطر عالية</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${highRisks}</div>
+                                </div>
                             </div>
-                            <div class="bg-green-50 border border-green-200 rounded p-4">
-                                <h4 class="font-semibold text-green-800 mb-2">تقييمات المخاطر (${riskAssessments.length})</h4>
-                                <p class="text-sm text-gray-700 mb-3">تقييم مخاطر السلامة والصحة المهنية</p>
-                                <button class="btn-secondary w-full" onclick="ISO.showHSERiskAssessmentForm()">
-                                    <i class="fas fa-shield-alt ml-2"></i>تقييم المخاطر
-                                </button>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #f59e0b !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-warning bg-opacity-10 text-warning rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-exclamation-circle fs-6"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">مخاطر متوسطة</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${mediumRisks}</div>
+                                </div>
                             </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #10b981 !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-success bg-opacity-10 text-success rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-shield-alt fs-6"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">مخاطر منخفضة</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${lowRisks}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #3b82f6 !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-primary bg-opacity-10 text-primary rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-bullseye fs-6"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">أهداف مكتملة</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${completedObjectives} <span style="font-size: 0.75rem; font-weight: normal; color: #6c757d;">من ${objectives.length}</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Register Section -->
+                <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                    <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold text-dark m-0"><i class="fas fa-list-alt text-danger me-2"></i>سجل تقييم المخاطر (Risk Register)</h5>
+                        <button class="btn btn-primary shadow-sm rounded-pill px-4" onclick="ISO.showHSERiskAssessmentForm()">
+                            <i class="fas fa-plus me-2"></i>إضافة تقييم خطر
+                        </button>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle border">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>النشاط / المهمة</th>
+                                        <th>المخاطر المحتملة (Hazards)</th>
+                                        <th>مستوى الخطر</th>
+                                        <th>إجراءات التحكم (Control Measures)</th>
+                                        <th class="text-center">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${riskRows}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Objectives Section -->
+                <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                    <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold text-dark m-0"><i class="fas fa-crosshairs text-primary me-2"></i>أهداف السلامة والصحة المهنية (HSE Objectives)</h5>
+                        <button class="btn btn-primary shadow-sm rounded-pill px-4" onclick="ISO.showHSEObjectiveForm()">
+                            <i class="fas fa-plus me-2"></i>إضافة هدف جديد
+                        </button>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle border">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>الهدف الرئيسي</th>
+                                        <th>المستهدف (Target)</th>
+                                        <th style="min-width: 200px;">نسبة الإنجاز (Progress)</th>
+                                        <th class="text-center">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${objectiveRows}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -1355,44 +2200,179 @@ const ISO = {
     async renderISO14001() {
         const aspects = AppState.appData.environmentalAspects || [];
         const monitoring = AppState.appData.environmentalMonitoring || [];
+        
+        // Calculate statistics
+        const significantAspects = aspects.filter(a => a.isSignificant).length;
+        const totalEmissions = monitoring.filter(m => m.type === 'انبعاثات' || m.type === 'Emissions').length;
+        const totalWaste = monitoring.filter(m => m.type === 'مخلفات' || m.type === 'Waste').length;
+
+        // Generate Aspects Table Rows
+        const aspectRows = aspects.length > 0 ? aspects.map(a => `
+            <tr>
+                <td class="align-middle fw-bold text-dark">${Utils.escapeHTML(a.activity)}</td>
+                <td class="align-middle">${Utils.escapeHTML(a.aspect)}</td>
+                <td class="align-middle">${Utils.escapeHTML(a.impact)}</td>
+                <td class="align-middle">
+                    <span class="badge ${a.isSignificant ? 'bg-danger' : 'bg-success'} rounded-pill px-3">
+                        ${a.isSignificant ? 'هام جداً (Significant)' : 'عادي (Non-Significant)'}
+                    </span>
+                </td>
+                <td class="align-middle text-center">
+                    <button class="btn btn-sm btn-outline-primary rounded-circle" onclick="ISO.showEnvironmentalAspectsForm(${JSON.stringify(a).replace(/"/g, '&quot;')})" title="تعديل">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger rounded-circle ms-1" onclick="ISO.deleteEnvironmentalAspect('${a.id}')" title="حذف">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('') : `<tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-leaf fs-4 mb-2 d-block"></i>لا توجد جوانب بيئية مسجلة حتى الآن</td></tr>`;
+
+        // Generate Monitoring Table Rows
+        const monitoringRows = monitoring.length > 0 ? monitoring.map(m => `
+            <tr>
+                <td class="align-middle fw-bold text-dark">${Utils.formatDate(m.date)}</td>
+                <td class="align-middle">
+                    <span class="badge ${m.type === 'مخلفات' || m.type === 'Waste' ? 'bg-warning text-dark' : (m.type === 'انبعاثات' || m.type === 'Emissions' ? 'bg-secondary' : 'bg-info text-dark')} px-2 py-1">
+                        ${Utils.escapeHTML(m.type)}
+                    </span>
+                </td>
+                <td class="align-middle">${Utils.escapeHTML(m.parameter)}</td>
+                <td class="align-middle fw-bold font-monospace text-primary">${Utils.escapeHTML(m.value)} ${Utils.escapeHTML(m.unit)}</td>
+                <td class="align-middle text-center">
+                    <button class="btn btn-sm btn-outline-primary rounded-circle" onclick="ISO.showEnvironmentalMonitoringForm(${JSON.stringify(m).replace(/"/g, '&quot;')})" title="تعديل">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger rounded-circle ms-1" onclick="ISO.deleteEnvironmentalMonitoring('${m.id}')" title="حذف">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('') : `<tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-chart-line fs-4 mb-2 d-block"></i>لا توجد سجلات مراقبة مسجلة حتى الآن</td></tr>`;
 
         return `
-            <div class="content-card iso-standard-dashboard iso-14001-dashboard">
-                <div class="card-header">
-                    <h2 class="card-title"><i class="fas fa-leaf ml-2"></i>ISO 14001 - إدارة البيئة</h2>
-                </div>
-                <div class="card-body">
-                    <div class="space-y-4">
-                        <p class="text-gray-700">
-                            يحدد هذا القسم متطلبات نظام إدارة البيئة (EMS) وقًا لمعيار ISO 14001.
-                            يهد إلى مساعدة المنظمات على تحسين أدائها البيئي من خلال إدارة مسؤولياتها البيئية
-                            بطريقة منهجية تساهم ي ركيزة الاستدامة.
+            <div class="iso-dashboard iso-standard-dashboard iso-14001-dashboard">
+                <!-- Header -->
+                <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; overflow: hidden;">
+                    <div class="card-header bg-success text-white p-4 border-0" style="background: linear-gradient(135deg, #166534 0%, #15803d 100%) !important;">
+                        <h3 class="card-title text-white d-flex align-items-center fw-bold m-0" style="font-size: 1.5rem;">
+                            <i class="fas fa-leaf mx-3 text-white-50 fs-3"></i>
+                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.compliance.iso14001Title', 'نظام الإدارة البيئية (ISO 14001)') : 'نظام الإدارة البيئية (ISO 14001)'}
+                        </h3>
+                        <p class="text-white-50 small mt-2 mb-0 px-2" style="max-width: 800px;">
+                            يهدف هذا النظام إلى مساعدة المنظمة على تحسين أدائها البيئي من خلال إدارة مسؤولياتها البيئية بطريقة منهجية تساهم في الاستدامة وتقليل الآثار السلبية.
                         </p>
-                        <h3 class="font-semibold text-lg mt-4 mb-2">العناصر الرئيسية:</h3>
-                        <ul class="list-disc list-inside text-gray-700 space-y-2">
-                            <li>السياق التنظيمي</li>
-                            <li>القيادة</li>
-                            <li>التخطيط (تحديد الجوانب البيئية، الالتزامات الامتثالية، الأهدا البيئية)</li>
-                            <li>الدعم (الموارد، الكاءة، الوعي، الاتصال، المعلومات الموثقة)</li>
-                            <li>التشغيل (التخطيط والتحكم التشغيلي، الاستعداد للطوارئ والاستجابة لها)</li>
-                            <li>تقييم الأداء (المراقبة والقياس، تقييم الامتثال، التدقيق الداخلي، مراجعة الإدارة)</li>
-                            <li>التحسين (عدم المطابقة والإجراءات التصحيحية، التحسين المستمر)</li>
-                        </ul>
-                        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="bg-green-50 border border-green-200 rounded p-4">
-                                <h4 class="font-semibold text-green-800 mb-2">الجوانب البيئية (${aspects.length})</h4>
-                                <p class="text-sm text-gray-700 mb-3">إدارة الجوانب البيئية وتأثيراتها</p>
-                                <button class="btn-secondary w-full" onclick="ISO.showEnvironmentalAspectsForm()">
-                                    <i class="fas fa-globe ml-2"></i>إدارة الجوانب البيئية
-                                </button>
+                    </div>
+                </div>
+
+                <!-- KPIs -->
+                <div class="mb-4" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #22c55e !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-success bg-opacity-10 text-success rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-globe fs-6"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">إجمالي الجوانب البيئية</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${aspects.length}</div>
+                                </div>
                             </div>
-                            <div class="bg-blue-50 border border-blue-200 rounded p-4">
-                                <h4 class="font-semibold text-blue-800 mb-2">المراقبة البيئية (${monitoring.length})</h4>
-                                <p class="text-sm text-gray-700 mb-3">تتبع ومراقبة الأداء البيئي</p>
-                                <button class="btn-secondary w-full" onclick="ISO.showEnvironmentalMonitoringForm()">
-                                    <i class="fas fa-chart-line ml-2"></i>المراقبة البيئية
-                                </button>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #ef4444 !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-danger bg-opacity-10 text-danger rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-exclamation-triangle fs-6"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">جوانب تأثير هام</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${significantAspects}</div>
+                                </div>
                             </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #64748b !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-smog fs-6"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">سجلات الانبعاثات</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${totalEmissions}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 8px; border-bottom: 3px solid #eab308 !important;">
+                            <div class="card-body d-flex align-items-center p-3">
+                                <div class="bg-warning bg-opacity-10 text-warning rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                    <i class="fas fa-trash-alt fs-6"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">سجلات المخلفات</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${totalWaste}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aspects Register Section -->
+                <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                    <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold text-dark m-0"><i class="fas fa-list text-success me-2"></i>سجل الجوانب البيئية (Environmental Aspects Register)</h5>
+                        <button class="btn btn-success shadow-sm rounded-pill px-4" onclick="ISO.showEnvironmentalAspectsForm()">
+                            <i class="fas fa-plus me-2"></i>إضافة جانب بيئي
+                        </button>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle border">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>النشاط / العملية</th>
+                                        <th>الجانب البيئي (Aspect)</th>
+                                        <th>التأثير البيئي (Impact)</th>
+                                        <th>مستوى الأهمية (Significance)</th>
+                                        <th class="text-center">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${aspectRows}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monitoring Section -->
+                <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                    <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold text-dark m-0"><i class="fas fa-chart-line text-info me-2"></i>سجل المراقبة البيئية (Environmental Monitoring)</h5>
+                        <button class="btn btn-success shadow-sm rounded-pill px-4" onclick="ISO.showEnvironmentalMonitoringForm()">
+                            <i class="fas fa-plus me-2"></i>إضافة سجل مراقبة
+                        </button>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle border">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>تاريخ القياس</th>
+                                        <th>نوع القياس</th>
+                                        <th>المعامل (Parameter)</th>
+                                        <th>القيمة المُقاسة (Value)</th>
+                                        <th class="text-center">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${monitoringRows}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -1409,16 +2389,16 @@ const ISO = {
             <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800 flex items-center">
-                        <i class="fas fa-search-plus text-blue-600 ml-3"></i>مركز التدقيق والجودة
+                        <i class="fas fa-search-plus text-blue-600 ml-3"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.headerTitle', 'مركز التدقيق والمراجعة (Audits & CAPA)') : 'مركز التدقيق والمراجعة (Audits & CAPA)'}
                     </h2>
-                    <p class="text-sm text-gray-500 mt-1">إدارة عمليات التدقيق وحالات عدم المطابقة والإجراءات التصحيحية</p>
+                    <p class="text-sm text-gray-500 mt-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.headerDesc', 'إدارة عمليات التدقيق الداخلي والخارجي ومتابعة حالات عدم المطابقة والإجراءات التصحيحية') : 'إدارة عمليات التدقيق الداخلي والخارجي ومتابعة حالات عدم المطابقة والإجراءات التصحيحية'}</p>
                 </div>
                 <div class="flex gap-2">
                     <button class="btn bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all" onclick="ISO.showAuditForm()">
-                        <i class="fas fa-plus text-blue-600"></i>جدولة تدقيق
+                        <i class="fas fa-plus text-blue-600"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.addAuditBtn', 'جدولة تدقيق') : 'جدولة تدقيق'}
                     </button>
                     <button class="btn bg-blue-600 text-white hover:bg-blue-700 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all" onclick="ISO.showNonConformityForm()">
-                        <i class="fas fa-exclamation-triangle"></i>تسجيل حالة عدم مطابقة
+                        <i class="fas fa-exclamation-triangle"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.addNcBtn', 'تسجيل حالة عدم مطابقة') : 'تسجيل حالة عدم مطابقة'}
                     </button>
                 </div>
             </div>
@@ -1431,15 +2411,15 @@ const ISO = {
                             <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center ml-2">
                                 <i class="fas fa-clipboard-check"></i>
                             </div>
-                            سجل عمليات التدقيق
+                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.auditLogTitle', 'سجل عمليات التدقيق') : 'سجل عمليات التدقيق'}
                         </h3>
-                        <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full border border-blue-200">${audits.length} عمليات</span>
+                        <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full border border-blue-200">${audits.length}</span>
                     </div>
                     <div class="card-body p-0 flex-1 overflow-y-auto" style="max-height: 500px;">
                         ${audits.length === 0 ? `
                             <div class="p-12 text-center flex flex-col items-center justify-center h-full">
                                 <div class="w-16 h-16 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mb-3"><i class="fas fa-clipboard text-2xl"></i></div>
-                                <h4 class="text-gray-600 font-bold mb-1">لا توجد سجلات تدقيق</h4>
+                                <h4 class="text-gray-600 font-bold mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.noAudits', 'لا توجد سجلات تدقيق') : 'لا توجد سجلات تدقيق'}</h4>
                                 <p class="text-gray-400 text-xs">قم بجدولة أول عملية تدقيق لتقييم النظام</p>
                             </div>
                         ` : `
@@ -1449,7 +2429,7 @@ const ISO = {
                                     const isScheduled = audit.status === 'مجدول' || audit.status === 'Scheduled';
                                     
                                     let statusColor = isCompleted ? 'green' : (isScheduled ? 'blue' : 'amber');
-                                    let typeIcon = audit.type?.includes('خارجي') ? 'fa-building' : 'fa-users-cog';
+                                    let typeIcon = audit.type?.includes('خارجي') || audit.type?.includes('External') ? 'fa-building' : 'fa-users-cog';
                                     
                                     return `
                                     <div class="p-4 hover:bg-gray-50 transition-colors flex items-start justify-between group">
@@ -1463,8 +2443,8 @@ const ISO = {
                                                     <span class="bg-${statusColor}-100 text-${statusColor}-800 text-[10px] font-bold px-2 py-0.5 rounded border border-${statusColor}-200">${audit.status}</span>
                                                 </div>
                                                 <div class="text-xs text-gray-500 flex items-center gap-3">
-                                                    <span title="تاريخ التدقيق"><i class="far fa-calendar ml-1"></i>${Utils.formatDate(audit.date)}</span>
-                                                    <span title="المدقق"><i class="fas fa-user-tie ml-1"></i>${Utils.escapeHTML(audit.auditor)}</span>
+                                                    <span title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.auditCard.date', 'تاريخ التدقيق') : 'تاريخ التدقيق'}"><i class="far fa-calendar ml-1"></i>${Utils.formatDate(audit.date)}</span>
+                                                    <span title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.auditCard.auditor', 'المدقق') : 'المدقق'}"><i class="fas fa-user-tie ml-1"></i>${Utils.escapeHTML(audit.auditor)}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1486,18 +2466,18 @@ const ISO = {
                             <div class="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center ml-2">
                                 <i class="fas fa-exclamation-triangle"></i>
                             </div>
-                            تتبع إجراءات CAPA
+                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.capaTitle', 'سجل CAPA') : 'سجل CAPA'}
                         </h3>
                         <div class="flex gap-1">
-                            <span class="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-1 rounded-md border border-red-200" title="حالات عدم مطابقة">${nonConformities.length} NC</span>
-                            <span class="bg-orange-100 text-orange-800 text-[10px] font-bold px-2 py-1 rounded-md border border-orange-200" title="إجراءات تصحيحية">${actions.length} CA</span>
+                            <span class="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-1 rounded-md border border-red-200" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.capaCard.ncType', 'حالات عدم مطابقة') : 'حالات عدم مطابقة'}">${nonConformities.length} NC</span>
+                            <span class="bg-orange-100 text-orange-800 text-[10px] font-bold px-2 py-1 rounded-md border border-orange-200" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.capaCard.caType', 'إجراءات تصحيحية') : 'إجراءات تصحيحية'}">${actions.length} CA</span>
                         </div>
                     </div>
                     <div class="card-body p-0 flex-1 overflow-y-auto bg-gray-50/30" style="max-height: 500px;">
                         ${nonConformities.length === 0 && actions.length === 0 ? `
                             <div class="p-12 text-center flex flex-col items-center justify-center h-full">
                                 <div class="w-16 h-16 bg-green-50 text-green-400 rounded-full flex items-center justify-center mb-3"><i class="fas fa-shield-alt text-2xl"></i></div>
-                                <h4 class="text-gray-600 font-bold mb-1">لا توجد حالات مسجلة</h4>
+                                <h4 class="text-gray-600 font-bold mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.noCapa', 'لا توجد سجلات عدم مطابقة أو إجراءات تصحيحية') : 'لا توجد سجلات عدم مطابقة أو إجراءات تصحيحية'}</h4>
                                 <p class="text-gray-400 text-xs">نظام الجودة يعمل بشكل مثالي دون ملاحظات.</p>
                             </div>
                         ` : `
@@ -1505,7 +2485,7 @@ const ISO = {
                                 <!-- Non-Conformities Section -->
                                 ${nonConformities.length > 0 ? `
                                     <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 pb-2 border-b border-gray-200 flex items-center gap-2">
-                                        <i class="fas fa-bug text-red-400"></i> حالات عدم المطابقة (NC)
+                                        <i class="fas fa-bug text-red-400"></i> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.capaCard.ncType', 'حالات عدم مطابقة (NC)') : 'حالات عدم مطابقة (NC)'}
                                     </h4>
                                     <div class="space-y-3 mb-6">
                                         ${nonConformities.map(nc => {
@@ -1529,7 +2509,7 @@ const ISO = {
                                 <!-- Corrective Actions Section -->
                                 ${actions.length > 0 ? `
                                     <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 pb-2 border-b border-gray-200 flex items-center gap-2">
-                                        <i class="fas fa-tools text-orange-400"></i> الإجراءات التصحيحية (CA)
+                                        <i class="fas fa-tools text-orange-400"></i> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.capaCard.caType', 'الإجراءات التصحيحية (CA)') : 'الإجراءات التصحيحية (CA)'}
                                     </h4>
                                     <div class="space-y-3">
                                         ${actions.map(action => {
@@ -1568,7 +2548,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل هد' : 'إضافة هد HSE جديد'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.editTitle', 'تعديل هدف') : 'تعديل هدف') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.addTitle', 'إضافة هدف HSE جديد') : 'إضافة هدف HSE جديد')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1576,30 +2556,30 @@ const ISO = {
                 <div class="modal-body">
                     <form id="hse-objective-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الهد *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.nameLabel', 'الهدف *') : 'الهدف *'}</label>
                             <input type="text" id="objective-name" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="مثال: تقليل الإصابات بنسبة 20%">
+                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.namePlaceholder', 'مثال: تقليل الإصابات بنسبة 20%') : 'مثال: تقليل الإصابات بنسبة 20%'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الوصف *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.descLabel', 'الوصف *') : 'الوصف *'}</label>
                             <textarea id="objective-description" required class="form-input" rows="4" 
-                                placeholder="وصف تفصيلي للحد الهدفي">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.descPlaceholder', 'وصف تفصيلي للهدف') : 'وصف تفصيلي للهدف'}">${Utils.escapeHTML(data?.description || '')}</textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الانتهاء *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.dueDateLabel', 'تاريخ الانتهاء *') : 'تاريخ الانتهاء *'}</label>
                             <input type="date" id="objective-due-date" required class="form-input" 
                                 value="${data?.dueDate ? new Date(data.dueDate).toISOString().slice(0, 10) : ''}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">المسؤول *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.respLabel', 'المسؤول *') : 'المسؤول *'}</label>
                             <input type="text" id="objective-responsible" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.responsible || '')}" placeholder="اسم المسؤول">
+                                value="${Utils.escapeHTML(data?.responsible || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.respPlaceholder', 'اسم المسؤول') : 'اسم المسؤول'}">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-objective-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-objective-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -1691,7 +2671,7 @@ const ISO = {
     },
 
     async showHSERiskAssessmentForm(data = null) {
-        Notification.info('سيتم إضافة نموذج تقييم المخاطر HSE قريباً');
+        Notification.info(typeof I18n !== 'undefined' ? I18n.t('module.iso.risks.comingSoon', 'سيتم إضافة نموذج تقييم المخاطر HSE قريباً') : 'سيتم إضافة نموذج تقييم المخاطر HSE قريباً');
     },
 
     async showEnvironmentalAspectsForm(data = null) {
@@ -1700,7 +2680,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل جانب بيئي' : 'إضافة جانب بيئي جديد'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.editTitle', 'تعديل جانب بيئي') : 'تعديل جانب بيئي') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.addTitle', 'إضافة جانب بيئي جديد') : 'إضافة جانب بيئي جديد')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1708,29 +2688,29 @@ const ISO = {
                 <div class="modal-body">
                     <form id="environmental-aspect-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">اسم الجانب البيئي *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.nameLabel', 'اسم الجانب البيئي *') : 'اسم الجانب البيئي *'}</label>
                             <input type="text" id="aspect-name" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="مثال: استهلاك المياه">
+                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.namePlaceholder', 'مثال: استهلاك المياه') : 'مثال: استهلاك المياه'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الوصف *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.descLabel', 'الوصف *') : 'الوصف *'}</label>
                             <textarea id="aspect-description" required class="form-input" rows="4" 
-                                placeholder="وصف تفصيلي للجانب البيئي">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.descPlaceholder', 'وصف تفصيلي للجانب البيئي') : 'وصف تفصيلي للجانب البيئي'}">${Utils.escapeHTML(data?.description || '')}</textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">التأثير *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.impactLabel', 'التأثير *') : 'التأثير *'}</label>
                             <select id="aspect-impact" required class="form-input">
-                                <option value="">اختر التأثير</option>
-                                <option value="منخض" ${data?.impact === 'منخض' ? 'selected' : ''}>منخض</option>
-                                <option value="متوسط" ${data?.impact === 'متوسط' ? 'selected' : ''}>متوسط</option>
-                                <option value="عالي" ${data?.impact === 'عالي' ? 'selected' : ''}>عالي</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.selectImpactOption', 'اختر التأثير') : 'اختر التأثير'}</option>
+                                <option value="منخض" ${data?.impact === 'منخض' || data?.impact === 'منخفض' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.impactLow', 'منخفض') : 'منخفض'}</option>
+                                <option value="متوسط" ${data?.impact === 'متوسط' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.impactMedium', 'متوسط') : 'متوسط'}</option>
+                                <option value="عالي" ${data?.impact === 'عالي' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.impactHigh', 'عالي') : 'عالي'}</option>
                             </select>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-aspect-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-aspect-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -1819,7 +2799,7 @@ const ISO = {
     },
 
     async showEnvironmentalMonitoringForm(data = null) {
-        Notification.info('سيتم إضافة نموذج المراقبة البيئية قريباً');
+        Notification.info(typeof I18n !== 'undefined' ? I18n.t('module.iso.monitoring.comingSoon', 'سيتم إضافة نموذج المراقبة البيئية قريباً') : 'سيتم إضافة نموذج المراقبة البيئية قريباً');
     },
 
     async showAuditForm(data = null) {
@@ -1828,7 +2808,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل تدقيق' : 'إضاة تدقيق جديد'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.editTitle', 'تعديل تدقيق') : 'تعديل تدقيق') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.addTitle', 'إضافة تدقيق جديد') : 'إضافة تدقيق جديد')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1836,42 +2816,42 @@ const ISO = {
                 <div class="modal-body">
                     <form id="audit-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">نوع التدقيق *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.typeLabel', 'نوع التدقيق *') : 'نوع التدقيق *'}</label>
                             <select id="audit-type" required class="form-input">
-                                <option value="">اختر النوع</option>
-                                <option value="تدقيق داخلي" ${data?.type === 'تدقيق داخلي' ? 'selected' : ''}>تدقيق داخلي</option>
-                                <option value="تدقيق خارجي" ${data?.type === 'تدقيق خارجي' ? 'selected' : ''}>تدقيق خارجي</option>
-                                <option value="مراجعة إدارة" ${data?.type === 'مراجعة إدارة' ? 'selected' : ''}>مراجعة إدارة</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.selectTypeOption', 'اختر النوع') : 'اختر النوع'}</option>
+                                <option value="تدقيق داخلي" ${data?.type === 'تدقيق داخلي' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.typeInternal', 'تدقيق داخلي') : 'تدقيق داخلي'}</option>
+                                <option value="تدقيق خارجي" ${data?.type === 'تدقيق خارجي' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.typeExternal', 'تدقيق خارجي') : 'تدقيق خارجي'}</option>
+                                <option value="مراجعة إدارة" ${data?.type === 'مراجعة إدارة' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.typeManagementReview', 'مراجعة إدارة') : 'مراجعة إدارة'}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ التدقيق *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.dateLabel', 'تاريخ التدقيق *') : 'تاريخ التدقيق *'}</label>
                             <input type="date" id="audit-date" required class="form-input" 
                                 value="${data?.date ? new Date(data.date).toISOString().slice(0, 10) : ''}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">المدقق *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.auditorLabel', 'المدقق *') : 'المدقق *'}</label>
                             <input type="text" id="audit-auditor" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.auditor || '')}" placeholder="اسم المدقق">
+                                value="${Utils.escapeHTML(data?.auditor || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.auditorPlaceholder', 'اسم المدقق') : 'اسم المدقق'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الحالة *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.statusLabel', 'الحالة *') : 'الحالة *'}</label>
                             <select id="audit-status" required class="form-input">
-                                <option value="مخطط" ${data?.status === 'مخطط' ? 'selected' : ''}>مخطط</option>
-                                <option value="قيد التنيذ" ${data?.status === 'قيد التنيذ' ? 'selected' : ''}>قيد التنيذ</option>
-                                <option value="مكتمل" ${data?.status === 'مكتمل' ? 'selected' : ''}>مكتمل</option>
+                                <option value="مخطط" ${data?.status === 'مخطط' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.statusPlanned', 'مخطط') : 'مخطط'}</option>
+                                <option value="قيد التنيذ" ${data?.status === 'قيد التنيذ' || data?.status === 'قيد التنفيذ' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.statusInProgress', 'قيد التنفيذ') : 'قيد التنفيذ'}</option>
+                                <option value="مكتمل" ${data?.status === 'مكتمل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.statusCompleted', 'مكتمل') : 'مكتمل'}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الوص</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.descLabel', 'الوصف') : 'الوصف'}</label>
                             <textarea id="audit-description" class="form-input" rows="4" 
-                                placeholder="وصف تفصيلي للتدقيق">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.descPlaceholder', 'وصف تفصيلي للتدقيق') : 'وصف تفصيلي للتدقيق'}">${Utils.escapeHTML(data?.description || '')}</textarea>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-audit-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-audit-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -1966,7 +2946,7 @@ const ISO = {
     async viewAudit(id) {
         const audit = AppState.appData.hseAudits.find(a => a.id === id);
         if (!audit) {
-            Notification.error('التدقيق غير موجود');
+            Notification.error(typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.notFound', 'التدقيق غير موجود') : 'التدقيق غير موجود');
             return;
         }
 
@@ -1975,22 +2955,22 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">تفاصيل التدقيق</h2>
+                    <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.detailsTitle', 'تفاصيل التدقيق') : 'تفاصيل التدقيق'}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-3">
-                        <div><strong>النوع:</strong> ${Utils.escapeHTML(audit.type)}</div>
-                        <div><strong>التاريخ:</strong> ${Utils.formatDate(audit.date)}</div>
-                        <div><strong>المدقق:</strong> ${Utils.escapeHTML(audit.auditor)}</div>
-                        <div><strong>الحالة:</strong> <span class="badge badge-${audit.status === 'مكتمل' ? 'success' : 'warning'}">${audit.status}</span></div>
-                        <div><strong>الوصف:</strong> ${Utils.escapeHTML(audit.description || '-')}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.table.type', 'النوع:') : 'النوع:'}</strong> ${Utils.escapeHTML(audit.type)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.table.date', 'التاريخ:') : 'التاريخ:'}</strong> ${Utils.formatDate(audit.date)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.table.auditor', 'المدقق:') : 'المدقق:'}</strong> ${Utils.escapeHTML(audit.auditor)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.table.status', 'الحالة:') : 'الحالة:'}</strong> <span class="badge badge-${audit.status === 'مكتمل' ? 'success' : 'warning'}">${audit.status}</span></div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.table.desc', 'الوصف:') : 'الوصف:'}</strong> ${Utils.escapeHTML(audit.description || '-')}</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
                 </div>
             </div>
         `;
@@ -2006,7 +2986,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل عدم مطابقة' : 'إضافة عدم مطابقة جديدة'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.editTitle', 'تعديل عدم مطابقة') : 'تعديل عدم مطابقة') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.addTitle', 'إضافة عدم مطابقة جديدة') : 'إضافة عدم مطابقة جديدة')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -2014,28 +2994,28 @@ const ISO = {
                 <div class="modal-body">
                     <form id="non-conformity-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ عدم المطابقة *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.date', 'تاريخ عدم المطابقة *') : 'تاريخ عدم المطابقة *'}</label>
                             <input type="date" id="nc-date" required class="form-input" 
                                 value="${data?.date ? new Date(data.date).toISOString().slice(0, 10) : ''}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الوصف *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.desc', 'الوصف *') : 'الوصف *'}</label>
                             <textarea id="nc-description" required class="form-input" rows="4" 
-                                placeholder="وصف تفصيلي لعدم المطابقة">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.descPlaceholder', 'وصف تفصيلي لعدم المطابقة') : 'وصف تفصيلي لعدم المطابقة'}">${Utils.escapeHTML(data?.description || '')}</textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الحالة *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.status', 'الحالة *') : 'الحالة *'}</label>
                             <select id="nc-status" required class="form-input">
-                                <option value="متوحة" ${data?.status === 'متوحة' ? 'selected' : ''}>متوحة</option>
-                                <option value="قيد المعالجة" ${data?.status === 'قيد المعالجة' ? 'selected' : ''}>قيد المعالجة</option>
-                                <option value="مغلق" ${data?.status === 'مغلق' ? 'selected' : ''}>مغلق</option>
+                                <option value="متوحة" ${data?.status === 'متوحة' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.statusOpen', 'متوحة') : 'متوحة'}</option>
+                                <option value="قيد المعالجة" ${data?.status === 'قيد المعالجة' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.statusInProgress', 'قيد المعالجة') : 'قيد المعالجة'}</option>
+                                <option value="مغلق" ${data?.status === 'مغلق' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.statusClosed', 'مغلق') : 'مغلق'}</option>
                             </select>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-nc-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-nc-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -2135,20 +3115,20 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">تفاصيل عدم المطابقة</h2>
+                    <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.detailsTitle', 'تفاصيل عدم المطابقة') : 'تفاصيل عدم المطابقة'}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-3">
-                        <div><strong>التاريخ:</strong> ${Utils.formatDate(nc.date)}</div>
-                        <div><strong>الوصف:</strong> ${Utils.escapeHTML(nc.description)}</div>
-                        <div><strong>الحالة:</strong> <span class="badge badge-${nc.status === 'مغلق' ? 'success' : 'danger'}">${nc.status}</span></div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.table.date', 'التاريخ:') : 'التاريخ:'}</strong> ${Utils.formatDate(nc.date)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.table.desc', 'الوصف:') : 'الوصف:'}</strong> ${Utils.escapeHTML(nc.description)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.table.status', 'الحالة:') : 'الحالة:'}</strong> <span class="badge badge-${nc.status === 'مغلق' ? 'success' : 'danger'}">${nc.status}</span></div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
                 </div>
             </div>
         `;
@@ -2164,7 +3144,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل إجراء تصحيحي' : 'إضافة إجراء تصحيحي جديد'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.editTitle', 'تعديل إجراء تصحيحي') : 'تعديل إجراء تصحيحي') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.addTitle', 'إضافة إجراء تصحيحي جديد') : 'إضافة إجراء تصحيحي جديد')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -2172,32 +3152,32 @@ const ISO = {
                 <div class="modal-body">
                     <form id="corrective-action-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الوصف *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.desc', 'الوصف *') : 'الوصف *'}</label>
                             <textarea id="ca-description" required class="form-input" rows="4" 
-                                placeholder="وصف تفصيلي للإجراء التصحيحي">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.descPlaceholder', 'وصف تفصيلي للإجراء التصحيحي') : 'وصف تفصيلي للإجراء التصحيحي'}">${Utils.escapeHTML(data?.description || '')}</textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">المسؤول *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.responsible', 'المسؤول *') : 'المسؤول *'}</label>
                             <input type="text" id="ca-responsible" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.responsible || '')}" placeholder="اسم المسؤول">
+                                value="${Utils.escapeHTML(data?.responsible || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.respPlaceholder', 'اسم المسؤول') : 'اسم المسؤول'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الانتهاء *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.dueDate', 'تاريخ الانتهاء *') : 'تاريخ الانتهاء *'}</label>
                             <input type="date" id="ca-due-date" required class="form-input" 
                                 value="${data?.dueDate ? new Date(data.dueDate).toISOString().slice(0, 10) : ''}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الحالة *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.status', 'الحالة *') : 'الحالة *'}</label>
                             <select id="ca-status" required class="form-input">
-                                <option value="قيد التنفيذ" ${data?.status === 'قيد التنيذ' ? 'selected' : ''}>قيد التنيذ</option>
-                                <option value="مكتمل" ${data?.status === 'مكتمل' ? 'selected' : ''}>مكتمل</option>
+                                <option value="قيد التنفيذ" ${data?.status === 'قيد التنيذ' || data?.status === 'قيد التنفيذ' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.statusInProgress', 'قيد التنفيذ') : 'قيد التنفيذ'}</option>
+                                <option value="مكتمل" ${data?.status === 'مكتمل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.statusCompleted', 'مكتمل') : 'مكتمل'}</option>
                             </select>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-ca-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-ca-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -2299,21 +3279,21 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">تفاصيل الإجراء التصحيحي</h2>
+                    <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.detailsTitle', 'تفاصيل الإجراء التصحيحي') : 'تفاصيل الإجراء التصحيحي'}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-3">
-                        <div><strong>الوصف:</strong> ${Utils.escapeHTML(ca.description)}</div>
-                        <div><strong>المسؤول:</strong> ${Utils.escapeHTML(ca.responsible)}</div>
-                        <div><strong>تاريخ الانتهاء:</strong> ${Utils.formatDate(ca.dueDate)}</div>
-                        <div><strong>الحالة:</strong> <span class="badge badge-${ca.status === 'مكتمل' ? 'success' : 'warning'}">${ca.status}</span></div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.table.desc', 'الوصف:') : 'الوصف:'}</strong> ${Utils.escapeHTML(ca.description)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.table.responsible', 'المسؤول:') : 'المسؤول:'}</strong> ${Utils.escapeHTML(ca.responsible)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.table.dueDate', 'تاريخ الانتهاء:') : 'تاريخ الانتهاء:'}</strong> ${Utils.formatDate(ca.dueDate)}</div>
+                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.table.status', 'الحالة:') : 'الحالة:'}</strong> <span class="badge badge-${ca.status === 'مكتمل' ? 'success' : 'warning'}">${ca.status}</span></div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
                 </div>
             </div>
         `;
@@ -2325,20 +3305,34 @@ const ISO = {
 
     // ===== مركز التكويد والإصدار (Document Coding & Issuing Center) =====
     renderSystemFormsDirectory(documentCodes, documentVersions) {
-        if (!this.SystemFormsManifest) return '';
+        if (!this.SystemFormsManifest || this.SystemFormsManifest.length === 0) return '';
         
-        return `
-        <div class="content-card mb-6 border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
-            <div class="card-header bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-6 py-4 border-0">
-                <h2 class="card-title text-white flex items-center text-xl font-bold m-0">
-                    <i class="fas fa-layer-group ml-3 text-2xl opacity-90"></i>
-                    دليل نماذج النظام المدمجة
-                </h2>
-                <p class="text-blue-100 text-sm mt-1 mb-0 opacity-80">يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد</p>
-            </div>
-            <div class="card-body bg-gray-50/50 p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                    ${this.SystemFormsManifest.map(form => {
+        // Group forms by module
+        const groupedForms = this.SystemFormsManifest.reduce((acc, form) => {
+            if (!acc[form.module]) {
+                acc[form.module] = [];
+            }
+            acc[form.module].push(form);
+            return acc;
+        }, {});
+
+        const modulesHtml = Object.keys(groupedForms).map(moduleName => {
+            const forms = groupedForms[moduleName];
+            
+            return `
+            <div class="mb-5 coding-system-module">
+                <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-4 coding-system-module-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-folder-open text-primary fs-5"></i>
+                        <h4 class="font-bold text-gray-800 m-0">
+                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.moduleName.' + moduleName.replace(/[^a-zA-Z0-9]/g, ''), moduleName) : moduleName}
+                        </h4>
+                    </div>
+                    <span class="badge bg-secondary rounded-pill shadow-sm">${forms.length}</span>
+                </div>
+                
+                <div class="row g-4 mb-4 coding-system-grid">
+                    ${forms.map(form => {
                         const matchedCode = documentCodes.find(c => c.code === form.defaultCode || c.documentName === form.name);
                         let activeVersion = null;
                         if (matchedCode) {
@@ -2350,44 +3344,83 @@ const ISO = {
                         }
                         
                         return `
-                        <div class="bg-white border ${matchedCode ? 'border-green-200' : 'border-red-200'} rounded-xl p-5 hover:shadow-xl transition-all duration-300 relative overflow-hidden group transform hover:-translate-y-1">
-                            <div class="absolute top-0 right-0 w-1.5 h-full ${matchedCode ? 'bg-gradient-to-b from-green-400 to-green-600' : 'bg-gradient-to-b from-red-400 to-red-600'}"></div>
-                            
-                            <div class="flex justify-between items-start mb-4">
-                                <h3 class="font-bold text-gray-800 text-lg leading-tight">${form.name}</h3>
-                                <span class="badge ${matchedCode ? 'badge-success bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-2.5 py-1 rounded-full font-semibold text-xs shadow-sm flex items-center whitespace-nowrap">
-                                    ${matchedCode ? '<i class="fas fa-check-circle ml-1"></i> مكود' : '<i class="fas fa-times-circle ml-1"></i> غير معرّف'}
-                                </span>
-                            </div>
-                            
-                            <div class="text-sm text-gray-600 space-y-2.5 mb-5">
-                                <div class="flex items-center bg-gray-50 rounded p-1.5"><i class="fas fa-puzzle-piece text-gray-400 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">الموديول:</span> <span class="font-semibold mr-auto">${form.module}</span></div>
-                                ${matchedCode ? `
-                                    <div class="flex items-center bg-blue-50/50 rounded p-1.5"><i class="fas fa-hashtag text-blue-500 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">الكود:</span> <span class="font-mono font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded mr-auto text-xs">${Utils.escapeHTML(matchedCode.code || '')}</span></div>
-                                    <div class="flex items-center bg-purple-50/50 rounded p-1.5"><i class="fas fa-code-branch text-purple-500 w-5 ml-1 text-center"></i> <span class="text-xs text-gray-500 ml-1">الإصدار:</span> ${activeVersion ? `<span class="font-bold text-purple-700 mr-auto bg-purple-100 px-1.5 py-0.5 rounded text-xs">v${activeVersion.versionNumber}</span>` : '<span class="text-red-500 mr-auto text-xs font-semibold">لا يوجد إصدار نشط</span>'}</div>
-                                ` : `
-                                    <div class="text-red-600 text-xs bg-red-50 p-2.5 rounded border border-red-100 flex flex-col gap-1 items-center text-center mt-3">
-                                        <i class="fas fa-exclamation-triangle text-lg mb-1 opacity-80"></i> 
-                                        <span>قم بتعيين كود ليظهر في <br>تذييل هذا النموذج عند الطباعة</span>
+                        <div class="col-12 col-md-6 col-lg-4 col-xl-3 coding-system-col">
+                            <div class="card h-100 border-0 shadow-sm hover-shadow transition-all relative overflow-hidden coding-system-form-card ${matchedCode ? 'is-coded' : 'is-uncoded'}">
+                                <!-- Indicator -->
+                                <div class="position-absolute top-0 bottom-0 ${matchedCode ? 'bg-success' : 'bg-danger'} coding-system-status-rail" style="width: 4px; ${document.dir === 'rtl' ? 'right: 0;' : 'left: 0;'}"></div>
+                                
+                                <div class="card-body d-flex flex-column coding-system-form-body" style="${document.dir === 'rtl' ? 'padding-right: 1.25rem;' : 'padding-left: 1.25rem;'}">
+                                    <!-- Title -->
+                                    <h5 class="card-title font-bold text-gray-800 mb-3" style="line-height: 1.4;">${typeof I18n !== 'undefined' ? I18n.t(form.i18nKey, form.name) : form.name}</h5>
+                                    
+                                    <!-- Badges -->
+                                    <div class="d-flex flex-wrap gap-2 mb-4">
+                                        <span class="badge ${matchedCode ? 'bg-success' : 'bg-danger'} d-flex align-items-center">
+                                            <i class="fas ${matchedCode ? 'fa-check-circle' : 'fa-times-circle'} mx-1"></i>
+                                            ${matchedCode ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.coded', 'مكود') : 'مكود') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.notCoded', 'غير معرّف') : 'غير معرّف')}
+                                        </span>
+                                        <span class="badge bg-light text-dark border d-flex align-items-center">
+                                            <i class="fas fa-tag text-secondary mx-1"></i> ${form.type}
+                                        </span>
+                                        <span class="badge bg-light text-dark border d-flex align-items-center">
+                                            <i class="fas fa-puzzle-piece text-secondary mx-1"></i> ${form.department}
+                                        </span>
                                     </div>
-                                `}
-                            </div>
-                            
-                            <div class="mt-auto pt-4 border-t border-gray-100 flex justify-end">
-                                ${matchedCode ? `
-                                    <button class="btn-secondary btn-sm flex items-center hover:bg-gray-100 transition-colors w-full justify-center py-2 text-gray-700 font-semibold" onclick="ISO.viewDocumentVersions('${matchedCode.id}')" title="سجل التغييرات">
-                                        <i class="fas fa-history ml-2 text-gray-500"></i> سجل التغييرات
-                                    </button>
-                                ` : `
-                                    <button class="btn-primary btn-sm flex items-center shadow-md hover:shadow-lg transition-all w-full justify-center py-2 bg-gradient-to-r from-blue-600 to-blue-700 border-0" onclick="ISO.quickAssignFormCode('${form.name}', '${form.defaultCode}', '${form.type}', '${form.department}')" title="إنشاء كود سريع">
-                                        <i class="fas fa-plus ml-2"></i> تعيين كود الآن
-                                    </button>
-                                `}
+                                    
+                                    <!-- Middle Content (Code/Warning) -->
+                                    <div class="flex-grow-1 d-flex flex-column justify-content-center mb-4">
+                                        ${matchedCode ? `
+                                            <div class="d-flex justify-content-between align-items-center bg-light rounded p-2 mb-2 border coding-system-meta-row">
+                                                <span class="text-muted small fw-bold"><i class="fas fa-hashtag mx-1 text-primary"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.code', 'الكود') : 'الكود'}</span>
+                                                <span class="badge bg-primary font-monospace">${Utils.escapeHTML(matchedCode.code || '')}</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center bg-light rounded p-2 border coding-system-meta-row">
+                                                <span class="text-muted small fw-bold"><i class="fas fa-code-branch mx-1 text-primary"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.version', 'الإصدار') : 'الإصدار'}</span>
+                                                ${activeVersion ? `<span class="badge bg-success font-monospace">v${activeVersion.versionNumber}</span>` : `<span class="badge bg-danger small">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.noVersion', 'لا يوجد') : 'لا يوجد'}</span>`}
+                                            </div>
+                                        ` : `
+                                            <div class="alert alert-danger py-2 px-3 m-0 d-flex align-items-start shadow-sm" style="font-size: 0.8rem; border-left: 3px solid #dc3545;">
+                                                <i class="fas fa-exclamation-triangle mx-1 mt-1"></i>
+                                                <span class="fw-bold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.warning', 'يرجى تعيين كود لهذا النموذج لكي يتم اعتماده واستخدامه في النظام.') : 'يرجى تعيين كود لهذا النموذج لكي يتم اعتماده واستخدامه في النظام.'}</span>
+                                            </div>
+                                        `}
+                                    </div>
+                                    
+                                    <!-- Action Button -->
+                                    <div class="mt-auto border-top pt-3 coding-system-card-footer">
+                                        ${matchedCode ? `
+                                            <button class="btn btn-outline-secondary btn-sm w-100 d-flex justify-content-center align-items-center fw-bold" onclick="ISO.viewDocumentVersions('${matchedCode.id}')" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.history', 'سجل التغييرات') : 'سجل التغييرات'}">
+                                                <i class="fas fa-history mx-2"></i>
+                                                ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.history', 'سجل التغييرات') : 'سجل التغييرات'}
+                                            </button>
+                                        ` : `
+                                            <button class="btn btn-primary btn-sm w-100 d-flex justify-content-center align-items-center fw-bold shadow-sm" onclick="ISO.quickAssignFormCode('${form.name}', '${form.defaultCode}', '${form.type}', '${form.department}')" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.assignCode', 'إنشاء كود سريع') : 'إنشاء كود سريع'}">
+                                                <i class="fas fa-plus-circle mx-2"></i>
+                                                ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.assignNow', 'تعيين كود الآن') : 'تعيين كود الآن'}
+                                            </button>
+                                        `}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         `;
                     }).join('')}
                 </div>
+            </div>
+            `;
+        }).join('');
+
+        return `
+        <div class="card mb-4 border-0 shadow-sm coding-system-directory">
+            <div class="card-header bg-primary text-white p-4 border-0 coding-system-directory-header">
+                <h3 class="card-title text-white d-flex align-items-center fw-bold m-0" style="font-size: 1.25rem;">
+                    <i class="fas fa-layer-group mx-3 opacity-75 fs-4"></i>
+                    ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.title', 'دليل نماذج النظام المدمجة') : 'دليل نماذج النظام المدمجة'}
+                </h3>
+                <p class="text-white-50 small mt-2 mb-0" style="padding-right: 3.5rem;">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.desc', 'يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد') : 'يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد'}</p>
+            </div>
+            <div class="card-body bg-light p-4 p-md-5 coding-system-directory-body">
+                ${modulesHtml}
             </div>
         </div>
         `;
@@ -2405,8 +3438,8 @@ const ISO = {
                     <div class="card-body">
                         <div class="empty-state">
                             <i class="fas fa-lock text-4xl text-gray-400 mb-4"></i>
-                            <p class="text-gray-600">ليس لديك صلاحية للوصول إلى مركز التكويد والإصدار</p>
-                            <p class="text-sm text-gray-500 mt-2">هذا القسم متاح فقط لمدير النظام</p>
+                            <p class="text-gray-600">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.accessDeniedTitle', 'ليس لديك صلاحية للوصول إلى مركز التكويد والإصدار') : 'ليس لديك صلاحية للوصول إلى مركز التكويد والإصدار'}</p>
+                            <p class="text-sm text-gray-500 mt-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.accessDeniedDesc', 'هذا القسم متاح فقط لمدير النظام') : 'هذا القسم متاح فقط لمدير النظام'}</p>
                         </div>
                     </div>
                 </div>
@@ -2450,6 +3483,11 @@ const ISO = {
                 Loading.hide();
             }
         }
+
+        const activeVersionsCount = documentVersions.filter(v => v.isActive === true || v.isActive === 'true').length;
+        const systemForms = Array.isArray(this.SystemFormsManifest) ? this.SystemFormsManifest : [];
+        const codedSystemForms = systemForms.filter(form => documentCodes.some(code => code.code === form.defaultCode || code.documentName === form.name)).length;
+        const codingCoverage = systemForms.length ? Math.round((codedSystemForms / systemForms.length) * 100) : 0;
 
         const html = `
             <style id="iso-coding-center-contrast-fix">
@@ -2505,52 +3543,125 @@ const ISO = {
                 [data-theme="dark"] .iso-workspace .iso-coding-center input::placeholder,
                 [data-theme="dark"] .iso-workspace .iso-coding-center textarea::placeholder { color:#9bb0ac !important; }
             </style>
-            <div class="space-y-6 iso-coding-center">
+            <style id="iso-coding-governance-styles">
+                .iso-workspace .coding-governance {
+                    --cg-petrol:#073b3a;--cg-petrol-2:#0b5551;--cg-teal:#0f766e;--cg-gold:#d7a92f;
+                    --cg-ink:#172d2a;--cg-muted:#617672;--cg-line:#d3e2df;--cg-surface:#fff;--cg-soft:#f3f8f7;
+                    display:flex;min-width:0;flex-direction:column;gap:18px;color:var(--cg-ink);font-family:"Cairo","Segoe UI",Tahoma,sans-serif;
+                }
+                .iso-workspace .coding-governance-hero {
+                    position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px 26px;
+                    border:1px solid rgba(255,255,255,.14);border-radius:18px;background:radial-gradient(circle at 8% 0%,rgba(215,169,47,.18),transparent 30%),#073b3a;color:#fff;box-shadow:0 18px 40px rgba(7,59,58,.2);
+                }
+                .iso-workspace .coding-governance-hero::after { content:"DOC";position:absolute;inset-inline-end:22px;bottom:-28px;color:rgba(255,255,255,.045);font:900 6.5rem/1 "Segoe UI",sans-serif;letter-spacing:-.08em;pointer-events:none; }
+                .iso-workspace .coding-governance-hero-copy { position:relative;z-index:1;display:flex;align-items:center;gap:14px;min-width:0; }
+                .iso-workspace .coding-governance-hero-icon { display:inline-flex;width:50px;height:50px;flex:0 0 50px;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.2);border-radius:14px;background:rgba(255,255,255,.1);color:#fde68a;font-size:1.25rem; }
+                .iso-workspace .coding-governance-eyebrow { display:block;margin-bottom:4px;color:#99f6e4;font-size:.61rem;font-weight:900;letter-spacing:.12em; }
+                .iso-workspace .coding-governance-hero h2 { margin:0;color:#fff!important;font-size:clamp(1.12rem,2vw,1.45rem);font-weight:900; }
+                .iso-workspace .coding-governance-hero p { margin:5px 0 0;color:rgba(255,255,255,.72)!important;font-size:.76rem;line-height:1.65; }
+                .iso-workspace .coding-governance-hero-actions { position:relative;z-index:1;display:flex;align-items:center;gap:9px; }
+                .iso-workspace .coding-governance-hero-actions button { min-height:41px;border:1px solid rgba(255,255,255,.28)!important;border-radius:10px!important;background:rgba(255,255,255,.1)!important;color:#fff!important;box-shadow:none!important; }
+                .iso-workspace .coding-governance-notice { display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:11px;font-size:.75rem;font-weight:700; }
+                .iso-workspace .coding-governance-notice.is-warning { border:1px solid #ebcf83;background:#fff8e6;color:#78540c; }
+                .iso-workspace .coding-governance-notice.is-loading { border:1px solid #b9dcd5;background:#eef9f6;color:#0b625c; }
+                .iso-workspace .coding-governance-stats { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px; }
+                .iso-workspace .coding-governance-stat { --stat-accent:var(--cg-teal);position:relative;overflow:hidden;min-height:105px;padding:15px 16px;border:1px solid var(--cg-line);border-radius:14px;background:var(--cg-surface);box-shadow:0 8px 22px rgba(7,59,58,.07); }
+                .iso-workspace .coding-governance-stat::before { content:"";position:absolute;inset-block:0;inset-inline-start:0;width:4px;background:var(--stat-accent); }
+                .iso-workspace .coding-governance-stat:nth-child(2){--stat-accent:#267b5b}.iso-workspace .coding-governance-stat:nth-child(3){--stat-accent:#8a6719}.iso-workspace .coding-governance-stat:nth-child(4){--stat-accent:#5d4ca3}
+                .iso-workspace .coding-governance-stat-icon { display:inline-flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:8px;background:color-mix(in srgb,var(--stat-accent) 11%,white);color:var(--stat-accent);font-size:.72rem; }
+                .iso-workspace .coding-governance-stat-value { margin:7px 0 3px;color:var(--cg-ink)!important;font-size:1.55rem;font-weight:900;font-variant-numeric:tabular-nums;line-height:1; }
+                .iso-workspace .coding-governance-stat-label { color:var(--cg-muted)!important;font-size:.69rem;font-weight:850; }
+                .iso-workspace .coding-system-directory { overflow:hidden!important;margin:0!important;border:1px solid var(--cg-line)!important;border-radius:17px!important;background:var(--cg-surface)!important;box-shadow:0 12px 30px rgba(7,59,58,.09)!important; }
+                .iso-workspace .coding-system-directory-header { padding:19px 21px!important;border:0!important;border-bottom:3px solid var(--cg-gold)!important;background:#0b5551!important;color:#fff!important; }
+                .iso-workspace .coding-system-directory-header::before { display:none!important; }
+                .iso-workspace .coding-system-directory-header .card-title,.iso-workspace .coding-system-directory-header p { color:#fff!important; }
+                .iso-workspace .coding-system-directory-body { padding:19px!important;background:var(--cg-soft)!important;color:var(--cg-ink)!important; }
+                .iso-workspace .coding-system-module { margin-bottom:20px!important;padding:16px;border:1px solid var(--cg-line);border-radius:14px;background:var(--cg-surface); }
+                .iso-workspace .coding-system-module:last-child { margin-bottom:0!important; }
+                .iso-workspace .coding-system-module-header { margin-bottom:14px!important;padding-bottom:11px!important;border-color:#c6d9d5!important; }
+                .iso-workspace .coding-system-module-header h4 { color:var(--cg-ink)!important;font-size:.88rem;font-weight:900; }
+                .iso-workspace .coding-system-module-header i { color:var(--cg-teal)!important; }
+                .iso-workspace .coding-system-grid { display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px!important;margin:0!important; }
+                .iso-workspace .coding-system-col { width:auto!important;max-width:none!important;padding:0!important; }
+                .iso-workspace .coding-system-form-card { min-height:260px;border:1px solid var(--cg-line)!important;border-radius:13px!important;background:var(--cg-surface)!important;color:var(--cg-ink)!important;box-shadow:0 6px 18px rgba(7,59,58,.06)!important;transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease; }
+                .iso-workspace .coding-system-form-card:hover { border-color:#abcac4!important;box-shadow:0 11px 24px rgba(7,59,58,.1)!important;transform:translateY(-2px); }
+                .iso-workspace .coding-system-status-rail { background:var(--cg-teal)!important; }.iso-workspace .coding-system-form-card.is-uncoded .coding-system-status-rail { background:#c58a22!important; }
+                .iso-workspace .coding-system-form-body { padding:16px!important;background:transparent!important;color:var(--cg-ink)!important; }
+                .iso-workspace .coding-system-form-card .card-title { color:var(--cg-ink)!important;font-size:.82rem!important;font-weight:900!important; }
+                .iso-workspace .coding-system-form-card .badge { border:1px solid #c9dcd8!important;background:#edf5f3!important;color:#34514c!important;box-shadow:none!important; }
+                .iso-workspace .coding-system-form-card .badge.bg-success { border-color:#a8d6c3!important;background:#e8f7f0!important;color:#176143!important; }
+                .iso-workspace .coding-system-form-card .badge.bg-danger { border-color:#e7cf9b!important;background:#fff5dc!important;color:#7b5813!important; }
+                .iso-workspace .coding-system-form-card .alert-danger { margin:.75rem 0 0;border:1px solid #e8cf95!important;border-inline-start:3px solid var(--cg-gold)!important;border-radius:10px;background:#fff8e7!important;color:#765415!important; }
+                .iso-workspace .coding-system-meta-row { border-color:#d8e5e2!important;background:var(--cg-soft)!important;color:var(--cg-ink)!important; }
+                .iso-workspace .coding-system-card-footer { border-color:#d8e5e2!important; }
+                .iso-workspace .coding-system-card-footer button { min-height:38px;border-radius:9px!important;font-size:.72rem;font-weight:850!important; }
+                .iso-workspace .coding-management-card { overflow:hidden!important;border:1px solid var(--cg-line)!important;border-radius:16px!important;background:var(--cg-surface)!important;box-shadow:0 10px 28px rgba(7,59,58,.08)!important; }
+                .iso-workspace .coding-management-header { padding:17px 19px!important;border-bottom:1px solid var(--cg-line)!important;background:#eef6f4!important; }
+                .iso-workspace .coding-management-header .card-title { color:var(--cg-petrol)!important; }
+                .iso-workspace .coding-management-toolbar { display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap; }
+                .iso-workspace .coding-management-toolbar button { min-height:38px;border-radius:9px!important;font-size:.7rem; }
+                .iso-workspace .coding-filter-bar { display:grid;grid-template-columns:auto minmax(260px,1fr);align-items:center;gap:10px;margin-bottom:14px;padding:12px;border:1px solid var(--cg-line);border-radius:11px;background:var(--cg-soft); }
+                .iso-workspace .coding-filter-label { display:flex;align-items:center;gap:7px;color:var(--cg-petrol);font-size:.72rem;font-weight:900;white-space:nowrap; }
+                .iso-workspace .coding-filter-label i { color:var(--cg-teal); }
+                .iso-workspace .coding-filter-bar input,.iso-workspace .coding-filter-bar select { width:100%;min-height:41px;border-radius:9px!important; }
+                .iso-workspace .coding-table-wrap { max-width:100%;overflow:auto;border:1px solid var(--cg-line)!important;border-radius:12px!important;background:var(--cg-surface);scrollbar-width:thin;scrollbar-color:#7da69f #e8f1ef; }
+                .iso-workspace .coding-table-wrap table { min-width:940px; }
+                .iso-workspace .coding-code-pill { display:inline-flex;align-items:center;padding:5px 9px;border:1px solid #b8d4cf;border-radius:7px;background:#edf7f5;color:#0b625c!important;font:800 .72rem/1.2 "Consolas","Cairo",monospace;direction:ltr; }
+                .iso-workspace .coding-row-actions { display:flex;align-items:center;justify-content:center;gap:6px; }
+                .iso-workspace .coding-empty-state { min-height:180px;border:2px dashed #c6d9d5!important;border-radius:12px;background:var(--cg-soft)!important; }
+                .iso-workspace .coding-empty-state i { color:#7aa59d;font-size:1.8rem; }
+                .iso-workspace .coding-governance button:focus-visible,.iso-workspace .coding-governance a:focus-visible,.iso-workspace .coding-governance input:focus-visible,.iso-workspace .coding-governance select:focus-visible { outline:3px solid rgba(197,138,34,.46);outline-offset:2px; }
+                [data-theme="dark"] .iso-workspace .coding-governance { --cg-ink:#e7f0ee;--cg-muted:#afc2be;--cg-line:#385b57;--cg-surface:#142927;--cg-soft:#102321; }
+                [data-theme="dark"] .iso-workspace .coding-governance-stat,[data-theme="dark"] .iso-workspace .coding-system-directory,[data-theme="dark"] .iso-workspace .coding-system-module,[data-theme="dark"] .iso-workspace .coding-system-form-card,[data-theme="dark"] .iso-workspace .coding-management-card,[data-theme="dark"] .iso-workspace .coding-table-wrap { background:var(--cg-surface)!important;color:var(--cg-ink)!important; }
+                [data-theme="dark"] .iso-workspace .coding-system-directory-body,[data-theme="dark"] .iso-workspace .coding-system-meta-row,[data-theme="dark"] .iso-workspace .coding-management-header,[data-theme="dark"] .iso-workspace .coding-filter-bar,[data-theme="dark"] .iso-workspace .coding-empty-state { background:var(--cg-soft)!important;color:var(--cg-ink)!important; }
+                [data-theme="dark"] .iso-workspace .coding-governance-stat-value,[data-theme="dark"] .iso-workspace .coding-system-module-header h4,[data-theme="dark"] .iso-workspace .coding-system-form-card .card-title,[data-theme="dark"] .iso-workspace .coding-management-header .card-title,[data-theme="dark"] .iso-workspace .coding-filter-label { color:var(--cg-ink)!important; }
+                [data-theme="dark"] .iso-workspace .coding-system-form-card .badge { border-color:#456763!important;background:#183532!important;color:#d9e9e6!important; }
+                [data-theme="dark"] .iso-workspace .coding-system-form-card .alert-danger { border-color:#715c2b!important;background:#342c19!important;color:#ffe3a8!important; }
+                [data-theme="dark"] .iso-workspace .coding-code-pill { border-color:#3d7168;background:#123934;color:#a7f3d0!important; }
+                @media(max-width:1180px){.iso-workspace .coding-system-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}.iso-workspace .coding-governance-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+                @media(max-width:820px){.iso-workspace .coding-governance-hero{align-items:flex-start;flex-direction:column;padding:20px}.iso-workspace .coding-governance-hero-actions{width:100%}.iso-workspace .coding-governance-hero-actions button{width:100%}.iso-workspace .coding-system-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.iso-workspace .coding-management-header>div{align-items:stretch!important;flex-direction:column!important}.iso-workspace .coding-management-toolbar{justify-content:stretch}.iso-workspace .coding-management-toolbar button{flex:1 1 145px}.iso-workspace .coding-filter-bar{grid-template-columns:1fr}}
+                @media(max-width:520px){.iso-workspace .coding-governance-stats,.iso-workspace .coding-system-grid{grid-template-columns:1fr!important}.iso-workspace .coding-governance-hero-copy{align-items:flex-start}.iso-workspace .coding-governance-hero::after{display:none}.iso-workspace .coding-system-directory-body{padding:11px!important}.iso-workspace .coding-system-module{padding:11px}.iso-workspace .coding-system-form-card{min-height:auto}}
+                @media(prefers-reduced-motion:reduce){.iso-workspace .coding-governance *{transition:none!important;animation:none!important}}
+            </style>
+            <div class="space-y-6 iso-coding-center coding-governance">
+                <section class="coding-governance-hero">
+                    <div class="coding-governance-hero-copy">
+                        <span class="coding-governance-hero-icon"><i class="fas fa-fingerprint"></i></span>
+                        <div><span class="coding-governance-eyebrow">DOCUMENT GOVERNANCE · CONTROLLED RECORDS</span><h2>مركز التكويد والإصدار</h2><p>حوكمة الأكواد، متابعة الإصدارات، وضمان استخدام النسخة المعتمدة من كل وثيقة ونموذج.</p></div>
+                    </div>
+                    <div class="coding-governance-hero-actions"><button type="button" onclick="ISO.reloadCodingCenter()"><i class="fas fa-sync-alt ml-2"></i>تحديث بيانات المركز</button></div>
+                </section>
                 ${timedOut ? `
-                <div class="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 flex items-center gap-2">
+                <div class="coding-governance-notice is-warning">
                     <i class="fas fa-clock text-amber-600"></i>
-                    <span class="text-sm text-amber-800">لم يتم تحميل البيانات في الوقت المحدد. اضغط <strong>إعادة تحميل</strong> للمحاولة مرة أخرى.</span>
+                    <span class="text-sm text-amber-800">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.timeoutWarning', 'لم يتم تحميل البيانات في الوقت المحدد. اضغط <strong>إعادة تحميل</strong> للمحاولة مرة أخرى.') : 'لم يتم تحميل البيانات في الوقت المحدد. اضغط <strong>إعادة تحميل</strong> للمحاولة مرة أخرى.'}</span>
                 </div>
                 ` : ''}
                 ${showLoadingIndicator ? `
-                <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 flex items-center gap-2">
+                <div class="coding-governance-notice is-loading">
                     <i class="fas fa-spinner fa-spin text-blue-600"></i>
-                    <span class="text-sm text-blue-800">جاري تحميل البيانات...</span>
+                    <span class="text-sm text-blue-800">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.loadingData', 'جاري تحميل البيانات...') : 'جاري تحميل البيانات...'}</span>
                 </div>
                 ` : ''}
                 <!-- إحصائيات سريعة + زر إعادة التحميل -->
-                <div class="flex flex-wrap items-center justify-between gap-4">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                            <div class="text-3xl font-bold text-blue-600 mb-2">${documentCodes.length}</div>
-                            <div class="text-sm text-gray-700 font-semibold">أكواد المستندات</div>
-                        </div>
-                        <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                            <div class="text-3xl font-bold text-green-600 mb-2">${documentVersions.length}</div>
-                            <div class="text-sm text-gray-700 font-semibold">إصدارات المستندات</div>
-                        </div>
-                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
-                            <div class="text-3xl font-bold text-purple-600 mb-2">${documentVersions.filter(v => v.isActive === true || v.isActive === 'true').length}</div>
-                            <div class="text-sm text-gray-700 font-semibold">إصدارات نشطة</div>
-                        </div>
-                    </div>
-                    <button type="button" onclick="ISO.reloadCodingCenter()" class="btn-secondary flex items-center gap-2 shrink-0" title="إعادة تحميل البيانات">
-                        <i class="fas fa-sync-alt"></i>
-                        <span>إعادة تحميل</span>
-                    </button>
+                <div class="coding-governance-stats">
+                    <div class="coding-governance-stat"><span class="coding-governance-stat-icon"><i class="fas fa-hashtag"></i></span><div class="coding-governance-stat-value">${documentCodes.length}</div><div class="coding-governance-stat-label">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.stats.codes', 'أكواد المستندات') : 'أكواد المستندات'}</div></div>
+                    <div class="coding-governance-stat"><span class="coding-governance-stat-icon"><i class="fas fa-code-branch"></i></span><div class="coding-governance-stat-value">${documentVersions.length}</div><div class="coding-governance-stat-label">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.stats.versions', 'إصدارات المستندات') : 'إصدارات المستندات'}</div></div>
+                    <div class="coding-governance-stat"><span class="coding-governance-stat-icon"><i class="fas fa-certificate"></i></span><div class="coding-governance-stat-value">${activeVersionsCount}</div><div class="coding-governance-stat-label">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.stats.activeVersions', 'إصدارات نشطة') : 'إصدارات نشطة'}</div></div>
+                    <div class="coding-governance-stat"><span class="coding-governance-stat-icon"><i class="fas fa-shield-alt"></i></span><div class="coding-governance-stat-value">${codingCoverage}%</div><div class="coding-governance-stat-label">تغطية نماذج النظام بالتكويد</div></div>
                 </div>
 
                 ${this.renderSystemFormsDirectory(documentCodes, documentVersions)}
 
                 <!-- قسم إدارة التكويد -->
-                <div class="content-card">
-                    <div class="card-header">
+                <div class="content-card coding-management-card coding-codes-card">
+                    <div class="card-header coding-management-header">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <h2 class="card-title">
                                 <i class="fas fa-code ml-2"></i>
                                 مركز التكويد (Document Coding Center)
                             </h2>
-                            <div class="flex flex-wrap items-center gap-2">
+                            <div class="flex flex-wrap items-center gap-2 coding-management-toolbar">
                                 <button type="button" class="btn-secondary flex items-center gap-1" onclick="ISO.importCodingCenterFromExcel()" title="استيراد أكواد المستندات من ملف Excel أو CSV">
                                     <i class="fas fa-file-excel"></i>
                                     <span>استيراد Excel</span>
@@ -2574,48 +3685,50 @@ const ISO = {
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="mb-4">
+                        <div class="mb-4 coding-filter-bar">
+                            <div class="coding-filter-label"><i class="fas fa-search"></i><span>البحث في سجل الأكواد</span></div>
                             <input type="text" id="document-code-search" class="form-input" 
-                                placeholder="بحث في أكواد المستندات..." 
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.searchPlaceholder', 'بحث في أكواد المستندات...') : 'بحث في أكواد المستندات...'}" 
                                 onkeyup="ISO.filterDocumentCodes()">
                         </div>
                         ${documentCodes.length === 0 ? `
-                            <div class="empty-state">
-                                <p class="text-gray-500">لا توجد أكواد مستندات مسجلة</p>
+                            <div class="empty-state coding-empty-state">
+                                <i class="fas fa-barcode"></i><p class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.noCodes', 'لا توجد أكواد مستندات مسجلة') : 'لا توجد أكواد مستندات مسجلة'}</p>
                             </div>
                         ` : `
-                            <div class="overflow-x-auto">
+                            <div class="overflow-x-auto coding-table-wrap">
                                 <table class="data-table">
                                     <thead>
                                         <tr>
-                                            <th>الكود</th>
-                                            <th>اسم المستند</th>
-                                            <th>نوع المستند</th>
-                                            <th>القسم</th>
-                                            <th>الحالة</th>
-                                            <th>تاريخ الإنشاء</th>
-                                            <th>الإجراءات</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.code', 'الكود') : 'الكود'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.name', 'اسم المستند') : 'اسم المستند'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.type', 'نوع المستند') : 'نوع المستند'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.dept', 'القسم') : 'القسم'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.status', 'الحالة') : 'الحالة'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.createdAt', 'تاريخ الإنشاء') : 'تاريخ الإنشاء'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.actions', 'الإجراءات') : 'الإجراءات'}</th>
                                         </tr>
                                     </thead>
                                     <tbody id="document-codes-table-body">
                                         ${documentCodes.map(code => `
                                             <tr>
-                                                <td><strong>${Utils.escapeHTML(code.code || '')}</strong></td>
+                                                <td><strong class="coding-code-pill">${Utils.escapeHTML(code.code || '')}</strong></td>
                                                 <td>${Utils.escapeHTML(code.documentName || '')}</td>
                                                 <td>${Utils.escapeHTML(code.documentType || '')}</td>
                                                 <td>${Utils.escapeHTML(code.department || '')}</td>
-                                                <td><span class="badge badge-${code.status === 'نشط' ? 'success' : 'warning'}">${Utils.escapeHTML(code.status || '')}</span></td>
+                                                <td><span class="badge badge-${code.status === 'نشط' || code.status === 'Active' ? 'success' : 'warning'}">${Utils.escapeHTML(code.status || '')}</span></td>
                                                 <td>${code.createdAt ? Utils.formatDate(code.createdAt) : '-'}</td>
-                                                <td>
-                                                    <button onclick="ISO.editDocumentCode('${code.id}')" class="btn-icon btn-icon-info" title="تعديل">
+                                                <td><div class="coding-row-actions">
+                                                    <button onclick="ISO.editDocumentCode('${code.id}')" class="btn-icon btn-icon-info" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
-                                                    <button onclick="ISO.viewDocumentVersions('${code.id}')" class="btn-icon btn-icon-success" title="عرض الإصدارات">
+                                                    <button onclick="ISO.viewDocumentVersions('${code.id}')" class="btn-icon btn-icon-success" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.viewVersions', 'عرض الإصدارات') : 'عرض الإصدارات'}">
                                                         <i class="fas fa-list"></i>
                                                     </button>
-                                                    <button onclick="ISO.deleteDocumentCode('${code.id}')" class="btn-icon btn-icon-danger" title="حذف">
+                                                    <button onclick="ISO.deleteDocumentCode('${code.id}')" class="btn-icon btn-icon-danger" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.delete', 'حذف') : 'حذف'}">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         `).join('')}
@@ -2627,42 +3740,43 @@ const ISO = {
                 </div>
 
                 <!-- قسم إدارة الإصدارات -->
-                <div class="content-card">
-                    <div class="card-header">
+                <div class="content-card coding-management-card coding-versions-card">
+                    <div class="card-header coding-management-header">
                         <div class="flex items-center justify-between">
                             <h2 class="card-title">
                                 <i class="fas fa-file-alt ml-2"></i>
-                                مركز الإصدار (Issuing Center)
+                                ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.issuingCenterTitle', 'مركز الإصدار (Issuing Center)') : 'مركز الإصدار (Issuing Center)'}
                             </h2>
                             <button class="btn-primary" onclick="ISO.showDocumentVersionForm()">
-                                <i class="fas fa-plus ml-2"></i>إضافة إصدار جديد
+                                <i class="fas fa-plus ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.addVersion', 'إضافة إصدار جديد') : 'إضافة إصدار جديد'}
                             </button>
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="mb-4">
+                        <div class="mb-4 coding-filter-bar">
+                            <div class="coding-filter-label"><i class="fas fa-filter"></i><span>تصفية سجل الإصدارات</span></div>
                             <select id="version-filter-code" class="form-input" onchange="ISO.filterDocumentVersions()">
-                                <option value="">جميع الأكواد</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.allCodes', 'جميع الأكواد') : 'جميع الأكواد'}</option>
                                 ${documentCodes.map(code => `
                                     <option value="${code.id}">${Utils.escapeHTML(code.code || '')} - ${Utils.escapeHTML(code.documentName || '')}</option>
                                 `).join('')}
                             </select>
                         </div>
                         ${documentVersions.length === 0 ? `
-                            <div class="empty-state">
-                                <p class="text-gray-500">لا توجد إصدارات مسجلة</p>
+                            <div class="empty-state coding-empty-state">
+                                <i class="fas fa-code-branch"></i><p class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.noVersions', 'لا توجد إصدارات مسجلة') : 'لا توجد إصدارات مسجلة'}</p>
                             </div>
                         ` : `
-                            <div class="overflow-x-auto">
+                            <div class="overflow-x-auto coding-table-wrap">
                                 <table class="data-table">
                                     <thead>
                                         <tr>
-                                            <th>الكود</th>
-                                            <th>رقم الإصدار</th>
-                                            <th>تاريخ الإصدار</th>
-                                            <th>تاريخ التعديل</th>
-                                            <th>الحالة</th>
-                                            <th>الإجراءات</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.code', 'الكود') : 'الكود'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.versionNum', 'رقم الإصدار') : 'رقم الإصدار'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.issueDate', 'تاريخ الإصدار') : 'تاريخ الإصدار'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.revisionDate', 'تاريخ التعديل') : 'تاريخ التعديل'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.status', 'الحالة') : 'الحالة'}</th>
+                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.actions', 'الإجراءات') : 'الإجراءات'}</th>
                                         </tr>
                                     </thead>
                                     <tbody id="document-versions-table-body">
@@ -2670,22 +3784,23 @@ const ISO = {
             const code = documentCodes.find(c => c.id === version.documentCodeId);
             return `
                                                 <tr data-code-id="${version.documentCodeId}">
-                                                    <td><strong>${Utils.escapeHTML(version.documentCode || code?.code || '')}</strong></td>
+                                                    <td><strong class="coding-code-pill">${Utils.escapeHTML(version.documentCode || code?.code || '')}</strong></td>
                                                     <td>${Utils.escapeHTML(version.versionNumber || '')}</td>
                                                     <td>${version.issueDate ? Utils.formatDate(version.issueDate) : '-'}</td>
                                                     <td>${version.revisionDate ? Utils.formatDate(version.revisionDate) : '-'}</td>
-                                                    <td>
+                                                    <td><div class="coding-row-actions">
                                                         <span class="badge badge-${version.isActive === true || version.isActive === 'true' ? 'success' : 'secondary'}">
-                                                            ${version.isActive === true || version.isActive === 'true' ? 'نشط' : 'غير نشط'}
+                                                            ${version.isActive === true || version.isActive === 'true' ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.active', 'نشط') : 'نشط') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.inactive', 'غير نشط') : 'غير نشط')}
                                                         </span>
                                                     </td>
                                                     <td>
-                                                        <button onclick="ISO.editDocumentVersion('${version.id}')" class="btn-icon btn-icon-info" title="تعديل">
+                                                        <button onclick="ISO.editDocumentVersion('${version.id}')" class="btn-icon btn-icon-info" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
-                                                        <button onclick="ISO.reissueDocument('${version.id}')" class="btn-icon btn-icon-warning" title="إعادة إصدار">
+                                                        <button onclick="ISO.reissueDocument('${version.id}')" class="btn-icon btn-icon-warning" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.reissue', 'إعادة إصدار') : 'إعادة إصدار'}">
                                                             <i class="fas fa-redo"></i>
                                                         </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             `;
@@ -3044,7 +4159,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل كود المستند' : 'إضافة كود مستند جديد'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.editCodeTitle', 'تعديل كود المستند') : 'تعديل كود المستند') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.addCodeTitle', 'إضافة كود مستند جديد') : 'إضافة كود مستند جديد')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -3052,51 +4167,51 @@ const ISO = {
                 <div class="modal-body">
                     <form id="document-code-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الكود *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.codeLabel', 'الكود *') : 'الكود *'}</label>
                             <input type="text" id="doc-code" required class="form-input" 
                                 value="${Utils.escapeHTML(data?.code || '')}" 
-                                placeholder="مثال: DOC-001, FORM-002">
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.codePlaceholder', 'مثال: DOC-001, FORM-002') : 'مثال: DOC-001, FORM-002'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">اسم المستند / الإجراء *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.nameLabel', 'اسم المستند / الإجراء *') : 'اسم المستند / الإجراء *'}</label>
                             <input type="text" id="doc-name" required class="form-input" 
                                 value="${Utils.escapeHTML(data?.documentName || '')}" 
-                                placeholder="اسم المستند">
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.namePlaceholder', 'اسم المستند') : 'اسم المستند'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">نوع المستند *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.typeLabel', 'نوع المستند *') : 'نوع المستند *'}</label>
                             <select id="doc-type" required class="form-input">
-                                <option value="">اختر النوع</option>
-                                <option value="وثيقة" ${data?.documentType === 'وثيقة' ? 'selected' : ''}>وثيقة</option>
-                                <option value="إجراء" ${data?.documentType === 'إجراء' ? 'selected' : ''}>إجراء</option>
-                                <option value="نموذج" ${data?.documentType === 'نموذج' ? 'selected' : ''}>نموذج</option>
-                                <option value="تقرير" ${data?.documentType === 'تقرير' ? 'selected' : ''}>تقرير</option>
-                                <option value="سجل" ${data?.documentType === 'سجل' ? 'selected' : ''}>سجل</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.selectTypeOption', 'اختر النوع') : 'اختر النوع'}</option>
+                                <option value="وثيقة" ${data?.documentType === 'وثيقة' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.typeDoc', 'وثيقة') : 'وثيقة'}</option>
+                                <option value="إجراء" ${data?.documentType === 'إجراء' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.typeProc', 'إجراء') : 'إجراء'}</option>
+                                <option value="نموذج" ${data?.documentType === 'نموذج' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.typeForm', 'نموذج') : 'نموذج'}</option>
+                                <option value="تقرير" ${data?.documentType === 'تقرير' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.typeReport', 'تقرير') : 'تقرير'}</option>
+                                <option value="سجل" ${data?.documentType === 'سجل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.typeRecord', 'سجل') : 'سجل'}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">القسم *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.departmentLabel', 'القسم *') : 'القسم *'}</label>
                             <input type="text" id="doc-department" required class="form-input" 
                                 value="${Utils.escapeHTML(data?.department || '')}" 
-                                placeholder="القسم التابع له">
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.departmentPlaceholder', 'القسم التابع له') : 'القسم التابع له'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الحالة *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusLabel', 'الحالة *') : 'الحالة *'}</label>
                             <select id="doc-status" required class="form-input">
-                                <option value="نشط" ${data?.status === 'نشط' ? 'selected' : ''}>نشط</option>
-                                <option value="معطل" ${data?.status === 'معطل' ? 'selected' : ''}>معطل</option>
+                                <option value="نشط" ${data?.status === 'نشط' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusActive', 'نشط') : 'نشط'}</option>
+                                <option value="معطل" ${data?.status === 'معطل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusInactive', 'معطل') : 'معطل'}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الوصف</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.descLabel', 'الوصف') : 'الوصف'}</label>
                             <textarea id="doc-description" class="form-input" rows="3" 
-                                placeholder="وصف اختياري للمستند">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.descPlaceholder', 'وصف اختياري للمستند') : 'وصف اختياري للمستند'}">${Utils.escapeHTML(data?.description || '')}</textarea>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-doc-code-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-doc-code-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -3239,7 +4354,7 @@ const ISO = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل إصدار المستند' : 'إضافة إصدار جديد'}</h2>
+                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.editVersionTitle', 'تعديل إصدار المستند') : 'تعديل إصدار المستند') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.addVersionTitle', 'إضافة إصدار جديد') : 'إضافة إصدار جديد')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -3247,9 +4362,9 @@ const ISO = {
                 <div class="modal-body">
                     <form id="document-version-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">كود المستند *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.docCodeLabel', 'كود المستند *') : 'كود المستند *'}</label>
                             <select id="version-code-id" required class="form-input" ${data ? 'disabled' : ''}>
-                                <option value="">اختر الكود</option>
+                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.selectCodeOption', 'اختر الكود') : 'اختر الكود'}</option>
                                 ${codes.map(code => `
                                     <option value="${code.id}" 
                                         ${(data?.documentCodeId === code.id || documentCodeId === code.id) ? 'selected' : ''}>
@@ -3259,44 +4374,44 @@ const ISO = {
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">رقم الإصدار *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.versionNumLabel', 'رقم الإصدار *') : 'رقم الإصدار *'}</label>
                             <input type="text" id="version-number" required class="form-input" 
                                 value="${Utils.escapeHTML(data?.versionNumber || '')}" 
-                                placeholder="مثال: 1.0, 2.1">
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.versionNumPlaceholder', 'مثال: 1.0, 2.1') : 'مثال: 1.0, 2.1'}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الإصدار *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.issueDateLabel', 'تاريخ الإصدار *') : 'تاريخ الإصدار *'}</label>
                             <input type="date" id="version-issue-date" required class="form-input" 
                                 value="${data?.issueDate ? new Date(data.issueDate).toISOString().slice(0, 10) : ''}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ التعديل</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.revDateLabel', 'تاريخ التعديل') : 'تاريخ التعديل'}</label>
                             <input type="date" id="version-revision-date" class="form-input" 
                                 value="${data?.revisionDate ? new Date(data.revisionDate).toISOString().slice(0, 10) : ''}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الحالة</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusLabel', 'الحالة') : 'الحالة'}</label>
                             <select id="version-status" class="form-input">
-                                <option value="نشط" ${data?.status === 'نشط' ? 'selected' : ''}>نشط</option>
-                                <option value="معطل" ${data?.status === 'معطل' ? 'selected' : ''}>معطل</option>
+                                <option value="نشط" ${data?.status === 'نشط' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusActive', 'نشط') : 'نشط'}</option>
+                                <option value="معطل" ${data?.status === 'معطل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusInactive', 'معطل') : 'معطل'}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">ملاحظة الإصدار</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.notesLabel', 'ملاحظة الإصدار') : 'ملاحظة الإصدار'}</label>
                             <textarea id="version-notes" class="form-input" rows="3" 
-                                placeholder="ملاحظات حول هذا الإصدار">${Utils.escapeHTML(data?.notes || '')}</textarea>
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.notesPlaceholder', 'ملاحظات حول هذا الإصدار') : 'ملاحظات حول هذا الإصدار'}">${Utils.escapeHTML(data?.notes || '')}</textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">سبب التعديل (سجل التغييرات)</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.changeReasonLabel', 'سبب التعديل (سجل التغييرات)') : 'سبب التعديل (سجل التغييرات)'}</label>
                             <input type="text" id="version-change-reason" class="form-input" 
                                 value="${Utils.escapeHTML(data?.changeReason || '')}" 
-                                placeholder="مثال: تحديث الإجراء بناءً على المراجعة السنوية">
+                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.changeReasonPlaceholder', 'مثال: تحديث الإجراء بناءً على المراجعة السنوية') : 'مثال: تحديث الإجراء بناءً على المراجعة السنوية'}">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="save-version-btn" class="btn-primary">حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
+                    <button type="button" id="save-version-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
                 </div>
             </div>
         `;
@@ -3393,7 +4508,7 @@ const ISO = {
             Loading.hide();
 
             if (!result.success || !result.data) {
-                Notification.error('فشل جلب الإصدارات');
+                Notification.error(typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.fetchVersionsFailed', 'فشل جلب الإصدارات') : 'فشل جلب الإصدارات');
                 return;
             }
 
@@ -3405,7 +4520,7 @@ const ISO = {
             modal.innerHTML = `
                 <div class="modal-content" style="max-width: 800px;">
                     <div class="modal-header">
-                        <h2 class="modal-title">سجل التغييرات والإصدارات: ${Utils.escapeHTML(code?.code || '')} - ${Utils.escapeHTML(code?.documentName || '')}</h2>
+                        <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.versionsTitle', 'سجل التغييرات والإصدارات:') : 'سجل التغييرات والإصدارات:'} ${Utils.escapeHTML(code?.code || '')} - ${Utils.escapeHTML(code?.documentName || '')}</h2>
                         <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                             <i class="fas fa-times"></i>
                         </button>
@@ -3413,24 +4528,24 @@ const ISO = {
                     <div class="modal-body">
                         <div class="mb-4">
                             <button class="btn-primary" onclick="ISO.showDocumentVersionForm(null, '${documentCodeId}'); this.closest('.modal-overlay').remove();">
-                                <i class="fas fa-plus ml-2"></i>إضافة إصدار جديد
+                                <i class="fas fa-plus ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.actions.addVersion', 'إضافة إصدار جديد') : 'إضافة إصدار جديد'}
                             </button>
                         </div>
                         ${versions.length === 0 ? `
                             <div class="empty-state">
-                                <p class="text-gray-500">لا توجد إصدارات لهذا المستند</p>
+                                <p class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.noVersions', 'لا توجد إصدارات لهذا المستند') : 'لا توجد إصدارات لهذا المستند'}</p>
                             </div>
                         ` : `
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>رقم الإصدار</th>
-                                        <th>تاريخ الإصدار</th>
-                                        <th>تاريخ التعديل</th>
-                                        <th>الحالة</th>
-                                        <th>ملاحظات</th>
-                                        <th>سبب التعديل</th>
-                                        <th>الإجراءات</th>
+                                        <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.versionNumLabel', 'رقم الإصدار') : 'رقم الإصدار'}</th>
+                                        <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.issueDateLabel', 'تاريخ الإصدار') : 'تاريخ الإصدار'}</th>
+                                        <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.revDateLabel', 'تاريخ التعديل') : 'تاريخ التعديل'}</th>
+                                        <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusLabel', 'الحالة') : 'الحالة'}</th>
+                                        <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.notesLabel', 'ملاحظات') : 'ملاحظات'}</th>
+                                        <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.changeReasonLabel', 'سبب التعديل') : 'سبب التعديل'}</th>
+                                        <th>${typeof I18n !== 'undefined' ? I18n.t('core.table.actions', 'الإجراءات') : 'الإجراءات'}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -3441,14 +4556,14 @@ const ISO = {
                                             <td>${v.revisionDate ? Utils.formatDate(v.revisionDate) : '-'}</td>
                                             <td>
                                                 <span class="badge badge-${v.isActive === true || v.isActive === 'true' ? 'success' : 'secondary'}">
-                                                    ${v.isActive === true || v.isActive === 'true' ? 'نشط' : 'غير نشط'}
+                                                    ${v.isActive === true || v.isActive === 'true' ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusActive', 'نشط') : 'نشط') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusInactive', 'غير نشط') : 'غير نشط')}
                                                 </span>
                                             </td>
                                             <td>${Utils.escapeHTML(v.notes || '-')}</td>
                                             <td>${Utils.escapeHTML(v.changeReason || '-')}</td>
                                             <td>
                                                 <button onclick="ISO.editDocumentVersion('${v.id}'); this.closest('.modal-overlay').remove();" 
-                                                    class="btn-icon btn-icon-info" title="تعديل">
+                                                    class="btn-icon btn-icon-info" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                             </td>
@@ -3459,7 +4574,7 @@ const ISO = {
                         `}
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
                     </div>
                 </div>
             `;
@@ -3613,6 +4728,350 @@ const ISO = {
             if (typeof Utils !== 'undefined') Utils.safeWarn('Error fetching ISO code details:', e);
         }
         return null;
+    },
+
+    // ==========================================
+    // ISO 45001 Forms and Logic
+    // ==========================================
+    
+    showHSERiskAssessmentForm(existingData = null) {
+        const data = existingData || {};
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay iso-professional-modal fixed inset-0 bg-black/50 z-50 flex justify-center items-center';
+        modal.innerHTML = `
+            <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden d-flex flex-column" style="max-height: 90vh;">
+                <div class="modal-header bg-light p-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="modal-title fw-bold m-0"><i class="fas fa-shield-alt text-primary me-2"></i>${data.id ? 'تعديل تقييم المخاطر' : 'إضافة تقييم مخاطر جديد'}</h5>
+                    <button type="button" class="btn-close" onclick="this.closest('.modal-overlay').remove()"></button>
+                </div>
+                <div class="modal-body p-4 overflow-auto flex-grow-1">
+                    <form id="iso-risk-form">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">النشاط / المهمة <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="risk-activity" required value="${Utils.escapeHTML(data.activity || '')}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">المخاطر المحتملة (Hazards) <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="risk-hazards" rows="3" required>${Utils.escapeHTML(data.hazards || '')}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">مستوى الخطر <span class="text-danger">*</span></label>
+                            <select class="form-select" id="risk-level" required>
+                                <option value="" disabled ${!data.riskLevel ? 'selected' : ''}>اختر مستوى الخطر...</option>
+                                <option value="منخفض" ${data.riskLevel === 'منخفض' || data.riskLevel === 'Low' ? 'selected' : ''}>منخفض (Low)</option>
+                                <option value="متوسط" ${data.riskLevel === 'متوسط' || data.riskLevel === 'Medium' ? 'selected' : ''}>متوسط (Medium)</option>
+                                <option value="عالي" ${data.riskLevel === 'عالي' || data.riskLevel === 'High' ? 'selected' : ''}>عالي (High)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">إجراءات التحكم والوقاية (Control Measures)</label>
+                            <textarea class="form-control" id="risk-controls" rows="3">${Utils.escapeHTML(data.controlMeasures || '')}</textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-light p-3 border-top d-flex justify-content-end">
+                    <button type="button" class="btn btn-secondary me-2 px-4" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                    <button type="button" class="btn btn-primary px-4" onclick="ISO.handleHSERiskSubmit('${data.id || ''}', this.closest('.modal-overlay'))">
+                        <i class="fas fa-save me-2"></i>حفظ
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    },
+
+    handleHSERiskSubmit(editId, modal) {
+        const activity = document.getElementById('risk-activity').value.trim();
+        const hazards = document.getElementById('risk-hazards').value.trim();
+        const riskLevel = document.getElementById('risk-level').value;
+        const controlMeasures = document.getElementById('risk-controls').value.trim();
+
+        if (!activity || !hazards || !riskLevel) {
+            Notification.warning('يرجى تعبئة الحقول المطلوبة');
+            return;
+        }
+
+        const riskRecord = {
+            id: editId || Utils.generateId('RSK'),
+            activity,
+            hazards,
+            riskLevel,
+            controlMeasures,
+            createdAt: new Date().toISOString()
+        };
+
+        if (!AppState.appData.hseRiskAssessments) AppState.appData.hseRiskAssessments = [];
+
+        if (editId) {
+            const idx = AppState.appData.hseRiskAssessments.findIndex(r => r.id === editId);
+            if (idx >= 0) AppState.appData.hseRiskAssessments[idx] = { ...AppState.appData.hseRiskAssessments[idx], ...riskRecord };
+        } else {
+            AppState.appData.hseRiskAssessments.push(riskRecord);
+        }
+
+        Notification.success('تم حفظ بيانات تقييم المخاطر بنجاح');
+        modal.remove();
+        ISO.load(); // Refresh view
+    },
+
+    deleteHSERiskAssessment(id) {
+        if (!confirm('هل أنت متأكد من رغبتك في حذف هذا التقييم؟')) return;
+        AppState.appData.hseRiskAssessments = AppState.appData.hseRiskAssessments.filter(r => r.id !== id);
+        Notification.success('تم الحذف بنجاح');
+        ISO.load();
+    },
+
+    showHSEObjectiveForm(existingData = null) {
+        const data = existingData || {};
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay iso-professional-modal fixed inset-0 bg-black/50 z-50 flex justify-center items-center';
+        modal.innerHTML = `
+            <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden d-flex flex-column" style="max-height: 90vh;">
+                <div class="modal-header bg-light p-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="modal-title fw-bold m-0"><i class="fas fa-bullseye text-primary me-2"></i>${data.id ? 'تعديل هدف' : 'إضافة هدف جديد'}</h5>
+                    <button type="button" class="btn-close" onclick="this.closest('.modal-overlay').remove()"></button>
+                </div>
+                <div class="modal-body p-4 overflow-auto flex-grow-1">
+                    <form id="iso-objective-form">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">الهدف الرئيسي <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="obj-title" required value="${Utils.escapeHTML(data.title || '')}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">المستهدف (Target) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="obj-target" required value="${Utils.escapeHTML(data.target || '')}" placeholder="مثال: تحقيق 0 إصابات وقت ضائع (LTI)">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">نسبة الإنجاز %</label>
+                            <input type="range" class="form-range" id="obj-progress" min="0" max="100" value="${data.progress || 0}" oninput="document.getElementById('progress-val').textContent = this.value + '%'">
+                            <div class="text-center fw-bold text-primary mt-2" id="progress-val">${data.progress || 0}%</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-light p-3 border-top d-flex justify-content-end">
+                    <button type="button" class="btn btn-secondary me-2 px-4" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                    <button type="button" class="btn btn-primary px-4" onclick="ISO.handleHSEObjectiveSubmit('${data.id || ''}', this.closest('.modal-overlay'))">
+                        <i class="fas fa-save me-2"></i>حفظ
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    },
+
+    handleHSEObjectiveSubmit(editId, modal) {
+        const title = document.getElementById('obj-title').value.trim();
+        const target = document.getElementById('obj-target').value.trim();
+        const progress = parseInt(document.getElementById('obj-progress').value, 10);
+
+        if (!title || !target) {
+            Notification.warning('يرجى تعبئة الحقول المطلوبة');
+            return;
+        }
+
+        const objRecord = {
+            id: editId || Utils.generateId('OBJ'),
+            title,
+            target,
+            progress,
+            createdAt: new Date().toISOString()
+        };
+
+        if (!AppState.appData.hseObjectives) AppState.appData.hseObjectives = [];
+
+        if (editId) {
+            const idx = AppState.appData.hseObjectives.findIndex(o => o.id === editId);
+            if (idx >= 0) AppState.appData.hseObjectives[idx] = { ...AppState.appData.hseObjectives[idx], ...objRecord };
+        } else {
+            AppState.appData.hseObjectives.push(objRecord);
+        }
+
+        Notification.success('تم حفظ بيانات الهدف بنجاح');
+        modal.remove();
+        ISO.load();
+    },
+
+    deleteHSEObjective(id) {
+        if (!confirm('هل أنت متأكد من رغبتك في حذف هذا الهدف؟')) return;
+        AppState.appData.hseObjectives = AppState.appData.hseObjectives.filter(o => o.id !== id);
+        Notification.success('تم الحذف بنجاح');
+        ISO.load();
+    },
+
+    // ==========================================
+    // ISO 14001 Forms and Logic
+    // ==========================================
+
+    showEnvironmentalAspectsForm(existingData = null) {
+        const data = existingData || {};
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay iso-professional-modal fixed inset-0 bg-black/50 z-50 flex justify-center items-center';
+        modal.innerHTML = `
+            <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden d-flex flex-column" style="max-height: 90vh;">
+                <div class="modal-header bg-light p-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="modal-title fw-bold m-0"><i class="fas fa-globe text-success me-2"></i>${data.id ? 'تعديل جانب بيئي' : 'إضافة جانب بيئي جديد'}</h5>
+                    <button type="button" class="btn-close" onclick="this.closest('.modal-overlay').remove()"></button>
+                </div>
+                <div class="modal-body p-4 overflow-auto flex-grow-1">
+                    <form id="iso-env-aspect-form">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">النشاط / العملية <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="env-activity" required value="${Utils.escapeHTML(data.activity || '')}" placeholder="مثال: تشغيل المولدات الكهربائية">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">الجانب البيئي (Aspect) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="env-aspect" required value="${Utils.escapeHTML(data.aspect || '')}" placeholder="مثال: انبعاث غازات العادم / استهلاك وقود">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">التأثير البيئي (Impact) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="env-impact" required value="${Utils.escapeHTML(data.impact || '')}" placeholder="مثال: تلوث الهواء / استنزاف موارد طبيعية">
+                        </div>
+                        <div class="mb-3 form-check form-switch mt-4">
+                            <input class="form-check-input" type="checkbox" role="switch" id="env-significant" ${data.isSignificant ? 'checked' : ''} style="transform: scale(1.5); margin-right: -2rem; margin-left: 1rem;">
+                            <label class="form-check-label fw-bold ms-4 pt-1" for="env-significant">تصنيف كجانب بيئي ذو تأثير هام (Significant)</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-light p-3 border-top d-flex justify-content-end">
+                    <button type="button" class="btn btn-secondary me-2 px-4" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                    <button type="button" class="btn btn-success px-4" onclick="ISO.handleEnvironmentalAspectSubmit('${data.id || ''}', this.closest('.modal-overlay'))">
+                        <i class="fas fa-save me-2"></i>حفظ
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    },
+
+    handleEnvironmentalAspectSubmit(editId, modal) {
+        const activity = document.getElementById('env-activity').value.trim();
+        const aspect = document.getElementById('env-aspect').value.trim();
+        const impact = document.getElementById('env-impact').value.trim();
+        const isSignificant = document.getElementById('env-significant').checked;
+
+        if (!activity || !aspect || !impact) {
+            Notification.warning('يرجى تعبئة الحقول المطلوبة');
+            return;
+        }
+
+        const aspectRecord = {
+            id: editId || Utils.generateId('ENV_ASP'),
+            activity,
+            aspect,
+            impact,
+            isSignificant,
+            createdAt: new Date().toISOString()
+        };
+
+        if (!AppState.appData.environmentalAspects) AppState.appData.environmentalAspects = [];
+
+        if (editId) {
+            const idx = AppState.appData.environmentalAspects.findIndex(a => a.id === editId);
+            if (idx >= 0) AppState.appData.environmentalAspects[idx] = { ...AppState.appData.environmentalAspects[idx], ...aspectRecord };
+        } else {
+            AppState.appData.environmentalAspects.push(aspectRecord);
+        }
+
+        Notification.success('تم حفظ الجانب البيئي بنجاح');
+        modal.remove();
+        ISO.load();
+    },
+
+    deleteEnvironmentalAspect(id) {
+        if (!confirm('هل أنت متأكد من رغبتك في حذف هذا الجانب البيئي؟')) return;
+        AppState.appData.environmentalAspects = AppState.appData.environmentalAspects.filter(a => a.id !== id);
+        Notification.success('تم الحذف بنجاح');
+        ISO.load();
+    },
+
+    showEnvironmentalMonitoringForm(existingData = null) {
+        const data = existingData || {};
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay iso-professional-modal fixed inset-0 bg-black/50 z-50 flex justify-center items-center';
+        modal.innerHTML = `
+            <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden d-flex flex-column" style="max-height: 90vh;">
+                <div class="modal-header bg-light p-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="modal-title fw-bold m-0"><i class="fas fa-chart-line text-info me-2"></i>${data.id ? 'تعديل سجل مراقبة' : 'إضافة سجل مراقبة جديد'}</h5>
+                    <button type="button" class="btn-close" onclick="this.closest('.modal-overlay').remove()"></button>
+                </div>
+                <div class="modal-body p-4 overflow-auto flex-grow-1">
+                    <form id="iso-env-monitor-form">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">تاريخ القياس <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="mon-date" required value="${data.date ? data.date.split('T')[0] : new Date().toISOString().split('T')[0]}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">نوع القياس <span class="text-danger">*</span></label>
+                            <select class="form-select" id="mon-type" required>
+                                <option value="" disabled ${!data.type ? 'selected' : ''}>اختر نوع القياس...</option>
+                                <option value="انبعاثات" ${data.type === 'انبعاثات' ? 'selected' : ''}>انبعاثات (Emissions)</option>
+                                <option value="مخلفات" ${data.type === 'مخلفات' ? 'selected' : ''}>مخلفات (Waste)</option>
+                                <option value="استهلاك طاقة" ${data.type === 'استهلاك طاقة' ? 'selected' : ''}>استهلاك طاقة (Energy)</option>
+                                <option value="استهلاك مياه" ${data.type === 'استهلاك مياه' ? 'selected' : ''}>استهلاك مياه (Water)</option>
+                                <option value="ضوضاء" ${data.type === 'ضوضاء' ? 'selected' : ''}>ضوضاء (Noise)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">المعامل (Parameter) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="mon-param" required value="${Utils.escapeHTML(data.parameter || '')}" placeholder="مثال: كمية المخلفات الصلبة / نسبة ثاني أكسيد الكربون">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">القيمة (Value) <span class="text-danger">*</span></label>
+                                <input type="number" step="0.01" class="form-control" id="mon-value" required value="${data.value || ''}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">وحدة القياس (Unit) <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="mon-unit" required value="${Utils.escapeHTML(data.unit || '')}" placeholder="مثال: kg, ppm, kWh">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-light p-3 border-top d-flex justify-content-end">
+                    <button type="button" class="btn btn-secondary me-2 px-4" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                    <button type="button" class="btn btn-info px-4 text-white" onclick="ISO.handleEnvironmentalMonitoringSubmit('${data.id || ''}', this.closest('.modal-overlay'))">
+                        <i class="fas fa-save me-2"></i>حفظ
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    },
+
+    handleEnvironmentalMonitoringSubmit(editId, modal) {
+        const date = document.getElementById('mon-date').value;
+        const type = document.getElementById('mon-type').value;
+        const parameter = document.getElementById('mon-param').value.trim();
+        const value = document.getElementById('mon-value').value;
+        const unit = document.getElementById('mon-unit').value.trim();
+
+        if (!date || !type || !parameter || !value || !unit) {
+            Notification.warning('يرجى تعبئة الحقول المطلوبة');
+            return;
+        }
+
+        const monRecord = {
+            id: editId || Utils.generateId('ENV_MON'),
+            date,
+            type,
+            parameter,
+            value,
+            unit,
+            createdAt: new Date().toISOString()
+        };
+
+        if (!AppState.appData.environmentalMonitoring) AppState.appData.environmentalMonitoring = [];
+
+        if (editId) {
+            const idx = AppState.appData.environmentalMonitoring.findIndex(m => m.id === editId);
+            if (idx >= 0) AppState.appData.environmentalMonitoring[idx] = { ...AppState.appData.environmentalMonitoring[idx], ...monRecord };
+        } else {
+            AppState.appData.environmentalMonitoring.push(monRecord);
+        }
+
+        Notification.success('تم حفظ سجل المراقبة البيئية بنجاح');
+        modal.remove();
+        ISO.load();
     }
 };
 

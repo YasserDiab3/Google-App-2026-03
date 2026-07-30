@@ -210,6 +210,15 @@ body.app-active {
     background: var(--bg-secondary);
 }
 
+/* Disable scroll on login screen for desktops to guarantee perfect centering */
+@media (min-height: 750px) {
+    body:not(.app-active) {
+        overflow: hidden !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+    }
+}
+
 /* Improve text rendering on mobile */
 @media (max-width: 768px) {
     html {
@@ -232,7 +241,32 @@ body.app-active {
     }
 }
 
+/* Accessibility Skip Link styling */
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
 
+.skip-link:focus {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    width: auto;
+    height: auto;
+    background: var(--brand-primary);
+    color: #ffffff;
+    padding: 8px 16px;
+    z-index: 100000;
+    border-radius: 6px;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
 
 .font-cairo {
     font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, 'Arial', 'Helvetica', sans-serif;
@@ -257,8 +291,6 @@ body.app-active {
 @media (max-width: 480px) {
     .login-screen {
         padding: 1rem;
-        align-items: flex-start;
-        padding-top: 2rem;
     }
 
     .login-container {
@@ -344,6 +376,123 @@ body.app-active {
 
 .login-footer-content {
     text-align: center;
+}
+
+.login-footer-copyright-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: fit-content;
+    margin: 0 auto 0.75rem auto;
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    padding: 0.35rem 0.6rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    direction: ltr !important;
+}
+
+.login-footer-copyright-separator {
+    color: var(--text-tertiary);
+    opacity: 0.5;
+}
+
+[data-theme="dark"] .login-footer-copyright-row {
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.04);
+}
+
+.login-footer-author {
+    font-weight: 700;
+    color: var(--primary-color);
+    letter-spacing: 0.5px;
+    text-align: left;
+}
+
+[data-theme="dark"] .login-footer-author {
+    color: var(--primary-light);
+}
+
+#login-footer-copyright {
+    font-weight: 500;
+    text-align: right;
+}
+
+.login-footer-contact-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.login-footer-contact-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--text-secondary);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.login-footer-contact-btn:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+[data-theme="dark"] .login-footer-contact-btn:focus-visible {
+    outline-color: var(--primary-light);
+}
+
+[data-theme="dark"] .login-footer-copyright-separator {
+    opacity: 0.7;
+    color: var(--text-secondary);
+}
+
+.login-footer-contact-btn i,
+.login-footer-contact-btn svg {
+    transition: transform 0.2s ease;
+}
+
+.login-footer-contact-btn:hover i,
+.login-footer-contact-btn:hover svg {
+    transform: scale(1.15);
+}
+
+/* Mail button hover styling */
+.login-footer-contact-btn.email-btn:hover {
+    color: var(--brand-primary);
+    border-color: var(--brand-primary);
+    background: rgba(26, 99, 79, 0.05);
+}
+
+[data-theme="dark"] .login-footer-contact-btn.email-btn:hover {
+    color: var(--brand-primary-light);
+    border-color: var(--brand-primary-light);
+    background: rgba(35, 124, 99, 0.1);
+}
+
+/* Teams button hover styling */
+.login-footer-contact-btn.teams-btn:hover {
+    color: #4b53bc;
+    border-color: #4b53bc;
+    background: rgba(75, 83, 188, 0.06);
+}
+
+[data-theme="dark"] .login-footer-contact-btn.teams-btn:hover {
+    color: #7b83eb;
+    border-color: #7b83eb;
+    background: rgba(123, 131, 235, 0.1);
 }
 
 .login-footer-row {
@@ -13212,6 +13361,19 @@ body {
 
 [data-theme="dark"] .ptw-work-type-name {
     color: #f3f4f6;
+}
+
+/* شارة إجمالي عدد النوع */
+.ptw-work-type-total-badge {
+    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+    color: #ffffff !important;
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    border-radius: 8px !important;
+    padding: 6px 12px !important;
+    min-width: 3rem !important;
+    text-align: center !important;
+    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3) !important;
 }
 
 /* شارات الإحصائيات */

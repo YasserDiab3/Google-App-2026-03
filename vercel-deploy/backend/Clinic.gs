@@ -1311,18 +1311,7 @@ function getAllClinicVisits(filters = {}) {
     try {
         const spreadsheetId = getSpreadsheetId();
 
-        // ✅ تأكد من وجود الشيتات وتحديث رؤوسها (بدون تغيير البيانات)
-        try {
-            const ss = SpreadsheetApp.openById(spreadsheetId);
-            const empSheet = createSheetWithHeaders(ss, 'ClinicVisits', {});
-            ensureSheetHeaders(empSheet, 'ClinicVisits', {});
 
-            const conSheet = createSheetWithHeaders(ss, 'ClinicContractorVisits', {});
-            ensureSheetHeaders(conSheet, 'ClinicContractorVisits', {});
-        } catch (e) {
-            // لا نفشل القراءة إذا لم نقدر نهيئ الرؤوس لأي سبب
-            Logger.log('Warning ensuring clinic sheets headers: ' + e.toString());
-        }
 
         // ✅ تشخيص: قراءة آمنة لكل ورقة على حدة + تسجيل العدد للتأكد من اكتمال تحميل المقاولين
         let employeeData = [];
@@ -3615,6 +3604,34 @@ function upsertClinicStaffAttendanceOnLogout_(payload) {
         var today = _clinicStaffDayKey_(new Date());
         var now = new Date().toISOString();
         var all = readFromSheet(sheetName, getSpreadsheetId()) || [];
+
+        // ✅ إصلاح الوردية الثالثة (الليلية): البحث عن أحدث سجل مفتوح للمستخدم (دخول بدون خروج) من الـ 30 ساعة الأخيرة
+        var openRecord = null;
+        var openIndex = -1;
+        var nowMs = new Date().getTime();
+        for (var i = all.length - 1; i >= 0; i--) {
+            var r = all[i];
+            if (r && _clinicStaffAttendanceMatchesUser_(r, staff, userId, email)) {
+                if (r.checkIn && (!r.checkOut || String(r.checkOut).trim() === '')) {
+                    var inMs = new Date(r.checkIn).getTime();
+                    if (!isNaN(inMs) && (nowMs - inMs) <= 30 * 60 * 60 * 1000) {
+                        openRecord = r;
+                        openIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (openRecord && openIndex !== -1) {
+            openRecord.checkOut = now;
+            openRecord.workDuration = _clinicStaffCalcDurationHours_(openRecord.checkIn, now);
+            openRecord.status = openRecord.workDuration ? 'present' : 'partial';
+            openRecord.updatedAt = now;
+            all[openIndex] = openRecord;
+            return saveToSheet(sheetName, all, getSpreadsheetId());
+        }
+
         var consolidated = _clinicStaffConsolidateAttendanceForUserDay_(all, staff, userId, email, today);
         if (!consolidated.merged) {
             return { success: true, skipped: true, message: 'لا يوجد سجل حضور لليوم' };
@@ -3624,9 +3641,9 @@ function upsertClinicStaffAttendanceOnLogout_(payload) {
         consolidated.merged.status = consolidated.merged.workDuration ? 'present' : 'partial';
         consolidated.merged.updatedAt = now;
         all = consolidated.all;
-        for (var i = 0; i < all.length; i++) {
-            if (all[i] && String(all[i].id) === String(consolidated.merged.id)) {
-                all[i] = consolidated.merged;
+        for (var j = 0; j < all.length; j++) {
+            if (all[j] && String(all[j].id) === String(consolidated.merged.id)) {
+                all[j] = consolidated.merged;
                 break;
             }
         }
@@ -3889,7 +3906,16 @@ function updateClinicStaffAttendance(payload, actorUserData) {
             var ci = new Date(record.checkIn).getTime();
             var co = new Date(record.checkOut).getTime();
             if (!isNaN(ci) && !isNaN(co) && co <= ci) {
-                return { success: false, message: 'وقت الخروج يجب أن يكون بعد وقت الدخول' };
+                // ✅ دعم الوردية الثالثة الليلية: إذا كان وقت الخروج على نفس التاريخ أصغر من وقت الدخول (مثلاً دخول 22:30 وخروج 07:30)، تتم إضافة 24 ساعة لوقت الخروج
+                var coDate = new Date(record.checkOut);
+                coDate.setDate(coDate.getDate() + 1);
+                var newCoMs = coDate.getTime();
+                if (newCoMs > ci && (newCoMs - ci) <= 24 * 60 * 60 * 1000) {
+                    record.checkOut = coDate.toISOString();
+                    co = newCoMs;
+                } else {
+                    return { success: false, message: 'وقت الخروج يجب أن يكون بعد وقت الدخول' };
+                }
             }
         }
 

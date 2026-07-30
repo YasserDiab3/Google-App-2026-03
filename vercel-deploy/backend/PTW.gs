@@ -236,3 +236,77 @@ function getPTWAlerts() {
     }
 }
 
+/**
+ * تنظيف السجلات المكررة واليتيمة التي تتجاوز المعرف 1399 من جدول PTWRegistry
+ */
+function cleanupPtwRegistryDatabase_() {
+    var spreadsheetId = getSpreadsheetId();
+    var regSheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName('PTWRegistry');
+    
+    var regData = readFromSheet('PTWRegistry', spreadsheetId);
+    
+    var maxValidId = 1399;
+    var rowsToKeep = [];
+    var headers = regSheet.getDataRange().getValues()[0];
+    
+    var seenPermitIds = {};
+    var seenIds = {};
+    
+    for (var i = 0; i < regData.length; i++) {
+        var row = regData[i];
+        if (!row) continue;
+        var pid = String(row.permitId || '').trim();
+        var id = String(row.id || '').trim();
+        
+        var pidNum = extractNumericFromPrefixedId_(pid, 'PTW');
+        var idNum = extractNumericFromPrefixedId_(id, 'REG');
+        
+        // 1. استبعاد أي سجل يتجاوز 1399
+        if (pidNum !== null && pidNum > maxValidId) continue;
+        if (idNum !== null && idNum > maxValidId) continue;
+        
+        // 2. معالجة التكرار
+        var isManual = row.isManualEntry === true || row.isManualEntry === 'true' || row.approvalCircuitOwnerId === '__manual__';
+        
+        if (isManual) {
+            // للتصاريح اليدوية، يجب أن يكون المعرف REG_XXX فريداً
+            if (id && seenIds[id]) continue;
+            if (id) seenIds[id] = true;
+            rowsToKeep.push(row);
+        } else {
+            // للتصاريح العادية، يجب أن يكون permitId فريداً
+            if (pid && seenPermitIds[pid]) continue;
+            if (pid) {
+                seenPermitIds[pid] = true;
+                rowsToKeep.push(row);
+            }
+        }
+    }
+    
+    Logger.log('PTWRegistry original rows: ' + regData.length);
+    Logger.log('PTWRegistry rows to keep: ' + rowsToKeep.length);
+    
+    regSheet.clearContents();
+    
+    var outputValues = [headers];
+    for (var j = 0; j < rowsToKeep.length; j++) {
+        var rowObj = rowsToKeep[j];
+        var rowVal = [];
+        for (var h = 0; h < headers.length; h++) {
+            var val = rowObj[headers[h]];
+            rowVal.push(val !== undefined ? val : '');
+        }
+        outputValues.push(rowVal);
+    }
+    
+    regSheet.getRange(1, 1, outputValues.length, headers.length).setValues(outputValues);
+    invalidateHseSheetCaches('PTWRegistry');
+    
+    return {
+        success: true,
+        originalCount: regData.length,
+        newCount: rowsToKeep.length,
+        deletedCount: regData.length - rowsToKeep.length
+    };
+}
+

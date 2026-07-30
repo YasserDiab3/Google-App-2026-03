@@ -2335,6 +2335,7 @@ const Clinic = {
         const name = record.name || record.medicationName || '';
         const type = record.type || record.medicationType || record.category || '';
         const purchaseDate = record.purchaseDate || record.buyDate || record.createdAt || new Date().toISOString();
+        const productionDate = record.productionDate || '';
         const expiryDate = record.expiryDate || record.endDate || '';
         const quantityAdded = record.quantityAdded !== undefined && record.quantityAdded !== null
             ? toNumber(record.quantityAdded, 0)
@@ -2366,6 +2367,7 @@ const Clinic = {
             type,
             usage,
             purchaseDate,
+            productionDate,
             expiryDate,
             quantityAdded: toNumber(quantityAdded, 0),
             remainingQuantity: toNumber(remainingQuantity, 0),
@@ -3115,21 +3117,37 @@ const Clinic = {
             const dispensed = Math.max(0, quantityAdded - remainingQuantity);
             const usage = item.usage || item.notes || '—';
 
-            // ✅ إظهار أزرار التعديل والحذف فقط لمدير النظام
-            const actionButtons = isAdmin ? `
-                <button type="button" class="btn-icon btn-icon-primary" data-action="view-medication" data-id="${Utils.escapeHTML(item.id || '')}">
+            // ✅ إظهار أزرار الإجراءات
+            let approveBtn = '';
+            let rejectBtn = '';
+            
+            if (isAdmin && (status === 'قيد الاعتماد' || item.pendingUpdate)) {
+                approveBtn = `
+                    <button type="button" class="btn-icon btn-icon-success" data-action="approve-medication" data-id="${Utils.escapeHTML(item.id || '')}" title="اعتماد">
+                        <i class="fas fa-check"></i>
+                    </button>
+                `;
+                rejectBtn = `
+                    <button type="button" class="btn-icon btn-icon-danger" data-action="reject-medication" data-id="${Utils.escapeHTML(item.id || '')}" title="رفض">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+            }
+
+            const actionButtons = `
+                ${approveBtn}
+                ${rejectBtn}
+                <button type="button" class="btn-icon btn-icon-primary" data-action="view-medication" data-id="${Utils.escapeHTML(item.id || '')}" title="عرض">
                     <i class="fas fa-eye"></i>
                 </button>
-                <button type="button" class="btn-icon btn-icon-warning" data-action="edit-medication" data-id="${Utils.escapeHTML(item.id || '')}">
+                <button type="button" class="btn-icon btn-icon-warning" data-action="edit-medication" data-id="${Utils.escapeHTML(item.id || '')}" title="تعديل">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button type="button" class="btn-icon btn-icon-danger" data-action="delete-medication" data-id="${Utils.escapeHTML(item.id || '')}">
+                ${isAdmin ? `
+                <button type="button" class="btn-icon btn-icon-danger" data-action="delete-medication" data-id="${Utils.escapeHTML(item.id || '')}" title="حذف">
                     <i class="fas fa-trash"></i>
                 </button>
-            ` : `
-                <button type="button" class="btn-icon btn-icon-primary" data-action="view-medication" data-id="${Utils.escapeHTML(item.id || '')}">
-                    <i class="fas fa-eye"></i>
-                </button>
+                ` : ''}
             `;
 
             return `
@@ -3141,6 +3159,7 @@ const Clinic = {
                     <td>${expiry}</td>
                     <td>
                         <span class="badge ${this.getMedicationBadgeClass(status)}">${Utils.escapeHTML(status)}</span>
+                        ${item.pendingUpdate ? '<br><span class="badge badge-warning" style="margin-top: 4px; font-size: 0.7rem;">تعديل قيد الاعتماد</span>' : ''}
                     </td>
                     <td>${days}</td>
                     <td class="text-center font-semibold">${quantityAdded}</td>
@@ -3199,11 +3218,9 @@ const Clinic = {
                     <button type="button" class="btn-success" id="medications-export-excel-btn">
                         <i class="fas fa-file-excel ml-2"></i>تصدير Excel
                     </button>
-                    ${isAdmin ? `
                     <button type="button" class="btn-primary" id="medications-add-btn">
                         <i class="fas fa-plus ml-2"></i>إضافة جديد
                     </button>
-                    ` : ''}
                 </div>
             </div>
 
@@ -3349,6 +3366,13 @@ const Clinic = {
             exportExcelBtn.addEventListener('click', () => this.exportMedicationsToExcel());
         }
 
+        panel.querySelectorAll('[data-action="approve-medication"]').forEach((btn) => {
+            btn.addEventListener('click', () => this.approveMedicationRequest(btn.getAttribute('data-id')));
+        });
+        panel.querySelectorAll('[data-action="reject-medication"]').forEach((btn) => {
+            btn.addEventListener('click', () => this.rejectMedicationRequest(btn.getAttribute('data-id')));
+        });
+        
         panel.querySelectorAll('[data-action="view-medication"]').forEach((btn) => {
             btn.addEventListener('click', () => this.viewMedication(btn.getAttribute('data-id')));
         });
@@ -3358,6 +3382,102 @@ const Clinic = {
         panel.querySelectorAll('[data-action="delete-medication"]').forEach((btn) => {
             btn.addEventListener('click', () => this.deleteMedication(btn.getAttribute('data-id')));
         });
+    },
+
+    async approveMedicationRequest(id) {
+        const record = this.getMedications().find((item) => item.id === id);
+        if (!record) return;
+
+        const confirmed = confirm(`هل أنت متأكد من اعتماد التعديلات للدواء "${Utils.escapeHTML(record.name)}"؟`);
+        if (!confirmed) return;
+
+        Loading.show();
+        try {
+            let updatedRecord = { ...record };
+            
+            if (record.pendingUpdate) {
+                // Apply pending updates
+                Object.assign(updatedRecord, record.pendingUpdate);
+                delete updatedRecord.pendingUpdate;
+                
+                // Recalculate status
+                const statusInfo = this.calculateMedicationStatus(updatedRecord);
+                updatedRecord.status = statusInfo.status;
+                updatedRecord.daysRemaining = statusInfo.daysRemaining;
+                updatedRecord.updatedAt = new Date().toISOString();
+                updatedRecord.updatedBy = this.getCurrentUserSummary();
+            } else if (record.status === 'قيد الاعتماد') {
+                const statusInfo = this.calculateMedicationStatus(updatedRecord);
+                updatedRecord.status = statusInfo.status;
+            }
+
+            updatedRecord = this.normalizeMedicationRecord(updatedRecord);
+
+            const index = AppState.appData.medications.findIndex(m => m.id === id);
+            if (index !== -1) AppState.appData.medications[index] = updatedRecord;
+            
+            this.ensureData();
+            this.renderMedicationsTab();
+
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+
+            await GoogleIntegration.sendRequest({
+                action: 'updateMedication',
+                data: { medicationId: id, updateData: updatedRecord }
+            });
+
+            Loading.hide();
+            Notification.success('تم الاعتماد بنجاح');
+        } catch (error) {
+            Loading.hide();
+            Notification.error('حدث خطأ أثناء الاعتماد: ' + error.message);
+        }
+    },
+
+    async rejectMedicationRequest(id) {
+        const record = this.getMedications().find((item) => item.id === id);
+        if (!record) return;
+
+        const confirmed = confirm(`هل أنت متأكد من رفض التعديلات للدواء "${Utils.escapeHTML(record.name)}"؟
+
+لن يتم تطبيق التغييرات المقترحة.`);
+        if (!confirmed) return;
+
+        Loading.show();
+        try {
+            if (record.status === 'قيد الاعتماد') {
+                // Delete if it was a new medication request
+                AppState.appData.medications = AppState.appData.medications.filter(m => m.id !== id);
+                
+                await GoogleIntegration.sendRequest({
+                    action: 'deleteMedication',
+                    data: { medicationId: id }
+                });
+            } else if (record.pendingUpdate) {
+                // Revert to original by deleting pendingUpdate
+                let updatedRecord = { ...record };
+                delete updatedRecord.pendingUpdate;
+                
+                const index = AppState.appData.medications.findIndex(m => m.id === id);
+                if (index !== -1) AppState.appData.medications[index] = updatedRecord;
+
+                await GoogleIntegration.sendRequest({
+                    action: 'updateMedication',
+                    data: { medicationId: id, updateData: updatedRecord }
+                });
+            }
+
+            this.ensureData();
+            this.renderMedicationsTab();
+
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+
+            Loading.hide();
+            Notification.success('تم رفض الطلب بنجاح');
+        } catch (error) {
+            Loading.hide();
+            Notification.error('حدث خطأ أثناء الرفض: ' + error.message);
+        }
     },
 
     viewMedication(id) {
@@ -7043,16 +7163,16 @@ const Clinic = {
                         ${['30','90','180','365','0'].map((v,i) => {
                             const labels=['30 يوم','3 أشهر','6 أشهر','سنة','الكل'];
                             const active=(this._clinicPeriod||'0')===v;
-                            return `<button class="clinic-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#134e4a':'#fff'};">${labels[i]}</button>`;
+                            return `<button type="button" class="clinic-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#134e4a':'#fff'};">${labels[i]}</button>`;
                         }).join('')}
                     </div>
-                    <button id="clinic-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
+                    <button type="button" id="clinic-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
                         <i class="fas fa-sliders-h"></i><span>فلاتر</span><span id="clinic-filter-badge" style="display:none;background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-right:2px;">●</span>
                     </button>
-                    <button id="clinic-export-pdf-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.25);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(0,0,0,0.4)'" onmouseout="this.style.background='rgba(0,0,0,0.25)'">
+                    <button type="button" id="clinic-export-pdf-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.25);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(0,0,0,0.4)'" onmouseout="this.style.background='rgba(0,0,0,0.25)'">
                         <i class="fas fa-file-pdf"></i><span>PDF</span>
                     </button>
-                    <button id="clinic-analytics-refresh" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" title="تحديث">
+                    <button type="button" id="clinic-analytics-refresh" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" title="تحديث">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                 </div>
@@ -7066,12 +7186,13 @@ const Clinic = {
                         <span style="font-weight:700;font-size:0.9rem;color:#134e4a;">الفلاتر التفاعلية</span>
                         <span id="clinic-filter-count" style="background:#ccfbf1;color:#0f766e;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
                     </div>
-                    <button id="clinic-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #99f6e4;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;" onmouseover="this.style.background='#f0fdfa';this.style.color='#0d9488'" onmouseout="this.style.background='#fff';this.style.color='#64748b'">
+                    <button type="button" id="clinic-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #99f6e4;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;" onmouseover="this.style.background='#f0fdfa';this.style.color='#0d9488'" onmouseout="this.style.background='#fff';this.style.color='#64748b'">
                         <i class="fas fa-times ml-1"></i>مسح الكل
                     </button>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
                     ${[
+                        {id:'clinic-af-factory', icon:'fas fa-industry',       color:'#ec4899', label:'المصنع'},
                         {id:'clinic-af-ptype',  icon:'fas fa-id-badge',       color:'#6366f1', label:'نوع الشخص'},
                         {id:'clinic-af-dept',   icon:'fas fa-building',        color:'#0d9488', label:'الإدارة'},
                         {id:'clinic-af-loc',    icon:'fas fa-map-marker-alt',  color:'#f59e0b', label:'الموقع'},
@@ -7094,31 +7215,57 @@ const Clinic = {
                 <div style="text-align:center;padding:16px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
             </div>
 
-            <!-- ══ Row 1: الزيارات حسب النوع + الاتجاه الشهري ══ -->
+            <!-- ══ Row 1: الزيارات حسب النوع + الإجازات المرضية ══ -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-user-circle" style="color:#3b82f6;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">الزيارات حسب نوع الشخص</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:220px;">
+                    <div style="padding:12px;position:relative;height:240px;">
                         <canvas id="clinic-chart-ptype"></canvas>
                         <div id="clinic-chart-ptype-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-chart-area" style="color:#8b5cf6;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">الاتجاه الزمني للزيارات (آخر 12 شهر)</span>
+                        <i class="fas fa-notes-medical" style="color:#f97316;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">الإجازات المرضية حسب الحالة</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:220px;">
-                        <canvas id="clinic-chart-trend"></canvas>
-                        <div id="clinic-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    <div style="padding:12px;position:relative;height:240px;">
+                        <canvas id="clinic-chart-sl-status"></canvas>
+                        <div id="clinic-chart-sl-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
             </div>
 
-            <!-- ══ Row 2: سبب الزيارة + الإدارة ══ -->
+            <!-- ══ الاتجاه الزمني ══ -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-chart-area" style="color:#8b5cf6;"></i>
+                    <span style="font-weight:700;font-size:0.88rem;">الاتجاه الزمني للزيارات (آخر 12 شهر)</span>
+                </div>
+                <div style="padding:12px;position:relative;height:260px;">
+                    <canvas id="clinic-chart-trend"></canvas>
+                    <div id="clinic-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                </div>
+            </div>
+
+            <!-- ══ Row: تحليل المصانع الرئيسية ══ -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-industry" style="color:#0284c7;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">توزيع ونسب الزيارات حسب المصانع الرئيسية</span>
+                    </div>
+                    <span style="font-size:0.72rem;color:#64748b;">انقر على أي مصنع لتصفية لوحة التحكم تلقائياً</span>
+                </div>
+                <div id="clinic-factories-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;padding:16px;background:#f8fafc;">
+                    <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">جارٍ التحميل…</div>
+                </div>
+            </div>
+
+            <!-- ══ Row 4: سبب الزيارة + الإصابات حسب النوع ══ -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
@@ -7132,76 +7279,62 @@ const Clinic = {
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-building" style="color:#6366f1;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">حسب الإدارة (أعلى 8)</span>
-                    </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="clinic-chart-dept"></canvas>
-                        <div id="clinic-chart-dept-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ══ Row 3: الموقع + الإجازات المرضية ══ -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
-                <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-map-marker-alt" style="color:#f59e0b;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">حسب الموقع (أعلى 8)</span>
-                    </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="clinic-chart-loc"></canvas>
-                        <div id="clinic-chart-loc-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
-                    </div>
-                </div>
-                <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-notes-medical" style="color:#f97316;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">الإجازات المرضية حسب الحالة</span>
-                    </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="clinic-chart-sl-status"></canvas>
-                        <div id="clinic-chart-sl-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ══ Row 4: الإصابات حسب النوع + الأدوية حسب الحالة ══ -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
-                <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-user-injured" style="color:#ef4444;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">الإصابات حسب النوع</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:260px;">
+                    <div style="padding:12px;position:relative;height:280px;">
                         <canvas id="clinic-chart-inj-type"></canvas>
                         <div id="clinic-chart-inj-type-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد إصابات</div>
                     </div>
                 </div>
+            </div>
+
+            <!-- ══ Row 5: الموقع + الإدارات ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-map-marker-alt" style="color:#3b82f6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">المواقع الأكثر تردداً (أعلى 10)</span>
+                    </div>
+                    <div id="clinic-locs-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-building" style="color:#6366f1;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">تفاصيل توزيع الزيارات حسب الإدارات</span>
+                    </div>
+                    <div id="clinic-depts-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ الأدوية + المقاولين ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-pills" style="color:#10b981;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">الأدوية حسب الحالة</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:260px;">
+                    <div style="padding:12px;position:relative;height:300px;">
                         <canvas id="clinic-chart-med-status"></canvas>
                         <div id="clinic-chart-med-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات أدوية</div>
                     </div>
                 </div>
-            </div>
-
-            <!-- ══ أكثر المقاولين تردداً على العيادة (أعلى 8) ══ -->
-            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
-                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-hard-hat" style="color:#0891b2;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">أكثر المقاولين تردداً على العيادة (أعلى 8)</span>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-hard-hat" style="color:#0891b2;"></i>
+                            <span style="font-weight:700;font-size:0.88rem;">أكثر المقاولين تردداً على العيادة (أعلى 8)</span>
+                        </div>
+                        <span id="clinic-chart-contractor-count" style="background:#ecfeff;color:#0e7490;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
                     </div>
-                    <span id="clinic-chart-contractor-count" style="background:#ecfeff;color:#0e7490;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
-                </div>
-                <div style="padding:12px;position:relative;height:300px;">
-                    <canvas id="clinic-chart-contractor"></canvas>
-                    <div id="clinic-chart-contractor-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات مقاولين</div>
+                    <div style="padding:12px;position:relative;height:300px;">
+                        <canvas id="clinic-chart-contractor"></canvas>
+                        <div id="clinic-chart-contractor-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات مقاولين</div>
+                    </div>
                 </div>
             </div>
 
@@ -7480,12 +7613,124 @@ const Clinic = {
         const reasonMap = this._cGroupBy(filteredVisits, v=>v.reason||v.diagnosis||'غير محدد', 10);
         this._cHBar('clinic-chart-reason', reasonMap.labels, reasonMap.data, 'rgba(13,148,136,0.75)');
 
-        // الإدارة (HBar)
-        const deptMap = this._cGroupBy(filteredVisits, v=>v.employeeDepartment||v.department||'غير محدد', 8);
-        this._cHBar('clinic-chart-dept', deptMap.labels, deptMap.data, 'rgba(99,102,241,0.75)');
+        // ── القوائم التفاعلية بدلاً من الرسوم البيانية ──
+        // 1. الموقع (List)
+        const locMap = this._cGroupBy(filteredVisits, v=>v.employeeLocation||v.workArea||'غير محدد', 10);
+        const locsListEl = document.getElementById('clinic-locs-list');
+        if (locsListEl) {
+            if (total === 0 || locMap.labels.length === 0) {
+                locsListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
+            } else {
+                locsListEl.innerHTML = locMap.labels.map((loc, i) => {
+                    const count = locMap.data[i];
+                    const pct = Math.round((count / total) * 100);
+                    return `
+                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;cursor:pointer;transition:background 0.2s;padding-left:4px;padding-right:4px;" 
+                             onmouseover="this.style.background='#f0fdfa'" 
+                             onmouseout="this.style.background='transparent'"
+                             onclick="const el = document.getElementById('clinic-af-loc'); if(el){el.value='${Utils.escapeHTML(loc)}'; el.dispatchEvent(new Event('change'));}">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
+                                    <span style="background:#e0f2fe;color:#0369a1;font-size:0.68rem;padding:2px 8px;border-radius:6px;font-weight:700;white-space:nowrap;flex-shrink:0;">موقع</span>
+                                    <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${Utils.escapeHTML(loc)}">${Utils.escapeHTML(loc)}</span>
+                                </div>
+                                <span style="font-size:0.75rem;font-weight:700;color:#0369a1;flex-shrink:0;margin-right:8px;">${count} زيارة (${pct}%)</span>
+                            </div>
+                            <div style="width:100%;height:6px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #38bdf8 0%, #0284c7 100%);border-radius:9999px;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 2. الإدارة (List)
+        const deptMap = this._cGroupBy(filteredVisits, v=>v.employeeDepartment||v.department||'غير محدد', 10);
+        const deptsListEl = document.getElementById('clinic-depts-list');
+        if (deptsListEl) {
+            if (total === 0 || deptMap.labels.length === 0) {
+                deptsListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
+            } else {
+                deptsListEl.innerHTML = deptMap.labels.map((dept, i) => {
+                    const count = deptMap.data[i];
+                    const pct = Math.round((count / total) * 100);
+                    return `
+                        <div style="cursor:pointer;padding:4px;border-radius:6px;transition:background 0.2s;" 
+                             onmouseover="this.style.background='#eff6ff'" 
+                             onmouseout="this.style.background='transparent'"
+                             onclick="const el = document.getElementById('clinic-af-dept'); if(el){el.value='${Utils.escapeHTML(dept)}'; el.dispatchEvent(new Event('change'));}">
+                            <div style="display:flex;justify-content:space-between;font-size:0.8rem;font-weight:700;color:#374151;margin-bottom:4px;">
+                                <span>${Utils.escapeHTML(dept)}</span>
+                                <span style="color:#2563eb;">${count} زيارة (${pct}%)</span>
+                            </div>
+                            <div style="width:100%;height:8px;background:#e5e7eb;border-radius:9999px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);border-radius:9999px;transition:width 0.5s ease-in-out;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 3. كروت المصانع الرئيسية (Factory Cards)
+        const factoriesCardsEl = document.getElementById('clinic-factories-cards');
+        if (factoriesCardsEl) {
+            if (total === 0) {
+                factoriesCardsEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">لا توجد بيانات</div>`;
+            } else {
+                // استخراج جميع المصانع المميزة من قائمة الزيارات (الكل) قبل الفلترة
+                const factoriesSet = new Set(visits.map(v => String(v.factoryName || v.factory || '').trim()).filter(f => f && f !== 'غير محدد'));
+                const officialSites = Array.from(factoriesSet).sort();
+                if (officialSites.length === 0) {
+                    factoriesCardsEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">لا توجد مصانع</div>`;
+                } else {
+                    factoriesCardsEl.innerHTML = officialSites.map((siteName, index) => {
+                        const siteVisits = filteredVisits.filter(v => (v.factoryName || v.factory || '').trim() === siteName);
+                        const siteTotal = siteVisits.length;
+                        // Calculate percentage against the total filtered visits (if any)
+                        const sitePct = total > 0 ? Math.round((siteTotal / total) * 100) : 0;
+                        
+                        const colors = [
+                            { primary: '#0284c7', light: '#e0f2fe', progress: 'linear-gradient(90deg, #38bdf8 0%, #0284c7 100%)' },
+                            { primary: '#059669', light: '#ecfdf5', progress: 'linear-gradient(90deg, #34d399 0%, #059669 100%)' },
+                            { primary: '#7c3aed', light: '#f5f3ff', progress: 'linear-gradient(90deg, #a78bfa 0%, #7c3aed 100%)' },
+                            { primary: '#ea580c', light: '#fff7ed', progress: 'linear-gradient(90deg, #fb923c 0%, #ea580c 100%)' },
+                            { primary: '#db2777', light: '#fdf2f8', progress: 'linear-gradient(90deg, #f472b6 0%, #db2777 100%)' }
+                        ];
+                        const theme = colors[index % colors.length];
+                        
+                        return `
+                            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);transition:all .2s;cursor:pointer;" 
+                                 onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.08)';this.style.borderColor='${theme.primary}'" 
+                                 onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)';this.style.borderColor='#e2e8f0'"
+                                 onclick="const el = document.getElementById('clinic-af-factory'); if(el){el.value='${Utils.escapeHTML(siteName)}'; el.dispatchEvent(new Event('change'));}">
+                                
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <div style="display:flex;align-items:center;gap:8px;">
+                                        <div style="width:36px;height:36px;background:${theme.light};border-radius:8px;display:flex;align-items:center;justify-content:center;color:${theme.primary};">
+                                            <i class="fas fa-industry" style="font-size:16px;"></i>
+                                        </div>
+                                        <span style="font-size:0.9rem;font-weight:800;color:#1e293b;">${Utils.escapeHTML(siteName)}</span>
+                                    </div>
+                                    <span style="font-size:1.15rem;font-weight:900;color:${theme.primary};">${sitePct}%</span>
+                                </div>
+                                
+                                <div style="width:100%;height:8px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
+                                    <div style="width:${sitePct}%;height:100%;background:${theme.progress};border-radius:9999px;"></div>
+                                </div>
+                                
+                                <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;color:#64748b;margin-top:2px;">
+                                    <span>إجمالي الزيارات: <strong style="color:#334155;">${siteTotal}</strong></span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+        }
 
         // ✅ أكثر المقاولين تردداً (HBar) — فقط زيارات المقاولين/الخارجي
-        // نأخذ الزيارات التي لها contractorName/externalName (من ClinicContractorVisits)
         const contractorVisits = filteredVisits.filter(v => {
             const cName = String(v.contractorName || '').trim();
             const eName = String(v.externalName || '').trim();
@@ -7504,10 +7749,6 @@ const Clinic = {
                 : '';
         }
         this._cHBar('clinic-chart-contractor', contractorMap.labels, contractorMap.data, 'rgba(8,145,178,0.75)');
-
-        // الموقع (HBar)
-        const locMap = this._cGroupBy(filteredVisits, v=>v.employeeLocation||v.workArea||'غير محدد', 8);
-        this._cHBar('clinic-chart-loc', locMap.labels, locMap.data, 'rgba(245,158,11,0.75)');
 
         // الإجازات المرضية حسب الحالة (Doughnut)
         const slStatusMap = this._cGroupBy(sl, l=>l.status||'قيد المعالجة');
@@ -7676,14 +7917,16 @@ const Clinic = {
     // ── تصفية الزيارات بالفلاتر التفاعلية ──
     _clinicApplyFilters(visits) {
         const get = id => { const el=document.getElementById(id); return el?el.value.trim():''; };
+        const fFactory= get('clinic-af-factory');
         const fPtype  = get('clinic-af-ptype');
         const fDept   = get('clinic-af-dept');
         const fLoc    = get('clinic-af-loc');
         const fReason = get('clinic-af-reason');
-        const hasAny  = [fPtype,fDept,fLoc,fReason].some(v=>v!=='');
+        const hasAny  = [fFactory,fPtype,fDept,fLoc,fReason].some(v=>v!=='');
         const badge   = document.getElementById('clinic-filter-badge');
         if (badge) badge.style.display = hasAny ? 'inline' : 'none';
         return visits.filter(v => {
+            if (fFactory && String(v.factoryName||v.factory||'').trim() !== fFactory) return false;
             if (fPtype) {
                 const lbl = String(v.personType||'').toLowerCase()==='contractor'?'contractor':'employee';
                 if (lbl !== fPtype) return false;
@@ -7706,6 +7949,7 @@ const Clinic = {
         // نوع الشخص ثابت
         const ptEl = document.getElementById('clinic-af-ptype');
         if (ptEl) { const cur=ptEl.value; ptEl.innerHTML=`<option value="">الكل</option><option value="employee"${cur==='employee'?' selected':''}>موظف</option><option value="contractor"${cur==='contractor'?' selected':''}>مقاول</option>`; }
+        fill('clinic-af-factory', unique(v=>String(v.factoryName||v.factory||'').trim()));
         fill('clinic-af-dept',   unique(v=>String(v.employeeDepartment||v.department||'').trim()));
         fill('clinic-af-loc',    unique(v=>String(v.employeeLocation||v.workArea||'').trim()));
         fill('clinic-af-reason', unique(v=>String(v.reason||v.diagnosis||'').trim()));
@@ -7849,7 +8093,7 @@ const Clinic = {
         const resetBtn = document.getElementById('clinic-filter-reset-btn');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
-                ['clinic-af-ptype','clinic-af-dept','clinic-af-loc','clinic-af-reason'].forEach(id=>{
+                ['clinic-af-factory','clinic-af-ptype','clinic-af-dept','clinic-af-loc','clinic-af-reason'].forEach(id=>{
                     const el=document.getElementById(id); if(el) el.value='';
                 });
                 this.updateClinicAnalyticsDashboard();
@@ -7857,7 +8101,7 @@ const Clinic = {
         }
 
         // قوائم الفلاتر
-        ['clinic-af-ptype','clinic-af-dept','clinic-af-loc','clinic-af-reason'].forEach(id => {
+        ['clinic-af-factory','clinic-af-ptype','clinic-af-dept','clinic-af-loc','clinic-af-reason'].forEach(id => {
             const el=document.getElementById(id);
             if(el) el.addEventListener('change',()=>this.updateClinicAnalyticsDashboard());
         });
@@ -11337,6 +11581,7 @@ const Clinic = {
     async showSickLeaveForm(record = null) {
         this.ensureData();
         const isEdit = !!record;
+        if (record) record = this.normalizeMedicationRecord(record);
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
 
@@ -11572,28 +11817,46 @@ const Clinic = {
             const createdAt = record?.createdAt || new Date().toISOString();
             const createdBy = record?.createdBy || this.getCurrentUserSummary();
             const currentUser = this.getCurrentUserSummary();
+            const isAdmin = this.isCurrentUserAdmin();
 
-            const payload = this.normalizeSickLeaveRecord({
-                id: record?.id || Utils.generateId('SICK_LEAVE'),
-                personType: currentType,
-                employeeName: isEmployee ? nameInput.value.trim() : null,
-                employeeCode: isEmployee ? (codeInput?.value.trim() || '') : null,
-                employeeNumber: isEmployee ? (codeInput?.value.trim() || '') : null,
-                employeePosition: isEmployee ? (positionInput?.value.trim() || '') : null,
-                employeeDepartment: isEmployee ? (departmentInput?.value.trim() || '') : null,
-                personName: !isEmployee ? nameInput.value.trim() : null,
-                startDate: startISO,
-                endDate: endISO,
-                daysCount,
-                reason: form.querySelector('#sick-leave-reason').value.trim(),
-                medicalNotes: form.querySelector('#sick-leave-notes').value.trim(),
-                treatingDoctor: form.querySelector('#sick-leave-doctor').value.trim(),
-                createdAt,
-                createdBy,
-                createdById: createdBy?.id || AppState.currentUser?.id || '',
-                updatedAt: new Date().toISOString(),
-                updatedBy: currentUser
-            });
+            let payload;
+            let pendingNotification = false;
+
+            if (isEdit) {
+                // If not admin, put changes in pendingUpdate
+                if (!isAdmin) {
+                    payload = { ...record }; // Keep original
+                    payload.pendingUpdate = {
+                        name, type, usage, purchaseDate: purchaseISO, productionDate: productionISO, expiryDate: expiryISO,
+                        quantityAdded, remainingQuantity, location, notes,
+                        requestedBy: currentUser, requestedAt: new Date().toISOString()
+                    };
+                    pendingNotification = true;
+                } else {
+                    payload = this.normalizeMedicationRecord({
+                        id: record?.id || Utils.generateId('MED'),
+                        name, type, usage, purchaseDate: purchaseISO, productionDate: productionISO, expiryDate: expiryISO,
+                        quantityAdded, remainingQuantity, location, notes,
+                        createdAt, createdBy, createdById: createdBy?.id || AppState.currentUser?.id || '',
+                        updatedAt: new Date().toISOString(), updatedBy: currentUser,
+                        status: statusInfoLatest.status, daysRemaining: statusInfoLatest.daysRemaining
+                    });
+                    delete payload.pendingUpdate; // Clear any pending updates
+                }
+            } else {
+                // New medication
+                const newStatus = isAdmin ? statusInfoLatest.status : 'قيد الاعتماد';
+                if (!isAdmin) pendingNotification = true;
+                
+                payload = this.normalizeMedicationRecord({
+                    id: Utils.generateId('MED'),
+                    name, type, usage, purchaseDate: purchaseISO, productionDate: productionISO, expiryDate: expiryISO,
+                    quantityAdded, remainingQuantity, location, notes,
+                    createdAt, createdBy, createdById: createdBy?.id || AppState.currentUser?.id || '',
+                    updatedAt: new Date().toISOString(), updatedBy: currentUser,
+                    status: newStatus, daysRemaining: statusInfoLatest.daysRemaining
+                });
+            }
 
             Loading.show();
             try {
@@ -13304,17 +13567,25 @@ const Clinic = {
 
     async showMedicationForm(record = null) {
         this.ensureData();
+        if (record) {
+            record = this.normalizeMedicationRecord(record);
+        }
         const isEdit = !!record;
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
 
         const safeValue = (value = '') => Utils.escapeHTML(value || '');
         const purchaseDateValue = record?.purchaseDate ? new Date(record.purchaseDate).toISOString().slice(0, 10) : '';
+        const productionDateValue = record?.productionDate ? new Date(record.productionDate).toISOString().slice(0, 10) : '';
         const expiryDateValue = record?.expiryDate ? new Date(record.expiryDate).toISOString().slice(0, 10) : '';
         const statusInfo = this.calculateMedicationStatus(record || {});
+        
+        const qAdded = record?.quantityAdded ?? record?.quantity ?? 0;
+        const qRemaining = record?.remainingQuantity ?? record?.quantity ?? 0;
+        const qDispensed = Math.max(0, qAdded - qRemaining);
 
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 780px;">
+            <div class="modal-content" style="max-width: 800px;">
                 <div class="modal-header modal-header-centered">
                     <h2 class="modal-title">${isEdit ? 'تعديل بيانات الدواء' : 'تسجيل دواء جديد'}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
@@ -13330,15 +13601,37 @@ const Clinic = {
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">نوع الدواء *</label>
-                                <input type="text" id="med-type" required class="form-input" placeholder="حبوب، شراب، حقن..." value="${safeValue(record?.type || record?.medicationType)}">
+                                <input type="text" id="med-type" list="med-type-list" required class="form-input" placeholder="اختر أو اكتب..." value="${safeValue(record?.type || record?.medicationType)}">
+                                <datalist id="med-type-list">
+                                    <option value="أقراص"></option>
+                                    <option value="شراب"></option>
+                                    <option value="كبسولات"></option>
+                                    <option value="حقن"></option>
+                                    <option value="مرهم"></option>
+                                    <option value="قطرة"></option>
+                                    <option value="بخاخ"></option>
+                                </datalist>
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">الاستخدام</label>
-                                <input type="text" id="med-usage" class="form-input" placeholder="الاستخدام الطبي للدواء" value="${safeValue(record?.usage || record?.notes || '')}">
+                                <input type="text" id="med-usage" list="med-usage-list" class="form-input" placeholder="اختر أو اكتب..." value="${safeValue(record?.usage || record?.notes || '')}">
+                                <datalist id="med-usage-list">
+                                    <option value="مسكن"></option>
+                                    <option value="مطهر معوي"></option>
+                                    <option value="غيار للجروح"></option>
+                                    <option value="مضاد حيوي"></option>
+                                    <option value="مضاد للحساسية"></option>
+                                    <option value="فيتامين"></option>
+                                    <option value="خافض حرارة"></option>
+                                </datalist>
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الشراء *</label>
                                 <input type="date" id="med-purchase" required class="form-input" value="${purchaseDateValue}">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الانتاج *</label>
+                                <input type="date" id="med-production" required class="form-input" value="${productionDateValue}">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ انتهاء الصلاحية</label>
@@ -13346,28 +13639,38 @@ const Clinic = {
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">الكمية المضافة *</label>
-                                <input type="number" id="med-quantity" required class="form-input" min="0" placeholder="الكمية المضافة" value="${record?.quantityAdded ?? record?.quantity ?? 0}">
-                        </div>
+                                <input type="number" id="med-quantity" required class="form-input" min="0" placeholder="إجمالي الكمية المضافة" value="${qAdded}">
+                            </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">الكمية المتبقية *</label>
-                                <input type="number" id="med-remaining" required class="form-input" min="0" placeholder="الكمية المتاحة" value="${record?.remainingQuantity ?? record?.quantity ?? 0}">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">الكمية - الرصيد *</label>
+                                <input type="number" id="med-remaining" required class="form-input bg-gray-50 font-bold" min="0" placeholder="الرصيد المتاح" value="${qRemaining}">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">الكمية المنصرفة</label>
+                                <input type="number" id="med-dispensed" readonly class="form-input bg-gray-100 text-blue-700 font-bold cursor-not-allowed" value="${qDispensed}">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">موقع التخزين</label>
-                                <input type="text" id="med-location" class="form-input" placeholder="مثال: غرفة الأدوية" value="${safeValue(record?.location)}">
-                            </div>
-                            <div class="flex flex-col justify-center bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
-                                <span class="text-sm font-semibold text-gray-700 mb-1">الحالة الحالية</span>
-                                <span id="med-status-badge" class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${this.getMedicationStatusClasses(statusInfo.status)}">
-                                    <i class="fas fa-info-circle"></i>
-                                    ${statusInfo.status || 'ساري'}
-                                </span>
-                                <span id="med-status-hint" class="text-xs text-gray-500 mt-2">${this.getMedicationStatusHint(statusInfo)}</span>
+                                <input type="text" id="med-location" class="form-input" placeholder="مثال: الغرفة 1 - الرف ب" value="${safeValue(record?.location)}">
                             </div>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">ملاحظات إضافية</label>
-                            <textarea id="med-notes" class="form-input" rows="3" placeholder="أدخل أي ملاحظات أو تعليمات خاصة">${safeValue(record?.notes)}</textarea>
+                            <textarea id="med-notes" class="form-input" rows="2" placeholder="أدخل أي ملاحظات أو تعليمات خاصة">${safeValue(record?.notes)}</textarea>
+                        </div>
+                        <div class="flex flex-col bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+                            <span class="text-sm font-semibold text-gray-700 mb-2">حالة الصنف من التعديل والاضافة واي حركة علي الدواء</span>
+                            <div class="flex items-center gap-3">
+                                <span id="med-status-badge" class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${this.getMedicationStatusClasses(statusInfo.status)}">
+                                    <i class="fas fa-info-circle"></i>
+                                    ${statusInfo.status || 'ساري'}
+                                </span>
+                                <span id="med-status-hint" class="text-xs text-gray-500">${this.getMedicationStatusHint(statusInfo)}</span>
+                            </div>
+                            ${isEdit ? `<div class="text-xs text-gray-500 mt-2">
+                                تم التسجيل: ${Utils.escapeHTML(record?.createdBy?.name || 'النظام')} ${record?.createdAt ? `(${this.formatDate(record.createdAt, true)})` : ''}
+                                ${record?.updatedBy ? `<br>آخر تعديل: ${Utils.escapeHTML(record.updatedBy.name)} ${record.updatedAt ? `(${this.formatDate(record.updatedAt, true)})` : ''}` : ''}
+                            </div>` : ''}
                         </div>
                         <div class="flex items-center justify-end gap-3 pt-4 border-t form-actions-centered">
                             <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
@@ -13387,15 +13690,33 @@ const Clinic = {
         const expiryInput = form.querySelector('#med-expiry');
         const statusBadge = form.querySelector('#med-status-badge');
         const statusHint = form.querySelector('#med-status-hint');
+        const qtyAddedInput = form.querySelector('#med-quantity');
+        const qtyRemainingInput = form.querySelector('#med-remaining');
+        const qtyDispensedInput = form.querySelector('#med-dispensed');
 
+        // تحديث حالة الصلاحية ديناميكيا
         const updateStatusPreview = () => {
             const info = this.calculateMedicationStatus({ expiryDate: expiryInput.value ? new Date(expiryInput.value).toISOString() : null });
             statusBadge.className = `inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${this.getMedicationStatusClasses(info.status)}`;
             statusBadge.innerHTML = `<i class="fas fa-info-circle"></i>${info.status}`;
             statusHint.textContent = this.getMedicationStatusHint(info);
         };
-
         expiryInput?.addEventListener('change', updateStatusPreview);
+
+        // حساب الرصيد والمنصرف ديناميكياً
+        // الرصيد = الكمية المضافة - المنصرف
+        // المنصرف = الكمية المضافة - الرصيد
+        qtyAddedInput.addEventListener('input', () => {
+            const added = parseInt(qtyAddedInput.value) || 0;
+            const dispensed = parseInt(qtyDispensedInput.value) || 0;
+            qtyRemainingInput.value = Math.max(0, added - dispensed);
+        });
+
+        qtyRemainingInput.addEventListener('input', () => {
+            const added = parseInt(qtyAddedInput.value) || 0;
+            const remaining = parseInt(qtyRemainingInput.value) || 0;
+            qtyDispensedInput.value = Math.max(0, added - remaining);
+        });
 
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -13404,6 +13725,7 @@ const Clinic = {
             const type = form.querySelector('#med-type').value.trim();
             const usage = form.querySelector('#med-usage')?.value.trim() || '';
             const purchaseDate = form.querySelector('#med-purchase').value;
+            const productionDate = form.querySelector('#med-production').value;
             const expiry = form.querySelector('#med-expiry').value;
             const quantityAdded = parseInt(form.querySelector('#med-quantity').value, 10) || 0;
             const remainingQuantity = parseInt(form.querySelector('#med-remaining').value, 10) || 0;
@@ -13413,6 +13735,7 @@ const Clinic = {
             const createdBy = record?.createdBy || this.getCurrentUserSummary();
 
             const purchaseISO = purchaseDate ? new Date(purchaseDate).toISOString() : new Date().toISOString();
+            const productionISO = productionDate ? new Date(productionDate).toISOString() : new Date().toISOString();
             const expiryISO = expiry ? new Date(expiry).toISOString() : '';
             const statusInfoLatest = this.calculateMedicationStatus({ expiryDate: expiryISO });
             const currentUser = this.getCurrentUserSummary();
@@ -13423,6 +13746,7 @@ const Clinic = {
                 type,
                 usage: usage,
                 purchaseDate: purchaseISO,
+                productionDate: productionISO,
                 expiryDate: expiryISO,
                 quantityAdded,
                 remainingQuantity,
@@ -13502,6 +13826,24 @@ const Clinic = {
                             });
                         }
 
+                        
+                        // إرسال إشعار للمدير إذا كان هناك طلب قيد الاعتماد
+                        if (pendingNotification && typeof GoogleIntegration !== 'undefined') {
+                            await GoogleIntegration.sendRequest({
+                                action: 'addNotification',
+                                data: {
+                                    id: Utils.generateId('NOTIF'),
+                                    title: isEdit ? 'طلب تعديل دواء' : 'طلب إضافة دواء جديد',
+                                    message: `قام ${currentUser.name} بإرسال طلب ${isEdit ? 'تعديل' : 'إضافة'} للدواء: ${payload.name}`,
+                                    type: 'alert',
+                                    targetRoles: ['admin', 'manager'],
+                                    createdAt: new Date().toISOString(),
+                                    readBy: [],
+                                    link: '#clinic-medications'
+                                }
+                            });
+                        }
+
                         // إطلاق حدث لإشعار نظام المزامنة اللحظية
                         document.dispatchEvent(new CustomEvent('data-saved', {
                             detail: {
@@ -13527,8 +13869,8 @@ const Clinic = {
                 if (ok) modal.remove();
             }
         });
-    },
 
+    },
     async viewVisit(id) {
         this.ensureData();
         const visit = AppState.appData.clinicVisits.find(v => v.id === id);
@@ -14463,6 +14805,19 @@ const Clinic = {
                 if (type !== 'all') {
                     filteredRequests = filteredRequests.filter(r => this._approvalRequestMatchesTypeFilter(r, type));
                 }
+                if (search) {
+                    filteredRequests = filteredRequests.filter((request) => this.normalizeArabicText([
+                        request.itemName,
+                        request.requestedBy?.name,
+                        request.requestedByName,
+                        request.userName,
+                        request.userEmail,
+                        request.medicationData?.name,
+                        request.visitData?.employeeName,
+                        request.visitData?.contractorName,
+                        request.reason
+                    ].filter(Boolean).join(' ')).includes(search));
+                }
 
                 const approvalsTableContainer = document.getElementById('approvals-table-container');
                 if (approvalsTableContainer) {
@@ -14758,6 +15113,10 @@ const Clinic = {
                     } catch (_e) { /* ignore */ }
                 }
 
+                if ((isSupply || isTimeOff) && typeof UI !== 'undefined' && typeof UI.updateNotificationsBadge === 'function') {
+                    UI.updateNotificationsBadge();
+                }
+
                 // تحديث تبويبة طلبات الموافقة فقط بدون إعادة تحميل كامل
                 setTimeout(() => {
                     this.renderApprovalsTab();
@@ -14847,19 +15206,6 @@ const Clinic = {
                     }
                 });
             }
-                if (search) {
-                    filteredRequests = filteredRequests.filter((request) => this.normalizeArabicText([
-                        request.itemName,
-                        request.requestedBy?.name,
-                        request.requestedByName,
-                        request.userName,
-                        request.userEmail,
-                        request.medicationData?.name,
-                        request.visitData?.employeeName,
-                        request.visitData?.contractorName,
-                        request.reason
-                    ].filter(Boolean).join(' ')).includes(search));
-                }
 
             if (result && result.success) {
                 Loading.hide();
@@ -14887,6 +15233,10 @@ const Clinic = {
                             AppState.appData.clinicStaffTimeOffRequests = refresh.data;
                         }
                     } catch (_e) { /* ignore */ }
+                }
+
+                if ((requestType === 'supply' || requestType === 'timeoff') && typeof UI !== 'undefined' && typeof UI.updateNotificationsBadge === 'function') {
+                    UI.updateNotificationsBadge();
                 }
 
                 // تحديث تبويبة طلبات الموافقة فقط
@@ -15041,19 +15391,75 @@ const Clinic = {
                         ? `طلب ${this.getTimeOffRequestTypeLabel(request.requestType)}`
                         : 'طلب احتياجات طبية';
             const statusKey = String(request.status || 'pending').toLowerCase();
-            const statusLabel = { pending: 'قيد المراجعة', approved: 'تمت الموافقة', rejected: 'مرفوض', fulfilled: 'تم التنفيذ' }[statusKey] || request.status || 'قيد المراجعة';
+            const statusLabel = {
+                pending: 'قيد المراجعة',
+                approved: 'تمت الموافقة',
+                rejected: 'مرفوض',
+                fulfilled: 'تم التنفيذ'
+            }[statusKey] || request.status || 'قيد المراجعة';
             const requestReference = request.id || request.requestId || '-';
 
             const modal = document.createElement('div');
             modal.className = 'modal-overlay';
             modal.innerHTML = `
                 <style>
-                    .clinic-approval-detail{--cad-navy:#0b2d4f;--cad-teal:#0f8b83;--cad-ink:#20384a;--cad-muted:#6b7f8e;--cad-line:#dce8ed;--cad-soft:#f4f8fa;width:min(880px,94vw);max-width:880px;max-height:92vh;overflow:hidden;border:1px solid rgba(15,139,131,.2);border-radius:22px;background:#fff;box-shadow:0 28px 80px rgba(8,34,57,.28);font-family:"Tajawal","Noto Kufi Arabic",sans-serif}.clinic-approval-detail .cad-header{position:relative;padding:24px 26px 22px;color:#fff;background:linear-gradient(128deg,#0b2d4f 0%,#124c68 62%,#0f8b83 100%);overflow:hidden}.clinic-approval-detail .cad-header:after{content:"";position:absolute;inset:auto -42px -72px auto;width:190px;height:190px;border:26px solid rgba(255,255,255,.07);border-radius:50%}.clinic-approval-detail .cad-head-main{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:18px}.clinic-approval-detail .cad-title-wrap{display:flex;align-items:center;gap:14px;min-width:0}.clinic-approval-detail .cad-title-icon{flex:0 0 48px;width:48px;height:48px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.24);border-radius:14px;background:rgba(255,255,255,.12);font-size:21px}.clinic-approval-detail .cad-eyebrow{margin:0 0 4px;color:#9de7df;font-size:.69rem;font-weight:800;letter-spacing:.04em}.clinic-approval-detail .cad-title{margin:0;color:#fff;font-size:clamp(1.05rem,2vw,1.35rem);font-weight:850;line-height:1.35}.clinic-approval-detail .cad-subtitle{margin:5px 0 0;color:rgba(255,255,255,.72);font-size:.72rem}.clinic-approval-detail .cad-close{position:relative;z-index:2;flex:0 0 38px;width:38px;height:38px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.24);border-radius:11px;background:rgba(255,255,255,.1);color:#fff;cursor:pointer}.clinic-approval-detail .cad-meta{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.clinic-approval-detail .cad-chip{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:rgba(255,255,255,.1);color:#fff;font-size:.69rem;font-weight:750}.clinic-approval-detail .cad-status--pending{background:#fff4cf;color:#7a4a00;border-color:#ffe29a}.clinic-approval-detail .cad-status--approved{background:#dff8eb;color:#14643b;border-color:#bcebd2}.clinic-approval-detail .cad-status--rejected{background:#ffe5e5;color:#9b2323;border-color:#ffc7c7}.clinic-approval-detail .cad-status--fulfilled{background:#dff5fa;color:#0a6073;border-color:#b8e4ed}.clinic-approval-detail .cad-body{max-height:calc(92vh - 196px);padding:20px 22px;overflow:auto;background:linear-gradient(180deg,#f7fafb 0%,#fff 100%)}.clinic-approval-detail .cad-card,.clinic-approval-detail .cad-item>div{margin-bottom:14px;padding:17px;border:1px solid var(--cad-line);border-radius:15px;background:#fff;box-shadow:0 5px 18px rgba(11,45,79,.055)}.clinic-approval-detail .cad-card-title,.clinic-approval-detail .cad-item h3{display:flex;align-items:center;gap:8px;margin:0 0 13px;color:var(--cad-navy);font-size:.86rem;font-weight:850}.clinic-approval-detail .cad-card-title i,.clinic-approval-detail .cad-item h3:before{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:#e1f4f1;color:var(--cad-teal);font-size:.75rem}.clinic-approval-detail .cad-item h3:before{content:"\\f46d";font-family:"Font Awesome 6 Free","Font Awesome 5 Free";font-weight:900}.clinic-approval-detail .cad-item .grid,.clinic-approval-detail .cad-data-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.clinic-approval-detail .cad-item .grid>div,.clinic-approval-detail .cad-data{min-width:0;padding:11px 12px;border:1px solid #e6eef2;border-radius:11px;background:var(--cad-soft);color:var(--cad-ink);font-size:.78rem;line-height:1.65;overflow-wrap:anywhere}.clinic-approval-detail .cad-item strong,.clinic-approval-detail .cad-data strong{display:block;margin-bottom:3px;color:var(--cad-muted);font-size:.66rem;font-weight:800}.clinic-approval-detail .cad-item .col-span-2,.clinic-approval-detail .cad-data--wide{grid-column:1/-1}.clinic-approval-detail .cad-decision{border-inline-start:4px solid var(--cad-teal)}.clinic-approval-detail .cad-decision--rejected{border-inline-start-color:#cf3f3f}.clinic-approval-detail .cad-pending{display:flex;align-items:center;gap:10px;padding:12px;border-radius:11px;background:#fff8df;color:#76520b;font-size:.75rem}.clinic-approval-detail .cad-footer{display:flex;justify-content:center;padding:13px 20px;border-top:1px solid var(--cad-line);background:#f8fbfc}.clinic-approval-detail .cad-footer button{min-width:130px;padding:9px 18px;border:1px solid #c9d9df;border-radius:10px;background:#fff;color:var(--cad-ink);font-weight:800;cursor:pointer}.clinic-approval-detail .cad-close:focus-visible,.clinic-approval-detail button:focus-visible{outline:3px solid rgba(20,184,166,.35);outline-offset:2px}[data-theme="dark"] .clinic-approval-detail{--cad-ink:#dce9ee;--cad-muted:#9fb2bd;--cad-line:#29444f;--cad-soft:#18323c;background:#112832}[data-theme="dark"] .clinic-approval-detail .cad-body,[data-theme="dark"] .clinic-approval-detail .cad-footer{background:#10262f}[data-theme="dark"] .clinic-approval-detail .cad-card,[data-theme="dark"] .clinic-approval-detail .cad-item>div{background:#17313b}@media(max-width:640px){.clinic-approval-detail{width:96vw;max-height:95vh;border-radius:16px}.clinic-approval-detail .cad-header{padding:18px 16px}.clinic-approval-detail .cad-title-icon{width:42px;height:42px}.clinic-approval-detail .cad-body{max-height:calc(95vh - 184px);padding:13px}.clinic-approval-detail .cad-item .grid,.clinic-approval-detail .cad-data-grid{grid-template-columns:1fr}.clinic-approval-detail .cad-item .col-span-2,.clinic-approval-detail .cad-data--wide{grid-column:auto}}
+                    .clinic-approval-detail{--cad-navy:#0b2d4f;--cad-teal:#0f8b83;--cad-ink:#20384a;--cad-muted:#6b7f8e;--cad-line:#dce8ed;--cad-soft:#f4f8fa;width:min(880px,94vw);max-width:880px;max-height:92vh;overflow:hidden;border:1px solid rgba(15,139,131,.2);border-radius:22px;background:#fff;box-shadow:0 28px 80px rgba(8,34,57,.28);font-family:"Tajawal","Noto Kufi Arabic",sans-serif}
+                    .clinic-approval-detail .cad-header{position:relative;padding:24px 26px 22px;color:#fff;background:linear-gradient(128deg,#0b2d4f 0%,#124c68 62%,#0f8b83 100%);overflow:hidden}
+                    .clinic-approval-detail .cad-header:after{content:"";position:absolute;inset:auto -42px -72px auto;width:190px;height:190px;border:26px solid rgba(255,255,255,.07);border-radius:50%}
+                    .clinic-approval-detail .cad-head-main{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+                    .clinic-approval-detail .cad-title-wrap{display:flex;align-items:center;gap:14px;min-width:0}
+                    .clinic-approval-detail .cad-title-icon{flex:0 0 48px;width:48px;height:48px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.24);border-radius:14px;background:rgba(255,255,255,.12);font-size:21px}
+                    .clinic-approval-detail .cad-eyebrow{margin:0 0 4px;color:#9de7df;font-size:.69rem;font-weight:800;letter-spacing:.04em}
+                    .clinic-approval-detail .cad-title{margin:0;color:#fff;font-size:clamp(1.05rem,2vw,1.35rem);font-weight:850;line-height:1.35}
+                    .clinic-approval-detail .cad-subtitle{margin:5px 0 0;color:rgba(255,255,255,.72);font-size:.72rem}
+                    .clinic-approval-detail .cad-close{position:relative;z-index:2;flex:0 0 38px;width:38px;height:38px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.24);border-radius:11px;background:rgba(255,255,255,.1);color:#fff;cursor:pointer;transition:.18s ease}
+                    .clinic-approval-detail .cad-close:hover{background:#fff;color:var(--cad-navy);transform:rotate(6deg)}
+                    .clinic-approval-detail .cad-meta{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+                    .clinic-approval-detail .cad-chip{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:rgba(255,255,255,.1);color:#fff;font-size:.69rem;font-weight:750}
+                    .clinic-approval-detail .cad-status--pending{background:#fff4cf;color:#7a4a00;border-color:#ffe29a}.clinic-approval-detail .cad-status--approved{background:#dff8eb;color:#14643b;border-color:#bcebd2}.clinic-approval-detail .cad-status--rejected{background:#ffe5e5;color:#9b2323;border-color:#ffc7c7}.clinic-approval-detail .cad-status--fulfilled{background:#dff5fa;color:#0a6073;border-color:#b8e4ed}
+                    .clinic-approval-detail .cad-body{max-height:calc(92vh - 196px);padding:20px 22px;overflow:auto;background:linear-gradient(180deg,#f7fafb 0%,#fff 100%)}
+                    .clinic-approval-detail .cad-card{margin-bottom:14px;padding:17px;border:1px solid var(--cad-line);border-radius:15px;background:#fff;box-shadow:0 5px 18px rgba(11,45,79,.055)}
+                    .clinic-approval-detail .cad-card-title,.clinic-approval-detail .cad-item h3{display:flex;align-items:center;gap:8px;margin:0 0 13px;color:var(--cad-navy);font-size:.86rem;font-weight:850}
+                    .clinic-approval-detail .cad-card-title i{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:#e1f4f1;color:var(--cad-teal);font-size:.75rem}
+                    .clinic-approval-detail .cad-item>div{margin-bottom:14px;padding:17px;border:1px solid var(--cad-line);border-radius:15px;background:#fff;box-shadow:0 5px 18px rgba(11,45,79,.055)}
+                    .clinic-approval-detail .cad-item h3:before{content:"\\f46d";font-family:"Font Awesome 6 Free","Font Awesome 5 Free";font-weight:900;width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:#e1f4f1;color:var(--cad-teal);font-size:.75rem}
+                    .clinic-approval-detail .cad-item .grid,.clinic-approval-detail .cad-data-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+                    .clinic-approval-detail .cad-item .grid>div,.clinic-approval-detail .cad-data{min-width:0;padding:11px 12px;border:1px solid #e6eef2;border-radius:11px;background:var(--cad-soft);color:var(--cad-ink);font-size:.78rem;line-height:1.65;overflow-wrap:anywhere}
+                    .clinic-approval-detail .cad-item strong,.clinic-approval-detail .cad-data strong{display:block;margin-bottom:3px;color:var(--cad-muted);font-size:.66rem;font-weight:800}
+                    .clinic-approval-detail .cad-item .col-span-2,.clinic-approval-detail .cad-data--wide{grid-column:1/-1}
+                    .clinic-approval-detail .cad-item .btn-secondary{display:inline-flex;align-items:center;gap:6px;margin-top:4px;border-color:#b9d8d5;color:var(--cad-teal);font-weight:800}
+                    .clinic-approval-detail .cad-decision{border-inline-start:4px solid var(--cad-teal)}
+                    .clinic-approval-detail .cad-decision--rejected{border-inline-start-color:#cf3f3f}
+                    .clinic-approval-detail .cad-pending{display:flex;align-items:center;gap:10px;padding:12px;border-radius:11px;background:#fff8df;color:#76520b;font-size:.75rem}
+                    .clinic-approval-detail .cad-pending i{font-size:1rem}
+                    .clinic-approval-detail .cad-footer{display:flex;justify-content:center;padding:13px 20px;border-top:1px solid var(--cad-line);background:#f8fbfc}
+                    .clinic-approval-detail .cad-footer button{min-width:130px;padding:9px 18px;border:1px solid #c9d9df;border-radius:10px;background:#fff;color:var(--cad-ink);font-weight:800;cursor:pointer;box-shadow:0 3px 10px rgba(11,45,79,.07)}
+                    [data-theme="dark"] .clinic-approval-detail{--cad-ink:#dce9ee;--cad-muted:#9fb2bd;--cad-line:#29444f;--cad-soft:#18323c;background:#112832}.clinic-approval-detail .cad-close:focus-visible,.clinic-approval-detail button:focus-visible{outline:3px solid rgba(20,184,166,.35);outline-offset:2px}
+                    [data-theme="dark"] .clinic-approval-detail .cad-body,[data-theme="dark"] .clinic-approval-detail .cad-footer{background:#10262f}[data-theme="dark"] .clinic-approval-detail .cad-card,[data-theme="dark"] .clinic-approval-detail .cad-item>div{background:#17313b}
+                    @media(max-width:640px){.clinic-approval-detail{width:96vw;max-height:95vh;border-radius:16px}.clinic-approval-detail .cad-header{padding:18px 16px}.clinic-approval-detail .cad-title-icon{width:42px;height:42px}.clinic-approval-detail .cad-body{max-height:calc(95vh - 184px);padding:13px}.clinic-approval-detail .cad-item .grid,.clinic-approval-detail .cad-data-grid{grid-template-columns:1fr}.clinic-approval-detail .cad-item .col-span-2,.clinic-approval-detail .cad-data--wide{grid-column:auto}}
+                    @media(prefers-reduced-motion:reduce){.clinic-approval-detail .cad-close{transition:none}.clinic-approval-detail .cad-close:hover{transform:none}}
                 </style>
                 <div class="modal-content clinic-approval-detail" role="dialog" aria-modal="true" aria-labelledby="clinic-approval-detail-title">
-                    <header class="cad-header"><div class="cad-head-main"><div class="cad-title-wrap"><span class="cad-title-icon"><i class="fas fa-file-medical-alt"></i></span><div><p class="cad-eyebrow">سجل الاعتماد الطبي</p><h2 id="clinic-approval-detail-title" class="cad-title">تفاصيل طلب الموافقة</h2><p class="cad-subtitle">${Utils.escapeHTML(requestTypeLabel)} · رقم ${Utils.escapeHTML(String(requestReference))}</p></div></div><button class="cad-close modal-close" type="button" aria-label="إغلاق"><i class="fas fa-times"></i></button></div><div class="cad-meta"><span class="cad-chip cad-status--${Utils.escapeHTML(statusKey)}"><i class="fas fa-circle-check"></i>${Utils.escapeHTML(statusLabel)}</span><span class="cad-chip"><i class="far fa-calendar-alt"></i>${Utils.escapeHTML(this.formatDate(request.createdAt || request.requestDate, true))}</span></div></header>
-                    <div class="modal-body cad-body"><div class="cad-item">${itemDetailsHTML}</div><section class="cad-card"><h3 class="cad-card-title"><i class="fas fa-user-circle"></i>بيانات مقدم الطلب</h3><div class="cad-data-grid"><div class="cad-data"><strong>مقدم الطلب</strong>${Utils.escapeHTML(requestedBy.name || '-')}</div><div class="cad-data"><strong>البريد الإلكتروني</strong>${Utils.escapeHTML(requestedBy.email || request.userEmail || '-')}</div><div class="cad-data"><strong>تاريخ الطلب</strong>${Utils.escapeHTML(this.formatDate(request.createdAt || request.requestDate, true))}</div><div class="cad-data"><strong>مرجع الطلب</strong>${Utils.escapeHTML(String(requestReference))}</div></div></section>${request.status === 'approved' ? `<section class="cad-card cad-decision"><h3 class="cad-card-title"><i class="fas fa-user-check"></i>قرار الموافقة</h3><div class="cad-data-grid"><div class="cad-data"><strong>تمت الموافقة بواسطة</strong>${Utils.escapeHTML(approvedBy.name || '-')}</div><div class="cad-data"><strong>تاريخ الموافقة</strong>${Utils.escapeHTML(this.formatDate(request.approvedAt, true))}</div></div></section>` : ''}${request.status === 'rejected' ? `<section class="cad-card cad-decision cad-decision--rejected"><h3 class="cad-card-title"><i class="fas fa-user-times"></i>قرار الرفض</h3><div class="cad-data-grid"><div class="cad-data"><strong>تم الرفض بواسطة</strong>${Utils.escapeHTML(rejectedBy.name || '-')}</div><div class="cad-data"><strong>تاريخ الرفض</strong>${Utils.escapeHTML(this.formatDate(request.rejectedAt, true))}</div>${request.rejectionReason ? `<div class="cad-data cad-data--wide"><strong>سبب الرفض</strong>${Utils.escapeHTML(request.rejectionReason)}</div>` : ''}</div></section>` : ''}${request.status !== 'approved' && request.status !== 'rejected' ? `<div class="cad-pending"><i class="fas fa-hourglass-half"></i><span>الطلب قيد المراجعة ولم يصدر قرار نهائي بعد.</span></div>` : ''}</div>
-                    <div class="modal-footer cad-footer"><button class="modal-close-btn" type="button"><i class="fas fa-times ml-2"></i>إغلاق</button></div>
+                    <header class="cad-header">
+                        <div class="cad-head-main">
+                            <div class="cad-title-wrap">
+                                <span class="cad-title-icon"><i class="fas fa-file-medical-alt"></i></span>
+                                <div><p class="cad-eyebrow">سجل الاعتماد الطبي</p><h2 id="clinic-approval-detail-title" class="cad-title">تفاصيل طلب الموافقة</h2><p class="cad-subtitle">${Utils.escapeHTML(requestTypeLabel)} · رقم ${Utils.escapeHTML(String(requestReference))}</p></div>
+                            </div>
+                            <button class="cad-close modal-close" type="button" aria-label="إغلاق"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="cad-meta"><span class="cad-chip cad-status--${Utils.escapeHTML(statusKey)}"><i class="fas fa-circle-check"></i>${Utils.escapeHTML(statusLabel)}</span><span class="cad-chip"><i class="far fa-calendar-alt"></i>${Utils.escapeHTML(this.formatDate(request.createdAt || request.requestDate, true))}</span></div>
+                    </header>
+                    <div class="modal-body cad-body">
+                        <div class="cad-item">${itemDetailsHTML}</div>
+                        <section class="cad-card"><h3 class="cad-card-title"><i class="fas fa-user-circle"></i>بيانات مقدم الطلب</h3><div class="cad-data-grid"><div class="cad-data"><strong>مقدم الطلب</strong>${Utils.escapeHTML(requestedBy.name || '-')}</div><div class="cad-data"><strong>البريد الإلكتروني</strong>${Utils.escapeHTML(requestedBy.email || request.userEmail || '-')}</div><div class="cad-data"><strong>تاريخ الطلب</strong>${Utils.escapeHTML(this.formatDate(request.createdAt || request.requestDate, true))}</div><div class="cad-data"><strong>مرجع الطلب</strong>${Utils.escapeHTML(String(requestReference))}</div></div></section>
+                        ${request.status === 'approved' ? `<section class="cad-card cad-decision"><h3 class="cad-card-title"><i class="fas fa-user-check"></i>قرار الموافقة</h3><div class="cad-data-grid"><div class="cad-data"><strong>تمت الموافقة بواسطة</strong>${Utils.escapeHTML(approvedBy.name || '-')}</div><div class="cad-data"><strong>تاريخ الموافقة</strong>${Utils.escapeHTML(this.formatDate(request.approvedAt, true))}</div></div></section>` : ''}
+                        ${request.status === 'rejected' ? `<section class="cad-card cad-decision cad-decision--rejected"><h3 class="cad-card-title"><i class="fas fa-user-times"></i>قرار الرفض</h3><div class="cad-data-grid"><div class="cad-data"><strong>تم الرفض بواسطة</strong>${Utils.escapeHTML(rejectedBy.name || '-')}</div><div class="cad-data"><strong>تاريخ الرفض</strong>${Utils.escapeHTML(this.formatDate(request.rejectedAt, true))}</div>${request.rejectionReason ? `<div class="cad-data cad-data--wide"><strong>سبب الرفض</strong>${Utils.escapeHTML(request.rejectionReason)}</div>` : ''}</div></section>` : ''}
+                        ${request.status !== 'approved' && request.status !== 'rejected' ? `<div class="cad-pending"><i class="fas fa-hourglass-half"></i><span>الطلب قيد المراجعة ولم يصدر قرار نهائي بعد.</span></div>` : ''}
+                    </div>
+                    <div class="modal-footer cad-footer">
+                        <button class="modal-close-btn" type="button"><i class="fas fa-times ml-2"></i>إغلاق</button>
+                    </div>
                 </div>
             `;
 
@@ -15842,6 +16248,15 @@ const Clinic = {
             leaveBlock?.classList.toggle('hidden', t !== 'leave');
             permBlock?.classList.toggle('hidden', t !== 'permission');
             otBlock?.classList.toggle('hidden', t !== 'overtime');
+            ['timeoff-date-from', 'timeoff-date-to'].forEach(id => {
+                const input = panel.querySelector('#' + id); if (input) input.required = t === 'leave';
+            });
+            ['timeoff-perm-date', 'timeoff-time-from', 'timeoff-time-to'].forEach(id => {
+                const input = panel.querySelector('#' + id); if (input) input.required = t === 'permission';
+            });
+            ['timeoff-ot-date', 'timeoff-duration-hours'].forEach(id => {
+                const input = panel.querySelector('#' + id); if (input) input.required = t === 'overtime';
+            });
         };
         const syncDraft = () => this._saveTimeOffFormDraftFromDom();
         typeEl?.addEventListener('change', () => { syncTypeFields(); syncDraft(); });
@@ -15859,10 +16274,97 @@ const Clinic = {
             }, 120);
         });
         syncTypeFields();
-        form.addEventListener('submit', (e) => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            this.submitTimeOffRequest();
+            const success = await this.submitTimeOffRequest();
+            if (success && typeof panel._closeClinicTimeOffRequestModal === 'function') {
+                panel._closeClinicTimeOffRequestModal(true);
+            }
         });
+    },
+
+    showTimeOffRequestForm() {
+        document.getElementById('clinic-timeoff-request-modal')?.remove();
+        const modal = document.createElement('div');
+        modal.id = 'clinic-timeoff-request-modal';
+        modal.className = 'modal-overlay';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-labelledby', 'clinic-timeoff-modal-title');
+        modal.dir = 'rtl';
+        modal.innerHTML = `
+            ${this.getClinicWorkflowStyles_()}
+            <div class="modal-content clinic-workflow-root" style="max-width:780px;border-radius:17px;overflow:hidden;box-shadow:0 24px 70px rgba(6,31,55,.3);">
+                <div class="modal-header" style="padding:17px 20px;background:linear-gradient(128deg,#0b2d4f,#174d78 66%,#17726e);color:#fff;border:0;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span style="width:43px;height:43px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.25);border-radius:12px;background:rgba(255,255,255,.13);"><i class="fas fa-user-clock" style="font-size:18px;"></i></span>
+                        <div>
+                            <h3 id="clinic-timeoff-modal-title" class="modal-title" style="margin:0;color:#fff;font-size:1.08rem;">إرسال طلب حضور جديد</h3>
+                            <p style="margin:3px 0 0;color:#d9ebf3;font-size:.72rem;">إجازة أو إذن أو عمل إضافي عبر مسار الموافقة</p>
+                        </div>
+                    </div>
+                    <button type="button" class="clinic-timeoff-modal-close" aria-label="إغلاق" style="width:36px;height:36px;border:1px solid rgba(255,255,255,.25);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;cursor:pointer;"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body" style="padding:18px 20px 20px;max-height:76vh;overflow-y:auto;background:#f6fafc;">
+                    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 12px;margin-bottom:14px;border:1px solid #bae6fd;border-radius:10px;background:#f0f9ff;color:#0c4a6e;font-size:.74rem;">
+                        <span><i class="fas fa-user"></i>${Utils.escapeHTML(AppState.currentUser?.name || 'مستخدم العيادة')}</span>
+                        <span><i class="fas fa-shield-check"></i>يرسل الطلب للموافقة الإدارية</span>
+                    </div>
+                    <form id="timeoff-request-form" class="cw-form">
+                        <div class="cw-form-grid">
+                            <div class="cw-field cw-field-full">
+                                <label class="cw-field-title" for="timeoff-request-type"><i class="fas fa-list-check"></i>نوع الطلب *</label>
+                                <select id="timeoff-request-type" class="cw-control" required>
+                                    <option value="">اختر نوع الطلب</option>
+                                    <option value="leave">إجازة</option>
+                                    <option value="permission">إذن</option>
+                                    <option value="overtime">عمل إضافي</option>
+                                </select>
+                            </div>
+                            <div id="timeoff-leave-dates" class="hidden cw-field-full cw-form-grid">
+                                <div class="cw-field"><label class="cw-field-title" for="timeoff-date-from"><i class="fas fa-calendar-day"></i>من تاريخ *</label><input type="date" id="timeoff-date-from" class="cw-control"></div>
+                                <div class="cw-field"><label class="cw-field-title" for="timeoff-date-to"><i class="fas fa-calendar-check"></i>إلى تاريخ *</label><input type="date" id="timeoff-date-to" class="cw-control"></div>
+                            </div>
+                            <div id="timeoff-permission-fields" class="hidden cw-field-full cw-form-grid">
+                                <div class="cw-field"><label class="cw-field-title" for="timeoff-perm-date"><i class="fas fa-calendar-day"></i>التاريخ *</label><input type="date" id="timeoff-perm-date" class="cw-control"></div>
+                                <div class="cw-field"><label class="cw-field-title" for="timeoff-time-from"><i class="fas fa-clock"></i>من وقت *</label><input type="time" id="timeoff-time-from" class="cw-control"></div>
+                                <div class="cw-field"><label class="cw-field-title" for="timeoff-time-to"><i class="fas fa-clock"></i>إلى وقت *</label><input type="time" id="timeoff-time-to" class="cw-control"></div>
+                            </div>
+                            <div id="timeoff-overtime-fields" class="hidden cw-field-full cw-form-grid">
+                                <div class="cw-field"><label class="cw-field-title" for="timeoff-ot-date"><i class="fas fa-calendar-day"></i>التاريخ *</label><input type="date" id="timeoff-ot-date" class="cw-control"></div>
+                                <div class="cw-field"><label class="cw-field-title" for="timeoff-duration-hours"><i class="fas fa-hourglass-half"></i>عدد الساعات *</label><input type="number" id="timeoff-duration-hours" class="cw-control" min="0.5" step="0.5" placeholder="مثال: 2"></div>
+                            </div>
+                            <div class="cw-field cw-field-full">
+                                <label class="cw-field-title" for="timeoff-reason"><i class="fas fa-pen-to-square"></i>سبب الطلب *</label>
+                                <textarea id="timeoff-reason" class="cw-control" rows="4" required placeholder="اكتب سبب الطلب بوضوح..."></textarea>
+                            </div>
+                        </div>
+                        <div class="cw-form-actions">
+                            <button type="button" class="cw-secondary clinic-timeoff-modal-close"><i class="fas fa-times"></i>إلغاء</button>
+                            <button type="submit" class="cw-submit"><i class="fas fa-paper-plane"></i>إرسال الطلب للموافقة</button>
+                        </div>
+                    </form>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        this.applyModuleI18n(modal);
+        this._applyTimeOffFormDraftToPanel(modal);
+        this._bindTimeOffFormPanelEvents(modal);
+
+        const keyHandler = (event) => { if (event.key === 'Escape') closeModal(); };
+        const closeModal = (force = false) => {
+            if (this._timeOffFormSubmitting && !force) return;
+            this._saveTimeOffFormDraftFromDom();
+            if (!force && this._isTimeOffFormDraftDirty() && !confirm('يوجد بيانات غير مرسلة. هل تريد إغلاق النموذج؟')) return;
+            document.removeEventListener('keydown', keyHandler);
+            this._timeOffFormFocused = false;
+            modal.remove();
+        };
+        modal._closeClinicTimeOffRequestModal = closeModal;
+        modal.querySelectorAll('.clinic-timeoff-modal-close').forEach(button => button.addEventListener('click', () => closeModal()));
+        modal.addEventListener('click', (event) => { if (event.target === modal) closeModal(); });
+        document.addEventListener('keydown', keyHandler);
+        setTimeout(() => modal.querySelector('#timeoff-request-type')?.focus(), 50);
     },
 
     _scheduleAttendanceDataLoadIfNeeded(force) {
@@ -15965,7 +16467,7 @@ const Clinic = {
 
     canAccessAttendanceTab() {
         if (this.isCurrentUserAdmin()) return true;
-        if (typeof Permissions !== 'undefined' && !Permissions.hasDetailedPermission('clinic', 'attendance')) return false;
+        if (typeof Permissions !== 'undefined' && Permissions.hasDetailedPermission('clinic', 'attendance')) return true;
         return this.isActiveClinicStaffMember();
     },
 
@@ -16076,6 +16578,85 @@ const Clinic = {
         return (this.getClinicStaffAttendanceList() || []).find(r => String(r.id) === id) || null;
     },
 
+    getClinicShiftRules() {
+        if (Array.isArray(AppState.appData?.clinicShiftRules) && AppState.appData.clinicShiftRules.length > 0) {
+            return AppState.appData.clinicShiftRules;
+        }
+        return [
+            { id: 'shift_1', name: 'الوردية الأولى', startTime: '07:30', endTime: '15:30', isOvernight: false },
+            { id: 'shift_2', name: 'الوردية الثانية', startTime: '15:30', endTime: '22:30', isOvernight: false },
+            { id: 'shift_3', name: 'الوردية الثالثة', startTime: '22:30', endTime: '07:30', isOvernight: true }
+        ];
+    },
+
+    showClinicShiftSettingsModal() {
+        if (!this.isCurrentUserAdmin()) {
+            Notification?.error?.('هذا الإجراء متاح لمدير النظام فقط');
+            return;
+        }
+        const shifts = this.getClinicShiftRules();
+        const html = `
+            <div class="modal-overlay active" id="clinic-shift-settings-modal">
+                <div class="modal-content" style="max-width:560px;">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-clock ml-2"></i>إعدادات مواعيد الورديات (العيادة)</h3>
+                        <button type="button" class="modal-close" onclick="document.getElementById('clinic-shift-settings-modal')?.remove()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="modal-body space-y-4">
+                        <p class="text-xs text-gray-500 mb-2">تعديل وتحديد مواعيد بداية ونهاية الورديات الرسمية. يتم اعتماد المواعيد للبصمات والوردية الثالثة الليلية (10:30 م إلى 07:30 ص).</p>
+                        ${shifts.map((s, idx) => `
+                            <div class="border rounded-lg p-3 bg-gray-50 space-y-2" data-shift-idx="${idx}">
+                                <div class="font-bold text-sm text-blue-700 flex items-center justify-between">
+                                    <span>${Utils.escapeHTML(s.name)}</span>
+                                    ${s.isOvernight ? '<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-semibold">🌙 وردية ليلية (تتجاوز منتصف الليل)</span>' : ''}
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="form-label text-xs">وقت البداية</label>
+                                        <input type="time" class="form-input shift-start-time" value="${Utils.escapeAttr(s.startTime)}" required>
+                                    </div>
+                                    <div>
+                                        <label class="form-label text-xs">وقت النهاية</label>
+                                        <input type="time" class="form-input shift-end-time" value="${Utils.escapeAttr(s.endTime)}" required>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-shift-settings-modal')?.remove()">إلغاء</button>
+                        <button type="button" class="btn-primary" id="clinic-shift-settings-save"><i class="fas fa-save ml-2"></i>حفظ القواعد</button>
+                    </div>
+                </div>
+            </div>`;
+
+        document.getElementById('clinic-shift-settings-modal')?.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+        document.getElementById('clinic-shift-settings-save')?.addEventListener('click', () => {
+            const modal = document.getElementById('clinic-shift-settings-modal');
+            const items = modal.querySelectorAll('[data-shift-idx]');
+            const updated = [];
+            items.forEach((item, idx) => {
+                const s = shifts[idx];
+                const startTime = item.querySelector('.shift-start-time')?.value || s.startTime;
+                const endTime = item.querySelector('.shift-end-time')?.value || s.endTime;
+                updated.push({
+                    ...s,
+                    startTime,
+                    endTime
+                });
+            });
+            AppState.appData.clinicShiftRules = updated;
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
+                GoogleIntegration.autoSave('ClinicShiftRules', updated).catch(() => {});
+            }
+            Notification?.success?.('تم حفظ قواعد الورديات بنجاح');
+            modal.remove();
+            this.renderAttendanceTab({ force: true });
+        });
+    },
+
     showAttendancePunchModal(recordId, punchType) {
         if (!this.canAccessAttendanceTab()) {
             Notification?.error?.('غير مصرح');
@@ -16100,9 +16681,34 @@ const Clinic = {
         if (!isCheckIn && !isCheckOut) return;
 
         const dayKey = this._attendanceDayKey(record.date);
-        const adjustedDefault = isCheckOut
-            ? `${dayKey}T17:00`
-            : `${dayKey}T08:00`;
+        let adjustedDefault = isCheckIn ? `${dayKey}T07:30` : `${dayKey}T15:30`;
+
+        if (isCheckOut && record.checkIn) {
+            try {
+                const inDate = new Date(record.checkIn);
+                const hh = inDate.getHours();
+                const mm = inDate.getMinutes();
+                const timeStr = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+                const shifts = this.getClinicShiftRules();
+                const s3 = shifts.find(s => s.isOvernight || s.id === 'shift_3') || { startTime: '22:30', endTime: '07:30' };
+                const s2 = shifts.find(s => s.id === 'shift_2') || { startTime: '15:30', endTime: '22:30' };
+                const s1 = shifts.find(s => s.id === 'shift_1') || { startTime: '07:30', endTime: '15:30' };
+
+                if (timeStr >= s3.startTime || timeStr < s1.startTime) {
+                    const nextDay = new Date(inDate);
+                    nextDay.setDate(nextDay.getDate() + 1);
+                    const nextDayKey = this._attendanceDayKey(nextDay);
+                    adjustedDefault = `${nextDayKey}T${s3.endTime}`;
+                } else if (timeStr >= s2.startTime) {
+                    adjustedDefault = `${dayKey}T${s2.endTime}`;
+                } else {
+                    adjustedDefault = `${dayKey}T${s1.endTime}`;
+                }
+            } catch (_e) {
+                adjustedDefault = `${dayKey}T15:30`;
+            }
+        }
+
         const title = isCheckIn ? 'إضافة بصمة دخول مفقودة' : 'إضافة بصمة خروج مفقودة';
         const icon = isCheckIn ? 'fa-sign-in-alt' : 'fa-sign-out-alt';
 
@@ -17261,12 +17867,12 @@ const Clinic = {
         if (!requestType) {
             this._timeOffFormSubmitting = false;
             Notification?.error?.('يرجى اختيار نوع الطلب');
-            return;
+            return false;
         }
         if (!reason) {
             this._timeOffFormSubmitting = false;
             Notification?.error?.('سبب الطلب مطلوب');
-            return;
+            return false;
         }
 
         Loading.show();
@@ -17306,12 +17912,15 @@ const Clinic = {
                 if (this.state) this.state.timeOffFormDraft = this._getDefaultTimeOffFormDraft();
                 this._attendanceRenderPending = false;
                 this.renderAttendanceTab({ force: true });
+                if (typeof UI !== 'undefined' && typeof UI.updateNotificationsBadge === 'function') UI.updateNotificationsBadge();
+                return true;
             } else {
                 throw new Error(result?.message || 'فشل إرسال الطلب');
             }
         } catch (error) {
             Loading.hide();
             Notification?.error?.(error?.message || 'فشل إرسال الطلب');
+            return false;
         } finally {
             this._timeOffFormSubmitting = false;
         }
@@ -17477,38 +18086,14 @@ const Clinic = {
                     ${activeFilterCount ? `<button type="button" id="clinic-attendance-reset-filters" class="btn-secondary btn-sm mt-2"><i class="fas fa-times ml-1"></i>مسح الفلاتر</button>` : ''}
                 </div>
 
-                <div class="content-card mb-4" id="clinic-attendance-section-timeoff">
-                    <div class="card-header"><h4 class="card-title"><i class="fas fa-paper-plane ml-2"></i>طلب جديد</h4></div>
-                    <div class="card-body">
-                        <form id="timeoff-request-form" class="space-y-3">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-sm font-semibold mb-1">نوع الطلب *</label>
-                                    <select id="timeoff-request-type" class="form-input" required>
-                                        <option value="">اختر النوع</option>
-                                        <option value="leave">إجازة</option>
-                                        <option value="permission">إذن</option>
-                                        <option value="overtime">إضافي</option>
-                                    </select>
-                                </div>
-                                <div id="timeoff-leave-dates" class="hidden md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <div><label class="block text-sm font-semibold mb-1">من تاريخ *</label><input type="date" id="timeoff-date-from" class="form-input"></div>
-                                    <div><label class="block text-sm font-semibold mb-1">إلى تاريخ *</label><input type="date" id="timeoff-date-to" class="form-input"></div>
-                                </div>
-                                <div id="timeoff-permission-fields" class="hidden md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <div><label class="block text-sm font-semibold mb-1">التاريخ *</label><input type="date" id="timeoff-perm-date" class="form-input"></div>
-                                    <div><label class="block text-sm font-semibold mb-1">من وقت *</label><input type="time" id="timeoff-time-from" class="form-input"></div>
-                                    <div><label class="block text-sm font-semibold mb-1">إلى وقت *</label><input type="time" id="timeoff-time-to" class="form-input"></div>
-                                </div>
-                                <div id="timeoff-overtime-fields" class="hidden md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <div><label class="block text-sm font-semibold mb-1">التاريخ *</label><input type="date" id="timeoff-ot-date" class="form-input"></div>
-                                    <div><label class="block text-sm font-semibold mb-1">عدد الساعات</label><input type="number" id="timeoff-duration-hours" class="form-input" min="0.5" step="0.5" placeholder="مثال: 2"></div>
-                                    <div class="text-sm text-gray-500 self-end pb-2">أو حدد من/إلى وقت أدناه</div>
-                                </div>
-                            </div>
-                            <div><label class="block text-sm font-semibold mb-1">السبب *</label><textarea id="timeoff-reason" class="form-textarea" rows="2" required placeholder="اذكر سبب الطلب..."></textarea></div>
-                            <button type="submit" class="btn-primary"><i class="fas fa-paper-plane ml-2"></i>إرسال الطلب</button>
-                        </form>
+                <div id="clinic-attendance-section-timeoff" style="position:relative;overflow:hidden;padding:20px;background:linear-gradient(135deg,#0f2f46 0%,#0f766e 100%);border:1px solid rgba(20,184,166,.3);border-radius:16px;color:#fff;margin-bottom:16px;box-shadow:0 12px 30px rgba(15,47,70,.14);">
+                    <div style="position:absolute;inset-inline-end:-36px;top:-48px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.08);"></div>
+                    <div style="position:relative;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;">
+                        <div style="display:flex;align-items:center;gap:13px;min-width:240px;">
+                            <span style="width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);font-size:1.25rem;"><i class="fas fa-user-clock"></i></span>
+                            <div><h4 style="margin:0;font-size:1.02rem;font-weight:800;">طلب حضور جديد</h4><p style="margin:5px 0 0;font-size:.75rem;color:#ccfbf1;">إجازة، إذن أو عمل إضافي عبر مسار اعتماد واضح</p></div>
+                        </div>
+                        <button type="button" id="clinic-open-timeoff-request" style="display:inline-flex;align-items:center;gap:8px;padding:11px 16px;border:0;border-radius:11px;background:#fff;color:#0f766e;font-size:.82rem;font-weight:800;cursor:pointer;box-shadow:0 7px 18px rgba(0,0,0,.16);"><i class="fas fa-plus"></i>إرسال طلب</button>
                     </div>
                 </div>
 
@@ -17606,8 +18191,10 @@ const Clinic = {
         panel.querySelectorAll('.clinic-attendance-period-btn').forEach(btn => {
             btn.addEventListener('click', () => applyPeriodPreset(btn.dataset.period || 'all'));
         });
+        panel.querySelector('#clinic-attendance-shift-rules-btn')?.addEventListener('click', () => this.showClinicShiftSettingsModal());
         panel.querySelector('#clinic-attendance-export-btn')?.addEventListener('click', () => this.exportAttendanceToExcel());
         panel.querySelector('#clinic-attendance-pdf-btn')?.addEventListener('click', () => this.exportAttendanceToPDF());
+        panel.querySelector('#clinic-open-timeoff-request')?.addEventListener('click', () => this.showTimeOffRequestForm());
         panel.querySelector('#clinic-attendance-refresh-btn')?.addEventListener('click', async () => {
             Notification?.info?.('جاري التحديث...');
             this._attendanceDataFetchedInSession = false;
@@ -17621,8 +18208,6 @@ const Clinic = {
         this.bindClinicStaffLeaveBalanceEvents(panel);
         this.bindAttendanceQuickNav(panel);
         this.initAttendanceTableScroll(panel);
-        this._applyTimeOffFormDraftToPanel(panel);
-        this._bindTimeOffFormPanelEvents(panel);
     },
 
     renderAttendanceTab(options) {
@@ -17784,6 +18369,7 @@ const Clinic = {
                         <button type="button" id="clinic-attendance-report-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;" title="تصدير تقرير"><i class="fas fa-file-export"></i><span>تقرير</span></button>
                         <button type="button" id="clinic-attendance-pdf-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;" title="PDF للفلتر الحالي"><i class="fas fa-file-pdf"></i><span>PDF</span></button>
                         <button type="button" id="clinic-attendance-export-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;" title="Excel للفلتر الحالي"><i class="fas fa-file-excel"></i><span>Excel</span></button>
+                        ${isAdmin ? `<button type="button" id="clinic-attendance-shift-rules-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;" title="مواعيد الورديات والقواعد"><i class="fas fa-clock"></i><span>مواعيد الورديات</span></button>` : ''}
                         ${isAdmin ? `<button type="button" id="clinic-attendance-add-punch-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;" title="إضافة سجل حضور أو بصمة مفقودة"><i class="fas fa-fingerprint"></i><span>بصمة مفقودة</span></button>` : ''}
                         ${isAdmin ? `<button type="button" id="clinic-attendance-add-staff-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:#fff;color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;"><i class="fas fa-user-plus"></i><span>إضافة مسئول</span></button>` : ''}
                     </div>
@@ -18233,7 +18819,7 @@ const Clinic = {
                 <div class="clinic-tab-panel ${this.state.activeTab === 'visits' ? 'active' : ''}" data-tab-panel="visits"></div>
                 <div class="clinic-tab-panel ${this.state.activeTab === 'medications' ? 'active' : ''}" data-tab-panel="medications"></div>
                 <div class="clinic-tab-panel ${this.state.activeTab === 'sickLeave' ? 'active' : ''}" data-tab-panel="sickLeave"></div>
-                ${isAdmin ? `
+                ${this.hasTabAccess('dispensed-medications') ? `
                 <div class="clinic-tab-panel ${this.state.activeTab === 'dispensed-medications' ? 'active' : ''}" data-tab-panel="dispensed-medications"></div>
                 ` : ''}
                 <div class="clinic-tab-panel ${this.state.activeTab === 'injuries' ? 'active' : ''}" data-tab-panel="injuries"></div>
@@ -19369,6 +19955,7 @@ const Clinic = {
 
                 // إرسال إشعار للمدير
                 this.notifyAdminAboutSupplyRequest(request);
+                if (typeof UI !== 'undefined' && typeof UI.updateNotificationsBadge === 'function') UI.updateNotificationsBadge();
 
                 // إعادة تحميل التبويب
                 this.renderSupplyRequestTab();
@@ -19434,6 +20021,18 @@ const Clinic = {
                             <label class="text-sm font-semibold text-gray-600">اسم العنصر</label>
                             <p class="text-gray-800">${Utils.escapeHTML(request.itemName || '')}</p>
                         </div>
+                        ${request.type === 'medication' && request.currentBalanceAtRequest !== null && request.currentBalanceAtRequest !== undefined ? `
+                        <div style="padding:9px 11px;border:1px solid #b8ded9;border-radius:9px;background:#f0fdfa;">
+                            <label class="text-sm font-semibold" style="color:#0f766e;">الرصيد عند إرسال الطلب</label>
+                            <p style="margin:3px 0 0;color:#134e4a;font-weight:800;">${request.currentBalanceAtRequest} ${Utils.escapeHTML(request.unit || 'وحدة')}</p>
+                        </div>
+                        ` : ''}
+                        ${request.type === 'medication' && request.medicationExpiryDate ? `
+                        <div>
+                            <label class="text-sm font-semibold text-gray-600">صلاحية الدواء</label>
+                            <p class="text-gray-800">${this.formatDate(request.medicationExpiryDate)}</p>
+                        </div>
+                        ` : ''}
                         <div>
                             <span class="text-sm font-semibold text-gray-600">الكمية</span>
                             <p class="text-gray-800">${request.quantity || ''} ${Utils.escapeHTML(request.unit || '')}</p>
@@ -19806,18 +20405,6 @@ const Clinic = {
                                         <i class="fas fa-user-check ml-2"></i>
                                         <strong>للموظفين:</strong> أدخل الكود الوظيفي فقط
                                     </div>
-                        ${request.type === 'medication' && request.currentBalanceAtRequest !== null && request.currentBalanceAtRequest !== undefined ? `
-                        <div style="padding:9px 11px;border:1px solid #b8ded9;border-radius:9px;background:#f0fdfa;">
-                            <label class="text-sm font-semibold" style="color:#0f766e;">الرصيد عند إرسال الطلب</label>
-                            <p style="margin:3px 0 0;color:#134e4a;font-weight:800;">${request.currentBalanceAtRequest} ${Utils.escapeHTML(request.unit || 'وحدة')}</p>
-                        </div>
-                        ` : ''}
-                        ${request.type === 'medication' && request.medicationExpiryDate ? `
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">صلاحية الدواء</label>
-                            <p class="text-gray-800">${this.formatDate(request.medicationExpiryDate)}</p>
-                        </div>
-                        ` : ''}
                                     <div>
                                         <i class="fas fa-save ml-2"></i>
                                         <strong>الحفظ:</strong> سيتم حفظ البيانات تلقائياً

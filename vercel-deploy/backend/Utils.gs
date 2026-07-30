@@ -3326,6 +3326,66 @@ function updateSingleRowInSheet(sheetName, recordId, updateData, spreadsheetId =
 }
 
 /**
+ * الحصول على قيمة الكاش المقسمة إلى أجزاء
+ */
+function getChunkedCache_(cache, cacheKey) {
+    try {
+        const chunksInfoStr = cache.get(cacheKey + '_chunks');
+        if (chunksInfoStr) {
+            const chunksInfo = JSON.parse(chunksInfoStr);
+            let jsonStr = '';
+            for (let i = 0; i < chunksInfo.numChunks; i++) {
+                const chunk = cache.get(cacheKey + '_chunk_' + i);
+                if (chunk === null) {
+                    return null; // جزء مفقود، الكاش غير صالح
+                }
+                jsonStr += chunk;
+            }
+            return jsonStr;
+        }
+        return cache.get(cacheKey);
+    } catch (e) {
+        Logger.log('Error in getChunkedCache_: ' + e.toString());
+        return null;
+    }
+}
+
+/**
+ * حفظ قيمة الكاش مع تقسيمها تلقائياً إذا كانت كبيرة
+ */
+function putChunkedCache_(cache, cacheKey, valueString, ttlSec) {
+    try {
+        const size = valueString.length;
+        // إذا كان الحجم أقل من 95 كيلوبايت، حفظ طبيعي
+        if (size < 95000) {
+            cache.put(cacheKey, valueString, ttlSec);
+            cache.remove(cacheKey + '_chunks'); // تنظيف الفضلات المحتملة
+            return true;
+        }
+
+        // حد أقصى للحجم لمنع الضغط الزائد
+        if (size > 900000) {
+            Logger.log('Data too large even for chunked caching: ' + size + ' bytes');
+            return false;
+        }
+
+        const chunkSize = 90000;
+        const numChunks = Math.ceil(size / chunkSize);
+        
+        cache.put(cacheKey + '_chunks', JSON.stringify({ numChunks: numChunks }), ttlSec);
+        
+        for (let i = 0; i < numChunks; i++) {
+            const chunk = valueString.substring(i * chunkSize, (i + 1) * chunkSize);
+            cache.put(cacheKey + '_chunk_' + i, chunk, ttlSec);
+        }
+        return true;
+    } catch (e) {
+        Logger.log('Error in putChunkedCache_: ' + e.toString());
+        return false;
+    }
+}
+
+/**
  * إبطال كاش قراءة الورقة ونسخة batchReadSheets لنفس الاسم (توحيد الإبطال بعد الكتابة).
  */
 function invalidateHseSheetCaches(sheetName) {
@@ -3333,9 +3393,27 @@ function invalidateHseSheetCaches(sheetName) {
         const sn = String(sheetName || '').trim();
         if (!sn) return;
         const cache = CacheService.getScriptCache();
+        
+        // مسح المفاتيح العادية
         cache.remove('hse_read_' + sn + '_v2');
         cache.remove('hse_read_' + sn + '_raw');
         cache.remove('batch_' + sn + '_v2');
+
+        // مسح المفاتيح المجزأة
+        const cleanSuffixes = ['_v2', '_raw'];
+        cleanSuffixes.forEach(function(suffix) {
+            const key = 'hse_read_' + sn + suffix;
+            const chunksInfoStr = cache.get(key + '_chunks');
+            if (chunksInfoStr) {
+                try {
+                    const chunksInfo = JSON.parse(chunksInfoStr);
+                    for (let i = 0; i < chunksInfo.numChunks; i++) {
+                        cache.remove(key + '_chunk_' + i);
+                    }
+                } catch(e) {}
+                cache.remove(key + '_chunks');
+            }
+        });
     } catch (e) {
         Logger.log('invalidateHseSheetCaches: ' + e.toString());
     }
@@ -3349,7 +3427,7 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
         // ✅ CacheService: Check cache first for frequently-read sheets
         const cache = CacheService.getScriptCache();
         const cacheKey = 'hse_read_' + sheetName + (skipSecurityFilter ? '_raw' : '_v2');
-        const cached = cache.get(cacheKey);
+        const cached = skipSecurityFilter ? null : getChunkedCache_(cache, cacheKey);
         
         if (cached) {
             try {
@@ -3660,15 +3738,14 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
             });
         }
 
-        // ✅ CacheService: Save to cache before returning (2 minutes TTL)
-        // Only cache sheets with reasonable size (< 500KB)
+        // ✅ CacheService: Save to cache before returning (2 minutes TTL) using chunked cache
         try {
-            const dataSize = JSON.stringify(uniqueObjects).length;
-            if (dataSize < 500000) { // 500KB limit for individual sheet cache
-                cache.put(cacheKey, JSON.stringify(uniqueObjects), 120); // 2 minutes
-                Logger.log('Cached readFromSheet: ' + sheetName + ' (' + dataSize + ' bytes, ' + uniqueObjects.length + ' records)');
-            } else {
-                Logger.log('Sheet ' + sheetName + ' too large for caching (' + dataSize + ' bytes)');
+            if (!skipSecurityFilter) {
+                const serialized = JSON.stringify(uniqueObjects);
+                const cachedOk = putChunkedCache_(cache, cacheKey, serialized, 120); // 2 minutes TTL
+                if (cachedOk) {
+                    Logger.log('Cached readFromSheet (chunked/normal): ' + sheetName + ' (' + serialized.length + ' bytes, ' + uniqueObjects.length + ' records)');
+                }
             }
         } catch (cacheError) {
             Logger.log('Cache write failed for ' + sheetName + ': ' + cacheError.toString());
@@ -4375,27 +4452,55 @@ function resolveHybridId_(rawValue, prefix, sheetName, idField, spreadsheetId, m
         return normalizeSequentialId_(value, normalizedPrefix);
     }
 
-    if (value && isLegacyTimestampIdForPrefix_(value, normalizedPrefix)) {
-        var mappedId = findMappedId_(sheetName, idField, normalizedPrefix, value, spreadsheetId);
-        if (mappedId) return mappedId;
-        var generatedFromLegacy = generateSequentialId(normalizedPrefix, sheetName, spreadsheetId, idField);
-        upsertIdMapping_(sheetName, idField, normalizedPrefix, value, generatedFromLegacy, spreadsheetId);
-        return generatedFromLegacy;
+    // ✅ حماية: رفض المعرفات المؤقتة (TMP) — لا تُسجّل في PTWIdMapping
+    // المعرفات المؤقتة تُولّد عند كل تحميل للصفحة وتتغير في كل مرة
+    // تسجيلها يسبب نمو لا نهائي في جدول PTWIdMapping
+    if (value && value.indexOf('_TMP_') >= 0) {
+        Logger.log('⚠️ resolveHybridId_: رفض معرف مؤقت (TMP) — سيتم توليد معرف تسلسلي جديد بدلاً منه: ' + value);
+        return generateSequentialId(normalizedPrefix, sheetName, spreadsheetId, idField);
     }
 
-    if (value && !isSequentialIdForPrefix_(value, normalizedPrefix)) {
-        if (mapUnknownFormats !== true) {
-            return value;
+    // ✅ استخدام Script Lock لمنع التوليد المتزامن المكرر
+    var lock = LockService.getScriptLock();
+    var hasLock = false;
+    try {
+        lock.waitLock(30000); // الانتظار حتى 30 ثانية
+        hasLock = true;
+    } catch (e) {
+        Logger.log('Lock timeout in resolveHybridId_ for value: ' + value);
+    }
+
+    try {
+        if (value && isLegacyTimestampIdForPrefix_(value, normalizedPrefix)) {
+            var mappedId = findMappedId_(sheetName, idField, normalizedPrefix, value, spreadsheetId);
+            if (mappedId) return mappedId;
+            var generatedFromLegacy = generateSequentialId(normalizedPrefix, sheetName, spreadsheetId, idField);
+            upsertIdMapping_(sheetName, idField, normalizedPrefix, value, generatedFromLegacy, spreadsheetId);
+            return generatedFromLegacy;
         }
-        // Unknown format: preserve compatibility by mapping it once.
-        var mappedUnknown = findMappedId_(sheetName, idField, normalizedPrefix, value, spreadsheetId);
-        if (mappedUnknown) return mappedUnknown;
-        var generatedFromUnknown = generateSequentialId(normalizedPrefix, sheetName, spreadsheetId, idField);
-        upsertIdMapping_(sheetName, idField, normalizedPrefix, value, generatedFromUnknown, spreadsheetId);
-        return generatedFromUnknown;
-    }
 
-    return generateSequentialId(normalizedPrefix, sheetName, spreadsheetId, idField);
+        if (value && !isSequentialIdForPrefix_(value, normalizedPrefix)) {
+            if (mapUnknownFormats !== true) {
+                return value;
+            }
+            // Unknown format: preserve compatibility by mapping it once.
+            var mappedUnknown = findMappedId_(sheetName, idField, normalizedPrefix, value, spreadsheetId);
+            if (mappedUnknown) return mappedUnknown;
+            var generatedFromUnknown = generateSequentialId(normalizedPrefix, sheetName, spreadsheetId, idField);
+            upsertIdMapping_(sheetName, idField, normalizedPrefix, value, generatedFromUnknown, spreadsheetId);
+            return generatedFromUnknown;
+        }
+
+        return generateSequentialId(normalizedPrefix, sheetName, spreadsheetId, idField);
+    } finally {
+        if (hasLock) {
+            try {
+                lock.releaseLock();
+            } catch (lockError) {
+                Logger.log('Error releasing lock in resolveHybridId_: ' + lockError.toString());
+            }
+        }
+    }
 }
 
 function isSequentialIdForPrefix_(value, prefix) {
@@ -4432,6 +4537,17 @@ function findMappedId_(sheetName, idField, prefix, oldId, spreadsheetId) {
 
         var expectedEntity = getIdMappingEntityType_(sheetName, idField, prefix);
         var oldValue = String(oldId || '').trim();
+        
+        try {
+            var cache = CacheService.getScriptCache();
+            var cacheKey = 'idmap_' + expectedEntity + '_' + oldValue;
+            var cachedNewId = cache.get(cacheKey);
+            if (cachedNewId) {
+                return cachedNewId;
+            }
+        } catch (e) {
+            // Ignore cache errors
+        }
 
         for (var i = 0; i < mapData.length; i++) {
             var row = mapData[i];
@@ -4484,6 +4600,15 @@ function upsertIdMapping_(sheetName, idField, prefix, oldId, newId, spreadsheetI
             updatedAt: nowIso
         };
         saveToSheet('PTWIdMapping', payload, targetSpreadsheetId);
+        SpreadsheetApp.flush(); // ✅ كتابة البيانات فوراً لمنع تعارض القراءات المتتالية
+        
+        try {
+            var cache = CacheService.getScriptCache();
+            var cacheKey = 'idmap_' + entityType + '_' + oldValue;
+            cache.put(cacheKey, newValue, 21600); // 6 hours
+        } catch (e) {
+            // Ignore cache errors
+        }
     } catch (e) {
         Logger.log('Failed to upsert PTW ID mapping: ' + e.toString());
     }

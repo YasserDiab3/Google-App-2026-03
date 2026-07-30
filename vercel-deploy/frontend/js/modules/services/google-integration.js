@@ -695,7 +695,12 @@ const GoogleIntegration = {
                     errorMsg.includes('aborted') ||
                     errorMsg.includes('فشل الاتصال مع google apps script بسبب cors') ||
                     errorMsg.includes('cors') ||
-                    errorMsg.includes('ازدحام');
+                    errorMsg.includes('ازدحام') ||
+                    errorMsg.includes('too many concurrent') ||
+                    errorMsg.includes('service invoked too many times') ||
+                    errorMsg.includes('server error') ||
+                    errorMsg.includes('limit exceeded') ||
+                    errorMsg.includes('rate limit');
                 const isAuthOrPermissionError =
                     errorMsg.includes('csrf') ||
                     errorMsg.includes('actor_identity') ||
@@ -708,17 +713,16 @@ const GoogleIntegration = {
                     errorMsg.includes('غير مسجل') ||
                     errorMsg.includes('رفض قراءة');
 
-                if (!isCircuitBreakerError && !isConfigError && !isTransientNetworkError && !isAuthOrPermissionError) {
+                const isAppError = error && error.isAppError === true;
+                if (!isAppError && !isCircuitBreakerError && !isConfigError && !isTransientNetworkError && !isAuthOrPermissionError) {
                     Utils.safeError('❌ خطأ غير معالج في مزامنة Google - هذا السبب الحقيقي لفتح Circuit Breaker:', error);
                     this._recordFailure();
                 }
 
-                // التحقق من هل هو pendingPromises
                 if (request.pendingPromises) {
                     request.pendingPromises.forEach(({ reject }) => reject(error));
                 }
             } finally {
-                // التحقق من هل هو activeRequests
                 this._activeRequests.delete(requestKey);
             }
             }
@@ -734,9 +738,6 @@ const GoogleIntegration = {
         }
     },
 
-    /**
-     * التحقق من هل هو addToQueue
-     */
     async _addToQueue(action, data, retryCount = 0) {
         return new Promise((resolve, reject) => {
             const requestKey = this._getRequestKey(action, data);
@@ -768,8 +769,13 @@ const GoogleIntegration = {
                 timestamp: Date.now()
             };
 
-            // التحقق من هل هو requestQueue
-            this._requestQueue.push(request);
+            // High priority for Auth RPCs (login, verifyMfaLogin) to jump to front of queue
+            const isHighPriority = !!(data && typeof data === 'object' && (data.__highPriority === true || action === 'login' || action === 'verifyMfaLogin' || action === 'confirmMfaEnrollment'));
+            if (isHighPriority) {
+                this._requestQueue.unshift(request);
+            } else {
+                this._requestQueue.push(request);
+            }
             this._activeRequests.set(requestKey, request);
 
             // التحقق من هل هو processRequestQueue
@@ -789,7 +795,7 @@ const GoogleIntegration = {
      */
     async _executeRequest(action, data, retryCount = 0) {
         if (!this._isBackendRpcConfigured()) {
-            return Promise.reject(new Error('الخادم الخلفي غير مُهيأ أو غير مفعّل'));
+            return Promise.reject(new Error('الخادم الخلفي غير مُتهيأ أو غير مفعّل'));
         }
 
         const scriptUrl = this._resolveScriptUrl();
@@ -814,6 +820,9 @@ const GoogleIntegration = {
             const allowStructuredFailure = !!(cleanData && typeof cleanData === 'object' && cleanData.__allowStructuredFailure === true);
             if (cleanData && typeof cleanData === 'object' && '__timeoutMs' in cleanData) {
                 delete cleanData.__timeoutMs;
+            }
+            if (cleanData && typeof cleanData === 'object' && '__highPriority' in cleanData) {
+                delete cleanData.__highPriority;
             }
             if (cleanData && typeof cleanData === 'object' && '__allowStructuredFailure' in cleanData) {
                 delete cleanData.__allowStructuredFailure;
@@ -889,29 +898,27 @@ const GoogleIntegration = {
 
             // التحقق من هل هو timeout
             // تحديد timeout ديناميكي حسب نوع العملية
-            // العمليات الثقيلة (قراءة/كتابة البيانات): 300 ثانية (5 دقائق)
-            // العمليات المتوسطة: 180 ثانية (3 دقائق)
-            // العمليات العادية: 120 ثانية (2 دقيقة)
+            // العمليات الثقيلة (قراءة/كتابة البيانات): 90 ثانية
+            // عمليات المصادقة والـ MFA: 25 ثانية لضمان إكمال cold-start بدون إجهاض مبكر
             const heavyOperations = [
                 'readFromSheet', 'saveToSheet', 'appendToSheet',
                 'getAllData', 'syncData', 'initializeSheets',
                 'getClinicData', 'getFireEquipmentData', 'getPPEData',
                 'getPeriodicInspectionsData', 'getViolationsData',
                 'getActionTrackingData', 'getBehaviorMonitoringData',
-                'saveOrUpdate', 'getAll', 'import', // إضافة عمليات جديدة
-                'getAllClinicVisits', // سجل التردد كامل (موظفين + مقاولين) — يُفضّل تمرير __timeoutMs من الواجهة
-                // قراءة كاملة لورقة الموظفين (شيت كبير + إقلاع بارد لـ GAS) — لا يُطابق شرط getAll المخصص أعلاه
+                'saveOrUpdate', 'getAll', 'import',
+                'getAllClinicVisits',
                 'getAllEmployees',
-                // لوحة إصدارات المستخدمين — قراءة Users + UserVersions
                 'getUserVersionsDashboard', 'getAllUserVersions', 'getUserVersionStats',
-                // إعدادات النماذج — استبدال كامل لجداول كبيرة
                 'saveFormSettings', 'getFormSettings', 'deleteSite', 'deletePlace', 'initFormSettingsTables'
             ];
             const mediumOperations = [
                 'getData', 'readData', 'loadData', 'fetchData', 'add', 'update'
             ];
+            const authActions = ['login', 'verifyMfaLogin', 'confirmMfaEnrollment', 'startMfaEnrollment', 'disableMfa', 'changePassword'];
+            const isAuthAction = typeof action === 'string' && authActions.includes(action);
             const isDeleteOperation = typeof action === 'string' && action.indexOf('delete') === 0;
-            // تجنب مطابقة السلسلة الفرعية «getAll» لأي إجراء يحتويها (مثل getAllTrainings → كان يُصنَّف ثقيلاً بمهلة 40s + إعادة محاولة)
+
             const isHeavyOperation = heavyOperations.some((op) => {
                 if (action === op) return true;
                 if (op === 'getAll') {
@@ -922,10 +929,12 @@ const GoogleIntegration = {
             const isMediumOperation = mediumOperations.some(op => action.includes(op) || action === op) || isDeleteOperation;
 
             // تقليل المهلات لتفعيل fail-fast ومنع تكدس الطابور لعدة دقائق
+            // زيادة مهلة عمليات المصادقة إلى 25 ثانية لضمان إكمال cold-start في Apps Script بدون إجهاض مبكر
             const timeoutDuration = Number(data?.__timeoutMs) > 0
                 ? Number(data.__timeoutMs)
                 : (action === 'saveFormSettings' ? 120000
-                    : (isHeavyOperation ? 90000 : (isMediumOperation ? 45000 : 12000)));
+                    : (isAuthAction ? 25000
+                        : (isHeavyOperation ? 90000 : (isMediumOperation ? 45000 : 15000))));
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => {
@@ -1265,9 +1274,13 @@ const GoogleIntegration = {
                     // التحقق من هل هو fallback
                     Utils.safeWarn('فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو spreadsheetId');
                     // التحقق من هل هو console
-                    throw new Error(errorMessage);
+                    const err = new Error(errorMessage);
+                    err.isAppError = true;
+                    throw err;
                 }
-                throw new Error(errorMessage);
+                const err = new Error(errorMessage);
+                err.isAppError = true;
+                throw err;
             }
 
             return result;
@@ -4093,7 +4106,7 @@ const GoogleIntegration = {
                             Utils.safeLog(`✅ تم حفظ ${sheetName} في Google Sheets بنجاح`);
                         }
 
-                        return { success: true, message: 'تم الحفظ بنجاح' };
+                        return Object.assign({ message: 'تم الحفظ بنجاح' }, result);
                     } else {
                         lastError = result?.message || 'خطأ غير معروف';
 
