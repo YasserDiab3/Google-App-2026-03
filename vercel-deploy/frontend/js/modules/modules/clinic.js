@@ -18598,6 +18598,7 @@ const Clinic = {
         panel.querySelector('#clinic-attendance-export-btn')?.addEventListener('click', () => this.exportAttendanceToExcel());
         panel.querySelector('#clinic-attendance-pdf-btn')?.addEventListener('click', () => this.exportAttendanceToPDF());
         panel.querySelector('#clinic-attendance-report-btn')?.addEventListener('click', () => this.showAttendanceReportModal());
+        panel.querySelector('#clinic-attendance-shift-rules-btn')?.addEventListener('click', () => this.showClinicShiftSettingsModal());
         panel.querySelector('#clinic-attendance-add-staff-btn')?.addEventListener('click', () => this.showAddClinicStaffModal());
         panel.querySelector('#clinic-attendance-add-punch-btn')?.addEventListener('click', () => this.showAddMissingAttendanceModal());
         panel.querySelector('#clinic-attendance-refresh-btn')?.addEventListener('click', async () => {
