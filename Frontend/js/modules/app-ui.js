@@ -2677,7 +2677,7 @@ window.UI = {
      * عرض نافذة "هناك تحديث جديد" بإصدار معيّن مع نبذة التحديث والدعم الكامل للغتين
      * @param {string} newVersion - الإصدار الجديد المعروض للمستخدم
      */
-    _showUpdateModal(newVersion) {
+    _showUpdateModal(newVersion, customHighlights = null) {
         const v = (newVersion && String(newVersion).trim()) || '';
         if (!v) return;
         const storageKey = 'hse_last_seen_version';
@@ -2698,17 +2698,32 @@ window.UI = {
             ? 'A new system update is available — please refresh the page to apply changes.'
             : 'هناك تحديث جديد متاح للتطبيق — يرجى تحديث الصفحة للحصول على أحدث نسخة.';
 
-        const notesListHtml = isEn ? `
-            <ul style="margin: 0.5rem 0 0; padding-left: 1.2rem; font-size: 0.85rem; color: var(--gray-600, #4b5563); line-height: 1.6; list-style-type: disc;">
-                <li>Enforced Read-Only role security guards across all modules and popups.</li>
-                <li>Full bilingual support for language switching and instant AR/EN keys.</li>
-                <li>Optimized search performance, system responsiveness, and session safety.</li>
-            </ul>
-        ` : `
-            <ul style="margin: 0.5rem 0 0; padding-right: 1.2rem; font-size: 0.85rem; color: var(--gray-600, #4b5563); line-height: 1.6; list-style-type: disc;">
-                <li>تطبيق قيود وتأمين دور "قراءة فقط" عبر كافة المديولات والنوافذ المنبثقة.</li>
-                <li>دعم كامل لتبديل لغة الواجهة ومفاتيح الترجمة الفورية باللغتين العربية والإنجليزية.</li>
-                <li>تحسين استجابة البحث والأداء العام وإدارة الجلسات في الواجهة.</li>
+        const activeHighlights = customHighlights || AppState?._serverReleaseHighlights || null;
+        let notesItems = [];
+
+        if (activeHighlights) {
+            if (isEn && Array.isArray(activeHighlights.en) && activeHighlights.en.length) {
+                notesItems = activeHighlights.en;
+            } else if (!isEn && Array.isArray(activeHighlights.ar) && activeHighlights.ar.length) {
+                notesItems = activeHighlights.ar;
+            }
+        }
+
+        if (!notesItems.length) {
+            notesItems = isEn ? [
+                'Restricted employee violations access by user department & enabled detailed permissions.',
+                'Linked user creation/editing with employee database via Employee Code with auto-fill.',
+                'Added legacy account linker tool & unified profile binding with employee records.'
+            ] : [
+                'تقييد عرض مخالفات الموظفين بحسب إدارة المستخدم وتفعيل الصلاحيات التفصيلية بالمديول.',
+                'ربط إضافة وتعديل المستخدمين بقاعدة بيانات الموظفين بواسطة الكود الوظيفي وتعبئة البيانات تلقائياً.',
+                'إضافة أداة ربط الحسابات القديمة بملفات الموظفين وتوحيد الربط في شاشة الملف الشخصي.'
+            ];
+        }
+
+        const notesListHtml = `
+            <ul style="margin: 0.5rem 0 0; padding-${isEn ? 'left' : 'right'}: 1.2rem; font-size: 0.85rem; color: var(--gray-600, #4b5563); line-height: 1.6; list-style-type: disc;">
+                ${notesItems.map(item => `<li>${(typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(item) : item}</li>`).join('')}
             </ul>
         `;
 
@@ -2792,6 +2807,10 @@ window.UI = {
             const serverVersion = (data && data.version) ? String(data.version).trim() : '';
             if (!serverVersion) return;
 
+            if (data.highlights) {
+                AppState._serverReleaseHighlights = data.highlights;
+            }
+
             const storageKey = 'hse_last_seen_version';
             const lastSeen = (typeof localStorage !== 'undefined' && localStorage.getItem(storageKey))
                 ? String(localStorage.getItem(storageKey)).trim()
@@ -2816,7 +2835,7 @@ window.UI = {
             if (AppState && AppState.debugMode) {
                 console.log('🌐 [UpdateNotif] خادم=' + serverVersion + ' أحدث من lastSeen=' + lastSeen + ' — عرض المودال');
             }
-            this._showUpdateModal(serverVersion);
+            this._showUpdateModal(serverVersion, data.highlights || null);
         } catch (e) {
             if (AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ التحقق من إصدار الخادم:', e);
         }

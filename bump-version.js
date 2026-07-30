@@ -83,7 +83,15 @@ function bumpRoot(root, newVersion, cacheVersion) {
     // 1) version.json
     replaceInFile(
         path.join(root, 'version.json'),
-        () => JSON.stringify({ version: newVersion }, null, 2) + '\n',
+        (content) => {
+            try {
+                const parsed = JSON.parse(content);
+                parsed.version = newVersion;
+                return JSON.stringify(parsed, null, 2) + '\n';
+            } catch (e) {
+                return JSON.stringify({ version: newVersion }, null, 2) + '\n';
+            }
+        },
         `version.json → ${newVersion}`
     );
 

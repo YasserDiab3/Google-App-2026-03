@@ -1,3 +1,15 @@
 {
-  "version": "1.0.636"
+  "version": "1.0.638",
+  "highlights": {
+    "ar": [
+      "تقييد عرض مخالفات الموظفين بحسب إدارة المستخدم وتفعيل الصلاحيات التفصيلية بالمديول.",
+      "ربط إضافة وتعديل المستخدمين بقاعدة بيانات الموظفين بواسطة الكود الوظيفي وتعبئة البيانات تلقائياً.",
+      "إضافة أداة ربط الحسابات القديمة بملفات الموظفين وتوحيد الربط في شاشة الملف الشخصي."
+    ],
+    "en": [
+      "Restricted employee violations access by user department & enabled detailed permissions.",
+      "Linked user creation/editing with employee database via Employee Code with auto-fill.",
+      "Added legacy account linker tool & unified profile binding with employee records."
+    ]
+  }
 }
