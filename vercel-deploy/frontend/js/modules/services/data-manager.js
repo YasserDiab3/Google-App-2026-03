@@ -24,11 +24,12 @@ const DataManager = {
             localStorage.removeItem('hse_sync_meta');
             localStorage.removeItem('hse_cache_timestamps');
             localStorage.removeItem('hse_cached_users');
+            localStorage.removeItem('hse_last_user_email');
             // مسح كل مفاتيح cache القراءة (قديمة ولكل ورقة)
             const keysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const k = localStorage.key(i);
-                if (k && (k.startsWith('hse_local_readFromSheet') || k.startsWith('hse_local_batchReadSheets'))) {
+                if (k && (k.startsWith('hse_local_readFromSheet') || k.startsWith('hse_local_batchReadSheets') || k.startsWith('hse_cache_') || k.startsWith('hse_user_'))) {
                     keysToRemove.push(k);
                 }
             }
@@ -55,7 +56,17 @@ const DataManager = {
             AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
             AppState._localDataIsTruncated = false;
             AppState._truncatedFields = {};
+            AppState._serverReleaseHighlights = null;
         }
+
+        // إرجاع كافة مؤشرات ذاكرة المديولات المؤقتة إلى الحساب الجديد
+        if (typeof window !== 'undefined') {
+            try { if (window.Clinic) { window.Clinic._visitsBackendFetchOk = false; window.Clinic._approvalsBackendFetchOk = false; } } catch (e) {}
+            try { if (window.Training) { window.Training._trainingBackendFetchOk = false; window.Training._trainingDataLoadPromise = null; } } catch (e) {}
+            try { if (window.ChemicalSafety) { window.ChemicalSafety._chemicalBackendFetchOk = false; window.ChemicalSafety._chemicalDataLoadPromise = null; } } catch (e) {}
+            try { if (window.DailyObservations) { window.DailyObservations._dailyObsBackendFetchOk = false; window.DailyObservations._dailyObsLoadPromise = null; } } catch (e) {}
+        }
+
         if (AppState && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
             Utils.safeLog('🧹 تم مسح البيانات المحلية' + (reason ? ': ' + reason : ''));
         }
@@ -63,20 +74,78 @@ const DataManager = {
     },
 
     /**
-     * إذا تغيّر المستخدم — مسح cache الجلسة السابقة قبل التحميل
+     * إذا تغيّر المستخدم — مسح cache الجلسة السابقة فوراً قبل التحميل لمنع تسريب البيانات
      */
     purgeIfUserChanged(newUserEmail) {
         const next = newUserEmail ? String(newUserEmail).trim().toLowerCase() : '';
-        const prev = (AppState && AppState.syncMeta && AppState.syncMeta.userEmail)
-            ? String(AppState.syncMeta.userEmail).trim().toLowerCase()
-            : '';
-        if (prev && next && prev !== next) {
-            return this.purgeLocalAppData('user_changed');
+        if (!next) return false;
+
+        let prev = '';
+
+        // 1. فحص البريد الإلكتروني للمستخدم السابق من localStorage
+        try {
+            const lastEmail = localStorage.getItem('hse_last_user_email');
+            if (lastEmail) prev = String(lastEmail).trim().toLowerCase();
+        } catch (e) {}
+
+        // 2. فحص syncMeta
+        if (!prev && AppState && AppState.syncMeta && AppState.syncMeta.userEmail) {
+            prev = String(AppState.syncMeta.userEmail).trim().toLowerCase();
         }
-        if (next && AppState && AppState.syncMeta) {
+
+        // 3. فحص المستخدم الحالي في AppState
+        if (!prev && AppState && AppState.currentUser && AppState.currentUser.email) {
+            prev = String(AppState.currentUser.email).trim().toLowerCase();
+        }
+
+        // 4. فحص الجلسة المؤقتة في sessionStorage
+        if (!prev) {
+            try {
+                const sessionStr = sessionStorage.getItem('hse_current_session');
+                if (sessionStr) {
+                    const parsed = JSON.parse(sessionStr);
+                    if (parsed && parsed.email) prev = String(parsed.email).trim().toLowerCase();
+                }
+            } catch (e) {}
+        }
+
+        // 5. فحص الجلسة المحفوظة في localStorage
+        if (!prev) {
+            try {
+                const remStr = localStorage.getItem('hse_remember_user');
+                if (remStr) {
+                    const parsed = JSON.parse(remStr);
+                    if (parsed && parsed.email) prev = String(parsed.email).trim().toLowerCase();
+                }
+            } catch (e) {}
+        }
+
+        let purged = false;
+        if (prev && prev !== next) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn(`🔒 [SECURITY DATA PROTECTION] تم اكتشاف تغيير المستخدم من (${prev}) إلى (${next}) — مسح بيانات وكاش الجلسة السابقة.`);
+            }
+            this.purgeLocalAppData('user_changed');
+            purged = true;
+        } else if (!prev && typeof localStorage !== 'undefined' && localStorage.getItem('hse_app_data')) {
+            // كاش موجود دون تحديد صاحبه → مسحه فوراً حماية للأمان قبل بدء جلسة جديدة
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn(`🔒 [SECURITY DATA PROTECTION] تم مسح كاش غير معروف صاحبه قبل بدء جلسة (${next}).`);
+            }
+            this.purgeLocalAppData('unowned_cache');
+            purged = true;
+        }
+
+        // حفظ البريد الإلكتروني للمستخدم الجديد لمنع التسريب في الجلسات القادمة
+        try {
+            localStorage.setItem('hse_last_user_email', next);
+        } catch (e) {}
+        if (AppState) {
+            if (!AppState.syncMeta) AppState.syncMeta = { sheets: {}, lastSyncTime: 0 };
             AppState.syncMeta.userEmail = next;
         }
-        return false;
+
+        return purged;
     },
 
     _isEffectiveAdminForStorage() {
@@ -372,7 +441,7 @@ const DataManager = {
                     : item.data;
                 
                 // محاولة المزامنة
-                await GoogleIntegration.sendToAppsScript('saveToSheet', {
+                await GoogleIntegration.sendToAppsScript('appendToSheet', {
                     sheetName: item.sheetName,
                     data: preparedData,
                     spreadsheetId: spreadsheetId

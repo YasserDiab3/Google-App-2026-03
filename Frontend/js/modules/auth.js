@@ -574,6 +574,13 @@ window.Auth = {
     },
 
     async _finishLoginAfterAuth(user, email, remember, foundUser) {
+        email = String(email || '').trim().toLowerCase();
+
+        // 🔒 فحص ومسح بيانات المستخدم السابق فوراً قبل البدء بإنشاء الجلسة
+        if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.purgeIfUserChanged === 'function') {
+            window.DataManager.purgeIfUserChanged(email);
+        }
+
         await Utils.RateLimiter.clearAttempts(email);
         const loginTime = new Date().toISOString();
 
@@ -1119,6 +1126,7 @@ window.Auth = {
         // مسح جميع بيانات الجلسة والبيانات المحلية الحساسة
         try {
             localStorage.removeItem('hse_remember_user');
+            localStorage.removeItem('hse_last_user_email');
             sessionStorage.removeItem('hse_current_session');
             sessionStorage.removeItem('hse_current_section');
             sessionStorage.removeItem('hse_session_id'); // مسح معرف الجلسة
