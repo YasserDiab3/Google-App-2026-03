@@ -127,13 +127,6 @@ const DataManager = {
             }
             this.purgeLocalAppData('user_changed');
             purged = true;
-        } else if (!prev && typeof localStorage !== 'undefined' && localStorage.getItem('hse_app_data')) {
-            // كاش موجود دون تحديد صاحبه → مسحه فوراً حماية للأمان قبل بدء جلسة جديدة
-            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                Utils.safeWarn(`🔒 [SECURITY DATA PROTECTION] تم مسح كاش غير معروف صاحبه قبل بدء جلسة (${next}).`);
-            }
-            this.purgeLocalAppData('unowned_cache');
-            purged = true;
         }
 
         // حفظ البريد الإلكتروني للمستخدم الجديد لمنع التسريب في الجلسات القادمة
