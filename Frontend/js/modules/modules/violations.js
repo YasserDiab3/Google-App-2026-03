@@ -1685,6 +1685,82 @@ const Violations = {
         return !!(filters.search || filters.personType || filters.violationType || filters.severity || filters.status);
     },
 
+    getViolationsPermissions(user = AppState.currentUser) {
+        if (!user) return { viewDepartmentOnly: true, viewAll: false };
+        if (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function' && Permissions.isCurrentUserEffectiveAdmin(user)) {
+            return { viewDepartmentOnly: false, viewAll: true };
+        }
+        const userPerms = user.permissions || {};
+        const normalized = typeof Permissions !== 'undefined' && typeof Permissions.normalizePermissions === 'function'
+            ? Permissions.normalizePermissions(userPerms)
+            : userPerms;
+
+        const detailed = (normalized && normalized.violationsPermissions) || {};
+        const canViewAll = detailed['violations-view-all'] === true;
+
+        return {
+            viewDepartmentOnly: !canViewAll,
+            viewAll: canViewAll
+        };
+    },
+
+    isDepartmentMatch(dept1, dept2) {
+        if (!dept1 || !dept2) return false;
+        const clean = (d) => String(d).trim().toLowerCase()
+            .replace(/^(إدارة|قسم)\s+/, '')
+            .replace(/\s+/g, ' ');
+        const d1 = clean(dept1);
+        const d2 = clean(dept2);
+        return d1 === d2 || d1.includes(d2) || d2.includes(d1);
+    },
+
+    isViolationVisibleToCurrentUser(violation) {
+        if (!violation) return false;
+        const norm = this.normalizeViolationRecord(violation);
+        if (!norm) return false;
+
+        // 1. المدراء ينالون الوصول الكامل تلقائياً
+        if (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function' && Permissions.isCurrentUserEffectiveAdmin()) {
+            return true;
+        }
+
+        // 2. فحص ما إذا تم منح صلاحية رؤية جميع الإدارات صراحة
+        const permScope = this.getViolationsPermissions();
+        if (permScope.viewAll) {
+            return true;
+        }
+
+        // 3. تقييد مخالفات الموظفين بإدارة المستخدم الحالي فقط
+        const isEmployeeRecord = norm.personType === 'employee' || !!String(norm.employeeName || '').trim();
+        if (isEmployeeRecord) {
+            const currentUserDept = String(AppState.currentUser?.department || '').trim();
+            let empDept = String(norm.employeeDepartment || '').trim();
+
+            if (!empDept && (norm.employeeId || norm.employeeCode || norm.employeeName)) {
+                const empList = AppState.appData?.employees || [];
+                const empCodeOrId = String(norm.employeeId || norm.employeeCode || norm.employeeName).trim().toLowerCase();
+                const matchedEmp = empList.find(e => {
+                    if (!e) return false;
+                    const code = String(e.id || e.employeeId || e.code || '').trim().toLowerCase();
+                    const name = String(e.name || e.employeeName || '').trim().toLowerCase();
+                    return (code && code === empCodeOrId) || (name && name === empCodeOrId);
+                });
+                if (matchedEmp) {
+                    empDept = String(matchedEmp.department || matchedEmp.section || '').trim();
+                }
+            }
+
+            if (!currentUserDept || !empDept) {
+                return false;
+            }
+
+            return this.isDepartmentMatch(currentUserDept, empDept);
+        }
+
+        // مخالفات المقاولين تظل ملموسة لجميع المستحقين للمديول
+        return true;
+    },
+
     getFilteredViolations() {
         try {
             if (typeof AppState === 'undefined' || !AppState.appData) {
@@ -1697,7 +1773,8 @@ const Violations = {
                     const eff = this.getEffectiveFineAmount(n);
                     return eff === n.fineAmount ? n : { ...n, fineAmount: eff };
                 })
-                .filter(Boolean);
+                .filter(Boolean)
+                .filter(v => this.isViolationVisibleToCurrentUser(v));
             const filters = this.currentFilters || {};
             const searchFilter = String(filters.search || '').trim().toLowerCase();
             const personFilter = filters.personType || '';
@@ -2600,6 +2677,13 @@ const Violations = {
             return;
         }
 
+        const targetViolation = (AppState.appData?.violations || []).find(v => v.id === id);
+        if (targetViolation && !this.isViolationVisibleToCurrentUser(targetViolation)) {
+            if (typeof Notification !== 'undefined') Notification.error('عذراً، ليس لديك صلاحية لحذف مخالفات تابعة لإدارة أخرى');
+            else if (typeof Utils !== 'undefined' && Utils.showToast) Utils.showToast('عذراً، ليس لديك صلاحية لحذف مخالفات تابعة لإدارة أخرى', 'error');
+            return;
+        }
+
         if (!confirm('هل أنت متأكد من حذف هذه المخالفة؟ لا يمكن التراجع عن هذا الإجراء.')) {
             return;
         }
@@ -2897,13 +2981,19 @@ const Violations = {
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
-                        <i class="fas fa-map-marker-alt" style="color:#f59e0b;font-size:1.15rem;"></i>
-                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.byLocation', 'حسب الموقع (أعلى 8)')}</span>
+                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <i class="fas fa-map-marker-alt" style="color:#f59e0b;font-size:1.15rem;"></i>
+                            <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.byLocation', 'حسب الموقع (أعلى 8)')}</span>
+                        </div>
+                        <span id="viol-loc-total-badge" style="background:#fffbeb;color:#92400e;padding:4px 12px;border-radius:12px;font-size:0.82rem;font-weight:700;"></span>
                     </div>
-                    <div style="padding:14px;position:relative;height:290px;">
-                        <canvas id="viol-chart-loc"></canvas>
-                        <div id="viol-chart-loc-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                    <div style="padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;align-items:center;">
+                        <div style="position:relative;height:220px;">
+                            <canvas id="viol-chart-loc"></canvas>
+                            <div id="viol-chart-loc-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                        </div>
+                        <div id="viol-loc-breakdown-list" style="display:flex;flex-direction:column;gap:9px;max-height:240px;overflow-y:auto;padding-left:4px;"></div>
                     </div>
                 </div>
             </div>
@@ -2911,23 +3001,35 @@ const Violations = {
             <!-- ── Row 3: أكثر الموظفين + أكثر المقاولين ── -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;margin-bottom:18px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
-                        <i class="fas fa-user-tie" style="color:#6366f1;font-size:1.15rem;"></i>
-                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.topEmployees', 'أكثر الموظفين مخالفةً (أعلى 10)')}</span>
+                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <i class="fas fa-user-tie" style="color:#6366f1;font-size:1.15rem;"></i>
+                            <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.topEmployees', 'أكثر الموظفين مخالفةً (أعلى 10)')}</span>
+                        </div>
+                        <span id="viol-emp-total-badge" style="background:#eef2ff;color:#4338ca;padding:4px 12px;border-radius:12px;font-size:0.82rem;font-weight:700;"></span>
                     </div>
-                    <div style="padding:14px;position:relative;height:290px;">
-                        <canvas id="viol-chart-emp"></canvas>
-                        <div id="viol-chart-emp-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.chart.noEmpViolations', 'لا توجد مخالفات موظفين')}</div>
+                    <div style="padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;align-items:center;">
+                        <div style="position:relative;height:220px;">
+                            <canvas id="viol-chart-emp"></canvas>
+                            <div id="viol-chart-emp-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.chart.noEmpViolations', 'لا توجد مخالفات موظفين')}</div>
+                        </div>
+                        <div id="viol-emp-breakdown-list" style="display:flex;flex-direction:column;gap:9px;max-height:240px;overflow-y:auto;padding-left:4px;"></div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
-                        <i class="fas fa-users-cog" style="color:#f97316;font-size:1.15rem;"></i>
-                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.topContractors', 'أكثر المقاولين مخالفةً (أعلى 10)')}</span>
+                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <i class="fas fa-users-cog" style="color:#f97316;font-size:1.15rem;"></i>
+                            <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.topContractors', 'أكثر المقاولين مخالفةً (أعلى 10)')}</span>
+                        </div>
+                        <span id="viol-con-total-badge" style="background:#fff7ed;color:#c2410c;padding:4px 12px;border-radius:12px;font-size:0.82rem;font-weight:700;"></span>
                     </div>
-                    <div style="padding:14px;position:relative;height:290px;">
-                        <canvas id="viol-chart-con"></canvas>
-                        <div id="viol-chart-con-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.chart.noConViolations', 'لا توجد مخالفات مقاولين')}</div>
+                    <div style="padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;align-items:center;">
+                        <div style="position:relative;height:220px;">
+                            <canvas id="viol-chart-con"></canvas>
+                            <div id="viol-chart-con-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.chart.noConViolations', 'لا توجد مخالفات مقاولين')}</div>
+                        </div>
+                        <div id="viol-con-breakdown-list" style="display:flex;flex-direction:column;gap:9px;max-height:240px;overflow-y:auto;padding-left:4px;"></div>
                     </div>
                 </div>
             </div>
@@ -2989,7 +3091,7 @@ const Violations = {
         // ── 1. جمع البيانات وتطبيع السجلات ──
         const period = parseInt(this._violPeriod || '0', 10);
         const rawAll = AppState.appData.violations || [];
-        const allViol = rawAll.map(r => this.normalizeViolationRecord(r)).filter(Boolean);
+        const allViol = rawAll.map(r => this.normalizeViolationRecord(r)).filter(v => v && this.isViolationVisibleToCurrentUser(v));
 
         // ── 2. تصفية بالفترة الزمنية ──
         const violByPeriod = this._vFilterByPeriod(allViol, period);
@@ -3054,15 +3156,24 @@ const Violations = {
         // 🏭 المصنع الرئيسي (توزيع ونسب المخالفات)
         this._vDrawFactoryBreakdown('viol-chart-factory', 'viol-factory-breakdown-list', viol);
 
-        // الحالة
+        // الحالة — يدعم عربي وإنجليزي
         const statusG = this._vGroupBy(viol, 'status');
-        const statusColors = { 'محلول':'rgba(16,185,129,0.85)', 'غير محلول':'rgba(239,68,68,0.85)', 'قيد المراجعة':'rgba(245,158,11,0.85)' };
-        this._vDrawDoughnut('viol-chart-status', statusG.labels.map(l => t('module.violations.status.' + l, l)), statusG.data, statusG.labels.map(l => statusColors[l] || 'rgba(148,163,184,0.8)'));
+        const statusColors = {
+            'محلول':'rgba(16,185,129,0.85)',    'resolved':'rgba(16,185,129,0.85)',
+            'غير محلول':'rgba(239,68,68,0.85)', 'unresolved':'rgba(239,68,68,0.85)', 'open':'rgba(239,68,68,0.85)',
+            'قيد المراجعة':'rgba(245,158,11,0.85)', 'in progress':'rgba(245,158,11,0.85)', 'under review':'rgba(245,158,11,0.85)'
+        };
+        this._vDrawDoughnut('viol-chart-status', statusG.labels.map(l => t('module.violations.status.' + l, l)), statusG.data, statusG.labels.map(l => statusColors[l.toLowerCase()] || statusColors[l] || 'rgba(148,163,184,0.8)'));
 
-        // الشدة
+        // الشدة — يدعم عربي وإنجليزي
         const sevG = this._vGroupBy(viol, 'severity');
-        const sevColors = { 'عالية':'rgba(239,68,68,0.85)', 'متوسطة':'rgba(245,158,11,0.85)', 'منخفضة':'rgba(16,185,129,0.85)', 'منخضة':'rgba(16,185,129,0.85)' };
-        this._vDrawDoughnut('viol-chart-sev', sevG.labels.map(l => t('module.violations.severity.' + l, l)), sevG.data, sevG.labels.map(l => sevColors[l] || 'rgba(148,163,184,0.8)'));
+        const sevColors = {
+            'عالية':'rgba(239,68,68,0.85)',   'high':'rgba(239,68,68,0.85)',
+            'متوسطة':'rgba(245,158,11,0.85)', 'medium':'rgba(245,158,11,0.85)', 'moderate':'rgba(245,158,11,0.85)',
+            'منخفضة':'rgba(16,185,129,0.85)', 'low':'rgba(16,185,129,0.85)',
+            'منخضة':'rgba(16,185,129,0.85)'
+        };
+        this._vDrawDoughnut('viol-chart-sev', sevG.labels.map(l => t('module.violations.severity.' + l, l)), sevG.data, sevG.labels.map(l => sevColors[l.toLowerCase()] || sevColors[l] || 'rgba(148,163,184,0.8)'));
 
         // الاتجاه الزمني
         this._vDrawTrend('viol-chart-trend', violByPeriod);
@@ -3070,24 +3181,39 @@ const Violations = {
         // نوع المخالفة (توزيع تفاعلي مع Doughnut + قائمة)
         this._vDrawTypeBreakdown('viol-chart-type', 'viol-type-breakdown-list', viol, 10);
 
-        // الموقع
-        const locG = this._vGroupBy(viol, 'violationLocation', 8);
-        this._vDrawHBar('viol-chart-loc', locG.labels, locG.data, 'rgba(245,158,11,0.75)');
+        // الموقع (توزيع تفاعلي)
+        this._vDrawListBreakdown('viol-chart-loc', 'viol-loc-breakdown-list', viol, 'violationLocation', 8, [
+            'rgba(245,158,11,0.85)','rgba(234,179,8,0.85)','rgba(202,138,4,0.85)',
+            'rgba(161,98,7,0.85)','rgba(120,53,15,0.85)','rgba(234,88,12,0.85)',
+            'rgba(194,65,12,0.85)','rgba(154,52,18,0.85)'
+        ], '#fffbeb', '#92400e', 'viol-loc-total-badge', 'viol-af-loc', null);
 
-        // أكثر الموظفين مخالفة
-        const empG = this._vGroupBy(empViol, 'employeeName', 10);
-        this._vDrawHBar('viol-chart-emp', empG.labels, empG.data, 'rgba(99,102,241,0.75)');
+        // أكثر الموظفين مخالفة (توزيع تفاعلي)
+        this._vDrawListBreakdown('viol-chart-emp', 'viol-emp-breakdown-list', empViol, 'employeeName', 10, [
+            'rgba(99,102,241,0.85)','rgba(79,70,229,0.85)','rgba(67,56,202,0.85)',
+            'rgba(55,48,163,0.85)','rgba(109,40,217,0.85)','rgba(124,58,237,0.85)',
+            'rgba(139,92,246,0.85)','rgba(167,139,250,0.85)','rgba(196,181,253,0.9)','rgba(76,29,149,0.85)'
+        ], '#eef2ff', '#4338ca', 'viol-emp-total-badge', null, null);
 
-        // أكثر المقاولين مخالفة
-        const conG = this._vGroupBy(conViol, 'contractorName', 10);
-        this._vDrawHBar('viol-chart-con', conG.labels, conG.data, 'rgba(249,115,22,0.75)');
+        // أكثر المقاولين مخالفة (توزيع تفاعلي)
+        this._vDrawListBreakdown('viol-chart-con', 'viol-con-breakdown-list', conViol, 'contractorName', 10, [
+            'rgba(249,115,22,0.85)','rgba(234,88,12,0.85)','rgba(194,65,12,0.85)',
+            'rgba(154,52,18,0.85)','rgba(180,83,9,0.85)','rgba(217,119,6,0.85)',
+            'rgba(245,158,11,0.85)','rgba(202,138,4,0.85)','rgba(161,98,7,0.85)','rgba(120,53,15,0.85)'
+        ], '#fff7ed', '#c2410c', 'viol-con-total-badge', null, null);
 
         // الغرامات حسب النوع
         this._vDrawFinesByType('viol-chart-fines', viol);
 
         // ── 8. جدول المخالفات الحرجة ──
         const critViol = viol
-            .filter(v => v.severity === 'عالية' && v.status !== 'محلول')
+            .filter(v => {
+                const sev = String(v.severity||'').trim().toLowerCase();
+                const sta = String(v.status||'').trim().toLowerCase();
+                const isHigh = sev === 'عالية' || sev === 'high';
+                const isResolved = sta === 'محلول' || sta === 'resolved';
+                return isHigh && !isResolved;
+            })
             .sort((a,b) => (b.fineAmount||0) - (a.fineAmount||0))
             .slice(0, 20);
         const critCountEl = document.getElementById('viol-critical-count');
@@ -3135,9 +3261,10 @@ const Violations = {
 
     // ── مساعد: تجميع حسب حقل ──
     _vGroupBy(viol, field, limit = 0) {
+        const undefLabel = this._t ? this._t('module.violations.analytics.undefined', 'غير محدد') : 'غير محدد';
         const map = {};
         viol.forEach(v => {
-            const val = String(v[field] || 'غير محدد').trim() || 'غير محدد';
+            const val = String(v[field] || undefLabel).trim() || undefLabel;
             map[val] = (map[val] || 0) + 1;
         });
         let entries = Object.entries(map).sort((a,b) => b[1]-a[1]);
@@ -3147,8 +3274,9 @@ const Violations = {
 
     // ── مساعد: استخراج اسم المصنع الرئيسي ──
     _vGetFactoryName(record) {
-        if (!record || typeof record !== 'object') return 'غير محدد';
-        return String(record.factory || record.violationLocation || record.violationPlace || 'غير محدد').trim() || 'غير محدد';
+        const undefLabel = this._t ? this._t('module.violations.analytics.undefined', 'غير محدد') : 'غير محدد';
+        if (!record || typeof record !== 'object') return undefLabel;
+        return String(record.factory || record.violationLocation || record.violationPlace || undefLabel).trim() || undefLabel;
     },
 
     // ── مساعد: تطبيق الفلاتر التفاعلية ──
@@ -3204,6 +3332,104 @@ const Violations = {
         fill('viol-af-sev',    unique(v => String(v.severity||'').trim()), 'module.violations.severity.');
         fill('viol-af-status', unique(v => String(v.status||'').trim()), 'module.violations.status.');
         fill('viol-af-loc',    unique(v => String(v.violationLocation||'').trim()));
+    },
+
+    // ── مساعد: رسم عام — Doughnut + قائمة Progress Bars ──
+    _vDrawListBreakdown(canvasId, listId, records, field, limit, colors, badgeBg, badgeColor, badgeId, filterSelectId, translationPrefix) {
+        const canvas  = document.getElementById(canvasId);
+        const emptyEl = document.getElementById(canvasId + '-empty');
+        const listEl  = document.getElementById(listId);
+        const badgeEl = badgeId ? document.getElementById(badgeId) : null;
+        if (!canvas) return;
+        const t = (key, fallback) => this._t(key, fallback);
+        const undefLabel = t('module.violations.analytics.undefined', 'غير محدد');
+
+        const map = {};
+        records.forEach(v => {
+            const val = String(v[field] || undefLabel).trim() || undefLabel;
+            map[val] = (map[val] || 0) + 1;
+        });
+        let sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
+        if (limit > 0) sorted = sorted.slice(0, limit);
+        const labels = sorted.map(e => e[0]);
+        const data   = sorted.map(e => e[1]);
+        const total  = records.length;
+
+        if (badgeEl) {
+            badgeEl.textContent = `${total.toLocaleString('en-US')} ${t('module.violations.analytics.violationUnit', 'مخالفة')}`;
+            if (badgeBg) badgeEl.style.background = badgeBg;
+            if (badgeColor) badgeEl.style.color = badgeColor;
+        }
+
+        if (!data.length || total === 0) {
+            canvas.style.display = 'none';
+            if (emptyEl) emptyEl.style.display = 'flex';
+            if (listEl) listEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.92rem;padding:20px;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>`;
+            return;
+        }
+        if (emptyEl) emptyEl.style.display = 'none';
+        canvas.style.display = '';
+
+        if (!this._violCharts) this._violCharts = {};
+        const prev = this._violCharts[canvasId];
+        if (prev) { try { prev.destroy(); } catch(e){} }
+        this._violCharts[canvasId] = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels,
+                datasets: [{ data, backgroundColor: labels.map((_, i) => colors[i % colors.length]), borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '60%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: ctx => {
+                        const val = ctx.parsed;
+                        const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
+                        return ` ${ctx.label}: ${val.toLocaleString('en-US')} (${pct}%)`;
+                    }}}
+                }
+            }
+        });
+
+        if (listEl) {
+            listEl.innerHTML = sorted.map((item, idx) => {
+                const name  = item[0];
+                const cnt   = item[1];
+                const pct   = total > 0 ? ((cnt / total) * 100).toFixed(1) : 0;
+                const color = colors[idx % colors.length];
+                const rank  = idx + 1;
+                const label = translationPrefix ? t(translationPrefix + name, name) : name;
+                return `
+                <div class="viol-list-item" data-filter-val="${Utils.escapeHTML(name)}" data-filter-id="${filterSelectId || ''}" title="${Utils.escapeHTML(label)}" style="background:#fff;border:1.5px solid #f1f5f9;border-radius:10px;padding:9px 12px;cursor:${filterSelectId ? 'pointer' : 'default'};transition:all 0.2s;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+                        <div style="display:flex;align-items:center;gap:7px;">
+                            <span style="width:20px;height:20px;border-radius:50%;background:${color};color:#fff;font-size:0.68rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${rank}</span>
+                            <span style="font-weight:800;font-size:0.85rem;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:155px;">${Utils.escapeHTML(label)}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap;">
+                            <span style="font-weight:800;font-size:0.95rem;color:${color.replace('0.85','1')};">${cnt.toLocaleString('en-US')}</span>
+                            <span style="font-size:0.78rem;font-weight:700;color:#64748b;">(${pct}%)</span>
+                        </div>
+                    </div>
+                    <div style="height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden;">
+                        <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;transition:width 0.6s ease;"></div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            if (filterSelectId) {
+                listEl.querySelectorAll('.viol-list-item').forEach(el => {
+                    el.addEventListener('mouseover', () => { el.style.background='#f8fafc'; el.style.borderColor='#cbd5e1'; });
+                    el.addEventListener('mouseout',  () => { el.style.background='#fff';    el.style.borderColor='#f1f5f9'; });
+                    el.addEventListener('click', () => {
+                        const val = el.getAttribute('data-filter-val');
+                        const sel = document.getElementById(filterSelectId);
+                        if (sel) { sel.value = sel.value === val ? '' : val; this.updateViolationAnalytics(); }
+                    });
+                });
+            }
+        }
     },
 
     // ── مساعد: رسم وتفصيل توزيع نوع المخالفة ──
@@ -4231,6 +4457,12 @@ const Violations = {
             violationData = violationDataOrId;
         }
         violationData = this.normalizeViolationRecord(violationData);
+        if (violationData && !this.isViolationVisibleToCurrentUser(violationData)) {
+            if (typeof Notification !== 'undefined') {
+                Notification.error('عذراً، ليس لديك صلاحية لمشاهدة أو تعديل مخالفات تابعة لإدارة أخرى');
+            }
+            return;
+        }
         const effectiveFineForForm = violationData ? this.getEffectiveFineAmount(violationData) : 0;
         const isEdit = !!violationData;
         const recordPersonType = String(violationData?.personType || '').trim().toLowerCase();
@@ -5589,6 +5821,10 @@ const Violations = {
             return;
         }
         const violation = this.normalizeViolationRecord(raw) || raw;
+        if (!this.isViolationVisibleToCurrentUser(violation)) {
+            if (typeof Notification !== 'undefined') Notification.error('عذراً، ليس لديك صلاحية لعرض مخالفة تابعة لإدارة أخرى');
+            return;
+        }
         const qSev = String(violation.severity || '').trim();
         const qStat = String(violation.status || '').trim();
 

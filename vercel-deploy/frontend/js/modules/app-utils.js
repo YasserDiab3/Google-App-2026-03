@@ -1,4 +1,4 @@
-﻿/* ========================================
+/* ========================================
    نظام السلامة المهنية - أمريكانا HSE
    app-utils.js - الدوال المساعدة والثوابت
    ======================================== */
@@ -232,6 +232,20 @@ const MODULE_DETAILED_PERMISSIONS = {
                 icon: 'fa-leaf'
             }
         ]
+    },
+    'violations': {
+        label: 'صلاحيات مديول المخالفات',
+        permissions: [
+            { key: 'violations-list', label: 'قائمة المخالفات', icon: 'fa-list' },
+            {
+                key: 'violations-view-department',
+                label: 'عرض مخالفات الموظفين الخاصة بالإدارة فقط (حسب إدارة المستخدم)',
+                icon: 'fa-building'
+            },
+            { key: 'violations-view-all', label: 'عرض جميع مخالفات الموظفين لكل الإدارات', icon: 'fa-globe' },
+            { key: 'analytics', label: 'التحليل والإحصائيات', icon: 'fa-chart-line' },
+            { key: 'approvals', label: 'طلبات الاعتماد والموافقات', icon: 'fa-check-circle' }
+        ]
     }
 };
 
@@ -248,7 +262,7 @@ const MODULE_PERMISSIONS_CONFIG = [
     { key: 'fire-equipment', label: 'معدات الإطفاء', icon: 'fa-fire-extinguisher', hasDetailedPermissions: true },
     { key: 'periodic-inspections', label: 'الفحوصات الدورية', icon: 'fa-clipboard-check' },
     { key: 'ppe', label: 'مهمات الوقاية', icon: 'fa-hard-hat' },
-    { key: 'violations', label: 'المخالفات', icon: 'fa-ban' },
+    { key: 'violations', label: 'المخالفات', icon: 'fa-ban', hasDetailedPermissions: true },
     { key: 'contractors', label: 'المقاولين', icon: 'fa-users', hasDetailedPermissions: true },
     { key: 'behavior-monitoring', label: 'مراقبة السلوكيات', icon: 'fa-user-check' },
     { key: 'chemical-safety', label: 'السلامة الكيميائية', icon: 'fa-flask' },
@@ -4299,7 +4313,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.632',
+    appVersion: '1.0.634',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
