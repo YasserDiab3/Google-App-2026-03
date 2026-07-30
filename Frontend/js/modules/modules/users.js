@@ -1794,6 +1794,7 @@ const Users = {
 
         const empCodeEl = document.getElementById('user-employee-code');
         const employeeCode = empCodeEl ? empCodeEl.value.trim() : '';
+        const collectedPermissions = typeof this.collectPermissions === 'function' ? this.collectPermissions() : {};
         
         const formData = {
             id: this.currentEditId || Utils.generateId('USER'),
