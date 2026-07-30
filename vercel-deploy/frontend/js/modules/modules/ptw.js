@@ -2552,6 +2552,9 @@ const PTW = {
     /**
      * تحميل بيانات PTW من Backend
      */
+    /**
+     * تحميل بيانات PTW من Backend
+     */
     async loadPTWFromBackend() {
         try {
             const rpcReady = GoogleIntegration &&
@@ -2561,43 +2564,20 @@ const PTW = {
                 if (AppState.debugMode) {
                     Utils.safeLog('⚠️ Backend غير متاح - استخدام البيانات المحلية');
                 }
-                return;
+                return false;
             }
 
             if (AppState.debugMode) {
                 Utils.safeLog('🔄 تحميل تصاريح العمل من Backend...');
             }
 
-            let result;
-            try {
-                result = await GoogleIntegration.sendRequest({
-                    action: 'getAllPTWs',
-                    data: {}
-                });
-            } catch (firstErr) {
-                const m = String(firstErr?.message || firstErr || '');
-                const missingLegacyAction = /not implemented|NOT_IMPLEMENTED|غير معتمد|ACTION_NOT_RECOGNIZED|الإجراء غير معروف|Action not recognized/i.test(m);
-                if (!missingLegacyAction) {
-                    if (AppState.debugMode) {
-                        Utils.safeError('❌ خطأ في تحميل التصاريح من Backend:', firstErr);
-                    }
-                    return false;
+            const result = await GoogleIntegration.sendRequest({
+                action: 'readFromSheet',
+                data: {
+                    sheetName: 'PTW',
+                    spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId
                 }
-                try {
-                    result = await GoogleIntegration.sendRequest({
-                        action: 'readFromSheet',
-                        data: {
-                            sheetName: 'PTW',
-                            spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId
-                        }
-                    });
-                } catch (fallbackErr) {
-                    if (AppState.debugMode) {
-                        Utils.safeError('❌ فشل بديل readFromSheet(PTW):', fallbackErr);
-                    }
-                    return false;
-                }
-            }
+            });
 
             if (result && result.success && Array.isArray(result.data)) {
                 // تحديث البيانات المحلية بما في Backend
@@ -2628,6 +2608,7 @@ const PTW = {
 
     /**
      * تحميل بيانات PTWRegistry من Backend
+     * ✅ عدم تصفير البيانات المحلية قبل الجلب لتجنب التأخير والظهور التلقائي للـ Spinners
      */
     async loadRegistryFromBackend() {
         try {
@@ -2638,32 +2619,18 @@ const PTW = {
                 return false;
             }
 
-            // مسح cache القديم قبل تحميل بيانات جديدة من Backend
-            // يمنع ظهور بيانات وهمية (من مزامنات سابقة خاطئة) بعد فشل التحميل
-            AppState.appData.ptwRegistry = [];
-            try { localStorage.removeItem('hse_ptw_registry'); } catch (_) {}
-
-            // محاولة تحميل من Backend إذا كان متاحاً
+            // محاولة تحميل من Backend إذا كان متاحاً (بدون مسح التخزين المحلي المسبق)
             try {
                 const result = await GoogleIntegration.sendRequest({
                     action: 'readFromSheet',
                     data: {
                         sheetName: 'PTWRegistry',
-                        spreadsheetId: AppState.googleConfig.sheets.spreadsheetId
+                        spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId
                     }
                 });
 
                 if (result && result.success && Array.isArray(result.data)) {
-                    // إذا كانت البيانات فارغة في Backend، تنظيف البيانات المحلية
-                    if (result.data.length === 0) {
-                        this.setPtwRegistryState([], 'backend.PTWRegistry.empty');
-                        if (AppState.debugMode) {
-                            Utils.safeLog('✅ تم تنظيف البيانات المحلية - الجدول فارغ في Backend');
-                        }
-                        return true;
-                    }
-                    
-                    // إذا كانت هناك بيانات في Backend، استخدامها
+                    // تحديث الحالة بالبيانات الواردة فقط بعد نجاح الطلب
                     this.setPtwRegistryState(result.data, 'backend.PTWRegistry.readFromSheet');
                     if (AppState.debugMode) {
                         Utils.safeLog(`✅ تم تحميل ${this.registryData.length} سجل من Backend`);
@@ -2773,40 +2740,70 @@ const PTW = {
         }
     },
 
-    /** بدء جلب PTW + السجل من الخادم (طلب واحد مشترك) */
+    /** بدء جلب PTW + السجل من الخادم في طلب واحد دفعة واحدة (batchReadSheets) لسرعة فائقة */
     _startPtwBackendSync() {
         if (this._backendSyncStarted || this._ptwBackendLoadPromise) return;
         this._backendSyncStarted = true;
-        // يعاد تعيينه في cleanup() أو عند انتهاء التحميل
 
-        const loadDataPromises = [
-            this.loadPTWFromBackend().catch(error => {
-                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                    Utils.safeWarn('⚠️ تعذر تحميل تصاريح العمل من Backend:', error);
-                }
-            }),
-            this.loadRegistryFromBackend().catch(error => {
-                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                    Utils.safeWarn('⚠️ تعذر تحميل السجل من Backend:', error);
-                }
-                return false;
-            })
-            // ✅ إصلاح جذري: لا نستدعي syncRegistryWithPermits تلقائياً عند التحميل
-            // السبب: syncRegistryWithPermits تولّد معرفات مؤقتة (TMP) وترسلها للـ Backend
-            // مما يسبب إنشاء صفوف في PTWIdMapping عند كل تحميل للصفحة
-            // المزامنة يجب أن تحدث فقط عند إنشاء/تعديل تصريح يدوياً
-        ];
+        const rpcReady = GoogleIntegration &&
+            typeof GoogleIntegration._isBackendRpcConfigured === 'function' &&
+            GoogleIntegration._isBackendRpcConfigured();
 
-        this._ptwBackendLoadPromise = Promise.all(loadDataPromises)
-            .then(() => this._refreshActiveTabAfterBackendSync())
-            .catch(error => {
-                Utils.safeWarn('⚠️ تعذر تحميل بعض بيانات PTW:', error);
+        if (!rpcReady) {
+            this._backendSyncStarted = false;
+            return;
+        }
+
+        this._ptwBackendLoadPromise = (async () => {
+            try {
+                // ✅ طلب دفعة واحدة عالي الكفاءة يجمع بين التصاريح وسجل التصاريح
+                const result = await GoogleIntegration.sendRequest({
+                    action: 'batchReadSheets',
+                    data: {
+                        sheetNames: ['PTW', 'PTWRegistry'],
+                        spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId
+                    }
+                });
+
+                if (result && result.success && result.data && typeof result.data === 'object') {
+                    const ptwData = result.data['PTW'];
+                    const registryData = result.data['PTWRegistry'];
+
+                    if (Array.isArray(ptwData)) {
+                        AppState.appData.ptw = ptwData;
+                    }
+
+                    if (Array.isArray(registryData)) {
+                        this.setPtwRegistryState(registryData, 'backend.PTWRegistry.batchReadSheets');
+                    }
+
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        window.DataManager.save();
+                    }
+                    if (AppState.debugMode) {
+                        Utils.safeLog('⚡ تم استلام بيانات PTW و PTWRegistry بطلب دفعة واحدة (batchReadSheets) بنجاح');
+                    }
+                } else {
+                    // بديل احتياطي في حال عدم إمكانية القراءة بدفعة واحدة
+                    await Promise.all([
+                        this.loadPTWFromBackend().catch(() => false),
+                        this.loadRegistryFromBackend().catch(() => false)
+                    ]);
+                }
+            } catch (err) {
+                if (AppState.debugMode) {
+                    Utils.safeWarn('⚠️ فشل مزامنة PTW عبر batchReadSheets — جاري استخدام النمط الفردي:', err);
+                }
+                await Promise.all([
+                    this.loadPTWFromBackend().catch(() => false),
+                    this.loadRegistryFromBackend().catch(() => false)
+                ]);
+            } finally {
                 this._refreshActiveTabAfterBackendSync();
-            })
-            .finally(() => {
                 this._ptwBackendLoadPromise = null;
                 this._backendSyncStarted = false;
-            });
+            }
+        })();
 
         return this._ptwBackendLoadPromise;
     },
