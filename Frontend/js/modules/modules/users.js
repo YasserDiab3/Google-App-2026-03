@@ -317,10 +317,16 @@ const Users = {
                         </h1>
                         <p class="section-subtitle">${this.t('module.users.subtitle', 'إدارة المستخدمين وصلاحياتهم')}</p>
                     </div>
-                    <button id="add-user-btn" class="btn-primary">
-                        <i class="fas fa-plus ml-2" aria-hidden="true"></i>
-                        ${this.t('module.users.addNewUser', 'إضافة مستخدم جديد')}
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button id="link-existing-users-btn" class="btn-secondary" onclick="Users.linkExistingUsersToEmployees()" style="background: #0284c7; color: white; border: none; border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-link" aria-hidden="true"></i>
+                            ربط الحسابات القديمة ببيانات الموظفين
+                        </button>
+                        <button id="add-user-btn" class="btn-primary">
+                            <i class="fas fa-plus ml-2" aria-hidden="true"></i>
+                            ${this.t('module.users.addNewUser', 'إضافة مستخدم جديد')}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -534,6 +540,39 @@ const Users = {
                                 placeholder="مثال: إدارة السلامة والصحة المهنية"
                                 style="border-radius: 8px; border-color: #cbd5e1;"
                             >
+                        </div>
+
+                        <!-- Employee Code / Linking -->
+                        <div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                <label for="user-employee-code" style="font-size: 13px; font-weight: 700; color: #334155; margin: 0;">
+                                    <i class="fas fa-id-badge ml-1 text-blue-600"></i> الكود الوظيفي (ربط بالموظف)
+                                </label>
+                                <span id="user-emp-link-status" style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: ${userData?.employeeCode ? '#dcfce7' : '#f1f5f9'}; color: ${userData?.employeeCode ? '#166534' : '#64748b'};">
+                                    ${userData?.employeeCode ? '🔗 مرتبط بالموظف' : 'غير مرتبط'}
+                                </span>
+                            </div>
+                            <input 
+                                type="text" 
+                                id="user-employee-code" 
+                                name="employeeCode" 
+                                list="user-employees-list"
+                                class="form-input"
+                                value="${Utils.escapeHTML(userData?.employeeCode || '')}"
+                                placeholder="ابحث برقم/كود الموظف أو اسمه..."
+                                style="border-radius: 8px; border-color: #cbd5e1;"
+                            >
+                            <datalist id="user-employees-list">
+                                ${((AppState.appData?.employees || []).filter(e => e && !e.isResigned)).map(emp => {
+                                    const code = emp.employeeNumber || emp.employeeCode || emp.sapId || emp.id || emp.code || '';
+                                    const name = emp.name || emp.employeeName || '';
+                                    const dept = emp.department || emp.section || '';
+                                    return `<option value="${Utils.escapeHTML(code)}">${Utils.escapeHTML(name)} - ${Utils.escapeHTML(dept)}</option>`;
+                                }).join('')}
+                            </datalist>
+                            <p id="user-emp-link-hint" style="margin: 4px 0 0; font-size: 11px; color: #64748b;">
+                                عند اختيار كود موظف، يتم جلب اسمه وإدارته تلقائياً وتوحيد ملفه الشخصي.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -797,7 +836,10 @@ const Users = {
                                             const pa = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
                                             return `<img data-user-photo="1" data-photo-key="${Utils.escapeHTML(photoKey)}" src="${Utils.escapeHTML(disp.displaySrc)}" alt="${Utils.escapeHTML(user.name || '')}"${pa} class="w-10 h-10 rounded-full object-cover" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
                                         })()}
-                                        <span>${Utils.escapeHTML(user.name || '')}</span>
+                                        <div class="flex flex-col">
+                                            <span class="font-semibold text-gray-800">${Utils.escapeHTML(user.name || '')}</span>
+                                            ${user.employeeCode ? `<span class="text-xs text-blue-600 font-mono" title="الكود الوظيفي المرتبط"><i class="fas fa-id-badge ml-1"></i> كود: ${Utils.escapeHTML(user.employeeCode)}</span>` : ''}
+                                        </div>
                                     </div>
                                 </td>
                                 <td>${Utils.escapeHTML(user.email || '')}${(typeof Auth !== 'undefined' && Auth._isMfaEnabledForUser && Auth._isMfaEnabledForUser(user)) ? ' <span class="badge badge-info text-xs" title="مصادقة ثنائية"><i class="fas fa-shield-halved"></i> MFA</span>' : ''}</td>
@@ -1149,6 +1191,7 @@ const Users = {
 
             this.setupSelectAllButtons();
             this.setupDetailedPermissionsButtons();
+            this.setupEmployeeCodeAutoLookup();
             this.updatePermissionsUI();
         }, 100);
     },
@@ -1349,13 +1392,293 @@ const Users = {
         }
     },
 
-    async showList() {
-        this.currentEditId = null;
-        const content = document.getElementById('users-content');
-        if (content) {
-            content.innerHTML = await this.renderList();
-            this.setupEventListeners();
-            this.loadUsersList();
+    setupEmployeeCodeAutoLookup() {
+        const empCodeInput = document.getElementById('user-employee-code');
+        const nameInput = document.getElementById('user-name');
+        const deptInput = document.getElementById('user-department');
+        const statusBadge = document.getElementById('user-emp-link-status');
+        const hintEl = document.getElementById('user-emp-link-hint');
+
+        if (!empCodeInput) return;
+
+        const handleLookup = () => {
+            const val = empCodeInput.value.trim();
+            if (!val) {
+                if (statusBadge) {
+                    statusBadge.textContent = 'غير مرتبط';
+                    statusBadge.style.background = '#f1f5f9';
+                    statusBadge.style.color = '#64748b';
+                }
+                if (hintEl) {
+                    hintEl.textContent = 'عند اختيار كود موظف، يتم جلب اسمه وإدارته تلقائياً وتوحيد ملفه الشخصي.';
+                    hintEl.style.color = '#64748b';
+                }
+                return;
+            }
+
+            let emp = null;
+            if (typeof EmployeeHelper !== 'undefined' && typeof EmployeeHelper.findByTerm === 'function') {
+                emp = EmployeeHelper.findByTerm(val);
+            } else if (Array.isArray(AppState.appData?.employees)) {
+                const normVal = val.toLowerCase();
+                emp = AppState.appData.employees.find(e => {
+                    if (!e) return false;
+                    const c = String(e.employeeNumber || e.employeeCode || e.sapId || e.id || e.code || '').trim().toLowerCase();
+                    const n = String(e.name || e.employeeName || '').trim().toLowerCase();
+                    return c === normVal || n === normVal;
+                });
+            }
+
+            if (emp) {
+                const currentEditUserId = this.currentEditId;
+                const primaryCode = (typeof EmployeeHelper !== 'undefined' && typeof EmployeeHelper.getPrimaryCode === 'function')
+                    ? EmployeeHelper.getPrimaryCode(emp)
+                    : (emp.employeeNumber || emp.employeeCode || emp.sapId || emp.id || emp.code || val);
+
+                const existingLinkUser = (AppState.appData?.users || []).find(u => {
+                    if (!u || u.id === currentEditUserId) return false;
+                    const uCode = String(u.employeeCode || u.employeeNumber || '').trim().toLowerCase();
+                    return uCode && (uCode === val.toLowerCase() || uCode === String(primaryCode).toLowerCase());
+                });
+
+                if (existingLinkUser) {
+                    if (statusBadge) {
+                        statusBadge.textContent = '⚠️ كود مكرر';
+                        statusBadge.style.background = '#fee2e2';
+                        statusBadge.style.color = '#991b1b';
+                    }
+                    if (hintEl) {
+                        hintEl.textContent = `⚠️ هذا الكود الوظيفي مرتبط بحساب مستخدم آخر مسبقاً (${existingLinkUser.name || existingLinkUser.email}).`;
+                        hintEl.style.color = '#dc2626';
+                    }
+                    return;
+                }
+
+                const empName = emp.name || emp.employeeName || '';
+                const empDept = emp.department || emp.section || '';
+
+                if (nameInput && empName && (!nameInput.value.trim() || nameInput.getAttribute('data-auto-filled') === 'true' || confirm(`هل ترغب بتحديث اسم المستخدم إلى "${empName}"؟`))) {
+                    nameInput.value = empName;
+                    nameInput.setAttribute('data-auto-filled', 'true');
+                }
+                if (deptInput && empDept && (!deptInput.value.trim() || deptInput.getAttribute('data-auto-filled') === 'true' || confirm(`هل ترغب بتحديث الإدارة إلى "${empDept}"؟`))) {
+                    deptInput.value = empDept;
+                    deptInput.setAttribute('data-auto-filled', 'true');
+                }
+
+                if (statusBadge) {
+                    statusBadge.textContent = '🔗 مرتبط بالموظف';
+                    statusBadge.style.background = '#dcfce7';
+                    statusBadge.style.color = '#166534';
+                }
+                if (hintEl) {
+                    hintEl.textContent = `✅ تم الربط ببيانات الموظف: ${empName} (${empDept || 'بدون قسم'}).`;
+                    hintEl.style.color = '#16a34a';
+                }
+            } else {
+                if (statusBadge) {
+                    statusBadge.textContent = 'غير موجود بقاعدة الموظفين';
+                    statusBadge.style.background = '#fef3c7';
+                    statusBadge.style.color = '#92400e';
+                }
+                if (hintEl) {
+                    hintEl.textContent = 'لم يتم العثور على موظف مطابق لهذا الكود في قاعدة بيانات الموظفين.';
+                    hintEl.style.color = '#d97706';
+                }
+            }
+        };
+
+        empCodeInput.addEventListener('change', handleLookup);
+        empCodeInput.addEventListener('blur', handleLookup);
+    },
+
+    async linkExistingUsersToEmployees() {
+        const isAdmin = (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserAdmin === 'function')
+            ? Permissions.isCurrentUserAdmin()
+            : (AppState.currentUser?.role || '').toLowerCase() === 'admin';
+
+        if (!isAdmin) {
+            Notification.error('هذه الميزة متاحة لمدير النظام فقط');
+            return;
+        }
+
+        if (typeof Loading !== 'undefined' && Loading.show) {
+            Loading.show('جاري فحص الحسابات وقاعدة بيانات الموظفين...');
+        }
+
+        try {
+            if (typeof EmployeeHelper !== 'undefined' && typeof EmployeeHelper.ensureEmployeesLoaded === 'function') {
+                await EmployeeHelper.ensureEmployeesLoaded();
+            }
+
+            const users = AppState.appData?.users || [];
+            const employees = AppState.appData?.employees || [];
+
+            if (!employees.length) {
+                Loading.hide();
+                Notification.warning('لا توجد بيانات للموظفين في قاعدة البيانات');
+                return;
+            }
+
+            const unlinkedUsers = users.filter(u => u && !String(u.employeeCode || '').trim());
+            const proposedMatches = [];
+
+            const norm = (s) => String(s || '').trim().toLowerCase();
+
+            unlinkedUsers.forEach(user => {
+                const uEmail = norm(user.email);
+                const uEmailPrefix = uEmail.includes('@') ? uEmail.split('@')[0] : '';
+                const uName = norm(user.name);
+
+                let matchedEmp = null;
+
+                if (uEmail) {
+                    matchedEmp = employees.find(e => {
+                        const eMail = norm(e.email || e.mail || e['البريد الإلكتروني']);
+                        return eMail && (eMail === uEmail || (uEmailPrefix && eMail.split('@')[0] === uEmailPrefix));
+                    });
+                }
+
+                if (!matchedEmp && uName) {
+                    matchedEmp = employees.find(e => {
+                        const eName = norm(e.name || e.employeeName);
+                        return eName && eName === uName;
+                    });
+                }
+
+                if (matchedEmp) {
+                    const code = (typeof EmployeeHelper !== 'undefined' && typeof EmployeeHelper.getPrimaryCode === 'function')
+                        ? EmployeeHelper.getPrimaryCode(matchedEmp)
+                        : (matchedEmp.employeeNumber || matchedEmp.employeeCode || matchedEmp.sapId || matchedEmp.id || matchedEmp.code);
+
+                    if (code) {
+                        proposedMatches.push({
+                            user,
+                            employee: matchedEmp,
+                            code: String(code).trim(),
+                            department: matchedEmp.department || matchedEmp.section || user.department || ''
+                        });
+                    }
+                }
+            });
+
+            Loading.hide();
+
+            if (!proposedMatches.length) {
+                Notification.info('جميع الحسابات الحالية مرتبطة مسبقاً أو لم يتم العثور على مطابقات جديدة في قاعدة الموظفين.');
+                return;
+            }
+
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 800px; width: 100%; border-radius: 16px; overflow: hidden; background: white; max-height: 90vh; display: flex; flex-direction: column;">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="margin:0; font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-link"></i> ربط الحسابات القديمة ببيانات الموظفين
+                        </h3>
+                        <button type="button" class="modal-close-btn" onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; width: 32px; height: 32px; cursor: pointer;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body" style="padding: 20px; overflow-y: auto; flex: 1;">
+                        <p style="margin-top:0; color:#475569; font-size:13px;">
+                            تم العثور على <strong>${proposedMatches.length}</strong> حساب يمكن ربطهم تلقائياً بملفات الموظفين المعتمدة. حدد الحسابات المراد ربطها ثم اضغط حفظ.
+                        </p>
+                        <div style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                <thead>
+                                    <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: right;">
+                                        <th style="padding: 10px 12px;"><input type="checkbox" id="select-all-matches" checked style="accent-color:#0284c7;"></th>
+                                        <th style="padding: 10px 12px;">اسم المستخدم</th>
+                                        <th style="padding: 10px 12px;">البريد الإلكتروني</th>
+                                        <th style="padding: 10px 12px;">الموظف المطابق</th>
+                                        <th style="padding: 10px 12px;">الكود الوظيفي</th>
+                                        <th style="padding: 10px 12px;">الإدارة</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${proposedMatches.map((m, idx) => `
+                                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                                            <td style="padding: 10px 12px;"><input type="checkbox" class="match-item-cb" data-index="${idx}" checked style="accent-color:#0284c7;"></td>
+                                            <td style="padding: 10px 12px; font-weight:600; color:#1e293b;">${Utils.escapeHTML(m.user.name || '')}</td>
+                                            <td style="padding: 10px 12px; color:#64748b;">${Utils.escapeHTML(m.user.email || '')}</td>
+                                            <td style="padding: 10px 12px; color:#0369a1; font-weight:600;">${Utils.escapeHTML(m.employee.name || m.employee.employeeName || '')}</td>
+                                            <td style="padding: 10px 12px;"><span style="background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:6px; font-weight:700;">${Utils.escapeHTML(m.code)}</span></td>
+                                            <td style="padding: 10px 12px; color:#475569;">${Utils.escapeHTML(m.department || '-')}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px;">
+                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                        <button type="button" id="confirm-link-users-btn" class="btn-primary" style="background:#0284c7;">
+                            <i class="fas fa-save ml-2"></i> تأكيد وحفظ الربط المحدد
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            const selectAllCb = modal.querySelector('#select-all-matches');
+            if (selectAllCb) {
+                selectAllCb.addEventListener('change', (e) => {
+                    modal.querySelectorAll('.match-item-cb').forEach(cb => cb.checked = e.target.checked);
+                });
+            }
+
+            const confirmBtn = modal.querySelector('#confirm-link-users-btn');
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', async () => {
+                    const checkboxes = modal.querySelectorAll('.match-item-cb:checked');
+                    if (!checkboxes.length) {
+                        Notification.warning('لم تقم بتحديد أي حساب للربط');
+                        return;
+                    }
+
+                    if (typeof Loading !== 'undefined' && Loading.show) Loading.show('جاري حفظ الربط وتحديث الحسابات...');
+                    confirmBtn.disabled = true;
+
+                    let updatedCount = 0;
+                    checkboxes.forEach(cb => {
+                        const idx = parseInt(cb.getAttribute('data-index'), 10);
+                        const match = proposedMatches[idx];
+                        if (match) {
+                            const uIdx = (AppState.appData?.users || []).findIndex(u => u.id === match.user.id);
+                            if (uIdx !== -1) {
+                                AppState.appData.users[uIdx] = {
+                                    ...AppState.appData.users[uIdx],
+                                    employeeCode: match.code,
+                                    department: match.department || AppState.appData.users[uIdx].department
+                                };
+                                updatedCount++;
+                            }
+                        }
+                    });
+
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        window.DataManager.save();
+                    }
+
+                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
+                        await GoogleIntegration.autoSave('Users', AppState.appData.users).catch(e => Utils.safeWarn('autoSave Users:', e));
+                    }
+
+                    Loading.hide();
+                    modal.remove();
+                    Notification.success(`تم ربط ${updatedCount} حساباً ببيانات الموظفين بنجاح وتحديث قاعدة البيانات`);
+                    this.showList();
+                });
+            }
+
+        } catch (e) {
+            Loading.hide();
+            Utils.safeError('خطأ في ربط الحسابات القديمة:', e);
+            Notification.error('حدث خطأ أثناء ربط الحسابات: ' + (e.message || String(e)));
         }
     },
 
@@ -1441,8 +1764,8 @@ const Users = {
             return;
         }
 
-        // ✅ إصلاح: جمع الصلاحيات بشكل صحيح
-        const collectedPermissions = this.collectPermissions();
+        const empCodeEl = document.getElementById('user-employee-code');
+        const employeeCode = empCodeEl ? empCodeEl.value.trim() : '';
         
         const formData = {
             id: this.currentEditId || Utils.generateId('USER'),
@@ -1450,6 +1773,7 @@ const Users = {
             email: emailEl.value.trim().toLowerCase(),
             role: roleEl.value,
             department: departmentEl.value.trim(),
+            employeeCode: employeeCode,
             active: activeEl.checked,
             photo: photoBase64,
             // ✅ إصلاح: التأكد من حفظ الصلاحيات حتى لو كانت فارغة (لكن ليس undefined)

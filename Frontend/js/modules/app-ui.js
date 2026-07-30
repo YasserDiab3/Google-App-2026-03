@@ -5283,9 +5283,20 @@ window.UI = {
         const email = norm(user.email);
         const emailLocal = email && email.indexOf('@') !== -1 ? norm(email.split('@')[0]) : '';
         const userId = norm(user.id);
-        const userEmployeeCode = norm(user.employeeNumber || user.employeeCode || user.employeeId || user.sapId || user.nationalId);
+        const userEmployeeCode = norm(user.employeeCode || user.employeeNumber || user.employeeId || user.sapId || user.nationalId);
         const userName = norm(user.name || user.fullName || user.displayName);
         const nameFp = this._profileNameFingerprint(user.name || user.fullName || user.displayName || '');
+
+        // 1. أولاً: مطابقة صريحة ومباشرة بالكود الوظيفي (إن وجد في حساب المستخدم)
+        if (userEmployeeCode) {
+            const foundByCode = employees.find(emp => {
+                if (!emp) return false;
+                const empId = norm(this._pickProfileField(emp, ['id', 'employeeId', 'معرف الموظف']));
+                const empCode = norm(this._pickProfileField(emp, ['employeeNumber', 'employeeCode', 'sapId', 'code', 'الكود الوظيفي', 'الرقم الوظيفي']));
+                return (empCode && empCode === userEmployeeCode) || (empId && empId === userEmployeeCode);
+            });
+            if (foundByCode) return foundByCode;
+        }
 
         const matchRow = (emp) => {
             if (!emp) return false;
