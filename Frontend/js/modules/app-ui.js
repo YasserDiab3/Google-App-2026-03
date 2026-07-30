@@ -2711,13 +2711,13 @@ window.UI = {
 
         if (!notesItems.length) {
             notesItems = isEn ? [
-                'Restricted employee violations access by user department & enabled detailed permissions.',
-                'Linked user creation/editing with employee database via Employee Code with auto-fill.',
-                'Added legacy account linker tool & unified profile binding with employee records.'
+                'Improved user employee code saving and profile sync without auto-overwriting user name.',
+                'Fixed Shift 3 overnight check-out & duration calculation for clinic staff.',
+                'Added customizable clinic shift schedule settings and verified overall system performance.'
             ] : [
-                'تقييد عرض مخالفات الموظفين بحسب إدارة المستخدم وتفعيل الصلاحيات التفصيلية بالمديول.',
-                'ربط إضافة وتعديل المستخدمين بقاعدة بيانات الموظفين بواسطة الكود الوظيفي وتعبئة البيانات تلقائياً.',
-                'إضافة أداة ربط الحسابات القديمة بملفات الموظفين وتوحيد الربط في شاشة الملف الشخصي.'
+                'تحسين حفظ بيانات كود المستخدمين والموافقات دون استبدال الاسم تلقائياً.',
+                'حل وتسجيل خروج الوردية الثالثة الليلية بالعيادة وحساب المواعيد بدقة.',
+                'إضافة لوحة ومواعيد الورديات الرسمية القابلة للتعديل وتأكيد السرعة والأداء.'
             ];
         }
 
@@ -9363,8 +9363,14 @@ window.UI = {
      */
     getReadNotifications() {
         try {
-            const read = localStorage.getItem('hse_read_notifications');
-            return read ? JSON.parse(read) : [];
+            const userId = (typeof AppState !== 'undefined' && AppState.currentUser)
+                ? String(AppState.currentUser.email || AppState.currentUser.id || '').trim().toLowerCase()
+                : '';
+            const userKey = userId ? `hse_read_notifications_${userId}` : 'hse_read_notifications';
+            const read = localStorage.getItem(userKey);
+            if (read) return JSON.parse(read);
+            const legacy = localStorage.getItem('hse_read_notifications');
+            return legacy ? JSON.parse(legacy) : [];
         } catch (error) {
             Utils.safeWarn('⚠️ خطأ في قراءة الإشعارات المقروءة:', error);
             return [];
@@ -9376,7 +9382,13 @@ window.UI = {
      */
     saveReadNotifications(readNotifications) {
         try {
-            localStorage.setItem('hse_read_notifications', JSON.stringify(readNotifications));
+            const userId = (typeof AppState !== 'undefined' && AppState.currentUser)
+                ? String(AppState.currentUser.email || AppState.currentUser.id || '').trim().toLowerCase()
+                : '';
+            const userKey = userId ? `hse_read_notifications_${userId}` : 'hse_read_notifications';
+            const payload = JSON.stringify(readNotifications || []);
+            localStorage.setItem(userKey, payload);
+            localStorage.setItem('hse_read_notifications', payload);
         } catch (error) {
             Utils.safeWarn('⚠️ خطأ في حفظ الإشعارات المقروءة:', error);
         }

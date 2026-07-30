@@ -1,15 +1,15 @@
 {
-  "version": "1.0.647",
+  "version": "1.0.648",
   "highlights": {
     "ar": [
-      "تقييد عرض مخالفات الموظفين بحسب إدارة المستخدم وتفعيل الصلاحيات التفصيلية بالمديول.",
-      "ربط إضافة وتعديل المستخدمين بقاعدة بيانات الموظفين بواسطة الكود الوظيفي وتعبئة البيانات تلقائياً.",
-      "إضافة أداة ربط الحسابات القديمة بملفات الموظفين وتوحيد الربط في شاشة الملف الشخصي."
+      "تحسين حفظ بيانات كود المستخدمين والموافقات دون استبدال الاسم تلقائياً.",
+      "حل وتسجيل خروج الوردية الثالثة الليلية بالعيادة وحساب المواعيد بدقة.",
+      "إضافة لوحة ومواعيد الورديات الرسمية القابلة للتعديل وتأكيد السرعة والأداء."
     ],
     "en": [
-      "Restricted employee violations access by user department & enabled detailed permissions.",
-      "Linked user creation/editing with employee database via Employee Code with auto-fill.",
-      "Added legacy account linker tool & unified profile binding with employee records."
+      "Improved user employee code saving and profile sync without auto-overwriting user name.",
+      "Fixed Shift 3 overnight check-out & duration calculation for clinic staff.",
+      "Added customizable clinic shift schedule settings and verified overall system performance."
     ]
   }
 }
