@@ -13,6 +13,10 @@ const PTW = {
     _mapMarkersToken: 0,
     _registrySanitizedCache: null,
     _registryTableMountToken: 0,
+    _mergedPermitsCache: null,
+    _mergedPermitsCacheToken: 0,
+    _metricsDatasetCache: null,
+    _approvalNormCache: new Map(),
     _isSubmitting: false, // منع الحفظ المتكرر
     _isSavingManualPermit: false, // منع الإرسال المزدوج لنموذج التصريح اليدوي
     _i18nSectionObserver: null,
@@ -1698,6 +1702,10 @@ const PTW = {
         const sanitized = this.sanitizePtwRegistryDataset(dataset, source);
         this.registryData = sanitized;
         this._registrySanitizedCache = null;
+        this._mergedPermitsCache = null;
+        this._metricsDatasetCache = null;
+        this._mergedPermitsCacheToken++;
+        this._approvalNormCache.clear();
         if (!AppState.appData) AppState.appData = {};
         AppState.appData.ptwRegistry = [...sanitized];
         try { localStorage.setItem('hse_ptw_registry', Utils.safeStringify(sanitized)); } catch (_) {}
@@ -2198,13 +2206,18 @@ const PTW = {
     },
 
     getPermitMetricsDataset() {
+        if (this._metricsDatasetCache) {
+            return this._metricsDatasetCache;
+        }
         const registryRows = this.getRegistrySanitizedDataset();
-        const permitsFromList = AppState.appData.ptw || [];
+        const permitsFromList = AppState.appData?.ptw || [];
         const permitsFromRegistry = this.getRegistryPermitsForMetrics();
         const merged = this.mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry);
         // مصدر العدّ: صفوف PTWRegistry المعقّمة (تطابق السجل/الورقة) وليس دمج PTW الفريد فقط
         const source = permitsFromRegistry.length > 0 ? permitsFromRegistry : merged;
-        return { source, merged, permitsFromList, permitsFromRegistry, registryRows };
+        const res = { source, merged, permitsFromList, permitsFromRegistry, registryRows };
+        this._metricsDatasetCache = res;
+        return res;
     },
 
     getPermitTypeDisplay(entry) {
@@ -2840,7 +2853,6 @@ const PTW = {
         try {
             permitsContent.innerHTML = this.renderList({ includeStats: false });
             this.applyModuleI18n(permitsContent);
-            this.setupEventListeners();
             this.loadPTWList(true);
 
             const hydrateStats = () => {
@@ -2857,7 +2869,9 @@ const PTW = {
                 }
             };
 
-            hydrateStats();
+            requestAnimationFrame(() => {
+                hydrateStats();
+            });
         } catch (error) {
             Utils.safeWarn('⚠️ خطأ في تحميل القائمة:', error);
             permitsContent.innerHTML = `
@@ -3269,7 +3283,7 @@ const PTW = {
                 this._startPtwBackendSync();
                 this._hydrateMapCoordinatesFromLocal();
                 this._scheduleMapCoordinatesBackgroundSync();
-            }, 0);
+            }, 1200);
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
                 Utils.safeError('❌ خطأ في تحميل مديول PTW:', error);
@@ -15406,6 +15420,14 @@ const PTW = {
             // أزرار إصدار التصاريح (add-ptw-btn, add-manual-ptw-btn) 
             // تعتمد الآن على سمة onclick مباشرة في الـ HTML لضمان الاستجابة الفورية
 
+            const filterContainer = document.querySelector('.ptw-filters-row');
+            if (filterContainer && filterContainer.dataset.listenersBound === '1') {
+                return;
+            }
+            if (filterContainer) {
+                filterContainer.dataset.listenersBound = '1';
+            }
+
             const searchInput = document.getElementById('ptw-search');
             const filterStatus = document.getElementById('ptw-filter-status');
             const filterWorkType = document.getElementById('ptw-filter-work-type');
@@ -17734,10 +17756,19 @@ const PTW = {
 
     /**
      * دمج التصاريح من القائمة والسجل للاستخدام في الفلتر والعرض
+     * ✅ يستخدم cache مؤقت — يُبطَل عند تغيير بيانات السجل أو التصاريح
      */
     getMergedPermitsForFilter() {
-        const permitsFromList = AppState.appData.ptw || [];
-        const permitsFromRegistry = (this.registryData || []).map(registryEntry => ({
+        // التحقق من صلاحية الـ cache
+        const ptwList = AppState.appData.ptw || [];
+        const regList = this.registryData || [];
+        const cacheKey = ptwList.length + '_' + regList.length + '_' + this._mergedPermitsCacheToken;
+        if (this._mergedPermitsCache && this._mergedPermitsCacheKey === cacheKey) {
+            return this._mergedPermitsCache;
+        }
+
+        const permitsFromList = ptwList;
+        const permitsFromRegistry = regList.map(registryEntry => ({
             id: registryEntry.permitId || registryEntry.id,
             workType: Array.isArray(registryEntry.permitType)
                 ? (registryEntry.permitTypeDisplay || registryEntry.permitType.join('، '))
@@ -17763,7 +17794,17 @@ const PTW = {
             sequentialNumber: registryEntry.sequentialNumber,
             paperPermitNumber: registryEntry.paperPermitNumber
         }));
-        return this.mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry);
+        const result = this.mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry);
+        this._mergedPermitsCache = result;
+        this._mergedPermitsCacheKey = cacheKey;
+        return result;
+    },
+
+    /** إبطال cache الدمج يدوياً (يُستدعى عند تغيير ptw مباشرة) */
+    _invalidateMergedPermitsCache() {
+        this._mergedPermitsCache = null;
+        this._mergedPermitsCacheToken++;
+        this._approvalNormCache.clear();
     },
 
     /**
@@ -17847,10 +17888,20 @@ const PTW = {
                         totalCount = 3;
                         approvedCount = 3;
                     } else {
-                        const approvals = this.normalizeApprovals(item.approvals || []);
-                        const requiredApprovals = approvals.filter(a => a.required !== false);
-                        approvedCount = requiredApprovals.filter(a => a.status === 'approved').length;
-                        totalCount = requiredApprovals.length;
+                        const cacheKey = item.id;
+                        let cachedCounts = cacheKey ? this._approvalNormCache.get(cacheKey) : null;
+                        if (cachedCounts) {
+                            approvedCount = cachedCounts.approvedCount;
+                            totalCount = cachedCounts.totalCount;
+                        } else {
+                            const approvals = this.normalizeApprovals(item.approvals || []);
+                            const requiredApprovals = approvals.filter(a => a.required !== false);
+                            approvedCount = requiredApprovals.filter(a => a.status === 'approved').length;
+                            totalCount = requiredApprovals.length;
+                            if (cacheKey) {
+                                this._approvalNormCache.set(cacheKey, { approvedCount, totalCount });
+                            }
+                        }
                     }
 
                     return `
@@ -17901,6 +17952,7 @@ const PTW = {
         const visibleCount = document.getElementById('ptw-list-visible-count');
         if (visibleCount) visibleCount.textContent = String(filtered.length);
 
+        // تحديث الفلاتر والأزرار
         const resetButton = document.getElementById('ptw-reset-filters');
         if (resetButton) resetButton.disabled = !hasActiveFilters;
         ['ptw-search', 'ptw-filter-work-type', 'ptw-filter-location', 'ptw-filter-sublocation', 'ptw-filter-status', 'ptw-filter-date-from', 'ptw-filter-date-to'].forEach((id) => {
@@ -17909,8 +17961,6 @@ const PTW = {
             if (field) field.classList.toggle('is-active', !!control.value);
         });
 
-        // تحديث KPIs بعد التصفية
-        this.updateKPIs();
     },
 
     /**
