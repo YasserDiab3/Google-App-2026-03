@@ -1748,7 +1748,7 @@ const Users = {
             return;
         }
 
-        const userData = this.currentEditId ? AppState.appData.users.find(u => u.id === this.currentEditId) : null;
+        const userData = this.currentEditId ? AppState.appData.users.find(u => String(u.id).trim() === String(this.currentEditId).trim()) : null;
 
         // معالجة الصورة
         let photoBase64 = userData?.photo || '';
@@ -1808,7 +1808,7 @@ const Users = {
             // حفظ الصلاحيات ككائن فارغ {} بدلاً من undefined لضمان عدم فقدانها
             permissions: collectedPermissions && typeof collectedPermissions === 'object' ? collectedPermissions : {},
             createdAt: this.currentEditId
-                ? AppState.appData.users.find(u => u.id === this.currentEditId)?.createdAt
+                ? AppState.appData.users.find(u => String(u.id).trim() === String(this.currentEditId).trim())?.createdAt
                 : new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             // إضافة حقول جديدة لتسجيل الدخول
@@ -1846,7 +1846,7 @@ const Users = {
         const isExplicitPasswordChange = isNewUser || !!(changePassToggle && changePassToggle.checked);
         const passwordUpdated = isExplicitPasswordChange && trimmedPasswordInput.length > 0;
         const previousUser = this.currentEditId
-            ? AppState.appData.users.find(u => u.id === this.currentEditId)
+            ? AppState.appData.users.find(u => String(u.id).trim() === String(this.currentEditId).trim())
             : null;
 
         // الهاش الصالح فقط هو SHA-256 بطول 64 — '***' و '' ليست هاش حقيقي
@@ -1907,7 +1907,7 @@ const Users = {
 
         // التحقق من عدم تكرار البريد الإلكتروني
         const existingUser = AppState.appData.users.find(u =>
-            u.email === formData.email && u.id !== formData.id
+            (u.email || '').toLowerCase() === formData.email && String(u.id).trim() !== String(formData.id).trim()
         );
         if (existingUser) {
             Loading.hide();
@@ -1978,7 +1978,7 @@ const Users = {
                 }
             } else {
                 // تحديث مستخدم موجود
-                const index = AppState.appData.users.findIndex(u => u.id === this.currentEditId);
+                const index = AppState.appData.users.findIndex(u => String(u.id).trim() === String(this.currentEditId).trim());
                 if (index !== -1) {
                     const previous = AppState.appData.users[index];
                     // الحفاظ على حالة isOnline إذا كان المستخدم متصل حالياً
@@ -2087,7 +2087,7 @@ const Users = {
             } else {
                 // ✅ إصلاح: تحديث جلسة المستخدم المعدل إذا كان متصل حالياً
                 // البحث عن المستخدم المعدل في الجلسات النشطة
-                const updatedUser = AppState.appData.users.find(u => u.id === formData.id);
+                const updatedUser = AppState.appData.users.find(u => String(u.id).trim() === String(formData.id).trim());
                 if (updatedUser && updatedUser.isOnline === true) {
                     // المستخدم متصل - يجب تحديث جلسته
                     // سيتم تحديث الجلسة تلقائياً عند المزامنة التالية
@@ -2165,7 +2165,7 @@ const Users = {
             return;
         }
 
-        const user = AppState.appData.users.find(u => u.id === userId);
+        const user = AppState.appData.users.find(u => String(u.id).trim() === String(userId).trim());
         if (user) {
             await this.showForm(user);
         } else {
@@ -2183,7 +2183,7 @@ const Users = {
             return;
         }
 
-        const user = (AppState.appData.users || []).find(u => u && (u.id === userId || u.email === userEmail));
+        const user = (AppState.appData.users || []).find(u => u && (String(u.id).trim() === String(userId).trim() || u.email === userEmail));
         if (!user) {
             Notification.error('المستخدم غير موجود');
             return;
@@ -2217,7 +2217,7 @@ const Users = {
             return;
         }
 
-        const user = AppState.appData.users.find(u => u.id === userId || u.email === userEmail);
+        const user = AppState.appData.users.find(u => String(u.id).trim() === String(userId).trim() || u.email === userEmail);
         if (!user) {
             Notification.error('المستخدم غير موجود');
             return;
