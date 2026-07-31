@@ -368,6 +368,35 @@ function doPost(e) {
             }
         }
 
+        // SEC-04: جلسة خادم موقعة — مطلوبة عند وجود userData (بعد login)
+        const sessionExemptActions = [
+            'login', 'verifyMfaLogin', 'initializeSheets', 'fixClinicSheetHeaders',
+            'testConnection', 'getPublicIP', 'invalidateServerSession'
+        ];
+        const isSessionExempt = sessionExemptActions.indexOf(action) !== -1;
+        if (!isSessionExempt && actorUserData && (actorUserData.email || actorUserData.id)) {
+            var sessionToken = String(postData.sessionToken || (payload && payload.sessionToken) || '').trim();
+            if (typeof validateServerSessionToken_ === 'function') {
+                var sessionGate = validateServerSessionToken_(sessionToken, actorUserData);
+                if (!sessionGate.ok) {
+                    if (typeof logSecurityEvent === 'function') {
+                        logSecurityEvent('session_gate_denied', {
+                            action: action,
+                            errorCode: sessionGate.errorCode,
+                            actor: actorUserData.email || actorUserData.id || '',
+                            severity: 'high'
+                        });
+                    }
+                    return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
+                        success: false,
+                        message: sessionGate.message || 'جلسة غير صالحة',
+                        errorCode: sessionGate.errorCode || 'SESSION_REQUIRED',
+                        action: action
+                    })));
+                }
+            }
+        }
+
         // قراءة الأوراق: CSRF + هوية مسجّلة في Users
         const sheetReadActions = ['readFromSheet', 'batchReadSheets'];
         if (sheetReadActions.indexOf(action) !== -1) {

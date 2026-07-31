@@ -537,6 +537,9 @@ window.Auth = {
         }
 
         // 🔓 نجاح تسجيل الدخول
+        if (loginMethod === 'server' && loginResult) {
+            this._storeServerSessionToken(loginResult);
+        }
         return await this._finishLoginAfterAuth(user, email, remember, foundUser);
     },
 
@@ -590,7 +593,29 @@ window.Auth = {
         }
 
         await Utils.RateLimiter.clearAttempts(email);
+        this._storeServerSessionToken(verifyResult);
         return await this._finishLoginAfterAuth(verifyResult.user, email, remember, null);
+    },
+
+    _storeServerSessionToken(authResult) {
+        try {
+            const token = authResult && authResult.sessionToken ? String(authResult.sessionToken).trim() : '';
+            if (!token) return;
+            sessionStorage.setItem('hse_server_session_token', token);
+            if (authResult.sessionExpiresAt) {
+                sessionStorage.setItem('hse_server_session_expires_at', String(authResult.sessionExpiresAt));
+            }
+            if (typeof AppState !== 'undefined' && AppState.currentUser) {
+                AppState.currentUser.serverSessionToken = token;
+            }
+        } catch (_e) { /* ignore */ }
+    },
+
+    _clearServerSessionToken() {
+        try {
+            sessionStorage.removeItem('hse_server_session_token');
+            sessionStorage.removeItem('hse_server_session_expires_at');
+        } catch (_e) { /* ignore */ }
     },
 
     async _finishLoginAfterAuth(user, email, remember, foundUser) {
@@ -1061,6 +1086,18 @@ window.Auth = {
         }
         this._recordClinicStaffAttendance('logout');
 
+        // إبطال جلسة الخادم (أفضل جهد — لا يعيق الخروج)
+        try {
+            const st = sessionStorage.getItem('hse_server_session_token');
+            if (st && typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
+                GoogleIntegration.sendRequest({
+                    action: 'invalidateServerSession',
+                    data: { sessionToken: st, __timeoutMs: 8000, __highPriority: true }
+                }).catch(() => {});
+            }
+        } catch (_inv) { /* ignore */ }
+        this._clearServerSessionToken();
+
         // تحديث حالة المستخدم إلى غير متصل
         if (AppState.currentUser && AppState.currentUser.email) {
             const users = AppState.appData.users || [];
@@ -1150,6 +1187,8 @@ window.Auth = {
             sessionStorage.removeItem('hse_current_session');
             sessionStorage.removeItem('hse_current_section');
             sessionStorage.removeItem('hse_session_id'); // مسح معرف الجلسة
+            sessionStorage.removeItem('hse_server_session_token');
+            sessionStorage.removeItem('hse_server_session_expires_at');
             if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.purgeLocalAppData === 'function') {
                 window.DataManager.purgeLocalAppData('logout');
             }

@@ -834,8 +834,7 @@ function loginUser(email, password) {
         try {
             _fastTouchUserLoginFields_(user.id, {
                 lastLogin: new Date().toISOString(),
-                isOnline: false,
-                activeSessionId: ''
+                isOnline: false
             });
         } catch (loginTimeError) {
             Logger.log('Warning: Could not update lastLogin: ' + loginTimeError.toString());
@@ -844,11 +843,11 @@ function loginUser(email, password) {
         // تجهيز كائن المستخدم للإرجاع (بدون بيانات حساسة)
         const safeUser = buildSafeUserFromRecord_(user);
 
-        return {
+        return attachServerSessionToLoginResult_({
             success: true,
             message: 'تم تسجيل الدخول بنجاح',
             user: safeUser
-        };
+        }, user);
 
     } catch (error) {
         Logger.log('Error in loginUser: ' + error.toString());
@@ -917,19 +916,18 @@ function verifyMfaLogin(challengeToken, email, code) {
             try {
                 _fastTouchUserLoginFields_(user.id, {
                     lastLogin: new Date().toISOString(),
-                    isOnline: false,
-                    activeSessionId: ''
+                    isOnline: false
                 });
             } catch (loginTimeError) {
                 Logger.log('Warning: Could not update lastLogin after MFA: ' + loginTimeError.toString());
             }
         }
 
-        return {
+        return attachServerSessionToLoginResult_({
             success: true,
             message: 'تم تسجيل الدخول بنجاح',
             user: safeUser
-        };
+        }, user || safeUser);
     } catch (error) {
         Logger.log('verifyMfaLogin error: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء التحقق من المصادقة الثنائية' };

@@ -8938,6 +8938,23 @@ const Clinic = {
     },
 
     /**
+     * PERF-01: فلاتر جلب سجل التردد — نافذة زمنية + حد أقصى للأحدث
+     * لا يغيّر مسار الدمج/الكاش؛ يقلّل حجم الاستجابة فقط.
+     */
+    getClinicVisitsFetchFilters() {
+        const months = 18;
+        const d = new Date();
+        d.setMonth(d.getMonth() - months);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return {
+            startDate: `${yyyy}-${mm}-${dd}`,
+            limit: 8000
+        };
+    },
+
+    /**
      * ✅ دالة منفصلة لتحميل بيانات الزيارات من Backend
      * @param {{ forceRefresh?: boolean }} [opts] — forceRefresh: انتظر الطلب الجاري ثم ابدأ جلباً جديداً (بدون تصفير الـ promise منتصف الطريق)
      */
@@ -8976,7 +8993,10 @@ const Clinic = {
             const result = await Utils.promiseWithTimeout(
                 GoogleIntegration.sendRequest({
                     action: 'getAllClinicVisits',
-                    data: { __timeoutMs: 120000 }
+                    data: {
+                        filters: this.getClinicVisitsFetchFilters(),
+                        __timeoutMs: 120000
+                    }
                 }),
                 120000,
                 'انتهت مهلة تحميل بيانات سجل التردد'

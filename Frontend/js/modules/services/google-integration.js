@@ -836,6 +836,11 @@ const GoogleIntegration = {
                 timestamp: new Date().toISOString()
             };
 
+            try {
+                const st = sessionStorage.getItem('hse_server_session_token');
+                if (st) payload.sessionToken = st;
+            } catch (_stErr) { /* ignore */ }
+
             // هوية المُنفِّذ للخادم: Code.gs يتطلب postData.userData لعمليات strictAdminActions
             // (deleteUser، resetUserPassword، initializeSheets، إصلاح رؤوس الجداول) وإلا يُرفض الطلب.
             if (typeof AppState !== 'undefined' && AppState.currentUser) {
@@ -1266,20 +1271,35 @@ const GoogleIntegration = {
                 if (allowStructuredFailure) {
                     return result;
                 }
-                // التحقق من هل هو errorMessage
+                const errorCode = result.errorCode ? String(result.errorCode) : '';
                 const errorMessage = result.message || 'فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو errorMessage';
+                const isSessionError = errorCode === 'SESSION_EXPIRED' ||
+                    errorCode === 'SESSION_TOKEN_MISSING' ||
+                    errorCode === 'SESSION_USER_MISMATCH' ||
+                    errorCode === 'SESSION_REQUIRED' ||
+                    errorMessage.includes('انتهت صلاحية الجلسة') ||
+                    errorMessage.includes('جلسة الخادم مفقودة');
+                if (isSessionError) {
+                    try {
+                        sessionStorage.removeItem('hse_server_session_token');
+                        sessionStorage.removeItem('hse_server_session_expires_at');
+                    } catch (_e) { /* ignore */ }
+                    if (typeof Notification !== 'undefined' && Notification.warning && !this._sessionExpiryNotified) {
+                        this._sessionExpiryNotified = true;
+                        Notification.warning('انتهت جلسة الخادم — أعد تسجيل الدخول للمتابعة مع المزامنة.');
+                        setTimeout(() => { this._sessionExpiryNotified = false; }, 15000);
+                    }
+                }
                 if (errorMessage.includes('فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو errorMessage')) {
-                    // التحقق من هل هو spreadsheetId
-                    // التحقق من هل هو getSpreadsheetId
-                    // التحقق من هل هو fallback
                     Utils.safeWarn('فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو spreadsheetId');
-                    // التحقق من هل هو console
                     const err = new Error(errorMessage);
                     err.isAppError = true;
+                    err.errorCode = errorCode;
                     throw err;
                 }
                 const err = new Error(errorMessage);
                 err.isAppError = true;
+                err.errorCode = errorCode;
                 throw err;
             }
 
@@ -1729,7 +1749,8 @@ const GoogleIntegration = {
         const authPatterns = [
             'ACTOR_IDENTITY_REQUIRED', 'ACTOR_NOT_REGISTERED', 'ACTOR_INACTIVE',
             'CSRF_TOKEN', 'STRICT_ADMIN_DENIED', 'READ_DENIED', 'PERMISSION_DENIED',
-            'GET_READ_DISABLED', 'رفض أمني', 'غير مسجل', 'CSRF'
+            'GET_READ_DISABLED', 'SESSION_EXPIRED', 'SESSION_TOKEN_MISSING', 'SESSION_USER_MISMATCH',
+            'SESSION_REQUIRED', 'رفض أمني', 'غير مسجل', 'CSRF', 'انتهت صلاحية الجلسة'
         ];
         return authPatterns.some((p) => code.includes(p) || msg.includes(p));
     },

@@ -357,6 +357,111 @@ function buildRequestSessionKey(action, token, sessionId, userHint) {
 }
 
 /**
+ * SEC-04: إصدار sessionToken موقّع في CacheService بعد login ناجح
+ * CacheService TTL الأقصى 21600 ثانية (6 ساعات) — نستخدمه كحد أقصى.
+ */
+function issueServerSessionToken_(userLike) {
+    try {
+        var email = '';
+        var userId = '';
+        if (userLike) {
+            email = String(userLike.email || '').trim().toLowerCase();
+            userId = userLike.id != null ? String(userLike.id) : '';
+        }
+        if (!email && !userId) return null;
+
+        var bytes = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+        var token = String(bytes).toLowerCase();
+        var ttlSec = 21600; // 6h max CacheService
+        var payload = JSON.stringify({
+            email: email,
+            userId: userId,
+            issuedAt: Date.now()
+        });
+        CacheService.getScriptCache().put('sess_v1:' + token, payload, ttlSec);
+        return {
+            sessionToken: token,
+            expiresAt: Date.now() + (ttlSec * 1000),
+            ttlSec: ttlSec
+        };
+    } catch (e) {
+        Logger.log('issueServerSessionToken_ error: ' + e.toString());
+        return null;
+    }
+}
+
+/**
+ * التحقق من sessionToken وربطه بهوية المُنفِّذ إن وُجدت
+ */
+function validateServerSessionToken_(sessionToken, actorUserData) {
+    var token = String(sessionToken || '').trim().toLowerCase();
+    if (!token || token.length < 32) {
+        return { ok: false, errorCode: 'SESSION_TOKEN_MISSING', message: 'مطلوب تسجيل دخول جديد (جلسة الخادم مفقودة).' };
+    }
+    try {
+        var raw = CacheService.getScriptCache().get('sess_v1:' + token);
+        if (!raw) {
+            return { ok: false, errorCode: 'SESSION_EXPIRED', message: 'انتهت صلاحية الجلسة. أعد تسجيل الدخول.' };
+        }
+        var data = JSON.parse(raw);
+        var actorEmail = '';
+        if (actorUserData && actorUserData.email) {
+            actorEmail = (typeof normalizeSheetScalarField_ === 'function')
+                ? normalizeSheetScalarField_(actorUserData.email).toLowerCase()
+                : String(actorUserData.email).trim().toLowerCase();
+        }
+        if (actorEmail && data.email && actorEmail !== data.email) {
+            if (typeof logSecurityEvent === 'function') {
+                logSecurityEvent('session_user_mismatch', { actor: actorEmail, sessionEmail: data.email, severity: 'high' });
+            }
+            return { ok: false, errorCode: 'SESSION_USER_MISMATCH', message: 'رفض أمني: الجلسة لا تطابق المستخدم.' };
+        }
+        // تمديد انزلاقي
+        CacheService.getScriptCache().put('sess_v1:' + token, raw, 21600);
+        return { ok: true, session: data };
+    } catch (e) {
+        Logger.log('validateServerSessionToken_ error: ' + e.toString());
+        return { ok: false, errorCode: 'SESSION_VALIDATE_ERROR', message: 'تعذر التحقق من الجلسة.' };
+    }
+}
+
+function invalidateServerSessionToken_(sessionToken) {
+    try {
+        var token = String(sessionToken || '').trim().toLowerCase();
+        if (!token) return { success: true };
+        CacheService.getScriptCache().remove('sess_v1:' + token);
+        return { success: true };
+    } catch (e) {
+        return { success: false, message: e.toString() };
+    }
+}
+
+/**
+ * إرفاق sessionToken بنتيجة login ناجحة (بدون MFA)
+ */
+function attachServerSessionToLoginResult_(result, userLike) {
+    try {
+        if (!result || result.success !== true || result.mfaRequired) return result;
+        var sess = issueServerSessionToken_(userLike || result.user);
+        if (sess && sess.sessionToken) {
+            result.sessionToken = sess.sessionToken;
+            result.sessionExpiresAt = sess.expiresAt;
+            var uid = userLike && userLike.id != null ? userLike.id : (result.user && result.user.id);
+            if (uid != null && typeof _fastTouchUserLoginFields_ === 'function') {
+                try {
+                    _fastTouchUserLoginFields_(uid, {
+                        activeSessionId: String(sess.sessionToken).substring(0, 80)
+                    });
+                } catch (_touchErr) { /* ignore */ }
+            }
+        }
+    } catch (e) {
+        Logger.log('attachServerSessionToLoginResult_ error: ' + e.toString());
+    }
+    return result;
+}
+
+/**
  * Rate limit بسيط باستخدام CacheService
  */
 function checkRateLimit(limitKey, limit, windowSec) {

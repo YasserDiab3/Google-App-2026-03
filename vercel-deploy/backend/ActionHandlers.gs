@@ -452,6 +452,13 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'invalidateServerSession': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var token = (postData && postData.sessionToken) || (payload && payload.sessionToken) || '';
+        if (typeof invalidateServerSessionToken_ === 'function') {
+            return invalidateServerSessionToken_(token);
+        }
+        return { success: true };
+    },
     'startMfaEnrollment': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

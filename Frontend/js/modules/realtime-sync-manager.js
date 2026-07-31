@@ -810,7 +810,12 @@ const RealtimeSyncManager = {
 
                 const result = await GoogleIntegration.sendRequest({
                     action: 'getAllClinicVisits',
-                    data: { __timeoutMs: 120000 }
+                    data: {
+                        filters: (typeof Clinic !== 'undefined' && typeof Clinic.getClinicVisitsFetchFilters === 'function')
+                            ? Clinic.getClinicVisitsFetchFilters()
+                            : { startDate: undefined, limit: 8000 },
+                        __timeoutMs: 120000
+                    }
                 });
 
                 if (result && result.success) {

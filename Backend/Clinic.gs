@@ -1308,6 +1308,7 @@ function applyMigrateContractorVisits() { return migrateLegacyContractorVisits_(
 
  */
 function getAllClinicVisits(filters = {}) {
+    var perfStart = Date.now();
     try {
         const spreadsheetId = getSpreadsheetId();
 
@@ -1470,8 +1471,28 @@ function getAllClinicVisits(filters = {}) {
             const dateB = new Date(b.visitDate || b.createdAt || 0);
             return dateB - dateA;
         });
-        
-        return { success: true, data: data, count: data.length };
+
+        var totalMatched = data.length;
+        var limit = parseInt(filters.limit, 10);
+        var truncated = false;
+        if (!isNaN(limit) && isFinite(limit) && limit > 0 && data.length > limit) {
+            data = data.slice(0, limit);
+            truncated = true;
+        }
+
+        var elapsedMs = Date.now() - perfStart;
+        if (elapsedMs > 5000) {
+            Logger.log('getAllClinicVisits slow: ' + elapsedMs + 'ms matched=' + totalMatched + ' returned=' + data.length + ' truncated=' + truncated);
+        }
+        return {
+            success: true,
+            data: data,
+            count: data.length,
+            totalMatched: totalMatched,
+            truncated: truncated,
+            limit: (!isNaN(limit) && isFinite(limit) && limit > 0) ? limit : null,
+            elapsedMs: elapsedMs
+        };
     } catch (error) {
         Logger.log('Error getting all clinic visits: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء قراءة الزيارات: ' + error.toString(), data: [] };

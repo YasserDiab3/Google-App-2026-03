@@ -1,13 +1,13 @@
 {
-  "version": "1.0.713",
+  "version": "1.0.715",
   "highlights": {
     "ar": [
-      "ترجمة واجهات العيادة ومراقبة التصرفات الظاهرة عند اللغة الإنجليزية.",
-      "نماذج وskeletons ورسائل التحميل لم تعد عربية ثابتة تحت EN."
+      "جلسة خادم موقعة بعد تسجيل الدخول لحماية طلبات API.",
+      "تسريع جلب سجل التردد: آخر 18 شهراً بحد أقصى مع قياس الزمن."
     ],
     "en": [
-      "Clinic and Behavior Monitoring visible UI strings translate in English mode.",
-      "Forms, skeletons, and loading messages are no longer hardcoded Arabic under EN."
+      "Signed server session after login to protect API requests.",
+      "Faster clinic visits fetch: last 18 months with a cap and timing."
     ]
   }
 }
