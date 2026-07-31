@@ -1233,12 +1233,12 @@ const PTW = {
      */
     persistPtwLocalState() {
         try {
-            if (Array.isArray(AppState?.appData?.ptw)) {
+            if (Array.isArray(AppState?.appData?.ptw) && (AppState.appData.ptw.length > 0 || !localStorage.getItem('hse_ptw_list'))) {
                 localStorage.setItem('hse_ptw_list', Utils.safeStringify(AppState.appData.ptw));
             }
-            if (Array.isArray(this.registryData)) {
+            if (Array.isArray(this.registryData) && (this.registryData.length > 0 || !localStorage.getItem('hse_ptw_registry'))) {
                 localStorage.setItem('hse_ptw_registry', Utils.safeStringify(this.registryData));
-            } else if (Array.isArray(AppState?.appData?.ptwRegistry)) {
+            } else if (Array.isArray(AppState?.appData?.ptwRegistry) && (AppState.appData.ptwRegistry.length > 0 || !localStorage.getItem('hse_ptw_registry'))) {
                 localStorage.setItem('hse_ptw_registry', Utils.safeStringify(AppState.appData.ptwRegistry));
             }
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
@@ -1889,8 +1889,11 @@ const PTW = {
     mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry) {
         const allPermitsMap = new Map();
         (permitsFromList || []).forEach((permit) => {
-            if (permit && permit.id) {
-                allPermitsMap.set(permit.id, {
+            if (!permit) return;
+            const permitId = String(permit.id || permit.permitId || permit.paperPermitNumber || permit.permitNumber || '').trim();
+            if (permitId) {
+                allPermitsMap.set(permitId, {
+                    id: permitId,
                     ...permit,
                     status: this.normalizePermitStatus(permit.status)
                 });
@@ -1898,9 +1901,12 @@ const PTW = {
         });
         // Registry should override list status/details for same permit ID.
         (permitsFromRegistry || []).forEach((permit) => {
-            if (permit && permit.id) {
-                const existing = allPermitsMap.get(permit.id) || {};
-                allPermitsMap.set(permit.id, {
+            if (!permit) return;
+            const permitId = String(permit.id || permit.permitId || permit.paperPermitNumber || permit.permitNumber || '').trim();
+            if (permitId) {
+                const existing = allPermitsMap.get(permitId) || {};
+                allPermitsMap.set(permitId, {
+                    id: permitId,
                     ...existing,
                     ...permit,
                     status: this.normalizePermitStatus(permit.status),
