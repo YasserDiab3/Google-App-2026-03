@@ -13,6 +13,10 @@ const PTW = {
     _mapMarkersToken: 0,
     _registrySanitizedCache: null,
     _registryTableMountToken: 0,
+    _mergedPermitsCache: null,
+    _mergedPermitsCacheToken: 0,
+    _metricsDatasetCache: null,
+    _approvalNormCache: new Map(),
     _isSubmitting: false, // منع الحفظ المتكرر
     _isSavingManualPermit: false, // منع الإرسال المزدوج لنموذج التصريح اليدوي
     _i18nSectionObserver: null,
@@ -1111,40 +1115,162 @@ const PTW = {
     },
 
     /**
+     * دمج مصفوفتين لسجل التصاريح مع الحفاظ على البيانات المحلية غير المرفوعة
+     */
+    _mergeRegistryLists(localList = [], incomingList = []) {
+        if (!Array.isArray(localList)) localList = [];
+        if (!Array.isArray(incomingList)) incomingList = [];
+        if (incomingList.length === 0) return localList;
+        if (localList.length === 0) return incomingList;
+
+        const mergedMap = new Map();
+        incomingList.forEach(item => {
+            if (!item || typeof item !== 'object') return;
+            const key = String(item.id || item.permitId || item.paperPermitNumber || item.sequentialNumber || '').trim();
+            if (key) {
+                mergedMap.set(key, item);
+            }
+        });
+
+        localList.forEach(item => {
+            if (!item || typeof item !== 'object') return;
+            const key = String(item.id || item.permitId || item.paperPermitNumber || item.sequentialNumber || '').trim();
+            const paperKey = String(item.paperPermitNumber || '').trim();
+
+            let foundInIncoming = false;
+            if (key && mergedMap.has(key)) foundInIncoming = true;
+            if (!foundInIncoming && paperKey) {
+                for (const existing of mergedMap.values()) {
+                    if (String(existing.paperPermitNumber || '').trim() === paperKey) {
+                        foundInIncoming = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!foundInIncoming) {
+                const addKey = key || (`local_reg_${Date.now()}_${Math.random()}`);
+                mergedMap.set(addKey, item);
+            }
+        });
+
+        return Array.from(mergedMap.values());
+    },
+
+    /**
+     * دمج مصفوفتين لقائمة التصاريح مع الحفاظ على التصاريح المحلية
+     */
+    _mergePermitLists(localList = [], incomingList = []) {
+        if (!Array.isArray(localList)) localList = [];
+        if (!Array.isArray(incomingList)) incomingList = [];
+        if (incomingList.length === 0) return localList;
+        if (localList.length === 0) return incomingList;
+
+        const mergedMap = new Map();
+        incomingList.forEach(item => {
+            if (!item || typeof item !== 'object') return;
+            const key = String(item.id || item.permitId || item.permitNumber || '').trim();
+            if (key) {
+                mergedMap.set(key, item);
+            }
+        });
+
+        localList.forEach(item => {
+            if (!item || typeof item !== 'object') return;
+            const key = String(item.id || item.permitId || item.permitNumber || '').trim();
+            const permitNumKey = String(item.permitNumber || item.paperPermitNumber || '').trim();
+
+            let foundInIncoming = false;
+            if (key && mergedMap.has(key)) foundInIncoming = true;
+            if (!foundInIncoming && permitNumKey) {
+                for (const existing of mergedMap.values()) {
+                    if (String(existing.permitNumber || existing.paperPermitNumber || '').trim() === permitNumKey) {
+                        foundInIncoming = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!foundInIncoming) {
+                const addKey = key || (`local_ptw_${Date.now()}_${Math.random()}`);
+                mergedMap.set(addKey, item);
+            }
+        });
+
+        return Array.from(mergedMap.values());
+    },
+
+    /**
+     * حفظ وتأكيد وجود بيانات التصاريح والسجل محلياً 100% بدون فقدان
+     */
+    persistPtwLocalState() {
+        try {
+            if (Array.isArray(AppState?.appData?.ptw)) {
+                localStorage.setItem('hse_ptw_list', Utils.safeStringify(AppState.appData.ptw));
+            }
+            if (Array.isArray(this.registryData)) {
+                localStorage.setItem('hse_ptw_registry', Utils.safeStringify(this.registryData));
+            } else if (Array.isArray(AppState?.appData?.ptwRegistry)) {
+                localStorage.setItem('hse_ptw_registry', Utils.safeStringify(AppState.appData.ptwRegistry));
+            }
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+        } catch (e) {
+            Utils.safeWarn('⚠️ فشل حفظ كاش PTW المحلي:', e);
+        }
+    },
+
+    /**
      * تهيئة وتحميل بيانات السجل
      * @param {boolean} skipBackendLoad - تجاهل تحميل البيانات من Backend (مفيد عند التحميل الأولي)
      */
     initRegistry(skipBackendLoad = false) {
         try {
-            // تحميل من AppState أولاً (الأحدث)
-            if (AppState.appData && AppState.appData.ptwRegistry && Array.isArray(AppState.appData.ptwRegistry)) {
-                this.setPtwRegistryState(AppState.appData.ptwRegistry, 'AppState.ptwRegistry');
-                Utils.safeLog(`✅ تم تحميل ${this.registryData.length} سجل من AppState`);
-                // لا نقوم بالمزامنة عند التحميل من AppState - ننتظر تحميل Backend
-                return;
-            }
-            // تحميل من localStorage كنسخة احتياطية
-            const savedData = localStorage.getItem('hse_ptw_registry');
-            if (savedData) {
+            if (!AppState.appData) AppState.appData = {};
+
+            // 1. استعادة قائمة التصاريح (ptw) من localStorage ودمجها مع AppState
+            const savedPtwList = localStorage.getItem('hse_ptw_list');
+            if (savedPtwList) {
                 try {
-                    this.setPtwRegistryState(JSON.parse(savedData), 'localStorage.hse_ptw_registry');
-                    Utils.safeLog(`✅ تم تحميل ${this.registryData.length} سجل من localStorage`);
-                    // لا نقوم بالمزامنة عند التحميل من localStorage - ننتظر تحميل Backend
+                    const parsedPtw = JSON.parse(savedPtwList);
+                    if (Array.isArray(parsedPtw) && parsedPtw.length > 0) {
+                        const currentPtw = Array.isArray(AppState.appData.ptw) ? AppState.appData.ptw : [];
+                        AppState.appData.ptw = this._mergePermitLists(currentPtw, parsedPtw);
+                        Utils.safeLog(`✅ تم استعادة ودمج ${AppState.appData.ptw.length} تصريح من localStorage (hse_ptw_list)`);
+                    }
+                } catch (e) {
+                    Utils.safeError('❌ خطأ في تحليل hse_ptw_list من localStorage:', e);
+                }
+            }
+
+            // 2. استعادة سجل التصاريح (ptwRegistry) ودمج المصادر المتاحة
+            let savedReg = [];
+            const savedRegistryData = localStorage.getItem('hse_ptw_registry');
+            if (savedRegistryData) {
+                try {
+                    const parsedReg = JSON.parse(savedRegistryData);
+                    if (Array.isArray(parsedReg)) savedReg = parsedReg;
                 } catch (parseError) {
                     Utils.safeError('❌ خطأ في تحليل بيانات السجل من localStorage:', parseError);
-                    this.registryData = [];
                 }
-            } else {
+            }
+
+            const appReg = Array.isArray(AppState.appData.ptwRegistry) ? AppState.appData.ptwRegistry : [];
+            const mergedReg = this._mergeRegistryLists(appReg, savedReg);
+            if (mergedReg.length > 0) {
+                this.setPtwRegistryState(mergedReg, 'initRegistry.merged');
+                Utils.safeLog(`✅ تم استعادة ودمج ${this.registryData.length} سجل في PTWRegistry`);
+            } else if (!Array.isArray(this.registryData)) {
                 this.registryData = [];
-                // التأكد من وجود مصفوفة فارغة في AppState
-                if (!AppState.appData) AppState.appData = {};
                 AppState.appData.ptwRegistry = [];
             }
+            this.persistPtwLocalState();
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل بيانات السجل:', error);
-            this.registryData = [];
+            if (!Array.isArray(this.registryData)) this.registryData = [];
             if (!AppState.appData) AppState.appData = {};
-            AppState.appData.ptwRegistry = [];
+            if (!Array.isArray(AppState.appData.ptwRegistry)) AppState.appData.ptwRegistry = [];
         }
     },
 
@@ -1157,6 +1283,7 @@ const PTW = {
         try {
             const { skipSync = false } = options;
             this.setPtwRegistryState(this.registryData, 'saveRegistryData');
+            this.persistPtwLocalState();
 
             // تحديث عرض السجل إذا كان مرئياً
             this.refreshRegistryViewIfVisible();
@@ -1698,9 +1825,17 @@ const PTW = {
         const sanitized = this.sanitizePtwRegistryDataset(dataset, source);
         this.registryData = sanitized;
         this._registrySanitizedCache = null;
+        this._mergedPermitsCache = null;
+        this._metricsDatasetCache = null;
+        this._mergedPermitsCacheToken++;
+        this._approvalNormCache.clear();
         if (!AppState.appData) AppState.appData = {};
         AppState.appData.ptwRegistry = [...sanitized];
-        try { localStorage.setItem('hse_ptw_registry', Utils.safeStringify(sanitized)); } catch (_) {}
+        try {
+            if (sanitized.length > 0) {
+                localStorage.setItem('hse_ptw_registry', Utils.safeStringify(sanitized));
+            }
+        } catch (_) {}
         return sanitized;
     },
 
@@ -2198,13 +2333,18 @@ const PTW = {
     },
 
     getPermitMetricsDataset() {
+        if (this._metricsDatasetCache) {
+            return this._metricsDatasetCache;
+        }
         const registryRows = this.getRegistrySanitizedDataset();
-        const permitsFromList = AppState.appData.ptw || [];
+        const permitsFromList = AppState.appData?.ptw || [];
         const permitsFromRegistry = this.getRegistryPermitsForMetrics();
         const merged = this.mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry);
         // مصدر العدّ: صفوف PTWRegistry المعقّمة (تطابق السجل/الورقة) وليس دمج PTW الفريد فقط
         const source = permitsFromRegistry.length > 0 ? permitsFromRegistry : merged;
-        return { source, merged, permitsFromList, permitsFromRegistry, registryRows };
+        const res = { source, merged, permitsFromList, permitsFromRegistry, registryRows };
+        this._metricsDatasetCache = res;
+        return res;
     },
 
     getPermitTypeDisplay(entry) {
@@ -2580,8 +2720,12 @@ const PTW = {
             });
 
             if (result && result.success && Array.isArray(result.data)) {
-                // تحديث البيانات المحلية بما في Backend
-                AppState.appData.ptw = result.data;
+                if (result.data.length > 0) {
+                    const currentPtw = Array.isArray(AppState.appData.ptw) ? AppState.appData.ptw : [];
+                    const mergedPtw = this._mergePermitLists(currentPtw, result.data);
+                    AppState.appData.ptw = mergedPtw;
+                    try { localStorage.setItem('hse_ptw_list', Utils.safeStringify(mergedPtw)); } catch (_) {}
+                }
 
                 // حفظ محلياً
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
@@ -2630,8 +2774,11 @@ const PTW = {
                 });
 
                 if (result && result.success && Array.isArray(result.data)) {
-                    // تحديث الحالة بالبيانات الواردة فقط بعد نجاح الطلب
-                    this.setPtwRegistryState(result.data, 'backend.PTWRegistry.readFromSheet');
+                    if (result.data.length > 0) {
+                        const currentReg = Array.isArray(this.registryData) ? this.registryData : [];
+                        const mergedReg = this._mergeRegistryLists(currentReg, result.data);
+                        this.setPtwRegistryState(mergedReg, 'backend.PTWRegistry.readFromSheet');
+                    }
                     if (AppState.debugMode) {
                         Utils.safeLog(`✅ تم تحميل ${this.registryData.length} سجل من Backend`);
                     }
@@ -2769,17 +2916,29 @@ const PTW = {
                     const ptwData = result.data['PTW'];
                     const registryData = result.data['PTWRegistry'];
 
-                    if (Array.isArray(ptwData)) {
-                        AppState.appData.ptw = ptwData;
+                    if (Array.isArray(ptwData) && ptwData.length > 0) {
+                        const currentPtw = Array.isArray(AppState.appData.ptw) ? AppState.appData.ptw : [];
+                        const mergedPtw = this._mergePermitLists(currentPtw, ptwData);
+                        AppState.appData.ptw = mergedPtw;
+                        try { localStorage.setItem('hse_ptw_list', Utils.safeStringify(mergedPtw)); } catch (_) {}
                     }
 
-                    if (Array.isArray(registryData)) {
-                        this.setPtwRegistryState(registryData, 'backend.PTWRegistry.batchReadSheets');
+                    if (Array.isArray(registryData) && registryData.length > 0) {
+                        const currentReg = Array.isArray(this.registryData) ? this.registryData : [];
+                        const mergedReg = this._mergeRegistryLists(currentReg, registryData);
+                        this.setPtwRegistryState(mergedReg, 'backend.PTWRegistry.batchReadSheets');
                     }
 
                     if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                         window.DataManager.save();
                     }
+                    // تحديث سلس للواجهة بعد استلام بيانات الخلفية
+                    try {
+                        this.filterItems();
+                        if (this.currentTab === 'registry' && typeof this.renderRegistryList === 'function') {
+                            this.renderRegistryList();
+                        }
+                    } catch (_) {}
                     if (AppState.debugMode) {
                         Utils.safeLog('⚡ تم استلام بيانات PTW و PTWRegistry بطلب دفعة واحدة (batchReadSheets) بنجاح');
                     }
@@ -2840,7 +2999,6 @@ const PTW = {
         try {
             permitsContent.innerHTML = this.renderList({ includeStats: false });
             this.applyModuleI18n(permitsContent);
-            this.setupEventListeners();
             this.loadPTWList(true);
 
             const hydrateStats = () => {
@@ -2857,7 +3015,9 @@ const PTW = {
                 }
             };
 
-            hydrateStats();
+            requestAnimationFrame(() => {
+                hydrateStats();
+            });
         } catch (error) {
             Utils.safeWarn('⚠️ خطأ في تحميل القائمة:', error);
             permitsContent.innerHTML = `
@@ -3054,6 +3214,17 @@ const PTW = {
         `;
     },
 
+    hasDetailedPermission(permissionKey) {
+        if (typeof Permissions === 'undefined') return true;
+        if (typeof Permissions.isCurrentUserEffectiveAdmin === 'function' && Permissions.isCurrentUserEffectiveAdmin()) {
+            return true;
+        }
+        if (typeof Permissions.hasDetailedPermission === 'function') {
+            return Permissions.hasDetailedPermission('ptw', permissionKey);
+        }
+        return true;
+    },
+
     async load() {
         // منع إعادة تحميل متداخلة (مثلاً بسبب language-changed أو إعادة دخول القسم بسرعة)
         if (this._isLoading) {
@@ -3064,11 +3235,10 @@ const PTW = {
         // Add language change listener
         if (!this._languageChangeListenerAdded) {
             document.addEventListener('language-changed', () => {
-                if (this._isLoading) {
-                    this._reloadRequested = true;
-                    return;
+                const section = document.getElementById('ptw-section');
+                if (section && section.offsetParent !== null && !this._isLoading && !(typeof AppState !== 'undefined' && AppState._languageRefresh)) {
+                    this.load();
                 }
-                this.load();
             });
             this._languageChangeListenerAdded = true;
         }
@@ -3113,6 +3283,28 @@ const PTW = {
             return fallback;
         };
 
+        const isReadOnly = typeof Permissions !== 'undefined' && typeof Permissions.isReadOnlyRole === 'function' && Permissions.isReadOnlyRole();
+        const canAddPermit = !isReadOnly && this.hasDetailedPermission('ptw-list');
+        const canAddManual = !isReadOnly && this.hasDetailedPermission('registry');
+
+        const canViewPermits = this.hasDetailedPermission('ptw-list');
+        const canViewRegistry = this.hasDetailedPermission('registry');
+        const canViewMap = this.hasDetailedPermission('map');
+        const canViewAnalysis = this.hasDetailedPermission('analytics');
+        const canViewApprovals = this.hasDetailedPermission('approvals');
+
+        let initialTab = 'permits';
+        if (!canViewPermits) {
+            if (canViewRegistry) initialTab = 'registry';
+            else if (canViewMap) initialTab = 'map';
+            else if (canViewAnalysis) initialTab = 'analysis';
+            else if (canViewApprovals) initialTab = 'approvals';
+        }
+        this.currentTab = initialTab;
+
+        // ✅ استعادة فورية (0ms) للبيانات المحلية قبل بناء واجهة DOM
+        try { this.initRegistry(true); } catch (_) { /* ignore */ }
+
         try {
             section.innerHTML = `
             <div class="section-header">
@@ -3125,40 +3317,54 @@ const PTW = {
                         <p class="section-subtitle">${t('module.ptw.subtitle', 'إصدار ومتابعة تصاريح العمل مع دائرة الاعتمادات')}</p>
                     </div>
                     <div class="flex items-center gap-2">
+                        ${canAddManual ? `
                         <button type="button" id="add-manual-ptw-btn" class="btn-warning" onclick="PTW.openManualPermitForm()">
                             <i class="fas fa-edit ml-2"></i>
                             ${t('module.ptw.btn.addManual', 'إضافة تصريح يدوي')}
                         </button>
+                        ` : ''}
+                        ${canAddPermit ? `
                         <button type="button" id="add-ptw-btn" class="btn-primary" onclick="PTW.showForm()">
                             <i class="fas fa-plus ml-2"></i>
                             ${t('module.ptw.btn.newPermit', 'إصدار تصريح جديد')}
                         </button>
+                        ` : ''}
                     </div>
                 </div>
             </div>
             
             <!-- تبويبات التصاريح والسجل والموافقات -->
             <div class="ptw-tabs mt-4 mb-4 bg-white rounded-lg shadow-sm p-1 flex overflow-x-auto" style="flex-wrap: nowrap; overflow-y: visible; min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box;">
-                <button id="ptw-tab-permits" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 text-blue-600 bg-blue-50 shadow-sm" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('permits')">
+                ${canViewPermits ? `
+                <button id="ptw-tab-permits" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 ${initialTab === 'permits' ? 'text-blue-600 bg-blue-50 shadow-sm active' : 'text-gray-600 hover:bg-gray-50'}" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('permits')">
                     <i class="fas fa-list ml-2"></i>
                     ${t('module.ptw.tab.permits', 'قائمة التصاريح')}
                 </button>
-                <button id="ptw-tab-registry" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 text-gray-600 hover:bg-gray-50" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('registry')">
+                ` : ''}
+                ${canViewRegistry ? `
+                <button id="ptw-tab-registry" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 ${initialTab === 'registry' ? 'text-blue-600 bg-blue-50 shadow-sm active' : 'text-gray-600 hover:bg-gray-50'}" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('registry')">
                     <i class="fas fa-clipboard-list ml-2"></i>
                     ${t('module.ptw.tab.registry', 'سجل حصر التصاريح')}
                 </button>
-                <button id="ptw-tab-map" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 text-gray-600 hover:bg-gray-50" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('map')">
+                ` : ''}
+                ${canViewMap ? `
+                <button id="ptw-tab-map" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 ${initialTab === 'map' ? 'text-blue-600 bg-blue-50 shadow-sm active' : 'text-gray-600 hover:bg-gray-50'}" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('map')">
                     <i class="fas fa-map-marked-alt ml-2"></i>
                     ${t('module.ptw.tab.map', 'خريطة مواقع التصاريح')}
                 </button>
-                <button id="ptw-tab-analysis" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 text-gray-600 hover:bg-gray-50" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('analysis')">
+                ` : ''}
+                ${canViewAnalysis ? `
+                <button id="ptw-tab-analysis" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 ${initialTab === 'analysis' ? 'text-blue-600 bg-blue-50 shadow-sm active' : 'text-gray-600 hover:bg-gray-50'}" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('analysis')">
                     <i class="fas fa-chart-line ml-2"></i>
                     ${t('module.ptw.tab.analysis', 'تحليل البيانات')}
                 </button>
-                <button id="ptw-tab-approvals" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 text-gray-600 hover:bg-gray-50" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('approvals')">
+                ` : ''}
+                ${canViewApprovals ? `
+                <button id="ptw-tab-approvals" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 ${initialTab === 'approvals' ? 'text-blue-600 bg-blue-50 shadow-sm active' : 'text-gray-600 hover:bg-gray-50'}" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('approvals')">
                     <i class="fas fa-check-double ml-2"></i>
                     ${t('module.ptw.tab.approvals', 'الموافقات')}
                 </button>
+                ` : ''}
                 <button id="ptw-refresh-header-btn" type="button" class="px-4 py-3 font-semibold text-sm rounded-md transition-all duration-200 border-2 border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600 ml-2" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important;" title="${t('module.ptw.btn.refreshTitle', 'تحديث المحتوى الحالي')}">
                     <i class="fas fa-sync-alt ml-2"></i>
                     ${t('module.common.refresh', 'تحديث')}
@@ -3229,18 +3435,18 @@ const PTW = {
             </style>
             <!-- محتوى التبويبات -->
             <div id="ptw-tab-content" class="min-h-[500px]">
-                <div id="ptw-permits-content" class="fade-in">
+                <div id="ptw-permits-content" style="${initialTab === 'permits' ? '' : 'display: none;'}" class="fade-in">
                     ${this._renderPermitsLoadingShell(t)}
                 </div>
-                <div id="ptw-registry-content" style="display: none;" class="fade-in" data-registry-pending="1">
+                <div id="ptw-registry-content" style="${initialTab === 'registry' ? '' : 'display: none;'}" class="fade-in" data-registry-pending="1">
                     ${this._renderRegistryPlaceholderShell(t)}
                 </div>
-                <div id="ptw-map-content" style="display: none; flex-direction: column; height: calc(100vh - 280px); min-height: 600px; width: 100%;" class="fade-in" data-map-pending="1">
+                <div id="ptw-map-content" style="${initialTab === 'map' ? 'display: flex;' : 'display: none;'} flex-direction: column; height: calc(100vh - 280px); min-height: 600px; width: 100%;" class="fade-in" data-map-pending="1">
                     ${this._renderMapPlaceholderShell(t)}
                 </div>
-                <div id="ptw-analysis-content" style="display: none;" class="fade-in" data-tab-lazy="analysis">
+                <div id="ptw-analysis-content" style="${initialTab === 'analysis' ? '' : 'display: none;'}" class="fade-in" data-tab-lazy="analysis">
                 </div>
-                <div id="ptw-approvals-content" style="display: none;" class="fade-in" data-tab-lazy="approvals">
+                <div id="ptw-approvals-content" style="${initialTab === 'approvals' ? '' : 'display: none;'}" class="fade-in" data-tab-lazy="approvals">
                 </div>
             </div>
         `;
@@ -3252,9 +3458,11 @@ const PTW = {
             
             // عرض فوري — يعرض HTML ويجهز البيانات المحلية فقط
             requestAnimationFrame(() => {
-                try { this.initRegistry(true); } catch (_) { /* ignore */ }
                 this._mountPermitsListContent(t);
                 this._mountRegistryShell();
+                if (initialTab !== 'permits') {
+                    this.switchTab(initialTab);
+                }
                 const mountMap = () => this._mountMapShell();
                 if (typeof requestIdleCallback === 'function') {
                     requestIdleCallback(mountMap, { timeout: 1200 });
@@ -3262,14 +3470,12 @@ const PTW = {
                     setTimeout(mountMap, 50);
                 }
             });
-            // تحميل ثانوي — مزامنة الخلفية بعد 1.5s من أول عرض
-            // Leaflet: فقط عند فتح تبويب الخريطة (موجود أصلاً في switchTab('map'))
-            // إحداثيات الخريطة: فقط عند فتح تبويب الخريطة
+            // تحميل ثانوي — مزامنة الخلفية فوراً دون تأخير (50ms)
             this._deferredSyncTimer = setTimeout(() => {
                 this._startPtwBackendSync();
                 this._hydrateMapCoordinatesFromLocal();
                 this._scheduleMapCoordinatesBackgroundSync();
-            }, 0);
+            }, 50);
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
                 Utils.safeError('❌ خطأ في تحميل مديول PTW:', error);
@@ -3308,6 +3514,13 @@ const PTW = {
      * التبديل بين التبويبات
      */
     switchTab(tab) {
+        const requiredPerm = tab === 'permits' ? 'ptw-list' : tab === 'analysis' ? 'analytics' : tab;
+        if (!this.hasDetailedPermission(requiredPerm)) {
+            if (typeof Notification !== 'undefined' && Notification.warning) {
+                Notification.warning('غير مصرح لك بعرض هذا التبويب');
+            }
+            return;
+        }
         this.currentTab = tab;
 
         // Update tab buttons
@@ -9805,6 +10018,14 @@ const PTW = {
      * فتح نموذج إدخال تصريح يدوي
      */
     async openManualPermitForm(entryId = null) {
+        const isReadOnly = typeof Permissions !== 'undefined' && typeof Permissions.isReadOnlyRole === 'function' && Permissions.isReadOnlyRole();
+        if (isReadOnly || !this.hasDetailedPermission('registry')) {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('غير مصرح لك بإضافة أو تعديل تصريح يدوي');
+            }
+            return;
+        }
+
         const ptwManualLoadingId = 'ptw-manual-form-loading-' + Date.now();
         const ptwManualLoadingOverlay = document.createElement('div');
         ptwManualLoadingOverlay.id = ptwManualLoadingId;
@@ -15406,6 +15627,14 @@ const PTW = {
             // أزرار إصدار التصاريح (add-ptw-btn, add-manual-ptw-btn) 
             // تعتمد الآن على سمة onclick مباشرة في الـ HTML لضمان الاستجابة الفورية
 
+            const filterContainer = document.querySelector('.ptw-filters-row');
+            if (filterContainer && filterContainer.dataset.listenersBound === '1') {
+                return;
+            }
+            if (filterContainer) {
+                filterContainer.dataset.listenersBound = '1';
+            }
+
             const searchInput = document.getElementById('ptw-search');
             const filterStatus = document.getElementById('ptw-filter-status');
             const filterWorkType = document.getElementById('ptw-filter-work-type');
@@ -15603,6 +15832,14 @@ const PTW = {
     currentEditId: null,
 
     async showForm(data = null) {
+        const isReadOnly = typeof Permissions !== 'undefined' && typeof Permissions.isReadOnlyRole === 'function' && Permissions.isReadOnlyRole();
+        if (isReadOnly || !this.hasDetailedPermission('ptw-list')) {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('غير مصرح لك بإصدار أو تعديل تصاريح جديدة');
+            }
+            return;
+        }
+
         if (typeof Permissions !== 'undefined' && Permissions.ensureFormSettingsState) {
             try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
         }
@@ -16036,6 +16273,7 @@ const PTW = {
                 AppState.appData.ptw.push(formData);
                 this.notifyPermitCreated(formData);
             }
+            try { localStorage.setItem('hse_ptw_list', Utils.safeStringify(AppState.appData.ptw)); } catch (_) {}
 
             // التأكد من حفظ بيانات السجل في AppState قبل حفظ DataManager
             this.setPtwRegistryState(this.registryData, 'handleSubmit.preBackground');
@@ -17734,10 +17972,19 @@ const PTW = {
 
     /**
      * دمج التصاريح من القائمة والسجل للاستخدام في الفلتر والعرض
+     * ✅ يستخدم cache مؤقت — يُبطَل عند تغيير بيانات السجل أو التصاريح
      */
     getMergedPermitsForFilter() {
-        const permitsFromList = AppState.appData.ptw || [];
-        const permitsFromRegistry = (this.registryData || []).map(registryEntry => ({
+        // التحقق من صلاحية الـ cache
+        const ptwList = AppState.appData.ptw || [];
+        const regList = this.registryData || [];
+        const cacheKey = ptwList.length + '_' + regList.length + '_' + this._mergedPermitsCacheToken;
+        if (this._mergedPermitsCache && this._mergedPermitsCacheKey === cacheKey) {
+            return this._mergedPermitsCache;
+        }
+
+        const permitsFromList = ptwList;
+        const permitsFromRegistry = regList.map(registryEntry => ({
             id: registryEntry.permitId || registryEntry.id,
             workType: Array.isArray(registryEntry.permitType)
                 ? (registryEntry.permitTypeDisplay || registryEntry.permitType.join('، '))
@@ -17763,7 +18010,17 @@ const PTW = {
             sequentialNumber: registryEntry.sequentialNumber,
             paperPermitNumber: registryEntry.paperPermitNumber
         }));
-        return this.mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry);
+        const result = this.mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry);
+        this._mergedPermitsCache = result;
+        this._mergedPermitsCacheKey = cacheKey;
+        return result;
+    },
+
+    /** إبطال cache الدمج يدوياً (يُستدعى عند تغيير ptw مباشرة) */
+    _invalidateMergedPermitsCache() {
+        this._mergedPermitsCache = null;
+        this._mergedPermitsCacheToken++;
+        this._approvalNormCache.clear();
     },
 
     /**
@@ -17847,10 +18104,20 @@ const PTW = {
                         totalCount = 3;
                         approvedCount = 3;
                     } else {
-                        const approvals = this.normalizeApprovals(item.approvals || []);
-                        const requiredApprovals = approvals.filter(a => a.required !== false);
-                        approvedCount = requiredApprovals.filter(a => a.status === 'approved').length;
-                        totalCount = requiredApprovals.length;
+                        const cacheKey = item.id;
+                        let cachedCounts = cacheKey ? this._approvalNormCache.get(cacheKey) : null;
+                        if (cachedCounts) {
+                            approvedCount = cachedCounts.approvedCount;
+                            totalCount = cachedCounts.totalCount;
+                        } else {
+                            const approvals = this.normalizeApprovals(item.approvals || []);
+                            const requiredApprovals = approvals.filter(a => a.required !== false);
+                            approvedCount = requiredApprovals.filter(a => a.status === 'approved').length;
+                            totalCount = requiredApprovals.length;
+                            if (cacheKey) {
+                                this._approvalNormCache.set(cacheKey, { approvedCount, totalCount });
+                            }
+                        }
                     }
 
                     return `
@@ -17901,6 +18168,7 @@ const PTW = {
         const visibleCount = document.getElementById('ptw-list-visible-count');
         if (visibleCount) visibleCount.textContent = String(filtered.length);
 
+        // تحديث الفلاتر والأزرار
         const resetButton = document.getElementById('ptw-reset-filters');
         if (resetButton) resetButton.disabled = !hasActiveFilters;
         ['ptw-search', 'ptw-filter-work-type', 'ptw-filter-location', 'ptw-filter-sublocation', 'ptw-filter-status', 'ptw-filter-date-from', 'ptw-filter-date-to'].forEach((id) => {
@@ -17909,8 +18177,6 @@ const PTW = {
             if (field) field.classList.toggle('is-active', !!control.value);
         });
 
-        // تحديث KPIs بعد التصفية
-        this.updateKPIs();
     },
 
     /**

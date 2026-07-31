@@ -577,28 +577,40 @@ const DataManager = {
                     }
                 });
 
-                // ✅ استعادة بيانات PTW و PTWRegistry من المفاتيح المخصصة إذا كانت فارغة في hse_app_data
-                if (!Array.isArray(AppState.appData.ptw) || AppState.appData.ptw.length === 0) {
-                    const savedPtwList = localStorage.getItem('hse_ptw_list');
-                    if (savedPtwList) {
-                        try {
-                            const parsedPtw = JSON.parse(savedPtwList);
-                            if (Array.isArray(parsedPtw) && parsedPtw.length > 0) {
-                                AppState.appData.ptw = parsedPtw;
-                            }
-                        } catch (_) {}
-                    }
+                // ✅ استعادة ودمج بيانات PTW و PTWRegistry من المفاتيح المخصصة دائماً لعدم فقدان أي تصاريح بعد التحديث
+                const savedPtwList = localStorage.getItem('hse_ptw_list');
+                if (savedPtwList) {
+                    try {
+                        const parsedPtw = JSON.parse(savedPtwList);
+                        if (Array.isArray(parsedPtw) && parsedPtw.length > 0) {
+                            const currentPtw = Array.isArray(AppState.appData.ptw) ? AppState.appData.ptw : [];
+                            const ptwMap = new Map();
+                            parsedPtw.concat(currentPtw).forEach(item => {
+                                if (item && typeof item === 'object') {
+                                    const key = String(item.id || item.permitId || item.paperPermitNumber || '').trim();
+                                    if (key) ptwMap.set(key, item);
+                                }
+                            });
+                            AppState.appData.ptw = Array.from(ptwMap.values());
+                        }
+                    } catch (_) {}
                 }
-                if (!Array.isArray(AppState.appData.ptwRegistry) || AppState.appData.ptwRegistry.length === 0) {
-                    const savedRegistry = localStorage.getItem('hse_ptw_registry');
-                    if (savedRegistry) {
-                        try {
-                            const parsedReg = JSON.parse(savedRegistry);
-                            if (Array.isArray(parsedReg) && parsedReg.length > 0) {
-                                AppState.appData.ptwRegistry = parsedReg;
-                            }
-                        } catch (_) {}
-                    }
+                const savedRegistry = localStorage.getItem('hse_ptw_registry');
+                if (savedRegistry) {
+                    try {
+                        const parsedReg = JSON.parse(savedRegistry);
+                        if (Array.isArray(parsedReg) && parsedReg.length > 0) {
+                            const currentReg = Array.isArray(AppState.appData.ptwRegistry) ? AppState.appData.ptwRegistry : [];
+                            const regMap = new Map();
+                            parsedReg.concat(currentReg).forEach(item => {
+                                if (item && typeof item === 'object') {
+                                    const key = String(item.id || item.permitId || item.paperPermitNumber || item.sequentialNumber || '').trim();
+                                    if (key) regMap.set(key, item);
+                                }
+                            });
+                            AppState.appData.ptwRegistry = Array.from(regMap.values());
+                        }
+                    } catch (_) {}
                 }
                 
                 if (AppState.debugMode) {

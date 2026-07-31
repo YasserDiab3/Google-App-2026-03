@@ -1201,6 +1201,27 @@ const PTW = {
     },
 
     /**
+     * حفظ وتأكيد وجود بيانات التصاريح والسجل محلياً 100% بدون فقدان
+     */
+    persistPtwLocalState() {
+        try {
+            if (Array.isArray(AppState?.appData?.ptw)) {
+                localStorage.setItem('hse_ptw_list', Utils.safeStringify(AppState.appData.ptw));
+            }
+            if (Array.isArray(this.registryData)) {
+                localStorage.setItem('hse_ptw_registry', Utils.safeStringify(this.registryData));
+            } else if (Array.isArray(AppState?.appData?.ptwRegistry)) {
+                localStorage.setItem('hse_ptw_registry', Utils.safeStringify(AppState.appData.ptwRegistry));
+            }
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+        } catch (e) {
+            Utils.safeWarn('⚠️ فشل حفظ كاش PTW المحلي:', e);
+        }
+    },
+
+    /**
      * تهيئة وتحميل بيانات السجل
      * @param {boolean} skipBackendLoad - تجاهل تحميل البيانات من Backend (مفيد عند التحميل الأولي)
      */
@@ -1244,6 +1265,7 @@ const PTW = {
                 this.registryData = [];
                 AppState.appData.ptwRegistry = [];
             }
+            this.persistPtwLocalState();
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل بيانات السجل:', error);
             if (!Array.isArray(this.registryData)) this.registryData = [];
@@ -1261,6 +1283,7 @@ const PTW = {
         try {
             const { skipSync = false } = options;
             this.setPtwRegistryState(this.registryData, 'saveRegistryData');
+            this.persistPtwLocalState();
 
             // تحديث عرض السجل إذا كان مرئياً
             this.refreshRegistryViewIfVisible();
@@ -3279,6 +3302,9 @@ const PTW = {
         }
         this.currentTab = initialTab;
 
+        // ✅ استعادة فورية (0ms) للبيانات المحلية قبل بناء واجهة DOM
+        try { this.initRegistry(true); } catch (_) { /* ignore */ }
+
         try {
             section.innerHTML = `
             <div class="section-header">
@@ -3432,7 +3458,6 @@ const PTW = {
             
             // عرض فوري — يعرض HTML ويجهز البيانات المحلية فقط
             requestAnimationFrame(() => {
-                try { this.initRegistry(true); } catch (_) { /* ignore */ }
                 this._mountPermitsListContent(t);
                 this._mountRegistryShell();
                 if (initialTab !== 'permits') {
@@ -3445,14 +3470,12 @@ const PTW = {
                     setTimeout(mountMap, 50);
                 }
             });
-            // تحميل ثانوي — مزامنة الخلفية بعد 1.5s من أول عرض
-            // Leaflet: فقط عند فتح تبويب الخريطة (موجود أصلاً في switchTab('map'))
-            // إحداثيات الخريطة: فقط عند فتح تبويب الخريطة
+            // تحميل ثانوي — مزامنة الخلفية فوراً دون تأخير (50ms)
             this._deferredSyncTimer = setTimeout(() => {
                 this._startPtwBackendSync();
                 this._hydrateMapCoordinatesFromLocal();
                 this._scheduleMapCoordinatesBackgroundSync();
-            }, 1200);
+            }, 50);
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
                 Utils.safeError('❌ خطأ في تحميل مديول PTW:', error);
