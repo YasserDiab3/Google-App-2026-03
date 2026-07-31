@@ -3102,6 +3102,17 @@ const PTW = {
         `;
     },
 
+    hasDetailedPermission(permissionKey) {
+        if (typeof Permissions === 'undefined') return true;
+        if (typeof Permissions.isCurrentUserEffectiveAdmin === 'function' && Permissions.isCurrentUserEffectiveAdmin()) {
+            return true;
+        }
+        if (typeof Permissions.hasDetailedPermission === 'function') {
+            return Permissions.hasDetailedPermission('ptw', permissionKey);
+        }
+        return true;
+    },
+
     async load() {
         // منع إعادة تحميل متداخلة (مثلاً بسبب language-changed أو إعادة دخول القسم بسرعة)
         if (this._isLoading) {
@@ -3160,6 +3171,25 @@ const PTW = {
             return fallback;
         };
 
+        const isReadOnly = typeof Permissions !== 'undefined' && typeof Permissions.isReadOnlyRole === 'function' && Permissions.isReadOnlyRole();
+        const canAddPermit = !isReadOnly && this.hasDetailedPermission('ptw-list');
+        const canAddManual = !isReadOnly && this.hasDetailedPermission('registry');
+
+        const canViewPermits = this.hasDetailedPermission('ptw-list');
+        const canViewRegistry = this.hasDetailedPermission('registry');
+        const canViewMap = this.hasDetailedPermission('map');
+        const canViewAnalysis = this.hasDetailedPermission('analytics');
+        const canViewApprovals = this.hasDetailedPermission('approvals');
+
+        let initialTab = 'permits';
+        if (!canViewPermits) {
+            if (canViewRegistry) initialTab = 'registry';
+            else if (canViewMap) initialTab = 'map';
+            else if (canViewAnalysis) initialTab = 'analysis';
+            else if (canViewApprovals) initialTab = 'approvals';
+        }
+        this.currentTab = initialTab;
+
         try {
             section.innerHTML = `
             <div class="section-header">
@@ -3172,40 +3202,54 @@ const PTW = {
                         <p class="section-subtitle">${t('module.ptw.subtitle', 'إصدار ومتابعة تصاريح العمل مع دائرة الاعتمادات')}</p>
                     </div>
                     <div class="flex items-center gap-2">
+                        ${canAddManual ? `
                         <button type="button" id="add-manual-ptw-btn" class="btn-warning" onclick="PTW.openManualPermitForm()">
                             <i class="fas fa-edit ml-2"></i>
                             ${t('module.ptw.btn.addManual', 'إضافة تصريح يدوي')}
                         </button>
+                        ` : ''}
+                        ${canAddPermit ? `
                         <button type="button" id="add-ptw-btn" class="btn-primary" onclick="PTW.showForm()">
                             <i class="fas fa-plus ml-2"></i>
                             ${t('module.ptw.btn.newPermit', 'إصدار تصريح جديد')}
                         </button>
+                        ` : ''}
                     </div>
                 </div>
             </div>
             
             <!-- تبويبات التصاريح والسجل والموافقات -->
             <div class="ptw-tabs mt-4 mb-4 bg-white rounded-lg shadow-sm p-1 flex overflow-x-auto" style="flex-wrap: nowrap; overflow-y: visible; min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box;">
-                <button id="ptw-tab-permits" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 text-blue-600 bg-blue-50 shadow-sm" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('permits')">
+                ${canViewPermits ? `
+                <button id="ptw-tab-permits" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 ${initialTab === 'permits' ? 'text-blue-600 bg-blue-50 shadow-sm active' : 'text-gray-600 hover:bg-gray-50'}" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('permits')">
                     <i class="fas fa-list ml-2"></i>
                     ${t('module.ptw.tab.permits', 'قائمة التصاريح')}
                 </button>
-                <button id="ptw-tab-registry" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 text-gray-600 hover:bg-gray-50" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('registry')">
+                ` : ''}
+                ${canViewRegistry ? `
+                <button id="ptw-tab-registry" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 ${initialTab === 'registry' ? 'text-blue-600 bg-blue-50 shadow-sm active' : 'text-gray-600 hover:bg-gray-50'}" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('registry')">
                     <i class="fas fa-clipboard-list ml-2"></i>
                     ${t('module.ptw.tab.registry', 'سجل حصر التصاريح')}
                 </button>
-                <button id="ptw-tab-map" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 text-gray-600 hover:bg-gray-50" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('map')">
+                ` : ''}
+                ${canViewMap ? `
+                <button id="ptw-tab-map" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 ${initialTab === 'map' ? 'text-blue-600 bg-blue-50 shadow-sm active' : 'text-gray-600 hover:bg-gray-50'}" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('map')">
                     <i class="fas fa-map-marked-alt ml-2"></i>
                     ${t('module.ptw.tab.map', 'خريطة مواقع التصاريح')}
                 </button>
-                <button id="ptw-tab-analysis" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 text-gray-600 hover:bg-gray-50" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('analysis')">
+                ` : ''}
+                ${canViewAnalysis ? `
+                <button id="ptw-tab-analysis" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 ${initialTab === 'analysis' ? 'text-blue-600 bg-blue-50 shadow-sm active' : 'text-gray-600 hover:bg-gray-50'}" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('analysis')">
                     <i class="fas fa-chart-line ml-2"></i>
                     ${t('module.ptw.tab.analysis', 'تحليل البيانات')}
                 </button>
-                <button id="ptw-tab-approvals" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 text-gray-600 hover:bg-gray-50" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('approvals')">
+                ` : ''}
+                ${canViewApprovals ? `
+                <button id="ptw-tab-approvals" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 ${initialTab === 'approvals' ? 'text-blue-600 bg-blue-50 shadow-sm active' : 'text-gray-600 hover:bg-gray-50'}" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('approvals')">
                     <i class="fas fa-check-double ml-2"></i>
                     ${t('module.ptw.tab.approvals', 'الموافقات')}
                 </button>
+                ` : ''}
                 <button id="ptw-refresh-header-btn" type="button" class="px-4 py-3 font-semibold text-sm rounded-md transition-all duration-200 border-2 border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600 ml-2" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important;" title="${t('module.ptw.btn.refreshTitle', 'تحديث المحتوى الحالي')}">
                     <i class="fas fa-sync-alt ml-2"></i>
                     ${t('module.common.refresh', 'تحديث')}
@@ -3276,18 +3320,18 @@ const PTW = {
             </style>
             <!-- محتوى التبويبات -->
             <div id="ptw-tab-content" class="min-h-[500px]">
-                <div id="ptw-permits-content" class="fade-in">
+                <div id="ptw-permits-content" style="${initialTab === 'permits' ? '' : 'display: none;'}" class="fade-in">
                     ${this._renderPermitsLoadingShell(t)}
                 </div>
-                <div id="ptw-registry-content" style="display: none;" class="fade-in" data-registry-pending="1">
+                <div id="ptw-registry-content" style="${initialTab === 'registry' ? '' : 'display: none;'}" class="fade-in" data-registry-pending="1">
                     ${this._renderRegistryPlaceholderShell(t)}
                 </div>
-                <div id="ptw-map-content" style="display: none; flex-direction: column; height: calc(100vh - 280px); min-height: 600px; width: 100%;" class="fade-in" data-map-pending="1">
+                <div id="ptw-map-content" style="${initialTab === 'map' ? 'display: flex;' : 'display: none;'} flex-direction: column; height: calc(100vh - 280px); min-height: 600px; width: 100%;" class="fade-in" data-map-pending="1">
                     ${this._renderMapPlaceholderShell(t)}
                 </div>
-                <div id="ptw-analysis-content" style="display: none;" class="fade-in" data-tab-lazy="analysis">
+                <div id="ptw-analysis-content" style="${initialTab === 'analysis' ? '' : 'display: none;'}" class="fade-in" data-tab-lazy="analysis">
                 </div>
-                <div id="ptw-approvals-content" style="display: none;" class="fade-in" data-tab-lazy="approvals">
+                <div id="ptw-approvals-content" style="${initialTab === 'approvals' ? '' : 'display: none;'}" class="fade-in" data-tab-lazy="approvals">
                 </div>
             </div>
         `;
@@ -3302,6 +3346,9 @@ const PTW = {
                 try { this.initRegistry(true); } catch (_) { /* ignore */ }
                 this._mountPermitsListContent(t);
                 this._mountRegistryShell();
+                if (initialTab !== 'permits') {
+                    this.switchTab(initialTab);
+                }
                 const mountMap = () => this._mountMapShell();
                 if (typeof requestIdleCallback === 'function') {
                     requestIdleCallback(mountMap, { timeout: 1200 });
@@ -3355,6 +3402,13 @@ const PTW = {
      * التبديل بين التبويبات
      */
     switchTab(tab) {
+        const requiredPerm = tab === 'permits' ? 'ptw-list' : tab === 'analysis' ? 'analytics' : tab;
+        if (!this.hasDetailedPermission(requiredPerm)) {
+            if (typeof Notification !== 'undefined' && Notification.warning) {
+                Notification.warning('غير مصرح لك بعرض هذا التبويب');
+            }
+            return;
+        }
         this.currentTab = tab;
 
         // Update tab buttons
@@ -9852,6 +9906,14 @@ const PTW = {
      * فتح نموذج إدخال تصريح يدوي
      */
     async openManualPermitForm(entryId = null) {
+        const isReadOnly = typeof Permissions !== 'undefined' && typeof Permissions.isReadOnlyRole === 'function' && Permissions.isReadOnlyRole();
+        if (isReadOnly || !this.hasDetailedPermission('registry')) {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('غير مصرح لك بإضافة أو تعديل تصريح يدوي');
+            }
+            return;
+        }
+
         const ptwManualLoadingId = 'ptw-manual-form-loading-' + Date.now();
         const ptwManualLoadingOverlay = document.createElement('div');
         ptwManualLoadingOverlay.id = ptwManualLoadingId;
@@ -15658,6 +15720,14 @@ const PTW = {
     currentEditId: null,
 
     async showForm(data = null) {
+        const isReadOnly = typeof Permissions !== 'undefined' && typeof Permissions.isReadOnlyRole === 'function' && Permissions.isReadOnlyRole();
+        if (isReadOnly || !this.hasDetailedPermission('ptw-list')) {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('غير مصرح لك بإصدار أو تعديل تصاريح جديدة');
+            }
+            return;
+        }
+
         if (typeof Permissions !== 'undefined' && Permissions.ensureFormSettingsState) {
             try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
         }
