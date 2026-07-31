@@ -2786,7 +2786,7 @@ window.UI = {
     showReleaseNotesModal() {
         const v = (AppState && AppState.appVersion) ? String(AppState.appVersion).trim() : '1.0.567';
         try { sessionStorage.removeItem('hse_update_modal_shown_version'); } catch (e) {}
-        this._showUpdateModal(v);
+        this._showUpdateModal(v, AppState?._serverReleaseHighlights || null);
     },
 
     /**
@@ -2920,7 +2920,7 @@ window.UI = {
             if (AppState && AppState.debugMode) {
                 console.log('🔔 [UpdateNotif] عرض المودال — current=' + currentVersion + ' أحدث من lastSeen=' + lastSeen);
             }
-            this._showUpdateModal(currentVersion);
+            this._showUpdateModal(currentVersion, AppState?._serverReleaseHighlights || null);
         } catch (e) {
             if (AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ خطأ في عرض رسالة التحديث:', e);
         }
