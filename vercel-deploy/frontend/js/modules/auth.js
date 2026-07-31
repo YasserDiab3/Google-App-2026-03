@@ -39,6 +39,25 @@ window.Auth = {
         }
     },
 
+    /**
+     * Bootstrap للطوارئ فقط: ممنوع إن وُجد مستخدمون في الكاش، أو على نطاق إنتاج معروف بعد أول مزامنة.
+     */
+    isBootstrapLoginAllowed(usersList) {
+        if (this.isBootstrapDisabled()) return false;
+        const users = Array.isArray(usersList) ? usersList : [];
+        if (users.length > 0) return false;
+        try {
+            const host = (typeof location !== 'undefined' && location.hostname) ? String(location.hostname).toLowerCase() : '';
+            const isLocal = !host || host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+            if (!isLocal) {
+                // على النشر العام: لا bootstrap إلا إن لم تُحمَّل أي قائمة مستخدمين بعد (تجهيز أول)
+                const everSynced = localStorage.getItem('hse_users_ever_synced') === 'true';
+                if (everSynced) return false;
+            }
+        } catch (e) { /* ignore */ }
+        return true;
+    },
+
     disableBootstrap(reason = '') {
         try {
             localStorage.setItem(this.bootstrap.disabledKey, 'true');
@@ -278,6 +297,7 @@ window.Auth = {
 
             // تعطيل نهائي
             this.disableBootstrap('Users sync completed with real users');
+            try { localStorage.setItem('hse_users_ever_synced', 'true'); } catch (_e) { /* ignore */ }
 
             // إذا كان المستخدم الحالي هو bootstrap → تسجيل خروج إجباري
             if (AppState?.currentUser?.isBootstrap === true) {
@@ -451,12 +471,10 @@ window.Auth = {
             }
             foundUser = users.find(u => u && u.email && u.email.toLowerCase().trim() === email);
 
-            // ✅ Bootstrap Support — حساب الطوارئ للدخول الأول أو عند تعذر الاتصال
-            // يُتاح دائماً لـ admin@hse.local إذا لم يكن مُعطَّلاً (أو عند انعدام الإنترنت والبيانات)
+            // ✅ Bootstrap Support — حساب الطوارئ للتجهيز الأول فقط (لا يُستخدم إن وُجد مستخدمون)
             const isOfflineWithNoUsers = !canSyncUsers && users.length === 0;
-            const bootstrapAllowed = !this.isBootstrapDisabled() || isOfflineWithNoUsers;
-            // Bootstrap Admin يعمل حتى لو فيه مستخدمون آخرون في الـ cache
-            // (لأن admin@hse.local هو حساب طوارئ وليس حساباً عادياً)
+            const bootstrapAllowed = this.isBootstrapLoginAllowed(users) || (isOfflineWithNoUsers && !this.isBootstrapDisabled());
+            // Bootstrap Admin يعمل فقط عند غياب مستخدمين في الكاش
             if (!foundUser && bootstrapAllowed && this.isBootstrapEmail(email)) {
                 foundUser = {
                     id: 'BOOTSTRAP_ADMIN',
@@ -493,8 +511,10 @@ window.Auth = {
             if (Utils.isSha256Hex(storedHash)) {
                 const normalizedInput = await Utils.normalizePasswordForComparison(inputPasswordRaw, storedHash);
                 passwordMatch = (storedHash.toLowerCase() === normalizedInput.toLowerCase());
-            } else if (storedHash === inputPasswordRaw) {
-                passwordMatch = true;
+            } else {
+                // إنتاج: رفض كلمات المرور النصية الصريحة في الشيت — أمان
+                Utils.safeWarn('⚠️ [AUTH] passwordHash غير SHA-256 — رُفض الدخول المحلي');
+                passwordMatch = false;
             }
 
             if (!passwordMatch) {

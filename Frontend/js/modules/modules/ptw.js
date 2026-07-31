@@ -1369,6 +1369,34 @@ const PTW = {
         }
     },
 
+    _recordHasTmpId(record) {
+        const id = String(record?.id || '').trim();
+        const permitId = String(record?.permitId || '').trim();
+        return id.includes('_TMP_') || permitId.includes('_TMP_');
+    },
+
+    _getPtwRecordsForCloudSave(sourceList) {
+        const list = Array.isArray(sourceList)
+            ? sourceList
+            : (Array.isArray(AppState?.appData?.ptw) ? AppState.appData.ptw : []);
+        return list.filter((r) => !this._recordHasTmpId(r));
+    },
+
+    async _autoSavePtwToCloud(sourceList) {
+        if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.autoSave !== 'function') {
+            return { success: false, message: 'GoogleIntegration غير متاح' };
+        }
+        const clean = this._getPtwRecordsForCloudSave(sourceList);
+        const fullLen = Array.isArray(sourceList)
+            ? sourceList.length
+            : (Array.isArray(AppState?.appData?.ptw) ? AppState.appData.ptw.length : 0);
+        if (clean.length === 0 && fullLen > 0) {
+            Utils.safeLog('⚠️ تخطي autoSave(PTW) — جميع السجلات تحتوي معرفات مؤقتة (_TMP_)');
+            return { success: true, skippedTmp: true };
+        }
+        return GoogleIntegration.autoSave('PTW', clean);
+    },
+
     /**
      * حفظ بيانات السجل
      * @param {Object} options - خيارات الحفظ
@@ -1387,13 +1415,8 @@ const PTW = {
             // هذا يمنع إنشاء صفوف في PTWIdMapping عند كل تحميل للصفحة
             if (!skipSync && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                 // فلترة السجلات التي تحتوي على TMP IDs — لا ترسل إلى Backend
-                const hasTmpId = (record) => {
-                    const id = String(record?.id || '').trim();
-                    const permitId = String(record?.permitId || '').trim();
-                    return id.includes('_TMP_') || permitId.includes('_TMP_');
-                };
                 const cleanData = Array.isArray(this.registryData)
-                    ? this.registryData.filter(r => !hasTmpId(r))
+                    ? this.registryData.filter(r => !this._recordHasTmpId(r))
                     : this.registryData;
                 
                 // لا ترسل إذا كل البيانات مؤقتة
@@ -13115,7 +13138,7 @@ const PTW = {
 
         // حفظ التصريح
         if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
-            await GoogleIntegration.autoSave('PTW', AppState.appData.ptw);
+            await this._autoSavePtwToCloud(AppState.appData.ptw);
         }
 
         // تحديث السجل
@@ -16402,7 +16425,7 @@ const PTW = {
                     ? this.updateRegistryEntry(formData)
                     : this.addToRegistry(formData),
                 // حفظ في Google Sheets
-                GoogleIntegration.autoSave('PTW', AppState.appData.ptw)
+                this._autoSavePtwToCloud(AppState.appData.ptw)
             ]).then((results) => {
                 const localSaveFailed = results[0]?.status === 'rejected';
                 const registrySaveFailed = results[1]?.status === 'rejected';
@@ -17535,7 +17558,7 @@ const PTW = {
             }
             
             // حفظ في Google Sheets في الخلفية
-            GoogleIntegration.autoSave('PTW', AppState.appData.ptw).catch(error => {
+            this._autoSavePtwToCloud(AppState.appData.ptw).catch(error => {
                 Utils.safeError('خطأ في حفظ Google Sheets:', error);
             });
 
@@ -17651,7 +17674,7 @@ const PTW = {
             } else {
                 Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
             }
-            await GoogleIntegration.autoSave('PTW', AppState.appData.ptw);
+            await this._autoSavePtwToCloud(AppState.appData.ptw);
 
             Notification.success(this._t('module.ptw.notify.assignedTo', 'تم توجيه الاعتماد إلى {name}.').replace(/\{name\}/g, approval.approver || ''));
             this.triggerNotificationsUpdate();
@@ -17693,7 +17716,7 @@ const PTW = {
                 Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
             }
             // حظ تلقائي ي Google Sheets
-            await GoogleIntegration.autoSave('PTW', AppState.appData.ptw);
+            await this._autoSavePtwToCloud(AppState.appData.ptw);
             Loading.hide();
             Notification.success(this._t('module.ptw.notify.deleted', 'تم حذف التصريح بنجاح'));
             this.updateKPIs(); // تحديث KPIs بعد الحذف

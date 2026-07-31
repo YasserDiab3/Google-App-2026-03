@@ -1,15 +1,17 @@
 {
-  "version": "1.0.705",
+  "version": "1.0.707",
   "highlights": {
     "ar": [
-      "تحسين تبديل اللغة بدون تجميد الشاشة وإعادة تحميل كل الموديولات المخفية.",
-      "تضييق الترجمة الحرفية على الشريط والقسم النشط فقط مع تأجيل معالجة DOM.",
-      "عيادة ومراقبة التصرفات: تحديث الواجهة عند تغيير اللغة دون مزامنة شبكة ثقيلة."
+      "حماية سجل زيارات العيادة من المسح عند فشل الجلب، ودمج realtime آمن.",
+      "تصفية تصاريح PTW المؤقتة من الحفظ السحابي، وإغلاق مودالات العيادة عند المغادرة.",
+      "مراقبة التصرفات: صفحات للجداول + تهريب معرّفات الإجراءات.",
+      "تشديد المصادقة ورفض كلمات المرور النصية، وبوابة حماية لقراءة/كتابة زيارات العيادة في الخلفية."
     ],
     "en": [
-      "Smoother language switch without freezing or reloading every previously visited module.",
-      "Literal i18n limited to sidebar and active section; DOM i18n deferred via animation frame.",
-      "Clinic and Behavior Monitoring refresh UI on language change without heavy network sync."
+      "Clinic visits protected from wipe on failed fetch; safer realtime merge.",
+      "Filter temporary PTW IDs from cloud auto-save; close clinic modals on leave.",
+      "Behavior Monitoring: table pagination + safe action IDs.",
+      "Auth hardening (no plaintext passwords) and authenticated clinic visit API gates."
     ]
   }
 }

@@ -1406,6 +1406,13 @@ var ActionHandlers = {
     'addClinicVisit': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
+                    if (typeof requireAuthenticatedActor_ === 'function') {
+                        var authGateAdd = requireAuthenticatedActor_(actorUserData, 'addClinicVisit');
+                        if (!authGateAdd.ok) {
+                            result = authGateAdd;
+                            return;
+                        }
+                    }
 
                     Logger.log('🚀 [CODE.GS] ===== addClinicVisit action تم استدعاؤها =====');
                     Logger.log('🚀 [CODE.GS] الوقت: ' + new Date().toISOString());
@@ -1483,7 +1490,13 @@ var ActionHandlers = {
     'updateClinicVisit': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    if (typeof requireAuthenticatedActor_ === 'function') {
+                        var authGateUpd = requireAuthenticatedActor_(actorUserData, 'updateClinicVisit');
+                        if (!authGateUpd.ok) {
+                            result = authGateUpd;
+                            return;
+                        }
+                    }
                     result = updateClinicVisit(payload.visitId || payload.id, payload.updateData || payload);
                     return;
 
@@ -1507,10 +1520,14 @@ var ActionHandlers = {
     'getAllClinicVisits': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
-                    result = getAllClinicVisits(payload.filters || {});
+            if (typeof requireAuthenticatedActor_ === 'function') {
+                var authGate = requireAuthenticatedActor_(actorUserData, 'getAllClinicVisits');
+                if (!authGate.ok) {
+                    result = authGate;
                     return;
-
+                }
+            }
+            result = getAllClinicVisits(payload.filters || {});
         })();
         return result;
     },

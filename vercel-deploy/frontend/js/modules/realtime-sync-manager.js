@@ -801,6 +801,84 @@ const RealtimeSyncManager = {
                 return false;
             }
 
+            // ✅ حالة خاصة: سجل التردد = موظفين + مقاولين عبر getAllClinicVisits (لا تقرأ ClinicVisits وحدها)
+            if (module === 'clinicVisits') {
+                if (typeof Clinic !== 'undefined' && Clinic._clinicVisitsLoadPromise) {
+                    if (!silent) realtimeSyncLog('⏳ clinicVisits: جلب عيادة جارٍ — تخطي realtime');
+                    return false;
+                }
+
+                const result = await GoogleIntegration.sendRequest({
+                    action: 'getAllClinicVisits',
+                    data: { __timeoutMs: 120000 }
+                });
+
+                if (result && result.success) {
+                    const newData = Array.isArray(result.data) ? result.data : null;
+                    const oldData = Array.isArray(AppState.appData.clinicVisits)
+                        ? AppState.appData.clinicVisits
+                        : [];
+
+                    if (!newData) {
+                        if (!silent) realtimeSyncLog('⚠️ clinicVisits: البيانات المستلمة ليست مصفوفة');
+                        return false;
+                    }
+
+                    if (newData.length === 0 && oldData.length > 0) {
+                        if (!silent) {
+                            realtimeSyncLog(
+                                `⚠️ clinicVisits: رد فارغ من الخادم — الإبقاء على ${oldData.length} زيارة محلية`
+                            );
+                        }
+                        this.state.lastSyncTime[module] = now;
+                        return true;
+                    }
+
+                    const previousLocal = oldData.slice();
+                    let merged = newData;
+                    if (typeof Clinic !== 'undefined' && typeof Clinic.mergeClinicVisitsWithLocalOnly === 'function') {
+                        merged = Clinic.mergeClinicVisitsWithLocalOnly(newData, previousLocal);
+                    }
+
+                    const newHash = this.calculateDataHash(merged);
+                    const oldHash = this.state.lastDataHash[module];
+
+                    if (newHash !== oldHash) {
+                        AppState.appData.clinicVisits = merged;
+                        AppState.appData.clinicContractorVisits = merged.filter(
+                            (v) => v && v.personType === 'contractor'
+                        );
+                        this.state.lastDataHash[module] = newHash;
+                        this.state.lastDataHash.clinicContractorVisits = this.calculateDataHash(
+                            AppState.appData.clinicContractorVisits || []
+                        );
+
+                        if (typeof DataManager !== 'undefined' && DataManager.save) {
+                            DataManager.save();
+                        }
+
+                        if (this.shouldRefreshModule(module)) {
+                            this.refreshModuleUI(module);
+                        }
+
+                        this.broadcast('sync-completed', module);
+                        this.stats.updatesReceived++;
+
+                        if (!silent) {
+                            realtimeSyncLog(`✅ clinicVisits (مدمج): ${merged.length} زيارة`);
+                        }
+                    } else if (!silent) {
+                        realtimeSyncLog('ℹ️ clinicVisits: لا توجد تحديثات جديدة');
+                    }
+
+                    this.state.lastSyncTime[module] = now;
+                    this.state.lastSyncTime.clinicContractorVisits = now;
+                    return true;
+                }
+
+                return false;
+            }
+
             // تحديد اسم الـ Sheet المقابل للموديول
             const sheetName = this.getSheetNameForModule(module);
 

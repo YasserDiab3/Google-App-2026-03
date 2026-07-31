@@ -37,7 +37,68 @@ const BehaviorMonitoring = {
             dateFrom: '',
             dateTo: ''
         },
-        contractorSort: 'date_desc'
+        contractorSort: 'date_desc',
+        logPage: 1,
+        contractorLogPage: 1,
+        pageSize: 50
+    },
+
+    getPageSize() {
+        const n = Number(this.state?.pageSize);
+        return Number.isFinite(n) && n > 0 ? n : 50;
+    },
+
+    paginateItems(items, page) {
+        const list = Array.isArray(items) ? items : [];
+        const size = this.getPageSize();
+        const total = list.length;
+        const totalPages = Math.max(1, Math.ceil(total / size) || 1);
+        const safePage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+        const start = (safePage - 1) * size;
+        return {
+            page: safePage,
+            totalPages,
+            total,
+            start,
+            end: Math.min(start + size, total),
+            items: list.slice(start, start + size)
+        };
+    },
+
+    renderTablePaginationHTML(kind, pageInfo) {
+        const { page, totalPages, total, start, end } = pageInfo;
+        if (total <= this.getPageSize()) {
+            return total
+                ? `<div class="bhm-pagination text-sm text-gray-500 mt-3">${start + 1}–${end} / ${total}</div>`
+                : '';
+        }
+        const prevDisabled = page <= 1 ? 'disabled' : '';
+        const nextDisabled = page >= totalPages ? 'disabled' : '';
+        const setter = kind === 'contractor' ? 'setContractorLogPage' : 'setLogPage';
+        return `
+            <div class="bhm-pagination flex flex-wrap items-center justify-between gap-3 mt-3">
+                <span class="text-sm text-gray-600">${start + 1}–${end} / ${total}</span>
+                <div class="flex items-center gap-2">
+                    <button type="button" class="btn-secondary btn-sm" ${prevDisabled} onclick="BehaviorMonitoring.${setter}(${page - 1})">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <span class="text-sm font-semibold">${page} / ${totalPages}</span>
+                    <button type="button" class="btn-secondary btn-sm" ${nextDisabled} onclick="BehaviorMonitoring.${setter}(${page + 1})">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    },
+
+    setLogPage(page) {
+        this.state.logPage = Math.max(1, Number(page) || 1);
+        this.renderLogTable();
+    },
+
+    setContractorLogPage(page) {
+        this.state.contractorLogPage = Math.max(1, Number(page) || 1);
+        this.renderContractorLogTable();
     },
 
     t(key, fallback) {
@@ -803,7 +864,7 @@ const BehaviorMonitoring = {
                                                         <td>${this.getBehaviorDate(b) ? this.formatBehaviorDateDisplay(b) : '—'}</td>
                                                         <td><span class="badge ${this.getRatingBadgeClass(b.rating)}">${Utils.escapeHTML(b.rating || '—')}</span></td>
                                                         <td class="text-center">
-                                                            <button onclick="BehaviorMonitoring.viewBehavior('${b.id}')" class="btn-icon btn-icon-primary" title="عرض">
+                                                            <button onclick="BehaviorMonitoring.viewBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-primary" title="عرض">
                                                                 <i class="fas fa-eye"></i>
                                                             </button>
                                                         </td>
@@ -923,10 +984,13 @@ const BehaviorMonitoring = {
     },
 
     renderLogTableHTML() {
-        const behaviors = this.getFilteredBehaviors();
-        if (!behaviors.length) {
+        const all = this.getFilteredBehaviors();
+        if (!all.length) {
             return `<div class="empty-state"><p class="text-gray-500">${this.t('common.noMatchingResults', 'لا توجد نتائج مطابقة للفلاتر الحالية')}</p></div>`;
         }
+        const pageInfo = this.paginateItems(all, this.state.logPage || 1);
+        this.state.logPage = pageInfo.page;
+        const behaviors = pageInfo.items;
 
         return `
             <div class="table-wrapper" style="overflow-x:auto;">
@@ -960,13 +1024,13 @@ const BehaviorMonitoring = {
                                 <td><span class="badge ${this.getRatingBadgeClass(b.rating)}">${Utils.escapeHTML(b.rating || '—')}</span></td>
                                 <td class="text-center bhm-log-table-actions">
                                     <div class="flex items-center justify-center gap-2 flex-wrap">
-                                        <button type="button" onclick="BehaviorMonitoring.viewBehavior('${b.id}')" class="btn-icon btn-icon-primary bhm-action-icon" title="عرض">
+                                        <button type="button" onclick="BehaviorMonitoring.viewBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-primary bhm-action-icon" title="عرض">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        <button type="button" onclick="BehaviorMonitoring.exportPDF('${b.id}')" class="btn-icon btn-icon-success bhm-action-icon" title="تصدير PDF">
+                                        <button type="button" onclick="BehaviorMonitoring.exportPDF(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-success bhm-action-icon" title="تصدير PDF">
                                             <i class="fas fa-file-pdf"></i>
                                         </button>
-                                        <button type="button" onclick="BehaviorMonitoring.printReport('${b.id}')" class="btn-icon btn-icon-info bhm-action-icon" title="طباعة">
+                                        <button type="button" onclick="BehaviorMonitoring.printReport(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-info bhm-action-icon" title="طباعة">
                                             <i class="fas fa-print"></i>
                                         </button>
                                     </div>
@@ -976,6 +1040,7 @@ const BehaviorMonitoring = {
                     </tbody>
                 </table>
             </div>
+            ${this.renderTablePaginationHTML('employee', pageInfo)}
         `;
     },
 
@@ -991,6 +1056,7 @@ const BehaviorMonitoring = {
     clearFilters() {
         this.state.filters = { search: '', behaviorType: '', rating: '', dateFrom: '', dateTo: '' };
         this.state.sort = 'date_desc';
+        this.state.logPage = 1;
         this.refreshCurrentTab();
     },
 
@@ -1083,6 +1149,7 @@ const BehaviorMonitoring = {
                 this.state.filters.dateFrom = (from?.value || '').toString();
                 this.state.filters.dateTo = (to?.value || '').toString();
                 this.state.sort = (sort?.value || 'date_desc').toString();
+                this.state.logPage = 1;
                 this.renderLogTable();
             };
 
@@ -1140,6 +1207,7 @@ const BehaviorMonitoring = {
                 this.state.contractorFilters.dateFrom = (from?.value || '').toString();
                 this.state.contractorFilters.dateTo = (to?.value || '').toString();
                 this.state.contractorSort = (sort?.value || 'date_desc').toString();
+                this.state.contractorLogPage = 1;
                 this.renderContractorLogTable();
             };
 
@@ -1801,13 +1869,13 @@ const BehaviorMonitoring = {
                     </div>
                 </div>
                 <div class="bhm-detail-footer">
-                    <button type="button" class="btn-primary" onclick="BehaviorMonitoring.editBehavior('${behavior.id}'); this.closest('.modal-overlay').remove();">
+                    <button type="button" class="btn-primary" onclick="BehaviorMonitoring.editBehavior(${JSON.stringify(String(behavior.id || ''))}); this.closest('.modal-overlay').remove();">
                         <i class="fas fa-pen ml-2"></i>تعديل
                     </button>
-                    <button type="button" class="btn-secondary" onclick="BehaviorMonitoring.printReport('${behavior.id}');">
+                    <button type="button" class="btn-secondary" onclick="BehaviorMonitoring.printReport(${JSON.stringify(String(behavior.id || ''))});">
                         <i class="fas fa-print ml-2"></i>طباعة
                     </button>
-                    <button type="button" class="btn-secondary" onclick="BehaviorMonitoring.exportPDF('${behavior.id}');">
+                    <button type="button" class="btn-secondary" onclick="BehaviorMonitoring.exportPDF(${JSON.stringify(String(behavior.id || ''))});">
                         <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
                     </button>
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
@@ -2036,6 +2104,7 @@ const BehaviorMonitoring = {
     clearContractorFilters() {
         this.state.contractorFilters = { search: '', behaviorType: '', rating: '', dateFrom: '', dateTo: '' };
         this.state.contractorSort = 'date_desc';
+        this.state.contractorLogPage = 1;
         this.refreshCurrentTab();
     },
 
@@ -2121,10 +2190,13 @@ const BehaviorMonitoring = {
     },
 
     renderContractorLogTableHTML() {
-        const behaviors = this.getFilteredContractorBehaviors();
-        if (!behaviors.length) {
+        const all = this.getFilteredContractorBehaviors();
+        if (!all.length) {
             return `<div class="empty-state"><p class="text-gray-500">${this.t('common.noMatchingResults', 'لا توجد نتائج مطابقة للفلاتر الحالية')}</p></div>`;
         }
+        const pageInfo = this.paginateItems(all, this.state.contractorLogPage || 1);
+        this.state.contractorLogPage = pageInfo.page;
+        const behaviors = pageInfo.items;
         return `
             <div class="table-wrapper" style="overflow-x:auto;">
                 <table class="data-table table-header-purple">
@@ -2154,10 +2226,10 @@ const BehaviorMonitoring = {
                                 <td><span class="badge ${this.getRatingBadgeClass(b.rating)}">${Utils.escapeHTML(b.rating || '—')}</span></td>
                                 <td class="text-center">
                                     <div class="flex items-center justify-center gap-2 flex-wrap">
-                                        <button type="button" onclick="BehaviorMonitoring.viewContractorBehavior('${b.id}')" class="btn-icon btn-icon-primary" title="عرض"><i class="fas fa-eye"></i></button>
-                                        <button type="button" onclick="BehaviorMonitoring.editContractorBehavior('${b.id}')" class="btn-icon btn-icon-warning" title="تعديل"><i class="fas fa-edit"></i></button>
-                                        <button type="button" onclick="BehaviorMonitoring.exportContractorPDF('${b.id}')" class="btn-icon btn-icon-success" title="تصدير PDF"><i class="fas fa-file-pdf"></i></button>
-                                        <button type="button" onclick="BehaviorMonitoring.printContractorReport('${b.id}')" class="btn-icon btn-icon-info" title="طباعة"><i class="fas fa-print"></i></button>
+                                        <button type="button" onclick="BehaviorMonitoring.viewContractorBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-primary" title="عرض"><i class="fas fa-eye"></i></button>
+                                        <button type="button" onclick="BehaviorMonitoring.editContractorBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-warning" title="تعديل"><i class="fas fa-edit"></i></button>
+                                        <button type="button" onclick="BehaviorMonitoring.exportContractorPDF(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-success" title="تصدير PDF"><i class="fas fa-file-pdf"></i></button>
+                                        <button type="button" onclick="BehaviorMonitoring.printContractorReport(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-info" title="طباعة"><i class="fas fa-print"></i></button>
                                     </div>
                                 </td>
                             </tr>
@@ -2165,6 +2237,7 @@ const BehaviorMonitoring = {
                     </tbody>
                 </table>
             </div>
+            ${this.renderTablePaginationHTML('contractor', pageInfo)}
         `;
     },
 
@@ -2667,9 +2740,9 @@ const BehaviorMonitoring = {
                     </div>
                 </div>
                 <div class="bhm-detail-footer">
-                    <button type="button" class="btn-primary" onclick="BehaviorMonitoring.editContractorBehavior('${b.id}'); this.closest('.modal-overlay').remove();"><i class="fas fa-pen ml-2"></i>تعديل</button>
-                    <button type="button" class="btn-secondary" onclick="BehaviorMonitoring.printContractorReport('${b.id}')"><i class="fas fa-print ml-2"></i>طباعة</button>
-                    <button type="button" class="btn-secondary" onclick="BehaviorMonitoring.exportContractorPDF('${b.id}')"><i class="fas fa-file-pdf ml-2"></i>PDF</button>
+                    <button type="button" class="btn-primary" onclick="BehaviorMonitoring.editContractorBehavior(${JSON.stringify(String(b.id || ''))}); this.closest('.modal-overlay').remove();"><i class="fas fa-pen ml-2"></i>تعديل</button>
+                    <button type="button" class="btn-secondary" onclick="BehaviorMonitoring.printContractorReport(${JSON.stringify(String(b.id || ''))})"><i class="fas fa-print ml-2"></i>طباعة</button>
+                    <button type="button" class="btn-secondary" onclick="BehaviorMonitoring.exportContractorPDF(${JSON.stringify(String(b.id || ''))})"><i class="fas fa-file-pdf ml-2"></i>PDF</button>
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
                 </div>
             </div>`;

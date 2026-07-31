@@ -8956,6 +8956,14 @@ const Clinic = {
             );
 
             if (result && result.success && Array.isArray(result.data)) {
+                // حماية إنتاج: لا تستبدل محلياً غير فارغ بمصفوفة فارغة من الخادم ولا تختم الكاش
+                if (result.data.length === 0 && previousLocalVisits.length > 0) {
+                    Utils.safeWarn(
+                        `⚠️ تجاهل سجل تردد فارغ من الخادم — الإبقاء على ${previousLocalVisits.length} زيارة محلية (لا يُحدَّث clinic_last_sync)`
+                    );
+                    return;
+                }
+
                 // ✅ تطبيع البيانات للتأكد من وجود جميع الحقول المطلوبة
                 const normalizedVisits = result.data.map(visit => {
                     if (!visit || typeof visit !== 'object') return visit;
@@ -21178,10 +21186,16 @@ const Clinic = {
         try {
             Utils.safeLog('🧹 تنظيف موارد Clinic module...');
 
-            // تنظيف جميع الـ event listeners
-            // ملاحظة: معظم الـ listeners مرتبطة بعناصر DOM محددة
-            // سيتم تنظيفها تلقائياً عند إزالة العناصر من DOM
-            
+            // إغلاق مودالات مفتوحة على body عند مغادرة العيادة
+            try {
+                const keepIds = new Set(['hse-update-message-modal']);
+                document.querySelectorAll('body > .modal-overlay').forEach((el) => {
+                    if (keepIds.has(String(el.id || ''))) return;
+                    el.remove();
+                });
+                document.getElementById('clinic-section')?.querySelectorAll('.modal-overlay').forEach((el) => el.remove());
+            } catch (_modalErr) { /* ignore */ }
+
             // تنظيف أي timers نشطة
             // (لا توجد timers دائمة في هذا الموديول حالياً، لكن يمكن إضافتها هنا لاحقاً)
 

@@ -2710,15 +2710,9 @@ window.UI = {
         }
 
         if (!notesItems.length) {
-            notesItems = isEn ? [
-                'Improved user employee code saving and profile sync without auto-overwriting user name.',
-                'Fixed Shift 3 overnight check-out & duration calculation for clinic staff.',
-                'Added customizable clinic shift schedule settings and verified overall system performance.'
-            ] : [
-                'تحسين حفظ بيانات كود المستخدمين والموافقات دون استبدال الاسم تلقائياً.',
-                'حل وتسجيل خروج الوردية الثالثة الليلية بالعيادة وحساب المواعيد بدقة.',
-                'إضافة لوحة ومواعيد الورديات الرسمية القابلة للتعديل وتأكيد السرعة والأداء.'
-            ];
+            notesItems = isEn
+                ? ['A new application version is available. Reload the page to apply updates.']
+                : ['يتوفر إصدار جديد من التطبيق. أعد تحميل الصفحة لتطبيق التحديثات.'];
         }
 
         const notesListHtml = `
@@ -2769,8 +2763,13 @@ window.UI = {
             if (modal && modal.parentNode) modal.remove();
             window.location.reload();
         };
+        // «لاحقاً»: لا تُعلِّم الإصدار كمقروء — وإلا يبقى المستخدم على كود قديم بلا تنبيه لاحق
         const onLater = () => {
-            try { if (typeof localStorage !== 'undefined') localStorage.setItem(storageKey, v); } catch (e) {}
+            try {
+                if (typeof sessionStorage !== 'undefined') {
+                    sessionStorage.setItem('hse_update_modal_shown_version', v);
+                }
+            } catch (e) {}
             if (modal && modal.parentNode) modal.remove();
         };
         const btnReload = modal.querySelector('#hse-update-message-reload');
