@@ -791,101 +791,131 @@ const Employees={cache:{data:null,lastLoad:null,lastUpdate:null,isUpdating:!1},c
                     </div>
                     </div>
                 </div>
-                <!-- \u2705 \u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u0641\u064A \u0635\u0641 \u0648\u0627\u062D\u062F \u0627\u062D\u062A\u0631\u0627\u0641\u064A - \u0645\u0634\u0627\u0628\u0647 \u0644\u0640 DailyObservations \u0648 Clinic -->
-                <div class="employees-filters-row" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 16px 20px; margin: 0 -20px 0 -20px; width: calc(100% + 40px); direction: rtl; border-bottom: 1px solid #dee2e6;">
+                <!-- \u2705 \u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u0641\u064A \u0635\u0641 \u0648\u0627\u062D\u062F \u0627\u062D\u062A\u0631\u0627\u0641\u064A \u0645\u062F\u0645\u062C \u0645\u0639 \u062F\u0639\u0645 \u0627\u0644\u062A\u0645\u0631\u064A\u0631 \u0627\u0644\u0623\u0641\u0642\u064A \u0648\u0627\u0644\u0645\u0631\u0648\u0646\u0629 \u0643\u0627\u0645\u0644\u0629 -->
+                <div class="employees-filters-row" style="background: #ffffff; padding: 12px 20px; margin: 0 -20px 16px -20px; width: calc(100% + 40px); direction: rtl; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02); overflow-x: auto; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;">
                     <style>
+                        .employees-filters-row::-webkit-scrollbar {
+                            height: 4px;
+                        }
+                        .employees-filters-row::-webkit-scrollbar-track {
+                            background: transparent;
+                        }
+                        .employees-filters-row::-webkit-scrollbar-thumb {
+                            background: #cbd5e1;
+                            border-radius: 4px;
+                        }
+                        .employees-filters-row .filters-flex-row {
+                            display: flex;
+                            align-items: flex-end;
+                            gap: 8px;
+                            flex-wrap: nowrap;
+                            width: 100%;
+                            min-width: max-content;
+                        }
                         .employees-filters-row .filter-field {
                             display: flex;
                             flex-direction: column;
-                            gap: 6px;
+                            gap: 3px;
+                        }
+                        .employees-filters-row .filter-field--search {
+                            flex: 2;
+                            min-width: 170px;
+                        }
+                        .employees-filters-row .filter-field--select {
+                            flex: 1;
+                            min-width: 110px;
+                        }
+                        .employees-filters-row .filter-field--reset {
+                            flex: 0 0 auto;
                         }
                         .employees-filters-row .filter-label {
                             display: flex;
                             align-items: center;
-                            gap: 6px;
-                            font-size: 13px;
-                            font-weight: 600;
-                            color: #495057;
-                            margin-bottom: 4px;
+                            gap: 4px;
+                            font-size: 11px;
+                            font-weight: 700;
+                            color: #475569;
+                            white-space: nowrap;
+                            margin-bottom: 1px;
                         }
                         .employees-filters-row .filter-label i {
-                            color: #6c757d;
-                            font-size: 14px;
+                            color: #3b82f6;
+                            font-size: 11px;
                         }
                         .employees-filters-row .filter-input {
                             width: 100%;
-                            padding: 8px 12px;
-                            border: 1px solid #ced4da;
-                            border-radius: 6px;
-                            font-size: 14px;
-                            background: white;
-                            transition: all 0.2s;
+                            height: 36px;
+                            padding: 0 10px;
+                            border: 1px solid #cbd5e1;
+                            border-radius: 8px;
+                            font-size: 13px;
+                            background: #f8fafc;
+                            color: #0f172a;
+                            transition: all 0.2s ease;
+                            text-overflow: ellipsis;
+                            white-space: nowrap;
+                        }
+                        .employees-filters-row .filter-input:hover {
+                            background: #ffffff;
+                            border-color: #94a3b8;
                         }
                         .employees-filters-row .filter-input:focus {
                             outline: none;
+                            background: #ffffff;
                             border-color: #3b82f6;
-                            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+                            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
                         }
                         .employees-filters-row .filter-count-badge {
                             display: inline-flex;
                             align-items: center;
                             justify-content: center;
-                            min-width: 24px;
-                            height: 20px;
-                            padding: 2px 8px;
-                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            min-width: 18px;
+                            height: 16px;
+                            padding: 0 5px;
+                            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
                             color: white;
-                            border-radius: 12px;
-                            font-size: 11px;
+                            border-radius: 10px;
+                            font-size: 10px;
                             font-weight: 700;
-                            margin-right: 4px;
-                            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+                            margin-right: 2px;
+                            box-shadow: 0 1px 3px rgba(59, 130, 246, 0.3);
                         }
                         .employees-filters-row .filter-reset-btn {
-                            width: 100%;
-                            padding: 10px 16px;
-                            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
-                            color: white;
-                            border: none;
-                            border-radius: 6px;
+                            height: 36px;
+                            padding: 0 14px;
+                            background: #f1f5f9;
+                            color: #475569;
+                            border: 1px solid #cbd5e1;
+                            border-radius: 8px;
                             cursor: pointer;
-                            font-size: 14px;
-                            font-weight: 600;
-                            transition: all 0.2s;
-                            display: flex;
+                            font-size: 12px;
+                            font-weight: 700;
+                            transition: all 0.2s ease;
+                            display: inline-flex;
                             align-items: center;
                             justify-content: center;
                             gap: 6px;
+                            white-space: nowrap;
                         }
                         .employees-filters-row .filter-reset-btn:hover {
-                            background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+                            background: #e2e8f0;
+                            color: #0f172a;
+                            border-color: #94a3b8;
                             transform: translateY(-1px);
-                            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-                        }
-                        .employees-filters-row .filters-grid {
-                            display: grid;
-                            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-                            gap: 16px;
-                            align-items: end;
-                        }
-                        @media (max-width: 1200px) {
-                            .employees-filters-row .filters-grid {
-                                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-                            }
                         }
                     </style>
-                    <div class="filters-grid">
+                    <div class="filters-flex-row">
                         <!-- \u062D\u0642\u0644 \u0627\u0644\u0628\u062D\u062B -->
-                        <div class="filter-field" style="min-width: 180px;">
-                            <label for="employees-search-filter" class="filter-label" style="text-align: right;">
+                        <div class="filter-field filter-field--search">
+                            <label for="employees-search-filter" class="filter-label">
                                 <i class="fas fa-search"></i>${this.t("module.common.search","\u0627\u0644\u0628\u062D\u062B")}
                             </label>
                             <input type="text" id="employees-search-filter" class="filter-input" placeholder="${this.t("module.employees.searchAllData","\u0627\u0628\u062D\u062B \u0641\u064A \u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A...")}" style="direction: rtl; text-align: right;">
                         </div>
                         
                         <!-- \u0641\u0644\u062A\u0631 \u0627\u0644\u0642\u0633\u0645 -->
-                        <div class="filter-field" style="min-width: 160px;">
-                            <label for="employee-filter-department" class="filter-label" style="text-align: right;">
+                        <div class="filter-field filter-field--select">
+                            <label for="employee-filter-department" class="filter-label">
                                 <i class="fas fa-building"></i>${this.t("module.employees.department","\u0627\u0644\u0642\u0633\u0645")}
                             </label>
                             <select id="employee-filter-department" class="filter-input" style="direction: rtl;">
@@ -894,8 +924,8 @@ const Employees={cache:{data:null,lastLoad:null,lastUpdate:null,isUpdating:!1},c
                         </div>
                         
                         <!-- \u0641\u0644\u062A\u0631 \u0627\u0644\u0641\u0631\u0639 -->
-                        <div class="filter-field" style="min-width: 160px;">
-                            <label for="employee-filter-branch" class="filter-label" style="text-align: right;">
+                        <div class="filter-field filter-field--select">
+                            <label for="employee-filter-branch" class="filter-label">
                                 <i class="fas fa-sitemap"></i>${this.t("module.employees.branch","\u0627\u0644\u0641\u0631\u0639")}
                             </label>
                             <select id="employee-filter-branch" class="filter-input" style="direction: rtl;">
@@ -904,8 +934,8 @@ const Employees={cache:{data:null,lastLoad:null,lastUpdate:null,isUpdating:!1},c
                         </div>
                         
                         <!-- \u0641\u0644\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 -->
-                        <div class="filter-field" style="min-width: 160px;">
-                            <label for="employee-filter-location" class="filter-label" style="text-align: right;">
+                        <div class="filter-field filter-field--select">
+                            <label for="employee-filter-location" class="filter-label">
                                 <i class="fas fa-map-marker-alt"></i>${this.t("module.employees.location","\u0627\u0644\u0645\u0648\u0642\u0639")}
                             </label>
                             <select id="employee-filter-location" class="filter-input" style="direction: rtl;">
@@ -914,8 +944,8 @@ const Employees={cache:{data:null,lastLoad:null,lastUpdate:null,isUpdating:!1},c
                         </div>
                         
                         <!-- \u0641\u0644\u062A\u0631 \u0627\u0644\u0648\u0638\u064A\u0641\u0629 -->
-                        <div class="filter-field" style="min-width: 160px;">
-                            <label for="employee-filter-job" class="filter-label" style="text-align: right;">
+                        <div class="filter-field filter-field--select">
+                            <label for="employee-filter-job" class="filter-label">
                                 <i class="fas fa-briefcase"></i>${this.t("module.employees.job","\u0627\u0644\u0648\u0638\u064A\u0641\u0629")}
                             </label>
                             <select id="employee-filter-job" class="filter-input" style="direction: rtl;">
@@ -924,8 +954,8 @@ const Employees={cache:{data:null,lastLoad:null,lastUpdate:null,isUpdating:!1},c
                         </div>
                         
                         <!-- \u0641\u0644\u062A\u0631 \u0627\u0644\u0645\u0646\u0635\u0628 -->
-                        <div class="filter-field" style="min-width: 160px;">
-                            <label for="employee-filter-position" class="filter-label" style="text-align: right;">
+                        <div class="filter-field filter-field--select">
+                            <label for="employee-filter-position" class="filter-label">
                                 <i class="fas fa-user-tie"></i>${this.t("module.employees.position","\u0627\u0644\u0645\u0646\u0635\u0628")}
                             </label>
                             <select id="employee-filter-position" class="filter-input" style="direction: rtl;">
@@ -934,8 +964,8 @@ const Employees={cache:{data:null,lastLoad:null,lastUpdate:null,isUpdating:!1},c
                         </div>
                         
                         <!-- \u0641\u0644\u062A\u0631 \u0627\u0644\u0646\u0648\u0639 -->
-                        <div class="filter-field" style="min-width: 160px;">
-                            <label for="employee-filter-gender" class="filter-label" style="text-align: right;">
+                        <div class="filter-field filter-field--select">
+                            <label for="employee-filter-gender" class="filter-label">
                                 <i class="fas fa-venus-mars"></i>${this.t("module.employees.gender","\u0627\u0644\u0646\u0648\u0639")}
                             </label>
                             <select id="employee-filter-gender" class="filter-input" style="direction: rtl;">
@@ -946,7 +976,7 @@ const Employees={cache:{data:null,lastLoad:null,lastUpdate:null,isUpdating:!1},c
                         </div>
                         
                         <!-- \u0632\u0631 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0639\u064A\u064A\u0646 -->
-                        <div class="filter-field" style="min-width: 140px;">
+                        <div class="filter-field filter-field--reset">
                             <button id="employee-reset-filters" class="filter-reset-btn">
                                 <i class="fas fa-redo"></i>${this.t("module.common.reset","\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646")}
                             </button>
