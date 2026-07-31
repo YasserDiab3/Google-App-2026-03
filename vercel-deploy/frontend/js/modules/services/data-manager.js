@@ -577,72 +577,6 @@ const DataManager = {
                     }
                 });
 
-                // ✅ استعادة ودمج بيانات PTW و PTWRegistry من المفاتيح المخصصة دائماً لعدم فقدان أي تصاريح بعد التحديث
-                const parsePtwTime = (val) => {
-                    if (!val) return 0;
-                    const t = new Date(val).getTime();
-                    return isNaN(t) ? 0 : t;
-                };
-                const savedPtwList = localStorage.getItem('hse_ptw_list');
-                if (savedPtwList) {
-                    try {
-                        const parsedPtw = JSON.parse(savedPtwList);
-                        if (Array.isArray(parsedPtw) && parsedPtw.length > 0) {
-                            const currentPtw = Array.isArray(AppState.appData.ptw) ? AppState.appData.ptw : [];
-                            const ptwMap = new Map();
-                            let ptwCounter = 0;
-                            parsedPtw.concat(currentPtw).forEach(item => {
-                                if (item && typeof item === 'object') {
-                                    const key = String(item.id || item.permitId || item.paperPermitNumber || item.permitNumber || `ptw_fallback_${ptwCounter++}`).trim();
-                                    if (ptwMap.has(key)) {
-                                        const existing = ptwMap.get(key);
-                                        const existingTime = parsePtwTime(existing?.updatedAt || existing?.created_at || existing?.date);
-                                        const itemTime = parsePtwTime(item?.updatedAt || item?.created_at || item?.date);
-                                        if (itemTime >= existingTime) ptwMap.set(key, { ...existing, ...item });
-                                    } else {
-                                        ptwMap.set(key, item);
-                                    }
-                                }
-                            });
-                            AppState.appData.ptw = Array.from(ptwMap.values());
-                        }
-                    } catch (_) {}
-                }
-                const savedRegistry = localStorage.getItem('hse_ptw_registry');
-                if (savedRegistry) {
-                    try {
-                        const parsedReg = JSON.parse(savedRegistry);
-                        if (Array.isArray(parsedReg) && parsedReg.length > 0) {
-                            const currentReg = Array.isArray(AppState.appData.ptwRegistry) ? AppState.appData.ptwRegistry : [];
-                            const regMap = new Map();
-                            let regCounter = 0;
-                            parsedReg.concat(currentReg).forEach(item => {
-                                if (item && typeof item === 'object') {
-                                    const key = String(item.id || item.permitId || item.paperPermitNumber || item.sequentialNumber || `reg_fallback_${regCounter++}`).trim();
-                                    if (regMap.has(key)) {
-                                        const existing = regMap.get(key);
-                                        const existingTime = parsePtwTime(existing?.updatedAt || existing?.created_at || existing?.date);
-                                        const itemTime = parsePtwTime(item?.updatedAt || item?.created_at || item?.date);
-                                        if (itemTime >= existingTime) regMap.set(key, { ...existing, ...item });
-                                    } else {
-                                        regMap.set(key, item);
-                                    }
-                                }
-                            });
-                            AppState.appData.ptwRegistry = Array.from(regMap.values());
-                        }
-                    } catch (_) {}
-                }
-
-                if (typeof window.PTW !== 'undefined') {
-                    window.PTW._metricsDatasetCache = null;
-                    window.PTW._registrySanitizedCache = null;
-                    window.PTW._mergedPermitsCache = null;
-                    if (typeof window.PTW.initRegistry === 'function') {
-                        try { window.PTW.initRegistry(true); } catch (_) {}
-                    }
-                }
-                
                 if (AppState.debugMode) {
                     const totalRecords = Object.keys(parsedData).reduce((sum, key) => {
                         if (Array.isArray(parsedData[key])) {
@@ -661,6 +595,72 @@ const DataManager = {
                 } else {
                     AppState._localDataIsTruncated = false;
                     AppState._truncatedFields = {};
+                }
+            }
+
+            // ✅ استعادة ودمج بيانات PTW و PTWRegistry من المفاتيح المخصصة دائماً لعدم فقدان أي تصاريح بعد التحديث
+            const parsePtwTime = (val) => {
+                if (!val) return 0;
+                const t = new Date(val).getTime();
+                return isNaN(t) ? 0 : t;
+            };
+            const savedPtwList = localStorage.getItem('hse_ptw_list');
+            if (savedPtwList) {
+                try {
+                    const parsedPtw = JSON.parse(savedPtwList);
+                    if (Array.isArray(parsedPtw) && parsedPtw.length > 0) {
+                        const currentPtw = Array.isArray(AppState.appData.ptw) ? AppState.appData.ptw : [];
+                        const ptwMap = new Map();
+                        let ptwCounter = 0;
+                        parsedPtw.concat(currentPtw).forEach(item => {
+                            if (item && typeof item === 'object') {
+                                const key = String(item.id || item.permitId || item.paperPermitNumber || item.permitNumber || item.sequentialNumber || `ptw_fallback_${ptwCounter++}`).trim();
+                                if (ptwMap.has(key)) {
+                                    const existing = ptwMap.get(key);
+                                    const existingTime = parsePtwTime(existing?.updatedAt || existing?.created_at || existing?.date);
+                                    const itemTime = parsePtwTime(item?.updatedAt || item?.created_at || item?.date);
+                                    if (itemTime >= existingTime) ptwMap.set(key, { ...existing, ...item });
+                                } else {
+                                    ptwMap.set(key, item);
+                                }
+                            }
+                        });
+                        AppState.appData.ptw = Array.from(ptwMap.values());
+                    }
+                } catch (_) {}
+            }
+            const savedRegistry = localStorage.getItem('hse_ptw_registry');
+            if (savedRegistry) {
+                try {
+                    const parsedReg = JSON.parse(savedRegistry);
+                    if (Array.isArray(parsedReg) && parsedReg.length > 0) {
+                        const currentReg = Array.isArray(AppState.appData.ptwRegistry) ? AppState.appData.ptwRegistry : [];
+                        const regMap = new Map();
+                        let regCounter = 0;
+                        parsedReg.concat(currentReg).forEach(item => {
+                            if (item && typeof item === 'object') {
+                                const key = String(item.id || item.permitId || item.paperPermitNumber || item.sequentialNumber || `reg_fallback_${regCounter++}`).trim();
+                                if (regMap.has(key)) {
+                                    const existing = regMap.get(key);
+                                    const existingTime = parsePtwTime(existing?.updatedAt || existing?.created_at || existing?.date);
+                                    const itemTime = parsePtwTime(item?.updatedAt || item?.created_at || item?.date);
+                                    if (itemTime >= existingTime) regMap.set(key, { ...existing, ...item });
+                                } else {
+                                    regMap.set(key, item);
+                                }
+                            }
+                        });
+                        AppState.appData.ptwRegistry = Array.from(regMap.values());
+                    }
+                } catch (_) {}
+            }
+
+            if (typeof window.PTW !== 'undefined') {
+                window.PTW._metricsDatasetCache = null;
+                window.PTW._registrySanitizedCache = null;
+                window.PTW._mergedPermitsCache = null;
+                if (typeof window.PTW.initRegistry === 'function') {
+                    try { window.PTW.initRegistry(true); } catch (_) {}
                 }
             }
             

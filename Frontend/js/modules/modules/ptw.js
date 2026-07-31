@@ -1130,14 +1130,14 @@ const PTW = {
         };
 
         const mergedMap = new Map();
+        let incCounter = 0;
         incomingList.forEach(item => {
             if (!item || typeof item !== 'object') return;
-            const key = String(item.id || item.permitId || item.paperPermitNumber || item.sequentialNumber || '').trim();
-            if (key) {
-                mergedMap.set(key, item);
-            }
+            const key = String(item.id || item.permitId || item.paperPermitNumber || item.sequentialNumber || `inc_reg_${incCounter++}`).trim();
+            mergedMap.set(key, item);
         });
 
+        let locCounter = 0;
         localList.forEach(item => {
             if (!item || typeof item !== 'object') return;
             const key = String(item.id || item.permitId || item.paperPermitNumber || item.sequentialNumber || '').trim();
@@ -1163,7 +1163,7 @@ const PTW = {
                     mergedMap.set(matchedKey, { ...existing, ...item });
                 }
             } else {
-                const addKey = key || (`local_reg_${Date.now()}_${Math.random()}`);
+                const addKey = key || (`local_reg_${Date.now()}_${locCounter++}`);
                 mergedMap.set(addKey, item);
             }
         });
@@ -1187,17 +1187,17 @@ const PTW = {
         };
 
         const mergedMap = new Map();
+        let incCounter = 0;
         incomingList.forEach(item => {
             if (!item || typeof item !== 'object') return;
-            const key = String(item.id || item.permitId || item.permitNumber || '').trim();
-            if (key) {
-                mergedMap.set(key, item);
-            }
+            const key = String(item.id || item.permitId || item.permitNumber || item.paperPermitNumber || item.sequentialNumber || `inc_ptw_${incCounter++}`).trim();
+            mergedMap.set(key, item);
         });
 
+        let locCounter = 0;
         localList.forEach(item => {
             if (!item || typeof item !== 'object') return;
-            const key = String(item.id || item.permitId || item.permitNumber || '').trim();
+            const key = String(item.id || item.permitId || item.permitNumber || item.paperPermitNumber || item.sequentialNumber || '').trim();
             const permitNumKey = String(item.permitNumber || item.paperPermitNumber || '').trim();
 
             let matchedKey = null;
@@ -1220,7 +1220,7 @@ const PTW = {
                     mergedMap.set(matchedKey, { ...existing, ...item });
                 }
             } else {
-                const addKey = key || (`local_ptw_${Date.now()}_${Math.random()}`);
+                const addKey = key || (`local_ptw_${Date.now()}_${locCounter++}`);
                 mergedMap.set(addKey, item);
             }
         });
@@ -1952,37 +1952,35 @@ const PTW = {
 
     mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry) {
         const allPermitsMap = new Map();
+        let listFallbackCounter = 0;
         (permitsFromList || []).forEach((permit) => {
             if (!permit) return;
-            const permitId = String(permit.id || permit.permitId || permit.paperPermitNumber || permit.permitNumber || '').trim();
-            if (permitId) {
-                allPermitsMap.set(permitId, {
-                    id: permitId,
-                    ...permit,
-                    status: this.normalizePermitStatus(permit.status)
-                });
-            }
+            const permitId = String(permit.id || permit.permitId || permit.paperPermitNumber || permit.permitNumber || permit.sequentialNumber || `list_permit_${listFallbackCounter++}`).trim();
+            allPermitsMap.set(permitId, {
+                id: permitId,
+                ...permit,
+                status: this.normalizePermitStatus(permit.status)
+            });
         });
         // Registry should override list status/details for same permit ID.
+        let regFallbackCounter = 0;
         (permitsFromRegistry || []).forEach((permit) => {
             if (!permit) return;
-            const permitId = String(permit.id || permit.permitId || permit.paperPermitNumber || permit.permitNumber || '').trim();
-            if (permitId) {
-                const existing = allPermitsMap.get(permitId) || {};
-                allPermitsMap.set(permitId, {
-                    id: permitId,
-                    ...existing,
-                    ...permit,
-                    status: this.normalizePermitStatus(permit.status),
-                    isFromRegistry: true,
-                    isManualEntry: permit.isManualEntry ?? existing.isManualEntry,
-                    skipApprovalFlow: permit.skipApprovalFlow ?? existing.skipApprovalFlow,
-                    approvalCircuitOwnerId: permit.approvalCircuitOwnerId || existing.approvalCircuitOwnerId,
-                    approvalCircuitName: permit.approvalCircuitName || existing.approvalCircuitName,
-                    sequentialNumber: permit.sequentialNumber ?? existing.sequentialNumber,
-                    paperPermitNumber: permit.paperPermitNumber || existing.paperPermitNumber
-                });
-            }
+            const permitId = String(permit.id || permit.permitId || permit.paperPermitNumber || permit.permitNumber || permit.sequentialNumber || `reg_permit_${regFallbackCounter++}`).trim();
+            const existing = allPermitsMap.get(permitId) || {};
+            allPermitsMap.set(permitId, {
+                id: permitId,
+                ...existing,
+                ...permit,
+                status: this.normalizePermitStatus(permit.status),
+                isFromRegistry: true,
+                isManualEntry: permit.isManualEntry ?? existing.isManualEntry,
+                skipApprovalFlow: permit.skipApprovalFlow ?? existing.skipApprovalFlow,
+                approvalCircuitOwnerId: permit.approvalCircuitOwnerId || existing.approvalCircuitOwnerId,
+                approvalCircuitName: permit.approvalCircuitName || existing.approvalCircuitName,
+                sequentialNumber: permit.sequentialNumber ?? existing.sequentialNumber,
+                paperPermitNumber: permit.paperPermitNumber || existing.paperPermitNumber
+            });
         });
         return this.sortPermitRecordsNewestFirst(Array.from(allPermitsMap.values()));
     },
