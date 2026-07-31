@@ -1235,21 +1235,61 @@ const PTW = {
      * حفظ آمن في localStorage مع إعادة محاولة عند QuotaExceeded
      */
     _safeLocalStorageSet(key, value) {
+        if (!value || value === '[]' || value === 'null') {
+            const existing = localStorage.getItem(key);
+            if (existing && existing !== '[]' && existing !== 'null' && existing.length > 10) {
+                Utils.safeWarn(`⚠️ تم منع مسح ${key} بقيمة فارغة مجهولة المصدر`);
+                return false;
+            }
+        }
         try {
             localStorage.setItem(key, value);
             return true;
         } catch (e) {
-            if (e.name === 'QuotaExceededError' || e.code === 22 || (e.message && e.message.includes('quota'))) {
-                // تحرير مساحة بمسح كاشات غير حرجة ثم إعادة المحاولة
+            if (e.name === 'QuotaExceededError' || e.code === 22 || (e.message && e.message.toLowerCase().includes('quota'))) {
+                Utils.safeWarn('⚠️ امتلاء storage عند حفظ ' + key + ' — جاري تحرير المساحة بشكل إجباري...');
                 try {
-                    localStorage.removeItem('hse_pending_sync_queue');
-                    localStorage.removeItem('violations_last_sync');
-                    localStorage.removeItem('hse_sync_meta');
+                    const sacrificialKeys = [
+                        'appTesterHistory', 'appTesterReports', 'appTesterLastExport', 'appTesterConfig',
+                        'hse_pending_sync_queue', 'violations_last_sync', 'hse_sync_meta',
+                        'daily_observations_last_sync', 'clinic_last_sync', 'chemical_safety_last_sync',
+                        'hse_read_notifications'
+                    ];
+                    for (const sKey of sacrificialKeys) {
+                        try { localStorage.removeItem(sKey); } catch (_) {}
+                    }
+
+                    try {
+                        localStorage.setItem(key, value);
+                        Utils.safeLog('✅ نجح حفظ ' + key + ' بعد مسح الكاشات الثانوية');
+                        return true;
+                    } catch (_) {}
+
+                    const rawAppData = localStorage.getItem('hse_app_data');
+                    if (rawAppData) {
+                        try {
+                            const parsed = JSON.parse(rawAppData);
+                            if (parsed && typeof parsed === 'object') {
+                                if (typeof DataManager !== 'undefined' && typeof DataManager.buildLightAppData === 'function') {
+                                    const light = DataManager.buildLightAppData(parsed);
+                                    localStorage.setItem('hse_app_data', Utils.safeStringify(light));
+                                } else {
+                                    delete parsed.dailyObservations;
+                                    delete parsed.incidents;
+                                    delete parsed.trainingAttendance;
+                                    localStorage.setItem('hse_app_data', Utils.safeStringify(parsed));
+                                }
+                            }
+                        } catch (_) {
+                            localStorage.removeItem('hse_app_data');
+                        }
+                    }
+
                     localStorage.setItem(key, value);
-                    Utils.safeLog('✅ نجح حفظ ' + key + ' بعد تحرير مساحة localStorage');
+                    Utils.safeLog('✅ نجح حفظ ' + key + ' بعد تحرير مساحة hse_app_data');
                     return true;
                 } catch (retryErr) {
-                    Utils.safeWarn('⚠️ فشل حفظ ' + key + ' حتى بعد تحرير مساحة:', retryErr);
+                    Utils.safeWarn('⚠️ فشل حفظ ' + key + ' حتى بعد تحرير المساحة:', retryErr);
                     return false;
                 }
             }
@@ -1268,7 +1308,6 @@ const PTW = {
             } else if (Array.isArray(AppState?.appData?.ptwRegistry) && (AppState.appData.ptwRegistry.length > 0 || !localStorage.getItem('hse_ptw_registry'))) {
                 this._safeLocalStorageSet('hse_ptw_registry', Utils.safeStringify(AppState.appData.ptwRegistry));
             }
-            // ✅ لا نستدعي DataManager.save() — المفاتيح المخصصة كافية ولا نريد بتر البيانات في hse_app_data
         } catch (e) {
             Utils.safeWarn('⚠️ فشل حفظ كاش PTW المحلي:', e);
         }

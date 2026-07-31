@@ -810,6 +810,11 @@ const DataManager = {
             localStorage.setItem('hse_app_data', serialized);
             this.saveCompanySettings();
             this._saveSyncMeta();
+            try {
+                if (typeof PTW !== 'undefined' && typeof PTW.persistPtwLocalState === 'function') {
+                    PTW.persistPtwLocalState();
+                }
+            } catch (_) {}
             // ملاحظة: _saveCacheTimestamps لا تُستدعى هنا — تُحدَّث timestamps فقط عبر recordServerFetch()
             // بعد الجلب الفعلي من الخادم، لمنع إعادة ضبط TTL عند الحفظ المحلي
 
