@@ -578,6 +578,11 @@ const DataManager = {
                 });
 
                 // ✅ استعادة ودمج بيانات PTW و PTWRegistry من المفاتيح المخصصة دائماً لعدم فقدان أي تصاريح بعد التحديث
+                const parsePtwTime = (val) => {
+                    if (!val) return 0;
+                    const t = new Date(val).getTime();
+                    return isNaN(t) ? 0 : t;
+                };
                 const savedPtwList = localStorage.getItem('hse_ptw_list');
                 if (savedPtwList) {
                     try {
@@ -591,8 +596,8 @@ const DataManager = {
                                     const key = String(item.id || item.permitId || item.paperPermitNumber || item.permitNumber || `ptw_fallback_${ptwCounter++}`).trim();
                                     if (ptwMap.has(key)) {
                                         const existing = ptwMap.get(key);
-                                        const existingTime = existing?.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
-                                        const itemTime = item?.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+                                        const existingTime = parsePtwTime(existing?.updatedAt || existing?.created_at || existing?.date);
+                                        const itemTime = parsePtwTime(item?.updatedAt || item?.created_at || item?.date);
                                         if (itemTime >= existingTime) ptwMap.set(key, { ...existing, ...item });
                                     } else {
                                         ptwMap.set(key, item);
@@ -616,8 +621,8 @@ const DataManager = {
                                     const key = String(item.id || item.permitId || item.paperPermitNumber || item.sequentialNumber || `reg_fallback_${regCounter++}`).trim();
                                     if (regMap.has(key)) {
                                         const existing = regMap.get(key);
-                                        const existingTime = existing?.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
-                                        const itemTime = item?.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+                                        const existingTime = parsePtwTime(existing?.updatedAt || existing?.created_at || existing?.date);
+                                        const itemTime = parsePtwTime(item?.updatedAt || item?.created_at || item?.date);
                                         if (itemTime >= existingTime) regMap.set(key, { ...existing, ...item });
                                     } else {
                                         regMap.set(key, item);

@@ -1123,6 +1123,12 @@ const PTW = {
         if (incomingList.length === 0) return localList;
         if (localList.length === 0) return incomingList;
 
+        const parseTime = (val) => {
+            if (!val) return 0;
+            const t = new Date(val).getTime();
+            return isNaN(t) ? 0 : t;
+        };
+
         const mergedMap = new Map();
         incomingList.forEach(item => {
             if (!item || typeof item !== 'object') return;
@@ -1137,18 +1143,26 @@ const PTW = {
             const key = String(item.id || item.permitId || item.paperPermitNumber || item.sequentialNumber || '').trim();
             const paperKey = String(item.paperPermitNumber || '').trim();
 
-            let foundInIncoming = false;
-            if (key && mergedMap.has(key)) foundInIncoming = true;
-            if (!foundInIncoming && paperKey) {
-                for (const existing of mergedMap.values()) {
+            let matchedKey = null;
+            if (key && mergedMap.has(key)) {
+                matchedKey = key;
+            } else if (paperKey) {
+                for (const [existingKey, existing] of mergedMap.entries()) {
                     if (String(existing.paperPermitNumber || '').trim() === paperKey) {
-                        foundInIncoming = true;
+                        matchedKey = existingKey;
                         break;
                     }
                 }
             }
 
-            if (!foundInIncoming) {
+            if (matchedKey) {
+                const existing = mergedMap.get(matchedKey);
+                const existingTime = parseTime(existing?.updatedAt || existing?.created_at || existing?.date);
+                const localTime = parseTime(item?.updatedAt || item?.created_at || item?.date);
+                if (localTime >= existingTime) {
+                    mergedMap.set(matchedKey, { ...existing, ...item });
+                }
+            } else {
                 const addKey = key || (`local_reg_${Date.now()}_${Math.random()}`);
                 mergedMap.set(addKey, item);
             }
@@ -1166,6 +1180,12 @@ const PTW = {
         if (incomingList.length === 0) return localList;
         if (localList.length === 0) return incomingList;
 
+        const parseTime = (val) => {
+            if (!val) return 0;
+            const t = new Date(val).getTime();
+            return isNaN(t) ? 0 : t;
+        };
+
         const mergedMap = new Map();
         incomingList.forEach(item => {
             if (!item || typeof item !== 'object') return;
@@ -1180,18 +1200,26 @@ const PTW = {
             const key = String(item.id || item.permitId || item.permitNumber || '').trim();
             const permitNumKey = String(item.permitNumber || item.paperPermitNumber || '').trim();
 
-            let foundInIncoming = false;
-            if (key && mergedMap.has(key)) foundInIncoming = true;
-            if (!foundInIncoming && permitNumKey) {
-                for (const existing of mergedMap.values()) {
+            let matchedKey = null;
+            if (key && mergedMap.has(key)) {
+                matchedKey = key;
+            } else if (permitNumKey) {
+                for (const [existingKey, existing] of mergedMap.entries()) {
                     if (String(existing.permitNumber || existing.paperPermitNumber || '').trim() === permitNumKey) {
-                        foundInIncoming = true;
+                        matchedKey = existingKey;
                         break;
                     }
                 }
             }
 
-            if (!foundInIncoming) {
+            if (matchedKey) {
+                const existing = mergedMap.get(matchedKey);
+                const existingTime = parseTime(existing?.updatedAt || existing?.created_at || existing?.date);
+                const localTime = parseTime(item?.updatedAt || item?.created_at || item?.date);
+                if (localTime >= existingTime) {
+                    mergedMap.set(matchedKey, { ...existing, ...item });
+                }
+            } else {
                 const addKey = key || (`local_ptw_${Date.now()}_${Math.random()}`);
                 mergedMap.set(addKey, item);
             }
