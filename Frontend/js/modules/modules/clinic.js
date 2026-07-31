@@ -16714,28 +16714,28 @@ const Clinic = {
 
         const html = `
             <div class="modal-overlay active" id="clinic-attendance-punch-modal">
-                <div class="modal-content" style="max-width:480px;">
-                    <div class="modal-header">
-                        <h3><i class="fas ${icon} ml-2"></i>${title}</h3>
-                        <button type="button" class="modal-close" onclick="document.getElementById('clinic-attendance-punch-modal')?.remove()"><i class="fas fa-times"></i></button>
+                <div class="modal-content" style="max-width:480px; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 1.5rem; border-bottom: none;">
+                        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center;"><i class="fas \${icon} ml-3" style="font-size: 1.5rem; opacity: 0.9;"></i>\${title}</h3>
+                        <button type="button" class="modal-close" style="color: white; opacity: 0.8; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'" onclick="document.getElementById('clinic-attendance-punch-modal')?.remove()"><i class="fas fa-times"></i></button>
                     </div>
-                    <div class="modal-body space-y-4">
-                        <div class="text-sm text-gray-600">
-                            <div><strong>المسئول:</strong> ${Utils.escapeHTML(record.userName || record.userEmail || '—')}</div>
-                            <div><strong>التاريخ:</strong> ${Utils.escapeHTML(dayKey || '—')}</div>
+                    <div class="modal-body space-y-5" style="padding: 1.5rem; background-color: #f8fafc;">
+                        <div style="background-color: #eff6ff; border-right: 4px solid #3b82f6; padding: 1rem; border-radius: 0.5rem; color: #1e3a8a; font-size: 0.9rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                            <div style="display: flex; align-items: center;"><i class="fas fa-user-circle ml-2" style="color: #60a5fa;"></i> <strong>المسئول:</strong> <span class="mr-2">\${Utils.escapeHTML(record.userName || record.userEmail || '—')}</span></div>
+                            <div style="display: flex; align-items: center;"><i class="fas fa-calendar-alt ml-2" style="color: #60a5fa;"></i> <strong>التاريخ:</strong> <span class="mr-2">\${Utils.escapeHTML(dayKey || '—')}</span></div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">${isCheckIn ? 'وقت الدخول' : 'وقت الخروج'} *</label>
-                            <input type="datetime-local" id="clinic-attendance-punch-time" class="form-input" value="${Utils.escapeAttr(adjustedDefault)}" required>
+                            <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="far fa-clock ml-2 text-blue-500"></i> \${isCheckIn ? 'وقت الدخول' : 'وقت الخروج'} <span class="text-red-500 mr-1">*</span></label>
+                            <input type="datetime-local" id="clinic-attendance-punch-time" class="form-input" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; transition: border-color 0.2s; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);" value="\${Utils.escapeAttr(adjustedDefault)}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">ملاحظة (اختياري)</label>
-                            <textarea id="clinic-attendance-punch-notes" class="form-textarea" rows="2" placeholder="سبب إضافة البصمة يدوياً..."></textarea>
+                            <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="far fa-comment-alt ml-2 text-gray-400"></i> ملاحظة <span style="color: #94a3b8; font-weight: normal; font-size: 0.8rem; margin-right: 0.5rem;">(اختياري)</span></label>
+                            <textarea id="clinic-attendance-punch-notes" class="form-textarea" rows="2" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; resize: none; transition: border-color 0.2s; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);" placeholder="سبب إضافة البصمة يدوياً..."></textarea>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-attendance-punch-modal')?.remove()">إلغاء</button>
-                        <button type="button" class="btn-primary" id="clinic-attendance-punch-save"><i class="fas fa-save ml-2"></i>حفظ</button>
+                    <div class="modal-footer" style="padding: 1.25rem 1.5rem; background-color: #ffffff; border-top: 1px solid #e2e8f0; display: flex; gap: 1rem; justify-content: flex-end;">
+                        <button type="button" class="btn-secondary" style="padding: 0.6rem 1.2rem; border-radius: 0.5rem; font-weight: 500;" onclick="document.getElementById('clinic-attendance-punch-modal')?.remove()">إلغاء</button>
+                        <button type="button" class="btn-primary" id="clinic-attendance-punch-save" style="padding: 0.6rem 1.5rem; border-radius: 0.5rem; font-weight: 600; background: #3b82f6; border: none; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3); transition: all 0.2s;"><i class="fas fa-check ml-2"></i>حفظ البصمة</button>
                     </div>
                 </div>
             </div>`;
@@ -16762,7 +16762,15 @@ const Clinic = {
                 if (resp?.success) {
                     Notification?.success?.(resp.message || 'تم حفظ البصمة');
                     document.getElementById('clinic-attendance-punch-modal')?.remove();
-                    await this.loadClinicAttendanceData(true);
+                    if (resp.data) {
+                        AppState.appData.clinicStaffAttendance = AppState.appData.clinicStaffAttendance || [];
+                        const idx = AppState.appData.clinicStaffAttendance.findIndex(r => String(r.id) === String(resp.data.id));
+                        if (idx > -1) AppState.appData.clinicStaffAttendance[idx] = resp.data;
+                        else AppState.appData.clinicStaffAttendance.push(resp.data);
+                        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+                    } else {
+                        await this.loadClinicAttendanceData(true);
+                    }
                     this.renderAttendanceTab({ force: true });
                 } else {
                     Notification?.error?.(resp?.message || 'فشل الحفظ');
@@ -16787,37 +16795,39 @@ const Clinic = {
         const today = this._getTodayLocalKey();
         const html = `
             <div class="modal-overlay active" id="clinic-attendance-add-modal">
-                <div class="modal-content" style="max-width:520px;">
-                    <div class="modal-header">
-                        <h3><i class="fas fa-fingerprint ml-2"></i>إضافة سجل حضور / بصمة مفقودة</h3>
-                        <button type="button" class="modal-close" onclick="document.getElementById('clinic-attendance-add-modal')?.remove()"><i class="fas fa-times"></i></button>
+                <div class="modal-content" style="max-width:520px; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #0f766e, #14b8a6); color: white; padding: 1.5rem; border-bottom: none;">
+                        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center;"><i class="fas fa-fingerprint ml-3" style="font-size: 1.5rem; opacity: 0.9;"></i>إضافة سجل حضور / بصمة مفقودة</h3>
+                        <button type="button" class="modal-close" style="color: white; opacity: 0.8; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'" onclick="document.getElementById('clinic-attendance-add-modal')?.remove()"><i class="fas fa-times"></i></button>
                     </div>
-                    <div class="modal-body space-y-4">
+                    <div class="modal-body space-y-5" style="padding: 1.5rem; background-color: #f8fafc;">
                         <div class="form-group">
-                            <label class="form-label">المسئول *</label>
-                            <select id="clinic-attendance-add-staff" class="form-input"><option value="">— اختر —</option>${staffOptions}</select>
+                            <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="fas fa-user-circle ml-2 text-teal-500"></i> المسئول <span class="text-red-500 mr-1">*</span></label>
+                            <select id="clinic-attendance-add-staff" class="form-input" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);"><option value="">— اختر المسئول —</option>\${staffOptions}</select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">التاريخ *</label>
-                            <input type="date" id="clinic-attendance-add-date" class="form-input" value="${Utils.escapeAttr(today)}" required>
+                            <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="far fa-calendar-alt ml-2 text-teal-500"></i> التاريخ <span class="text-red-500 mr-1">*</span></label>
+                            <input type="date" id="clinic-attendance-add-date" class="form-input" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);" value="\${Utils.escapeAttr(today)}" required>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; background: #ffffff; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e2e8f0;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;"><i class="fas fa-sign-in-alt ml-1 text-green-500"></i> وقت الدخول</label>
+                                <input type="datetime-local" id="clinic-attendance-add-checkin" class="form-input" style="padding: 0.5rem; font-size: 0.9rem;" value="\${Utils.escapeAttr(today + 'T08:00')}">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;"><i class="fas fa-sign-out-alt ml-1 text-orange-500"></i> وقت الخروج</label>
+                                <input type="datetime-local" id="clinic-attendance-add-checkout" class="form-input" style="padding: 0.5rem; font-size: 0.9rem;" value="\${Utils.escapeAttr(today + 'T17:00')}">
+                            </div>
+                            <div style="grid-column: span 2; font-size: 0.75rem; color: #64748b; text-align: center; margin-top: -0.25rem;"><i class="fas fa-info-circle ml-1"></i> يمكن ترك أحد الحقلين فارغاً لإضافة بصمة دخول أو خروج فقط.</div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">وقت الدخول</label>
-                            <input type="datetime-local" id="clinic-attendance-add-checkin" class="form-input" value="${Utils.escapeAttr(today + 'T08:00')}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">وقت الخروج</label>
-                            <input type="datetime-local" id="clinic-attendance-add-checkout" class="form-input" value="${Utils.escapeAttr(today + 'T17:00')}">
-                        </div>
-                        <p class="text-xs text-gray-500">يمكن ترك أحد الحقلين فارغاً لإضافة بصمة دخول أو خروج فقط.</p>
-                        <div class="form-group">
-                            <label class="form-label">ملاحظة</label>
-                            <textarea id="clinic-attendance-add-notes" class="form-textarea" rows="2" placeholder="سبب الإضافة اليدوية..."></textarea>
+                            <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="far fa-comment-alt ml-2 text-gray-400"></i> ملاحظة</label>
+                            <textarea id="clinic-attendance-add-notes" class="form-textarea" rows="2" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; resize: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);" placeholder="سبب الإضافة اليدوية..."></textarea>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-attendance-add-modal')?.remove()">إلغاء</button>
-                        <button type="button" class="btn-primary" id="clinic-attendance-add-save"><i class="fas fa-save ml-2"></i>حفظ</button>
+                    <div class="modal-footer" style="padding: 1.25rem 1.5rem; background-color: #ffffff; border-top: 1px solid #e2e8f0; display: flex; gap: 1rem; justify-content: flex-end;">
+                        <button type="button" class="btn-secondary" style="padding: 0.6rem 1.2rem; border-radius: 0.5rem; font-weight: 500;" onclick="document.getElementById('clinic-attendance-add-modal')?.remove()">إلغاء</button>
+                        <button type="button" class="btn-primary" id="clinic-attendance-add-save" style="padding: 0.6rem 1.5rem; border-radius: 0.5rem; font-weight: 600; background: #0f766e; border: none; box-shadow: 0 4px 6px -1px rgba(15, 118, 110, 0.3); transition: all 0.2s;"><i class="fas fa-check ml-2"></i>حفظ السجل</button>
                     </div>
                 </div>
             </div>`;
@@ -16849,7 +16859,15 @@ const Clinic = {
                 if (resp?.success) {
                     Notification?.success?.(resp.message || 'تم حفظ السجل');
                     document.getElementById('clinic-attendance-add-modal')?.remove();
-                    await this.loadClinicAttendanceData(true);
+                    if (resp.data) {
+                        AppState.appData.clinicStaffAttendance = AppState.appData.clinicStaffAttendance || [];
+                        const idx = AppState.appData.clinicStaffAttendance.findIndex(r => String(r.id) === String(resp.data.id));
+                        if (idx > -1) AppState.appData.clinicStaffAttendance[idx] = resp.data;
+                        else AppState.appData.clinicStaffAttendance.push(resp.data);
+                        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+                    } else {
+                        await this.loadClinicAttendanceData(true);
+                    }
                     this.renderAttendanceTab({ force: true });
                 } else {
                     Notification?.error?.(resp?.message || 'فشل الحفظ');
