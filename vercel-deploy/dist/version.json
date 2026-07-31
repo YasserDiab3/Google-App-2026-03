@@ -1,13 +1,13 @@
 {
-  "version": "1.0.715",
+  "version": "1.0.717",
   "highlights": {
     "ar": [
-      "ترجمة واجهات العيادة ومراقبة التصرفات الظاهرة عند اللغة الإنجليزية.",
-      "نماذج وskeletons ورسائل التحميل لم تعد عربية ثابتة تحت EN."
+      "تعطيل حساب التجهيز bootstrap من الخادم (SEC-01 مرحلة 1).",
+      "الواجهة تقرأ سياسة القفل قبل تسجيل الدخول."
     ],
     "en": [
-      "Clinic and Behavior Monitoring visible UI strings translate in English mode.",
-      "Forms, skeletons, and loading messages are no longer hardcoded Arabic under EN."
+      "Server kill-switch disables bootstrap admin (SEC-01 phase 1).",
+      "Client reads bootstrap policy before login."
     ]
   }
 }

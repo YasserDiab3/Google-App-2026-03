@@ -1,13 +1,13 @@
 {
-  "version": "1.0.715",
+  "version": "1.0.717",
   "highlights": {
     "ar": [
-      "جلسة خادم موقعة بعد تسجيل الدخول لحماية طلبات API.",
-      "تسريع جلب سجل التردد: آخر 18 شهراً بحد أقصى مع قياس الزمن."
+      "تعطيل حساب التجهيز bootstrap من الخادم (SEC-01 مرحلة 1).",
+      "الواجهة تقرأ سياسة القفل قبل تسجيل الدخول."
     ],
     "en": [
-      "Signed server session after login to protect API requests.",
-      "Faster clinic visits fetch: last 18 months with a cap and timing."
+      "Server kill-switch disables bootstrap admin (SEC-01 phase 1).",
+      "Client reads bootstrap policy before login."
     ]
   }
 }
