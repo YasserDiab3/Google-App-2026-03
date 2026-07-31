@@ -204,12 +204,12 @@ const BehaviorMonitoring={_setupTimeoutId:null,_eventListenersAbortController:nu
                         </div>
                     </div>
                     <div class="card-body" style="padding: 12px 16px;">
-                        <div class="behavior-filters-inline-bar" style="display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px;">
-                            <div class="relative" style="min-width: 220px; flex: 1;">
+                        <div class="behavior-filters-inline-bar" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px;">
+                            <div class="relative" style="width: 220px; flex-shrink: 0;">
                                 <input id="behavior-filter-search" type="text" class="form-input" style="height: 36px; padding-right: 32px;" placeholder="${this.t("common.searchPlaceholder","ISO / \u0627\u0633\u0645 / \u0643\u0648\u062F / \u0648\u0635\u0641")}" value="${i(e.search)}">
                                 <i class="fas fa-search absolute top-2.5 right-3 text-gray-400"></i>
                             </div>
-                            <select id="behavior-filter-type" class="form-input" style="height: 36px; width: 140px; flex-shrink: 0;">
+                            <select id="behavior-filter-type" class="form-input" style="height: 36px; width: 130px; flex-shrink: 0;">
                                 <option value="">${this.t("common.allTypes","\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0646\u0648\u0627\u0639")}</option>
                                 <option value="\u0625\u064A\u062C\u0627\u0628\u064A" ${e.behaviorType==="\u0625\u064A\u062C\u0627\u0628\u064A"?"selected":""}>${this.t("module.behavior.positive","\u0625\u064A\u062C\u0627\u0628\u064A")}</option>
                                 <option value="\u0633\u0644\u0628\u064A" ${e.behaviorType==="\u0633\u0644\u0628\u064A"?"selected":""}>${this.t("module.behavior.negative","\u0633\u0644\u0628\u064A")}</option>
@@ -221,9 +221,9 @@ const BehaviorMonitoring={_setupTimeoutId:null,_eventListenersAbortController:nu
                                 <option value="\u0645\u0642\u0628\u0648\u0644" ${e.rating==="\u0645\u0642\u0628\u0648\u0644"?"selected":""}>${this.t("module.behavior.acceptable","\u0645\u0642\u0628\u0648\u0644")}</option>
                                 <option value="\u0636\u0639\u064A\u0641" ${e.rating==="\u0636\u0639\u064A\u0641"?"selected":""}>${this.t("module.behavior.poor","\u0636\u0639\u064A\u0641")}</option>
                             </select>
-                            <input id="behavior-filter-from" type="date" class="form-input" style="height: 36px; width: 140px; flex-shrink: 0;" value="${i(e.dateFrom)}" title="${this.t("common.fromDate","\u0645\u0646 \u062A\u0627\u0631\u064A\u062E")}">
-                            <input id="behavior-filter-to" type="date" class="form-input" style="height: 36px; width: 140px; flex-shrink: 0;" value="${i(e.dateTo)}" title="${this.t("common.toDate","\u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E")}">
-                            <select id="behavior-sort" class="form-input" style="height: 36px; width: 140px; flex-shrink: 0;">
+                            <input id="behavior-filter-from" type="date" class="form-input" style="height: 36px; width: 135px; flex-shrink: 0;" value="${i(e.dateFrom)}" title="${this.t("common.fromDate","\u0645\u0646 \u062A\u0627\u0631\u064A\u062E")}">
+                            <input id="behavior-filter-to" type="date" class="form-input" style="height: 36px; width: 135px; flex-shrink: 0;" value="${i(e.dateTo)}" title="${this.t("common.toDate","\u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E")}">
+                            <select id="behavior-sort" class="form-input" style="height: 36px; width: 135px; flex-shrink: 0;">
                                 <option value="date_desc" ${this.state?.sort==="date_desc"?"selected":""}>${this.t("common.newestFirst","\u0627\u0644\u0623\u062D\u062F\u062B \u0623\u0648\u0644\u0627\u064B")}</option>
                                 <option value="date_asc" ${this.state?.sort==="date_asc"?"selected":""}>${this.t("common.oldestFirst","\u0627\u0644\u0623\u0642\u062F\u0645 \u0623\u0648\u0644\u0627\u064B")}</option>
                             </select>
@@ -635,12 +635,12 @@ const BehaviorMonitoring={_setupTimeoutId:null,_eventListenersAbortController:nu
                         </div>
                     </div>
                     <div class="card-body" style="padding: 12px 16px;">
-                        <div class="behavior-contractors-filters-inline-bar" style="display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px;">
-                            <div class="relative" style="min-width: 220px; flex: 1;">
+                        <div class="behavior-contractors-filters-inline-bar" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px;">
+                            <div class="relative" style="width: 220px; flex-shrink: 0;">
                                 <input id="bhmc-filter-search" type="text" class="form-input" style="height: 36px; padding-right: 32px;" placeholder="${this.t("common.searchPlaceholder","ISO / \u0645\u0642\u0627\u0648\u0644 / \u0639\u0627\u0645\u0644 / \u0648\u0635\u0641")}" value="${i(e.search)}">
                                 <i class="fas fa-search absolute top-2.5 right-3 text-gray-400"></i>
                             </div>
-                            <select id="bhmc-filter-type" class="form-input" style="height: 36px; width: 140px; flex-shrink: 0;">
+                            <select id="bhmc-filter-type" class="form-input" style="height: 36px; width: 130px; flex-shrink: 0;">
                                 <option value="">${this.t("common.allTypes","\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0646\u0648\u0627\u0639")}</option>
                                 <option value="\u0625\u064A\u062C\u0627\u0628\u064A" ${e.behaviorType==="\u0625\u064A\u062C\u0627\u0628\u064A"?"selected":""}>${this.t("module.behavior.positive","\u0625\u064A\u062C\u0627\u0628\u064A")}</option>
                                 <option value="\u0633\u0644\u0628\u064A" ${e.behaviorType==="\u0633\u0644\u0628\u064A"?"selected":""}>${this.t("module.behavior.negative","\u0633\u0644\u0628\u064A")}</option>
@@ -652,9 +652,9 @@ const BehaviorMonitoring={_setupTimeoutId:null,_eventListenersAbortController:nu
                                 <option value="\u0645\u0642\u0628\u0648\u0644" ${e.rating==="\u0645\u0642\u0628\u0648\u0644"?"selected":""}>${this.t("module.behavior.acceptable","\u0645\u0642\u0628\u0648\u0644")}</option>
                                 <option value="\u0636\u0639\u064A\u0641" ${e.rating==="\u0636\u0639\u064A\u0641"?"selected":""}>${this.t("module.behavior.poor","\u0636\u0639\u064A\u0641")}</option>
                             </select>
-                            <input id="bhmc-filter-from" type="date" class="form-input" style="height: 36px; width: 140px; flex-shrink: 0;" value="${i(e.dateFrom)}" title="${this.t("common.fromDate","\u0645\u0646 \u062A\u0627\u0631\u064A\u062E")}">
-                            <input id="bhmc-filter-to" type="date" class="form-input" style="height: 36px; width: 140px; flex-shrink: 0;" value="${i(e.dateTo)}" title="${this.t("common.toDate","\u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E")}">
-                            <select id="bhmc-sort" class="form-input" style="height: 36px; width: 140px; flex-shrink: 0;">
+                            <input id="bhmc-filter-from" type="date" class="form-input" style="height: 36px; width: 135px; flex-shrink: 0;" value="${i(e.dateFrom)}" title="${this.t("common.fromDate","\u0645\u0646 \u062A\u0627\u0631\u064A\u062E")}">
+                            <input id="bhmc-filter-to" type="date" class="form-input" style="height: 36px; width: 135px; flex-shrink: 0;" value="${i(e.dateTo)}" title="${this.t("common.toDate","\u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E")}">
+                            <select id="bhmc-sort" class="form-input" style="height: 36px; width: 135px; flex-shrink: 0;">
                                 <option value="date_desc" ${this.state?.contractorSort==="date_desc"?"selected":""}>${this.t("common.newestFirst","\u0627\u0644\u0623\u062D\u062F\u062B \u0623\u0648\u0644\u0627\u064B")}</option>
                                 <option value="date_asc" ${this.state?.contractorSort==="date_asc"?"selected":""}>${this.t("common.oldestFirst","\u0627\u0644\u0623\u0642\u062F\u0645 \u0623\u0648\u0644\u0627\u064B")}</option>
                             </select>
@@ -673,15 +673,15 @@ const BehaviorMonitoring={_setupTimeoutId:null,_eventListenersAbortController:nu
                 <table class="data-table table-header-purple">
                     <thead>
                         <tr>
-                            <th>${this.t("module.behavior.isoCode","\u0643\u0648\u062F ISO")}</th>
+                            <th style="width: 110px;">${this.t("module.behavior.isoCode","\u0643\u0648\u062F ISO")}</th>
                             <th>${this.t("module.behavior.contractorName","\u0627\u0644\u0645\u0642\u0627\u0648\u0644")}</th>
-                            <th>${this.t("module.behavior.contractorWorker","\u0627\u0644\u0639\u0627\u0645\u0644")}</th>
-                            <th>${this.t("module.behavior.factory","\u0627\u0644\u0645\u0635\u0646\u0639")}</th>
-                            <th>${this.t("module.behavior.subLocation","\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0641\u0631\u0639\u064A")}</th>
-                            <th>${this.t("module.behavior.behaviorType","\u0646\u0648\u0639 \u0627\u0644\u062A\u0635\u0631\u0641")}</th>
-                            <th>${this.t("module.behavior.date","\u0627\u0644\u062A\u0627\u0631\u064A\u062E")}</th>
-                            <th>${this.t("module.behavior.rating","\u0627\u0644\u062A\u0642\u064A\u064A\u0645")}</th>
-                            <th class="text-center">${this.t("common.actions","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A")}</th>
+                            <th style="width: 140px;">${this.t("module.behavior.contractorWorker","\u0627\u0644\u0639\u0627\u0645\u0644")}</th>
+                            <th style="width: 130px;">${this.t("module.behavior.factory","\u0627\u0644\u0645\u0635\u0646\u0639")}</th>
+                            <th style="width: 140px;">${this.t("module.behavior.subLocation","\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0641\u0631\u0639\u064A")}</th>
+                            <th style="width: 110px;">${this.t("module.behavior.behaviorType","\u0646\u0648\u0639 \u0627\u0644\u062A\u0635\u0631\u0641")}</th>
+                            <th style="width: 140px;">${this.t("module.behavior.date","\u0627\u0644\u062A\u0627\u0631\u064A\u062E")}</th>
+                            <th style="width: 100px;">${this.t("module.behavior.rating","\u0627\u0644\u062A\u0642\u064A\u064A\u0645")}</th>
+                            <th class="text-center" style="width: 140px;">${this.t("common.actions","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A")}</th>
                         </tr>
                     </thead>
                     <tbody>

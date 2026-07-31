@@ -833,12 +833,12 @@ const BehaviorMonitoring = {
                         </div>
                     </div>
                     <div class="card-body" style="padding: 12px 16px;">
-                        <div class="behavior-filters-inline-bar" style="display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px;">
-                            <div class="relative" style="min-width: 220px; flex: 1;">
+                        <div class="behavior-filters-inline-bar" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px;">
+                            <div class="relative" style="width: 220px; flex-shrink: 0;">
                                 <input id="behavior-filter-search" type="text" class="form-input" style="height: 36px; padding-right: 32px;" placeholder="${this.t('common.searchPlaceholder', 'ISO / اسم / كود / وصف')}" value="${safe(filters.search)}">
                                 <i class="fas fa-search absolute top-2.5 right-3 text-gray-400"></i>
                             </div>
-                            <select id="behavior-filter-type" class="form-input" style="height: 36px; width: 140px; flex-shrink: 0;">
+                            <select id="behavior-filter-type" class="form-input" style="height: 36px; width: 130px; flex-shrink: 0;">
                                 <option value="">${this.t('common.allTypes', 'جميع الأنواع')}</option>
                                 <option value="إيجابي" ${filters.behaviorType === 'إيجابي' ? 'selected' : ''}>${this.t('module.behavior.positive', 'إيجابي')}</option>
                                 <option value="سلبي" ${filters.behaviorType === 'سلبي' ? 'selected' : ''}>${this.t('module.behavior.negative', 'سلبي')}</option>
@@ -850,9 +850,9 @@ const BehaviorMonitoring = {
                                 <option value="مقبول" ${filters.rating === 'مقبول' ? 'selected' : ''}>${this.t('module.behavior.acceptable', 'مقبول')}</option>
                                 <option value="ضعيف" ${filters.rating === 'ضعيف' ? 'selected' : ''}>${this.t('module.behavior.poor', 'ضعيف')}</option>
                             </select>
-                            <input id="behavior-filter-from" type="date" class="form-input" style="height: 36px; width: 140px; flex-shrink: 0;" value="${safe(filters.dateFrom)}" title="${this.t('common.fromDate', 'من تاريخ')}">
-                            <input id="behavior-filter-to" type="date" class="form-input" style="height: 36px; width: 140px; flex-shrink: 0;" value="${safe(filters.dateTo)}" title="${this.t('common.toDate', 'إلى تاريخ')}">
-                            <select id="behavior-sort" class="form-input" style="height: 36px; width: 140px; flex-shrink: 0;">
+                            <input id="behavior-filter-from" type="date" class="form-input" style="height: 36px; width: 135px; flex-shrink: 0;" value="${safe(filters.dateFrom)}" title="${this.t('common.fromDate', 'من تاريخ')}">
+                            <input id="behavior-filter-to" type="date" class="form-input" style="height: 36px; width: 135px; flex-shrink: 0;" value="${safe(filters.dateTo)}" title="${this.t('common.toDate', 'إلى تاريخ')}">
+                            <select id="behavior-sort" class="form-input" style="height: 36px; width: 135px; flex-shrink: 0;">
                                 <option value="date_desc" ${this.state?.sort === 'date_desc' ? 'selected' : ''}>${this.t('common.newestFirst', 'الأحدث أولاً')}</option>
                                 <option value="date_asc" ${this.state?.sort === 'date_asc' ? 'selected' : ''}>${this.t('common.oldestFirst', 'الأقدم أولاً')}</option>
                             </select>
@@ -2030,12 +2030,12 @@ const BehaviorMonitoring = {
                         </div>
                     </div>
                     <div class="card-body" style="padding: 12px 16px;">
-                        <div class="behavior-contractors-filters-inline-bar" style="display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px;">
-                            <div class="relative" style="min-width: 220px; flex: 1;">
+                        <div class="behavior-contractors-filters-inline-bar" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px;">
+                            <div class="relative" style="width: 220px; flex-shrink: 0;">
                                 <input id="bhmc-filter-search" type="text" class="form-input" style="height: 36px; padding-right: 32px;" placeholder="${this.t('common.searchPlaceholder', 'ISO / مقاول / عامل / وصف')}" value="${safe(filters.search)}">
                                 <i class="fas fa-search absolute top-2.5 right-3 text-gray-400"></i>
                             </div>
-                            <select id="bhmc-filter-type" class="form-input" style="height: 36px; width: 140px; flex-shrink: 0;">
+                            <select id="bhmc-filter-type" class="form-input" style="height: 36px; width: 130px; flex-shrink: 0;">
                                 <option value="">${this.t('common.allTypes', 'جميع الأنواع')}</option>
                                 <option value="إيجابي" ${filters.behaviorType === 'إيجابي' ? 'selected' : ''}>${this.t('module.behavior.positive', 'إيجابي')}</option>
                                 <option value="سلبي" ${filters.behaviorType === 'سلبي' ? 'selected' : ''}>${this.t('module.behavior.negative', 'سلبي')}</option>
@@ -2047,9 +2047,9 @@ const BehaviorMonitoring = {
                                 <option value="مقبول" ${filters.rating === 'مقبول' ? 'selected' : ''}>${this.t('module.behavior.acceptable', 'مقبول')}</option>
                                 <option value="ضعيف" ${filters.rating === 'ضعيف' ? 'selected' : ''}>${this.t('module.behavior.poor', 'ضعيف')}</option>
                             </select>
-                            <input id="bhmc-filter-from" type="date" class="form-input" style="height: 36px; width: 140px; flex-shrink: 0;" value="${safe(filters.dateFrom)}" title="${this.t('common.fromDate', 'من تاريخ')}">
-                            <input id="bhmc-filter-to" type="date" class="form-input" style="height: 36px; width: 140px; flex-shrink: 0;" value="${safe(filters.dateTo)}" title="${this.t('common.toDate', 'إلى تاريخ')}">
-                            <select id="bhmc-sort" class="form-input" style="height: 36px; width: 140px; flex-shrink: 0;">
+                            <input id="bhmc-filter-from" type="date" class="form-input" style="height: 36px; width: 135px; flex-shrink: 0;" value="${safe(filters.dateFrom)}" title="${this.t('common.fromDate', 'من تاريخ')}">
+                            <input id="bhmc-filter-to" type="date" class="form-input" style="height: 36px; width: 135px; flex-shrink: 0;" value="${safe(filters.dateTo)}" title="${this.t('common.toDate', 'إلى تاريخ')}">
+                            <select id="bhmc-sort" class="form-input" style="height: 36px; width: 135px; flex-shrink: 0;">
                                 <option value="date_desc" ${this.state?.contractorSort === 'date_desc' ? 'selected' : ''}>${this.t('common.newestFirst', 'الأحدث أولاً')}</option>
                                 <option value="date_asc" ${this.state?.contractorSort === 'date_asc' ? 'selected' : ''}>${this.t('common.oldestFirst', 'الأقدم أولاً')}</option>
                             </select>
@@ -2076,15 +2076,15 @@ const BehaviorMonitoring = {
                 <table class="data-table table-header-purple">
                     <thead>
                         <tr>
-                            <th>${this.t('module.behavior.isoCode', 'كود ISO')}</th>
+                            <th style="width: 110px;">${this.t('module.behavior.isoCode', 'كود ISO')}</th>
                             <th>${this.t('module.behavior.contractorName', 'المقاول')}</th>
-                            <th>${this.t('module.behavior.contractorWorker', 'العامل')}</th>
-                            <th>${this.t('module.behavior.factory', 'المصنع')}</th>
-                            <th>${this.t('module.behavior.subLocation', 'الموقع الفرعي')}</th>
-                            <th>${this.t('module.behavior.behaviorType', 'نوع التصرف')}</th>
-                            <th>${this.t('module.behavior.date', 'التاريخ')}</th>
-                            <th>${this.t('module.behavior.rating', 'التقييم')}</th>
-                            <th class="text-center">${this.t('common.actions', 'الإجراءات')}</th>
+                            <th style="width: 140px;">${this.t('module.behavior.contractorWorker', 'العامل')}</th>
+                            <th style="width: 130px;">${this.t('module.behavior.factory', 'المصنع')}</th>
+                            <th style="width: 140px;">${this.t('module.behavior.subLocation', 'الموقع الفرعي')}</th>
+                            <th style="width: 110px;">${this.t('module.behavior.behaviorType', 'نوع التصرف')}</th>
+                            <th style="width: 140px;">${this.t('module.behavior.date', 'التاريخ')}</th>
+                            <th style="width: 100px;">${this.t('module.behavior.rating', 'التقييم')}</th>
+                            <th class="text-center" style="width: 140px;">${this.t('common.actions', 'الإجراءات')}</th>
                         </tr>
                     </thead>
                     <tbody>
