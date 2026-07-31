@@ -204,8 +204,8 @@ const BehaviorMonitoring={_setupTimeoutId:null,_eventListenersAbortController:nu
                         </div>
                     </div>
                     <div class="card-body" style="padding: 12px 16px;">
-                        <div class="behavior-filters-inline-bar" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px;">
-                            <div class="relative" style="width: 220px; flex-shrink: 0;">
+                        <div class="behavior-filters-inline-bar" style="background: var(--bg-surface-secondary, #f8fafc); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color, #e2e8f0); display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px;">
+                            <div class="relative" style="width: 220px; min-width: 180px; flex-shrink: 0;">
                                 <input id="behavior-filter-search" type="text" class="form-input" style="height: 36px; padding-right: 32px;" placeholder="${this.t("common.searchPlaceholder","ISO / \u0627\u0633\u0645 / \u0643\u0648\u062F / \u0648\u0635\u0641")}" value="${i(e.search)}">
                                 <i class="fas fa-search absolute top-2.5 right-3 text-gray-400"></i>
                             </div>
@@ -635,8 +635,8 @@ const BehaviorMonitoring={_setupTimeoutId:null,_eventListenersAbortController:nu
                         </div>
                     </div>
                     <div class="card-body" style="padding: 12px 16px;">
-                        <div class="behavior-contractors-filters-inline-bar" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px;">
-                            <div class="relative" style="width: 220px; flex-shrink: 0;">
+                        <div class="behavior-contractors-filters-inline-bar" style="background: var(--bg-surface-secondary, #f8fafc); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color, #e2e8f0); display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px;">
+                            <div class="relative" style="width: 220px; min-width: 180px; flex-shrink: 0;">
                                 <input id="bhmc-filter-search" type="text" class="form-input" style="height: 36px; padding-right: 32px;" placeholder="${this.t("common.searchPlaceholder","ISO / \u0645\u0642\u0627\u0648\u0644 / \u0639\u0627\u0645\u0644 / \u0648\u0635\u0641")}" value="${i(e.search)}">
                                 <i class="fas fa-search absolute top-2.5 right-3 text-gray-400"></i>
                             </div>
