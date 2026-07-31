@@ -1,13 +1,13 @@
 {
-  "version": "1.0.721",
+  "version": "1.0.723",
   "highlights": {
     "ar": [
-      "SEC-01 مرحلة 3: إزالة هاش حساب التجهيز من الحزمة.",
-      "لا يمكن بناء دخول bootstrap محلي بعد الآن."
+      "SEC-01 مرحلة 4: تنظيف بقايا مسار bootstrap نهائياً.",
+      "رفض أي @hse.local دائماً؛ لا جلسات bootstrap جديدة."
     ],
     "en": [
-      "SEC-01 phase 3: bootstrap password hash removed from the bundle.",
-      "Local bootstrap admin login path can no longer be constructed."
+      "SEC-01 phase 4: remaining bootstrap path cleaned up.",
+      "Any @hse.local email always rejected; no new bootstrap sessions."
     ]
   }
 }

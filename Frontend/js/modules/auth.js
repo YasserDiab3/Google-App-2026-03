@@ -27,7 +27,9 @@ window.Auth = {
 
     isBootstrapEmail(email) {
         try {
-            return String(email || '').toLowerCase().trim() === this.bootstrap.email;
+            const e = String(email || '').toLowerCase().trim();
+            // SEC-01 مرحلة 4: أي بريد @hse.local يُعامل كمسار bootstrap مرفوض
+            return e === this.bootstrap.email || e.endsWith('@hse.local');
         } catch (e) {
             return false;
         }
@@ -78,29 +80,10 @@ window.Auth = {
     },
 
     /**
-     * Bootstrap للطوارئ فقط (SEC-01 مرحلة 2):
-     * على أي host غير localhost — مرفوض دائماً (حتى كاش فارغ / بلا everSynced).
-     * localhost يبقى مشروطاً بالكاش + القفل المحلي/الخادم.
+     * SEC-01 مرحلة 4: لا يُسمح بـ bootstrap بعد الآن — دائماً false.
      */
-    isBootstrapLoginAllowed(usersList) {
-        if (this.isServerBootstrapDisabled()) return false;
-        if (this.isBootstrapDisabled()) return false;
-        try {
-            const host = (typeof location !== 'undefined' && location.hostname) ? String(location.hostname).toLowerCase() : '';
-            const isLocal = !host || host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
-            if (!isLocal) {
-                // SEC-01-P2: إنتاج/نشر عام — لا باب bootstrap حتى مع users=[]
-                this.disableBootstrap('phase2 non-localhost hard deny');
-                return false;
-            }
-        } catch (e) {
-            // إن تعذّر معرفة الـ host اعتبره غير محلي (أشد أماناً)
-            this.disableBootstrap('phase2 host-detect fail');
-            return false;
-        }
-        const users = Array.isArray(usersList) ? usersList : [];
-        if (users.length > 0) return false;
-        return true;
+    isBootstrapLoginAllowed(_usersList) {
+        return false;
     },
 
     disableBootstrap(reason = '') {
@@ -325,30 +308,19 @@ window.Auth = {
     },
 
     /**
-     * يتم استدعاؤها بعد نجاح مزامنة Users.
-     * إذا تم جلب مستخدمين حقيقيين (غير @hse.local)، نعطّل حساب الـ bootstrap نهائياً.
+     * يُستدعى بعد نجاح مزامنة Users (google-integration / app-ui / login-init).
+     * SEC-01 مرحلة 4: تعطيل بقايا bootstrap + إجبار خروج الجلسات القديمة isBootstrap.
      */
     handleUsersSyncSuccess() {
         try {
-            if (this.isBootstrapDisabled()) return false;
-            const users = AppState?.appData?.users;
-            if (!Array.isArray(users) || users.length === 0) return false;
-
-            const nonLegacyUsers = users.filter(u => {
-                const em = String(u?.email || '').toLowerCase().trim();
-                return em && !em.endsWith('@hse.local');
-            });
-            if (nonLegacyUsers.length === 0) return false;
-
-            // تعطيل نهائي
-            this.disableBootstrap('Users sync completed with real users');
+            this.disableBootstrap('Users sync completed');
             try { localStorage.setItem('hse_users_ever_synced', 'true'); } catch (_e) { /* ignore */ }
 
-            // إذا كان المستخدم الحالي هو bootstrap → تسجيل خروج إجباري
+            // جلسة قديمة بوسم bootstrap → خروج إجباري
             if (AppState?.currentUser?.isBootstrap === true) {
                 try {
                     if (typeof Notification !== 'undefined' && Notification.success) {
-                        Notification.success('✅ تم تعطيل حساب مدير النظام الافتراضي بعد نجاح المزامنة. يرجى تسجيل الدخول بحسابك من قاعدة البيانات.');
+                        Notification.success('✅ تم تعطيل حساب التجهيز الافتراضي. يرجى تسجيل الدخول بحسابك من قاعدة البيانات.');
                     }
                 } catch (e) { /* ignore */ }
 
@@ -407,12 +379,12 @@ window.Auth = {
 
         email = email.trim().toLowerCase();
 
-        // SEC-01 مرحلة 1: تحديث سياسة الخادم قبل أي مسار bootstrap محلي
+        // SEC-01: تحديث سياسة الخادم (دفاع إضافي) ثم رفض أي @hse.local دائماً
         try {
             await this.refreshBootstrapPolicyFromServer();
         } catch (_polErr) { /* ignore — نعتمد الكاش المحلي إن وُجد */ }
 
-        if (this.isBootstrapEmail(email) && this.isServerBootstrapDisabled()) {
+        if (this.isBootstrapEmail(email)) {
             const errorMessage = 'حساب التجهيز الافتراضي معطّل من الخادم. يرجى الدخول بحساب النظام.';
             Notification.error(errorMessage);
             return { success: false, message: errorMessage, errorCode: 'BOOTSTRAP_DISABLED' };
@@ -685,7 +657,8 @@ window.Auth = {
             userPermissions = Permissions.normalizePermissions(userPermissions);
         }
 
-        const isBootstrap = this.isBootstrapEmail(email) && !this.isBootstrapDisabled();
+        // SEC-01 مرحلة 4: لا وسم جلسات جديدة كـ bootstrap (الإبقاء على logout للجلسات القديمة عبر handleUsersSyncSuccess)
+        const isBootstrap = false;
         
         const allUsersList = AppState.appData.users || [];
         const fullUserData = allUsersList.find(u => u && u.email && u.email.toLowerCase() === email) || user || {};

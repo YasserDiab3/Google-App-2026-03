@@ -1,13 +1,13 @@
 {
-  "version": "1.0.721",
+  "version": "1.0.723",
   "highlights": {
     "ar": [
-      "SEC-01 مرحلة 2: رفض bootstrap دائماً على غير localhost.",
-      "حتى مع كاش فارغ لا يعمل حساب التجهيز على الإنتاج."
+      "SEC-01 مرحلة 4: تنظيف بقايا مسار bootstrap نهائياً.",
+      "رفض أي @hse.local دائماً؛ لا جلسات bootstrap جديدة."
     ],
     "en": [
-      "SEC-01 phase 2: always deny bootstrap off localhost.",
-      "Empty cache no longer allows bootstrap admin in production."
+      "SEC-01 phase 4: remaining bootstrap path cleaned up.",
+      "Any @hse.local email always rejected; no new bootstrap sessions."
     ]
   }
 }
