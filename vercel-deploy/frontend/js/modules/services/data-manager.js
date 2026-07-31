@@ -633,6 +633,15 @@ const DataManager = {
                         }
                     } catch (_) {}
                 }
+
+                if (typeof window.PTW !== 'undefined') {
+                    window.PTW._metricsDatasetCache = null;
+                    window.PTW._registrySanitizedCache = null;
+                    window.PTW._mergedPermitsCache = null;
+                    if (typeof window.PTW.initRegistry === 'function') {
+                        try { window.PTW.initRegistry(true); } catch (_) {}
+                    }
+                }
                 
                 if (AppState.debugMode) {
                     const totalRecords = Object.keys(parsedData).reduce((sum, key) => {

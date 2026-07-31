@@ -114,7 +114,11 @@ const Dashboard = {
             }
         }
 
+        if (window.PTW && typeof window.PTW.initRegistry === 'function') {
+            try { window.PTW.initRegistry(true); } catch (_) {}
+        }
         if (window.PTW && typeof window.PTW.getPermitMetricsDataset === 'function') {
+            window.PTW._metricsDatasetCache = null;
             const dataset = window.PTW.getPermitMetricsDataset();
             const source = Array.isArray(dataset?.source) ? dataset.source : [];
             if (source.length > 0) {
@@ -122,18 +126,24 @@ const Dashboard = {
             }
         }
 
-        const list = Array.isArray(data?.ptw) ? data.ptw : [];
-        const registryRaw = Array.isArray(data?.ptwRegistry) ? data.ptwRegistry : [];
+        const list = Array.isArray(AppState?.appData?.ptw) && AppState.appData.ptw.length > 0
+            ? AppState.appData.ptw
+            : (Array.isArray(data?.ptw) ? data.ptw : []);
+        const registryRaw = Array.isArray(AppState?.appData?.ptwRegistry) && AppState.appData.ptwRegistry.length > 0
+            ? AppState.appData.ptwRegistry
+            : (Array.isArray(data?.ptwRegistry) ? data.ptwRegistry : []);
         const registry = mapRegistryRows(registryRaw);
 
         const mergedMap = new Map();
         list.forEach((p) => {
-            if (!p || !p.id) return;
-            mergedMap.set(p.id, { ...p, status: this.normalizePTWStatus(p.status) });
+            if (!p || (!p.id && !p.permitId && !p.paperPermitNumber)) return;
+            const key = String(p.id || p.permitId || p.paperPermitNumber);
+            mergedMap.set(key, { ...p, status: this.normalizePTWStatus(p.status) });
         });
         registry.forEach((r) => {
-            if (!r || !r.id) return;
-            mergedMap.set(r.id, r);
+            if (!r || (!r.id && !r.permitId && !r.paperPermitNumber)) return;
+            const key = String(r.id || r.permitId || r.paperPermitNumber);
+            mergedMap.set(key, r);
         });
         return registry.length > 0 ? registry : Array.from(mergedMap.values());
     },

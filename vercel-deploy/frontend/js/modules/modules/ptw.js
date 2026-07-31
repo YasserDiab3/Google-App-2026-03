@@ -1255,6 +1255,9 @@ const PTW = {
      */
     initRegistry(skipBackendLoad = false) {
         try {
+            this._registrySanitizedCache = null;
+            this._mergedPermitsCache = null;
+            this._metricsDatasetCache = null;
             if (!AppState.appData) AppState.appData = {};
 
             // 1. استعادة قائمة التصاريح (ptw) من localStorage ودمجها مع AppState
@@ -20411,6 +20414,7 @@ const PTW = {
     try {
         if (typeof window !== 'undefined' && typeof PTW !== 'undefined') {
             window.PTW = PTW;
+            try { PTW.initRegistry(true); } catch (_) {}
 
             window.addEventListener('formSettingsUpdated', function () {
                 try { if (typeof PTW !== 'undefined' && PTW.refreshSiteDropdowns) PTW.refreshSiteDropdowns(); } catch (e) {}
