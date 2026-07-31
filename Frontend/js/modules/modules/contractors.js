@@ -2993,16 +2993,16 @@ const Contractors = {
                 <table class="data-table table-header-orange">
                     <thead>
                         <tr>
-                            <th>كود المقاول</th>
-                            <th>اسم الشركة / المقاول</th>
-                            <th>نوع الجهة</th>
-                            <th>السجل التجاري / الترخيص</th>
-                            <th>تاريخ الاعتماد</th>
-                            <th>تاريخ انتهاء الاعتماد</th>
-                            <th>مسؤول السلامة للمراجعة</th>
-                            <th>الحالة</th>
-                            <th>ملاحظات</th>
-                            <th>الإجراءات</th>
+                            <th>${this.t('module.contractors.code', 'كود المقاول')}</th>
+                            <th>${this.t('module.contractors.companyName', 'اسم الشركة / المقاول')}</th>
+                            <th>${this.t('module.contractors.entityType', 'نوع الجهة')}</th>
+                            <th>${this.t('module.contractors.license', 'السجل التجاري / الترخيص')}</th>
+                            <th>${this.t('module.contractors.approvalDate', 'تاريخ الاعتماد')}</th>
+                            <th>${this.t('module.contractors.expiryDate', 'تاريخ انتهاء الاعتماد')}</th>
+                            <th>${this.t('module.contractors.safetyOfficer', 'مسؤول السلامة للمراجعة')}</th>
+                            <th>${this.t('module.contractors.status', 'الحالة')}</th>
+                            <th>${this.t('module.contractors.notes', 'ملاحظات')}</th>
+                            <th>${this.t('module.contractors.actions', 'الإجراءات')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -15103,7 +15103,7 @@ const Contractors = {
                 #contractors-section .data-table tbody tr:hover{background:#edf8f7}
                 #contractors-section .empty-state{padding:42px 18px;text-align:center;color:var(--ctr-muted)}
                 #contractors-section .empty-state i{display:grid;place-items:center;width:56px;height:56px;margin:0 auto 10px;border-radius:16px;background:#e8f5f3;color:var(--ctr-teal)!important;font-size:22px!important}
-                #contractors-section .approved-filters-bar{border-color:#bddbdc;background:linear-gradient(180deg,#f8fcfc,#eff8f7)}
+                #contractors-section .approved-filters-bar{border:1px solid #e2e8f0;background:#ffffff;border-radius:12px;padding:10px 14px;margin-bottom:12px}
                 #contractors-section .approved-filters-bar__title{color:var(--ctr-navy)}
                 #contractors-section .approved-filters-bar__title i{color:var(--ctr-teal)}
                 #contractors-section .approved-filters-bar__badge{background:var(--ctr-teal)}

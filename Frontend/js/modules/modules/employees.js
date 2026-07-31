@@ -2959,12 +2959,12 @@ const Employees = {
             <div id="employees-stats-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 items-start"></div>
             <div class="content-card">
                 <div class="card-header">
-                    <div class="flex items-center justify-between">
+                    <div class="flex items-center justify-between flex-wrap gap-4">
                         <h2 class="card-title">
-                            <i class="fas fa-list ml-2"></i>
+                            <i class="fas fa-users ml-2"></i>
                             ${this.t('module.employees.employeeList', 'قائمة الموظفين')}
                         </h2>
-                        <div class="flex items-center gap-4 flex-wrap">
+                        <div class="flex items-center gap-3 flex-wrap">
                             <button id="refresh-employees-btn" class="btn-secondary" title="${this.t('module.employees.refreshFromDbTitle', 'تحديث البيانات من قاعدة البيانات')}">
                                 <i class="fas fa-sync-alt ml-2"></i>
                                 ${this.t('module.common.refresh', 'تحديث')}
@@ -2979,68 +2979,10 @@ const Employees = {
                                 ${this.t('module.employees.deleteAll', 'حذف الجميع')}
                             </button>
                             ` : ''}
-                            <input 
-                                type="text" 
-                                id="employees-search" 
-                                class="form-input" 
-                                style="max-width: 300px;"
-                                placeholder="${this.t('module.common.searchDots', 'البحث...')}"
-                            >
                         </div>
                     </div>
-                    <!-- ✅ زر Toggle لعرض الموظفين غير النشطين - منفصل عن حقل البحث -->
-                    <div class="flex items-center justify-end mt-4" style="direction: rtl;">
-                        <!-- ✅ زر Toggle لعرض الموظفين غير النشطين - تصميم احترافي مع عدد المستقيلين -->
-                        <label class="toggle-switch-container" id="show-inactive-employees-container" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; padding: 10px 16px; border-radius: 10px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 2px solid #dee2e6; transition: all 0.3s ease; min-width: 200px;">
-                            <input type="checkbox" id="show-inactive-employees" style="display: none;">
-                            <div class="toggle-switch" style="position: relative; width: 56px; height: 30px; background: #cbd5e0; border-radius: 15px; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); flex-shrink: 0;">
-                                <div class="toggle-slider" style="position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; background: white; border-radius: 50%; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></div>
-                            </div>
-                            <div class="flex items-center gap-2" style="flex: 1;">
-                                <i class="fas fa-user-slash toggle-icon" style="font-size: 16px; color: #6c757d; transition: all 0.3s ease;"></i>
-                                <span class="toggle-label" style="font-size: 14px; font-weight: 600; color: #495057; white-space: nowrap; transition: all 0.3s ease;">
-                                    ${this.t('module.employees.showInactive', 'عرض المستقيلين')}
-                                </span>
-                                <span class="inactive-count-badge" id="inactive-employees-count" style="display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 22px; padding: 0 8px; background: #dc2626; color: white; border-radius: 11px; font-size: 11px; font-weight: 700; margin-right: 4px; box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3); transition: all 0.3s ease;">
-                                    0
-                                </span>
-                            </div>
-                        </label>
-                        <style>
-                            #show-inactive-employees-container {
-                                position: relative;
-                            }
-                            #show-inactive-employees-container input:checked + .toggle-switch {
-                                background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
-                                box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15), inset 0 2px 4px rgba(0,0,0,0.1) !important;
-                            }
-                            #show-inactive-employees-container input:checked + .toggle-switch .toggle-slider {
-                                transform: translateX(26px) !important;
-                                box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
-                            }
-                            #show-inactive-employees-container input:checked ~ .flex .toggle-icon {
-                                color: #dc2626 !important;
-                            }
-                            #show-inactive-employees-container input:checked ~ .flex .toggle-label {
-                                color: #dc2626 !important;
-                                font-weight: 700 !important;
-                            }
-                            #show-inactive-employees-container input:checked ~ .flex .inactive-count-badge {
-                                background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
-                                box-shadow: 0 2px 6px rgba(220, 38, 38, 0.4) !important;
-                                transform: scale(1.1) !important;
-                            }
-                            #show-inactive-employees-container:hover {
-                                background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%) !important;
-                                border-color: #adb5bd !important;
-                            }
-                            #show-inactive-employees-container:hover .toggle-switch {
-                                box-shadow: inset 0 2px 4px rgba(0,0,0,0.15) !important;
-                            }
-                        </style>
-                    </div>
-                    </div>
                 </div>
+                <div class="card-body" style="padding: 16px;">
                 <!-- ✅ الفلاتر مدمجة احترافية في صف واحد مباشر أعلى الجدول -->
                 <div class="employees-filters-row" style="background: #ffffff; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02); direction: rtl; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;">
                     <style>
@@ -3225,6 +3167,18 @@ const Employees = {
                             </select>
                         </div>
                         
+                        <!-- فلتر المستقيلين -->
+                        <div class="filter-field filter-field--select" style="min-width: 140px;">
+                            <label class="filter-label">
+                                <i class="fas fa-user-slash"></i>${this.t('module.employees.status', 'الحالة')}
+                            </label>
+                            <label id="show-inactive-employees-container" style="display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
+                                <input type="checkbox" id="show-inactive-employees" style="width: 15px; height: 15px; cursor: pointer;">
+                                <span style="font-size: 12px; font-weight: 600; color: #475569;">${this.t('module.employees.showInactive', 'عرض المستقيلين')}</span>
+                                <span class="inactive-count-badge" id="inactive-employees-count" style="display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; background: #dc2626; color: white; border-radius: 9px; font-size: 10px; font-weight: 700;">0</span>
+                            </label>
+                        </div>
+
                         <!-- زر إعادة التعيين -->
                         <div class="filter-field filter-field--reset">
                             <button id="employee-reset-filters" class="filter-reset-btn">

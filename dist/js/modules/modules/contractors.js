@@ -344,30 +344,12 @@ const APPROVED_ENTITY_STATUS_OPTIONS={approved:"\u0645\u0639\u062A\u0645\u062F",
                     </div>
                 </div>
             </div>
-        `},renderApprovedEntitiesTable(t,e=!1){return!t||t.length===0?`
+        `},renderApprovedEntitiesTable(t,e=!1){if(!t||t.length===0)return`
                 <div class="empty-state">
                     <i class="fas fa-clipboard-check text-4xl text-gray-300 mb-3"></i>
                     <p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u062C\u0647\u0627\u062A \u0645\u0639\u062A\u0645\u062F\u0629 \u0623\u0648 \u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0645\u0633\u062C\u0644\u064A\u0646 \u062D\u0627\u0644\u064A\u0627\u064B.</p>
                 </div>
-            `:`
-            <div class="table-wrapper">
-                <table class="data-table table-header-orange">
-                    <thead>
-                        <tr>
-                            <th>\u0643\u0648\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644</th>
-                            <th>\u0627\u0633\u0645 \u0627\u0644\u0634\u0631\u0643\u0629 / \u0627\u0644\u0645\u0642\u0627\u0648\u0644</th>
-                            <th>\u0646\u0648\u0639 \u0627\u0644\u062C\u0647\u0629</th>
-                            <th>\u0627\u0644\u0633\u062C\u0644 \u0627\u0644\u062A\u062C\u0627\u0631\u064A / \u0627\u0644\u062A\u0631\u062E\u064A\u0635</th>
-                            <th>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F</th>
-                            <th>\u062A\u0627\u0631\u064A\u062E \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F</th>
-                            <th>\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0644\u0644\u0645\u0631\u0627\u062C\u0639\u0629</th>
-                            <th>\u0627\u0644\u062D\u0627\u0644\u0629</th>
-                            <th>\u0645\u0644\u0627\u062D\u0638\u0627\u062A</th>
-                            <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${t.map(r=>{const o=this.getApprovedStatusBadgeClass(r.status),i=this.getApprovedStatusLabel(r.status),s=this.getApprovedTypeLabel(r.entityType),n=r.approvalDate?Utils.formatDate(r.approvalDate):"\u2014",l=r.expiryDate?Utils.formatDate(r.expiryDate):"\u2014",p=this.isApprovalExpired(r)?'<span class="badge badge-danger ml-2">\u0645\u0646\u062A\u0647\u064A</span>':"";let f=r.code||r.isoCode||r.contractorCode||r["\u0643\u0648\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644"]||r.\u0643\u0648\u062F||r.codeNumber||"";if(!f&&r.contractorId){const C=(AppState.appData.contractors||[]).find(k=>k.id===r.contractorId);C&&C.code&&(f=C.code)}let u="";if(r.isRegularContractor&&r.requirementsStatus){const A=r.requirementsStatus;u=A.allMet?'<span class="badge badge-success ml-2" data-i18n-literal>\u0645\u0633\u062A\u0648\u0641\u064A</span>':`<span class="badge badge-warning ml-2">${A.completed}/${A.total}</span>`}const d=this.isEntityEnabled(r),m=d?"":'<span class="badge badge-danger ml-2" data-i18n-literal>\u063A\u064A\u0631 \u0646\u0634\u0637</span>',v=r.isRegularContractor,h=r.contractorId||r.id,w=e?d?`<button class="btn-icon btn-icon-warning" title="\u062A\u0639\u0637\u064A\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644" data-i18n-title="module.contractors.disable" onclick="Contractors.toggleEntityActive('${r.id}', 'inactive')">
+            `;const a=t.map(r=>{const o=this.getApprovedStatusBadgeClass(r.status),i=this.getApprovedStatusLabel(r.status),s=this.getApprovedTypeLabel(r.entityType),n=r.approvalDate?Utils.formatDate(r.approvalDate):"\u2014",l=r.expiryDate?Utils.formatDate(r.expiryDate):"\u2014",p=this.isApprovalExpired(r)?'<span class="badge badge-danger ml-2">\u0645\u0646\u062A\u0647\u064A</span>':"";let f=r.code||r.isoCode||r.contractorCode||r["\u0643\u0648\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644"]||r.\u0643\u0648\u062F||r.codeNumber||"";if(!f&&r.contractorId){const C=(AppState.appData.contractors||[]).find(k=>k.id===r.contractorId);C&&C.code&&(f=C.code)}let u="";if(r.isRegularContractor&&r.requirementsStatus){const A=r.requirementsStatus;u=A.allMet?'<span class="badge badge-success ml-2" data-i18n-literal>\u0645\u0633\u062A\u0648\u0641\u064A</span>':`<span class="badge badge-warning ml-2">${A.completed}/${A.total}</span>`}const d=this.isEntityEnabled(r),m=d?"":'<span class="badge badge-danger ml-2" data-i18n-literal>\u063A\u064A\u0631 \u0646\u0634\u0637</span>',v=r.isRegularContractor,h=r.contractorId||r.id,w=e?d?`<button class="btn-icon btn-icon-warning" title="\u062A\u0639\u0637\u064A\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644" data-i18n-title="module.contractors.disable" onclick="Contractors.toggleEntityActive('${r.id}', 'inactive')">
                         <i class="fas fa-toggle-off"></i>
                     </button>`:`<button class="btn-icon btn-icon-success" title="\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644" data-i18n-title="module.contractors.enable" onclick="Contractors.toggleEntityActive('${r.id}', 'active')">
                         <i class="fas fa-toggle-on"></i>
@@ -443,7 +425,25 @@ const APPROVED_ENTITY_STATUS_OPTIONS={approved:"\u0645\u0639\u062A\u0645\u062F",
                     <td>${Utils.escapeHTML(r.notes||"")||"\u2014"}</td>
                     <td>${b}</td>
                 </tr>
-            `}).join("")}
+            `}).join("");return`
+            <div class="table-wrapper">
+                <table class="data-table table-header-orange">
+                    <thead>
+                        <tr>
+                            <th>${this.t("module.contractors.code","\u0643\u0648\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644")}</th>
+                            <th>${this.t("module.contractors.companyName","\u0627\u0633\u0645 \u0627\u0644\u0634\u0631\u0643\u0629 / \u0627\u0644\u0645\u0642\u0627\u0648\u0644")}</th>
+                            <th>${this.t("module.contractors.entityType","\u0646\u0648\u0639 \u0627\u0644\u062C\u0647\u0629")}</th>
+                            <th>${this.t("module.contractors.license","\u0627\u0644\u0633\u062C\u0644 \u0627\u0644\u062A\u062C\u0627\u0631\u064A / \u0627\u0644\u062A\u0631\u062E\u064A\u0635")}</th>
+                            <th>${this.t("module.contractors.approvalDate","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F")}</th>
+                            <th>${this.t("module.contractors.expiryDate","\u062A\u0627\u0631\u064A\u062E \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F")}</th>
+                            <th>${this.t("module.contractors.safetyOfficer","\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0644\u0644\u0645\u0631\u0627\u062C\u0639\u0629")}</th>
+                            <th>${this.t("module.contractors.status","\u0627\u0644\u062D\u0627\u0644\u0629")}</th>
+                            <th>${this.t("module.contractors.notes","\u0645\u0644\u0627\u062D\u0638\u0627\u062A")}</th>
+                            <th>${this.t("module.contractors.actions","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A")}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${a}
                     </tbody>
                 </table>
             </div>
@@ -3680,7 +3680,7 @@ const APPROVED_ENTITY_STATUS_OPTIONS={approved:"\u0645\u0639\u062A\u0645\u062F",
                 #contractors-section .data-table tbody tr:hover{background:#edf8f7}
                 #contractors-section .empty-state{padding:42px 18px;text-align:center;color:var(--ctr-muted)}
                 #contractors-section .empty-state i{display:grid;place-items:center;width:56px;height:56px;margin:0 auto 10px;border-radius:16px;background:#e8f5f3;color:var(--ctr-teal)!important;font-size:22px!important}
-                #contractors-section .approved-filters-bar{border-color:#bddbdc;background:linear-gradient(180deg,#f8fcfc,#eff8f7)}
+                #contractors-section .approved-filters-bar{border:1px solid #e2e8f0;background:#ffffff;border-radius:12px;padding:10px 14px;margin-bottom:12px}
                 #contractors-section .approved-filters-bar__title{color:var(--ctr-navy)}
                 #contractors-section .approved-filters-bar__title i{color:var(--ctr-teal)}
                 #contractors-section .approved-filters-bar__badge{background:var(--ctr-teal)}
