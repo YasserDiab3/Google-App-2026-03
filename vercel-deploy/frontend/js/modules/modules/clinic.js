@@ -15577,6 +15577,8 @@ const Clinic = {
         if (!this._languageChangeListenerAdded) {
             // الاستماع لتغيير اللغة من app-ui.js
             document.addEventListener('language-changed', () => {
+                // عند تحديث اللغة المركزي: loadSectionData يعيد Clinic.load مرة واحدة — تجنّب ازدواج الرسم
+                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
                 this.refreshOnLanguageChange();
             });
             
@@ -15646,8 +15648,9 @@ const Clinic = {
             // ✅ تحسين سرعة التحميل: عدم انتظار syncDataFromServer في الخلفية
             // التحميل ينتهي فوراً بعد عرض الواجهة؛ جلب البيانات يتم في الخلفية ثم تحديث الواجهة
             const shouldLoadData = isFirstLoad || !hasLocalData || cacheAge >= CACHE_DURATION;
+            const isLanguageRefresh = typeof AppState !== 'undefined' && AppState._languageRefresh === true;
             
-            if (shouldLoadData) {
+            if (shouldLoadData && !isLanguageRefresh) {
                 Utils.safeLog('🔄 تحميل بيانات العيادة من قاعدة البيانات (في الخلفية)...');
                 Utils.promiseWithTimeout(
                     this.syncDataFromServer(),
@@ -15676,6 +15679,12 @@ const Clinic = {
                 }).finally(() => {
                     this.state.initialized = true;
                 });
+            } else if (isLanguageRefresh) {
+                // تغيير لغة فقط: إعادة رسم الواجهة دون مزامنة شبكة
+                Utils.safeLog('🌐 تحديث واجهة العيادة بعد تغيير اللغة (بدون مزامنة شبكة)');
+                this.ensureData();
+                this.renderUI();
+                this.state.initialized = true;
             } else {
                 Utils.safeLog('✅ عرض الواجهة بالبيانات المحفوظة محلياً - تحديث في الخلفية');
                 this.syncDataInBackground();

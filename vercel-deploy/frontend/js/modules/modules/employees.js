@@ -368,6 +368,7 @@ const Employees = {
         // إضافة مستمع لتغيير اللغة
         if (!this._languageChangeListenerAdded) {
             document.addEventListener('language-changed', () => {
+                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
                 this.load();
             });
             this._languageChangeListenerAdded = true;
@@ -2959,12 +2960,12 @@ const Employees = {
             <div id="employees-stats-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 items-start"></div>
             <div class="content-card">
                 <div class="card-header">
-                    <div class="flex items-center justify-between">
+                    <div class="flex items-center justify-between flex-wrap gap-4">
                         <h2 class="card-title">
-                            <i class="fas fa-list ml-2"></i>
+                            <i class="fas fa-users ml-2"></i>
                             ${this.t('module.employees.employeeList', 'قائمة الموظفين')}
                         </h2>
-                        <div class="flex items-center gap-4 flex-wrap">
+                        <div class="flex items-center gap-3 flex-wrap">
                             <button id="refresh-employees-btn" class="btn-secondary" title="${this.t('module.employees.refreshFromDbTitle', 'تحديث البيانات من قاعدة البيانات')}">
                                 <i class="fas fa-sync-alt ml-2"></i>
                                 ${this.t('module.common.refresh', 'تحديث')}
@@ -2979,163 +2980,135 @@ const Employees = {
                                 ${this.t('module.employees.deleteAll', 'حذف الجميع')}
                             </button>
                             ` : ''}
-                            <input 
-                                type="text" 
-                                id="employees-search" 
-                                class="form-input" 
-                                style="max-width: 300px;"
-                                placeholder="${this.t('module.common.searchDots', 'البحث...')}"
-                            >
                         </div>
                     </div>
-                    <!-- ✅ زر Toggle لعرض الموظفين غير النشطين - منفصل عن حقل البحث -->
-                    <div class="flex items-center justify-end mt-4" style="direction: rtl;">
-                        <!-- ✅ زر Toggle لعرض الموظفين غير النشطين - تصميم احترافي مع عدد المستقيلين -->
-                        <label class="toggle-switch-container" id="show-inactive-employees-container" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; padding: 10px 16px; border-radius: 10px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 2px solid #dee2e6; transition: all 0.3s ease; min-width: 200px;">
-                            <input type="checkbox" id="show-inactive-employees" style="display: none;">
-                            <div class="toggle-switch" style="position: relative; width: 56px; height: 30px; background: #cbd5e0; border-radius: 15px; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); flex-shrink: 0;">
-                                <div class="toggle-slider" style="position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; background: white; border-radius: 50%; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></div>
-                            </div>
-                            <div class="flex items-center gap-2" style="flex: 1;">
-                                <i class="fas fa-user-slash toggle-icon" style="font-size: 16px; color: #6c757d; transition: all 0.3s ease;"></i>
-                                <span class="toggle-label" style="font-size: 14px; font-weight: 600; color: #495057; white-space: nowrap; transition: all 0.3s ease;">
-                                    ${this.t('module.employees.showInactive', 'عرض المستقيلين')}
-                                </span>
-                                <span class="inactive-count-badge" id="inactive-employees-count" style="display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 22px; padding: 0 8px; background: #dc2626; color: white; border-radius: 11px; font-size: 11px; font-weight: 700; margin-right: 4px; box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3); transition: all 0.3s ease;">
-                                    0
-                                </span>
-                            </div>
-                        </label>
-                        <style>
-                            #show-inactive-employees-container {
-                                position: relative;
-                            }
-                            #show-inactive-employees-container input:checked + .toggle-switch {
-                                background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
-                                box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15), inset 0 2px 4px rgba(0,0,0,0.1) !important;
-                            }
-                            #show-inactive-employees-container input:checked + .toggle-switch .toggle-slider {
-                                transform: translateX(26px) !important;
-                                box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
-                            }
-                            #show-inactive-employees-container input:checked ~ .flex .toggle-icon {
-                                color: #dc2626 !important;
-                            }
-                            #show-inactive-employees-container input:checked ~ .flex .toggle-label {
-                                color: #dc2626 !important;
-                                font-weight: 700 !important;
-                            }
-                            #show-inactive-employees-container input:checked ~ .flex .inactive-count-badge {
-                                background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
-                                box-shadow: 0 2px 6px rgba(220, 38, 38, 0.4) !important;
-                                transform: scale(1.1) !important;
-                            }
-                            #show-inactive-employees-container:hover {
-                                background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%) !important;
-                                border-color: #adb5bd !important;
-                            }
-                            #show-inactive-employees-container:hover .toggle-switch {
-                                box-shadow: inset 0 2px 4px rgba(0,0,0,0.15) !important;
-                            }
-                        </style>
-                    </div>
-                    </div>
                 </div>
-                <!-- ✅ الفلاتر في صف واحد احترافي - مشابه لـ DailyObservations و Clinic -->
-                <div class="employees-filters-row" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 16px 20px; margin: 0 -20px 0 -20px; width: calc(100% + 40px); direction: rtl; border-bottom: 1px solid #dee2e6;">
+                <div class="card-body" style="padding: 16px;">
+                <!-- ✅ الفلاتر مدمجة احترافية في صف واحد مباشر أعلى الجدول -->
+                <div class="employees-filters-row" style="background: #ffffff; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02); direction: rtl; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;">
                     <style>
+                        .employees-filters-row::-webkit-scrollbar {
+                            height: 4px;
+                        }
+                        .employees-filters-row::-webkit-scrollbar-track {
+                            background: transparent;
+                        }
+                        .employees-filters-row::-webkit-scrollbar-thumb {
+                            background: #cbd5e1;
+                            border-radius: 4px;
+                        }
+                        .employees-filters-row .filters-flex-row {
+                            display: flex;
+                            align-items: flex-end;
+                            gap: 8px;
+                            flex-wrap: nowrap;
+                            width: 100%;
+                            min-width: max-content;
+                        }
                         .employees-filters-row .filter-field {
                             display: flex;
                             flex-direction: column;
-                            gap: 6px;
+                            gap: 3px;
+                        }
+                        .employees-filters-row .filter-field--search {
+                            flex: 2;
+                            min-width: 170px;
+                        }
+                        .employees-filters-row .filter-field--select {
+                            flex: 1;
+                            min-width: 110px;
+                        }
+                        .employees-filters-row .filter-field--reset {
+                            flex: 0 0 auto;
                         }
                         .employees-filters-row .filter-label {
                             display: flex;
                             align-items: center;
-                            gap: 6px;
-                            font-size: 13px;
-                            font-weight: 600;
-                            color: #495057;
-                            margin-bottom: 4px;
+                            gap: 4px;
+                            font-size: 11px;
+                            font-weight: 700;
+                            color: #475569;
+                            white-space: nowrap;
+                            margin-bottom: 1px;
                         }
                         .employees-filters-row .filter-label i {
-                            color: #6c757d;
-                            font-size: 14px;
+                            color: #3b82f6;
+                            font-size: 11px;
                         }
                         .employees-filters-row .filter-input {
                             width: 100%;
-                            padding: 8px 12px;
-                            border: 1px solid #ced4da;
-                            border-radius: 6px;
-                            font-size: 14px;
-                            background: white;
-                            transition: all 0.2s;
+                            height: 36px;
+                            padding: 0 10px;
+                            border: 1px solid #cbd5e1;
+                            border-radius: 8px;
+                            font-size: 13px;
+                            background: #f8fafc;
+                            color: #0f172a;
+                            transition: all 0.2s ease;
+                            text-overflow: ellipsis;
+                            white-space: nowrap;
+                        }
+                        .employees-filters-row .filter-input:hover {
+                            background: #ffffff;
+                            border-color: #94a3b8;
                         }
                         .employees-filters-row .filter-input:focus {
                             outline: none;
+                            background: #ffffff;
                             border-color: #3b82f6;
-                            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+                            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
                         }
                         .employees-filters-row .filter-count-badge {
                             display: inline-flex;
                             align-items: center;
                             justify-content: center;
-                            min-width: 24px;
-                            height: 20px;
-                            padding: 2px 8px;
-                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            min-width: 18px;
+                            height: 16px;
+                            padding: 0 5px;
+                            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
                             color: white;
-                            border-radius: 12px;
-                            font-size: 11px;
+                            border-radius: 10px;
+                            font-size: 10px;
                             font-weight: 700;
-                            margin-right: 4px;
-                            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+                            margin-right: 2px;
+                            box-shadow: 0 1px 3px rgba(59, 130, 246, 0.3);
                         }
                         .employees-filters-row .filter-reset-btn {
-                            width: 100%;
-                            padding: 10px 16px;
-                            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
-                            color: white;
-                            border: none;
-                            border-radius: 6px;
+                            height: 36px;
+                            padding: 0 14px;
+                            background: #f1f5f9;
+                            color: #475569;
+                            border: 1px solid #cbd5e1;
+                            border-radius: 8px;
                             cursor: pointer;
-                            font-size: 14px;
-                            font-weight: 600;
-                            transition: all 0.2s;
-                            display: flex;
+                            font-size: 12px;
+                            font-weight: 700;
+                            transition: all 0.2s ease;
+                            display: inline-flex;
                             align-items: center;
                             justify-content: center;
                             gap: 6px;
+                            white-space: nowrap;
                         }
                         .employees-filters-row .filter-reset-btn:hover {
-                            background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+                            background: #e2e8f0;
+                            color: #0f172a;
+                            border-color: #94a3b8;
                             transform: translateY(-1px);
-                            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-                        }
-                        .employees-filters-row .filters-grid {
-                            display: grid;
-                            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-                            gap: 16px;
-                            align-items: end;
-                        }
-                        @media (max-width: 1200px) {
-                            .employees-filters-row .filters-grid {
-                                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-                            }
                         }
                     </style>
-                    <div class="filters-grid">
+                    <div class="filters-flex-row">
                         <!-- حقل البحث -->
-                        <div class="filter-field" style="min-width: 180px;">
-                            <label for="employees-search-filter" class="filter-label" style="text-align: right;">
+                        <div class="filter-field filter-field--search">
+                            <label for="employees-search-filter" class="filter-label">
                                 <i class="fas fa-search"></i>${this.t('module.common.search', 'البحث')}
                             </label>
                             <input type="text" id="employees-search-filter" class="filter-input" placeholder="${this.t('module.employees.searchAllData', 'ابحث في جميع البيانات...')}" style="direction: rtl; text-align: right;">
                         </div>
                         
                         <!-- فلتر القسم -->
-                        <div class="filter-field" style="min-width: 160px;">
-                            <label for="employee-filter-department" class="filter-label" style="text-align: right;">
+                        <div class="filter-field filter-field--select">
+                            <label for="employee-filter-department" class="filter-label">
                                 <i class="fas fa-building"></i>${this.t('module.employees.department', 'القسم')}
                             </label>
                             <select id="employee-filter-department" class="filter-input" style="direction: rtl;">
@@ -3144,8 +3117,8 @@ const Employees = {
                         </div>
                         
                         <!-- فلتر الفرع -->
-                        <div class="filter-field" style="min-width: 160px;">
-                            <label for="employee-filter-branch" class="filter-label" style="text-align: right;">
+                        <div class="filter-field filter-field--select">
+                            <label for="employee-filter-branch" class="filter-label">
                                 <i class="fas fa-sitemap"></i>${this.t('module.employees.branch', 'الفرع')}
                             </label>
                             <select id="employee-filter-branch" class="filter-input" style="direction: rtl;">
@@ -3154,8 +3127,8 @@ const Employees = {
                         </div>
                         
                         <!-- فلتر الموقع -->
-                        <div class="filter-field" style="min-width: 160px;">
-                            <label for="employee-filter-location" class="filter-label" style="text-align: right;">
+                        <div class="filter-field filter-field--select">
+                            <label for="employee-filter-location" class="filter-label">
                                 <i class="fas fa-map-marker-alt"></i>${this.t('module.employees.location', 'الموقع')}
                             </label>
                             <select id="employee-filter-location" class="filter-input" style="direction: rtl;">
@@ -3164,8 +3137,8 @@ const Employees = {
                         </div>
                         
                         <!-- فلتر الوظيفة -->
-                        <div class="filter-field" style="min-width: 160px;">
-                            <label for="employee-filter-job" class="filter-label" style="text-align: right;">
+                        <div class="filter-field filter-field--select">
+                            <label for="employee-filter-job" class="filter-label">
                                 <i class="fas fa-briefcase"></i>${this.t('module.employees.job', 'الوظيفة')}
                             </label>
                             <select id="employee-filter-job" class="filter-input" style="direction: rtl;">
@@ -3174,8 +3147,8 @@ const Employees = {
                         </div>
                         
                         <!-- فلتر المنصب -->
-                        <div class="filter-field" style="min-width: 160px;">
-                            <label for="employee-filter-position" class="filter-label" style="text-align: right;">
+                        <div class="filter-field filter-field--select">
+                            <label for="employee-filter-position" class="filter-label">
                                 <i class="fas fa-user-tie"></i>${this.t('module.employees.position', 'المنصب')}
                             </label>
                             <select id="employee-filter-position" class="filter-input" style="direction: rtl;">
@@ -3184,8 +3157,8 @@ const Employees = {
                         </div>
                         
                         <!-- فلتر النوع -->
-                        <div class="filter-field" style="min-width: 160px;">
-                            <label for="employee-filter-gender" class="filter-label" style="text-align: right;">
+                        <div class="filter-field filter-field--select">
+                            <label for="employee-filter-gender" class="filter-label">
                                 <i class="fas fa-venus-mars"></i>${this.t('module.employees.gender', 'النوع')}
                             </label>
                             <select id="employee-filter-gender" class="filter-input" style="direction: rtl;">
@@ -3195,8 +3168,20 @@ const Employees = {
                             </select>
                         </div>
                         
+                        <!-- فلتر المستقيلين -->
+                        <div class="filter-field filter-field--select" style="min-width: 140px;">
+                            <label class="filter-label">
+                                <i class="fas fa-user-slash"></i>${this.t('module.employees.status', 'الحالة')}
+                            </label>
+                            <label id="show-inactive-employees-container" style="display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
+                                <input type="checkbox" id="show-inactive-employees" style="width: 15px; height: 15px; cursor: pointer;">
+                                <span style="font-size: 12px; font-weight: 600; color: #475569;">${this.t('module.employees.showInactive', 'عرض المستقيلين')}</span>
+                                <span class="inactive-count-badge" id="inactive-employees-count" style="display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; background: #dc2626; color: white; border-radius: 9px; font-size: 10px; font-weight: 700;">0</span>
+                            </label>
+                        </div>
+
                         <!-- زر إعادة التعيين -->
-                        <div class="filter-field" style="min-width: 140px;">
+                        <div class="filter-field filter-field--reset">
                             <button id="employee-reset-filters" class="filter-reset-btn">
                                 <i class="fas fa-redo"></i>${this.t('module.common.reset', 'إعادة تعيين')}
                             </button>

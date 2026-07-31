@@ -1,15 +1,15 @@
 {
-  "version": "1.0.703",
+  "version": "1.0.705",
   "highlights": {
     "ar": [
-      "شريط فلتر احترافي فوق جداول مراقبة التصرفات (موظفين ومقاولين).",
-      "حماية تحميل العيادة من سباق جلب الزيارات وتحديث طابع المزامنة عند النجاح فقط.",
-      "منع استبدال الأدوية والإجازات والإصابات بقائمة فارغة من الخادم."
+      "تحسين تبديل اللغة بدون تجميد الشاشة وإعادة تحميل كل الموديولات المخفية.",
+      "تضييق الترجمة الحرفية على الشريط والقسم النشط فقط مع تأجيل معالجة DOM.",
+      "عيادة ومراقبة التصرفات: تحديث الواجهة عند تغيير اللغة دون مزامنة شبكة ثقيلة."
     ],
     "en": [
-      "Professional filter toolbar above Behavior Monitoring tables (employees and contractors).",
-      "Clinic load safety: no parallel visits fetch race; sync timestamp only after successful visits fetch.",
-      "Do not overwrite local medications, sick leave, or injuries with an empty server array."
+      "Smoother language switch without freezing or reloading every previously visited module.",
+      "Literal i18n limited to sidebar and active section; DOM i18n deferred via animation frame.",
+      "Clinic and Behavior Monitoring refresh UI on language change without heavy network sync."
     ]
   }
 }

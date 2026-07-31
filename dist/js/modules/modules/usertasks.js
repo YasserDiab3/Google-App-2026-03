@@ -102,7 +102,7 @@ const UserTasks={cache:{members:null,tasks:new Map,lastLoad:null},config:{cacheT
             @media (max-width: 500px) {
                 .ut-field { min-width: 100%; }
             }
-        </style>`},ensureData(){AppState.appData.userTasks||(AppState.appData.userTasks=[])},async load(){this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{this.load()}),this._languageChangeListenerAdded=!0);const t=document.getElementById("user-tasks-section");if(!t){typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u0642\u0633\u0645 user-tasks-section \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F!");return}if(typeof AppState>"u"){t.innerHTML=`
+        </style>`},ensureData(){AppState.appData.userTasks||(AppState.appData.userTasks=[])},async load(){this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{typeof AppState<"u"&&AppState._languageRefresh||this.load()}),this._languageChangeListenerAdded=!0);const t=document.getElementById("user-tasks-section");if(!t){typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u0642\u0633\u0645 user-tasks-section \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F!");return}if(typeof AppState>"u"){t.innerHTML=`
                 <div class="content-card">
                     <div class="card-body">
                         <div class="empty-state">

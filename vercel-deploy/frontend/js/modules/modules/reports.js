@@ -237,6 +237,7 @@ const Reports = {
         if (!this._languageChangeBound) {
             this._languageChangeBound = true;
             document.addEventListener('language-changed', () => {
+                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
                 if (document.getElementById('reports-section') && document.getElementById('reports-section').innerHTML) {
                     Reports.load();
                 }

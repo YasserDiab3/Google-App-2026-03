@@ -9,71 +9,69 @@ const UserTasks={cache:{members:null,tasks:new Map,lastLoad:null},config:{cacheT
             .ut-filter-bar {
                 background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 60%, #f1f5f9 100%);
                 border-bottom: 1.5px solid #e2e8f0;
-                padding: 1.1rem 1.3rem 1.25rem;
+                padding: 0.9rem 1.2rem;
                 position: relative;
             }
             .ut-filter-bar::before {
                 content: ''; position: absolute; top: 0; right: 0; left: 0; height: 3.5px;
                 background: linear-gradient(90deg, #6366f1, #8b5cf6, #3b82f6);
             }
-            .ut-filter-head {
+            .ut-filter-toolbar {
                 display: flex; align-items: center; justify-content: space-between;
-                flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1rem;
+                flex-wrap: wrap; gap: 0.8rem;
             }
-            .ut-filter-title {
-                display: flex; align-items: center; gap: 0.65rem;
-                font-size: 1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.01em;
+            .ut-filter-title-box {
+                display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0;
+            }
+            .ut-filter-title-text {
+                font-size: 0.95rem; font-weight: 800; color: #1e293b; letter-spacing: -0.01em;
             }
             .ut-filter-icon {
-                width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;
+                width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
                 display: flex; align-items: center; justify-content: center;
                 background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
-                color: #fff; font-size: 0.9rem;
-                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+                color: #fff; font-size: 0.85rem;
+                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            }
+            .ut-filter-fields-row {
+                display: flex; align-items: flex-end; flex-wrap: wrap; gap: 0.65rem; flex: 1; min-width: 0; justify-content: flex-end;
             }
             .ut-filter-reset {
-                display: inline-flex; align-items: center; gap: 0.45rem;
+                display: inline-flex; align-items: center; gap: 0.4rem;
                 background: #ffffff; border: 1.5px solid #cbd5e1; color: #475569;
-                padding: 0.45rem 1rem; border-radius: 11px; font-size: 0.82rem;
+                height: 38px; padding: 0 0.85rem; border-radius: 10px; font-size: 0.8rem;
                 font-weight: 700; cursor: pointer; transition: all 0.2s ease;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+                box-shadow: 0 2px 5px rgba(0,0,0,0.03); flex-shrink: 0; margin-top: auto;
             }
             .ut-filter-reset:hover {
                 border-color: #ef4444; color: #ef4444; background: #fef2f2;
-                box-shadow: 0 4px 12px rgba(239, 68, 68, 0.18); transform: translateY(-1px);
+                box-shadow: 0 4px 10px rgba(239, 68, 68, 0.15); transform: translateY(-1px);
             }
-            .ut-filter-reset i { font-size: 0.78rem; transition: transform 0.3s ease; }
+            .ut-filter-reset i { font-size: 0.75rem; transition: transform 0.3s ease; }
             .ut-filter-reset:hover i { transform: rotate(-90deg); }
 
-            .ut-filter-grid {
-                display: grid; gap: 0.9rem;
-                grid-template-columns: 2.2fr 1.3fr 1.1.fr 1.1fr;
-            }
-            .ut-filter-grid-3 { grid-template-columns: 2.2fr 1.3fr 1.3fr; }
-            @media (max-width: 960px) { .ut-filter-grid, .ut-filter-grid-3 { grid-template-columns: 1fr 1fr; } }
-            @media (max-width: 580px) { .ut-filter-grid, .ut-filter-grid-3 { grid-template-columns: 1fr; } }
-
-            .ut-field { display: flex; flex-direction: column; gap: 0.38rem; min-width: 0; }
+            .ut-field { display: flex; flex-direction: column; gap: 0.25rem; min-width: 125px; flex: 1; }
+            .ut-field-search { flex: 1.6; min-width: 180px; }
             .ut-field label {
-                display: flex; align-items: center; gap: 0.4rem;
-                font-size: 0.78rem; font-weight: 700; color: #475569;
+                display: flex; align-items: center; gap: 0.35rem;
+                font-size: 0.74rem; font-weight: 700; color: #475569; margin: 0;
             }
-            .ut-field label i { font-size: 0.76rem; color: #6366f1; }
+            .ut-field label i { font-size: 0.72rem; color: #6366f1; }
 
             .ut-field select,
             .ut-search-wrap input {
-                width: 100%; height: 42px; padding: 0 0.85rem;
-                font-size: 0.88rem; font-weight: 600; color: #1e293b;
-                border: 1.5px solid #cbd5e1; border-radius: 12px; background: #ffffff;
+                width: 100%; height: 38px; padding: 0 0.75rem;
+                font-size: 0.84rem; font-weight: 600; color: #1e293b;
+                border: 1.5px solid #cbd5e1; border-radius: 10px; background: #ffffff;
                 outline: none; transition: all 0.2s ease;
                 box-sizing: border-box;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             }
             .ut-field select {
                 cursor: pointer; appearance: none; -webkit-appearance: none;
-                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-                background-repeat: no-repeat; background-position: left 0.85rem center;
-                padding-left: 2.4rem;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+                background-repeat: no-repeat; background-position: left 0.75rem center;
+                padding-left: 2.2rem;
             }
             .ut-field select:hover,
             .ut-search-wrap input:hover {
@@ -82,20 +80,29 @@ const UserTasks={cache:{members:null,tasks:new Map,lastLoad:null},config:{cacheT
             .ut-field select:focus,
             .ut-search-wrap input:focus {
                 border-color: #6366f1; background: #ffffff;
-                box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
             }
             .ut-search-wrap { position: relative; }
             .ut-search-wrap .ut-search-ico {
                 position: absolute; top: 50%; transform: translateY(-50%);
-                right: 0.9rem; color: #6366f1; font-size: 0.88rem; pointer-events: none;
+                right: 0.85rem; color: #6366f1; font-size: 0.82rem; pointer-events: none;
                 transition: color 0.2s ease;
             }
             .ut-search-wrap input:focus + .ut-search-ico,
             .ut-search-wrap input:hover + .ut-search-ico {
                 color: #4338ca;
             }
-            .ut-search-wrap input { padding-right: 2.5rem; }
-        </style>`},ensureData(){AppState.appData.userTasks||(AppState.appData.userTasks=[])},async load(){this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{this.load()}),this._languageChangeListenerAdded=!0);const t=document.getElementById("user-tasks-section");if(!t){typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u0642\u0633\u0645 user-tasks-section \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F!");return}if(typeof AppState>"u"){t.innerHTML=`
+            .ut-search-wrap input { padding-right: 2.3rem; }
+
+            @media (max-width: 900px) {
+                .ut-filter-toolbar { flex-direction: column; align-items: stretch; }
+                .ut-filter-fields-row { flex-direction: row; flex-wrap: wrap; }
+                .ut-field { min-width: 45%; }
+            }
+            @media (max-width: 500px) {
+                .ut-field { min-width: 100%; }
+            }
+        </style>`},ensureData(){AppState.appData.userTasks||(AppState.appData.userTasks=[])},async load(){this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{typeof AppState<"u"&&AppState._languageRefresh||this.load()}),this._languageChangeListenerAdded=!0);const t=document.getElementById("user-tasks-section");if(!t){typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u0642\u0633\u0645 user-tasks-section \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F!");return}if(typeof AppState>"u"){t.innerHTML=`
                 <div class="content-card">
                     <div class="card-body">
                         <div class="empty-state">
@@ -244,49 +251,49 @@ const UserTasks={cache:{members:null,tasks:new Map,lastLoad:null},config:{cacheT
             
             ${this._filterPanelStyles()}
 
-            <!-- \u0627\u0644\u0641\u0644\u062A\u0631\u0629 \u0648\u0627\u0644\u0628\u062D\u062B -->
+            <!-- \u0627\u0644\u0641\u0644\u062A\u0631\u0629 \u0648\u0627\u0644\u0628\u062D\u062B \u0623\u0639\u0644\u0649 \u0627\u0644\u062C\u062F\u0648\u0644 \u0641\u064A \u0633\u0637\u0631 \u0634\u0631\u064A\u0637\u064A \u0623\u0641\u0642\u064A\u0627\u064B -->
             <div class="content-card mt-6 ut-filter-card">
                 <div class="ut-filter-bar">
-                    <div class="ut-filter-head">
-                        <div class="ut-filter-title">
+                    <div class="ut-filter-toolbar">
+                        <div class="ut-filter-title-box">
                             <span class="ut-filter-icon"><i class="fas fa-sliders-h"></i></span>
-                            <span>${this.t("module.userTasks.filterTitle","\u0641\u0644\u062A\u0631\u0629 \u0627\u0644\u0645\u0647\u0627\u0645")}</span>
+                            <span class="ut-filter-title-text">${this.t("module.userTasks.filterTitle","\u0641\u0644\u062A\u0631\u0629 \u0627\u0644\u0645\u0647\u0627\u0645")}</span>
                         </div>
-                        <button type="button" id="task-filter-reset" class="ut-filter-reset">
-                            <i class="fas fa-rotate-left"></i>${this.t("module.userTasks.resetFilters","\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646")}
-                        </button>
-                    </div>
-                    <div class="ut-filter-grid">
-                        <div class="ut-field ut-field-search">
-                            <label><i class="fas fa-magnifying-glass"></i>${this.t("module.userTasks.search","\u0628\u062D\u062B")}</label>
-                            <div class="ut-search-wrap">
-                                <i class="fas fa-search ut-search-ico"></i>
-                                <input type="text" id="task-search-input" placeholder="${this.t("module.userTasks.searchTasksPlaceholder","\u0627\u0628\u062D\u062B \u0628\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629 \u0623\u0648 \u0627\u0644\u0648\u0635\u0641...")}">
+                        <div class="ut-filter-fields-row">
+                            <div class="ut-field ut-field-search">
+                                <label><i class="fas fa-magnifying-glass"></i>${this.t("module.userTasks.search","\u0628\u062D\u062B")}</label>
+                                <div class="ut-search-wrap">
+                                    <i class="fas fa-search ut-search-ico"></i>
+                                    <input type="text" id="task-search-input" placeholder="${this.t("module.userTasks.searchTasksPlaceholder","\u0627\u0628\u062D\u062B \u0628\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629 \u0623\u0648 \u0627\u0644\u0648\u0635\u0641...")}">
+                                </div>
                             </div>
-                        </div>
-                        <div class="ut-field">
-                            <label><i class="fas fa-user"></i>${this.t("module.userTasks.user","\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645")}</label>
-                            <select id="task-user-filter">
-                                <option value="">${this.t("module.userTasks.allUsers","\u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646")}</option>
-                            </select>
-                        </div>
-                        <div class="ut-field">
-                            <label><i class="fas fa-circle-check"></i>${this.t("module.userTasks.status","\u0627\u0644\u062D\u0627\u0644\u0629")}</label>
-                            <select id="task-status-filter">
-                                <option value="">${this.t("module.userTasks.allStatuses","\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0627\u0644\u0627\u062A")}</option>
-                                <option value="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630">${this.t("module.userTasks.inProgress","\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630")}</option>
-                                <option value="\u0645\u0643\u062A\u0645\u0644">${this.t("module.userTasks.completed","\u0645\u0643\u062A\u0645\u0644")}</option>
-                                <option value="\u0645\u0644\u063A\u064A">${this.t("module.userTasks.cancelled","\u0645\u0644\u063A\u064A")}</option>
-                            </select>
-                        </div>
-                        <div class="ut-field">
-                            <label><i class="fas fa-flag"></i>${this.t("module.userTasks.priority","\u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0629")}</label>
-                            <select id="task-priority-filter">
-                                <option value="">${this.t("module.userTasks.allPriorities","\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0627\u062A")}</option>
-                                <option value="\u0639\u0627\u0644\u064A">${this.t("module.userTasks.priorityHigh","\u0639\u0627\u0644\u064A")}</option>
-                                <option value="\u0645\u062A\u0648\u0633\u0637">${this.t("module.userTasks.priorityMedium","\u0645\u062A\u0648\u0633\u0637")}</option>
-                                <option value="\u0645\u0646\u062E\u0641\u0636">${this.t("module.userTasks.priorityLow","\u0645\u0646\u062E\u0641\u0636")}</option>
-                            </select>
+                            <div class="ut-field">
+                                <label><i class="fas fa-user"></i>${this.t("module.userTasks.user","\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645")}</label>
+                                <select id="task-user-filter">
+                                    <option value="">${this.t("module.userTasks.allUsers","\u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646")}</option>
+                                </select>
+                            </div>
+                            <div class="ut-field">
+                                <label><i class="fas fa-circle-check"></i>${this.t("module.userTasks.status","\u0627\u0644\u062D\u0627\u0644\u0629")}</label>
+                                <select id="task-status-filter">
+                                    <option value="">${this.t("module.userTasks.allStatuses","\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0627\u0644\u0627\u062A")}</option>
+                                    <option value="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630">${this.t("module.userTasks.inProgress","\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630")}</option>
+                                    <option value="\u0645\u0643\u062A\u0645\u0644">${this.t("module.userTasks.completed","\u0645\u0643\u062A\u0645\u0644")}</option>
+                                    <option value="\u0645\u0644\u063A\u064A">${this.t("module.userTasks.cancelled","\u0645\u0644\u063A\u064A")}</option>
+                                </select>
+                            </div>
+                            <div class="ut-field">
+                                <label><i class="fas fa-flag"></i>${this.t("module.userTasks.priority","\u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0629")}</label>
+                                <select id="task-priority-filter">
+                                    <option value="">${this.t("module.userTasks.allPriorities","\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0627\u062A")}</option>
+                                    <option value="\u0639\u0627\u0644\u064A">${this.t("module.userTasks.priorityHigh","\u0639\u0627\u0644\u064A")}</option>
+                                    <option value="\u0645\u062A\u0648\u0633\u0637">${this.t("module.userTasks.priorityMedium","\u0645\u062A\u0648\u0633\u0637")}</option>
+                                    <option value="\u0645\u0646\u062E\u0641\u0636">${this.t("module.userTasks.priorityLow","\u0645\u0646\u062E\u0641\u0636")}</option>
+                                </select>
+                            </div>
+                            <button type="button" id="task-filter-reset" class="ut-filter-reset">
+                                <i class="fas fa-rotate-left"></i>${this.t("module.userTasks.resetFilters","\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646")}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -403,43 +410,43 @@ const UserTasks={cache:{members:null,tasks:new Map,lastLoad:null},config:{cacheT
 
             ${this._filterPanelStyles()}
 
-            <!-- \u0627\u0644\u0641\u0644\u062A\u0631\u0629 \u0648\u0627\u0644\u0628\u062D\u062B -->
+            <!-- \u0627\u0644\u0641\u0644\u062A\u0631\u0629 \u0648\u0627\u0644\u0628\u062D\u062B \u0623\u0639\u0644\u0649 \u0627\u0644\u062C\u062F\u0648\u0644 \u0641\u064A \u0633\u0637\u0631 \u0634\u0631\u064A\u0637\u064A \u0623\u0641\u0642\u064A\u0627\u064B -->
             <div class="content-card mt-6 ut-filter-card">
                 <div class="ut-filter-bar">
-                    <div class="ut-filter-head">
-                        <div class="ut-filter-title">
+                    <div class="ut-filter-toolbar">
+                        <div class="ut-filter-title-box">
                             <span class="ut-filter-icon"><i class="fas fa-sliders-h"></i></span>
-                            <span>${this.t("module.userTasks.filterTitle","\u0641\u0644\u062A\u0631\u0629 \u0627\u0644\u0645\u0647\u0627\u0645")}</span>
+                            <span class="ut-filter-title-text">${this.t("module.userTasks.filterTitle","\u0641\u0644\u062A\u0631\u0629 \u0627\u0644\u0645\u0647\u0627\u0645")}</span>
                         </div>
-                        <button type="button" id="user-task-filter-reset" class="ut-filter-reset">
-                            <i class="fas fa-rotate-left"></i>${this.t("module.userTasks.resetFilters","\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646")}
-                        </button>
-                    </div>
-                    <div class="ut-filter-grid ut-filter-grid-3">
-                        <div class="ut-field ut-field-search">
-                            <label><i class="fas fa-magnifying-glass"></i>${this.t("module.userTasks.search","\u0628\u062D\u062B")}</label>
-                            <div class="ut-search-wrap">
-                                <i class="fas fa-search ut-search-ico"></i>
-                                <input type="text" id="user-task-search-input" placeholder="${this.t("module.userTasks.searchTasksPlaceholder","\u0627\u0628\u062D\u062B \u0628\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629 \u0623\u0648 \u0627\u0644\u0648\u0635\u0641...")}">
+                        <div class="ut-filter-fields-row">
+                            <div class="ut-field ut-field-search">
+                                <label><i class="fas fa-magnifying-glass"></i>${this.t("module.userTasks.search","\u0628\u062D\u062B")}</label>
+                                <div class="ut-search-wrap">
+                                    <i class="fas fa-search ut-search-ico"></i>
+                                    <input type="text" id="user-task-search-input" placeholder="${this.t("module.userTasks.searchTasksPlaceholder","\u0627\u0628\u062D\u062B \u0628\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629 \u0623\u0648 \u0627\u0644\u0648\u0635\u0641...")}">
+                                </div>
                             </div>
-                        </div>
-                        <div class="ut-field">
-                            <label><i class="fas fa-circle-check"></i>${this.t("module.userTasks.status","\u0627\u0644\u062D\u0627\u0644\u0629")}</label>
-                            <select id="user-task-status-filter">
-                                <option value="">${this.t("module.userTasks.allStatuses","\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0627\u0644\u0627\u062A")}</option>
-                                <option value="\u062C\u062F\u064A\u062F\u0629">${this.t("module.userTasks.statusNew","\u062C\u062F\u064A\u062F\u0629")}</option>
-                                <option value="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630">${this.t("module.userTasks.inProgress","\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630")}</option>
-                                <option value="\u0645\u0643\u062A\u0645\u0644">${this.t("module.userTasks.completed","\u0645\u0643\u062A\u0645\u0644\u0629")}</option>
-                            </select>
-                        </div>
-                        <div class="ut-field">
-                            <label><i class="fas fa-flag"></i>${this.t("module.userTasks.priority","\u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0629")}</label>
-                            <select id="user-task-priority-filter">
-                                <option value="">${this.t("module.userTasks.allPriorities","\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0627\u062A")}</option>
-                                <option value="\u0639\u0627\u0644\u064A">${this.t("module.userTasks.priorityHigh","\u0639\u0627\u0644\u064A")}</option>
-                                <option value="\u0645\u062A\u0648\u0633\u0637">${this.t("module.userTasks.priorityMedium","\u0645\u062A\u0648\u0633\u0637")}</option>
-                                <option value="\u0645\u0646\u062E\u0641\u0636">${this.t("module.userTasks.priorityLow","\u0645\u0646\u062E\u0641\u0636")}</option>
-                            </select>
+                            <div class="ut-field">
+                                <label><i class="fas fa-circle-check"></i>${this.t("module.userTasks.status","\u0627\u0644\u062D\u0627\u0644\u0629")}</label>
+                                <select id="user-task-status-filter">
+                                    <option value="">${this.t("module.userTasks.allStatuses","\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0627\u0644\u0627\u062A")}</option>
+                                    <option value="\u062C\u062F\u064A\u062F\u0629">${this.t("module.userTasks.statusNew","\u062C\u062F\u064A\u062F\u0629")}</option>
+                                    <option value="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630">${this.t("module.userTasks.inProgress","\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630")}</option>
+                                    <option value="\u0645\u0643\u062A\u0645\u0644">${this.t("module.userTasks.completed","\u0645\u0643\u062A\u0645\u0644\u0629")}</option>
+                                </select>
+                            </div>
+                            <div class="ut-field">
+                                <label><i class="fas fa-flag"></i>${this.t("module.userTasks.priority","\u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0629")}</label>
+                                <select id="user-task-priority-filter">
+                                    <option value="">${this.t("module.userTasks.allPriorities","\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0627\u062A")}</option>
+                                    <option value="\u0639\u0627\u0644\u064A">${this.t("module.userTasks.priorityHigh","\u0639\u0627\u0644\u064A")}</option>
+                                    <option value="\u0645\u062A\u0648\u0633\u0637">${this.t("module.userTasks.priorityMedium","\u0645\u062A\u0648\u0633\u0637")}</option>
+                                    <option value="\u0645\u0646\u062E\u0641\u0636">${this.t("module.userTasks.priorityLow","\u0645\u0646\u062E\u0641\u0636")}</option>
+                                </select>
+                            </div>
+                            <button type="button" id="user-task-filter-reset" class="ut-filter-reset">
+                                <i class="fas fa-rotate-left"></i>${this.t("module.userTasks.resetFilters","\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646")}
+                            </button>
                         </div>
                     </div>
                 </div>

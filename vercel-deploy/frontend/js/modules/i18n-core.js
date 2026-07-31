@@ -2429,6 +2429,31 @@
             'module.iso.notify.saveSuccess': 'تم الحفظ بنجاح',
             'module.iso.notify.deleteSuccess': 'تم الحذف بنجاح',
 
+            'module.behavior.title': 'مراقبة السلوكيات',
+            'module.behavior.subtitle': 'تسجيل ومتابعة سلوكيات الموظفين والمقاولين',
+            'module.behavior.addEmployee': 'تسجيل تصرف موظف',
+            'module.behavior.addContractor': 'تسجيل تصرف مقاول',
+            'module.behavior.tabs.overview': 'نظرة عامة',
+            'module.behavior.tabs.employeeLog': 'تصرفات الموظفين',
+            'module.behavior.tabs.contractorLog': 'تصرفات المقاولين',
+            'module.behavior.employeeBehaviorsTitle': 'تصرفات الموظفين (بحث / فلترة)',
+            'module.behavior.contractorBehaviorsTitle': 'سجل تصرفات المقاولين (بحث / فلترة)',
+            'module.behavior.positive': 'إيجابي',
+            'module.behavior.negative': 'سلبي',
+            'module.behavior.excellent': 'ممتاز',
+            'module.behavior.good': 'جيد',
+            'module.behavior.acceptable': 'مقبول',
+            'module.behavior.poor': 'ضعيف',
+            'module.behavior.isoCode': 'كود ISO',
+            'module.behavior.employeeName': 'اسم الموظف',
+            'module.behavior.contractorName': 'المقاول',
+            'module.behavior.contractorWorker': 'العامل',
+            'module.behavior.factory': 'المصنع',
+            'module.behavior.subLocation': 'الموقع الفرعي',
+            'module.behavior.behaviorType': 'نوع التصرف',
+            'module.behavior.date': 'التاريخ',
+            'module.behavior.rating': 'التقييم',
+
             'language.current': 'العربية'
         },
         en: {
@@ -4842,11 +4867,53 @@
             'module.iso.export.noData': 'No data to export',
             'module.iso.notify.updateSuccess': 'Data updated',
             'module.iso.notify.saveSuccess': 'Saved successfully',
-            'module.iso.notify.deleteSuccess': 'Deleted successfully'
+            'module.iso.notify.deleteSuccess': 'Deleted successfully',
+
+            'module.behavior.title': 'Behavior Monitoring',
+            'module.behavior.subtitle': 'Record and track employee and contractor behaviors',
+            'module.behavior.addEmployee': 'Record Employee Behavior',
+            'module.behavior.addContractor': 'Record Contractor Behavior',
+            'module.behavior.tabs.overview': 'Overview',
+            'module.behavior.tabs.employeeLog': 'Employee Behaviors',
+            'module.behavior.tabs.contractorLog': 'Contractor Behaviors',
+            'module.behavior.employeeBehaviorsTitle': 'Employee Behaviors (Search / Filter)',
+            'module.behavior.contractorBehaviorsTitle': 'Contractor Behaviors Log (Search / Filter)',
+            'module.behavior.positive': 'Positive',
+            'module.behavior.negative': 'Negative',
+            'module.behavior.excellent': 'Excellent',
+            'module.behavior.good': 'Good',
+            'module.behavior.acceptable': 'Acceptable',
+            'module.behavior.poor': 'Poor',
+            'module.behavior.isoCode': 'ISO Code',
+            'module.behavior.employeeName': 'Employee Name',
+            'module.behavior.contractorName': 'Contractor',
+            'module.behavior.contractorWorker': 'Worker',
+            'module.behavior.factory': 'Factory',
+            'module.behavior.subLocation': 'Sub Location',
+            'module.behavior.behaviorType': 'Behavior Type',
+            'module.behavior.date': 'Date',
+            'module.behavior.rating': 'Rating'
         }
     };
 
     const literalArToEn = {
+        'مراقبة السلوكيات': 'Behavior Monitoring',
+        'تسجيل ومتابعة سلوكيات الموظفين والمقاولين': 'Record and track employee and contractor behaviors',
+        'تسجيل تصرف موظف': 'Record Employee Behavior',
+        'تسجيل تصرف مقاول': 'Record Contractor Behavior',
+        'نظرة عامة': 'Overview',
+        'تصرفات الموظفين': 'Employee Behaviors',
+        'تصرفات المقاولين': 'Contractor Behaviors',
+        'تصرفات الموظفين (بحث/فلترة)': 'Employee Behaviors (Search / Filter)',
+        'تصرفات الموظفين (بحث / فلترة)': 'Employee Behaviors (Search / Filter)',
+        'سجل تصرفات المقاولين': 'Contractor Behaviors Log',
+        'سجل تصرفات المقاولين (بحث / فلترة)': 'Contractor Behaviors Log (Search / Filter)',
+        'تصرفات سلبية': 'Negative Behaviors',
+        'تصرفات إيجابية': 'Positive Behaviors',
+        'إجمالي السجلات': 'Total Records',
+        'تصرفات المقاولين / شركات خارجية': 'Contractor Behaviors / External',
+        'آخر 5 تصرفات': 'Last 5 Behaviors',
+        'لا توجد تصرفات مسجلة': 'No registered behaviors',
         'إدارة السلامة والصحة المهنية والبيئة': 'HSE Department',
         'إدارة السلامة والصحة المهنية': 'HSE Department',
         'السلامة والصحة المهنية والبيئة': 'Health, Safety & Environment (HSE)',
@@ -6274,17 +6341,56 @@
      * - t(key, lang, fallback) — لغة + احتياطي (مثل applyI18n)
      */
     function t(key, arg2, arg3) {
+        if (!key) return '';
         const current = getCurrentLang();
+        let targetLang = current;
+        let fallback = '';
+
         if (arg3 !== undefined) {
-            const lang = arg2 === 'ar' || arg2 === 'en' ? arg2 : current;
-            const fallback = arg3 != null ? String(arg3) : '';
-            return (translations[lang]?.[key] ?? translations.ar?.[key] ?? fallback) || key;
+            targetLang = (arg2 === 'ar' || arg2 === 'en') ? arg2 : current;
+            fallback = arg3 != null ? String(arg3) : '';
+        } else if (arg2 === 'ar' || arg2 === 'en') {
+            targetLang = arg2;
+            fallback = '';
+        } else {
+            targetLang = current;
+            fallback = arg2 != null && arg2 !== '' ? String(arg2) : '';
         }
-        if (arg2 === 'ar' || arg2 === 'en') {
-            return (translations[arg2]?.[key] ?? translations.ar?.[key] ?? '') || key;
+
+        // 1. Direct match in target language dictionary
+        const targetVal = translations[targetLang]?.[key];
+        if (targetVal !== undefined && targetVal !== null && targetVal !== '') {
+            return targetVal;
         }
-        const fallback = arg2 != null && arg2 !== '' ? String(arg2) : '';
-        return (translations[current]?.[key] ?? translations.ar?.[key] ?? fallback) || key;
+
+        // 2. Target language is English ('en')
+        if (targetLang === 'en') {
+            // A. Prefer explicit English fallback if provided
+            if (fallback && fallback !== key) {
+                return fallback;
+            }
+            // B. If Arabic translation exists, try translating it to English
+            const arVal = translations.ar?.[key];
+            if (arVal) {
+                const trimmedAr = String(arVal).trim();
+                const translatedLiteral = mapArToEnExact.get(trimmedAr) || literalArToEn[trimmedAr];
+                if (translatedLiteral) return translatedLiteral;
+                return arVal;
+            }
+        }
+
+        // 3. Target language is Arabic ('ar')
+        if (targetLang === 'ar') {
+            const arVal = translations.ar?.[key];
+            if (arVal !== undefined && arVal !== null && arVal !== '') {
+                return arVal;
+            }
+            if (fallback && fallback !== key) {
+                return fallback;
+            }
+        }
+
+        return fallback || key;
     }
 
     function applyI18n(root = document, lang) {
@@ -6462,12 +6568,11 @@
         if (observerAttached || !global.MutationObserver || !document?.body) return;
         observerAttached = true;
         const observer = new MutationObserver((mutations) => {
-            const lang = getCurrentLang();
+            // لا تطبّق i18n بشكل متزامن هنا — يسبب تجمداً عند إعادة بناء أقسام كبيرة؛ الدفع لـ rAF فقط
             let addedCount = 0;
             mutations.forEach((mutation) => {
                 mutation.addedNodes.forEach((node) => {
                     if (!(node instanceof HTMLElement)) return;
-                    applyI18n(node, lang);
                     pendingNodes.push(node);
                     addedCount++;
                 });

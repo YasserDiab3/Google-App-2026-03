@@ -682,7 +682,7 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                     .iso-workspace *, .iso-workspace *::before, .iso-workspace *::after { transition: none !important; animation: none !important; }
                 }
             </style>
-        `},async load(){this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{this.load()}),this._languageChangeListenerAdded=!0);const e=document.getElementById("iso-section");if(e)try{e.innerHTML=`
+        `},async load(){this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{typeof AppState<"u"&&AppState._languageRefresh||this.load()}),this._languageChangeListenerAdded=!0);const e=document.getElementById("iso-section");if(e)try{e.innerHTML=`
             ${this.renderIdentityStyles_()}
             <div class="iso-workspace">
             <div class="section-header iso-hero-header">

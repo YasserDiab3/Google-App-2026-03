@@ -133,7 +133,7 @@ const PPE = {
             if (search) {
                 const hay = [
                     item.receiptNumber, item.id, item.employeeName, item.employeeCode, item.employeeNumber,
-                    item.equipmentType, item.status, item.employeeDepartment
+                    item.equipmentType, item.status, item.employeeDepartment, item.createdBy, item.createdByUser, item.recordedBy, item.recorderName
                 ].map((x) => String(x || '').toLowerCase()).join(' | ');
                 if (!hay.includes(search)) return false;
             }
@@ -420,6 +420,7 @@ const PPE = {
                         <th>${esc(t('module.ppe.table.employeeCode', 'الكود الوظيفي'))}</th>
                         <th>${esc(t('module.ppe.table.equipmentType', 'نوع المعدة'))}</th>
                         <th>${esc(t('module.ppe.table.quantity', 'الكمية'))}</th>
+                        <th>${esc(t('module.ppe.table.createdBy', 'مسجّل الاستلام'))}</th>
                         <th>${esc(t('module.ppe.table.receiptDate', 'تاريخ الاستلام'))}</th>
                         <th>${esc(t('module.ppe.table.status', 'الحالة'))}</th>
                         <th>${esc(t('module.ppe.table.actions', 'الإجراءات'))}</th>
@@ -429,6 +430,7 @@ const PPE = {
                     ${filtered.map((item) => {
             const stDisp = this.getDisplayStatus(item.status);
             const idJs = String(item.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const recordedBy = item.createdBy || item.createdByUser || item.recordedBy || item.recorderName || item.user || '—';
             return `
                         <tr>
                             <td class="font-mono font-semibold">${esc(item.receiptNumber || item.id || '')}</td>
@@ -439,6 +441,7 @@ const PPE = {
                                 ${item.shoeSize ? `<span class="block text-[11px] text-blue-600 font-semibold mt-0.5"><i class="fas fa-shoe-prints ml-1 text-[10px]"></i>مقاس: ${esc(item.shoeSize)}</span>` : ''}
                             </td>
                             <td>${item.quantity || 0}</td>
+                            <td><span class="text-xs font-semibold text-slate-700"><i class="fas fa-user-edit text-blue-500 ml-1 text-[11px]"></i>${esc(recordedBy)}</span></td>
                             <td>${item.receiptDate ? Utils.formatDate(item.receiptDate) : '-'}</td>
                             <td>
                                 <span class="badge badge-${this.isStatusReceived(item.status) ? 'success' : 'warning'}">
@@ -789,6 +792,7 @@ const PPE = {
         // Add language change listener
         if (!this._languageChangeListenerAdded) {
             document.addEventListener('language-changed', () => {
+                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
                 this.load();
             });
             this._languageChangeListenerAdded = true;
@@ -2381,6 +2385,9 @@ const PPE = {
                         }
                     }
 
+                    const activeUser = (typeof AppState !== 'undefined' && AppState.currentUser) ? AppState.currentUser : {};
+                    const currentUserName = activeUser.name || activeUser.username || activeUser.email || '—';
+
                     const commonData = {
                         receiptNumber: receiptNumber,
                         employeeName: employeeNameEl.value.trim(),
@@ -2392,7 +2399,10 @@ const PPE = {
                         employeeLocation: employeeLocationEl.value.trim(),
                         receiptDate: new Date(receiptDateEl.value).toISOString(),
                         status: statusEl.value,
-                        notes: (notesEl?.value || '').trim()
+                        notes: (notesEl?.value || '').trim(),
+                        createdBy: isEdit ? (ppeData?.createdBy || ppeData?.createdByUser || currentUserName) : currentUserName,
+                        createdByUser: isEdit ? (ppeData?.createdByUser || ppeData?.createdBy || currentUserName) : currentUserName,
+                        recordedBy: isEdit ? (ppeData?.recordedBy || ppeData?.createdBy || currentUserName) : currentUserName
                     };
 
                     try {
@@ -2599,6 +2609,7 @@ const PPE = {
         const t = (k, f) => this._t(k, f);
         const ut = (s) => Utils.escapeHTML(s);
         const stLabel = this.getDisplayStatus(item.status);
+        const recordedBy = item.createdBy || item.createdByUser || item.recordedBy || item.recorderName || item.user || '—';
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         const idJs = String(item.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
@@ -2624,6 +2635,10 @@ const PPE = {
                             <div>
                                 <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.employeeCode', 'الكود الوظيفي'))}:</label>
                                 <p class="text-gray-800">${Utils.escapeHTML(item.employeeCode || item.employeeNumber || '')}</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.label.createdBy', 'مسجّل الاستلام'))}:</label>
+                                <p class="text-gray-800 font-semibold text-blue-700"><i class="fas fa-user-edit text-blue-500 ml-1"></i>${Utils.escapeHTML(recordedBy)}</p>
                             </div>
                             <div>
                                 <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.label.department', 'القسم'))}:</label>
@@ -2759,6 +2774,7 @@ const PPE = {
             const formCode = item.receiptNumber || `PPE-${item.id?.substring(0, 8) || 'UNKNOWN'}`;
             const escape = (value) => Utils.escapeHTML(value || '');
             const formatDate = (value) => value ? Utils.formatDate(value) : '-';
+            const recordedBy = item.createdBy || item.createdByUser || item.recordedBy || item.recorderName || item.user || '—';
             const content = `
                 <table>
                     <tr><th>رقم الإيصال</th><td>${escape(item.receiptNumber || item.id)}</td></tr>
@@ -2770,6 +2786,7 @@ const PPE = {
                     <tr><th>الموقع</th><td>${escape(item.employeeLocation)}</td></tr>
                     <tr><th>نوع المعدة</th><td>${escape(item.equipmentType)}</td></tr>
                     <tr><th>الكمية</th><td>${item.quantity || 0}</td></tr>
+                    <tr><th>مسجّل الاستلام</th><td>${escape(recordedBy)}</td></tr>
                     <tr><th>تاريخ الاستلام</th><td>${formatDate(item.receiptDate)}</td></tr>
                     <tr><th>الحالة</th><td>${escape(item.status)}</td></tr>
                 </table>

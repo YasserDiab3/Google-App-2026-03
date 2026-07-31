@@ -1,15 +1,15 @@
 {
-  "version": "1.0.702",
+  "version": "1.0.705",
   "highlights": {
     "ar": [
-      "تحسين حفظ بيانات كود المستخدمين والموافقات دون استبدال الاسم تلقائياً.",
-      "حل وتسجيل خروج الوردية الثالثة الليلية بالعيادة وحساب المواعيد بدقة.",
-      "إضافة لوحة ومواعيد الورديات الرسمية القابلة للتعديل وتأكيد السرعة والأداء."
+      "تحسين تبديل اللغة بدون تجميد الشاشة وإعادة تحميل كل الموديولات المخفية.",
+      "تضييق الترجمة الحرفية على الشريط والقسم النشط فقط مع تأجيل معالجة DOM.",
+      "عيادة ومراقبة التصرفات: تحديث الواجهة عند تغيير اللغة دون مزامنة شبكة ثقيلة."
     ],
     "en": [
-      "Improved user employee code saving and profile sync without auto-overwriting user name.",
-      "Fixed Shift 3 overnight check-out & duration calculation for clinic staff.",
-      "Added customizable clinic shift schedule settings and verified overall system performance."
+      "Smoother language switch without freezing or reloading every previously visited module.",
+      "Literal i18n limited to sidebar and active section; DOM i18n deferred via animation frame.",
+      "Clinic and Behavior Monitoring refresh UI on language change without heavy network sync."
     ]
   }
 }

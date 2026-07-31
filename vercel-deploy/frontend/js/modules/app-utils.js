@@ -205,6 +205,8 @@ const MODULE_DETAILED_PERMISSIONS = {
         label: 'صلاحيات مديول تصاريح العمل',
         permissions: [
             { key: 'ptw-list', label: 'قائمة التصاريح', icon: 'fa-list' },
+            { key: 'registry', label: 'سجل حصر التصاريح', icon: 'fa-clipboard-list' },
+            { key: 'map', label: 'خريطة مواقع التصاريح', icon: 'fa-map-marked-alt' },
             { key: 'analytics', label: 'التحليل', icon: 'fa-chart-line' },
             { key: 'approvals', label: 'الموافقات', icon: 'fa-check-circle' }
         ]
@@ -245,6 +247,31 @@ const MODULE_DETAILED_PERMISSIONS = {
             { key: 'violations-view-all', label: 'عرض جميع مخالفات الموظفين لكل الإدارات', icon: 'fa-globe' },
             { key: 'analytics', label: 'التحليل والإحصائيات', icon: 'fa-chart-line' },
             { key: 'approvals', label: 'طلبات الاعتماد والموافقات', icon: 'fa-check-circle' }
+        ]
+    },
+    'safety-performance-kpis': {
+        label: 'صلاحيات مديول مؤشرات الأداء (KPIs)',
+        permissions: [
+            { key: 'kpis-dashboard', label: 'مؤشرات الأداء الرئيسية', icon: 'fa-gauge-high' },
+            { key: 'kpis-targets', label: 'مستهدفات المؤشرات', icon: 'fa-bullseye' },
+            { key: 'kpi-annual-plan', label: 'الخطة السنوية لمؤشرات الأداء', icon: 'fa-calendar-alt' },
+            { key: 'hse-monitoring-plan', label: 'خطة متابعة HSE', icon: 'fa-clipboard-check' },
+            { key: 'analytics', label: 'تحليل البيانات والإحصائيات', icon: 'fa-chart-bar' }
+        ]
+    },
+    'issue-tracking': {
+        label: 'صلاحيات مديول تتبع المشاكل',
+        permissions: [
+            { key: 'issue-registry', label: 'سجل المشاكل', icon: 'fa-bug' },
+            { key: 'analytics', label: 'التحليل والإحصائيات', icon: 'fa-chart-line' }
+        ]
+    },
+    'change-management': {
+        label: 'صلاحيات مديول إدارة التغيرات',
+        permissions: [
+            { key: 'change-registry', label: 'سجل طلبات التغيير', icon: 'fa-exchange-alt' },
+            { key: 'change-approvals', label: 'موافقات واعتمادات التغيير', icon: 'fa-check-double' },
+            { key: 'analytics', label: 'التحليل والإحصائيات', icon: 'fa-chart-line' }
         ]
     }
 };
@@ -4313,7 +4340,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.703',
+    appVersion: '1.0.705',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,

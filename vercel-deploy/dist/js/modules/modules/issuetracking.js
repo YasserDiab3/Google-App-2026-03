@@ -1,4 +1,4 @@
-const IssueTracking={state:{currentView:"list",filters:{status:"all",priority:"all",module:"all",category:"all",search:""},currentIssue:null},async load(){this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{this.load()}),this._languageChangeListenerAdded=!0);const e=document.getElementById("issue-tracking-section");if(!e){Utils.safeError("\u0642\u0633\u0645 issue-tracking-section \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F!");return}e.innerHTML=`
+const IssueTracking={state:{currentView:"list",filters:{status:"all",priority:"all",module:"all",category:"all",search:""},currentIssue:null},async load(){this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{typeof AppState<"u"&&AppState._languageRefresh||this.load()}),this._languageChangeListenerAdded=!0);const e=document.getElementById("issue-tracking-section");if(!e){Utils.safeError("\u0642\u0633\u0645 issue-tracking-section \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F!");return}e.innerHTML=`
             <div class="section-header">
                 <div class="flex items-center justify-between flex-wrap gap-3">
                     <div>

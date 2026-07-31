@@ -2786,7 +2786,7 @@ window.UI = {
     showReleaseNotesModal() {
         const v = (AppState && AppState.appVersion) ? String(AppState.appVersion).trim() : '1.0.567';
         try { sessionStorage.removeItem('hse_update_modal_shown_version'); } catch (e) {}
-        this._showUpdateModal(v);
+        this._showUpdateModal(v, AppState?._serverReleaseHighlights || null);
     },
 
     /**
@@ -2920,7 +2920,7 @@ window.UI = {
             if (AppState && AppState.debugMode) {
                 console.log('🔔 [UpdateNotif] عرض المودال — current=' + currentVersion + ' أحدث من lastSeen=' + lastSeen);
             }
-            this._showUpdateModal(currentVersion);
+            this._showUpdateModal(currentVersion, AppState?._serverReleaseHighlights || null);
         } catch (e) {
             if (AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ خطأ في عرض رسالة التحديث:', e);
         }
@@ -6538,10 +6538,8 @@ window.UI = {
         }
 
         // عند تحديث اللغة فقط نعيد تحميل المحتوى الحالي دون تنظيف أي موديول
+        // لا تمسح _languageRefresh هنا — يُمسح من setLanguage بعد إطار حتى تقرأه Clinic/Behavior أثناء load()
         const isLanguageRefresh = AppState._languageRefresh === true;
-        if (isLanguageRefresh) {
-            AppState._languageRefresh = false;
-        }
 
         // تنظيف الموديول السابق قبل تحميل موديول جديد (لمنع تسريبات الذاكرة) - لا يُنفّذ عند تغيير اللغة
         const previousSection = AppState.previousSection;
@@ -11171,10 +11169,24 @@ window.UI = {
             }
         });
 
-        // تطبيق طبقة i18n المركزية على النصوص والخصائص + النصوص الثابتة.
+        // تطبيق طبقة i18n المركزية — data-i18n على المستند؛ الترجمة الحرفية فقط على الشريط + القسم النشط (تفادي تجميد كامل الـ DOM)
         if (i18nCore) {
             i18nCore.applyI18n(document, lang);
-            i18nCore.applyLiteralTranslations(document, lang);
+            const literalRoots = [
+                document.querySelector('.sidebar'),
+                document.querySelector('.login-container') || document.getElementById('login-form'),
+                document.querySelector('.section.active')
+                    || (AppState.currentSection ? document.getElementById(`${AppState.currentSection}-section`) : null)
+                    || document.getElementById('main-content')
+            ].filter(Boolean);
+            const uniqueRoots = [...new Set(literalRoots)];
+            if (uniqueRoots.length) {
+                uniqueRoots.forEach((root) => {
+                    try { i18nCore.applyLiteralTranslations(root, lang); } catch (_e) { /* ignore */ }
+                });
+            } else {
+                i18nCore.applyLiteralTranslations(document, lang);
+            }
             i18nCore.observeDomForI18n();
         }
 
@@ -11202,6 +11214,11 @@ window.UI = {
 
         Utils.safeLog(`✅ تم تعيين اللغة: ${lang} (${isRTL ? 'RTL' : 'LTR'})`);
 
+        // علم قبل الحدث: المستمعون يتخطون this.load() المزدوج؛ loadSectionData يعيد القسم الظاهر مرة واحدة فقط
+        if (!isInitialLoad && typeof AppState !== 'undefined') {
+            AppState._languageRefresh = true;
+        }
+
         // إرسال حدث تغيير اللغة للموديولات
         try {
             const languageChangeEvent = new CustomEvent('language-changed', {
@@ -11217,13 +11234,20 @@ window.UI = {
             try {
                 const currentSection = AppState.currentSection;
                 if (currentSection && typeof this.loadSectionData === 'function') {
-                    AppState._languageRefresh = true;
                     this.loadSectionData(currentSection, true);
-                    AppState._languageRefresh = false;
                 }
             } catch (err) {
-                if (typeof AppState !== 'undefined') AppState._languageRefresh = false;
                 Utils.safeWarn('⚠️ خطأ عند إعادة تحميل القسم بعد تغيير اللغة:', err);
+            } finally {
+                // إبقاء العلم أثناء بدء load() المتزامن؛ المسح بعد إطار لمنع سباق الموديولات الثقيلة
+                const clearFlag = () => {
+                    try { if (typeof AppState !== 'undefined') AppState._languageRefresh = false; } catch (_e) { /* ignore */ }
+                };
+                if (typeof requestAnimationFrame === 'function') {
+                    requestAnimationFrame(() => setTimeout(clearFlag, 0));
+                } else {
+                    setTimeout(clearFlag, 0);
+                }
             }
         }
 

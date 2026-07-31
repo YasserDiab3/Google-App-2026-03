@@ -874,6 +874,8 @@ const Training = {
         // يطبق i18n على القسم ويبطل الكاش ثم يعيد رسم التبويب النشط فقط.
         if (!this._languageChangeListenerAdded) {
             document.addEventListener('language-changed', () => {
+                // أثناء _languageRefresh: loadSectionData يستدعي load() بمسار خفيف مرة واحدة
+                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
                 try {
                     const sec = document.getElementById('training-section');
                     if (sec) this.applyModuleI18n(sec);
@@ -884,6 +886,17 @@ const Training = {
                 }
             });
             this._languageChangeListenerAdded = true;
+        }
+        if (typeof AppState !== 'undefined' && AppState._languageRefresh === true) {
+            try {
+                const sec = document.getElementById('training-section');
+                if (sec) this.applyModuleI18n(sec);
+            } catch (e) { /* ignore */ }
+            this._markAllTabsDirty();
+            if (this._currentActiveTab) {
+                this.switchTab(this._currentActiveTab);
+            }
+            return;
         }
         this.ensureData();
         if (typeof Permissions !== 'undefined' && typeof Permissions.ensureFormSettingsState === 'function') {

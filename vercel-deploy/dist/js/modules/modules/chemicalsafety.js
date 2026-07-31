@@ -45,7 +45,7 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                 <path d="M48 54 C52 58,50 60,54 64 C56 66,56 70,52 72 C48 74,44 72,42 68 C40 64,42 60,46 58 C47 57,48 56,48 54 Z" fill="#FFFFFF" opacity="0.3" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;"/>
                 <line x1="30" y1="76" x2="70" y2="76" stroke="#000000" stroke-width="4" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;"/>
             </svg>
-        `.trim()}],ChemicalSafety={currentEditId:null,filters:{search:"",department:"",physicalShape:"",classification:""},msdsFiles:{arabic:null,english:null},_eventListenersAbortController:null,_setupTimeoutId:null,_chemicalDataLoadPromise:null,_chemicalBackendFetchOk:!1,async load(){this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{this.load()}),this._languageChangeListenerAdded=!0);const e=document.getElementById("chemical-safety-section");if(e){if(typeof AppState>"u"){e.innerHTML=`
+        `.trim()}],ChemicalSafety={currentEditId:null,filters:{search:"",department:"",physicalShape:"",classification:""},msdsFiles:{arabic:null,english:null},_eventListenersAbortController:null,_setupTimeoutId:null,_chemicalDataLoadPromise:null,_chemicalBackendFetchOk:!1,async load(){this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{typeof AppState<"u"&&AppState._languageRefresh||this.load()}),this._languageChangeListenerAdded=!0);const e=document.getElementById("chemical-safety-section");if(e){if(typeof AppState>"u"){e.innerHTML=`
                 <div class="content-card">
                     <div class="card-body">
                         <div class="empty-state">

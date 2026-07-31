@@ -184,6 +184,9 @@ const BehaviorMonitoring = {
         // Add language change listener
         if (!this._languageChangeListenerAdded) {
             document.addEventListener('language-changed', () => {
+                // loadSectionData يعيد تحميل القسم الظاهر؛ لا تعِد تحميل موديول مخفي أو مزدوج
+                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
+                if (AppState?.currentSection && AppState.currentSection !== 'behavior-monitoring') return;
                 this.load();
             });
             this._languageChangeListenerAdded = true;
@@ -296,6 +299,11 @@ const BehaviorMonitoring = {
             this.setupEventListeners();
             // render active tab (sync) then bind events
             await this.switchTab(activeTab, { initial: true });
+
+            // تغيير لغة: لا تعيد جلب الشبكة — البيانات لم تتغير
+            if (typeof AppState !== 'undefined' && AppState._languageRefresh === true) {
+                return;
+            }
             
             // تحميل البيانات بشكل غير متزامن بعد عرض الواجهة
             setTimeout(() => {

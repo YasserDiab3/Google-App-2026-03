@@ -368,6 +368,7 @@ const Employees = {
         // إضافة مستمع لتغيير اللغة
         if (!this._languageChangeListenerAdded) {
             document.addEventListener('language-changed', () => {
+                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
                 this.load();
             });
             this._languageChangeListenerAdded = true;

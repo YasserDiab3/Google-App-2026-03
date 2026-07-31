@@ -167,6 +167,7 @@ const UserTasks = {
         // Add language change listener
         if (!this._languageChangeListenerAdded) {
             document.addEventListener('language-changed', () => {
+                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
                 this.load();
             });
             this._languageChangeListenerAdded = true;

@@ -6568,12 +6568,11 @@
         if (observerAttached || !global.MutationObserver || !document?.body) return;
         observerAttached = true;
         const observer = new MutationObserver((mutations) => {
-            const lang = getCurrentLang();
+            // لا تطبّق i18n بشكل متزامن هنا — يسبب تجمداً عند إعادة بناء أقسام كبيرة؛ الدفع لـ rAF فقط
             let addedCount = 0;
             mutations.forEach((mutation) => {
                 mutation.addedNodes.forEach((node) => {
                     if (!(node instanceof HTMLElement)) return;
-                    applyI18n(node, lang);
                     pendingNodes.push(node);
                     addedCount++;
                 });
