@@ -963,25 +963,6 @@ const Dashboard = {
             ? `<div class="stats-cards-grid" id="reports-stats-grid">${statCardsHtml}</div>`
             : `<p class="text-gray-500 text-sm px-2">${this.t('dash.noStatsForPermissions', 'لا توجد إحصائيات سريعة مطابقة لصلاحياتك الحالية.')}</p>`;
 
-        const exportSectionHtml = exportButtonsHtml.trim()
-            ? `
-                    <div class="reports-actions-section">
-                        <div class="section-header-row">
-                            <h3>
-                                <i class="fas fa-file-export"></i>
-                                <span>${this.t('dash.exportReports', 'تصدير التقارير')}</span>
-                            </h3>
-                            <span class="info-text">
-                                <i class="fas fa-info-circle"></i>
-                                ${this.t('dash.exportReportsPdfHint', 'يمكنك تصدير التقارير بصيغة PDF')}
-                            </span>
-                        </div>
-                        <div class="reports-export-grid">
-                            ${exportButtonsHtml}
-                        </div>
-                    </div>`
-            : '';
-
         const medicationsHtml = this.dashboardCan('clinic')
             ? this.renderMedicationsAlerts(expiringMedications, today)
             : '';
@@ -1021,8 +1002,6 @@ const Dashboard = {
                         </div>
                         ${statsSectionInner}
                     </div>
-                    
-                    ${exportSectionHtml}
                     
                     <!-- تنبيهات الأدوية -->
                     ${medicationsHtml}
