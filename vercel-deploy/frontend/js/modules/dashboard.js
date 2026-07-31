@@ -777,7 +777,7 @@ const Dashboard = {
         if (forceRefresh) {
             this._clinicVisitsPrefetchedInSession = false;
             this._clinicVisitsPrefetchPromise = null;
-            Clinic._clinicVisitsLoadPromise = null;
+            // لا تُصفَّر Clinic._clinicVisitsLoadPromise أثناء الجلب — يمنع طلبين متوازيين
             Clinic._visitsBackendFetchOk = false;
         }
 
@@ -796,7 +796,7 @@ const Dashboard = {
             return this._clinicVisitsPrefetchPromise;
         }
 
-        this._clinicVisitsPrefetchPromise = Clinic.loadVisitsDataFromBackend()
+        this._clinicVisitsPrefetchPromise = Clinic.loadVisitsDataFromBackend({ forceRefresh })
             .then(() => {
                 this._clinicVisitsPrefetchedInSession = true;
                 if (typeof Clinic.prefetchClinicTimeOffApprovalsForAdminIfNeeded === 'function') {

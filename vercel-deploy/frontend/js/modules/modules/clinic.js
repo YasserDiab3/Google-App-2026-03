@@ -8912,12 +8912,30 @@ const Clinic = {
 
     /**
      * ✅ دالة منفصلة لتحميل بيانات الزيارات من Backend
+     * @param {{ forceRefresh?: boolean }} [opts] — forceRefresh: انتظر الطلب الجاري ثم ابدأ جلباً جديداً (بدون تصفير الـ promise منتصف الطريق)
      */
-    async loadVisitsDataFromBackend() {
-        // ✅ منع التكرار: نفس الطلب لا يبدأ أكثر من مرة
+    async loadVisitsDataFromBackend(opts = {}) {
+        const forceRefresh = !!(opts && opts.forceRefresh === true);
+
+        // ✅ منع التكرار: انضم للطلب الجاري؛ عند force انتظر اكتماله ثم ابدأ جديداً
+        if (this._clinicVisitsLoadPromise) {
+            if (!forceRefresh) {
+                return this._clinicVisitsLoadPromise;
+            }
+            try {
+                await this._clinicVisitsLoadPromise;
+            } catch (_e) { /* تجاهل — سيُعاد الجلب */ }
+        }
+
+        // بعد الانتظار: إن بدأ طلب آخر انضم إليه بدل طلب متوازٍ
         if (this._clinicVisitsLoadPromise) {
             return this._clinicVisitsLoadPromise;
         }
+
+        if (forceRefresh) {
+            this._visitsBackendFetchOk = false;
+        }
+
         const previousLocalVisits = Array.isArray(AppState.appData.clinicVisits)
             ? AppState.appData.clinicVisits.slice()
             : [];
@@ -9236,11 +9254,10 @@ const Clinic = {
             Utils.safeLog('🔄 [CLINIC] تحديث البيانات من الخادم بعد الحفظ...');
         }
 
-        // إجبار تحديث جديد: إلغاء أي طلب جلب موجود (قد يحمل بيانات قديمة) وعلامة الجلسة
-        this._clinicVisitsLoadPromise = null;
+        // إجبار تحديث جديد بدون تصفير الـ promise الجاري (يمنع طلبين متوازيين وسباق الكتابة)
         this._visitsBackendFetchOk = false;
 
-        this.loadVisitsDataFromBackend()
+        this.loadVisitsDataFromBackend({ forceRefresh: true })
             .then(() => {
                 // ✅ تحديث الإحصائيات والأرقام فوراً بعد المزامنة
                 try {
@@ -15149,13 +15166,20 @@ const Clinic = {
                                 action: 'getAllMedications',
                                 data: {}
                             });
-                            if (medicationsResult && medicationsResult.success) {
-                                AppState.appData.medications = medicationsResult.data;
-                                AppState.appData.clinicMedications = medicationsResult.data;
-                                AppState.appData.clinicInventory = medicationsResult.data;
+                            if (medicationsResult && medicationsResult.success && Array.isArray(medicationsResult.data)) {
+                                const oldMeds = Array.isArray(AppState.appData.clinicMedications) && AppState.appData.clinicMedications.length
+                                    ? AppState.appData.clinicMedications
+                                    : (Array.isArray(AppState.appData.medications) ? AppState.appData.medications : []);
+                                if (medicationsResult.data.length === 0 && oldMeds.length > 0) {
+                                    Utils.safeWarn('⚠️ تجاهل قائمة أدوية فارغة بعد الموافقة — الإبقاء على المحلي');
+                                } else {
+                                    AppState.appData.medications = medicationsResult.data;
+                                    AppState.appData.clinicMedications = medicationsResult.data;
+                                    AppState.appData.clinicInventory = medicationsResult.data;
 
-                                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                                    window.DataManager.save();
+                                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                                        window.DataManager.save();
+                                    }
                                 }
                             }
                         } catch (syncError) {
@@ -15630,7 +15654,7 @@ const Clinic = {
                     130000,
                     'انتهت مهلة تحميل البيانات'
                 ).then(() => {
-                    localStorage.setItem('clinic_last_sync', Date.now().toString());
+                    // clinic_last_sync يُحدَّث فقط داخل loadVisitsDataFromBackend عند نجاح جلب الزيارات
                     this.ensureData();
                     this.renderUI();
                     if (this.state && this.state.activeTab === 'visits') {
@@ -15723,6 +15747,14 @@ const Clinic = {
             )
                 .then(result => {
                     if (result && result.success && Array.isArray(result.data)) {
+                        const oldMeds = Array.isArray(AppState.appData.clinicMedications) && AppState.appData.clinicMedications.length
+                            ? AppState.appData.clinicMedications
+                            : (Array.isArray(AppState.appData.medications) ? AppState.appData.medications : []);
+                        // لا تستبدل محلياً غير فارغ بمصفوفة فارغة من الخادم
+                        if (result.data.length === 0 && oldMeds.length > 0) {
+                            Utils.safeWarn('⚠️ تجاهل قائمة أدوية فارغة من الخادم — الإبقاء على البيانات المحلية');
+                            return;
+                        }
                         // ✅ تطبيع الأدوية فور تحميلها (الأرقام قد تأتي كـ string من Google Sheets)
                         const normalizedMeds = result.data.map(m => this.normalizeMedicationRecord(m));
                         AppState.appData.medications = normalizedMeds;
@@ -15749,6 +15781,11 @@ const Clinic = {
             )
                 .then(result => {
                     if (result && result.success && Array.isArray(result.data)) {
+                        const oldSick = Array.isArray(AppState.appData.sickLeave) ? AppState.appData.sickLeave : [];
+                        if (result.data.length === 0 && oldSick.length > 0) {
+                            Utils.safeWarn('⚠️ تجاهل إجازات مرضية فارغة من الخادم — الإبقاء على البيانات المحلية');
+                            return;
+                        }
                         AppState.appData.sickLeave = result.data;
                         Utils.safeLog(`✅ تم تحميل ${result.data.length} إجازة مرضية`);
                     }
@@ -15771,6 +15808,11 @@ const Clinic = {
             )
                 .then(result => {
                     if (result && result.success && Array.isArray(result.data)) {
+                        const oldInjuries = Array.isArray(AppState.appData.injuries) ? AppState.appData.injuries : [];
+                        if (result.data.length === 0 && oldInjuries.length > 0) {
+                            Utils.safeWarn('⚠️ تجاهل إصابات فارغة من الخادم — الإبقاء على البيانات المحلية');
+                            return;
+                        }
                         AppState.appData.injuries = result.data;
                         Utils.safeLog(`✅ تم تحميل ${result.data.length} إصابة`);
                     }
@@ -15849,8 +15891,7 @@ const Clinic = {
                 () => new Error('Background sync timeout')
             );
 
-            // حفظ وقت آخر مزامنة
-            localStorage.setItem('clinic_last_sync', Date.now().toString());
+            // clinic_last_sync يُحدَّث فقط عند نجاح loadVisitsDataFromBackend — لا بعد غلاف المزامنة
 
             // ✅ إعادة تطبيع البيانات بعد المزامنة
             this.ensureData();
