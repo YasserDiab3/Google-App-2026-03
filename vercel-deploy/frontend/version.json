@@ -1,17 +1,15 @@
 {
-  "version": "1.0.707",
+  "version": "1.0.709",
   "highlights": {
     "ar": [
-      "حماية سجل زيارات العيادة من المسح عند فشل الجلب، ودمج realtime آمن.",
-      "تصفية تصاريح PTW المؤقتة من الحفظ السحابي، وإغلاق مودالات العيادة عند المغادرة.",
-      "مراقبة التصرفات: صفحات للجداول + تهريب معرّفات الإجراءات.",
-      "تشديد المصادقة ورفض كلمات المرور النصية، وبوابة حماية لقراءة/كتابة زيارات العيادة في الخلفية."
+      "بانر واضح لكل المستخدمين عند انقطاع الإنترنت أو تعذر الوصول للخادم.",
+      "تحسين رسالة العمل المحلي حتى لا يختلط الأمر بأخطاء غامضة.",
+      "تثبيت Playwright مع اختبار smoke للبانر."
     ],
     "en": [
-      "Clinic visits protected from wipe on failed fetch; safer realtime merge.",
-      "Filter temporary PTW IDs from cloud auto-save; close clinic modals on leave.",
-      "Behavior Monitoring: table pagination + safe action IDs.",
-      "Auth hardening (no plaintext passwords) and authenticated clinic visit API gates."
+      "Clear offline banner for all users when the network or server is unreachable.",
+      "Clearer local-work messaging instead of silent or vague failures.",
+      "Playwright installed with an offline-banner smoke test."
     ]
   }
 }

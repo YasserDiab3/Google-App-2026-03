@@ -1377,5 +1377,49 @@ select.form-select option {
     white-space: nowrap;
 }
 
+/* ===== Offline banner (all users) ===== */
+.hse-offline-banner {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 99999;
+    background: linear-gradient(90deg, #b45309 0%, #c2410c 100%);
+    color: #fff;
+    text-align: center;
+    padding: 0.55rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.4;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+}
+.hse-offline-banner.is-visible {
+    display: flex;
+}
+.hse-offline-banner[data-mode="backend"] {
+    background: linear-gradient(90deg, #a16207 0%, #b45309 100%);
+}
+.hse-offline-banner__icon {
+    opacity: 0.95;
+    flex-shrink: 0;
+}
+body.hse-has-offline-banner {
+    padding-top: 2.6rem;
+}
+@media (max-width: 640px) {
+    .hse-offline-banner {
+        font-size: 0.8rem;
+        padding: 0.5rem 0.75rem;
+        gap: 0.4rem;
+    }
+    body.hse-has-offline-banner {
+        padding-top: 3.1rem;
+    }
+}
+
 /* ===== End of UI/UX Enhancements ===== */
 

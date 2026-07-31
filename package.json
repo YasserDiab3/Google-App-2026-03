@@ -1,0 +1,14 @@
+{
+  "name": "clinic-repo",
+  "private": true,
+  "description": "HSE clinic-repo root tooling (Playwright smoke + shared scripts)",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test tests/e2e/smoke",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:install": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2"
+  }
+}

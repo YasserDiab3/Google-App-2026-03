@@ -109,6 +109,9 @@ const ConnectionMonitor = {
                 this.state.lastSuccessTime = new Date().toISOString();
                 this.state.isConnected = true;
 
+                // بانر للمستخدم العادي + حدث عام
+                this.emitUserConnectionState(true);
+
                 // إذا كان الاتصال قد انقطع سابقاً وأعيد الآن، نرسل إشعار نجاح
                 if (this.state.adminNotified && this.state.isConnected) {
                     this.notifyAdminConnectionRestored();
@@ -151,12 +154,33 @@ const ConnectionMonitor = {
                 Utils.safeWarn(`⚠️ فشل فحص الاتصال (${this.state.consecutiveFailures}/${this.config.failureThreshold}):`, errorMsg);
             }
 
+            // بانر لكل المستخدمين بعد تجاوز العتبة (ليس أدمن فقط)
+            if (this.state.consecutiveFailures >= this.config.failureThreshold) {
+                this.emitUserConnectionState(false);
+            }
+
             // إرسال إشعار لمدير النظام إذا تجاوزنا العتبة
             if (this.state.consecutiveFailures >= this.config.failureThreshold && !this.state.adminNotified) {
                 this.notifyAdminConnectionLost(error);
                 this.state.adminNotified = true;
             }
         }
+    },
+
+    /**
+     * إخطار الواجهة (بانر عام) بحالة الخادم — لجميع المستخدمين
+     */
+    emitUserConnectionState(connected) {
+        try {
+            if (typeof OfflineBanner !== 'undefined' && typeof OfflineBanner.setBackendOffline === 'function') {
+                OfflineBanner.setBackendOffline(!connected);
+            }
+            if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+                window.dispatchEvent(new CustomEvent('hse:backend-connection', {
+                    detail: { connected: !!connected, at: new Date().toISOString() }
+                }));
+            }
+        } catch (_e) { /* ignore */ }
     },
 
     /**
