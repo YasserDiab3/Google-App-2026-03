@@ -3041,8 +3041,8 @@ const Employees = {
                     </div>
                     </div>
                 </div>
-                <!-- ✅ الفلاتر في صف واحد احترافي مدمج مع دعم التمرير الأفقي والمرونة كاملة -->
-                <div class="employees-filters-row" style="background: #ffffff; padding: 12px 20px; margin: 0 -20px 16px -20px; width: calc(100% + 40px); direction: rtl; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02); overflow-x: auto; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;">
+                <!-- ✅ الفلاتر مدمجة احترافية في صف واحد مباشر أعلى الجدول -->
+                <div class="employees-filters-row" style="background: #ffffff; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02); direction: rtl; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;">
                     <style>
                         .employees-filters-row::-webkit-scrollbar {
                             height: 4px;

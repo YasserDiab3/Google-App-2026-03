@@ -791,8 +791,8 @@ const Employees={cache:{data:null,lastLoad:null,lastUpdate:null,isUpdating:!1},c
                     </div>
                     </div>
                 </div>
-                <!-- \u2705 \u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u0641\u064A \u0635\u0641 \u0648\u0627\u062D\u062F \u0627\u062D\u062A\u0631\u0627\u0641\u064A \u0645\u062F\u0645\u062C \u0645\u0639 \u062F\u0639\u0645 \u0627\u0644\u062A\u0645\u0631\u064A\u0631 \u0627\u0644\u0623\u0641\u0642\u064A \u0648\u0627\u0644\u0645\u0631\u0648\u0646\u0629 \u0643\u0627\u0645\u0644\u0629 -->
-                <div class="employees-filters-row" style="background: #ffffff; padding: 12px 20px; margin: 0 -20px 16px -20px; width: calc(100% + 40px); direction: rtl; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02); overflow-x: auto; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;">
+                <!-- \u2705 \u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u0645\u062F\u0645\u062C\u0629 \u0627\u062D\u062A\u0631\u0627\u0641\u064A\u0629 \u0641\u064A \u0635\u0641 \u0648\u0627\u062D\u062F \u0645\u0628\u0627\u0634\u0631 \u0623\u0639\u0644\u0649 \u0627\u0644\u062C\u062F\u0648\u0644 -->
+                <div class="employees-filters-row" style="background: #ffffff; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02); direction: rtl; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;">
                     <style>
                         .employees-filters-row::-webkit-scrollbar {
                             height: 4px;
