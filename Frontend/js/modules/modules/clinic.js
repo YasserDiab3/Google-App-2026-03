@@ -1117,6 +1117,19 @@ const Clinic = {
         return (Array.isArray(visits) ? visits : []).filter(visit => !this.isTestClinicVisit_(visit));
     },
 
+    isContractorVisit_(visit) {
+        if (!visit || typeof visit !== 'object') return false;
+        const type = String(visit.personType || '').toLowerCase().trim();
+        if (type === 'contractor' || type === 'external' || type === 'مقاول' || type === 'خارجي' || type.includes('مقاول') || type.includes('خارج')) {
+            return true;
+        }
+        return !!(visit.contractorName || visit.contractorWorkerName || visit.externalName);
+    },
+
+    isEmployeeVisit_(visit) {
+        return !this.isContractorVisit_(visit);
+    },
+
     /** دمج زيارات العيادة لأغراض التحليل (بدون تكرار id) */
     getClinicVisitsForAnalysis_() {
         const clinicVisits = Array.isArray(AppState.appData.clinicVisits) ? AppState.appData.clinicVisits : [];
@@ -2839,9 +2852,8 @@ const Clinic = {
                 return false;
             }
 
-            const pType = String(item.personType || 'employee').toLowerCase();
-            if (activePersonTab === 'employees' && pType !== 'employee') return false;
-            if (activePersonTab === 'contractors' && pType === 'employee') return false;
+            if (activePersonTab === 'employees' && !this.isEmployeeVisit_(item)) return false;
+            if (activePersonTab === 'contractors' && !this.isContractorVisit_(item)) return false;
 
             const injuryDate = item.injuryDate ? new Date(item.injuryDate) : null;
             if (fromDate && (!injuryDate || injuryDate < fromDate)) {
@@ -9305,17 +9317,9 @@ const Clinic = {
                 return dateB - dateA;
             });
 
-            // ✅ فلترة الزيارات حسب النوع مع التأكد من وجود personType
-            const employeeVisits = allVisits.filter(v => {
-                if (!v || typeof v !== 'object') return false;
-                const type = String(v.personType || '').toLowerCase().trim();
-                return type === 'employee' || type === '' || (!type && !v.contractorName && !v.externalName);
-            });
-            const contractorVisits = allVisits.filter(v => {
-                if (!v || typeof v !== 'object') return false;
-                const type = String(v.personType || '').toLowerCase().trim();
-                return type === 'contractor' || type === 'external' || (v.contractorName || v.externalName);
-            });
+            // ✅ فلترة الزيارات حسب النوع باستخدام الفاحص الشامل
+            const employeeVisits = allVisits.filter(v => this.isEmployeeVisit_(v));
+            const contractorVisits = allVisits.filter(v => this.isContractorVisit_(v));
 
             const baseVisits = activeVisitType === 'employees' ? employeeVisits : contractorVisits;
             
@@ -14251,8 +14255,8 @@ const Clinic = {
         const allVisits = (AppState.appData.clinicVisits || []).slice().reverse();
 
         // فلترة الزيارات حسب النوع
-        const employeeVisits = allVisits.filter(v => v.personType === 'employee' || !v.personType);
-        const contractorVisits = allVisits.filter(v => v.personType === 'contractor');
+        const employeeVisits = allVisits.filter(v => this.isEmployeeVisit_(v));
+        const contractorVisits = allVisits.filter(v => this.isContractorVisit_(v));
 
         const visits = activeVisitType === 'employees' ? employeeVisits : contractorVisits;
         if (visits.length === 0) {
@@ -14343,8 +14347,8 @@ const Clinic = {
         const isContractorsTab = activeVisitType === 'contractors';
 
         const allVisits = (AppState.appData.clinicVisits || []).slice().reverse();
-        const employeeVisits = allVisits.filter(v => v.personType === 'employee' || !v.personType);
-        const contractorVisits = allVisits.filter(v => v.personType === 'contractor');
+        const employeeVisits = allVisits.filter(v => this.isEmployeeVisit_(v));
+        const contractorVisits = allVisits.filter(v => this.isContractorVisit_(v));
         const visits = activeVisitType === 'employees' ? employeeVisits : contractorVisits;
 
         if (visits.length === 0) {
@@ -16748,38 +16752,50 @@ const Clinic = {
                 Notification?.warning?.('يرجى تحديد الوقت');
                 return;
             }
-            try {
-                Loading?.show?.();
-                const resp = await GoogleIntegration.sendRequest({
-                    action: 'updateClinicStaffAttendance',
-                    data: {
-                        recordId: record.id,
-                        punchType: type,
-                        [isCheckIn ? 'checkIn' : 'checkOut']: timeVal,
-                        notes
-                    }
-                });
-                if (resp?.success) {
-                    Notification?.success?.(resp.message || 'تم حفظ البصمة');
-                    document.getElementById('clinic-attendance-punch-modal')?.remove();
-                    if (resp.data) {
-                        AppState.appData.clinicStaffAttendance = AppState.appData.clinicStaffAttendance || [];
-                        const idx = AppState.appData.clinicStaffAttendance.findIndex(r => String(r.id) === String(resp.data.id));
-                        if (idx > -1) AppState.appData.clinicStaffAttendance[idx] = resp.data;
+
+            // ✅ حفظ فوري محلياً وإغلاق النافذة بدون إغلاق الواجهة بالتحميل
+            document.getElementById('clinic-attendance-punch-modal')?.remove();
+
+            AppState.appData.clinicStaffAttendance = AppState.appData.clinicStaffAttendance || [];
+            const idx = AppState.appData.clinicStaffAttendance.findIndex(r => String(r.id) === String(record.id));
+            if (idx > -1) {
+                const target = { ...AppState.appData.clinicStaffAttendance[idx] };
+                target[isCheckIn ? 'checkIn' : 'checkOut'] = timeVal;
+                if (notes) target.notes = target.notes ? `${target.notes} | ${notes}` : notes;
+                target.updatedAt = new Date().toISOString();
+                AppState.appData.clinicStaffAttendance[idx] = target;
+            }
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+            this.renderAttendanceTab({ force: true });
+            Notification?.success?.('تم حفظ البصمة محلياً وجاري المزامنة…');
+
+            // ✅ المزامنة مع الخادم في الخلفية
+            (async () => {
+                try {
+                    const resp = await GoogleIntegration.sendRequest({
+                        action: 'updateClinicStaffAttendance',
+                        data: {
+                            recordId: record.id,
+                            punchType: type,
+                            [isCheckIn ? 'checkIn' : 'checkOut']: timeVal,
+                            notes
+                        }
+                    });
+                    if (resp?.success && resp.data) {
+                        const bgIdx = AppState.appData.clinicStaffAttendance.findIndex(r => String(r.id) === String(resp.data.id));
+                        if (bgIdx > -1) AppState.appData.clinicStaffAttendance[bgIdx] = resp.data;
                         else AppState.appData.clinicStaffAttendance.push(resp.data);
                         if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
-                    } else {
-                        await this.loadClinicAttendanceData(true);
+                        this.renderAttendanceTab({ force: true });
+                    } else if (resp?.message) {
+                        Utils.safeWarn('⚠️ تنبيه أثناء مزامنة البصمة مع الخادم:', resp.message);
                     }
-                    this.renderAttendanceTab({ force: true });
-                } else {
-                    Notification?.error?.(resp?.message || 'فشل الحفظ');
+                } catch (err) {
+                    Utils.safeWarn('⚠️ خطأ شبكة أثناء مزامنة البصمة في الخلفية:', err);
                 }
-            } catch (err) {
-                Notification?.error?.(err?.message || 'فشل الحفظ');
-            } finally {
-                Loading?.hide?.();
-            }
+            })();
         });
     },
 
@@ -16847,36 +16863,73 @@ const Clinic = {
                 Notification?.warning?.('أدخل وقت دخول أو خروج على الأقل');
                 return;
             }
-            try {
-                Loading?.show?.();
-                const data = { staffId, date, notes };
-                if (checkIn) data.checkIn = checkIn;
-                if (checkOut) data.checkOut = checkOut;
-                const resp = await GoogleIntegration.sendRequest({
-                    action: 'updateClinicStaffAttendance',
-                    data
-                });
-                if (resp?.success) {
-                    Notification?.success?.(resp.message || 'تم حفظ السجل');
-                    document.getElementById('clinic-attendance-add-modal')?.remove();
-                    if (resp.data) {
-                        AppState.appData.clinicStaffAttendance = AppState.appData.clinicStaffAttendance || [];
-                        const idx = AppState.appData.clinicStaffAttendance.findIndex(r => String(r.id) === String(resp.data.id));
-                        if (idx > -1) AppState.appData.clinicStaffAttendance[idx] = resp.data;
+
+            // ✅ حفظ فوري محلياً وإغلاق النافذة دون تعطيل العرض
+            document.getElementById('clinic-attendance-add-modal')?.remove();
+
+            const staffObj = (this.getClinicStaffList() || []).find(s => String(s.id) === String(staffId));
+            const dayKey = this._attendanceDayKey(date);
+            AppState.appData.clinicStaffAttendance = AppState.appData.clinicStaffAttendance || [];
+            const existingIdx = AppState.appData.clinicStaffAttendance.findIndex(r =>
+                (String(r.staffId) === String(staffId) || String(r.userId) === String(staffObj?.userId)) &&
+                this._attendanceDayKey(r.date) === dayKey
+            );
+
+            const tempRecord = {
+                id: existingIdx > -1 ? AppState.appData.clinicStaffAttendance[existingIdx].id : Utils.generateId('CSA'),
+                staffId: staffId,
+                userId: staffObj?.userId || '',
+                userName: staffObj?.userName || staffObj?.userEmail || staffId,
+                userEmail: staffObj?.userEmail || '',
+                staffRole: staffObj?.staffRole || '',
+                date: dayKey,
+                checkIn: checkIn || (existingIdx > -1 ? AppState.appData.clinicStaffAttendance[existingIdx].checkIn : ''),
+                checkOut: checkOut || (existingIdx > -1 ? AppState.appData.clinicStaffAttendance[existingIdx].checkOut : ''),
+                workDuration: '',
+                status: 'present',
+                source: 'manual',
+                notes: notes || (existingIdx > -1 ? AppState.appData.clinicStaffAttendance[existingIdx].notes : ''),
+                createdAt: existingIdx > -1 ? AppState.appData.clinicStaffAttendance[existingIdx].createdAt : new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            if (existingIdx > -1) {
+                AppState.appData.clinicStaffAttendance[existingIdx] = tempRecord;
+            } else {
+                AppState.appData.clinicStaffAttendance.push(tempRecord);
+            }
+
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+            this.renderAttendanceTab({ force: true });
+            Notification?.success?.('تم حفظ سجل الحضور بنجاح وجاري المزامنة في الخلفية');
+
+            // ✅ المزامنة مع الخادم في الخلفية دون تعطيل واجهة المستخدم
+            (async () => {
+                try {
+                    const data = { staffId, date, notes };
+                    if (checkIn) data.checkIn = checkIn;
+                    if (checkOut) data.checkOut = checkOut;
+                    const resp = await GoogleIntegration.sendRequest({
+                        action: 'updateClinicStaffAttendance',
+                        data
+                    });
+                    if (resp?.success && resp.data) {
+                        const bgIdx = AppState.appData.clinicStaffAttendance.findIndex(r =>
+                            String(r.id) === String(tempRecord.id) || String(r.id) === String(resp.data.id)
+                        );
+                        if (bgIdx > -1) AppState.appData.clinicStaffAttendance[bgIdx] = resp.data;
                         else AppState.appData.clinicStaffAttendance.push(resp.data);
                         if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
-                    } else {
-                        await this.loadClinicAttendanceData(true);
+                        this.renderAttendanceTab({ force: true });
+                    } else if (resp?.message) {
+                        Utils.safeWarn('⚠️ تنبيه أثناء مزامنة سجل الحضور مع الخادم:', resp.message);
                     }
-                    this.renderAttendanceTab({ force: true });
-                } else {
-                    Notification?.error?.(resp?.message || 'فشل الحفظ');
+                } catch (bgErr) {
+                    Utils.safeWarn('⚠️ خطأ شبكة أثناء مزامنة سجل الحضور في الخلفية:', bgErr);
                 }
-            } catch (err) {
-                Notification?.error?.(err?.message || 'فشل الحفظ');
-            } finally {
-                Loading?.hide?.();
-            }
+            })();
         });
     },
 

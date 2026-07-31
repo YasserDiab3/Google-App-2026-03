@@ -576,6 +576,30 @@ const DataManager = {
                         AppState.appData.systemStatistics = parsedData[key];
                     }
                 });
+
+                // ✅ استعادة بيانات PTW و PTWRegistry من المفاتيح المخصصة إذا كانت فارغة في hse_app_data
+                if (!Array.isArray(AppState.appData.ptw) || AppState.appData.ptw.length === 0) {
+                    const savedPtwList = localStorage.getItem('hse_ptw_list');
+                    if (savedPtwList) {
+                        try {
+                            const parsedPtw = JSON.parse(savedPtwList);
+                            if (Array.isArray(parsedPtw) && parsedPtw.length > 0) {
+                                AppState.appData.ptw = parsedPtw;
+                            }
+                        } catch (_) {}
+                    }
+                }
+                if (!Array.isArray(AppState.appData.ptwRegistry) || AppState.appData.ptwRegistry.length === 0) {
+                    const savedRegistry = localStorage.getItem('hse_ptw_registry');
+                    if (savedRegistry) {
+                        try {
+                            const parsedReg = JSON.parse(savedRegistry);
+                            if (Array.isArray(parsedReg) && parsedReg.length > 0) {
+                                AppState.appData.ptwRegistry = parsedReg;
+                            }
+                        } catch (_) {}
+                    }
+                }
                 
                 if (AppState.debugMode) {
                     const totalRecords = Object.keys(parsedData).reduce((sum, key) => {
@@ -825,7 +849,8 @@ const DataManager = {
             'incidents': 'Incidents',
             'dailyObservations': 'DailyObservations',
             'dailySafetyCheckList': 'DailySafetyCheckList',
-            'ptwRegistry': 'PTW',
+            'ptw': 'PTW',
+            'ptwRegistry': 'PTWRegistry',
             'contractorEvaluations': 'ContractorEvaluations',
             'contractorApprovalRequests': 'ContractorApprovalRequests',
             'contractorEvaluationApprovalRequests': 'ContractorEvaluationApprovalRequests',
