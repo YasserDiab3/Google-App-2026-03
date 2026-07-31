@@ -20,8 +20,13 @@ window.Auth = {
         // SHA-256("admin123") - لا يوجد تخزين لكلمة المرور النصية داخل الكود
         passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
         disabledKey: 'hse_bootstrap_disabled',
-        disabledAtKey: 'hse_bootstrap_disabled_at'
+        disabledAtKey: 'hse_bootstrap_disabled_at',
+        /** كاش محلي لسياسة الخادم (SEC-01 مرحلة 1) */
+        serverDisabledKey: 'hse_bootstrap_server_disabled'
     },
+
+    /** null=غير معروف بعد · true/false من آخر سياسة خادم */
+    _serverBootstrapDisabled: null,
 
     isBootstrapEmail(email) {
         try {
@@ -39,10 +44,47 @@ window.Auth = {
         }
     },
 
+    /** قتل من الخادم (خاصية HSE_BOOTSTRAP_DISABLED) — لا يعتمد على كاش المستخدمين فقط */
+    isServerBootstrapDisabled() {
+        if (this._serverBootstrapDisabled === true) return true;
+        try {
+            return localStorage.getItem(this.bootstrap.serverDisabledKey) === 'true';
+        } catch (e) {
+            return false;
+        }
+    },
+
+    /**
+     * جلب سياسة bootstrap من الخادم (قراءة فقط). فشل الشبكة لا يفتح الباب إن كان مغلقاً محلياً مسبقاً.
+     */
+    async refreshBootstrapPolicyFromServer() {
+        try {
+            if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
+                return this.isServerBootstrapDisabled();
+            }
+            const res = await Promise.race([
+                GoogleIntegration.sendRequest({ action: 'getAuthBootstrapPolicy', data: {} }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('bootstrap_policy_timeout')), 12000))
+            ]);
+            const disabled = !!(res && res.success && res.data && res.data.bootstrapDisabled === true);
+            this._serverBootstrapDisabled = disabled;
+            try {
+                localStorage.setItem(this.bootstrap.serverDisabledKey, disabled ? 'true' : 'false');
+            } catch (_e) { /* ignore */ }
+            if (disabled) {
+                this.disableBootstrap('server policy HSE_BOOTSTRAP_DISABLED');
+            }
+            return disabled;
+        } catch (_err) {
+            return this.isServerBootstrapDisabled();
+        }
+    },
+
     /**
      * Bootstrap للطوارئ فقط: ممنوع إن وُجد مستخدمون في الكاش، أو على نطاق إنتاج معروف بعد أول مزامنة.
      */
     isBootstrapLoginAllowed(usersList) {
+        if (this.isServerBootstrapDisabled()) return false;
         if (this.isBootstrapDisabled()) return false;
         const users = Array.isArray(usersList) ? usersList : [];
         if (users.length > 0) return false;
@@ -361,6 +403,17 @@ window.Auth = {
         }
 
         email = email.trim().toLowerCase();
+
+        // SEC-01 مرحلة 1: تحديث سياسة الخادم قبل أي مسار bootstrap محلي
+        try {
+            await this.refreshBootstrapPolicyFromServer();
+        } catch (_polErr) { /* ignore — نعتمد الكاش المحلي إن وُجد */ }
+
+        if (this.isBootstrapEmail(email) && this.isServerBootstrapDisabled()) {
+            const errorMessage = 'حساب التجهيز الافتراضي معطّل من الخادم. يرجى الدخول بحساب النظام.';
+            Notification.error(errorMessage);
+            return { success: false, message: errorMessage, errorCode: 'BOOTSTRAP_DISABLED' };
+        }
 
         // التحقق من Rate Limiting
         try {

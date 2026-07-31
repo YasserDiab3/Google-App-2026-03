@@ -781,6 +781,19 @@ function loginUser(email, password) {
             return { success: false, message: 'البريد الإلكتروني وكلمة المرور مطلوبان' };
         }
 
+        // SEC-01: لا مسار خادم لحساب bootstrap عند تفعيل القفل
+        if (typeof isBootstrapEmailServer_ === 'function' && isBootstrapEmailServer_(e) &&
+            typeof isServerBootstrapDisabled_ === 'function' && isServerBootstrapDisabled_()) {
+            if (typeof logSecurityEvent === 'function') {
+                logSecurityEvent('bootstrap_login_rejected', { actor: e, severity: 'high' });
+            }
+            return {
+                success: false,
+                message: 'حساب التجهيز الافتراضي معطّل من الخادم. استخدم حساب النظام.',
+                errorCode: 'BOOTSTRAP_DISABLED'
+            };
+        }
+
         const user = getUserRecordFromUsersSheetByEmail_(e);
         if (!user) {
             return { success: false, message: 'بيانات الاعتماد غير صحيحة' };
@@ -1176,5 +1189,119 @@ function changeUserPassword(payload, actorUserData) {
     } catch (error) {
         Logger.log('changeUserPassword error: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء تغيير كلمة المرور: ' + error.toString() };
+    }
+}
+
+/**
+ * SEC-01 مرحلة 0 — تدقيق قراءة فقط (لا يغيّر بيانات ولا يعطّل bootstrap).
+ * يُرجع عدد المدراء النشطين ببريد حقيقي بدون أي hashes/كلمات مرور.
+ */
+function auditSec01Phase0_() {
+    try {
+        var spreadsheetId = getSpreadsheetId();
+        var rows = readFromSheet('Users', spreadsheetId, true);
+        if (!rows || !Array.isArray(rows)) {
+            return { success: false, message: 'فشل قراءة ورقة Users', phase: '0' };
+        }
+
+        function normRole_(r) {
+            return String(r || '').trim().toLowerCase();
+        }
+        function isAdminRole_(role) {
+            var r = normRole_(role);
+            return r === 'admin' ||
+                r === 'system_admin' ||
+                r === 'superadmin' ||
+                r === 'super_admin' ||
+                r === 'مدير' ||
+                r === 'مدير النظام' ||
+                role === 'مدير' ||
+                role === 'مدير النظام';
+        }
+        function isActive_(u) {
+            if (!u) return false;
+            if (u.active === false || u.active === 'false' || u.active === 0 || u.active === '0') return false;
+            return true;
+        }
+        function hasHash_(u) {
+            var h = String((u && (u.passwordHash || u.password)) || '').trim();
+            if (!h || h === '***') return false;
+            return /^[a-f0-9]{64}$/i.test(h) || h.length >= 32;
+        }
+        function maskEmail_(email) {
+            var e = String(email || '').trim().toLowerCase();
+            var at = e.indexOf('@');
+            if (at < 1) return '(invalid)';
+            var local = e.slice(0, at);
+            var domain = e.slice(at + 1);
+            var keep = local.slice(0, Math.min(2, local.length));
+            return keep + '***@' + domain;
+        }
+
+        var total = 0;
+        var activeRealAdmins = [];
+        var inactiveAdmins = 0;
+        var legacyHseLocal = 0;
+        var bootstrapExact = 0;
+        var adminsMissingHash = 0;
+
+        for (var i = 0; i < rows.length; i++) {
+            var u = rows[i];
+            if (!u) continue;
+            var email = normalizeSheetScalarField_(u.email).toLowerCase();
+            if (!email) continue;
+            total++;
+
+            if (email === 'admin@hse.local') bootstrapExact++;
+            if (email.indexOf('@hse.local') !== -1) legacyHseLocal++;
+
+            if (!isAdminRole_(u.role)) continue;
+            if (!isActive_(u)) {
+                inactiveAdmins++;
+                continue;
+            }
+            if (email.indexOf('@hse.local') !== -1) continue;
+
+            var okHash = hasHash_(u);
+            if (!okHash) adminsMissingHash++;
+
+            activeRealAdmins.push({
+                emailMasked: maskEmail_(email),
+                role: String(u.role || ''),
+                hasPasswordHash: okHash,
+                idPresent: !!normalizeSheetScalarField_(u.id)
+            });
+        }
+
+        var gatePass = activeRealAdmins.length >= 2 &&
+            activeRealAdmins.filter(function (a) { return a.hasPasswordHash; }).length >= 2;
+
+        return {
+            success: true,
+            phase: '0',
+            readOnly: true,
+            spreadsheetIdSuffix: String(spreadsheetId || '').slice(-8),
+            totals: {
+                usersWithEmail: total,
+                activeRealAdmins: activeRealAdmins.length,
+                inactiveAdmins: inactiveAdmins,
+                legacyHseLocalEmails: legacyHseLocal,
+                bootstrapExactEmailRows: bootstrapExact,
+                activeRealAdminsMissingHash: adminsMissingHash
+            },
+            activeRealAdmins: activeRealAdmins,
+            gates: {
+                minTwoActiveRealAdmins: activeRealAdmins.length >= 2,
+                minTwoWithPasswordHash: activeRealAdmins.filter(function (a) { return a.hasPasswordHash; }).length >= 2,
+                phase0CodeGatePass: gatePass
+            },
+            notes: [
+                'لا يغيّر هذا التدقيق أي بيانات ولا يعطّل bootstrap.',
+                'تجربة الدخول بكلمات المرور تتطلب تأكيداً بشرياً (لا تُنفَّذ من الوكيل).'
+            ]
+        };
+    } catch (error) {
+        Logger.log('auditSec01Phase0_ error: ' + error.toString());
+        return { success: false, phase: '0', message: String(error) };
     }
 }

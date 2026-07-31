@@ -327,6 +327,19 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'getAuthBootstrapPolicy': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            try {
+                result = (typeof getAuthBootstrapPolicy === 'function')
+                    ? getAuthBootstrapPolicy()
+                    : { success: false, message: 'getAuthBootstrapPolicy unavailable' };
+            } catch (e) {
+                result = { success: false, message: 'getAuthBootstrapPolicy: ' + (e && e.toString ? e.toString() : e) };
+            }
+        })();
+        return result;
+    },
     'getPublicIP': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

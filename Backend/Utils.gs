@@ -719,6 +719,88 @@ function getCachedActorRecordForActor_(actorUserData) {
     return rec;
 }
 
+/**
+ * SEC-01 مرحلة 1 — Kill-switch خادم لحساب bootstrap (admin@hse.local)
+ * الخاصية: HSE_BOOTSTRAP_DISABLED = 'true' | 'false'
+ * الافتراضي عند عدم الضبط: false (لا تغيير سلوك حتى التفعيل الصريح).
+ * التراجع الفوري: setProperty('HSE_BOOTSTRAP_DISABLED','false')
+ */
+var HSE_BOOTSTRAP_ADMIN_EMAIL_ = 'admin@hse.local';
+var HSE_BOOTSTRAP_DISABLED_PROP_ = 'HSE_BOOTSTRAP_DISABLED';
+
+function isBootstrapEmailServer_(email) {
+    try {
+        var e = String(email || '').trim().toLowerCase();
+        return e === HSE_BOOTSTRAP_ADMIN_EMAIL_;
+    } catch (err) {
+        return false;
+    }
+}
+
+function isServerBootstrapDisabled_() {
+    try {
+        var raw = PropertiesService.getScriptProperties().getProperty(HSE_BOOTSTRAP_DISABLED_PROP_);
+        if (raw === null || raw === undefined || raw === '') return false;
+        var v = String(raw).trim().toLowerCase();
+        return v === 'true' || v === '1' || v === 'yes';
+    } catch (e) {
+        return false;
+    }
+}
+
+function getAuthBootstrapPolicy() {
+    try {
+        var props = PropertiesService.getScriptProperties();
+        var raw = props.getProperty(HSE_BOOTSTRAP_DISABLED_PROP_);
+        var disabled = isServerBootstrapDisabled_();
+        return {
+            success: true,
+            data: {
+                bootstrapDisabled: disabled,
+                propertyRaw: raw === null ? null : String(raw),
+                bootstrapEmail: HSE_BOOTSTRAP_ADMIN_EMAIL_,
+                rollbackHint: "PropertiesService set HSE_BOOTSTRAP_DISABLED=false",
+                checkedAt: new Date().toISOString()
+            }
+        };
+    } catch (e) {
+        Logger.log('getAuthBootstrapPolicy error: ' + e.toString());
+        return { success: false, message: 'getAuthBootstrapPolicy: ' + e.toString() };
+    }
+}
+
+/** تفعيل kill-switch (مرحلة 1) — لا يمس جلسات المستخدمين الحقيقيين */
+function enableSec01Phase1KillSwitch_() {
+    try {
+        var props = PropertiesService.getScriptProperties();
+        props.setProperty(HSE_BOOTSTRAP_DISABLED_PROP_, 'true');
+        props.setProperty('HSE_BOOTSTRAP_DISABLED_AT', new Date().toISOString());
+        props.setProperty('HSE_BOOTSTRAP_DISABLED_REASON', 'SEC-01 phase1 kill-switch');
+        if (typeof logSecurityEvent === 'function') {
+            logSecurityEvent('bootstrap_kill_switch_enabled', { severity: 'medium', phase: '1' });
+        }
+        return getAuthBootstrapPolicy();
+    } catch (e) {
+        return { success: false, message: 'enableSec01Phase1KillSwitch_: ' + e.toString() };
+    }
+}
+
+/** تراجع فوري لمرحلة 1 */
+function disableSec01Phase1KillSwitch_() {
+    try {
+        var props = PropertiesService.getScriptProperties();
+        props.setProperty(HSE_BOOTSTRAP_DISABLED_PROP_, 'false');
+        props.setProperty('HSE_BOOTSTRAP_DISABLED_AT', new Date().toISOString());
+        props.setProperty('HSE_BOOTSTRAP_DISABLED_REASON', 'SEC-01 phase1 rollback');
+        if (typeof logSecurityEvent === 'function') {
+            logSecurityEvent('bootstrap_kill_switch_disabled', { severity: 'medium', phase: '1' });
+        }
+        return getAuthBootstrapPolicy();
+    } catch (e) {
+        return { success: false, message: 'disableSec01Phase1KillSwitch_: ' + e.toString() };
+    }
+}
+
 function requireAuthenticatedActor_(actorUserData, actionName) {
     var action = String(actionName || 'unknown');
     var email = actorUserData && actorUserData.email
@@ -726,6 +808,22 @@ function requireAuthenticatedActor_(actorUserData, actionName) {
             ? normalizeSheetScalarField_(actorUserData.email).toLowerCase()
             : String(actorUserData.email).trim().toLowerCase())
         : '';
+
+    // SEC-01 مرحلة 1: رفض ممثل bootstrap عند تفعيل kill-switch الخادم
+    if (email && typeof isBootstrapEmailServer_ === 'function' && isBootstrapEmailServer_(email) &&
+        typeof isServerBootstrapDisabled_ === 'function' && isServerBootstrapDisabled_()) {
+        if (typeof logSecurityEvent === 'function') {
+            logSecurityEvent('bootstrap_actor_rejected', { action: action, actor: email, severity: 'high' });
+        }
+        return {
+            ok: false,
+            success: false,
+            message: 'حساب التجهيز الافتراضي معطّل من الخادم. استخدم حساباً من قاعدة المستخدمين.',
+            errorCode: 'BOOTSTRAP_DISABLED',
+            action: action
+        };
+    }
+
     if (!email && !(actorUserData && actorUserData.id)) {
         if (typeof logSecurityEvent === 'function') {
             logSecurityEvent('auth_required_missing_email', { action: action, severity: 'high' });

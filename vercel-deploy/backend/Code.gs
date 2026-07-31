@@ -265,6 +265,8 @@ function doPost(e) {
             'getDocumentCodes', 'getDocumentVersions', 'getDocumentCodeAndVersion',
             // Read-only utility actions
             'getPublicIP',
+            // SEC-01: سياسة bootstrap (قراءة فقط — لا أسرار)
+            'getAuthBootstrapPolicy',
             // ✅ مؤشر تحديثات المستخدمين (للـ sync الفوري بين الأجهزة)
             'getUsersMeta',
             // ✅ طلبات موافقة - عيادة
@@ -371,7 +373,8 @@ function doPost(e) {
         // SEC-04: جلسة خادم موقعة — مطلوبة عند وجود userData (بعد login)
         const sessionExemptActions = [
             'login', 'verifyMfaLogin', 'initializeSheets', 'fixClinicSheetHeaders',
-            'testConnection', 'getPublicIP', 'invalidateServerSession'
+            'testConnection', 'getPublicIP', 'invalidateServerSession',
+            'getAuthBootstrapPolicy'
         ];
         const isSessionExempt = sessionExemptActions.indexOf(action) !== -1;
         if (!isSessionExempt && actorUserData && (actorUserData.email || actorUserData.id)) {
