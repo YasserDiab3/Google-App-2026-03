@@ -1,5 +1,5 @@
 {
-  "version": "1.0.719",
+  "version": "1.0.721",
   "highlights": {
     "ar": [
       "SEC-01 مرحلة 2: رفض bootstrap دائماً على غير localhost.",

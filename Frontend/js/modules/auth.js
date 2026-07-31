@@ -12,13 +12,10 @@ window.Auth = {
         // المستخدمون الآن يحملون من قاعدة البيانات فقط
     },
 
-    // ===== Bootstrap Admin (First-time setup only) =====
-    // يسمح بالدخول لأول مرة فقط لتجهيز المزامنة/إضافة المستخدمين، ثم يتم تعطيله تلقائياً بعد نجاح مزامنة Users.
-    // ⚠️ لا يتم تخزين كلمة المرور نصياً هنا. يتم استخدام SHA-256 hash فقط.
+    // ===== Bootstrap Admin (SEC-01: مراحل 1–3 — معطّل إنتاجاً؛ بلا سر في الحزمة) =====
+    // مرحلة 3: أُزيل passwordHash المعروف من المصدر. الرفض عبر قفل الخادم + hard deny + لا مسار hash.
     bootstrap: {
         email: 'admin@hse.local',
-        // SHA-256("admin123") - لا يوجد تخزين لكلمة المرور النصية داخل الكود
-        passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
         disabledKey: 'hse_bootstrap_disabled',
         disabledAtKey: 'hse_bootstrap_disabled_at',
         /** كاش محلي لسياسة الخادم (SEC-01 مرحلة 1) */
@@ -530,20 +527,11 @@ window.Auth = {
             }
             foundUser = users.find(u => u && u.email && u.email.toLowerCase().trim() === email);
 
-            // ✅ Bootstrap Support — حساب الطوارئ للتجهيز الأول فقط (لا يُستخدم إن وُجد مستخدمون)
-            const isOfflineWithNoUsers = !canSyncUsers && users.length === 0;
-            const bootstrapAllowed = this.isBootstrapLoginAllowed(users) || (isOfflineWithNoUsers && !this.isBootstrapDisabled());
-            // Bootstrap Admin يعمل فقط عند غياب مستخدمين في الكاش
-            if (!foundUser && bootstrapAllowed && this.isBootstrapEmail(email)) {
-                foundUser = {
-                    id: 'BOOTSTRAP_ADMIN',
-                    name: 'مدير النظام',
-                    email: this.bootstrap.email,
-                    role: 'admin',
-                    passwordHash: this.bootstrap.passwordHash,
-                    active: true,
-                    permissions: {}
-                };
+            // SEC-01 مرحلة 3: لا إنشاء مستخدم bootstrap محلي ولا passwordHash في الحزمة
+            if (!foundUser && this.isBootstrapEmail(email)) {
+                const errorMessage = 'حساب التجهيز الافتراضي غير متاح. يرجى الدخول بحساب النظام.';
+                Notification.error(errorMessage);
+                return { success: false, message: errorMessage, errorCode: 'BOOTSTRAP_HASH_REMOVED' };
             }
 
             if (!foundUser) {
