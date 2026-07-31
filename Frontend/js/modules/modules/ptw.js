@@ -1120,28 +1120,50 @@ const PTW = {
      */
     initRegistry(skipBackendLoad = false) {
         try {
-            // تحميل من AppState أولاً (الأحدث)
-            if (AppState.appData && AppState.appData.ptwRegistry && Array.isArray(AppState.appData.ptwRegistry)) {
+            if (!AppState.appData) AppState.appData = {};
+
+            // 1. استعادة قائمة التصاريح (ptw) من localStorage إذا كانت فارغة في AppState
+            if (!Array.isArray(AppState.appData.ptw) || AppState.appData.ptw.length === 0) {
+                const savedPtwList = localStorage.getItem('hse_ptw_list');
+                if (savedPtwList) {
+                    try {
+                        const parsedPtw = JSON.parse(savedPtwList);
+                        if (Array.isArray(parsedPtw) && parsedPtw.length > 0) {
+                            AppState.appData.ptw = parsedPtw;
+                            Utils.safeLog(`✅ تم تحميل ${parsedPtw.length} تصريح من localStorage (hse_ptw_list)`);
+                        }
+                    } catch (e) {
+                        Utils.safeError('❌ خطأ في تحليل hse_ptw_list من localStorage:', e);
+                    }
+                }
+            }
+
+            // 2. استعادة سجل التصاريح (ptwRegistry) من AppState أو localStorage
+            let registryLoaded = false;
+            if (Array.isArray(AppState.appData.ptwRegistry) && AppState.appData.ptwRegistry.length > 0) {
                 this.setPtwRegistryState(AppState.appData.ptwRegistry, 'AppState.ptwRegistry');
                 Utils.safeLog(`✅ تم تحميل ${this.registryData.length} سجل من AppState`);
-                // لا نقوم بالمزامنة عند التحميل من AppState - ننتظر تحميل Backend
-                return;
+                registryLoaded = true;
             }
-            // تحميل من localStorage كنسخة احتياطية
-            const savedData = localStorage.getItem('hse_ptw_registry');
-            if (savedData) {
-                try {
-                    this.setPtwRegistryState(JSON.parse(savedData), 'localStorage.hse_ptw_registry');
-                    Utils.safeLog(`✅ تم تحميل ${this.registryData.length} سجل من localStorage`);
-                    // لا نقوم بالمزامنة عند التحميل من localStorage - ننتظر تحميل Backend
-                } catch (parseError) {
-                    Utils.safeError('❌ خطأ في تحليل بيانات السجل من localStorage:', parseError);
-                    this.registryData = [];
+
+            if (!registryLoaded) {
+                const savedRegistryData = localStorage.getItem('hse_ptw_registry');
+                if (savedRegistryData) {
+                    try {
+                        const parsedReg = JSON.parse(savedRegistryData);
+                        if (Array.isArray(parsedReg) && parsedReg.length > 0) {
+                            this.setPtwRegistryState(parsedReg, 'localStorage.hse_ptw_registry');
+                            Utils.safeLog(`✅ تم تحميل ${this.registryData.length} سجل من localStorage`);
+                            registryLoaded = true;
+                        }
+                    } catch (parseError) {
+                        Utils.safeError('❌ خطأ في تحليل بيانات السجل من localStorage:', parseError);
+                    }
                 }
-            } else {
+            }
+
+            if (!registryLoaded && !Array.isArray(this.registryData)) {
                 this.registryData = [];
-                // التأكد من وجود مصفوفة فارغة في AppState
-                if (!AppState.appData) AppState.appData = {};
                 AppState.appData.ptwRegistry = [];
             }
         } catch (error) {
@@ -2784,6 +2806,7 @@ const PTW = {
 
                     if (Array.isArray(ptwData)) {
                         AppState.appData.ptw = ptwData;
+                        try { localStorage.setItem('hse_ptw_list', Utils.safeStringify(ptwData)); } catch (_) {}
                     }
 
                     if (Array.isArray(registryData)) {
