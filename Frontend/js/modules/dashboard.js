@@ -1070,88 +1070,186 @@ const Dashboard = {
     /**
      * عرض تنبيهات الأدوية
      */
+    /**
+     * عرض تنبيهات صلاحية الأدوية بتصميم عصري ومنسق
+     */
     renderMedicationsAlerts(expiringMedications, today) {
-        if (expiringMedications.length === 0) {
+        const hasAlerts = expiringMedications && expiringMedications.length > 0;
+        
+        if (!hasAlerts) {
             return `
-                <div class="medications-alerts-section" style="border-top: 1px solid var(--border-color); padding-top: 2rem; margin-top: 2rem;">
-                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
-                        <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(139, 92, 246, 0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <i class="fas fa-pills" style="color: #7c3aed; font-size: 1.125rem;"></i>
+                <div class="medications-alerts-section" style="border-top: 1px dashed var(--border-color); padding-top: 1.75rem; margin-top: 2rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(99, 102, 241, 0.15)); display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: inset 0 0 0 1px rgba(124, 58, 237, 0.2);">
+                                <i class="fas fa-pills" style="color: #7c3aed; font-size: 1.2rem;"></i>
+                            </div>
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em;">
+                                    ${this.t('dash.medicationsExpiryAlerts', 'تنبيهات صلاحية الأدوية')}
+                                </h3>
+                                <p style="margin: 2px 0 0; font-size: 0.8rem; color: var(--text-secondary);">
+                                    مراقبة الأدوية القريبة من الانتهاء في العيادة
+                                </p>
+                            </div>
                         </div>
-                        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: var(--text-primary);">
-                            ${this.t('dash.medicationsExpiryAlerts', 'تنبيهات صلاحية الأدوية')}
-                        </h3>
                     </div>
-                    <div style="background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 12px; padding: 1.25rem; display: flex; align-items: center; gap: 1rem;">
-                        <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(34, 197, 94, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <i class="fas fa-check-circle" style="color: #16a34a; font-size: 1.5rem;"></i>
+                    <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.03) 100%); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 14px; padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 1.25rem; backdrop-filter: blur(4px);">
+                        <div style="width: 46px; height: 46px; border-radius: 12px; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                            <i class="fas fa-check" style="color: #ffffff; font-size: 1.3rem;"></i>
                         </div>
-                        <p style="margin: 0; font-size: 0.9375rem; font-weight: 500; color: var(--text-primary); line-height: 1.5;">
-                            ${this.t('dash.noExpiringMedications30Days', 'لا توجد أدوية منتهية أو قريبة الانتهاء خلال 30 يوماً.')}
-                        </p>
+                        <div>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: #047857; margin-bottom: 0.2rem;">
+                                المخزون الدوائي آمن بالكامل
+                            </div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4;">
+                                ${this.t('dash.noExpiringMedications30Days', 'لا توجد أدوية منتهية أو قريبة الانتهاء خلال 30 يوماً.')}
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
         }
 
+        const expiredCount = expiringMedications.filter(m => {
+            const exp = m.expiryDate ? new Date(m.expiryDate) : null;
+            return exp && exp < today;
+        }).length;
+
+        const headerBadgeBg = expiredCount > 0
+            ? 'linear-gradient(135deg, #ef4444, #dc2626)'
+            : 'linear-gradient(135deg, #f59e0b, #d97706)';
+
         return `
-            <div class="medications-alerts-section" style="border-top: 1px solid var(--border-color); padding-top: 2rem; margin-top: 2rem;">
+            <div class="medications-alerts-section" style="border-top: 1px dashed var(--border-color); padding-top: 1.75rem; margin-top: 2rem;">
+                <!-- الهيدر -->
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                        <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(139, 92, 246, 0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <i class="fas fa-pills" style="color: #7c3aed; font-size: 1.125rem;"></i>
+                    <div style="display: flex; align-items: center; gap: 0.85rem;">
+                        <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(99, 102, 241, 0.15)); display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.18); border: 1px solid rgba(124, 58, 237, 0.25);">
+                            <i class="fas fa-pills" style="color: #7c3aed; font-size: 1.25rem;"></i>
                         </div>
-                        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: var(--text-primary);">
-                            ${this.t('dash.medicationsExpiryAlerts', 'تنبيهات صلاحية الأدوية')}
-                        </h3>
+                        <div>
+                            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em;">
+                                ${this.t('dash.medicationsExpiryAlerts', 'تنبيهات صلاحية الأدوية')}
+                            </h3>
+                            <p style="margin: 2px 0 0; font-size: 0.8rem; color: var(--text-secondary);">
+                                الأدوية الواجب متابعتها أو تجديدها في العيادة
+                            </p>
+                        </div>
                     </div>
-                    <span class="badge badge-warning" style="padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; font-size: 0.875rem; background: rgba(234, 179, 8, 0.15); color: #ca8a04; border: 1px solid rgba(234, 179, 8, 0.3);">
-                        ${expiringMedications.length} تنبيه
-                    </span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="padding: 0.45rem 0.9rem; border-radius: 20px; font-weight: 700; font-size: 0.82rem; background: ${headerBadgeBg}; color: #ffffff; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); display: flex; align-items: center; gap: 0.4rem;">
+                            <i class="fas fa-exclamation-circle" style="font-size: 0.85rem;"></i>
+                            <span>${expiringMedications.length} تنبيه</span>
+                        </span>
+                    </div>
                 </div>
-                <div class="medications-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+
+                <!-- قائمة الأدوية -->
+                <div class="medications-list" style="display: flex; flex-direction: column; gap: 0.85rem;">
                     ${expiringMedications.slice(0, 5).map((med, index) => {
-            const expiry = med.expiryDate ? new Date(med.expiryDate) : null;
-            const diff = expiry ? Math.ceil((expiry - today) / (1000 * 60 * 60 * 24)) : null;
-            const statusText = diff !== null
-                ? (diff < 0 ? 'منتهية الصلاحية' : `يتبقى ${diff} يوم`)
-                : 'تاريخ غير محدد';
-            const badgeClass = diff !== null
-                ? (diff < 0 ? 'badge-danger' : diff <= 7 ? 'badge-danger' : diff <= 30 ? 'badge-warning' : 'badge-success')
-                : 'badge-secondary';
+                        const expiry = med.expiryDate ? new Date(med.expiryDate) : null;
+                        const diff = expiry ? Math.ceil((expiry - today) / (1000 * 60 * 60 * 24)) : null;
+                        
+                        let urgencyConfig = {
+                            borderStrip: 'linear-gradient(180deg, #6b7280, #4b5563)',
+                            bgTint: 'var(--card-bg)',
+                            badgeBg: 'linear-gradient(135deg, rgba(107, 114, 128, 0.12), rgba(75, 85, 99, 0.12))',
+                            badgeColor: '#4b5563',
+                            badgeBorder: 'rgba(107, 114, 128, 0.25)',
+                            icon: 'fa-calendar-times',
+                            statusText: 'تاريخ غير محدد'
+                        };
 
-            const badgeStyles = {
-                'badge-danger': 'background: rgba(220, 38, 38, 0.1); color: #dc2626; border: 1px solid rgba(220, 38, 38, 0.2);',
-                'badge-warning': 'background: rgba(234, 179, 8, 0.1); color: #ca8a04; border: 1px solid rgba(234, 179, 8, 0.2);',
-                'badge-success': 'background: rgba(34, 197, 94, 0.1); color: #16a34a; border: 1px solid rgba(34, 197, 94, 0.2);',
-                'badge-secondary': 'background: rgba(107, 114, 128, 0.1); color: #6b7280; border: 1px solid rgba(107, 114, 128, 0.2);'
-            };
+                        if (diff !== null) {
+                            if (diff < 0) {
+                                urgencyConfig = {
+                                    borderStrip: 'linear-gradient(180deg, #ef4444, #b91c1c)',
+                                    bgTint: 'rgba(239, 68, 68, 0.03)',
+                                    badgeBg: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                                    badgeColor: '#ffffff',
+                                    badgeBorder: 'transparent',
+                                    icon: 'fa-exclamation-triangle',
+                                    statusText: 'منتهية الصلاحية'
+                                };
+                            } else if (diff === 0) {
+                                urgencyConfig = {
+                                    borderStrip: 'linear-gradient(180deg, #f97316, #c2410c)',
+                                    bgTint: 'rgba(249, 115, 22, 0.04)',
+                                    badgeBg: 'linear-gradient(135deg, #ea580c, #c2410c)',
+                                    badgeColor: '#ffffff',
+                                    badgeBorder: 'transparent',
+                                    icon: 'fa-bell',
+                                    statusText: 'تنتهي اليوم!'
+                                };
+                            } else if (diff <= 7) {
+                                urgencyConfig = {
+                                    borderStrip: 'linear-gradient(180deg, #f59e0b, #d97706)',
+                                    bgTint: 'rgba(245, 158, 11, 0.03)',
+                                    badgeBg: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.15))',
+                                    badgeColor: '#b45309',
+                                    badgeBorder: 'rgba(245, 158, 11, 0.35)',
+                                    icon: 'fa-clock',
+                                    statusText: `ينتهي خلال ${diff} أيام`
+                                };
+                            } else {
+                                urgencyConfig = {
+                                    borderStrip: 'linear-gradient(180deg, #eab308, #ca8a04)',
+                                    bgTint: 'rgba(234, 179, 8, 0.02)',
+                                    badgeBg: 'linear-gradient(135deg, rgba(234, 179, 8, 0.12), rgba(202, 138, 4, 0.12))',
+                                    badgeColor: '#a16207',
+                                    badgeBorder: 'rgba(234, 179, 8, 0.3)',
+                                    icon: 'fa-hourglass-half',
+                                    statusText: `يتبقى ${diff} يوم`
+                                };
+                            }
+                        }
 
-            return `
-                        <div class="medication-alert-item" style="opacity: 0; transform: translateX(-20px); animation: slideInRight 0.4s ease ${index * 80}ms forwards; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s ease; cursor: pointer; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);">
-                            <div style="flex: 1; min-width: 0;">
-                                <div style="font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; line-height: 1.4;">
-                                    ${Utils.escapeHTML(med.name || '')}
+                        const remainingQty = med.remainingQuantity ?? med.quantityAdded ?? med.quantity;
+                        const qtyText = (remainingQty !== undefined && remainingQty !== null && remainingQty !== '')
+                            ? `${remainingQty} ${med.unit || 'وحدة'}`
+                            : null;
+
+                        return `
+                            <div class="medication-alert-item" style="opacity: 0; transform: translateY(10px); animation: slideInUp 0.35s ease ${index * 60}ms forwards; background: ${urgencyConfig.bgTint}; border: 1px solid var(--border-color); border-radius: 14px; padding: 1.1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                                
+                                <!-- شريط المؤشر اللوني الجانبي -->
+                                <div style="position: absolute; top: 0; right: 0; bottom: 0; width: 5px; background: ${urgencyConfig.borderStrip}; border-radius: 0 14px 14px 0;"></div>
+                                
+                                <div style="flex: 1; min-width: 0; padding-right: 0.6rem;">
+                                    <div style="font-size: 0.98rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.4rem; line-height: 1.35; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                        <span>${Utils.escapeHTML(med.name || '')}</span>
+                                        ${med.batchNumber ? `<span style="font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.45rem; border-radius: 6px; background: var(--bg-hover); color: var(--text-secondary); border: 1px solid var(--border-color);">تشغيلة #${Utils.escapeHTML(med.batchNumber)}</span>` : ''}
+                                    </div>
+                                    <div style="font-size: 0.82rem; color: var(--text-secondary); display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;">
+                                        <span style="display: flex; align-items: center; gap: 0.4rem;">
+                                            <i class="far fa-calendar-alt" style="color: #64748b; font-size: 0.85rem;"></i>
+                                            <strong style="font-weight: 600;">تاريخ الانتهاء:</strong> ${med.expiryDate ? Utils.formatDate(med.expiryDate) : 'غير محدد'}
+                                        </span>
+                                        ${qtyText ? `
+                                        <span style="display: flex; align-items: center; gap: 0.4rem; color: #475569;">
+                                            <i class="fas fa-boxes" style="color: #64748b; font-size: 0.82rem;"></i>
+                                            <strong style="font-weight: 600;">المتبقي:</strong> ${Utils.escapeHTML(qtyText)}
+                                        </span>` : ''}
+                                    </div>
                                 </div>
-                                <div style="font-size: 0.8125rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
-                                    <i class="fas fa-calendar-alt" style="font-size: 0.75rem; opacity: 0.7;"></i>
-                                    <span>${med.expiryDate ? Utils.formatDate(med.expiryDate) : 'تاريخ غير محدد'}</span>
+                                <div style="margin-right: 0.75rem; flex-shrink: 0;">
+                                    <span style="font-weight: 700; padding: 0.55rem 0.95rem; border-radius: 10px; font-size: 0.82rem; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.45rem; background: ${urgencyConfig.badgeBg}; color: ${urgencyConfig.badgeColor}; border: 1px solid ${urgencyConfig.badgeBorder}; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+                                        <i class="fas ${urgencyConfig.icon}" style="font-size: 0.85rem;"></i>
+                                        <span>${urgencyConfig.statusText}</span>
+                                    </span>
                                 </div>
                             </div>
-                            <span class="badge ${badgeClass}" style="margin-right: 1rem; font-weight: 600; padding: 0.5rem 0.875rem; border-radius: 8px; font-size: 0.8125rem; white-space: nowrap; flex-shrink: 0; ${badgeStyles[badgeClass] || badgeStyles['badge-secondary']}">
-                                ${statusText}
-                            </span>
-                        </div>
-                    `;
-        }).join('')}
-                    ${expiringMedications.length > 5
-                ? `<div class="text-center mt-3">
-                        <p class="text-xs font-medium" style="color: var(--text-secondary);">
-                            <i class="fas fa-info-circle ml-1"></i>
-                            يوجد ${expiringMedications.length - 5} أدوية أخرى تتطلب المتابعة
-                        </p>
-                    </div>`
-                : ''}
+                        `;
+                    }).join('')}
+
+                    ${expiringMedications.length > 5 ? `
+                    <div style="text-align: center; margin-top: 0.5rem;">
+                        <span style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.82rem; font-weight: 600; background: var(--bg-hover); color: var(--text-secondary); border: 1px solid var(--border-color);">
+                            <i class="fas fa-info-circle" style="color: #6366f1;"></i>
+                            يوجد ${expiringMedications.length - 5} أدوية أخرى قريبة الانتهاء بحاجة إلى متابعة
+                        </span>
+                    </div>` : ''}
                 </div>
             </div>
         `;
