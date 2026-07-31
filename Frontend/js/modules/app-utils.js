@@ -205,6 +205,8 @@ const MODULE_DETAILED_PERMISSIONS = {
         label: 'صلاحيات مديول تصاريح العمل',
         permissions: [
             { key: 'ptw-list', label: 'قائمة التصاريح', icon: 'fa-list' },
+            { key: 'registry', label: 'سجل حصر التصاريح', icon: 'fa-clipboard-list' },
+            { key: 'map', label: 'خريطة مواقع التصاريح', icon: 'fa-map-marked-alt' },
             { key: 'analytics', label: 'التحليل', icon: 'fa-chart-line' },
             { key: 'approvals', label: 'الموافقات', icon: 'fa-check-circle' }
         ]
