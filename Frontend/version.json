@@ -1,15 +1,15 @@
 {
-  "version": "1.0.702",
+  "version": "1.0.703",
   "highlights": {
     "ar": [
-      "تحسين حفظ بيانات كود المستخدمين والموافقات دون استبدال الاسم تلقائياً.",
-      "حل وتسجيل خروج الوردية الثالثة الليلية بالعيادة وحساب المواعيد بدقة.",
-      "إضافة لوحة ومواعيد الورديات الرسمية القابلة للتعديل وتأكيد السرعة والأداء."
+      "شريط فلتر احترافي فوق جداول مراقبة التصرفات (موظفين ومقاولين).",
+      "حماية تحميل العيادة من سباق جلب الزيارات وتحديث طابع المزامنة عند النجاح فقط.",
+      "منع استبدال الأدوية والإجازات والإصابات بقائمة فارغة من الخادم."
     ],
     "en": [
-      "Improved user employee code saving and profile sync without auto-overwriting user name.",
-      "Fixed Shift 3 overnight check-out & duration calculation for clinic staff.",
-      "Added customizable clinic shift schedule settings and verified overall system performance."
+      "Professional filter toolbar above Behavior Monitoring tables (employees and contractors).",
+      "Clinic load safety: no parallel visits fetch race; sync timestamp only after successful visits fetch.",
+      "Do not overwrite local medications, sick leave, or injuries with an empty server array."
     ]
   }
 }

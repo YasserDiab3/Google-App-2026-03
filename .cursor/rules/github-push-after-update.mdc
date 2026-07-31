@@ -24,3 +24,8 @@ alwaysApply: true
 - «تم، رفع»
 
 بدون كلمة «رفع»، يُمنع الرفع.
+
+## نبذة إشعار التحديث
+
+عند رفع واجهة: بعد bump حدّث highlights في version.json (Frontend + vercel-deploy) لتطابق تغييرات هذا الرفع. انظر version-highlights-match-changes.mdc.
+

@@ -1,0 +1,33 @@
+---
+description: نبذة إشعار التحديث في version.json يجب أن تطابق التغييرات الفعلية عند كل bump/رفع
+alwaysApply: true
+---
+
+# مطابقة نبذة التحديث مع التغييرات الفعلية
+
+إشعار «هناك تحديث جديد» يقرأ highlights من Frontend/version.json ونسخته في vercel-deploy/frontend/version.json.
+
+## إلزامي عند كل bump أو «رفع» يشمل الواجهة
+
+1. بعد node bump-version.js (أو قبل الـ commit): أعد كتابة highlights.ar و highlights.en.
+2. المحتوى = ما تغيّر في هذا الإصدار / جلسة الرفع الحالية فقط — ليس نصوص إصدارات قديمة.
+3. 2–4 نقاط قصيرة، واضحة للمستخدم (عربي + إنجليزي متوازيان).
+4. نفس highlights في Frontend/version.json و vercel-deploy/frontend/version.json.
+5. bump-version.js يحدّث رقم version فقط وقد يبقي النبذة القديمة — لا تعتمد عليه للنبذة.
+
+## ممنوع
+
+- ترك نبذة قديمة بينما الرفع عن ميزة أخرى.
+- نبذة عامة فارغة المعنى دون ذكر ما يظهر للمستخدم.
+- تحديث Frontend/version.json دون vercel-deploy/frontend/version.json.
+
+## مثال
+
+- خطأ: رفع حماية تحميل العيادة ونبذة عن الورديات القديمة.
+- صحيح: نبذة عن فلتر التصرفات + حماية جلب الزيارات + منع الاستبدال الفارغ.
+
+## قائمة تحقق قبل الـ commit
+
+- [ ] رقم الإصدار محدَّث
+- [ ] highlights.ar / highlights.en تصف diff هذه الجلسة
+- [ ] النسختان Frontend + vercel-deploy متطابقتان
