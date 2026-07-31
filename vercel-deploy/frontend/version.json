@@ -2,12 +2,12 @@
   "version": "1.0.721",
   "highlights": {
     "ar": [
-      "SEC-01 مرحلة 2: رفض bootstrap دائماً على غير localhost.",
-      "حتى مع كاش فارغ لا يعمل حساب التجهيز على الإنتاج."
+      "SEC-01 مرحلة 3: إزالة هاش حساب التجهيز من الحزمة.",
+      "لا يمكن بناء دخول bootstrap محلي بعد الآن."
     ],
     "en": [
-      "SEC-01 phase 2: always deny bootstrap off localhost.",
-      "Empty cache no longer allows bootstrap admin in production."
+      "SEC-01 phase 3: bootstrap password hash removed from the bundle.",
+      "Local bootstrap admin login path can no longer be constructed."
     ]
   }
 }
