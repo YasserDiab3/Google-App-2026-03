@@ -251,22 +251,22 @@ const BehaviorMonitoring = {
                         <div>
                             <h1 class="section-title">
                                 <i class="fas fa-eye ml-3"></i>
-                                مراقبة السلوكيات
+                                ${this.t('module.behavior.title', 'مراقبة السلوكيات')}
                             </h1>
-                            <p class="section-subtitle">تسجيل ومتابعة سلوكيات الموظفين والمقاولين</p>
+                            <p class="section-subtitle">${this.t('module.behavior.subtitle', 'تسجيل ومتابعة سلوكيات الموظفين والمقاولين')}</p>
                         </div>
                         <div class="flex items-center gap-2 flex-wrap justify-end">
                             <button id="behavior-refresh-btn" class="btn-secondary">
                                 <i class="fas fa-sync-alt ml-2"></i>
-                                تحديث
+                                ${this.t('common.refresh', 'تحديث')}
                             </button>
                             <button id="behavior-add-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
-                                تسجيل تصرف موظف
+                                ${this.t('module.behavior.addEmployee', 'تسجيل تصرف موظف')}
                             </button>
                             <button id="behavior-add-contractor-header-btn" type="button" class="btn-secondary">
                                 <i class="fas fa-users-cog ml-2"></i>
-                                تسجيل تصرف مقاول
+                                ${this.t('module.behavior.addContractor', 'تسجيل تصرف مقاول')}
                             </button>
                         </div>
                     </div>
@@ -276,13 +276,13 @@ const BehaviorMonitoring = {
                     <div class="module-tabs-wrapper">
                         <div class="module-tabs-container">
                             <button class="module-tab-btn ${activeTab === 'overview' ? 'active' : ''}" data-tab="overview" onclick="BehaviorMonitoring.switchTab('overview')">
-                                <i class="fas fa-chart-pie ml-2"></i>نظرة عامة
+                                <i class="fas fa-chart-pie ml-2"></i>${this.t('module.behavior.tabs.overview', 'نظرة عامة')}
                             </button>
                             <button class="module-tab-btn ${activeTab === 'log' ? 'active' : ''}" data-tab="log" onclick="BehaviorMonitoring.switchTab('log')">
-                                <i class="fas fa-list ml-2"></i>تصرفات الموظفين
+                                <i class="fas fa-list ml-2"></i>${this.t('module.behavior.tabs.employeeLog', 'تصرفات الموظفين')}
                             </button>
                             <button class="module-tab-btn ${activeTab === 'contractors' ? 'active' : ''}" data-tab="contractors" onclick="BehaviorMonitoring.switchTab('contractors')">
-                                <i class="fas fa-users-cog ml-2"></i>تصرفات المقاولين
+                                <i class="fas fa-users-cog ml-2"></i>${this.t('module.behavior.tabs.contractorLog', 'تصرفات المقاولين')}
                             </button>
                         </div>
                     </div>
@@ -820,82 +820,74 @@ const BehaviorMonitoring = {
 
         return `
             <div id="behavior-log-container">
-                <div class="content-card behavior-filters-card">
-                    <div class="card-header">
-                        <h2 class="card-title"><i class="fas fa-filter ml-2"></i>تصرفات الموظفين (بحث/فلترة)</h2>
-                    </div>
-                    <div class="card-body behavior-dynamic-filter-wrap">
-                        <div class="behavior-filter-topbar">
-                            <div class="behavior-filter-topbar-title">
-                                <span class="badge badge-secondary" id="behavior-filter-count">${isSkeleton ? '—' : this.getFilteredBehaviors().length}</span>
-                                <span>سجل بعد الفلترة</span>
-                            </div>
-                            <div id="behavior-active-filter-chips" class="behavior-active-filter-chips">
-                                ${activeFilterChips}
-                            </div>
+                <div class="content-card">
+                    <div class="card-header flex flex-wrap items-center justify-between gap-2" style="padding: 12px 16px;">
+                        <div class="flex items-center gap-2">
+                            <h2 class="card-title" style="margin: 0;"><i class="fas fa-list ml-2"></i>${this.t('module.behavior.employeeBehaviorsTitle', 'تصرفات الموظفين (بحث/فلترة)')}</h2>
+                            <span class="badge badge-secondary" id="behavior-filter-count">${isSkeleton ? '—' : this.getFilteredBehaviors().length}</span>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 behavior-filter-grid">
-                            <div class="lg:col-span-2">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">بحث سريع</label>
-                                <div class="relative">
-                                    <input id="behavior-filter-search" type="text" class="form-input pr-10" placeholder="ISO / اسم / كود / وصف" value="${safe(filters.search)}">
-                                    <i class="fas fa-search absolute top-3 right-3 text-gray-400"></i>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button id="behavior-export-csv-btn" class="btn-success btn-sm">
+                                <i class="fas fa-file-csv ml-1"></i>${this.t('common.exportCSV', 'تصدير CSV')}
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body" style="padding: 12px 16px;">
+                        <div class="behavior-filters-toolbar behavior-filters-inline-bar" role="search" aria-label="${this.t('module.behavior.employeeBehaviorsTitle', 'تصرفات الموظفين (بحث / فلترة)')}">
+                            <div class="bf-row">
+                                <div class="bf-field bf-field--search">
+                                    <label for="behavior-filter-search" class="bf-label"><i class="fas fa-search"></i>${this.t('module.common.search', 'البحث')}</label>
+                                    <div class="bf-search-wrap">
+                                        <input id="behavior-filter-search" type="text" class="bf-input" placeholder="${this.t('common.searchPlaceholder', 'ISO / اسم / كود / وصف')}" value="${safe(filters.search)}" autocomplete="off">
+                                        <i class="fas fa-search bf-search-icon" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                                <div class="bf-field bf-field--select">
+                                    <label for="behavior-filter-type" class="bf-label"><i class="fas fa-tags"></i>${this.t('module.behavior.behaviorType', 'نوع التصرف')}</label>
+                                    <select id="behavior-filter-type" class="bf-input">
+                                        <option value="">${this.t('common.allTypes', 'جميع الأنواع')}</option>
+                                        <option value="إيجابي" ${filters.behaviorType === 'إيجابي' ? 'selected' : ''}>${this.t('module.behavior.positive', 'إيجابي')}</option>
+                                        <option value="سلبي" ${filters.behaviorType === 'سلبي' ? 'selected' : ''}>${this.t('module.behavior.negative', 'سلبي')}</option>
+                                    </select>
+                                </div>
+                                <div class="bf-field bf-field--select">
+                                    <label for="behavior-filter-rating" class="bf-label"><i class="fas fa-star"></i>${this.t('module.behavior.rating', 'التقييم')}</label>
+                                    <select id="behavior-filter-rating" class="bf-input">
+                                        <option value="">${this.t('common.allRatings', 'جميع التقييمات')}</option>
+                                        <option value="ممتاز" ${filters.rating === 'ممتاز' ? 'selected' : ''}>${this.t('module.behavior.excellent', 'ممتاز')}</option>
+                                        <option value="جيد" ${filters.rating === 'جيد' ? 'selected' : ''}>${this.t('module.behavior.good', 'جيد')}</option>
+                                        <option value="مقبول" ${filters.rating === 'مقبول' ? 'selected' : ''}>${this.t('module.behavior.acceptable', 'مقبول')}</option>
+                                        <option value="ضعيف" ${filters.rating === 'ضعيف' ? 'selected' : ''}>${this.t('module.behavior.poor', 'ضعيف')}</option>
+                                    </select>
+                                </div>
+                                <div class="bf-field bf-field--date">
+                                    <label for="behavior-filter-from" class="bf-label"><i class="fas fa-calendar-alt"></i>${this.t('common.fromDate', 'من تاريخ')}</label>
+                                    <input id="behavior-filter-from" type="date" class="bf-input" value="${safe(filters.dateFrom)}">
+                                </div>
+                                <div class="bf-field bf-field--date">
+                                    <label for="behavior-filter-to" class="bf-label"><i class="fas fa-calendar-check"></i>${this.t('common.toDate', 'إلى تاريخ')}</label>
+                                    <input id="behavior-filter-to" type="date" class="bf-input" value="${safe(filters.dateTo)}">
+                                </div>
+                                <div class="bf-field bf-field--sort">
+                                    <label for="behavior-sort" class="bf-label"><i class="fas fa-sort-amount-down"></i>${this.t('common.sort', 'الترتيب')}</label>
+                                    <select id="behavior-sort" class="bf-input">
+                                        <option value="date_desc" ${this.state?.sort === 'date_desc' ? 'selected' : ''}>${this.t('common.newestFirst', 'الأحدث أولاً')}</option>
+                                        <option value="date_asc" ${this.state?.sort === 'date_asc' ? 'selected' : ''}>${this.t('common.oldestFirst', 'الأقدم أولاً')}</option>
+                                    </select>
+                                </div>
+                                <div class="bf-field bf-field--actions">
+                                    <span class="bf-label" style="visibility:hidden;">.</span>
+                                    <button type="button" id="behavior-clear-filters-btn" class="bf-reset-btn" title="${this.t('common.clearFilters', 'مسح الفلاتر')}">
+                                        <i class="fas fa-eraser"></i>${this.t('common.clearFilters', 'مسح')}
+                                    </button>
                                 </div>
                             </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">نوع التصرف</label>
-                                <select id="behavior-filter-type" class="form-input">
-                                    <option value="">الكل</option>
-                                    <option value="إيجابي" ${filters.behaviorType === 'إيجابي' ? 'selected' : ''}>إيجابي</option>
-                                    <option value="سلبي" ${filters.behaviorType === 'سلبي' ? 'selected' : ''}>سلبي</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">التقييم</label>
-                                <select id="behavior-filter-rating" class="form-input">
-                                    <option value="">الكل</option>
-                                    <option value="ممتاز" ${filters.rating === 'ممتاز' ? 'selected' : ''}>ممتاز</option>
-                                    <option value="جيد" ${filters.rating === 'جيد' ? 'selected' : ''}>جيد</option>
-                                    <option value="مقبول" ${filters.rating === 'مقبول' ? 'selected' : ''}>مقبول</option>
-                                    <option value="ضعيف" ${filters.rating === 'ضعيف' ? 'selected' : ''}>ضعيف</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">من</label>
-                                <input id="behavior-filter-from" type="date" class="form-input" value="${safe(filters.dateFrom)}">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">إلى</label>
-                                <input id="behavior-filter-to" type="date" class="form-input" value="${safe(filters.dateTo)}">
-                            </div>
                         </div>
-
-                        <div class="flex flex-wrap items-center justify-end gap-2 mt-4">
-                            <div class="flex items-center gap-2 behavior-filter-actions">
-                                <select id="behavior-sort" class="form-input" style="max-width: 220px;">
-                                    <option value="date_desc" ${this.state?.sort === 'date_desc' ? 'selected' : ''}>الأحدث أولاً</option>
-                                    <option value="date_asc" ${this.state?.sort === 'date_asc' ? 'selected' : ''}>الأقدم أولاً</option>
-                                </select>
-                                <button id="behavior-export-csv-btn" class="btn-success">
-                                    <i class="fas fa-file-csv ml-2"></i>
-                                    تصدير CSV
-                                </button>
-                                <button id="behavior-clear-filters-btn" class="btn-secondary">
-                                    <i class="fas fa-eraser ml-2"></i>
-                                    مسح الفلاتر
-                                </button>
-                            </div>
+                        <div id="behavior-active-filter-chips" class="behavior-active-filter-chips">
+                            ${activeFilterChips}
                         </div>
-                    </div>
-                </div>
-
-                <div class="content-card mt-4">
-                    <div class="card-header">
-                        <h2 class="card-title"><i class="fas fa-table ml-2"></i>البيانات</h2>
-                    </div>
-                    <div class="card-body">
                         <div id="behavior-log-table-container">
-                            ${isSkeleton ? `<div class="empty-state"><p class="text-gray-500">جاري التحميل...</p></div>` : this.renderLogTableHTML()}
+                            ${isSkeleton ? `<div class="empty-state"><p class="text-gray-500">${this.t('common.loading', 'جاري التحميل...')}</p></div>` : this.renderLogTableHTML()}
                         </div>
                     </div>
                 </div>
@@ -925,7 +917,7 @@ const BehaviorMonitoring = {
     renderLogTableHTML() {
         const behaviors = this.getFilteredBehaviors();
         if (!behaviors.length) {
-            return `<div class="empty-state"><p class="text-gray-500">لا توجد نتائج مطابقة للفلاتر الحالية</p></div>`;
+            return `<div class="empty-state"><p class="text-gray-500">${this.t('common.noMatchingResults', 'لا توجد نتائج مطابقة للفلاتر الحالية')}</p></div>`;
         }
 
         return `
@@ -933,14 +925,14 @@ const BehaviorMonitoring = {
                 <table class="data-table table-header-purple">
                     <thead>
                         <tr>
-                            <th>كود ISO</th>
-                            <th>اسم الموظف</th>
-                            <th>المصنع</th>
-                            <th>الموقع الفرعي</th>
-                            <th>نوع التصرف</th>
-                            <th>التاريخ</th>
-                            <th>التقييم</th>
-                            <th class="text-center">الإجراءات</th>
+                            <th>${this.t('module.behavior.isoCode', 'كود ISO')}</th>
+                            <th>${this.t('module.behavior.employeeName', 'اسم الموظف')}</th>
+                            <th>${this.t('module.behavior.factory', 'المصنع')}</th>
+                            <th>${this.t('module.behavior.subLocation', 'الموقع الفرعي')}</th>
+                            <th>${this.t('module.behavior.behaviorType', 'نوع التصرف')}</th>
+                            <th>${this.t('module.behavior.date', 'التاريخ')}</th>
+                            <th>${this.t('module.behavior.rating', 'التقييم')}</th>
+                            <th class="text-center">${this.t('common.actions', 'الإجراءات')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2045,73 +2037,74 @@ const BehaviorMonitoring = {
         const countLabel = isSkeleton ? '—' : String(this.getFilteredContractorBehaviors().length);
         return `
             <div id="behavior-contractors-container">
-                <div class="content-card behavior-filters-card">
-                    <div class="card-header flex flex-wrap items-center justify-between gap-2">
-                        <h2 class="card-title"><i class="fas fa-users-cog ml-2"></i>سجل تصرفات المقاولين</h2>
-                        <button type="button" id="behavior-add-contractor-btn" class="btn-primary">
-                            <i class="fas fa-plus ml-2"></i>تسجيل تصرف مقاول
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
-                            <div class="lg:col-span-2">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">بحث سريع</label>
-                                <input id="bhmc-filter-search" type="text" class="form-input" placeholder="ISO / مقاول / عامل / وصف" value="${safe(filters.search)}">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">نوع التصرف</label>
-                                <select id="bhmc-filter-type" class="form-input">
-                                    <option value="">الكل</option>
-                                    <option value="إيجابي" ${filters.behaviorType === 'إيجابي' ? 'selected' : ''}>إيجابي</option>
-                                    <option value="سلبي" ${filters.behaviorType === 'سلبي' ? 'selected' : ''}>سلبي</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">التقييم</label>
-                                <select id="bhmc-filter-rating" class="form-input">
-                                    <option value="">الكل</option>
-                                    <option value="ممتاز" ${filters.rating === 'ممتاز' ? 'selected' : ''}>ممتاز</option>
-                                    <option value="جيد" ${filters.rating === 'جيد' ? 'selected' : ''}>جيد</option>
-                                    <option value="مقبول" ${filters.rating === 'مقبول' ? 'selected' : ''}>مقبول</option>
-                                    <option value="ضعيف" ${filters.rating === 'ضعيف' ? 'selected' : ''}>ضعيف</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">من</label>
-                                <input id="bhmc-filter-from" type="date" class="form-input" value="${safe(filters.dateFrom)}">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">إلى</label>
-                                <input id="bhmc-filter-to" type="date" class="form-input" value="${safe(filters.dateTo)}">
-                            </div>
+                <div class="content-card">
+                    <div class="card-header flex flex-wrap items-center justify-between gap-2" style="padding: 12px 16px;">
+                        <div class="flex items-center gap-2">
+                            <h2 class="card-title" style="margin: 0;"><i class="fas fa-users-cog ml-2"></i>${this.t('module.behavior.contractorBehaviorsTitle', 'سجل تصرفات المقاولين')}</h2>
+                            <span class="badge badge-secondary" id="bhmc-filter-count">${countLabel}</span>
                         </div>
-                        <div class="flex flex-wrap items-center justify-between gap-2 mt-4">
-                            <div class="text-sm text-gray-600">
-                                <span class="badge badge-secondary" id="bhmc-filter-count">${countLabel}</span>
-                                <span>سجل (بعد الفلترة)</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <select id="bhmc-sort" class="form-input" style="max-width: 220px;">
-                                    <option value="date_desc" ${this.state?.contractorSort === 'date_desc' ? 'selected' : ''}>الأحدث أولاً</option>
-                                    <option value="date_asc" ${this.state?.contractorSort === 'date_asc' ? 'selected' : ''}>الأقدم أولاً</option>
-                                </select>
-                                <button id="bhmc-export-csv-btn" class="btn-success">
-                                    <i class="fas fa-file-csv ml-2"></i>تصدير CSV
-                                </button>
-                                <button id="bhmc-clear-filters-btn" class="btn-secondary">
-                                    <i class="fas fa-eraser ml-2"></i>مسح الفلاتر
-                                </button>
-                            </div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button type="button" id="behavior-add-contractor-btn" class="btn-primary btn-sm">
+                                <i class="fas fa-plus ml-1"></i>${this.t('module.behavior.addContractor', 'تسجيل تصرف مقاول')}
+                            </button>
+                            <button id="bhmc-export-csv-btn" class="btn-success btn-sm">
+                                <i class="fas fa-file-csv ml-1"></i>${this.t('common.exportCSV', 'تصدير CSV')}
+                            </button>
                         </div>
                     </div>
-                </div>
-                <div class="content-card mt-4">
-                    <div class="card-header">
-                        <h2 class="card-title"><i class="fas fa-table ml-2"></i>البيانات</h2>
-                    </div>
-                    <div class="card-body">
+                    <div class="card-body" style="padding: 12px 16px;">
+                        <div class="behavior-filters-toolbar behavior-contractors-filters-inline-bar" role="search" aria-label="${this.t('module.behavior.contractorBehaviorsTitle', 'سجل تصرفات المقاولين (بحث / فلترة)')}">
+                            <div class="bf-row">
+                                <div class="bf-field bf-field--search">
+                                    <label for="bhmc-filter-search" class="bf-label"><i class="fas fa-search"></i>${this.t('module.common.search', 'البحث')}</label>
+                                    <div class="bf-search-wrap">
+                                        <input id="bhmc-filter-search" type="text" class="bf-input" placeholder="${this.t('common.searchPlaceholder', 'ISO / مقاول / عامل / وصف')}" value="${safe(filters.search)}" autocomplete="off">
+                                        <i class="fas fa-search bf-search-icon" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                                <div class="bf-field bf-field--select">
+                                    <label for="bhmc-filter-type" class="bf-label"><i class="fas fa-tags"></i>${this.t('module.behavior.behaviorType', 'نوع التصرف')}</label>
+                                    <select id="bhmc-filter-type" class="bf-input">
+                                        <option value="">${this.t('common.allTypes', 'جميع الأنواع')}</option>
+                                        <option value="إيجابي" ${filters.behaviorType === 'إيجابي' ? 'selected' : ''}>${this.t('module.behavior.positive', 'إيجابي')}</option>
+                                        <option value="سلبي" ${filters.behaviorType === 'سلبي' ? 'selected' : ''}>${this.t('module.behavior.negative', 'سلبي')}</option>
+                                    </select>
+                                </div>
+                                <div class="bf-field bf-field--select">
+                                    <label for="bhmc-filter-rating" class="bf-label"><i class="fas fa-star"></i>${this.t('module.behavior.rating', 'التقييم')}</label>
+                                    <select id="bhmc-filter-rating" class="bf-input">
+                                        <option value="">${this.t('common.allRatings', 'جميع التقييمات')}</option>
+                                        <option value="ممتاز" ${filters.rating === 'ممتاز' ? 'selected' : ''}>${this.t('module.behavior.excellent', 'ممتاز')}</option>
+                                        <option value="جيد" ${filters.rating === 'جيد' ? 'selected' : ''}>${this.t('module.behavior.good', 'جيد')}</option>
+                                        <option value="مقبول" ${filters.rating === 'مقبول' ? 'selected' : ''}>${this.t('module.behavior.acceptable', 'مقبول')}</option>
+                                        <option value="ضعيف" ${filters.rating === 'ضعيف' ? 'selected' : ''}>${this.t('module.behavior.poor', 'ضعيف')}</option>
+                                    </select>
+                                </div>
+                                <div class="bf-field bf-field--date">
+                                    <label for="bhmc-filter-from" class="bf-label"><i class="fas fa-calendar-alt"></i>${this.t('common.fromDate', 'من تاريخ')}</label>
+                                    <input id="bhmc-filter-from" type="date" class="bf-input" value="${safe(filters.dateFrom)}">
+                                </div>
+                                <div class="bf-field bf-field--date">
+                                    <label for="bhmc-filter-to" class="bf-label"><i class="fas fa-calendar-check"></i>${this.t('common.toDate', 'إلى تاريخ')}</label>
+                                    <input id="bhmc-filter-to" type="date" class="bf-input" value="${safe(filters.dateTo)}">
+                                </div>
+                                <div class="bf-field bf-field--sort">
+                                    <label for="bhmc-sort" class="bf-label"><i class="fas fa-sort-amount-down"></i>${this.t('common.sort', 'الترتيب')}</label>
+                                    <select id="bhmc-sort" class="bf-input">
+                                        <option value="date_desc" ${this.state?.contractorSort === 'date_desc' ? 'selected' : ''}>${this.t('common.newestFirst', 'الأحدث أولاً')}</option>
+                                        <option value="date_asc" ${this.state?.contractorSort === 'date_asc' ? 'selected' : ''}>${this.t('common.oldestFirst', 'الأقدم أولاً')}</option>
+                                    </select>
+                                </div>
+                                <div class="bf-field bf-field--actions">
+                                    <span class="bf-label" style="visibility:hidden;">.</span>
+                                    <button type="button" id="bhmc-clear-filters-btn" class="bf-reset-btn" title="${this.t('common.clearFilters', 'مسح الفلاتر')}">
+                                        <i class="fas fa-eraser"></i>${this.t('common.clearFilters', 'مسح')}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                         <div id="bhmc-log-table-container">
-                            ${isSkeleton ? '<div class="empty-state"><p class="text-gray-500">جاري التحميل...</p></div>' : this.renderContractorLogTableHTML()}
+                            ${isSkeleton ? `<div class="empty-state"><p class="text-gray-500">${this.t('common.loading', 'جاري التحميل...')}</p></div>` : this.renderContractorLogTableHTML()}
                         </div>
                     </div>
                 </div>
@@ -2122,22 +2115,22 @@ const BehaviorMonitoring = {
     renderContractorLogTableHTML() {
         const behaviors = this.getFilteredContractorBehaviors();
         if (!behaviors.length) {
-            return '<div class="empty-state"><p class="text-gray-500">لا توجد نتائج مطابقة للفلاتر الحالية</p></div>';
+            return `<div class="empty-state"><p class="text-gray-500">${this.t('common.noMatchingResults', 'لا توجد نتائج مطابقة للفلاتر الحالية')}</p></div>`;
         }
         return `
             <div class="table-wrapper" style="overflow-x:auto;">
                 <table class="data-table table-header-purple">
                     <thead>
                         <tr>
-                            <th>كود ISO</th>
-                            <th>المقاول</th>
-                            <th>العامل</th>
-                            <th>المصنع</th>
-                            <th>الموقع الفرعي</th>
-                            <th>نوع التصرف</th>
-                            <th>التاريخ</th>
-                            <th>التقييم</th>
-                            <th class="text-center">الإجراءات</th>
+                            <th style="width: 110px;">${this.t('module.behavior.isoCode', 'كود ISO')}</th>
+                            <th>${this.t('module.behavior.contractorName', 'المقاول')}</th>
+                            <th style="width: 140px;">${this.t('module.behavior.contractorWorker', 'العامل')}</th>
+                            <th style="width: 130px;">${this.t('module.behavior.factory', 'المصنع')}</th>
+                            <th style="width: 140px;">${this.t('module.behavior.subLocation', 'الموقع الفرعي')}</th>
+                            <th style="width: 110px;">${this.t('module.behavior.behaviorType', 'نوع التصرف')}</th>
+                            <th style="width: 140px;">${this.t('module.behavior.date', 'التاريخ')}</th>
+                            <th style="width: 100px;">${this.t('module.behavior.rating', 'التقييم')}</th>
+                            <th class="text-center" style="width: 140px;">${this.t('common.actions', 'الإجراءات')}</th>
                         </tr>
                     </thead>
                     <tbody>
