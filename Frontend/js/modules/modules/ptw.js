@@ -1115,6 +1115,92 @@ const PTW = {
     },
 
     /**
+     * دمج مصفوفتين لسجل التصاريح مع الحفاظ على البيانات المحلية غير المرفوعة
+     */
+    _mergeRegistryLists(localList = [], incomingList = []) {
+        if (!Array.isArray(localList)) localList = [];
+        if (!Array.isArray(incomingList)) incomingList = [];
+        if (incomingList.length === 0) return localList;
+        if (localList.length === 0) return incomingList;
+
+        const mergedMap = new Map();
+        incomingList.forEach(item => {
+            if (!item || typeof item !== 'object') return;
+            const key = String(item.id || item.permitId || item.paperPermitNumber || item.sequentialNumber || '').trim();
+            if (key) {
+                mergedMap.set(key, item);
+            }
+        });
+
+        localList.forEach(item => {
+            if (!item || typeof item !== 'object') return;
+            const key = String(item.id || item.permitId || item.paperPermitNumber || item.sequentialNumber || '').trim();
+            const paperKey = String(item.paperPermitNumber || '').trim();
+
+            let foundInIncoming = false;
+            if (key && mergedMap.has(key)) foundInIncoming = true;
+            if (!foundInIncoming && paperKey) {
+                for (const existing of mergedMap.values()) {
+                    if (String(existing.paperPermitNumber || '').trim() === paperKey) {
+                        foundInIncoming = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!foundInIncoming) {
+                const addKey = key || (`local_reg_${Date.now()}_${Math.random()}`);
+                mergedMap.set(addKey, item);
+            }
+        });
+
+        return Array.from(mergedMap.values());
+    },
+
+    /**
+     * دمج مصفوفتين لقائمة التصاريح مع الحفاظ على التصاريح المحلية
+     */
+    _mergePermitLists(localList = [], incomingList = []) {
+        if (!Array.isArray(localList)) localList = [];
+        if (!Array.isArray(incomingList)) incomingList = [];
+        if (incomingList.length === 0) return localList;
+        if (localList.length === 0) return incomingList;
+
+        const mergedMap = new Map();
+        incomingList.forEach(item => {
+            if (!item || typeof item !== 'object') return;
+            const key = String(item.id || item.permitId || item.permitNumber || '').trim();
+            if (key) {
+                mergedMap.set(key, item);
+            }
+        });
+
+        localList.forEach(item => {
+            if (!item || typeof item !== 'object') return;
+            const key = String(item.id || item.permitId || item.permitNumber || '').trim();
+            const permitNumKey = String(item.permitNumber || item.paperPermitNumber || '').trim();
+
+            let foundInIncoming = false;
+            if (key && mergedMap.has(key)) foundInIncoming = true;
+            if (!foundInIncoming && permitNumKey) {
+                for (const existing of mergedMap.values()) {
+                    if (String(existing.permitNumber || existing.paperPermitNumber || '').trim() === permitNumKey) {
+                        foundInIncoming = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!foundInIncoming) {
+                const addKey = key || (`local_ptw_${Date.now()}_${Math.random()}`);
+                mergedMap.set(addKey, item);
+            }
+        });
+
+        return Array.from(mergedMap.values());
+    },
+
+    /**
      * تهيئة وتحميل بيانات السجل
      * @param {boolean} skipBackendLoad - تجاهل تحميل البيانات من Backend (مفيد عند التحميل الأولي)
      */
@@ -1122,55 +1208,47 @@ const PTW = {
         try {
             if (!AppState.appData) AppState.appData = {};
 
-            // 1. استعادة قائمة التصاريح (ptw) من localStorage إذا كانت فارغة في AppState
-            if (!Array.isArray(AppState.appData.ptw) || AppState.appData.ptw.length === 0) {
-                const savedPtwList = localStorage.getItem('hse_ptw_list');
-                if (savedPtwList) {
-                    try {
-                        const parsedPtw = JSON.parse(savedPtwList);
-                        if (Array.isArray(parsedPtw) && parsedPtw.length > 0) {
-                            AppState.appData.ptw = parsedPtw;
-                            Utils.safeLog(`✅ تم تحميل ${parsedPtw.length} تصريح من localStorage (hse_ptw_list)`);
-                        }
-                    } catch (e) {
-                        Utils.safeError('❌ خطأ في تحليل hse_ptw_list من localStorage:', e);
+            // 1. استعادة قائمة التصاريح (ptw) من localStorage ودمجها مع AppState
+            const savedPtwList = localStorage.getItem('hse_ptw_list');
+            if (savedPtwList) {
+                try {
+                    const parsedPtw = JSON.parse(savedPtwList);
+                    if (Array.isArray(parsedPtw) && parsedPtw.length > 0) {
+                        const currentPtw = Array.isArray(AppState.appData.ptw) ? AppState.appData.ptw : [];
+                        AppState.appData.ptw = this._mergePermitLists(currentPtw, parsedPtw);
+                        Utils.safeLog(`✅ تم استعادة ودمج ${AppState.appData.ptw.length} تصريح من localStorage (hse_ptw_list)`);
                     }
+                } catch (e) {
+                    Utils.safeError('❌ خطأ في تحليل hse_ptw_list من localStorage:', e);
                 }
             }
 
-            // 2. استعادة سجل التصاريح (ptwRegistry) من AppState أو localStorage
-            let registryLoaded = false;
-            if (Array.isArray(AppState.appData.ptwRegistry) && AppState.appData.ptwRegistry.length > 0) {
-                this.setPtwRegistryState(AppState.appData.ptwRegistry, 'AppState.ptwRegistry');
-                Utils.safeLog(`✅ تم تحميل ${this.registryData.length} سجل من AppState`);
-                registryLoaded = true;
-            }
-
-            if (!registryLoaded) {
-                const savedRegistryData = localStorage.getItem('hse_ptw_registry');
-                if (savedRegistryData) {
-                    try {
-                        const parsedReg = JSON.parse(savedRegistryData);
-                        if (Array.isArray(parsedReg) && parsedReg.length > 0) {
-                            this.setPtwRegistryState(parsedReg, 'localStorage.hse_ptw_registry');
-                            Utils.safeLog(`✅ تم تحميل ${this.registryData.length} سجل من localStorage`);
-                            registryLoaded = true;
-                        }
-                    } catch (parseError) {
-                        Utils.safeError('❌ خطأ في تحليل بيانات السجل من localStorage:', parseError);
-                    }
+            // 2. استعادة سجل التصاريح (ptwRegistry) ودمج المصادر المتاحة
+            let savedReg = [];
+            const savedRegistryData = localStorage.getItem('hse_ptw_registry');
+            if (savedRegistryData) {
+                try {
+                    const parsedReg = JSON.parse(savedRegistryData);
+                    if (Array.isArray(parsedReg)) savedReg = parsedReg;
+                } catch (parseError) {
+                    Utils.safeError('❌ خطأ في تحليل بيانات السجل من localStorage:', parseError);
                 }
             }
 
-            if (!registryLoaded && !Array.isArray(this.registryData)) {
+            const appReg = Array.isArray(AppState.appData.ptwRegistry) ? AppState.appData.ptwRegistry : [];
+            const mergedReg = this._mergeRegistryLists(appReg, savedReg);
+            if (mergedReg.length > 0) {
+                this.setPtwRegistryState(mergedReg, 'initRegistry.merged');
+                Utils.safeLog(`✅ تم استعادة ودمج ${this.registryData.length} سجل في PTWRegistry`);
+            } else if (!Array.isArray(this.registryData)) {
                 this.registryData = [];
                 AppState.appData.ptwRegistry = [];
             }
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل بيانات السجل:', error);
-            this.registryData = [];
+            if (!Array.isArray(this.registryData)) this.registryData = [];
             if (!AppState.appData) AppState.appData = {};
-            AppState.appData.ptwRegistry = [];
+            if (!Array.isArray(AppState.appData.ptwRegistry)) AppState.appData.ptwRegistry = [];
         }
     },
 
@@ -2619,8 +2697,12 @@ const PTW = {
             });
 
             if (result && result.success && Array.isArray(result.data)) {
-                // تحديث البيانات المحلية بما في Backend
-                AppState.appData.ptw = result.data;
+                if (result.data.length > 0) {
+                    const currentPtw = Array.isArray(AppState.appData.ptw) ? AppState.appData.ptw : [];
+                    const mergedPtw = this._mergePermitLists(currentPtw, result.data);
+                    AppState.appData.ptw = mergedPtw;
+                    try { localStorage.setItem('hse_ptw_list', Utils.safeStringify(mergedPtw)); } catch (_) {}
+                }
 
                 // حفظ محلياً
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
@@ -2669,8 +2751,11 @@ const PTW = {
                 });
 
                 if (result && result.success && Array.isArray(result.data)) {
-                    // تحديث الحالة بالبيانات الواردة فقط بعد نجاح الطلب
-                    this.setPtwRegistryState(result.data, 'backend.PTWRegistry.readFromSheet');
+                    if (result.data.length > 0) {
+                        const currentReg = Array.isArray(this.registryData) ? this.registryData : [];
+                        const mergedReg = this._mergeRegistryLists(currentReg, result.data);
+                        this.setPtwRegistryState(mergedReg, 'backend.PTWRegistry.readFromSheet');
+                    }
                     if (AppState.debugMode) {
                         Utils.safeLog(`✅ تم تحميل ${this.registryData.length} سجل من Backend`);
                     }
@@ -2809,12 +2894,16 @@ const PTW = {
                     const registryData = result.data['PTWRegistry'];
 
                     if (Array.isArray(ptwData) && ptwData.length > 0) {
-                        AppState.appData.ptw = ptwData;
-                        try { localStorage.setItem('hse_ptw_list', Utils.safeStringify(ptwData)); } catch (_) {}
+                        const currentPtw = Array.isArray(AppState.appData.ptw) ? AppState.appData.ptw : [];
+                        const mergedPtw = this._mergePermitLists(currentPtw, ptwData);
+                        AppState.appData.ptw = mergedPtw;
+                        try { localStorage.setItem('hse_ptw_list', Utils.safeStringify(mergedPtw)); } catch (_) {}
                     }
 
-                    if (Array.isArray(registryData)) {
-                        this.setPtwRegistryState(registryData, 'backend.PTWRegistry.batchReadSheets');
+                    if (Array.isArray(registryData) && registryData.length > 0) {
+                        const currentReg = Array.isArray(this.registryData) ? this.registryData : [];
+                        const mergedReg = this._mergeRegistryLists(currentReg, registryData);
+                        this.setPtwRegistryState(mergedReg, 'backend.PTWRegistry.batchReadSheets');
                     }
 
                     if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
@@ -16161,6 +16250,7 @@ const PTW = {
                 AppState.appData.ptw.push(formData);
                 this.notifyPermitCreated(formData);
             }
+            try { localStorage.setItem('hse_ptw_list', Utils.safeStringify(AppState.appData.ptw)); } catch (_) {}
 
             // التأكد من حفظ بيانات السجل في AppState قبل حفظ DataManager
             this.setPtwRegistryState(this.registryData, 'handleSubmit.preBackground');
