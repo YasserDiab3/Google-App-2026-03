@@ -585,10 +585,18 @@ const DataManager = {
                         if (Array.isArray(parsedPtw) && parsedPtw.length > 0) {
                             const currentPtw = Array.isArray(AppState.appData.ptw) ? AppState.appData.ptw : [];
                             const ptwMap = new Map();
+                            let ptwCounter = 0;
                             parsedPtw.concat(currentPtw).forEach(item => {
                                 if (item && typeof item === 'object') {
-                                    const key = String(item.id || item.permitId || item.paperPermitNumber || '').trim();
-                                    if (key) ptwMap.set(key, item);
+                                    const key = String(item.id || item.permitId || item.paperPermitNumber || item.permitNumber || `ptw_fallback_${ptwCounter++}`).trim();
+                                    if (ptwMap.has(key)) {
+                                        const existing = ptwMap.get(key);
+                                        const existingTime = existing?.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+                                        const itemTime = item?.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+                                        if (itemTime >= existingTime) ptwMap.set(key, { ...existing, ...item });
+                                    } else {
+                                        ptwMap.set(key, item);
+                                    }
                                 }
                             });
                             AppState.appData.ptw = Array.from(ptwMap.values());
@@ -602,10 +610,18 @@ const DataManager = {
                         if (Array.isArray(parsedReg) && parsedReg.length > 0) {
                             const currentReg = Array.isArray(AppState.appData.ptwRegistry) ? AppState.appData.ptwRegistry : [];
                             const regMap = new Map();
+                            let regCounter = 0;
                             parsedReg.concat(currentReg).forEach(item => {
                                 if (item && typeof item === 'object') {
-                                    const key = String(item.id || item.permitId || item.paperPermitNumber || item.sequentialNumber || '').trim();
-                                    if (key) regMap.set(key, item);
+                                    const key = String(item.id || item.permitId || item.paperPermitNumber || item.sequentialNumber || `reg_fallback_${regCounter++}`).trim();
+                                    if (regMap.has(key)) {
+                                        const existing = regMap.get(key);
+                                        const existingTime = existing?.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+                                        const itemTime = item?.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+                                        if (itemTime >= existingTime) regMap.set(key, { ...existing, ...item });
+                                    } else {
+                                        regMap.set(key, item);
+                                    }
                                 }
                             });
                             AppState.appData.ptwRegistry = Array.from(regMap.values());
