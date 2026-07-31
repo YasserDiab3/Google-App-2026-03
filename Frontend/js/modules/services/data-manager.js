@@ -217,7 +217,7 @@ const DataManager = {
         const heavyKeys = [
             'training', 'trainingSessions', 'trainingCertificates', 'trainingAttendance',
             'contractorTrainings', 'violations', 'blacklistRegister', 'incidents',
-            'dailyObservations', 'dailySafetyCheckList', 'ptwRegistry', 'trainingAnalysisData',
+            'dailyObservations', 'dailySafetyCheckList', 'trainingAnalysisData',
             'contractorEvaluations', 'contractorApprovalRequests', 'contractorEvaluationApprovalRequests', 'contractorDeletionRequests',
             'annualTrainingPlans', 'nearmiss', 'inspections', 'chemicalInventory',
             'clinicVisits', 'clinicMedications', 'clinicInventory', 'clinicInjuries', 'clinicSickLeave', 'clinicStaff', 'clinicStaffAttendance', 'clinicStaffTimeOffRequests'

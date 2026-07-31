@@ -1231,19 +1231,44 @@ const PTW = {
     /**
      * حفظ وتأكيد وجود بيانات التصاريح والسجل محلياً 100% بدون فقدان
      */
+    /**
+     * حفظ آمن في localStorage مع إعادة محاولة عند QuotaExceeded
+     */
+    _safeLocalStorageSet(key, value) {
+        try {
+            localStorage.setItem(key, value);
+            return true;
+        } catch (e) {
+            if (e.name === 'QuotaExceededError' || e.code === 22 || (e.message && e.message.includes('quota'))) {
+                // تحرير مساحة بمسح كاشات غير حرجة ثم إعادة المحاولة
+                try {
+                    localStorage.removeItem('hse_pending_sync_queue');
+                    localStorage.removeItem('violations_last_sync');
+                    localStorage.removeItem('hse_sync_meta');
+                    localStorage.setItem(key, value);
+                    Utils.safeLog('✅ نجح حفظ ' + key + ' بعد تحرير مساحة localStorage');
+                    return true;
+                } catch (retryErr) {
+                    Utils.safeWarn('⚠️ فشل حفظ ' + key + ' حتى بعد تحرير مساحة:', retryErr);
+                    return false;
+                }
+            }
+            Utils.safeWarn('⚠️ فشل حفظ ' + key + ':', e);
+            return false;
+        }
+    },
+
     persistPtwLocalState() {
         try {
             if (Array.isArray(AppState?.appData?.ptw) && (AppState.appData.ptw.length > 0 || !localStorage.getItem('hse_ptw_list'))) {
-                localStorage.setItem('hse_ptw_list', Utils.safeStringify(AppState.appData.ptw));
+                this._safeLocalStorageSet('hse_ptw_list', Utils.safeStringify(AppState.appData.ptw));
             }
             if (Array.isArray(this.registryData) && (this.registryData.length > 0 || !localStorage.getItem('hse_ptw_registry'))) {
-                localStorage.setItem('hse_ptw_registry', Utils.safeStringify(this.registryData));
+                this._safeLocalStorageSet('hse_ptw_registry', Utils.safeStringify(this.registryData));
             } else if (Array.isArray(AppState?.appData?.ptwRegistry) && (AppState.appData.ptwRegistry.length > 0 || !localStorage.getItem('hse_ptw_registry'))) {
-                localStorage.setItem('hse_ptw_registry', Utils.safeStringify(AppState.appData.ptwRegistry));
+                this._safeLocalStorageSet('hse_ptw_registry', Utils.safeStringify(AppState.appData.ptwRegistry));
             }
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
-            }
+            // ✅ لا نستدعي DataManager.save() — المفاتيح المخصصة كافية ولا نريد بتر البيانات في hse_app_data
         } catch (e) {
             Utils.safeWarn('⚠️ فشل حفظ كاش PTW المحلي:', e);
         }
@@ -1864,7 +1889,7 @@ const PTW = {
         AppState.appData.ptwRegistry = [...sanitized];
         try {
             if (sanitized.length > 0) {
-                localStorage.setItem('hse_ptw_registry', Utils.safeStringify(sanitized));
+                this._safeLocalStorageSet('hse_ptw_registry', Utils.safeStringify(sanitized));
             }
         } catch (_) {}
         return sanitized;
@@ -2761,7 +2786,7 @@ const PTW = {
                     const currentPtw = Array.isArray(AppState.appData.ptw) ? AppState.appData.ptw : [];
                     const mergedPtw = this._mergePermitLists(currentPtw, result.data);
                     AppState.appData.ptw = mergedPtw;
-                    try { localStorage.setItem('hse_ptw_list', Utils.safeStringify(mergedPtw)); } catch (_) {}
+                    try { this._safeLocalStorageSet('hse_ptw_list', Utils.safeStringify(mergedPtw)); } catch (_) {}
                 }
 
                 // حفظ محلياً
@@ -2957,7 +2982,7 @@ const PTW = {
                         const currentPtw = Array.isArray(AppState.appData.ptw) ? AppState.appData.ptw : [];
                         const mergedPtw = this._mergePermitLists(currentPtw, ptwData);
                         AppState.appData.ptw = mergedPtw;
-                        try { localStorage.setItem('hse_ptw_list', Utils.safeStringify(mergedPtw)); } catch (_) {}
+                        try { this._safeLocalStorageSet('hse_ptw_list', Utils.safeStringify(mergedPtw)); } catch (_) {}
                     }
 
                     if (Array.isArray(registryData) && registryData.length > 0) {
@@ -3493,20 +3518,18 @@ const PTW = {
             this.formSettingsEventsBound = false;
             this.setupEventListeners();
             
-            // عرض فوري — يعرض HTML ويجهز البيانات المحلية فقط
-            requestAnimationFrame(() => {
-                this._mountPermitsListContent(t);
-                this._mountRegistryShell();
-                if (initialTab !== 'permits') {
-                    this.switchTab(initialTab);
-                }
-                const mountMap = () => this._mountMapShell();
-                if (typeof requestIdleCallback === 'function') {
-                    requestIdleCallback(mountMap, { timeout: 1200 });
-                } else {
-                    setTimeout(mountMap, 50);
-                }
-            });
+            // ✅ عرض فوري متزامن (0ms) — بدون requestAnimationFrame لضمان ظهور البيانات فوراً
+            this._mountPermitsListContent(t);
+            this._mountRegistryShell();
+            if (initialTab !== 'permits') {
+                this.switchTab(initialTab);
+            }
+            const mountMap = () => this._mountMapShell();
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(mountMap, { timeout: 1200 });
+            } else {
+                setTimeout(mountMap, 50);
+            }
             // تحميل ثانوي — مزامنة الخلفية فوراً دون تأخير (50ms)
             this._deferredSyncTimer = setTimeout(() => {
                 this._startPtwBackendSync();
@@ -16310,7 +16333,7 @@ const PTW = {
                 AppState.appData.ptw.push(formData);
                 this.notifyPermitCreated(formData);
             }
-            try { localStorage.setItem('hse_ptw_list', Utils.safeStringify(AppState.appData.ptw)); } catch (_) {}
+            try { this._safeLocalStorageSet('hse_ptw_list', Utils.safeStringify(AppState.appData.ptw)); } catch (_) {}
 
             // التأكد من حفظ بيانات السجل في AppState قبل حفظ DataManager
             this.setPtwRegistryState(this.registryData, 'handleSubmit.preBackground');
