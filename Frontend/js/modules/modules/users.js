@@ -409,6 +409,22 @@ const Users = {
         }
     },
 
+    async showList() {
+        if (typeof Loading !== 'undefined' && Loading.hide) {
+            Loading.hide();
+        }
+        this.currentView = 'list';
+        const overlay = document.getElementById('user-form-modal-overlay');
+        if (overlay) overlay.remove();
+
+        const container = document.getElementById('users-table-container');
+        if (container) {
+            await this.loadUsersList();
+        } else if (document.getElementById('users-section')) {
+            await this.load();
+        }
+    },
+
     async renderList() {
         return `
             <div class="content-card">

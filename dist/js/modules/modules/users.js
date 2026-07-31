@@ -156,7 +156,7 @@ const Users={currentView:"list",currentEditId:null,autoRefreshInterval:null,refr
                             </div>
                         </div>
                     </div>
-                `,this.applyModuleI18n(e))}},async renderList(){return`
+                `,this.applyModuleI18n(e))}},async showList(){typeof Loading<"u"&&Loading.hide&&Loading.hide(),this.currentView="list";const e=document.getElementById("user-form-modal-overlay");e&&e.remove(),document.getElementById("users-table-container")?await this.loadUsersList():document.getElementById("users-section")&&await this.load()},async renderList(){return`
             <div class="content-card">
                 <div class="card-header">
                     <div class="flex items-center justify-between">
