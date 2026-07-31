@@ -158,6 +158,19 @@ const Clinic = {
                 'empty.noResults': 'لا توجد نتائج مطابقة لبحثك.',
                 'empty.noEmployeeVisits': 'لا توجد زيارات موظفين مسجلة.',
                 'empty.noContractorVisits': 'لا توجد زيارات مقاولين مسجلة.',
+
+                // Skeletons / loading
+                'skeleton.loading': 'جاري التحميل...',
+                'skeleton.openingVisits': 'جاري فتح سجل التردد...',
+                'skeleton.openingAttendance': 'جاري فتح الحضور...',
+                'skeleton.openingMedications': 'جاري فتح الأدوية...',
+                'skeleton.openingSickLeave': 'جاري فتح الإجازات المرضية...',
+                'skeleton.openingDispensed': 'جاري فتح سجل الأدوية المنصرفة...',
+                'skeleton.openingInjuries': 'جاري فتح الإصابات...',
+                'skeleton.openingSupply': 'جاري فتح إرسال طلب احتياجات...',
+                'skeleton.openingApprovals': 'جاري فتح طلبات الموافقة...',
+                'skeleton.preparing': 'جاري التحضير...',
+                'skeleton.loadingData': 'جاري تحميل البيانات...',
                 
                 // Time
                 'time.lessThanMinute': 'أقل من دقيقة',
@@ -216,6 +229,19 @@ const Clinic = {
                 'empty.noResults': 'No results match your search.',
                 'empty.noEmployeeVisits': 'No employee visits recorded.',
                 'empty.noContractorVisits': 'No contractor visits recorded.',
+
+                // Skeletons / loading
+                'skeleton.loading': 'Loading...',
+                'skeleton.openingVisits': 'Opening attendance log...',
+                'skeleton.openingAttendance': 'Opening attendance...',
+                'skeleton.openingMedications': 'Opening medications...',
+                'skeleton.openingSickLeave': 'Opening sick leave...',
+                'skeleton.openingDispensed': 'Opening dispensed medications log...',
+                'skeleton.openingInjuries': 'Opening injuries...',
+                'skeleton.openingSupply': 'Opening supply request...',
+                'skeleton.openingApprovals': 'Opening approval requests...',
+                'skeleton.preparing': 'Preparing...',
+                'skeleton.loadingData': 'Loading data...',
                 
                 // Time
                 'time.lessThanMinute': 'Less than a minute',
@@ -226,7 +252,7 @@ const Clinic = {
         };
 
         return {
-            t: (key) => translations[lang]?.[key] || key,
+            t: (key, fallback) => translations[lang]?.[key] || (fallback != null ? String(fallback) : key),
             isRTL,
             lang
         };
@@ -2995,7 +3021,7 @@ const Clinic = {
             const current = (panel.innerHTML || '').trim();
             // إذا كان هناك محتوى بالفعل لا نمسحه لتجنب وميض
             if (current) return;
-            const safeLabel = Utils.escapeHTML(label || 'جاري التحميل...');
+            const safeLabel = Utils.escapeHTML(label || this.getTranslations().t('skeleton.loading', 'جاري التحميل...'));
             panel.innerHTML = `
                 <div class="content-card" style="margin:14px;">
                     <div class="card-body" style="display:flex;align-items:center;justify-content:center;min-height:210px;gap:12px;">
@@ -3035,17 +3061,18 @@ const Clinic = {
             }
 
             const panel = document.querySelector(`.clinic-tab-panel[data-tab-panel="${tabKey}"]`);
+            const { t } = this.getTranslations();
             const labelMap = {
-                visits: 'جاري فتح سجل التردد...',
-                attendance: 'جاري فتح الحضور...',
-                medications: 'جاري فتح الأدوية...',
-                sickLeave: 'جاري فتح الإجازات المرضية...',
-                'dispensed-medications': 'جاري فتح سجل الأدوية المنصرفة...',
-                injuries: 'جاري فتح الإصابات...',
-                'supply-request': 'جاري فتح إرسال طلب احتياجات...',
-                approvals: 'جاري فتح طلبات الموافقة...'
+                visits: t('skeleton.openingVisits', 'جاري فتح سجل التردد...'),
+                attendance: t('skeleton.openingAttendance', 'جاري فتح الحضور...'),
+                medications: t('skeleton.openingMedications', 'جاري فتح الأدوية...'),
+                sickLeave: t('skeleton.openingSickLeave', 'جاري فتح الإجازات المرضية...'),
+                'dispensed-medications': t('skeleton.openingDispensed', 'جاري فتح سجل الأدوية المنصرفة...'),
+                injuries: t('skeleton.openingInjuries', 'جاري فتح الإصابات...'),
+                'supply-request': t('skeleton.openingSupply', 'جاري فتح إرسال طلب احتياجات...'),
+                approvals: t('skeleton.openingApprovals', 'جاري فتح طلبات الموافقة...')
             };
-            this._renderTabSkeleton(panel, labelMap[tabKey] || 'جاري التحميل...');
+            this._renderTabSkeleton(panel, labelMap[tabKey] || t('skeleton.loading', 'جاري التحميل...'));
 
             const run = () => {
                 // تجاهل إذا تغيّر التبويب/تم جدولة أحدث
@@ -9318,7 +9345,7 @@ const Clinic = {
             // التحقق من وجود AppState
             if (typeof AppState === 'undefined' || !AppState.appData) {
                 Utils.safeWarn('⚠️ AppState غير متوفر في renderVisitsTabContent');
-                panel.innerHTML = '<div class="empty-state"><p class="text-gray-500">جاري تحميل البيانات...</p></div>';
+                panel.innerHTML = '<div class="empty-state"><p class="text-gray-500">' + this.getTranslations().t('skeleton.loadingData', 'جاري تحميل البيانات...') + '</p></div>';
                 return;
             }
 
@@ -14732,7 +14759,7 @@ const Clinic = {
         }
 
         // ✅ عرض فوري بالبيانات المحلية إن وجدت، ثم تحديث من backend عند الحاجة
-        panel.innerHTML = '<div class="text-center py-8"><div style="width: 300px; margin: 0 auto 16px;"><div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;"><div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div></div></div><p class="mt-2">جاري التحضير...</p></div>';
+        panel.innerHTML = '<div class="text-center py-8"><div style="width: 300px; margin: 0 auto 16px;"><div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;"><div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div></div></div><p class="mt-2">' + this.getTranslations().t('skeleton.preparing', 'جاري التحضير...') + '</p></div>';
 
         try {
             const lastSync = (() => { try { return localStorage.getItem('clinic_approvals_last_sync'); } catch (e) { return null; } })();
@@ -16469,7 +16496,7 @@ const Clinic = {
     },
 
     _renderAttendanceTableLoadingRow(colspan, label) {
-        const safeLabel = Utils.escapeHTML(label || 'جاري تحميل البيانات...');
+        const safeLabel = Utils.escapeHTML(label || this.getTranslations().t('skeleton.loadingData', 'جاري تحميل البيانات...'));
         return `<tr><td colspan="${colspan}" class="text-center text-gray-500 py-10">
             <i class="fas fa-spinner fa-spin ml-2" style="color:#0d9488;"></i>${safeLabel}
         </td></tr>`;
@@ -18822,7 +18849,7 @@ const Clinic = {
 
         const ad = AppState.appData;
         if (!ad) {
-            section.innerHTML = '<div class="content-card"><div class="card-body"><p class="text-gray-600">جاري تحميل البيانات...</p></div></div>';
+            section.innerHTML = '<div class="content-card"><div class="card-body"><p class="text-gray-600">' + this.getTranslations().t('skeleton.loadingData', 'جاري تحميل البيانات...') + '</p></div></div>';
             return;
         }
 
@@ -19058,7 +19085,7 @@ const Clinic = {
         
         if (needsReload && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
             // عرض رسالة تحميل
-            panel.innerHTML = '<div class="text-center py-8 text-gray-500"><div style="width: 300px; margin: 0 auto 16px;"><div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;"><div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div></div></div><p>جاري تحميل البيانات...</p></div>';
+            panel.innerHTML = '<div class="text-center py-8 text-gray-500"><div style="width: 300px; margin: 0 auto 16px;"><div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;"><div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div></div></div><p>' + this.getTranslations().t('skeleton.loadingData', 'جاري تحميل البيانات...') + '</p></div>';
             
             try {
                 // تحميل البيانات من Backend

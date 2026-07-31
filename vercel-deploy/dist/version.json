@@ -1,13 +1,13 @@
 {
-  "version": "1.0.711",
+  "version": "1.0.713",
   "highlights": {
     "ar": [
-      "حماية ختم مزامنة العيادة والمفاتيح الحرجة من المسح عند امتلاء التخزين.",
-      "توسيع اختبارات Playwright smoke لبوابات الدخول والخدمات وDATA-02."
+      "ترجمة واجهات العيادة ومراقبة التصرفات الظاهرة عند اللغة الإنجليزية.",
+      "نماذج وskeletons ورسائل التحميل لم تعد عربية ثابتة تحت EN."
     ],
     "en": [
-      "Protect clinic sync TTL and critical keys from wipe on storage quota pressure.",
-      "Expanded Playwright smoke for login gate, client services, and DATA-02."
+      "Clinic and Behavior Monitoring visible UI strings translate in English mode.",
+      "Forms, skeletons, and loading messages are no longer hardcoded Arabic under EN."
     ]
   }
 }

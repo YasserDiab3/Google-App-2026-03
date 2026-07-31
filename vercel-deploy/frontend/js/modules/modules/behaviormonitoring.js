@@ -218,7 +218,7 @@ const BehaviorMonitoring = {
             document.querySelectorAll('select[id$="-factory"]').forEach(function(el) {
                 if (el.tagName !== 'SELECT') return;
                 var v = el.value;
-                el.innerHTML = '<option value="">اختر المصنع</option>' + sites.map(function(s) { return '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>'; }).join('');
+                el.innerHTML = '<option value="">' + this.t('module.behavior.selectFactory', 'اختر المصنع') + '</option>' + sites.map(function(s) { return '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>'; }).join('');
                 if (v) el.value = v;
             });
         } catch (e) { if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ BehaviorMonitoring.refreshSiteDropdowns:', e); }
@@ -267,8 +267,8 @@ const BehaviorMonitoring = {
                         <div class="card-body">
                             <div class="empty-state">
                                 <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-2">تعذر تحميل مراقبة السلوكيات</p>
-                                <p class="text-sm text-gray-400">AppState غير متوفر حالياً. جرّب تحديث الصفحة.</p>
+                                <p class="text-gray-500 mb-2">${this.t('module.behavior.loadFailed', 'تعذر تحميل مراقبة السلوكيات')}</p>
+                                <p class="text-sm text-gray-400">${this.t('module.behavior.appStateMissing', 'AppState غير متوفر حالياً. جرّب تحديث الصفحة.')}</p>
                                 <button onclick="location.reload()" class="btn-primary mt-4">
                                     <i class="fas fa-redo ml-2"></i>
                                     تحديث الصفحة
@@ -401,8 +401,8 @@ const BehaviorMonitoring = {
                         <div class="card-body">
                             <div class="empty-state">
                                 <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-2">حدث خطأ أثناء تحميل البيانات</p>
-                                <p class="text-sm text-gray-400 mb-4">${error && error.message ? Utils.escapeHTML(error.message) : 'خطأ غير معروف'}</p>
+                                <p class="text-gray-500 mb-2">${this.t('module.behavior.dataLoadError', 'حدث خطأ أثناء تحميل البيانات')}</p>
+                                <p class="text-sm text-gray-400 mb-4">${error && error.message ? Utils.escapeHTML(error.message) : this.t('common.unknownError', 'خطأ غير معروف')}</p>
                                 <button onclick="BehaviorMonitoring.load()" class="btn-primary">
                                     <i class="fas fa-redo ml-2"></i>
                                     إعادة المحاولة
@@ -864,7 +864,7 @@ const BehaviorMonitoring = {
                                                         <td>${this.getBehaviorDate(b) ? this.formatBehaviorDateDisplay(b) : '—'}</td>
                                                         <td><span class="badge ${this.getRatingBadgeClass(b.rating)}">${Utils.escapeHTML(b.rating || '—')}</span></td>
                                                         <td class="text-center">
-                                                            <button onclick="BehaviorMonitoring.viewBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-primary" title="عرض">
+                                                            <button onclick="BehaviorMonitoring.viewBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-primary" title="${this.t('common.view', 'عرض')}">
                                                                 <i class="fas fa-eye"></i>
                                                             </button>
                                                         </td>
@@ -972,13 +972,13 @@ const BehaviorMonitoring = {
             if (!v) return;
             chips.push(`<span class="behavior-filter-chip"><strong>${Utils.escapeHTML(label)}:</strong> ${Utils.escapeHTML(v)}</span>`);
         };
-        pushChip('بحث', filters.search);
+        pushChip(this.t('module.common.search', 'البحث'), filters.search);
         pushChip('النوع', filters.behaviorType);
         pushChip('التقييم', filters.rating);
         pushChip('من', filters.dateFrom);
         pushChip('إلى', filters.dateTo);
         if (!chips.length) {
-            return `<span class="behavior-filter-chip behavior-filter-chip-muted">لا توجد فلاتر مفعلة</span>`;
+            return `<span class="behavior-filter-chip behavior-filter-chip-muted">${this.t('module.behavior.noActiveFilters', 'لا توجد فلاتر مفعلة')}</span>`;
         }
         return chips.join('');
     },
@@ -1024,13 +1024,13 @@ const BehaviorMonitoring = {
                                 <td><span class="badge ${this.getRatingBadgeClass(b.rating)}">${Utils.escapeHTML(b.rating || '—')}</span></td>
                                 <td class="text-center bhm-log-table-actions">
                                     <div class="flex items-center justify-center gap-2 flex-wrap">
-                                        <button type="button" onclick="BehaviorMonitoring.viewBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-primary bhm-action-icon" title="عرض">
+                                        <button type="button" onclick="BehaviorMonitoring.viewBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-primary bhm-action-icon" title="${this.t('common.view', 'عرض')}">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        <button type="button" onclick="BehaviorMonitoring.exportPDF(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-success bhm-action-icon" title="تصدير PDF">
+                                        <button type="button" onclick="BehaviorMonitoring.exportPDF(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-success bhm-action-icon" title="${this.t('common.exportPDF', 'تصدير PDF')}">
                                             <i class="fas fa-file-pdf"></i>
                                         </button>
-                                        <button type="button" onclick="BehaviorMonitoring.printReport(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-info bhm-action-icon" title="طباعة">
+                                        <button type="button" onclick="BehaviorMonitoring.printReport(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-info bhm-action-icon" title="${this.t('common.print', 'طباعة')}">
                                             <i class="fas fa-print"></i>
                                         </button>
                                     </div>
@@ -1112,10 +1112,10 @@ const BehaviorMonitoring = {
             <div id="behavior-form-container">
                 <div class="content-card behavior-form-card">
                     <div class="card-header">
-                        <h2 class="card-title"><i class="fas fa-pen-to-square ml-2"></i>تسجيل تصرف</h2>
+                        <h2 class="card-title"><i class="fas fa-pen-to-square ml-2"></i>${this.t('module.behavior.recordBehavior', 'تسجيل تصرف')}</h2>
                     </div>
                     <div class="card-body">
-                        ${isSkeleton ? `<div class="empty-state"><p class="text-gray-500">جاري التحميل...</p></div>` : this.getBehaviorFormHTML(null, uid, { inline: true })}
+                        ${isSkeleton ? `<div class="empty-state"><p class="text-gray-500">${this.t('common.loading', 'جاري التحميل...')}</p></div>` : this.getBehaviorFormHTML(null, uid, { inline: true })}
                     </div>
                 </div>
             </div>
@@ -1300,34 +1300,34 @@ const BehaviorMonitoring = {
                         <div class="bhm-section-head" id="${uid}-sec-emp">
                             <span class="bhm-section-icon" aria-hidden="true"><i class="fas fa-id-card"></i></span>
                             <div>
-                                <h4 class="bhm-section-title">بيانات الموظف</h4>
-                                <p class="bhm-section-hint">الكود والاسم والقسم والوظيفة</p>
+                                <h4 class="bhm-section-title">${this.t('module.behavior.form.employeeSection', 'بيانات الموظف')}</h4>
+                                <p class="bhm-section-hint">${this.t('module.behavior.form.employeeHint', 'الكود والاسم والقسم والوظيفة')}</p>
                             </div>
                         </div>
                         <div class="bhm-section-body">
                             <div class="bhm-grid bhm-grid-2">
                                 <div class="bhm-field">
-                                    <label for="${ids.employeeCode}" class="bhm-label">الكود الوظيفي <span class="bhm-req">*</span></label>
+                                    <label for="${ids.employeeCode}" class="bhm-label">${this.t('module.behavior.form.employeeCode', 'الكود الوظيفي')} <span class="bhm-req">*</span></label>
                                     <input type="text" id="${ids.employeeCode}" required class="form-input bhm-input"
-                                        value="${Utils.escapeHTML(data?.employeeCode || data?.employeeNumber || '')}" placeholder="أدخل الكود الوظيفي">
+                                        value="${Utils.escapeHTML(data?.employeeCode || data?.employeeNumber || '')}" placeholder="${this.t('module.behavior.form.employeeCodePh', 'أدخل الكود الوظيفي')}">
                                 </div>
                                 <div class="bhm-field">
-                                    <label for="${ids.employeeName}" class="bhm-label">اسم الموظف <span class="bhm-req">*</span></label>
+                                    <label for="${ids.employeeName}" class="bhm-label">${this.t('module.behavior.employeeName', 'اسم الموظف')} <span class="bhm-req">*</span></label>
                                     <div class="relative">
                                         <input type="text" id="${ids.employeeName}" required class="form-input bhm-input"
-                                            value="${Utils.escapeHTML(data?.employeeName || '')}" placeholder="ابحث بالاسم أو الكود" autocomplete="off">
+                                            value="${Utils.escapeHTML(data?.employeeName || '')}" placeholder="${this.t('module.behavior.form.employeeNamePh', 'ابحث بالاسم أو الكود')}" autocomplete="off">
                                         <div id="${ids.dropdown}" class="hse-lookup-dropdown absolute z-50 hidden w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"></div>
                                     </div>
                                 </div>
                                 <div class="bhm-field">
-                                    <label for="${ids.department}" class="bhm-label">القسم <span class="bhm-req">*</span></label>
+                                    <label for="${ids.department}" class="bhm-label">${this.t('module.behavior.form.department', 'القسم')} <span class="bhm-req">*</span></label>
                                     <input type="text" id="${ids.department}" required class="form-input bhm-input"
-                                        value="${Utils.escapeHTML(data?.department || data?.employeeDepartment || '')}" placeholder="يُعبَّأ تلقائياً من بيانات الموظف">
+                                        value="${Utils.escapeHTML(data?.department || data?.employeeDepartment || '')}" placeholder="${this.t('module.behavior.form.autoFillPh', 'يُعبَّأ تلقائياً من بيانات الموظف')}">
                                 </div>
                                 <div class="bhm-field">
-                                    <label for="${ids.job}" class="bhm-label">الوظيفة <span class="bhm-req">*</span></label>
+                                    <label for="${ids.job}" class="bhm-label">${this.t('module.behavior.form.job', 'الوظيفة')} <span class="bhm-req">*</span></label>
                                     <input type="text" id="${ids.job}" required class="form-input bhm-input"
-                                        value="${Utils.escapeHTML(data?.job || data?.position || data?.employeeJob || '')}" placeholder="يُعبَّأ تلقائياً من بيانات الموظف">
+                                        value="${Utils.escapeHTML(data?.job || data?.position || data?.employeeJob || '')}" placeholder="${this.t('module.behavior.form.autoFillPh', 'يُعبَّأ تلقائياً من بيانات الموظف')}">
                                 </div>
                             </div>
                         </div>
@@ -1337,35 +1337,35 @@ const BehaviorMonitoring = {
                         <div class="bhm-section-head" id="${uid}-sec-act">
                             <span class="bhm-section-icon bhm-section-icon--violet" aria-hidden="true"><i class="fas fa-clipboard-list"></i></span>
                             <div>
-                                <h4 class="bhm-section-title">تفاصيل التصرف</h4>
-                                <p class="bhm-section-hint">النوع، التاريخ، والتقييم</p>
+                                <h4 class="bhm-section-title">${this.t('module.behavior.form.detailsSection', 'تفاصيل التصرف')}</h4>
+                                <p class="bhm-section-hint">${this.t('module.behavior.form.detailsHint', 'النوع، التاريخ، والتقييم')}</p>
                             </div>
                         </div>
                         <div class="bhm-section-body">
                             <div class="bhm-grid bhm-grid-3">
                                 <div class="bhm-field bhm-field-type">
                                     <div class="bhm-label-row">
-                                        <label for="${ids.behaviorType}" class="bhm-label mb-0">نوع التصرف <span class="bhm-req">*</span></label>
+                                        <label for="${ids.behaviorType}" class="bhm-label mb-0">${this.t('module.behavior.behaviorType', 'نوع التصرف')} <span class="bhm-req">*</span></label>
                                         <span class="badge ${this.getBehaviorTypeBadgeClass(data?.behaviorType)} bhm-type-chip" id="${uid}-type-badge">${Utils.escapeHTML(data?.behaviorType || '—')}</span>
                                     </div>
                                     <select id="${ids.behaviorType}" required class="form-input bhm-input mt-2">
-                                        <option value="">اختر النوع</option>
-                                        <option value="إيجابي" ${data?.behaviorType === 'إيجابي' ? 'selected' : ''}>إيجابي</option>
-                                        <option value="سلبي" ${data?.behaviorType === 'سلبي' ? 'selected' : ''}>سلبي</option>
+                                        <option value="">${this.t('module.behavior.selectType', 'اختر النوع')}</option>
+                                        <option value="إيجابي" ${data?.behaviorType === 'إيجابي' ? 'selected' : ''}>${this.t('module.behavior.positive', 'إيجابي')}</option>
+                                        <option value="سلبي" ${data?.behaviorType === 'سلبي' ? 'selected' : ''}>${this.t('module.behavior.negative', 'سلبي')}</option>
                                     </select>
                                 </div>
                                 <div class="bhm-field">
-                                    <label for="${ids.behaviorDate}" class="bhm-label">التاريخ <span class="bhm-req">*</span></label>
+                                    <label for="${ids.behaviorDate}" class="bhm-label">${this.t('module.behavior.date', 'التاريخ')} <span class="bhm-req">*</span></label>
                                     <input type="date" id="${ids.behaviorDate}" required class="form-input bhm-input" value="${dateValue}">
                                 </div>
                                 <div class="bhm-field">
-                                    <label for="${ids.behaviorRating}" class="bhm-label">التقييم <span class="bhm-req">*</span></label>
+                                    <label for="${ids.behaviorRating}" class="bhm-label">${this.t('module.behavior.rating', 'التقييم')} <span class="bhm-req">*</span></label>
                                     <select id="${ids.behaviorRating}" required class="form-input bhm-input">
-                                        <option value="">اختر التقييم</option>
-                                        <option value="ممتاز" ${data?.rating === 'ممتاز' ? 'selected' : ''}>ممتاز</option>
-                                        <option value="جيد" ${data?.rating === 'جيد' ? 'selected' : ''}>جيد</option>
-                                        <option value="مقبول" ${data?.rating === 'مقبول' ? 'selected' : ''}>مقبول</option>
-                                        <option value="ضعيف" ${data?.rating === 'ضعيف' ? 'selected' : ''}>ضعيف</option>
+                                        <option value="">${this.t('module.behavior.selectRating', 'اختر التقييم')}</option>
+                                        <option value="ممتاز" ${data?.rating === 'ممتاز' ? 'selected' : ''}>${this.t('module.behavior.excellent', 'ممتاز')}</option>
+                                        <option value="جيد" ${data?.rating === 'جيد' ? 'selected' : ''}>${this.t('module.behavior.good', 'جيد')}</option>
+                                        <option value="مقبول" ${data?.rating === 'مقبول' ? 'selected' : ''}>${this.t('module.behavior.acceptable', 'مقبول')}</option>
+                                        <option value="ضعيف" ${data?.rating === 'ضعيف' ? 'selected' : ''}>${this.t('module.behavior.poor', 'ضعيف')}</option>
                                     </select>
                                 </div>
                             </div>
@@ -1376,25 +1376,25 @@ const BehaviorMonitoring = {
                         <div class="bhm-section-head" id="${uid}-sec-loc">
                             <span class="bhm-section-icon bhm-section-icon--teal" aria-hidden="true"><i class="fas fa-map-marked-alt"></i></span>
                             <div>
-                                <h4 class="bhm-section-title">الموقع</h4>
-                                <p class="bhm-section-hint">المصنع والموقع الفرعي للملاحظة</p>
+                                <h4 class="bhm-section-title">${this.t('module.behavior.form.locationSection', 'الموقع')}</h4>
+                                <p class="bhm-section-hint">${this.t('module.behavior.form.locationHint', 'المصنع والموقع الفرعي للملاحظة')}</p>
                             </div>
                         </div>
                         <div class="bhm-section-body">
                             <div class="bhm-grid bhm-grid-2">
                                 <div class="bhm-field">
-                                    <label for="${ids.factory}" class="bhm-label"><i class="fas fa-industry ml-1 opacity-70"></i> المصنع <span class="bhm-req">*</span></label>
+                                    <label for="${ids.factory}" class="bhm-label"><i class="fas fa-industry ml-1 opacity-70"></i> ${this.t('module.behavior.factory', 'المصنع')} <span class="bhm-req">*</span></label>
                                     <select id="${ids.factory}" required class="form-input bhm-input">
-                                        <option value="">اختر المصنع</option>
+                                        <option value="">${this.t('module.behavior.selectFactory', 'اختر المصنع')}</option>
                                         ${sites.map(site => `
                                             <option value="${site.id}" ${(resolvedFactoryId === site.id || selectedFactory === site.name) ? 'selected' : ''}>${Utils.escapeHTML(site.name)}</option>
                                         `).join('')}
                                     </select>
                                 </div>
                                 <div class="bhm-field">
-                                    <label for="${ids.subLocation}" class="bhm-label"><i class="fas fa-map-marker-alt ml-1 opacity-70"></i> الموقع الفرعي <span class="bhm-req">*</span></label>
+                                    <label for="${ids.subLocation}" class="bhm-label"><i class="fas fa-map-marker-alt ml-1 opacity-70"></i> ${this.t('module.behavior.subLocation', 'الموقع الفرعي')} <span class="bhm-req">*</span></label>
                                     <select id="${ids.subLocation}" required class="form-input bhm-input">
-                                        <option value="">اختر الموقع الفرعي</option>
+                                        <option value="">${this.t('module.behavior.selectSubLocation', 'اختر الموقع الفرعي')}</option>
                                         ${places.map(place => `
                                             <option value="${place.id}" ${(resolvedSubId === place.id || selectedSub === place.name) ? 'selected' : ''}>${Utils.escapeHTML(place.name)}</option>
                                         `).join('')}
@@ -1408,23 +1408,23 @@ const BehaviorMonitoring = {
                         <div class="bhm-negative-head">
                             <span class="bhm-negative-icon" aria-hidden="true"><i class="fas fa-exclamation-triangle"></i></span>
                             <div>
-                                <h4 class="bhm-negative-title">إجراء تصحيحي (للتصرف السلبي)</h4>
-                                <p class="bhm-negative-sub">يظهر هذا القسم عند اختيار «سلبي» فقط</p>
+                                <h4 class="bhm-negative-title">${this.t('module.behavior.form.correctiveTitle', 'إجراء تصحيحي (للتصرف السلبي)')}</h4>
+                                <p class="bhm-negative-sub">${this.t('module.behavior.form.correctiveHint', 'يظهر هذا القسم عند اختيار تصرف سلبي فقط')}</p>
                             </div>
                         </div>
                         <div class="bhm-negative-body">
                             <div class="bhm-grid bhm-grid-2">
                                 <div class="bhm-field">
-                                    <label for="${ids.correctiveAction}" class="bhm-label">الإجراء التصحيحي <span class="bhm-req">*</span></label>
+                                    <label for="${ids.correctiveAction}" class="bhm-label">${this.t('module.behavior.form.correctiveAction', 'الإجراء التصحيحي')} <span class="bhm-req">*</span></label>
                                     <select id="${ids.correctiveAction}" class="form-input bhm-input" ${isNegative ? 'required' : ''}>
-                                        <option value="">اختر الإجراء</option>
+                                        <option value="">${this.t('module.behavior.selectAction', 'اختر الإجراء')}</option>
                                         ${this.NEGATIVE_ACTIONS.map(a => `
                                             <option value="${Utils.escapeHTML(a)}" ${data?.correctiveAction === a ? 'selected' : ''}>${Utils.escapeHTML(a)}</option>
                                         `).join('')}
                                     </select>
                                 </div>
                                 <div class="bhm-field">
-                                    <label for="${ids.correctiveActionDetails}" class="bhm-label">تفاصيل إضافية <span class="bhm-optional">(اختياري)</span></label>
+                                    <label for="${ids.correctiveActionDetails}" class="bhm-label">${this.t('module.behavior.form.extraDetails', 'تفاصيل إضافية')} <span class="bhm-optional">(${this.t('common.optional', 'اختياري')})</span></label>
                                     <input type="text" id="${ids.correctiveActionDetails}" class="form-input bhm-input"
                                         value="${Utils.escapeHTML(data?.correctiveActionDetails || '')}" placeholder="مثال: تدريب على SOP-01 / إنذار رقم…">
                                 </div>
@@ -1436,36 +1436,36 @@ const BehaviorMonitoring = {
                         <div class="bhm-section-head" id="${uid}-sec-desc">
                             <span class="bhm-section-icon bhm-section-icon--amber" aria-hidden="true"><i class="fas fa-align-right"></i></span>
                             <div>
-                                <h4 class="bhm-section-title">الوصف والمرفقات</h4>
-                                <p class="bhm-section-hint">وصف التصرف وصورة اختيارية</p>
+                                <h4 class="bhm-section-title">${this.t('module.behavior.form.descSection', 'الوصف والمرفقات')}</h4>
+                                <p class="bhm-section-hint">${this.t('module.behavior.form.descHint', 'وصف التصرف وصورة اختيارية')}</p>
                             </div>
                         </div>
                         <div class="bhm-section-body">
                             <div class="bhm-grid bhm-grid-media">
                                 <div class="bhm-field bhm-upload-wrap">
-                                    <label for="${ids.photoInput}" class="bhm-label"><i class="fas fa-image ml-1 opacity-70"></i> صورة <span class="bhm-optional">(غير إلزامي)</span></label>
+                                    <label for="${ids.photoInput}" class="bhm-label"><i class="fas fa-image ml-1 opacity-70"></i> ${this.t('module.behavior.form.photo', 'صورة')} <span class="bhm-optional">(${this.t('common.optional', 'اختياري')})</span></label>
                                     <div class="bhm-file-slot">
                                         <input type="file" id="${ids.photoInput}" accept="image/*" class="bhm-file-input">
-                                        <span class="bhm-file-hint">PNG أو JPG — حتى 2 ميجا</span>
+                                        <span class="bhm-file-hint">${this.t('module.behavior.form.photoHint', 'PNG أو JPG — حتى 2 ميجا')}</span>
                                     </div>
                                     <div id="${ids.photoPreview}" class="bhm-photo-preview mt-3 ${data?.photo ? '' : 'hidden'}">
                                         <img src="${Utils.escapeHTML(photoThumbSrc)}" alt="معاينة"${photoThumbProxyAttr} class="bhm-photo-thumb" id="${ids.photoImg}">
-                                        <button type="button" class="bhm-photo-clear" data-action="clear-photo">حذف الصورة</button>
+                                        <button type="button" class="bhm-photo-clear" data-action="clear-photo">${this.t('module.behavior.form.clearPhoto', 'حذف الصورة')}</button>
                                     </div>
                                 </div>
                                 <div class="bhm-field bhm-field-grow">
-                                    <label for="${ids.description}" class="bhm-label">الوصف <span class="bhm-req">*</span></label>
-                                    <textarea id="${ids.description}" required class="form-input bhm-input bhm-textarea" rows="5" placeholder="وصف التصرف والظروف…">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                    <label for="${ids.description}" class="bhm-label">${this.t('module.behavior.form.description', 'الوصف')} <span class="bhm-req">*</span></label>
+                                    <textarea id="${ids.description}" required class="form-input bhm-input bhm-textarea" rows="5" placeholder="${this.t('module.behavior.form.descriptionPh', 'وصف التصرف والظروف…')}">${Utils.escapeHTML(data?.description || '')}</textarea>
                                 </div>
                             </div>
                         </div>
                     </section>
 
                     <div class="bhm-form-footer">
-                        ${inline ? '' : '<button type="button" class="btn-secondary bhm-btn-cancel" data-action="cancel-form">إلغاء</button>'}
+                        ${inline ? '' : `<button type="button" class="btn-secondary bhm-btn-cancel" data-action="cancel-form">${this.t('common.cancel', 'إلغاء')}</button>`}
                         <button type="button" id="${ids.saveBtn}" class="btn-primary bhm-btn-save">
                             <i class="fas fa-save ml-2"></i>
-                            حفظ
+                            ${this.t('common.save', 'حفظ')}
                         </button>
                     </div>
                 </form>
@@ -1583,7 +1583,7 @@ const BehaviorMonitoring = {
             const places = this.getPlaceOptions(factoryId);
             const prev = subEl.value;
             subEl.innerHTML = `
-                <option value="">اختر الموقع الفرعي</option>
+                <option value="">${this.t('module.behavior.selectSubLocation', 'اختر الموقع الفرعي')}</option>
                 ${places.map(p => `<option value="${p.id}">${Utils.escapeHTML(p.name)}</option>`).join('')}
             `;
             if (prev && places.some(p => p.id === prev)) subEl.value = prev;
@@ -1610,7 +1610,7 @@ const BehaviorMonitoring = {
                 <div class="bhm-modal-hero">
                     <div class="bhm-modal-hero-text">
                         <p class="bhm-modal-kicker"><i class="fas fa-user-check ml-2"></i>مراقبة السلوكيات</p>
-                        <h2 class="bhm-modal-title">${data ? 'تعديل التصرف' : 'تسجيل تصرف موظف'}</h2>
+                        <h2 class="bhm-modal-title">${data ? this.t('module.behavior.editBehavior', 'تعديل التصرف') : this.t('module.behavior.addEmployee', 'تسجيل تصرف موظف')}</h2>
                         <p class="bhm-modal-sub">${data ? 'تحديث بيانات التسجيل ثم احفظ.' : 'أدخل بيانات الموظف والموقع ثم وصف التصرف.'}</p>
                     </div>
                     <button type="button" class="bhm-modal-close" onclick="this.closest('.modal-overlay').remove()" aria-label="إغلاق">
@@ -2226,10 +2226,10 @@ const BehaviorMonitoring = {
                                 <td><span class="badge ${this.getRatingBadgeClass(b.rating)}">${Utils.escapeHTML(b.rating || '—')}</span></td>
                                 <td class="text-center">
                                     <div class="flex items-center justify-center gap-2 flex-wrap">
-                                        <button type="button" onclick="BehaviorMonitoring.viewContractorBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-primary" title="عرض"><i class="fas fa-eye"></i></button>
-                                        <button type="button" onclick="BehaviorMonitoring.editContractorBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-warning" title="تعديل"><i class="fas fa-edit"></i></button>
-                                        <button type="button" onclick="BehaviorMonitoring.exportContractorPDF(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-success" title="تصدير PDF"><i class="fas fa-file-pdf"></i></button>
-                                        <button type="button" onclick="BehaviorMonitoring.printContractorReport(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-info" title="طباعة"><i class="fas fa-print"></i></button>
+                                        <button type="button" onclick="BehaviorMonitoring.viewContractorBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-primary" title="${this.t('common.view', 'عرض')}"><i class="fas fa-eye"></i></button>
+                                        <button type="button" onclick="BehaviorMonitoring.editContractorBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-warning" title="${this.t('common.edit', 'تعديل')}"><i class="fas fa-edit"></i></button>
+                                        <button type="button" onclick="BehaviorMonitoring.exportContractorPDF(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-success" title="${this.t('common.exportPDF', 'تصدير PDF')}"><i class="fas fa-file-pdf"></i></button>
+                                        <button type="button" onclick="BehaviorMonitoring.printContractorReport(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-info" title="${this.t('common.print', 'طباعة')}"><i class="fas fa-print"></i></button>
                                     </div>
                                 </td>
                             </tr>
@@ -2331,29 +2331,29 @@ const BehaviorMonitoring = {
                         <div class="bhm-section-head">
                             <span class="bhm-section-icon"><i class="fas fa-users-cog"></i></span>
                             <div>
-                                <h4 class="bhm-section-title">بيانات المقاول</h4>
-                                <p class="bhm-section-hint">اختر المقاول ويمكن إضافة اسم العامل</p>
+                                <h4 class="bhm-section-title">${this.t('module.behavior.form.contractorSection', 'بيانات المقاول')}</h4>
+                                <p class="bhm-section-hint">${this.t('module.behavior.form.contractorHint', 'اختر المقاول ويمكن إضافة اسم العامل')}</p>
                             </div>
                         </div>
                         <div class="bhm-section-body">
                             <div class="bhm-grid bhm-grid-2">
                                 <div class="bhm-field">
-                                    <label for="${ids.contractorSelect}" class="bhm-label">المقاول <span class="bhm-req">*</span></label>
+                                    <label for="${ids.contractorSelect}" class="bhm-label">${this.t('module.behavior.contractorName', 'المقاول')} <span class="bhm-req">*</span></label>
                                     <select id="${ids.contractorSelect}" required class="form-input bhm-input">
-                                        <option value="">-- اختر المقاول --</option>
+                                        <option value="">${this.t('module.behavior.selectContractor', '-- اختر المقاول --')}</option>
                                     </select>
                                 </div>
                                 <div class="bhm-field">
-                                    <label for="${ids.contractorWorker}" class="bhm-label">اسم العامل <span class="bhm-optional">(اختياري)</span></label>
-                                    <input type="text" id="${ids.contractorWorker}" class="form-input bhm-input" value="${Utils.escapeHTML(data?.contractorWorker || '')}" placeholder="عامل تابع للمقاول">
+                                    <label for="${ids.contractorWorker}" class="bhm-label">${this.t('module.behavior.contractorWorker', 'اسم العامل')} <span class="bhm-optional">(${this.t('common.optional', 'اختياري')})</span></label>
+                                    <input type="text" id="${ids.contractorWorker}" class="form-input bhm-input" value="${Utils.escapeHTML(data?.contractorWorker || '')}" placeholder="${this.t('module.behavior.form.workerPh', 'عامل تابع للمقاول')}">
                                 </div>
                                 <div class="bhm-field">
-                                    <label for="${ids.department}" class="bhm-label">القسم</label>
-                                    <input type="text" id="${ids.department}" class="form-input bhm-input" value="${Utils.escapeHTML(data?.department || '')}" placeholder="اختياري">
+                                    <label for="${ids.department}" class="bhm-label">${this.t('module.behavior.form.department', 'القسم')}</label>
+                                    <input type="text" id="${ids.department}" class="form-input bhm-input" value="${Utils.escapeHTML(data?.department || '')}" placeholder="${this.t('common.optional', 'اختياري')}">
                                 </div>
                                 <div class="bhm-field">
-                                    <label for="${ids.job}" class="bhm-label">الوظيفة</label>
-                                    <input type="text" id="${ids.job}" class="form-input bhm-input" value="${Utils.escapeHTML(data?.job || data?.position || '')}" placeholder="اختياري">
+                                    <label for="${ids.job}" class="bhm-label">${this.t('module.behavior.form.job', 'الوظيفة')}</label>
+                                    <input type="text" id="${ids.job}" class="form-input bhm-input" value="${Utils.escapeHTML(data?.job || data?.position || '')}" placeholder="${this.t('common.optional', 'اختياري')}">
                                 </div>
                             </div>
                         </div>
@@ -2369,27 +2369,27 @@ const BehaviorMonitoring = {
                             <div class="bhm-grid bhmc-contractor-detail-grid">
                                 <div class="bhm-field bhmc-contractor-detail-type">
                                     <div class="bhm-label-row">
-                                        <label for="${ids.behaviorType}" class="bhm-label mb-0">نوع التصرف <span class="bhm-req">*</span></label>
+                                        <label for="${ids.behaviorType}" class="bhm-label mb-0">${this.t('module.behavior.behaviorType', 'نوع التصرف')} <span class="bhm-req">*</span></label>
                                         <span class="badge ${this.getBehaviorTypeBadgeClass(data?.behaviorType)} bhm-type-chip" id="${ids.typeBadge}">${Utils.escapeHTML(data?.behaviorType || '—')}</span>
                                     </div>
                                     <select id="${ids.behaviorType}" required class="form-input bhm-input mt-2">
-                                        <option value="">اختر النوع</option>
-                                        <option value="إيجابي" ${data?.behaviorType === 'إيجابي' ? 'selected' : ''}>إيجابي</option>
-                                        <option value="سلبي" ${data?.behaviorType === 'سلبي' ? 'selected' : ''}>سلبي</option>
+                                        <option value="">${this.t('module.behavior.selectType', 'اختر النوع')}</option>
+                                        <option value="إيجابي" ${data?.behaviorType === 'إيجابي' ? 'selected' : ''}>${this.t('module.behavior.positive', 'إيجابي')}</option>
+                                        <option value="سلبي" ${data?.behaviorType === 'سلبي' ? 'selected' : ''}>${this.t('module.behavior.negative', 'سلبي')}</option>
                                     </select>
                                 </div>
                                 <div class="bhm-field">
-                                    <label for="${ids.behaviorDate}" class="bhm-label">التاريخ <span class="bhm-req">*</span></label>
+                                    <label for="${ids.behaviorDate}" class="bhm-label">${this.t('module.behavior.date', 'التاريخ')} <span class="bhm-req">*</span></label>
                                     <input type="date" id="${ids.behaviorDate}" required class="form-input bhm-input" value="${dateValue}">
                                 </div>
                                 <div class="bhm-field">
-                                    <label for="${ids.behaviorRating}" class="bhm-label">التقييم <span class="bhm-req">*</span></label>
+                                    <label for="${ids.behaviorRating}" class="bhm-label">${this.t('module.behavior.rating', 'التقييم')} <span class="bhm-req">*</span></label>
                                     <select id="${ids.behaviorRating}" required class="form-input bhm-input">
-                                        <option value="">اختر التقييم</option>
-                                        <option value="ممتاز" ${data?.rating === 'ممتاز' ? 'selected' : ''}>ممتاز</option>
-                                        <option value="جيد" ${data?.rating === 'جيد' ? 'selected' : ''}>جيد</option>
-                                        <option value="مقبول" ${data?.rating === 'مقبول' ? 'selected' : ''}>مقبول</option>
-                                        <option value="ضعيف" ${data?.rating === 'ضعيف' ? 'selected' : ''}>ضعيف</option>
+                                        <option value="">${this.t('module.behavior.selectRating', 'اختر التقييم')}</option>
+                                        <option value="ممتاز" ${data?.rating === 'ممتاز' ? 'selected' : ''}>${this.t('module.behavior.excellent', 'ممتاز')}</option>
+                                        <option value="جيد" ${data?.rating === 'جيد' ? 'selected' : ''}>${this.t('module.behavior.good', 'جيد')}</option>
+                                        <option value="مقبول" ${data?.rating === 'مقبول' ? 'selected' : ''}>${this.t('module.behavior.acceptable', 'مقبول')}</option>
+                                        <option value="ضعيف" ${data?.rating === 'ضعيف' ? 'selected' : ''}>${this.t('module.behavior.poor', 'ضعيف')}</option>
                                     </select>
                                 </div>
                             </div>
@@ -2405,7 +2405,7 @@ const BehaviorMonitoring = {
                                 <div class="bhm-field">
                                     <label for="${ids.factory}" class="bhm-label">المصنع <span class="bhm-req">*</span></label>
                                     <select id="${ids.factory}" required class="form-input bhm-input">
-                                        <option value="">اختر المصنع</option>
+                                        <option value="">${this.t('module.behavior.selectFactory', 'اختر المصنع')}</option>
                                         ${sites.map((site) => `
                                             <option value="${site.id}" ${(resolvedFactoryId === site.id || selectedFactory === site.name) ? 'selected' : ''}>${Utils.escapeHTML(site.name)}</option>
                                         `).join('')}
@@ -2414,7 +2414,7 @@ const BehaviorMonitoring = {
                                 <div class="bhm-field">
                                     <label for="${ids.subLocation}" class="bhm-label">الموقع الفرعي <span class="bhm-req">*</span></label>
                                     <select id="${ids.subLocation}" required class="form-input bhm-input">
-                                        <option value="">اختر الموقع الفرعي</option>
+                                        <option value="">${this.t('module.behavior.selectSubLocation', 'اختر الموقع الفرعي')}</option>
                                         ${places.map((place) => `
                                             <option value="${place.id}" ${(resolvedSubId === place.id || selectedSub === place.name) ? 'selected' : ''}>${Utils.escapeHTML(place.name)}</option>
                                         `).join('')}
@@ -2431,9 +2431,9 @@ const BehaviorMonitoring = {
                         <div class="bhm-negative-body">
                             <div class="bhm-grid bhm-grid-2">
                                 <div class="bhm-field">
-                                    <label for="${ids.correctiveAction}" class="bhm-label">الإجراء التصحيحي <span class="bhm-req">*</span></label>
+                                    <label for="${ids.correctiveAction}" class="bhm-label">${this.t('module.behavior.form.correctiveAction', 'الإجراء التصحيحي')} <span class="bhm-req">*</span></label>
                                     <select id="${ids.correctiveAction}" class="form-input bhm-input" ${isNegative ? 'required' : ''}>
-                                        <option value="">اختر الإجراء</option>
+                                        <option value="">${this.t('module.behavior.selectAction', 'اختر الإجراء')}</option>
                                         ${this.NEGATIVE_ACTIONS.map((a) => `
                                             <option value="${Utils.escapeHTML(a)}" ${data?.correctiveAction === a ? 'selected' : ''}>${Utils.escapeHTML(a)}</option>
                                         `).join('')}
@@ -2458,11 +2458,11 @@ const BehaviorMonitoring = {
                                     <input type="file" id="${ids.photoInput}" accept="image/*" class="bhm-file-input">
                                     <div id="${ids.photoPreview}" class="bhm-photo-preview mt-3 ${data?.photo ? '' : 'hidden'}">
                                         <img src="${Utils.escapeHTML(photoThumbSrc)}" alt=""${photoThumbProxyAttr} class="bhm-photo-thumb" id="${ids.photoImg}">
-                                        <button type="button" class="bhm-photo-clear" data-action="cb-clear-photo">حذف الصورة</button>
+                                        <button type="button" class="bhm-photo-clear" data-action="cb-clear-photo">${this.t('module.behavior.form.clearPhoto', 'حذف الصورة')}</button>
                                     </div>
                                 </div>
                                 <div class="bhm-field bhm-field-grow">
-                                    <label for="${ids.description}" class="bhm-label">الوصف <span class="bhm-req">*</span></label>
+                                    <label for="${ids.description}" class="bhm-label">${this.t('module.behavior.form.description', 'الوصف')} <span class="bhm-req">*</span></label>
                                     <textarea id="${ids.description}" required class="form-input bhm-input bhm-textarea" rows="5">${Utils.escapeHTML(data?.description || '')}</textarea>
                                 </div>
                             </div>
@@ -2501,7 +2501,7 @@ const BehaviorMonitoring = {
             if (!factoryEl || !subEl) return;
             const places = this.getPlaceOptions(factoryEl.value);
             const prev = subEl.value;
-            subEl.innerHTML = '<option value="">اختر الموقع الفرعي</option>' +
+            subEl.innerHTML = '<option value="">' + this.t('module.behavior.selectSubLocation', 'اختر الموقع الفرعي') + '</option>' +
                 places.map((p) => `<option value="${p.id}">${Utils.escapeHTML(p.name)}</option>`).join('');
             if (prev && places.some((p) => p.id === prev)) subEl.value = prev;
         };
