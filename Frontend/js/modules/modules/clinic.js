@@ -1114,7 +1114,24 @@ const Clinic = {
     },
 
     getActualClinicVisits_(visits) {
-        return (Array.isArray(visits) ? visits : []).filter(visit => !this.isTestClinicVisit_(visit));
+        const base = Array.isArray(visits) ? visits : (Array.isArray(AppState?.appData?.clinicVisits) ? AppState.appData.clinicVisits : []);
+        const contractorVisits = Array.isArray(AppState?.appData?.clinicContractorVisits) ? AppState.appData.clinicContractorVisits : [];
+        const extraContractorVisits = Array.isArray(AppState?.appData?.contractorVisits) ? AppState.appData.contractorVisits : [];
+
+        const existingIds = new Set();
+        const merged = [];
+
+        [...base, ...contractorVisits, ...extraContractorVisits].forEach(v => {
+            if (!v || typeof v !== 'object') return;
+            const vid = String(v.id || '').trim();
+            if (vid) {
+                if (existingIds.has(vid)) return;
+                existingIds.add(vid);
+            }
+            merged.push(v);
+        });
+
+        return merged.filter(visit => !this.isTestClinicVisit_(visit));
     },
 
     isContractorVisit_(visit) {
@@ -1123,7 +1140,7 @@ const Clinic = {
         if (type === 'contractor' || type === 'external' || type === 'مقاول' || type === 'خارجي' || type.includes('مقاول') || type.includes('خارج')) {
             return true;
         }
-        return !!(visit.contractorName || visit.contractorWorkerName || visit.externalName);
+        return !!(visit.contractorName || visit.contractorWorkerName || visit.externalName || visit.contractorCompany || visit.contractorPosition || visit.isContractor);
     },
 
     isEmployeeVisit_(visit) {
@@ -8925,14 +8942,11 @@ const Clinic = {
                 const normalizedVisits = result.data.map(visit => {
                     if (!visit || typeof visit !== 'object') return visit;
                     
-                    // التأكد من وجود personType
-                    if (!visit.personType) {
-                        // محاولة تحديد النوع من الحقول المتوفرة
-                        if (visit.contractorName || visit.contractorWorkerName || visit.externalName) {
-                            visit.personType = 'contractor';
-                        } else {
-                            visit.personType = 'employee';
-                        }
+                    // ✅ تحديد شخصية الزيارة بشكل دقيق وتلقائي
+                    if (this.isContractorVisit_(visit)) {
+                        visit.personType = 'contractor';
+                    } else if (!visit.personType) {
+                        visit.personType = 'employee';
                     }
                     
                     // ✅ التأكد من وجود medications كـ array (التحقق الشامل)
@@ -10405,13 +10419,13 @@ const Clinic = {
                         return;
                     }
                     this.state.activeVisitType = visitType;
-                    this.scheduleVisitsTabRender(false, 30);
+                    this.scheduleVisitsTabRender(false, 0);
                 } catch (error) {
                     Utils.safeError('❌ خطأ في تبديل التبويب:', error);
                     // محاولة إعادة عرض التبويب الحالي في حالة الخطأ
                     if (this.state && this.state.activeVisitType) {
                         try {
-                            this.scheduleVisitsTabRender(false, 30);
+                            this.scheduleVisitsTabRender(false, 0);
                         } catch (retryError) {
                             Utils.safeError('❌ فشل إعادة عرض التبويب:', retryError);
                         }

@@ -105,14 +105,29 @@ function bumpRoot(root, newVersion, cacheVersion) {
         `service-worker.js CACHE_VERSION → ${cacheVersion}`
     );
 
-    // 3) index.html  __SW_REGISTER_QUERY
+    // 3) index.html  __SW_REGISTER_QUERY & Module script query versions
     replaceInFile(
         path.join(root, 'index.html'),
-        (c) => c.replace(
-            /const __SW_REGISTER_QUERY = "[^"]*";/,
-            `const __SW_REGISTER_QUERY = "v=${cacheVersion}";`
-        ),
-        `index.html __SW_REGISTER_QUERY → v=${cacheVersion}`
+        (c) => {
+            let updated = c.replace(
+                /const __SW_REGISTER_QUERY = "[^"]*";/,
+                `const __SW_REGISTER_QUERY = "v=${cacheVersion}";`
+            );
+            updated = updated.replace(
+                /src="js\/modules\/modules\/ptw\.js\?v=[^"]*"/g,
+                `src="js/modules/modules/ptw.js?v=${cacheVersion}"`
+            );
+            updated = updated.replace(
+                /src="js\/modules\/services\/data-manager\.js\?v=[^"]*"/g,
+                `src="js/modules/services/data-manager.js?v=${cacheVersion}"`
+            );
+            updated = updated.replace(
+                /src="js\/modules\/modules\/clinic\.js\?v=[^"]*"/g,
+                `src="js/modules/modules/clinic.js?v=${cacheVersion}"`
+            );
+            return updated;
+        },
+        `index.html __SW_REGISTER_QUERY & module script queries → v=${cacheVersion}`
     );
 
     // 4) app-utils.js  appVersion
