@@ -1730,7 +1730,11 @@ const PTW = {
         this._approvalNormCache.clear();
         if (!AppState.appData) AppState.appData = {};
         AppState.appData.ptwRegistry = [...sanitized];
-        try { localStorage.setItem('hse_ptw_registry', Utils.safeStringify(sanitized)); } catch (_) {}
+        try {
+            if (sanitized.length > 0) {
+                localStorage.setItem('hse_ptw_registry', Utils.safeStringify(sanitized));
+            }
+        } catch (_) {}
         return sanitized;
     },
 
