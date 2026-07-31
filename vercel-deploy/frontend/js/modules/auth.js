@@ -81,22 +81,28 @@ window.Auth = {
     },
 
     /**
-     * Bootstrap للطوارئ فقط: ممنوع إن وُجد مستخدمون في الكاش، أو على نطاق إنتاج معروف بعد أول مزامنة.
+     * Bootstrap للطوارئ فقط (SEC-01 مرحلة 2):
+     * على أي host غير localhost — مرفوض دائماً (حتى كاش فارغ / بلا everSynced).
+     * localhost يبقى مشروطاً بالكاش + القفل المحلي/الخادم.
      */
     isBootstrapLoginAllowed(usersList) {
         if (this.isServerBootstrapDisabled()) return false;
         if (this.isBootstrapDisabled()) return false;
-        const users = Array.isArray(usersList) ? usersList : [];
-        if (users.length > 0) return false;
         try {
             const host = (typeof location !== 'undefined' && location.hostname) ? String(location.hostname).toLowerCase() : '';
             const isLocal = !host || host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
             if (!isLocal) {
-                // على النشر العام: لا bootstrap إلا إن لم تُحمَّل أي قائمة مستخدمين بعد (تجهيز أول)
-                const everSynced = localStorage.getItem('hse_users_ever_synced') === 'true';
-                if (everSynced) return false;
+                // SEC-01-P2: إنتاج/نشر عام — لا باب bootstrap حتى مع users=[]
+                this.disableBootstrap('phase2 non-localhost hard deny');
+                return false;
             }
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+            // إن تعذّر معرفة الـ host اعتبره غير محلي (أشد أماناً)
+            this.disableBootstrap('phase2 host-detect fail');
+            return false;
+        }
+        const users = Array.isArray(usersList) ? usersList : [];
+        if (users.length > 0) return false;
         return true;
     },
 

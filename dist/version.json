@@ -1,13 +1,13 @@
 {
-  "version": "1.0.717",
+  "version": "1.0.719",
   "highlights": {
     "ar": [
-      "تعطيل حساب التجهيز bootstrap من الخادم (SEC-01 مرحلة 1).",
-      "الواجهة تقرأ سياسة القفل قبل تسجيل الدخول."
+      "SEC-01 مرحلة 2: رفض bootstrap دائماً على غير localhost.",
+      "حتى مع كاش فارغ لا يعمل حساب التجهيز على الإنتاج."
     ],
     "en": [
-      "Server kill-switch disables bootstrap admin (SEC-01 phase 1).",
-      "Client reads bootstrap policy before login."
+      "SEC-01 phase 2: always deny bootstrap off localhost.",
+      "Empty cache no longer allows bootstrap admin in production."
     ]
   }
 }
