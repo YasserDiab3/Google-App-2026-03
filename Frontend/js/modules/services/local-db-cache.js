@@ -181,6 +181,40 @@ const LocalDBCache = {
         } catch (error) {
             return false;
         }
+    },
+
+    /**
+     * تنظيف دائم وصامت للسجلات التي تجاوزت مدة معينة في الكاش المحرز (افتراضياً 60 يوماً)
+     */
+    async purgeStaleCache(maxAgeDays = 60) {
+        try {
+            const db = await this.init();
+            if (!db) return false;
+
+            const cutoff = Date.now() - (maxAgeDays * 24 * 60 * 60 * 1000);
+
+            return new Promise((resolve) => {
+                const tx = db.transaction(this.STORE_APP_DATA, 'readwrite');
+                const store = tx.objectStore(this.STORE_APP_DATA);
+                const request = store.openCursor();
+
+                request.onsuccess = (event) => {
+                    const cursor = event.target.result;
+                    if (cursor) {
+                        const record = cursor.value;
+                        if (record && record.updatedAt && record.updatedAt < cutoff) {
+                            cursor.delete();
+                        }
+                        cursor.continue();
+                    } else {
+                        resolve(true);
+                    }
+                };
+                request.onerror = () => resolve(false);
+            });
+        } catch (error) {
+            return false;
+        }
     }
 };
 

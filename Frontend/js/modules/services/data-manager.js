@@ -620,6 +620,10 @@ const DataManager = {
                             Utils.safeLog(`⚡ [IndexedDB] تم استعادة ${restoredCount} سجل من الكاش عالي السعة بنجاح (0ms)`);
                         }
                     }
+                    // تنظيف صامت للكاش القديم لتخفيف المساحة
+                    if (typeof LocalDBCache.purgeStaleCache === 'function') {
+                        LocalDBCache.purgeStaleCache(60).catch(() => {});
+                    }
                 } catch (dbErr) {
                     if (typeof Utils !== 'undefined' && Utils.safeWarn) {
                         Utils.safeWarn('⚠️ استثناء أثناء التحميل من IndexedDB:', dbErr);
