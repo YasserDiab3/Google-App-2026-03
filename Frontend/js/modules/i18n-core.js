@@ -6274,17 +6274,56 @@
      * - t(key, lang, fallback) — لغة + احتياطي (مثل applyI18n)
      */
     function t(key, arg2, arg3) {
+        if (!key) return '';
         const current = getCurrentLang();
+        let targetLang = current;
+        let fallback = '';
+
         if (arg3 !== undefined) {
-            const lang = arg2 === 'ar' || arg2 === 'en' ? arg2 : current;
-            const fallback = arg3 != null ? String(arg3) : '';
-            return (translations[lang]?.[key] ?? translations.ar?.[key] ?? fallback) || key;
+            targetLang = (arg2 === 'ar' || arg2 === 'en') ? arg2 : current;
+            fallback = arg3 != null ? String(arg3) : '';
+        } else if (arg2 === 'ar' || arg2 === 'en') {
+            targetLang = arg2;
+            fallback = '';
+        } else {
+            targetLang = current;
+            fallback = arg2 != null && arg2 !== '' ? String(arg2) : '';
         }
-        if (arg2 === 'ar' || arg2 === 'en') {
-            return (translations[arg2]?.[key] ?? translations.ar?.[key] ?? '') || key;
+
+        // 1. Direct match in target language dictionary
+        const targetVal = translations[targetLang]?.[key];
+        if (targetVal !== undefined && targetVal !== null && targetVal !== '') {
+            return targetVal;
         }
-        const fallback = arg2 != null && arg2 !== '' ? String(arg2) : '';
-        return (translations[current]?.[key] ?? translations.ar?.[key] ?? fallback) || key;
+
+        // 2. Target language is English ('en')
+        if (targetLang === 'en') {
+            // A. Prefer explicit English fallback if provided
+            if (fallback && fallback !== key) {
+                return fallback;
+            }
+            // B. If Arabic translation exists, try translating it to English
+            const arVal = translations.ar?.[key];
+            if (arVal) {
+                const trimmedAr = String(arVal).trim();
+                const translatedLiteral = mapArToEnExact.get(trimmedAr) || literalArToEn[trimmedAr];
+                if (translatedLiteral) return translatedLiteral;
+                return arVal;
+            }
+        }
+
+        // 3. Target language is Arabic ('ar')
+        if (targetLang === 'ar') {
+            const arVal = translations.ar?.[key];
+            if (arVal !== undefined && arVal !== null && arVal !== '') {
+                return arVal;
+            }
+            if (fallback && fallback !== key) {
+                return fallback;
+            }
+        }
+
+        return fallback || key;
     }
 
     function applyI18n(root = document, lang) {
