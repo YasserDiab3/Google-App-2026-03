@@ -2808,7 +2808,7 @@ const PTW = {
                     const ptwData = result.data['PTW'];
                     const registryData = result.data['PTWRegistry'];
 
-                    if (Array.isArray(ptwData)) {
+                    if (Array.isArray(ptwData) && ptwData.length > 0) {
                         AppState.appData.ptw = ptwData;
                         try { localStorage.setItem('hse_ptw_list', Utils.safeStringify(ptwData)); } catch (_) {}
                     }
@@ -2820,6 +2820,13 @@ const PTW = {
                     if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                         window.DataManager.save();
                     }
+                    // تحديث سلس للواجهة بعد استلام بيانات الخلفية
+                    try {
+                        this.filterItems();
+                        if (this.currentTab === 'registry' && typeof this.renderRegistryList === 'function') {
+                            this.renderRegistryList();
+                        }
+                    } catch (_) {}
                     if (AppState.debugMode) {
                         Utils.safeLog('⚡ تم استلام بيانات PTW و PTWRegistry بطلب دفعة واحدة (batchReadSheets) بنجاح');
                     }
@@ -3105,11 +3112,10 @@ const PTW = {
         // Add language change listener
         if (!this._languageChangeListenerAdded) {
             document.addEventListener('language-changed', () => {
-                if (this._isLoading) {
-                    this._reloadRequested = true;
-                    return;
+                const section = document.getElementById('ptw-section');
+                if (section && section.offsetParent !== null && !this._isLoading && !(typeof AppState !== 'undefined' && AppState._languageRefresh)) {
+                    this.load();
                 }
-                this.load();
             });
             this._languageChangeListenerAdded = true;
         }

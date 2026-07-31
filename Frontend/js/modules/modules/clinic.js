@@ -16716,17 +16716,17 @@ const Clinic = {
             <div class="modal-overlay active" id="clinic-attendance-punch-modal">
                 <div class="modal-content" style="max-width:480px; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
                     <div class="modal-header" style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 1.5rem; border-bottom: none;">
-                        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center;"><i class="fas \${icon} ml-3" style="font-size: 1.5rem; opacity: 0.9;"></i>\${title}</h3>
+                        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center;"><i class="fas ${icon} ml-3" style="font-size: 1.5rem; opacity: 0.9;"></i>${title}</h3>
                         <button type="button" class="modal-close" style="color: white; opacity: 0.8; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'" onclick="document.getElementById('clinic-attendance-punch-modal')?.remove()"><i class="fas fa-times"></i></button>
                     </div>
                     <div class="modal-body space-y-5" style="padding: 1.5rem; background-color: #f8fafc;">
                         <div style="background-color: #eff6ff; border-right: 4px solid #3b82f6; padding: 1rem; border-radius: 0.5rem; color: #1e3a8a; font-size: 0.9rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                            <div style="display: flex; align-items: center;"><i class="fas fa-user-circle ml-2" style="color: #60a5fa;"></i> <strong>المسئول:</strong> <span class="mr-2">\${Utils.escapeHTML(record.userName || record.userEmail || '—')}</span></div>
-                            <div style="display: flex; align-items: center;"><i class="fas fa-calendar-alt ml-2" style="color: #60a5fa;"></i> <strong>التاريخ:</strong> <span class="mr-2">\${Utils.escapeHTML(dayKey || '—')}</span></div>
+                            <div style="display: flex; align-items: center;"><i class="fas fa-user-circle ml-2" style="color: #60a5fa;"></i> <strong>المسئول:</strong> <span class="mr-2">${Utils.escapeHTML(record.userName || record.userEmail || '—')}</span></div>
+                            <div style="display: flex; align-items: center;"><i class="fas fa-calendar-alt ml-2" style="color: #60a5fa;"></i> <strong>التاريخ:</strong> <span class="mr-2">${Utils.escapeHTML(dayKey || '—')}</span></div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="far fa-clock ml-2 text-blue-500"></i> \${isCheckIn ? 'وقت الدخول' : 'وقت الخروج'} <span class="text-red-500 mr-1">*</span></label>
-                            <input type="datetime-local" id="clinic-attendance-punch-time" class="form-input" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; transition: border-color 0.2s; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);" value="\${Utils.escapeAttr(adjustedDefault)}" required>
+                            <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="far fa-clock ml-2 text-blue-500"></i> ${isCheckIn ? 'وقت الدخول' : 'وقت الخروج'} <span class="text-red-500 mr-1">*</span></label>
+                            <input type="datetime-local" id="clinic-attendance-punch-time" class="form-input" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; transition: border-color 0.2s; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);" value="${Utils.escapeAttr(adjustedDefault)}" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="far fa-comment-alt ml-2 text-gray-400"></i> ملاحظة <span style="color: #94a3b8; font-weight: normal; font-size: 0.8rem; margin-right: 0.5rem;">(اختياري)</span></label>
@@ -16803,20 +16803,20 @@ const Clinic = {
                     <div class="modal-body space-y-5" style="padding: 1.5rem; background-color: #f8fafc;">
                         <div class="form-group">
                             <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="fas fa-user-circle ml-2 text-teal-500"></i> المسئول <span class="text-red-500 mr-1">*</span></label>
-                            <select id="clinic-attendance-add-staff" class="form-input" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);"><option value="">— اختر المسئول —</option>\${staffOptions}</select>
+                            <select id="clinic-attendance-add-staff" class="form-input" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);"><option value="">— اختر المسئول —</option>${staffOptions}</select>
                         </div>
                         <div class="form-group">
                             <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="far fa-calendar-alt ml-2 text-teal-500"></i> التاريخ <span class="text-red-500 mr-1">*</span></label>
-                            <input type="date" id="clinic-attendance-add-date" class="form-input" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);" value="\${Utils.escapeAttr(today)}" required>
+                            <input type="date" id="clinic-attendance-add-date" class="form-input" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);" value="${Utils.escapeAttr(today)}" required>
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; background: #ffffff; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e2e8f0;">
                             <div class="form-group" style="margin-bottom: 0;">
                                 <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;"><i class="fas fa-sign-in-alt ml-1 text-green-500"></i> وقت الدخول</label>
-                                <input type="datetime-local" id="clinic-attendance-add-checkin" class="form-input" style="padding: 0.5rem; font-size: 0.9rem;" value="\${Utils.escapeAttr(today + 'T08:00')}">
+                                <input type="datetime-local" id="clinic-attendance-add-checkin" class="form-input" style="padding: 0.5rem; font-size: 0.9rem;" value="${Utils.escapeAttr(today + 'T08:00')}">
                             </div>
                             <div class="form-group" style="margin-bottom: 0;">
                                 <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;"><i class="fas fa-sign-out-alt ml-1 text-orange-500"></i> وقت الخروج</label>
-                                <input type="datetime-local" id="clinic-attendance-add-checkout" class="form-input" style="padding: 0.5rem; font-size: 0.9rem;" value="\${Utils.escapeAttr(today + 'T17:00')}">
+                                <input type="datetime-local" id="clinic-attendance-add-checkout" class="form-input" style="padding: 0.5rem; font-size: 0.9rem;" value="${Utils.escapeAttr(today + 'T17:00')}">
                             </div>
                             <div style="grid-column: span 2; font-size: 0.75rem; color: #64748b; text-align: center; margin-top: -0.25rem;"><i class="fas fa-info-circle ml-1"></i> يمكن ترك أحد الحقلين فارغاً لإضافة بصمة دخول أو خروج فقط.</div>
                         </div>
