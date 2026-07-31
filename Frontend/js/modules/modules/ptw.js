@@ -1249,12 +1249,14 @@ const PTW = {
             if (e.name === 'QuotaExceededError' || e.code === 22 || (e.message && e.message.toLowerCase().includes('quota'))) {
                 Utils.safeWarn('⚠️ امتلاء storage عند حفظ ' + key + ' — جاري تحرير المساحة بشكل إجباري...');
                 try {
+                    // مفاتيح *_last_sync حرجة — حذفها يفرض إعادة جلب ثقيل (عيادة خاصة).
+                    // لا تُدرج هنا: clinic_last_sync وأشباهها.
                     const sacrificialKeys = [
                         'appTesterHistory', 'appTesterReports', 'appTesterLastExport', 'appTesterConfig',
-                        'hse_pending_sync_queue', 'violations_last_sync', 'hse_sync_meta',
-                        'daily_observations_last_sync', 'clinic_last_sync', 'chemical_safety_last_sync',
+                        'hse_sync_meta',
                         'hse_read_notifications'
                     ];
+                    // ملاحظة: hse_pending_sync_queue و *_last_sync مستثناة عمداً لحفظ سلامة المزامنة
                     for (const sKey of sacrificialKeys) {
                         try { localStorage.removeItem(sKey); } catch (_) {}
                     }

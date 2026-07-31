@@ -1,15 +1,13 @@
 {
-  "version": "1.0.709",
+  "version": "1.0.711",
   "highlights": {
     "ar": [
-      "بانر واضح لكل المستخدمين عند انقطاع الإنترنت أو تعذر الوصول للخادم.",
-      "تحسين رسالة العمل المحلي حتى لا يختلط الأمر بأخطاء غامضة.",
-      "تثبيت Playwright مع اختبار smoke للبانر."
+      "حماية ختم مزامنة العيادة والمفاتيح الحرجة من المسح عند امتلاء التخزين.",
+      "توسيع اختبارات Playwright smoke لبوابات الدخول والخدمات وDATA-02."
     ],
     "en": [
-      "Clear offline banner for all users when the network or server is unreachable.",
-      "Clearer local-work messaging instead of silent or vague failures.",
-      "Playwright installed with an offline-banner smoke test."
+      "Protect clinic sync TTL and critical keys from wipe on storage quota pressure.",
+      "Expanded Playwright smoke for login gate, client services, and DATA-02."
     ]
   }
 }
