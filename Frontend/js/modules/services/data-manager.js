@@ -34,6 +34,9 @@ const DataManager = {
                 }
             }
             keysToRemove.forEach((k) => localStorage.removeItem(k));
+            if (typeof LocalDBCache !== 'undefined' && typeof LocalDBCache.clear === 'function') {
+                LocalDBCache.clear().catch(err => Utils.safeWarn('⚠️ فشل تفريغ IndexedDB:', err));
+            }
         } catch (e) {
             if (typeof Utils !== 'undefined' && Utils.safeWarn) {
                 Utils.safeWarn('⚠️ فشل مسح localStorage:', e);
@@ -598,6 +601,32 @@ const DataManager = {
                 }
             }
 
+            // ✅ تحميل الكاش عالي السعة من IndexedDB لمنع الفقدان عند تجاوز 5MB
+            if (typeof LocalDBCache !== 'undefined') {
+                try {
+                    const dbData = await LocalDBCache.get('hse_app_data');
+                    if (dbData && typeof dbData === 'object') {
+                        let restoredCount = 0;
+                        Object.keys(dbData).forEach(key => {
+                            if (Array.isArray(dbData[key]) && dbData[key].length > 0) {
+                                const currentArr = Array.isArray(AppState.appData[key]) ? AppState.appData[key] : [];
+                                if (currentArr.length === 0 || dbData[key].length > currentArr.length) {
+                                    AppState.appData[key] = LocalDBCache.sanitizeData(key, dbData[key]);
+                                    restoredCount += dbData[key].length;
+                                }
+                            }
+                        });
+                        if (restoredCount > 0 && AppState.debugMode) {
+                            Utils.safeLog(`⚡ [IndexedDB] تم استعادة ${restoredCount} سجل من الكاش عالي السعة بنجاح (0ms)`);
+                        }
+                    }
+                } catch (dbErr) {
+                    if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                        Utils.safeWarn('⚠️ استثناء أثناء التحميل من IndexedDB:', dbErr);
+                    }
+                }
+            }
+
             // ✅ استعادة ودمج بيانات PTW و PTWRegistry من المفاتيح المخصصة دائماً لعدم فقدان أي تصاريح بعد التحديث
             const parsePtwTime = (val) => {
                 if (!val) return 0;
@@ -778,6 +807,16 @@ const DataManager = {
             }
             
             const dataToSave = this.sanitizeAppDataForStorage(AppState.appData);
+            
+            // ✅ حفظ كامل البيانات في IndexedDB لتفادي قيد الـ 5MB في localStorage وحماية البيانات من الفقد
+            if (typeof LocalDBCache !== 'undefined' && typeof LocalDBCache.set === 'function') {
+                LocalDBCache.set('hse_app_data', dataToSave).catch(e => {
+                    if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                        Utils.safeWarn('⚠️ فشل الحفظ في IndexedDB:', e);
+                    }
+                });
+            }
+
             const serialized = Utils.safeStringify(dataToSave);
             if (!serialized) {
                 Utils.safeWarn('⚠️ فشل تسلسل البيانات');
