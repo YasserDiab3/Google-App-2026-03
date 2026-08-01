@@ -2,12 +2,12 @@
   "version": "1.0.728",
   "highlights": {
     "ar": [
-      "P1: إصلاح XSS في نسخ بيانات الحساب ومعرفات القوائم.",
-      "حماية سلوك/PPE/مخالفات من مسح البيانات المحلية بمصفوفة فارغة."
+      "P4: مودال التحديث يظهر عند أول زيارة دون إخفاء الإصدار مبكراً.",
+      "تنبيه عند اختصار التخزين المحلي بسبب امتلاء المساحة."
     ],
     "en": [
-      "P1: XSS fixes for credential copy and list ID onclick handlers.",
-      "Behavior/PPE/violations guarded against empty-array local wipe."
+      "P4: Update modal shows on first visit without early last_seen hide.",
+      "Notice when local storage is shortened due to quota limits."
     ]
   }
 }
