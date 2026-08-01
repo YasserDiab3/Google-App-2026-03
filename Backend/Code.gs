@@ -281,9 +281,8 @@ function doPost(e) {
             'getContractorIssuingAuthoritiesForPermitType',
             // تقرير الجلسات اليومي (قراءة فقط — يتطلب CSRF + مدير)
             // getDailyUserSessionActivityReport, getAllUserActivityLogs, getUserActivityLogs, getLogStatistics, getAllAuditLogs
-            // ✅ مهمات الوقاية — قراءة بدون CSRF (CSRF self-heal عند تبديل مستخدم)
-            'getAllPPE', 'getPPEMatrix', 'getAllPPEMatrices',
-            'getAllPPEStockItems', 'getAllPPETransactions', 'getPPEItemsList'
+            // ✅ P2.2: قراءات PPE أُخرجت — تتطلب CSRF + جلسة (مثل باقي القراءات الحساسة)
+            // getAllPPE, getPPEMatrix, getAllPPEMatrices, getAllPPEStockItems, getAllPPETransactions, getPPEItemsList
         ];
 
         // قائمة بالـ actions الحساسة التي تتطلب CSRF token إلزامي

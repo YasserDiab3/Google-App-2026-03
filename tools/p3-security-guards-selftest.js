@@ -55,6 +55,9 @@ const code = read('Backend/Code.gs');
 assert(code.includes('SESSION_ACTOR_REQUIRED') || code.includes('needsSessionForWrite'), 'GAS: P2 session write gate');
 assert(!/'getAllClinicVisitDeletionRequests'\s*,/.test(code.split('const readOnlyActions')[1].split('];')[0]), 'GAS: deletion requests ليست readOnly');
 assert(!/'ensureContractorEvaluationApprovalRequestsSheet'\s*,/.test(code.split('const readOnlyActions')[1].split('];')[0]), 'GAS: ensure مقاولين ليست readOnly');
+const readOnlyBlock = code.split('const readOnlyActions')[1].split('];')[0];
+assert(!/'getAllPPE'\s*,/.test(readOnlyBlock), 'GAS: getAllPPE ليست readOnly (P2.2)');
+assert(!/'getPPEItemsList'\s*,/.test(readOnlyBlock), 'GAS: getPPEItemsList ليست readOnly (P2.2)');
 
 const utils = read('Backend/Utils.gs');
 assert(utils.includes('requireAuthenticatedActor_') && /checkSheetDirectWriteAccess_[\s\S]*?requireAuthenticatedActor_/.test(utils), 'GAS: P0.1 write actor gate');
