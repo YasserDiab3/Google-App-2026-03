@@ -75,8 +75,8 @@
             }
             if (this._lightStorage) {
                 return en
-                    ? this.t('common.storage.light', 'Local copy is shortened (storage limit) — full data stays in memory / Google Sheets.')
-                    : this.t('common.storage.light', 'النسخة المحلية مختصرة (حد التخزين) — البيانات الكاملة في الذاكرة / Google Sheets.');
+                    ? this.t('common.storage.light', 'Local copy is shortened (storage limit).')
+                    : this.t('common.storage.light', 'النسخة المحلية مختصرة (حد التخزين).');
             }
             return '';
         },

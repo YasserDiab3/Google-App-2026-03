@@ -28,8 +28,8 @@ const DataManager = {
                 ? I18n.isEn()
                 : (typeof localStorage !== 'undefined' && localStorage.getItem('language') === 'en');
             const msg = isEn
-                ? 'Local storage is limited — a shortened copy was saved. Full data remains in memory / Google Sheets.'
-                : 'التخزين المحلي محدود — حُفظت نسخة مختصرة. البيانات الكاملة في الذاكرة / Google Sheets.';
+                ? 'Local storage is limited — a shortened copy was saved.'
+                : 'التخزين المحلي محدود — حُفظت نسخة مختصرة.';
             if (typeof Notification !== 'undefined' && typeof Notification.info === 'function') {
                 Notification.info(msg, { duration: 5500 });
             } else if (typeof Notification !== 'undefined' && typeof Notification.warning === 'function') {
