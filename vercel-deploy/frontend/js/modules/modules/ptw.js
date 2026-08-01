@@ -10426,9 +10426,25 @@ const PTW = {
                 .manual-section-2 h3 { color: #00695C; border-color: #009688; }
                 .manual-section-2 h3 i { color: #00796B; background: rgba(0, 150, 136, 0.1); }
                 
-                .manual-section-3 { background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); border-color: #9C27B0; }
-                .manual-section-3 h3 { color: #6A1B9A; border-color: #9C27B0; }
-                .manual-section-3 h3 i { color: #7B1FA2; background: rgba(156, 39, 176, 0.1); }
+                .manual-section-3 { background: linear-gradient(135deg, #eef5fb 0%, #e3eef8 100%); border-color: #003865; }
+                .manual-section-3 h3 { color: #003865; border-color: #003865; }
+                .manual-section-3 h3 i { color: #004C8C; background: rgba(0, 56, 101, 0.08); }
+                .ptw-work-type-hint {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    margin: 0 0 12px;
+                    padding: 8px 12px;
+                    background: #fff;
+                    border: 1px solid #dbe3ee;
+                    border-right: 3px solid #FFC72C;
+                    border-radius: 10px;
+                    color: #334155;
+                    font-size: 0.82rem;
+                    font-weight: 600;
+                    line-height: 1.4;
+                }
+                .ptw-work-type-hint i { color: #003865; }
                 
                 .manual-section-4 { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-color: #FF9800; }
                 .manual-section-4 h3 { color: #E65100; border-color: #FF9800; }
@@ -10499,93 +10515,152 @@ const PTW = {
                     font-weight: 600;
                     color: #333;
                 }
-                /* صفوف أنواع التصريح: النوع يمين، الفرعيات يسار — مضغوطة بلا تداخل */
+                /* صفوف أنواع التصريح — هوية HSE: كحلي + ذهبي، أسماء أوضح، فرعيات مهنية */
                 .ptw-work-type-stack,
                 .manual-section-3 .ptw-work-type-stack,
                 .ptw-section-3 .ptw-work-type-stack {
                     display: flex;
                     flex-direction: column;
-                    gap: 8px;
+                    gap: 10px;
                     width: 100%;
                 }
                 .ptw-work-type-row {
                     display: grid;
-                    grid-template-columns: minmax(148px, 200px) minmax(0, 1fr);
-                    gap: 8px 12px;
+                    grid-template-columns: minmax(168px, 220px) minmax(0, 1fr);
+                    gap: 0 14px;
                     align-items: center;
-                    padding: 8px 10px;
-                    background: #fff;
-                    border: 1px solid #e5e7eb;
-                    border-radius: 10px;
-                    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+                    padding: 10px 12px 10px 14px;
+                    background: linear-gradient(90deg, #ffffff 0%, #f8fafc 100%);
+                    border: 1px solid #dbe3ee;
+                    border-right: 3px solid #003865;
+                    border-radius: 12px;
+                    box-shadow: 0 1px 3px rgba(0, 56, 101, 0.06);
                     min-width: 0;
+                    transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+                }
+                .ptw-work-type-row:hover {
+                    border-color: #b8c9dc;
+                    box-shadow: 0 2px 8px rgba(0, 56, 101, 0.08);
                 }
                 .ptw-work-type-row.is-filled {
-                    border-color: #c4b5fd;
-                    background: #faf5ff;
+                    border-color: #9eb6ce;
+                    border-right-color: #FFC72C;
+                    background: linear-gradient(90deg, #fffdf6 0%, #f5f9fc 100%);
+                    box-shadow: 0 2px 10px rgba(0, 56, 101, 0.1);
                 }
                 .ptw-work-type-row__label {
                     display: flex;
                     align-items: center;
-                    gap: 8px;
+                    gap: 10px;
                     min-width: 0;
+                    padding-left: 12px;
+                    border-left: 1px dashed #c5d4e4;
+                    align-self: stretch;
                 }
                 .ptw-work-type-row__icon {
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 8px;
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 10px;
                     display: inline-flex;
                     align-items: center;
                     justify-content: center;
                     flex-shrink: 0;
-                    font-size: 0.85rem;
+                    font-size: 0.92rem;
+                    box-shadow: inset 0 0 0 1px rgba(0, 56, 101, 0.06);
                 }
                 .ptw-work-type-row__name {
-                    font-weight: 700;
-                    font-size: 0.86rem;
-                    color: #1f2937;
-                    line-height: 1.3;
+                    font-weight: 800;
+                    font-size: 0.98rem;
+                    color: #003865;
+                    line-height: 1.35;
+                    letter-spacing: 0.01em;
+                    font-family: 'Segoe UI', Tahoma, 'Noto Sans Arabic', Arial, sans-serif;
                 }
                 .ptw-work-type-row__opts {
                     display: flex;
                     flex-wrap: wrap;
-                    gap: 6px;
+                    gap: 7px;
                     align-items: center;
                     justify-content: flex-start;
                     min-width: 0;
+                    padding: 2px 0;
                 }
-                .ptw-work-subopt {
+                .ptw-work-type-row__opts--fields {
+                    gap: 6px 8px;
+                }
+                .ptw-work-subopt,
+                .ptw-check-option.ptw-work-subopt {
                     display: inline-flex !important;
                     align-items: center;
-                    gap: 5px;
+                    gap: 6px;
                     margin: 0 !important;
-                    padding: 4px 8px !important;
-                    border: 1px solid #e5e7eb !important;
+                    padding: 5px 10px !important;
+                    border: 1px solid #d0dbe8 !important;
                     border-radius: 8px !important;
-                    background: #f8fafc !important;
-                    font-size: 0.78rem !important;
+                    background: #fff !important;
+                    font-size: 0.8rem !important;
                     font-weight: 600;
                     color: #334155;
                     cursor: pointer;
                     white-space: nowrap;
-                    line-height: 1.2;
+                    line-height: 1.25;
+                    box-shadow: 0 1px 1px rgba(15, 23, 42, 0.03);
+                    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
                 }
-                .ptw-work-subopt:hover { border-color: #c4b5fd !important; background: #faf5ff !important; }
-                .ptw-work-subopt input { margin: 0 !important; width: 14px; height: 14px; flex-shrink: 0; }
+                .ptw-work-subopt:hover,
+                .ptw-check-option.ptw-work-subopt:hover {
+                    border-color: #003865 !important;
+                    background: #eef5fb !important;
+                    color: #003865;
+                }
+                .ptw-work-subopt:has(input:checked),
+                .ptw-check-option.ptw-work-subopt:has(input:checked) {
+                    border-color: #003865 !important;
+                    background: linear-gradient(135deg, #003865 0%, #004C8C 100%) !important;
+                    color: #fff !important;
+                    box-shadow: 0 2px 6px rgba(0, 56, 101, 0.22);
+                }
+                .ptw-work-subopt:has(input:checked) span,
+                .ptw-check-option.ptw-work-subopt:has(input:checked) span {
+                    color: #fff !important;
+                }
+                .ptw-work-subopt input,
+                .ptw-check-option.ptw-work-subopt input {
+                    margin: 0 !important;
+                    width: 14px;
+                    height: 14px;
+                    flex-shrink: 0;
+                    accent-color: #FFC72C;
+                }
                 .ptw-work-subopt-input {
                     width: auto !important;
-                    min-width: 88px;
-                    max-width: 160px;
-                    height: 30px !important;
-                    padding: 4px 8px !important;
-                    font-size: 0.78rem !important;
+                    min-width: 92px;
+                    max-width: 168px;
+                    height: 32px !important;
+                    padding: 5px 10px !important;
+                    font-size: 0.8rem !important;
                     border-radius: 8px !important;
+                    border: 1px solid #d0dbe8 !important;
+                    background: #fff !important;
+                    color: #1e293b;
                 }
-                .ptw-work-subopt-input--wide { min-width: 160px; max-width: 280px; flex: 1 1 180px; }
+                .ptw-work-subopt-input:focus {
+                    outline: none;
+                    border-color: #003865 !important;
+                    box-shadow: 0 0 0 3px rgba(0, 56, 101, 0.12);
+                }
+                .ptw-work-subopt-input--wide { min-width: 180px; max-width: 320px; flex: 1 1 200px; }
                 @media (max-width: 700px) {
                     .ptw-work-type-row {
                         grid-template-columns: 1fr;
                         align-items: stretch;
+                        gap: 10px;
+                    }
+                    .ptw-work-type-row__label {
+                        padding-left: 0;
+                        border-left: none;
+                        padding-bottom: 8px;
+                        border-bottom: 1px dashed #c5d4e4;
                     }
                 }
                 .manual-work-type-inline-panel { display: none !important; }
@@ -11335,9 +11410,9 @@ const PTW = {
                         <!-- القسم الثالث: أنواع التصريح عمودياً + فرعيات بتشك بوكس على اليسار -->
                         <div class="ptw-manual-form-section manual-section-3">
                             <h3><i class="fas fa-clipboard-check"></i><span>القسم الثالث : تحديد نوع / طبيعة الأعمال والعناصر التفصيلية لتنفيذ العملية</span></h3>
-                            <p class="text-sm text-gray-600 mb-3 bg-white p-2 rounded border border-gray-100 inline-block">
-                                <i class="fas fa-check-square text-purple-500 ml-1"></i>
-                                كل نوع في صف مستقل، والخيارات الفرعية على اليسار (يمكن اختيار أكثر من نوع).
+                            <p class="ptw-work-type-hint">
+                                <i class="fas fa-layer-group" aria-hidden="true"></i>
+                                <span>اختر نوع التصريح من العمود الأيمن، ثم حدّد طبيعة العمل من الخيارات على اليسار.</span>
                             </p>
                             <select id="manual-work-type-select" class="sr-only" aria-hidden="true" tabindex="-1">
                                 <option value="">—</option>
@@ -14853,41 +14928,78 @@ const PTW = {
                 .ptw-section-2 h3 { color: #00695C; border-color: #009688; }
                 .ptw-section-2 h3 i { color: #00796B; background: rgba(0, 150, 136, 0.1); }
                 
-                .ptw-section-3 { background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); border-color: #9C27B0; }
-                .ptw-section-3 h3 { color: #6A1B9A; border-color: #9C27B0; }
-                .ptw-section-3 h3 i { color: #7B1FA2; background: rgba(156, 39, 176, 0.1); }
-                .ptw-section-3 .ptw-work-type-stack { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+                .ptw-section-3 { background: linear-gradient(135deg, #eef5fb 0%, #e3eef8 100%); border-color: #003865; }
+                .ptw-section-3 h3 { color: #003865; border-color: #003865; }
+                .ptw-section-3 h3 i { color: #004C8C; background: rgba(0, 56, 101, 0.08); }
+                .ptw-section-3 .ptw-work-type-hint {
+                    display: inline-flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 8px 12px;
+                    background: #fff; border: 1px solid #dbe3ee; border-right: 3px solid #FFC72C; border-radius: 10px;
+                    color: #334155; font-size: 0.82rem; font-weight: 600; line-height: 1.4;
+                }
+                .ptw-section-3 .ptw-work-type-hint i { color: #003865; }
+                .ptw-section-3 .ptw-work-type-stack { display: flex; flex-direction: column; gap: 10px; width: 100%; }
                 .ptw-section-3 .ptw-work-type-row {
                     display: grid;
-                    grid-template-columns: minmax(148px, 200px) minmax(0, 1fr);
-                    gap: 8px 12px;
+                    grid-template-columns: minmax(168px, 220px) minmax(0, 1fr);
+                    gap: 0 14px;
                     align-items: center;
-                    padding: 8px 10px;
-                    background: #fff;
-                    border: 1px solid #e5e7eb;
-                    border-radius: 10px;
+                    padding: 10px 12px 10px 14px;
+                    background: linear-gradient(90deg, #ffffff 0%, #f8fafc 100%);
+                    border: 1px solid #dbe3ee;
+                    border-right: 3px solid #003865;
+                    border-radius: 12px;
+                    box-shadow: 0 1px 3px rgba(0, 56, 101, 0.06);
                     min-width: 0;
                 }
-                .ptw-section-3 .ptw-work-type-row__label { display: flex; align-items: center; gap: 8px; min-width: 0; }
-                .ptw-section-3 .ptw-work-type-row__icon {
-                    width: 32px; height: 32px; border-radius: 8px;
-                    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.85rem;
+                .ptw-section-3 .ptw-work-type-row.is-filled {
+                    border-right-color: #FFC72C;
+                    background: linear-gradient(90deg, #fffdf6 0%, #f5f9fc 100%);
                 }
-                .ptw-section-3 .ptw-work-type-row__name { font-weight: 700; font-size: 0.86rem; color: #1f2937; line-height: 1.3; }
-                .ptw-section-3 .ptw-work-type-row__opts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
+                .ptw-section-3 .ptw-work-type-row__label {
+                    display: flex; align-items: center; gap: 10px; min-width: 0;
+                    padding-left: 12px; border-left: 1px dashed #c5d4e4; align-self: stretch;
+                }
+                .ptw-section-3 .ptw-work-type-row__icon {
+                    width: 36px; height: 36px; border-radius: 10px;
+                    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.92rem;
+                    box-shadow: inset 0 0 0 1px rgba(0, 56, 101, 0.06);
+                }
+                .ptw-section-3 .ptw-work-type-row__name {
+                    font-weight: 800; font-size: 0.98rem; color: #003865; line-height: 1.35; letter-spacing: 0.01em;
+                }
+                .ptw-section-3 .ptw-work-type-row__opts { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; min-width: 0; }
                 .ptw-section-3 .ptw-work-subopt,
                 .ptw-section-3 .ptw-check-option {
-                    display: inline-flex !important; align-items: center; gap: 5px; margin: 0 !important;
-                    padding: 4px 8px !important; border: 1px solid #e5e7eb !important; border-radius: 8px !important;
-                    background: #f8fafc !important; font-size: 0.78rem !important; font-weight: 600; white-space: nowrap;
+                    display: inline-flex !important; align-items: center; gap: 6px; margin: 0 !important;
+                    padding: 5px 10px !important; border: 1px solid #d0dbe8 !important; border-radius: 999px !important;
+                    background: #fff !important; font-size: 0.8rem !important; font-weight: 600; color: #334155; white-space: nowrap;
+                    box-shadow: 0 1px 1px rgba(15, 23, 42, 0.03);
                 }
+                .ptw-section-3 .ptw-work-subopt:hover,
+                .ptw-section-3 .ptw-check-option:hover {
+                    border-color: #003865 !important; background: #eef5fb !important; color: #003865;
+                }
+                .ptw-section-3 .ptw-work-subopt:has(input:checked),
+                .ptw-section-3 .ptw-check-option:has(input:checked) {
+                    border-color: #003865 !important;
+                    background: linear-gradient(135deg, #003865 0%, #004C8C 100%) !important;
+                    color: #fff !important;
+                }
+                .ptw-section-3 .ptw-work-subopt:has(input:checked) span,
+                .ptw-section-3 .ptw-check-option:has(input:checked) span { color: #fff !important; }
+                .ptw-section-3 .ptw-work-subopt input,
+                .ptw-section-3 .ptw-check-option input { margin: 0 !important; width: 14px; height: 14px; accent-color: #FFC72C; }
                 .ptw-section-3 .ptw-work-subopt-input {
-                    width: auto !important; min-width: 88px; max-width: 160px; height: 30px !important;
-                    padding: 4px 8px !important; font-size: 0.78rem !important; border-radius: 8px !important;
+                    width: auto !important; min-width: 92px; max-width: 168px; height: 32px !important;
+                    padding: 5px 10px !important; font-size: 0.8rem !important; border-radius: 8px !important;
+                    border: 1px solid #d0dbe8 !important;
                 }
-                .ptw-section-3 .ptw-work-subopt-input--wide { min-width: 160px; max-width: 280px; flex: 1 1 180px; }
+                .ptw-section-3 .ptw-work-subopt-input--wide { min-width: 180px; max-width: 320px; flex: 1 1 200px; }
                 @media (max-width: 700px) {
-                    .ptw-section-3 .ptw-work-type-row { grid-template-columns: 1fr; }
+                    .ptw-section-3 .ptw-work-type-row { grid-template-columns: 1fr; gap: 10px; }
+                    .ptw-section-3 .ptw-work-type-row__label {
+                        padding-left: 0; border-left: none; padding-bottom: 8px; border-bottom: 1px dashed #c5d4e4;
+                    }
                 }
                 
                 .ptw-section-4 { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-color: #FF9800; }
@@ -15301,9 +15413,9 @@ const PTW = {
                                 <i class="fas fa-clipboard-check"></i>
                                 <span>القسم الثالث : تحديد نوع / طبيعة الأعمال والعناصر التفصيلية لتنفيذ العملية</span>
                             </h3>
-                            <p class="text-sm text-gray-600 mb-3 bg-white p-2 rounded border border-gray-100 inline-block">
-                                <i class="fas fa-check-square text-purple-500 ml-1"></i>
-                                كل نوع في صف مستقل، والخيارات الفرعية على اليسار.
+                            <p class="ptw-work-type-hint">
+                                <i class="fas fa-layer-group" aria-hidden="true"></i>
+                                <span>اختر نوع التصريح من العمود الأيمن، ثم حدّد طبيعة العمل من الخيارات على اليسار.</span>
                             </p>
                             <div class="ptw-work-type-stack">
                                 <div class="ptw-work-type-row" data-type="hot">
