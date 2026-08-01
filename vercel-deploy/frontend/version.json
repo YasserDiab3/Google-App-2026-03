@@ -1,13 +1,15 @@
 {
-  "version": "1.0.723",
+  "version": "1.0.724",
   "highlights": {
     "ar": [
-      "SEC-01 مرحلة 4: تنظيف بقايا مسار bootstrap نهائياً.",
-      "رفض أي @hse.local دائماً؛ لا جلسات bootstrap جديدة."
+      "P0 أمان: كتابة الأوراق بهوية مسجّلة فقط.",
+      "موافقات العيادة (حذف/توريد/أدوية) بصلاحية مدير وختم خادم.",
+      "إغلاق قراءة طلبات الموافقة العامة بدون CSRF."
     ],
     "en": [
-      "SEC-01 phase 4: remaining bootstrap path cleaned up.",
-      "Any @hse.local email always rejected; no new bootstrap sessions."
+      "P0 security: sheet writes require a registered actor.",
+      "Clinic approvals (delete/supply/meds) require admin + server stamp.",
+      "Public approval-list reads without CSRF closed."
     ]
   }
 }
