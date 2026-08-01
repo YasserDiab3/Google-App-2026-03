@@ -719,16 +719,38 @@ const Users = {
     updateUsersAdminStatsCards(users) {
         const root = document.getElementById('users-admin-stats');
         if (!root) return;
-        const parent = root.parentElement;
-        if (!parent) return;
-        const html = this.renderUsersAdminStatsCards(this.computeUsersAdminStats(users || AppState.appData?.users || []));
-        const tmp = document.createElement('div');
-        tmp.innerHTML = html.trim();
-        const next = tmp.firstElementChild;
-        if (next) {
-            root.replaceWith(next);
-            this.applyModuleI18n(next);
-        }
+        const s = this.computeUsersAdminStats(users || AppState.appData?.users || []);
+        const inactiveFoot = s.inactive
+            ? `${s.inactive} ${this.t('module.users.stats.inactive', 'غير نشط')}`
+            : this.t('module.users.stats.allActiveHint', 'لا حسابات معطّلة');
+        const feet = {
+            total: inactiveFoot,
+            active: `${s.total ? Math.round((s.active / Math.max(s.total, 1)) * 100) : 0}% ${this.t('module.users.stats.ofTotal', 'من الإجمالي')}`,
+            online: this.t('module.users.stats.liveHint', 'يتحدّث تلقائياً'),
+            admins: `${s.safety} ${this.t('module.users.stats.safetyOfficers', 'مسؤول سلامة')}`,
+            mfa: s.total
+                ? `${Math.round((s.mfa / Math.max(s.total, 1)) * 100)}% ${this.t('module.users.stats.coverage', 'تغطية')}`
+                : this.t('module.users.stats.noUsers', 'لا مستخدمين'),
+            linked: `${Math.max(0, s.total - s.linked)} ${this.t('module.users.stats.unlinked', 'غير مربوط')}`,
+            never: this.t('module.users.stats.reviewHint', 'مراجعة دعوات/تفعيل'),
+            stale: this.t('module.users.stats.staleFoot', 'قد يحتاج مراجعة صلاحيات')
+        };
+        const values = {
+            total: s.total,
+            active: s.active,
+            online: s.online,
+            admins: s.admins,
+            mfa: s.mfa,
+            linked: s.linked,
+            never: s.neverLogin,
+            stale: s.stale30
+        };
+        Object.keys(values).forEach((key) => {
+            const valEl = root.querySelector(`[data-uas-value="${key}"]`);
+            const footEl = root.querySelector(`[data-uas-foot="${key}"]`);
+            if (valEl) valEl.textContent = String(Number(values[key]) || 0);
+            if (footEl && feet[key] != null) footEl.textContent = feet[key];
+        });
     },
 
     async renderList() {
@@ -3175,28 +3197,38 @@ const Users = {
 
             const isOnline = user.isOnline === true;
             const lastLoginTime = user.lastLogin ? Utils.formatDateTime(user.lastLogin) : '-';
+            const onlineLabel = isOnline ? 'متصل' : 'غير متصل';
 
-            // خلية حالة الاتصال (العمود 8 - index 7)
+            // خلية حالة الاتصال (العمود 8 - index 7) — حدّث فقط عند التغيير لتقليل تهنيج الواجهة
             const connectionCell = cells[7];
             if (connectionCell) {
-                connectionCell.innerHTML = `
+                const prevOnline = connectionCell.getAttribute('data-online') === '1';
+                if (prevOnline !== isOnline || !connectionCell.getAttribute('data-online')) {
+                    connectionCell.setAttribute('data-online', isOnline ? '1' : '0');
+                    connectionCell.innerHTML = `
                     <div class="flex items-center gap-2">
                         <div class="w-3 h-3 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}" style="animation: ${isOnline ? 'pulse 2s infinite' : 'none'};"></div>
                         <span class="text-sm ${isOnline ? 'text-green-600' : 'text-gray-500'}">
-                            ${isOnline ? 'متصل' : 'غير متصل'}
+                            ${onlineLabel}
                         </span>
                     </div>
                 `;
+                }
             }
 
             // خلية آخر تسجيل دخول (العمود 9 - index 8)
             const lastLoginCell = cells[8];
             if (lastLoginCell) {
-                lastLoginCell.innerHTML = `
+                const prevLogin = lastLoginCell.getAttribute('data-last-login') || '';
+                const nextLogin = String(user.lastLogin || '');
+                if (prevLogin !== nextLogin) {
+                    lastLoginCell.setAttribute('data-last-login', nextLogin);
+                    lastLoginCell.innerHTML = `
                     <span class="text-sm text-gray-600" title="${user.lastLogin || '-'}">
                         ${lastLoginTime}
                     </span>
                 `;
+                }
             }
         });
 

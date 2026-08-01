@@ -32,6 +32,27 @@ const PTW = {
         if (typeof i18nCore.applyLiteralTranslations === 'function') i18nCore.applyLiteralTranslations(target);
     },
 
+    /** تأجيل i18n بعد Mutations — التطبيق المتزامن كان يجمّد الشاشة عند بناء أقسام/نماذج كبيرة */
+    _queuePtwI18nNode(node) {
+        if (!node || node.nodeType !== 1) return;
+        if (!this._ptwI18nPendingNodes) this._ptwI18nPendingNodes = [];
+        this._ptwI18nPendingNodes.push(node);
+        if (this._ptwI18nFlushScheduled) return;
+        this._ptwI18nFlushScheduled = true;
+        const flush = () => {
+            this._ptwI18nFlushScheduled = false;
+            const batch = this._ptwI18nPendingNodes || [];
+            this._ptwI18nPendingNodes = [];
+            batch.forEach((n) => {
+                try {
+                    if (n && n.isConnected) this.applyModuleI18n(n);
+                } catch (_e) { /* ignore */ }
+            });
+        };
+        if (typeof requestAnimationFrame === 'function') requestAnimationFrame(flush);
+        else setTimeout(flush, 32);
+    },
+
     _t(key, fallback) {
         if (window.AppI18n && typeof window.AppI18n.t === 'function') return window.AppI18n.t(key, fallback);
         if (window.I18n && typeof window.I18n.t === 'function') return window.I18n.t(key, fallback);
@@ -95,7 +116,7 @@ const PTW = {
             this._i18nSectionObserver = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
                     mutation.addedNodes.forEach((node) => {
-                        if (node && node.nodeType === 1) this.applyModuleI18n(node);
+                        if (node && node.nodeType === 1) this._queuePtwI18nNode(node);
                     });
                 });
             });
@@ -108,7 +129,7 @@ const PTW = {
                     mutation.addedNodes.forEach((node) => {
                         if (!node || node.nodeType !== 1) return;
                         if (node.classList?.contains('modal-overlay') || node.querySelector?.('.modal-overlay')) {
-                            this.applyModuleI18n(node);
+                            this._queuePtwI18nNode(node);
                         }
                     });
                 });
