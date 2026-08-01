@@ -1,13 +1,3 @@
 {
-  "version": "1.0.751",
-  "highlights": {
-    "ar": [
-      "مواءمة حجم عناصر أنواع التصريح في القسم الثالث مع كروت القسم الرابع.",
-      "الإبقاء على التمييز اللوني لكل نوع تصريح بنفس التخطيط الحالي."
-    ],
-    "en": [
-      "PTW section-3 work-type rows now match section-4 card sizing.",
-      "Kept per-type color accents with the same current layout."
-    ]
-  }
+  "version": "1.0.1"
 }

@@ -1578,6 +1578,312 @@ const IssuingAuthorities = {
         document.getElementById('ia-export-pdf-btn')?.addEventListener('click', () => this.exportListToPDF());
     },
 
+    computeIaAdminStats(list) {
+        const rows = Array.isArray(list) ? list : [];
+        let active = 0;
+        let inactive = 0;
+        let withG = 0;
+        let withY = 0;
+        let onlyX = 0;
+        const factories = new Set();
+        const departments = new Set();
+        const roles = new Set();
+
+        rows.forEach((r) => {
+            if (r && r.isActive === false) inactive += 1;
+            else active += 1;
+
+            let hasG = false;
+            let hasY = false;
+            (this.PERMIT_TYPES || []).forEach((pt) => {
+                const v = String((r && r[pt.key]) || 'X').toUpperCase().trim();
+                if (v === 'G') hasG = true;
+                else if (v === 'Y') hasY = true;
+            });
+            if (hasG) withG += 1;
+            if (hasY) withY += 1;
+            if (!hasG && !hasY) onlyX += 1;
+
+            const fac = String(r?.factory || r?.factoryId || '').trim();
+            if (fac) factories.add(fac);
+            const dep = String(r?.departmentName || '').trim();
+            if (dep) departments.add(dep);
+            const role = String(r?.approvalRole || '').trim();
+            if (role) roles.add(role);
+        });
+
+        return {
+            total: rows.length,
+            active,
+            inactive,
+            withG,
+            withY,
+            onlyX,
+            factories: factories.size,
+            departments: departments.size,
+            roles: roles.size
+        };
+    },
+
+    ensureIaAdminStatsStyles() {
+        const styleId = 'ia-admin-stats-styles-v1';
+        if (document.getElementById(styleId)) return;
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            #ia-admin-stats {
+                --ias-navy: #003865;
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+                gap: 0.85rem;
+                margin: 0 0 1.15rem;
+                align-items: stretch;
+            }
+            #ia-admin-stats .ias-card {
+                --ias-accent: var(--ias-navy);
+                --ias-accent-soft: #e8f1f8;
+                position: relative;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                gap: 0.55rem;
+                min-height: 118px;
+                padding: 1rem 1.05rem 0.95rem;
+                border-radius: 14px;
+                background: linear-gradient(155deg, #ffffff 0%, var(--ias-accent-soft) 125%);
+                border: 1px solid color-mix(in srgb, var(--ias-accent) 16%, #e2e8f0);
+                box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 20px rgba(15, 23, 42, 0.035);
+                transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            }
+            #ia-admin-stats .ias-card::after {
+                content: '';
+                position: absolute;
+                inset-inline-start: 0;
+                top: 0;
+                bottom: 0;
+                width: 3px;
+                background: linear-gradient(180deg, var(--ias-accent), color-mix(in srgb, var(--ias-accent) 40%, #fff));
+                border-radius: 14px 0 0 14px;
+            }
+            [dir="rtl"] #ia-admin-stats .ias-card::after { border-radius: 0 14px 14px 0; }
+            #ia-admin-stats .ias-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(15, 23, 42, 0.07), 0 12px 28px rgba(15, 23, 42, 0.05);
+                border-color: color-mix(in srgb, var(--ias-accent) 28%, #e2e8f0);
+            }
+            #ia-admin-stats .ias-card__top {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 0.5rem;
+                position: relative;
+                z-index: 1;
+            }
+            #ia-admin-stats .ias-card__icon {
+                width: 38px;
+                height: 38px;
+                border-radius: 11px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                background: color-mix(in srgb, var(--ias-accent) 12%, #fff);
+                color: var(--ias-accent);
+                font-size: 0.95rem;
+                box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ias-accent) 14%, transparent);
+            }
+            #ia-admin-stats .ias-card__label {
+                margin: 0;
+                font-size: 0.78rem;
+                font-weight: 700;
+                color: #334155;
+                line-height: 1.35;
+            }
+            #ia-admin-stats .ias-card__hint {
+                margin: 0.15rem 0 0;
+                font-size: 0.68rem;
+                color: #64748b;
+                line-height: 1.4;
+            }
+            #ia-admin-stats .ias-card__value {
+                position: relative;
+                z-index: 1;
+                margin-top: auto;
+                font-size: 1.7rem;
+                font-weight: 800;
+                letter-spacing: -0.03em;
+                line-height: 1;
+                color: var(--ias-accent);
+                font-variant-numeric: tabular-nums;
+            }
+            #ia-admin-stats .ias-card__foot {
+                position: relative;
+                z-index: 1;
+                font-size: 0.68rem;
+                color: #64748b;
+                font-weight: 600;
+            }
+            #ia-admin-stats .ias-card--total { --ias-accent: #003865; --ias-accent-soft: #e8f1f8; }
+            #ia-admin-stats .ias-card--active { --ias-accent: #0f766e; --ias-accent-soft: #ecfdf8; }
+            #ia-admin-stats .ias-card--g { --ias-accent: #15803d; --ias-accent-soft: #f0fdf4; }
+            #ia-admin-stats .ias-card--y { --ias-accent: #b45309; --ias-accent-soft: #fffbeb; }
+            #ia-admin-stats .ias-card--x { --ias-accent: #b91c1c; --ias-accent-soft: #fef2f2; }
+            #ia-admin-stats .ias-card--factory { --ias-accent: #1d4ed8; --ias-accent-soft: #eff6ff; }
+            #ia-admin-stats .ias-card--dept { --ias-accent: #0369a1; --ias-accent-soft: #f0f9ff; }
+            #ia-admin-stats .ias-card--role { --ias-accent: #7c3aed; --ias-accent-soft: #f5f3ff; }
+            @media (max-width: 640px) {
+                #ia-admin-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                #ia-admin-stats .ias-card__value { font-size: 1.45rem; }
+            }
+        `;
+        document.head.appendChild(style);
+    },
+
+    renderIaAdminStatsCards(stats) {
+        this.ensureIaAdminStatsStyles();
+        const s = stats || this.computeIaAdminStats(this._data || []);
+        const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML)
+            ? Utils.escapeHTML
+            : (v) => String(v == null ? '' : v);
+        const cat = this._categoryTitle();
+        const pct = (n) => (s.total ? Math.round((n / Math.max(s.total, 1)) * 100) : 0);
+        const cards = [
+            {
+                key: 'total',
+                cls: 'ias-card--total',
+                icon: 'fa-users',
+                label: this.t('module.issuingAuthorities.stats.total', 'إجمالي السجلات'),
+                hint: this._tReplace('module.issuingAuthorities.stats.totalHint', 'قائمة {{cat}} الحالية', { cat }),
+                value: s.total,
+                foot: s.inactive
+                    ? `${s.inactive} ${this.t('module.issuingAuthorities.stats.inactive', 'غير نشط')}`
+                    : this.t('module.issuingAuthorities.stats.allActiveHint', 'لا سجلات معطّلة')
+            },
+            {
+                key: 'active',
+                cls: 'ias-card--active',
+                icon: 'fa-user-check',
+                label: this.t('module.issuingAuthorities.stats.active', 'سجلات نشطة'),
+                hint: this.t('module.issuingAuthorities.stats.activeHint', 'متاحة للاعتماد في التصاريح'),
+                value: s.active,
+                foot: `${pct(s.active)}% ${this.t('module.issuingAuthorities.stats.ofTotal', 'من الإجمالي')}`
+            },
+            {
+                key: 'withG',
+                cls: 'ias-card--g',
+                icon: 'fa-certificate',
+                label: this.t('module.issuingAuthorities.stats.withG', 'مصرحون (G)'),
+                hint: this.t('module.issuingAuthorities.stats.withGHint', 'توقيع في كل الحالات لنوع واحد على الأقل'),
+                value: s.withG,
+                foot: `${pct(s.withG)}% ${this.t('module.issuingAuthorities.stats.coverage', 'تغطية')}`
+            },
+            {
+                key: 'withY',
+                cls: 'ias-card--y',
+                icon: 'fa-handshake',
+                label: this.t('module.issuingAuthorities.stats.withY', 'يحتاج تنسيق (Y)'),
+                hint: this.t('module.issuingAuthorities.stats.withYHint', 'توقيع بعد تنسيق HSE لنوع واحد على الأقل'),
+                value: s.withY,
+                foot: this.t('module.issuingAuthorities.stats.withYFoot', 'متابعة تنسيق السلامة')
+            },
+            {
+                key: 'onlyX',
+                cls: 'ias-card--x',
+                icon: 'fa-ban',
+                label: this.t('module.issuingAuthorities.stats.onlyX', 'بلا صلاحية توقيع (X)'),
+                hint: this.t('module.issuingAuthorities.stats.onlyXHint', 'كل أنواع التصاريح غير مفعّلة'),
+                value: s.onlyX,
+                foot: this.t('module.issuingAuthorities.stats.onlyXFoot', 'قد يحتاج مراجعة صلاحيات')
+            },
+            {
+                key: 'factories',
+                cls: 'ias-card--factory',
+                icon: 'fa-industry',
+                label: this.t('module.issuingAuthorities.stats.factories', 'مصانع مغطاة'),
+                hint: this.t('module.issuingAuthorities.stats.factoriesHint', 'عدد المصانع في القائمة'),
+                value: s.factories,
+                foot: this.t('module.issuingAuthorities.stats.scopeFoot', 'نطاق المواقع')
+            },
+            {
+                key: 'departments',
+                cls: 'ias-card--dept',
+                icon: 'fa-sitemap',
+                label: this.t('module.issuingAuthorities.stats.departments', 'إدارات مغطاة'),
+                hint: this.t('module.issuingAuthorities.stats.departmentsHint', 'تنوع الإدارات المسجّلة'),
+                value: s.departments,
+                foot: this.t('module.issuingAuthorities.stats.orgFoot', 'توزيع تنظيمي')
+            },
+            {
+                key: 'roles',
+                cls: 'ias-card--role',
+                icon: 'fa-user-tag',
+                label: this.t('module.issuingAuthorities.stats.roles', 'أدوار اعتماد'),
+                hint: this.t('module.issuingAuthorities.stats.rolesHint', 'أنواع أدوار الاعتماد المستخدمة'),
+                value: s.roles,
+                foot: this.t('module.issuingAuthorities.stats.rolesFoot', 'تنوع مسارات الاعتماد')
+            }
+        ];
+
+        return `
+            <div id="ia-admin-stats" class="ia-admin-stats" role="region" aria-label="${esc(this.t('module.issuingAuthorities.stats.region', 'ملخص المصرح لهم باعتماد التصاريح'))}">
+                ${cards.map((c) => `
+                    <article class="ias-card ${c.cls}" data-ias="${c.key}">
+                        <div class="ias-card__top">
+                            <div>
+                                <p class="ias-card__label">${esc(c.label)}</p>
+                                <p class="ias-card__hint">${esc(c.hint)}</p>
+                            </div>
+                            <div class="ias-card__icon" aria-hidden="true"><i class="fas ${c.icon}"></i></div>
+                        </div>
+                        <div class="ias-card__value" data-ias-value="${c.key}">${Number(c.value) || 0}</div>
+                        <div class="ias-card__foot" data-ias-foot="${c.key}">${esc(c.foot)}</div>
+                    </article>
+                `).join('')}
+            </div>
+        `;
+    },
+
+    updateIaAdminStatsCards(list) {
+        const root = document.getElementById('ia-admin-stats');
+        if (!root) return;
+        const s = this.computeIaAdminStats(list != null ? list : (this._data || []));
+        const pct = (n) => (s.total ? Math.round((n / Math.max(s.total, 1)) * 100) : 0);
+        const cat = this._categoryTitle();
+        const values = {
+            total: s.total,
+            active: s.active,
+            withG: s.withG,
+            withY: s.withY,
+            onlyX: s.onlyX,
+            factories: s.factories,
+            departments: s.departments,
+            roles: s.roles
+        };
+        const feet = {
+            total: s.inactive
+                ? `${s.inactive} ${this.t('module.issuingAuthorities.stats.inactive', 'غير نشط')}`
+                : this.t('module.issuingAuthorities.stats.allActiveHint', 'لا سجلات معطّلة'),
+            active: `${pct(s.active)}% ${this.t('module.issuingAuthorities.stats.ofTotal', 'من الإجمالي')}`,
+            withG: `${pct(s.withG)}% ${this.t('module.issuingAuthorities.stats.coverage', 'تغطية')}`,
+            withY: this.t('module.issuingAuthorities.stats.withYFoot', 'متابعة تنسيق السلامة'),
+            onlyX: this.t('module.issuingAuthorities.stats.onlyXFoot', 'قد يحتاج مراجعة صلاحيات'),
+            factories: this.t('module.issuingAuthorities.stats.scopeFoot', 'نطاق المواقع'),
+            departments: this.t('module.issuingAuthorities.stats.orgFoot', 'توزيع تنظيمي'),
+            roles: this.t('module.issuingAuthorities.stats.rolesFoot', 'تنوع مسارات الاعتماد')
+        };
+        // تحديث تلميح الإجمالي للفئة النشطة
+        const totalHint = root.querySelector('[data-ias="total"] .ias-card__hint');
+        if (totalHint) {
+            totalHint.textContent = this._tReplace('module.issuingAuthorities.stats.totalHint', 'قائمة {{cat}} الحالية', { cat });
+        }
+        Object.keys(values).forEach((key) => {
+            const valEl = root.querySelector(`[data-ias-value="${key}"]`);
+            const footEl = root.querySelector(`[data-ias-foot="${key}"]`);
+            if (valEl) valEl.textContent = String(Number(values[key]) || 0);
+            if (footEl && feet[key] != null) footEl.textContent = feet[key];
+        });
+    },
+
     _renderShell() {
         const canAdd = this.hasIssuingAuthoritiesModuleAccess();
         const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
@@ -1601,6 +1907,7 @@ const IssuingAuthorities = {
                 </div>
             </div>
         </div>
+        ${this.renderIaAdminStatsCards(this.computeIaAdminStats(this._data || []))}
         <div class="ia-module" id="ia-module-root">
             <div class="content-card">
                 <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
@@ -1949,6 +2256,9 @@ const IssuingAuthorities = {
     _renderTable() {
         const wrapper = document.getElementById('ia-table-wrapper');
         if (!wrapper) return;
+
+        // تحديث كروت المتابعة من كامل بيانات الفئة (وليس الفلتر فقط)
+        try { this.updateIaAdminStatsCards(this._data || []); } catch (_e) { /* ignore */ }
 
         const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML)
             ? Utils.escapeHTML
