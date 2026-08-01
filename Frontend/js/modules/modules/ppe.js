@@ -71,14 +71,14 @@ const PPE = {
                 font-size: 12px; font-weight: 600; color: #4a5568; text-transform: uppercase;
                 letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px;
             }
-            .ppe-visits-filters-row .filter-label i { font-size: 11px; color: #667eea; }
+            .ppe-visits-filters-row .filter-label i { font-size: 11px; color: #0f766e; }
             .ppe-visits-filters-row .filter-input {
                 width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px;
                 background: white; font-size: 14px; color: #2d3748; transition: all 0.2s ease;
                 box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             }
             .ppe-visits-filters-row .filter-input:focus {
-                outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                outline: none; border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
             }
             .ppe-visits-filters-row .filter-reset-btn {
                 width: 100%; padding: 10px 16px; min-height: 42px; border-radius: 12px;
@@ -91,11 +91,191 @@ const PPE = {
             }
             .ppe-visits-filters-row .filter-count-badge {
                 display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 20px;
-                padding: 2px 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                padding: 2px 8px; background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
                 color: white; border-radius: 12px; font-size: 11px; font-weight: 700; margin-inline-start: 4px;
+            }
+            .ppe-receipts-kpi { margin: 0 0 1.1rem; direction: rtl; }
+            .ppe-receipts-kpi__intro {
+                display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
+                gap: 10px; margin-bottom: 12px;
+            }
+            .ppe-receipts-kpi__title {
+                margin: 0; font-size: 0.95rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;
+            }
+            .ppe-receipts-kpi__title i {
+                width: 1.75rem; height: 1.75rem; border-radius: 8px; display: inline-flex; align-items: center;
+                justify-content: center; background: rgba(15, 118, 110, 0.1); color: #0f766e; font-size: 0.85rem;
+            }
+            .ppe-receipts-kpi__sub { margin: 4px 0 0; font-size: 0.78rem; color: #64748b; line-height: 1.45; }
+            .ppe-receipts-kpi__meta {
+                display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px;
+                background: #f0fdfa; border: 1px solid #99f6e4; color: #0f766e; font-size: 0.75rem; font-weight: 700;
+            }
+            .ppe-receipts-kpi__grid {
+                display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: stretch;
+            }
+            .ppe-rk-card {
+                position: relative; overflow: hidden; background: #fff; border: 1px solid #e2e8f0;
+                border-radius: 14px; padding: 14px 14px 12px; min-height: 108px; box-sizing: border-box;
+                box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;
+            }
+            .ppe-rk-card::before {
+                content: ''; position: absolute; inset-inline-start: 0; top: 0; bottom: 0; width: 4px;
+            }
+            .ppe-rk-card:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08); }
+            .ppe-rk-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+            .ppe-rk-card__icon {
+                width: 40px; height: 40px; border-radius: 12px; display: inline-flex; align-items: center;
+                justify-content: center; font-size: 1rem; flex-shrink: 0;
+            }
+            .ppe-rk-card__label { margin: 0; font-size: 0.78rem; font-weight: 700; color: #475569; line-height: 1.35; }
+            .ppe-rk-card__value {
+                margin: 8px 0 0; font-size: 1.65rem; font-weight: 900; line-height: 1; color: #0f172a;
+                font-variant-numeric: tabular-nums;
+            }
+            .ppe-rk-card__desc { margin: 8px 0 0; font-size: 0.72rem; color: #64748b; line-height: 1.4; }
+            .ppe-rk-card__chip {
+                display: inline-flex; align-items: center; margin-top: 8px; padding: 3px 8px; border-radius: 999px;
+                font-size: 0.68rem; font-weight: 700; background: #f8fafc; color: #475569; border: 1px solid #e2e8f0;
+            }
+            .ppe-rk-card--total::before { background: #0f766e; }
+            .ppe-rk-card--total .ppe-rk-card__icon { background: #ecfdf5; color: #0f766e; }
+            .ppe-rk-card--received::before { background: #16a34a; }
+            .ppe-rk-card--received .ppe-rk-card__icon { background: #f0fdf4; color: #16a34a; }
+            .ppe-rk-card--pending::before { background: #d97706; }
+            .ppe-rk-card--pending .ppe-rk-card__icon { background: #fffbeb; color: #d97706; }
+            .ppe-rk-card--pending.is-attention { background: linear-gradient(180deg, #fffbeb 0%, #fff 70%); border-color: #fde68a; }
+            .ppe-rk-card--employees::before { background: #2563eb; }
+            .ppe-rk-card--employees .ppe-rk-card__icon { background: #eff6ff; color: #2563eb; }
+            @media (max-width: 1100px) {
+                .ppe-receipts-kpi__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            }
+            @media (max-width: 640px) {
+                .ppe-receipts-kpi__grid { grid-template-columns: 1fr; }
+            }
+            @media print {
+                .ppe-rk-card { box-shadow: none !important; break-inside: avoid; }
+                .ppe-rk-card:hover { transform: none; }
             }
         `;
         document.head.appendChild(style);
+    },
+
+    /** إحصائيات سجل الاستلام — مرور واحد */
+    computeReceiptsKpiStats(ppeList, filteredList) {
+        const list = Array.isArray(ppeList) ? ppeList : [];
+        const filtered = Array.isArray(filteredList) ? filteredList : list;
+        let received = 0;
+        let pending = 0;
+        const employees = new Set();
+        for (let i = 0; i < list.length; i++) {
+            const item = list[i];
+            if (!item) continue;
+            const st = String(item.status || '').trim();
+            if (st === 'مستلم') received++;
+            else if (st === 'قيد التسليم') pending++;
+            const empKey = item.employeeCode || item.employeeNumber || item.employeeName;
+            if (empKey) employees.add(String(empKey).trim().toLowerCase());
+        }
+        return {
+            total: list.length,
+            received,
+            pending,
+            employees: employees.size,
+            filteredCount: filtered.length,
+            hasFilters: this.hasActiveReceiptFilters()
+        };
+    },
+
+    buildReceiptsKpiHtml(stats) {
+        const t = (k, f) => this._t(k, f);
+        const esc = (v) => Utils.escapeHTML(v);
+        const s = stats || this.computeReceiptsKpiStats(AppState.appData.ppe || [], []);
+        const metaText = s.hasFilters
+            ? `${t('module.ppe.kpi.showingFiltered', 'عرض')} ${s.filteredCount} ${t('module.ppe.kpi.ofTotal', 'من')} ${s.total}`
+            : `${t('module.ppe.kpi.liveSnapshot', 'ملخص فوري للسجل')}`;
+        const pendingChip = s.pending > 0
+            ? `<span class="ppe-rk-card__chip"><i class="fas fa-exclamation-circle ml-1"></i>${esc(t('module.ppe.kpi.needsFollowUp', 'تحتاج متابعة'))}</span>`
+            : `<span class="ppe-rk-card__chip">${esc(t('module.ppe.kpi.noPending', 'لا يوجد معلّق'))}</span>`;
+        const receivedPct = s.total > 0 ? Math.round((s.received / s.total) * 100) : 0;
+
+        return `
+            <section class="ppe-receipts-kpi" id="ppe-receipts-kpi" aria-label="${esc(t('module.ppe.kpi.sectionLabel', 'ملخص سجل الاستلام'))}">
+                <div class="ppe-receipts-kpi__intro">
+                    <div>
+                        <h3 class="ppe-receipts-kpi__title">
+                            <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+                            <span>${esc(t('module.ppe.kpi.sectionTitle', 'لوحة متابعة الاستلامات'))}</span>
+                        </h3>
+                        <p class="ppe-receipts-kpi__sub">${esc(t('module.ppe.kpi.sectionSub', 'أرقام سريعة تساعدك على فهم حالة التسليم والمتابعة دون فتح كل سجل.'))}</p>
+                    </div>
+                    <span class="ppe-receipts-kpi__meta" id="ppe-receipts-kpi-meta">
+                        <i class="fas fa-filter" aria-hidden="true"></i>${esc(metaText)}
+                    </span>
+                </div>
+                <div class="ppe-receipts-kpi__grid">
+                    <article class="ppe-rk-card ppe-rk-card--total">
+                        <div class="ppe-rk-card__head">
+                            <div>
+                                <p class="ppe-rk-card__label">${esc(t('module.ppe.kpi.totalReceipts', 'إجمالي الاستلامات'))}</p>
+                                <p class="ppe-rk-card__value" id="ppe-kpi-total">${s.total}</p>
+                            </div>
+                            <span class="ppe-rk-card__icon" aria-hidden="true"><i class="fas fa-receipt"></i></span>
+                        </div>
+                        <p class="ppe-rk-card__desc">${esc(t('module.ppe.kpi.totalReceiptsDesc', 'كل سجلات الاستلام المسجّلة في النظام'))}</p>
+                    </article>
+                    <article class="ppe-rk-card ppe-rk-card--received">
+                        <div class="ppe-rk-card__head">
+                            <div>
+                                <p class="ppe-rk-card__label">${esc(t('module.ppe.kpi.receivedItems', 'مهمات تم تسليمها'))}</p>
+                                <p class="ppe-rk-card__value" id="ppe-kpi-received">${s.received}</p>
+                            </div>
+                            <span class="ppe-rk-card__icon" aria-hidden="true"><i class="fas fa-check-circle"></i></span>
+                        </div>
+                        <p class="ppe-rk-card__desc">${esc(t('module.ppe.kpi.receivedItemsDesc', 'استلامات مكتملة وموثّقة'))}</p>
+                        <span class="ppe-rk-card__chip">${receivedPct}% ${esc(t('module.ppe.kpi.ofAll', 'من الإجمالي'))}</span>
+                    </article>
+                    <article class="ppe-rk-card ppe-rk-card--pending${s.pending > 0 ? ' is-attention' : ''}">
+                        <div class="ppe-rk-card__head">
+                            <div>
+                                <p class="ppe-rk-card__label">${esc(t('module.ppe.kpi.pendingItems', 'قيد التسليم'))}</p>
+                                <p class="ppe-rk-card__value" id="ppe-kpi-pending">${s.pending}</p>
+                            </div>
+                            <span class="ppe-rk-card__icon" aria-hidden="true"><i class="fas fa-clock"></i></span>
+                        </div>
+                        <p class="ppe-rk-card__desc">${esc(t('module.ppe.kpi.pendingItemsDesc', 'سجلات لم تُغلق بعد — راجعها أولاً'))}</p>
+                        ${pendingChip}
+                    </article>
+                    <article class="ppe-rk-card ppe-rk-card--employees">
+                        <div class="ppe-rk-card__head">
+                            <div>
+                                <p class="ppe-rk-card__label">${esc(t('module.ppe.kpi.uniqueEmployees', 'الموظفون المستلمون'))}</p>
+                                <p class="ppe-rk-card__value" id="ppe-kpi-employees">${s.employees}</p>
+                            </div>
+                            <span class="ppe-rk-card__icon" aria-hidden="true"><i class="fas fa-users"></i></span>
+                        </div>
+                        <p class="ppe-rk-card__desc">${esc(t('module.ppe.kpi.uniqueEmployeesDesc', 'عدد الموظفين المستفيدين من المهمات'))}</p>
+                    </article>
+                </div>
+            </section>
+        `;
+    },
+
+    /** ربط مستمع مرة واحدة لكل عنصر (يمنع التكرار عند إعادة الرسم) */
+    _ppeBindOnce(el, eventName, handler) {
+        if (!el || !eventName || typeof handler !== 'function') return;
+        const attr = `data-ppe-bound-${eventName}`;
+        if (el.hasAttribute(attr)) return;
+        el.setAttribute(attr, '1');
+        el.addEventListener(eventName, handler);
+    },
+
+    showPPEFormById(id) {
+        const list = (typeof AppState !== 'undefined' && AppState.appData && Array.isArray(AppState.appData.ppe))
+            ? AppState.appData.ppe
+            : [];
+        const item = list.find((row) => row && String(row.id) === String(id));
+        return this.showPPEForm(item || null);
     },
 
     getDisplayStatus(status) {
@@ -306,43 +486,8 @@ const PPE = {
 
         const uniqueTypes = [...new Set(ppeList.map(p => p.equipmentType).filter(Boolean))].sort();
         const uniqueStatuses = ['مستلم', 'قيد التسليم'];
-
-        const receiptsKpiGrid = `
-            <div class="kpi-grid mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="kpi-card kpi-primary">
-                    <div class="kpi-icon"><i class="fas fa-receipt"></i></div>
-                    <div class="kpi-content">
-                        <div class="kpi-label">${esc(t('module.ppe.kpi.totalReceipts', 'إجمالي الاستلامات'))}</div>
-                        <div class="kpi-value">${ppeList.length}</div>
-                        <div class="kpi-description">${esc(t('module.ppe.kpi.totalReceiptsDesc', 'سجلات الاستلام المسجلة'))}</div>
-                    </div>
-                </div>
-                <div class="kpi-card kpi-success">
-                    <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
-                    <div class="kpi-content">
-                        <div class="kpi-label">${esc(t('module.ppe.kpi.receivedItems', 'مهمات تم تسليمها'))}</div>
-                        <div class="kpi-value">${ppeList.filter(i => i.status === 'مستلم').length}</div>
-                        <div class="kpi-description">${esc(t('module.ppe.kpi.receivedItemsDesc', 'استلامات مكتملة وموثقة'))}</div>
-                    </div>
-                </div>
-                <div class="kpi-card kpi-warning">
-                    <div class="kpi-icon"><i class="fas fa-clock"></i></div>
-                    <div class="kpi-content">
-                        <div class="kpi-label">${esc(t('module.ppe.kpi.pendingItems', 'قيد التسليم'))}</div>
-                        <div class="kpi-value">${ppeList.filter(i => i.status === 'قيد التسليم').length}</div>
-                        <div class="kpi-description">${esc(t('module.ppe.kpi.pendingItemsDesc', 'استلامات قيد المتابعة'))}</div>
-                    </div>
-                </div>
-                <div class="kpi-card kpi-info">
-                    <div class="kpi-icon"><i class="fas fa-users"></i></div>
-                    <div class="kpi-content">
-                        <div class="kpi-label">${esc(t('module.ppe.kpi.uniqueEmployees', 'الموظفون المستلمون'))}</div>
-                        <div class="kpi-value">${new Set(ppeList.map(i => i.employeeCode || i.employeeNumber).filter(Boolean)).size}</div>
-                        <div class="kpi-description">${esc(t('module.ppe.kpi.uniqueEmployeesDesc', 'عدد الموظفين المستفيدين'))}</div>
-                    </div>
-                </div>
-            </div>
-        `;
+        const kpiStats = this.computeReceiptsKpiStats(ppeList, filtered);
+        const receiptsKpiGrid = this.buildReceiptsKpiHtml(kpiStats);
 
         const filterRow = `
             <div class="ppe-visits-filters-row visits-filters-row" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 16px 20px; margin: 0 0 14px 0; width: 100%; border: 1px solid #e2e8f0; border-radius: 12px; direction: ${isRTL ? 'rtl' : 'ltr'};">
@@ -386,6 +531,7 @@ const PPE = {
                             <i class="fas fa-rotate-left ml-1"></i>${esc(t('module.ppe.filter.reset', 'إعادة تعيين الفلاتر'))}
                         </button>
                     </div>
+                </div>
             </div>`;
 
         if (ppeList.length === 0) {
@@ -456,7 +602,7 @@ const PPE = {
                                     <button onclick="PPE.exportPDF('${idJs}')" class="btn-icon btn-icon-success" title="${esc(pdfT)}">
                                         <i class="fas fa-file-pdf"></i>
                                     </button>
-                                    <button onclick="PPE.showPPEForm(${JSON.stringify(item).replace(/"/g, '&quot;')});" class="btn-icon btn-icon-primary" title="${esc(editTitle)}">
+                                    <button onclick="PPE.showPPEFormById('${idJs}')" class="btn-icon btn-icon-primary" title="${esc(editTitle)}">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                     <button onclick="PPE.deletePPE('${idJs}')" class="btn-icon btn-icon-danger" title="${esc(delTitle)}">
@@ -493,56 +639,35 @@ const PPE = {
             }
         };
         const search = document.getElementById('ppe-receipts-search');
-        if (search) {
-            const h = (e) => {
-                this.state.filters.receipts.search = (e.target && e.target.value) || '';
-                clearTimeout(this._receiptsFilterTimer);
-                this._receiptsFilterTimer = setTimeout(() => run(() => this.refreshReceiptsListUI()), 220);
-            };
-            search.addEventListener('input', h);
-        }
-        const typeEl = document.getElementById('ppe-receipts-filter-type');
-        if (typeEl) {
-            typeEl.addEventListener('change', (e) => {
-                this.state.filters.receipts.equipmentType = (e.target && e.target.value) || '';
-                this.refreshReceiptsListUI();
-            });
-        }
-        const statusEl = document.getElementById('ppe-receipts-filter-status');
-        if (statusEl) {
-            statusEl.addEventListener('change', (e) => {
-                this.state.filters.receipts.status = (e.target && e.target.value) || '';
-                this.refreshReceiptsListUI();
-            });
-        }
-        const fromEl = document.getElementById('ppe-receipts-date-from');
-        if (fromEl) {
-            fromEl.addEventListener('change', (e) => {
-                this.state.filters.receipts.dateFrom = (e.target && e.target.value) || '';
-                this.refreshReceiptsListUI();
-            });
-        }
-        const toEl = document.getElementById('ppe-receipts-date-to');
-        if (toEl) {
-            toEl.addEventListener('change', (e) => {
-                this.state.filters.receipts.dateTo = (e.target && e.target.value) || '';
-                this.refreshReceiptsListUI();
-            });
-        }
-        const resetEl = document.getElementById('ppe-receipts-reset-filters');
-        if (resetEl) {
-            resetEl.addEventListener('click', () => {
-                this.resetReceiptFilters();
-                this.refreshReceiptsListUI();
-            });
-        }
-        const clearEmpty = document.getElementById('ppe-receipts-clear-empty-filters');
-        if (clearEmpty) {
-            clearEmpty.addEventListener('click', () => {
-                this.resetReceiptFilters();
-                this.refreshReceiptsListUI();
-            });
-        }
+        this._ppeBindOnce(search, 'input', (e) => {
+            this.state.filters.receipts.search = (e.target && e.target.value) || '';
+            clearTimeout(this._receiptsFilterTimer);
+            this._receiptsFilterTimer = setTimeout(() => run(() => this.refreshReceiptsListUI()), 220);
+        });
+        this._ppeBindOnce(document.getElementById('ppe-receipts-filter-type'), 'change', (e) => {
+            this.state.filters.receipts.equipmentType = (e.target && e.target.value) || '';
+            this.refreshReceiptsListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-receipts-filter-status'), 'change', (e) => {
+            this.state.filters.receipts.status = (e.target && e.target.value) || '';
+            this.refreshReceiptsListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-receipts-date-from'), 'change', (e) => {
+            this.state.filters.receipts.dateFrom = (e.target && e.target.value) || '';
+            this.refreshReceiptsListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-receipts-date-to'), 'change', (e) => {
+            this.state.filters.receipts.dateTo = (e.target && e.target.value) || '';
+            this.refreshReceiptsListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-receipts-reset-filters'), 'click', () => {
+            this.resetReceiptFilters();
+            this.refreshReceiptsListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-receipts-clear-empty-filters'), 'click', () => {
+            this.resetReceiptFilters();
+            this.refreshReceiptsListUI();
+        });
     },
 
     /**
@@ -865,17 +990,21 @@ const PPE = {
             // ✅ تحسين: تحميل البيانات مباشرة في الخلفية قبل عرض الواجهة
             const dataLoadPromise = this.preloadData();
 
-            // ✅ تحسين: عرض الواجهة فوراً بالبيانات المتوفرة (إن وجدت)
-            // هذا يضمن عدم وجود واجهة فارغة حتى لو فشل تحميل البيانات
+            // ✅ رسم فوري من البيانات المحلية — لا ننتظر الشبكة قبل shell
             let tabContent = '';
             try {
-                // محاولة تحميل المحتوى مع البيانات المتوفرة أولاً
-                const tabContentPromise = this.renderActiveTabContent(false); // false = بدون Loading overlay
-                tabContent = await Utils.promiseWithTimeout(
-                    tabContentPromise,
-                    3000, // ✅ تقليل timeout من 5 ثوان إلى 3 ثوان
-                    this._t('module.ppe.timeout.content', 'انتهت مهلة تحميل المحتوى')
-                );
+                if (this.state.activeTab === 'stock-control') {
+                    const cached = (this.state.stockItemsCache && this.state.stockItemsCache.length)
+                        ? this.state.stockItemsCache
+                        : (Array.isArray(AppState.appData.ppeStock) ? AppState.appData.ppeStock : []);
+                    tabContent = cached.length
+                        ? this.buildStockControlTabHtmlSync(cached, '')
+                        : `<div class="empty-state py-8"><p class="text-gray-500">${Utils.escapeHTML(this._t('module.ppe.loading.stockData', 'جاري تحميل بيانات المخزون…'))}</p></div>`;
+                } else if (this.state.activeTab === 'analysis') {
+                    tabContent = await this.renderPpeAnalysisTab();
+                } else {
+                    tabContent = await this.renderReceiptsTab();
+                }
             } catch (error) {
                 if (typeof Utils !== 'undefined' && Utils.safeWarn) {
                     Utils.safeWarn('⚠️ خطأ في تحميل محتوى التبويب:', error);
@@ -886,7 +1015,24 @@ const PPE = {
             }
 
             // ✅ انتظار تحميل البيانات في الخلفية (بدون حجب الواجهة)
-            dataLoadPromise.catch(error => {
+            dataLoadPromise.then(() => {
+                if (this.state.activeTab === 'receipts') {
+                    const list = document.getElementById('ppe-list');
+                    if (list) this.refreshReceiptsListUI();
+                } else if (this.state.activeTab === 'stock-control') {
+                    const container = document.getElementById('ppe-tab-content');
+                    if (!container) return;
+                    this.renderActiveTabContent(false).then((html) => {
+                        if (this.state.activeTab !== 'stock-control' || !html) return;
+                        container.innerHTML = html;
+                        this.ensurePpeFilterStyles();
+                        this.bindStockFilters();
+                        this._bindPpeStockExcelToolbar();
+                    }).catch(() => {});
+                } else if (this.state.activeTab === 'analysis') {
+                    try { this.updatePpeAnalyticsDashboard(); } catch (_e) { /* ignore */ }
+                }
+            }).catch(error => {
                 Utils.safeWarn('⚠️ خطأ في تحميل البيانات في الخلفية:', error);
             });
 
@@ -959,7 +1105,8 @@ const PPE = {
             try {
                 this.ensurePpeFilterStyles();
                 this.setupEventListeners();
-                this.applyModuleI18n(section);
+                const tabRoot = document.getElementById('ppe-tab-content') || section;
+                this.applyModuleI18n(tabRoot);
                 if (this.state.activeTab === 'receipts') {
                     this.bindReceiptsFilters();
                     this._bindPpeReceiptExcelToolbar();
@@ -967,9 +1114,10 @@ const PPE = {
                     this.bindStockFilters();
                     this._bindPpeStockExcelToolbar();
                 } else if (this.state.activeTab === 'analysis') {
-                    // ✅ تهيئة لوحة التحليل
                     this._ppeBindAnalyticsEvents();
-                    this.updatePpeAnalyticsDashboard();
+                    requestAnimationFrame(() => {
+                        try { this.updatePpeAnalyticsDashboard(); } catch (_e) { /* ignore */ }
+                    });
                 }
             } catch (error) {
                 Utils.safeWarn('⚠️ خطأ في setupEventListeners:', error);
@@ -1182,7 +1330,7 @@ const PPE = {
                     ${ut(t('module.ppe.btn.refresh', 'تحديث'))}
                 </button>
             `;
-        } else {
+        } else if (this.state.activeTab === 'stock-control') {
             headerButtonsContainer.innerHTML = `
                 <button id="add-stock-item-btn" class="btn-primary">
                     <i class="fas fa-plus ml-2"></i>
@@ -1191,6 +1339,13 @@ const PPE = {
                 <button id="add-transaction-btn" class="btn-secondary">
                     <i class="fas fa-exchange-alt ml-2"></i>
                     ${ut(t('module.ppe.btn.addTransaction', 'إضافة حركة'))}
+                </button>
+            `;
+        } else {
+            headerButtonsContainer.innerHTML = `
+                <button id="ppe-refresh-btn" type="button" class="btn-secondary border-2 border-green-500 text-green-600 hover:bg-green-50" title="${ut(t('module.ppe.btn.refreshTitle', 'تحديث المحتوى الحالي'))}">
+                    <i class="fas fa-sync-alt ml-2"></i>
+                    ${ut(t('module.ppe.btn.refresh', 'تحديث'))}
                 </button>
             `;
         }
@@ -1245,6 +1400,8 @@ const PPE = {
             return;
         }
 
+        const switchToken = (this._switchTabToken = (this._switchTabToken || 0) + 1);
+
         try {
             this.state.isSwitchingTab = true;
             this.state.activeTab = tabName;
@@ -1263,48 +1420,69 @@ const PPE = {
             const tabContentContainer = document.getElementById('ppe-tab-content');
             if (tabContentContainer) {
                 try {
-                    // عدم إخفاء المحتوى بالكامل عند فتح المخزون — عرض الكاش فوراً ثم التحديث
-                    if (tabName === 'stock-control') {
+                    tabContentContainer.style.opacity = '1';
+                    tabContentContainer.style.pointerEvents = 'auto';
+
+                    // رسم فوري من البيانات المحلية أولاً (بدون انتظار شبكة)
+                    if (tabName === 'receipts') {
+                        tabContentContainer.innerHTML = await this.renderReceiptsTab();
+                        this.ensurePpeFilterStyles();
+                        this.bindReceiptsFilters();
+                        this._bindPpeReceiptExcelToolbar();
+                        this.applyModuleI18n(tabContentContainer);
+                    } else if (tabName === 'stock-control') {
                         const cached = (this.state.stockItemsCache && this.state.stockItemsCache.length)
                             ? this.state.stockItemsCache
                             : (Array.isArray(AppState.appData.ppeStock) && AppState.appData.ppeStock.length
                                 ? AppState.appData.ppeStock
                                 : []);
-                        const syncHint = `<div role="status" class="rounded-lg border border-blue-100 bg-blue-50/90 px-4 py-2 text-sm text-blue-900 flex items-center gap-2">
+                        const syncHint = `<div role="status" class="rounded-lg border border-blue-100 bg-blue-50/90 px-4 py-2 text-sm text-blue-900 flex items-center gap-2 mb-3">
                             <i class="fas fa-sync-alt fa-spin text-blue-600"></i>
                             <span>${Utils.escapeHTML(this._t('module.ppe.stock.syncingHint', 'جاري مزامنة أحدث بيانات المخزون…'))}</span>
                         </div>`;
                         tabContentContainer.innerHTML = cached.length > 0
                             ? this.buildStockControlTabHtmlSync(cached, syncHint)
                             : `<div class="space-y-4" id="ppe-stock-tab-root">${syncHint}<div class="empty-state py-8"><p class="text-gray-600">${Utils.escapeHTML(this._t('module.ppe.loading.stockData', 'جاري تحميل بيانات المخزون…'))}</p></div></div>`;
-                        tabContentContainer.style.opacity = '1';
-                        tabContentContainer.style.pointerEvents = 'auto';
                         if (cached.length > 0) {
                             this.ensurePpeFilterStyles();
                             this.bindStockFilters();
                             this._bindPpeStockExcelToolbar();
                         }
-                    } else {
-                        tabContentContainer.style.opacity = '0.92';
-                        tabContentContainer.style.pointerEvents = 'none';
+                        this.applyModuleI18n(tabContentContainer);
+                    } else if (tabName === 'analysis') {
+                        tabContentContainer.innerHTML = await this.renderPpeAnalysisTab();
+                        this._ppeBindAnalyticsEvents();
+                        this.applyModuleI18n(tabContentContainer);
+                        // تأجيل تحديث الرسوم الثقيلة بعد paint
+                        const tokenAtPaint = switchToken;
+                        requestAnimationFrame(() => {
+                            if (this._switchTabToken !== tokenAtPaint || this.state.activeTab !== 'analysis') return;
+                            try { this.updatePpeAnalyticsDashboard(); } catch (_e) { /* ignore */ }
+                        });
                     }
 
-                    const newContent = await this.renderActiveTabContent(tabName !== 'stock-control' && tabName !== 'analysis');
-                    tabContentContainer.innerHTML = newContent;
-                    this.applyModuleI18n(tabContentContainer);
-                    if (tabName === 'receipts') {
-                        this.ensurePpeFilterStyles();
-                        this.bindReceiptsFilters();
-                        this._bindPpeReceiptExcelToolbar();
-                    } else if (tabName === 'stock-control') {
-                        this.ensurePpeFilterStyles();
-                        this.bindStockFilters();
-                        this._bindPpeStockExcelToolbar();
-                    } else if (tabName === 'analysis') {
-                        // ✅ تهيئة لوحة التحليل بعد التبديل
-                        this._ppeBindAnalyticsEvents();
-                        this.updatePpeAnalyticsDashboard();
+                    // فتح القفل بعد الرسم الفوري حتى لا يتجمد التبديل التالي
+                    this.state.isSwitchingTab = false;
+                    this.updateHeaderButtons();
+
+                    // مزامنة خلفية للمخزون فقط (قد تنتظر الشبكة)
+                    if (tabName === 'stock-control') {
+                        const tokenForStock = switchToken;
+                        this.renderActiveTabContent(false).then((newContent) => {
+                            if (this._switchTabToken !== tokenForStock || this.state.activeTab !== 'stock-control') return;
+                            const container = document.getElementById('ppe-tab-content');
+                            if (!container || !newContent) return;
+                            container.innerHTML = newContent;
+                            this.ensurePpeFilterStyles();
+                            this.bindStockFilters();
+                            this._bindPpeStockExcelToolbar();
+                            this.applyModuleI18n(container);
+                        }).catch((error) => {
+                            if (this._switchTabToken !== tokenForStock) return;
+                            Utils.safeError('❌ خطأ في مزامنة تبويب المخزون:', error);
+                        });
                     }
+
                     Utils.safeLog(`✅ PPE: تم التبديل إلى تبويب ${tabName}`);
                 } catch (error) {
                     Utils.safeError('❌ خطأ في تحميل محتوى التبويب:', error);
@@ -1318,15 +1496,14 @@ const PPE = {
                             </button>
                         </div>
                     `;
+                    this.updateHeaderButtons();
                 } finally {
-                    // ✅ استعادة الشفافية دائماً
                     tabContentContainer.style.opacity = '1';
                     tabContentContainer.style.pointerEvents = 'auto';
                 }
+            } else {
+                this.updateHeaderButtons();
             }
-            
-            // تحديث أزرار الهيدر
-            this.updateHeaderButtons();
             
         } catch (error) {
             Utils.safeError('❌ خطأ في التبديل بين التبويبات:', error);
@@ -4728,62 +4905,39 @@ const PPE = {
         };
 
         const search = document.getElementById('ppe-stock-search');
-        if (search) {
-            search.addEventListener('input', (e) => {
-                this.state.filters.stock.search = (e.target && e.target.value) || '';
-                clearTimeout(this._stockFilterTimer);
-                this._stockFilterTimer = setTimeout(() => run(() => this.refreshStockListUI()), 220);
-            });
-        }
-        const categoryEl = document.getElementById('ppe-stock-filter-category');
-        if (categoryEl) {
-            categoryEl.addEventListener('change', (e) => {
-                this.state.filters.stock.category = (e.target && e.target.value) || '';
-                this.refreshStockListUI();
-            });
-        }
-        const supplierEl = document.getElementById('ppe-stock-filter-supplier');
-        if (supplierEl) {
-            supplierEl.addEventListener('change', (e) => {
-                this.state.filters.stock.supplier = (e.target && e.target.value) || '';
-                this.refreshStockListUI();
-            });
-        }
-        const statusEl = document.getElementById('ppe-stock-filter-status');
-        if (statusEl) {
-            statusEl.addEventListener('change', (e) => {
-                this.state.filters.stock.status = (e.target && e.target.value) || '';
-                this.refreshStockListUI();
-            });
-        }
-        const fromEl = document.getElementById('ppe-stock-date-from');
-        if (fromEl) {
-            fromEl.addEventListener('change', (e) => {
-                this.state.filters.stock.dateFrom = (e.target && e.target.value) || '';
-                this.refreshStockListUI();
-            });
-        }
-        const toEl = document.getElementById('ppe-stock-date-to');
-        if (toEl) {
-            toEl.addEventListener('change', (e) => {
-                this.state.filters.stock.dateTo = (e.target && e.target.value) || '';
-                this.refreshStockListUI();
-            });
-        }
-        const resetEl = document.getElementById('ppe-stock-reset-filters');
-        if (resetEl) {
-            resetEl.addEventListener('click', () => {
-                this.resetStockFilters();
-                this.refreshStockListUI();
-            });
-        }
-        const clearEmpty = document.getElementById('ppe-stock-clear-empty-filters');
-        if (clearEmpty) {
-            clearEmpty.addEventListener('click', () => {
-                this.resetStockFilters();
-                this.refreshStockListUI();
-            });
-        }
+        this._ppeBindOnce(search, 'input', (e) => {
+            this.state.filters.stock.search = (e.target && e.target.value) || '';
+            clearTimeout(this._stockFilterTimer);
+            this._stockFilterTimer = setTimeout(() => run(() => this.refreshStockListUI()), 220);
+        });
+        this._ppeBindOnce(document.getElementById('ppe-stock-filter-category'), 'change', (e) => {
+            this.state.filters.stock.category = (e.target && e.target.value) || '';
+            this.refreshStockListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-stock-filter-supplier'), 'change', (e) => {
+            this.state.filters.stock.supplier = (e.target && e.target.value) || '';
+            this.refreshStockListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-stock-filter-status'), 'change', (e) => {
+            this.state.filters.stock.status = (e.target && e.target.value) || '';
+            this.refreshStockListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-stock-date-from'), 'change', (e) => {
+            this.state.filters.stock.dateFrom = (e.target && e.target.value) || '';
+            this.refreshStockListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-stock-date-to'), 'change', (e) => {
+            this.state.filters.stock.dateTo = (e.target && e.target.value) || '';
+            this.refreshStockListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-stock-reset-filters'), 'click', () => {
+            this.resetStockFilters();
+            this.refreshStockListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-stock-clear-empty-filters'), 'click', () => {
+            this.resetStockFilters();
+            this.refreshStockListUI();
+        });
     },
 
     /** طلب واحد لقائمة المخزون مع مهلة بالمللي ثوانٍ */
@@ -6396,6 +6550,8 @@ const PPE = {
     _ppeBindAnalyticsEvents() {
         const root = document.getElementById('ppe-analytics-root');
         if (!root) return;
+        if (root.getAttribute('data-ppe-analytics-bound') === '1') return;
+        root.setAttribute('data-ppe-analytics-bound', '1');
 
         // أزرار الفترة
         root.querySelectorAll('.ppe-period-btn').forEach(btn => {

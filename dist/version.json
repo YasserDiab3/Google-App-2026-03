@@ -1,13 +1,13 @@
 {
-  "version": "1.0.756",
+  "version": "1.0.758",
   "highlights": {
     "ar": [
-      "إصلاح تبويب المقاولين المعتمدين: إضافة دالة الترجمة المفقودة this.t التي كانت تسبب فشل تحميل القائمة عند وجود سجلات.",
-      "تحصين معالجة السجلات الفارغة وتحسين رسالة الخطأ بالعربية."
+      "تحسين مديول مهمات الوقاية: تبديل تبويبات أسلس بدون تجميد، وتحميل أول أسرع من البيانات المحلية.",
+      "كروت ملخص احترافية في سجل الاستلام مع متابعة أوضح للحالات المعلّقة والموظفين المستفيدين."
     ],
     "en": [
-      "Fix approved contractors tab: restore missing Contractors.t() that crashed the list when records existed.",
-      "Harden null-record handling and Arabic error messaging."
+      "PPE module performance: smoother tab switching without freezes, faster first paint from local data.",
+      "Professional receipt-log summary cards with clearer pending follow-up and employee coverage."
     ]
   }
 }
