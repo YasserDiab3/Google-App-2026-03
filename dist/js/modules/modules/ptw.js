@@ -2562,22 +2562,6 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                 .manual-section-3 { background: linear-gradient(135deg, #eef5fb 0%, #e3eef8 100%); border-color: #003865; }
                 .manual-section-3 h3 { color: #003865; border-color: #003865; }
                 .manual-section-3 h3 i { color: #004C8C; background: rgba(0, 56, 101, 0.08); }
-                .ptw-work-type-hint {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 8px;
-                    margin: 0 0 12px;
-                    padding: 8px 12px;
-                    background: #fff;
-                    border: 1px solid #dbe3ee;
-                    border-right: 3px solid #FFC72C;
-                    border-radius: 10px;
-                    color: #334155;
-                    font-size: 0.82rem;
-                    font-weight: 600;
-                    line-height: 1.4;
-                }
-                .ptw-work-type-hint i { color: #003865; }
                 
                 .manual-section-4 { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-color: #FF9800; }
                 .manual-section-4 h3 { color: #E65100; border-color: #FF9800; }
@@ -2648,152 +2632,180 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                     font-weight: 600;
                     color: #333;
                 }
-                /* \u0635\u0641\u0648\u0641 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u062A\u0635\u0631\u064A\u062D \u2014 \u0647\u0648\u064A\u0629 HSE: \u0643\u062D\u0644\u064A + \u0630\u0647\u0628\u064A\u060C \u0623\u0633\u0645\u0627\u0621 \u0623\u0648\u0636\u062D\u060C \u0641\u0631\u0639\u064A\u0627\u062A \u0645\u0647\u0646\u064A\u0629 */
+                /* \u0635\u0641\u0648\u0641 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u062A\u0635\u0631\u064A\u062D \u2014 \u0645\u0636\u063A\u0648\u0637\u0629 + \u062A\u0645\u064A\u064A\u0632 \u0644\u0648\u0646\u064A \u0644\u0643\u0644 \u0646\u0648\u0639 */
+                .ptw-work-type-hint {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    margin: 0 0 8px;
+                    padding: 5px 10px;
+                    background: #fff;
+                    border: 1px solid #dbe3ee;
+                    border-right: 3px solid #FFC72C;
+                    border-radius: 8px;
+                    color: #475569;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    line-height: 1.3;
+                }
+                .ptw-work-type-hint i { color: #003865; font-size: 0.8rem; }
                 .ptw-work-type-stack,
                 .manual-section-3 .ptw-work-type-stack,
                 .ptw-section-3 .ptw-work-type-stack {
                     display: flex;
                     flex-direction: column;
-                    gap: 10px;
+                    gap: 5px;
                     width: 100%;
                 }
                 .ptw-work-type-row {
                     display: grid;
-                    grid-template-columns: minmax(168px, 220px) minmax(0, 1fr);
-                    gap: 0 14px;
+                    grid-template-columns: minmax(150px, 190px) minmax(0, 1fr);
+                    gap: 0 10px;
                     align-items: center;
-                    padding: 10px 12px 10px 14px;
-                    background: linear-gradient(90deg, #ffffff 0%, #f8fafc 100%);
-                    border: 1px solid #dbe3ee;
-                    border-right: 3px solid #003865;
-                    border-radius: 12px;
-                    box-shadow: 0 1px 3px rgba(0, 56, 101, 0.06);
+                    padding: 5px 8px 5px 10px;
+                    background: #fff;
+                    border: 1px solid #e2e8f0;
+                    border-right: 3px solid #94a3b8;
+                    border-radius: 8px;
                     min-width: 0;
-                    transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+                    transition: border-color 0.15s ease, background 0.15s ease;
                 }
-                .ptw-work-type-row:hover {
-                    border-color: #b8c9dc;
-                    box-shadow: 0 2px 8px rgba(0, 56, 101, 0.08);
-                }
-                .ptw-work-type-row.is-filled {
-                    border-color: #9eb6ce;
-                    border-right-color: #FFC72C;
-                    background: linear-gradient(90deg, #fffdf6 0%, #f5f9fc 100%);
-                    box-shadow: 0 2px 10px rgba(0, 56, 101, 0.1);
-                }
+                .ptw-work-type-row:hover { border-color: #cbd5e1; }
+                .ptw-work-type-row.is-filled { box-shadow: inset 0 0 0 1px rgba(0, 56, 101, 0.08); }
                 .ptw-work-type-row__label {
                     display: flex;
                     align-items: center;
-                    gap: 10px;
+                    gap: 8px;
                     min-width: 0;
-                    padding-left: 12px;
-                    border-left: 1px dashed #c5d4e4;
+                    padding-left: 8px;
+                    border-left: 1px solid #e2e8f0;
                     align-self: stretch;
                 }
                 .ptw-work-type-row__icon {
-                    width: 36px;
-                    height: 36px;
-                    border-radius: 10px;
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 7px;
                     display: inline-flex;
                     align-items: center;
                     justify-content: center;
                     flex-shrink: 0;
-                    font-size: 0.92rem;
-                    box-shadow: inset 0 0 0 1px rgba(0, 56, 101, 0.06);
+                    font-size: 0.78rem;
                 }
                 .ptw-work-type-row__name {
                     font-weight: 800;
-                    font-size: 0.98rem;
-                    color: #003865;
-                    line-height: 1.35;
+                    font-size: 0.88rem;
+                    line-height: 1.25;
                     letter-spacing: 0.01em;
+                    color: #0f172a;
                     font-family: 'Segoe UI', Tahoma, 'Noto Sans Arabic', Arial, sans-serif;
                 }
                 .ptw-work-type-row__opts {
                     display: flex;
                     flex-wrap: wrap;
-                    gap: 7px;
+                    gap: 4px;
                     align-items: center;
-                    justify-content: flex-start;
                     min-width: 0;
-                    padding: 2px 0;
                 }
-                .ptw-work-type-row__opts--fields {
-                    gap: 6px 8px;
-                }
+                .ptw-work-type-row__opts--fields { gap: 4px 6px; }
+                /* \u062A\u0645\u064A\u064A\u0632 \u0627\u0644\u0623\u0646\u0648\u0627\u0639 */
+                .ptw-work-type-row[data-type="hot"] { border-right-color: #dc2626; background: linear-gradient(90deg, #fff 62%, #fef2f2 100%); }
+                .ptw-work-type-row[data-type="hot"] .ptw-work-type-row__name { color: #b91c1c; }
+                .ptw-work-type-row[data-type="hot"].is-filled { background: #fef2f2; border-color: #fecaca; }
+                .ptw-work-type-row[data-type="confined"] { border-right-color: #64748b; background: linear-gradient(90deg, #fff 62%, #f8fafc 100%); }
+                .ptw-work-type-row[data-type="confined"] .ptw-work-type-row__name { color: #334155; }
+                .ptw-work-type-row[data-type="confined"].is-filled { background: #f1f5f9; border-color: #cbd5e1; }
+                .ptw-work-type-row[data-type="height"] { border-right-color: #2563eb; background: linear-gradient(90deg, #fff 62%, #eff6ff 100%); }
+                .ptw-work-type-row[data-type="height"] .ptw-work-type-row__name { color: #1d4ed8; }
+                .ptw-work-type-row[data-type="height"].is-filled { background: #eff6ff; border-color: #bfdbfe; }
+                .ptw-work-type-row[data-type="excavation"] { border-right-color: #d97706; background: linear-gradient(90deg, #fff 62%, #fffbeb 100%); }
+                .ptw-work-type-row[data-type="excavation"] .ptw-work-type-row__name { color: #b45309; }
+                .ptw-work-type-row[data-type="excavation"].is-filled { background: #fffbeb; border-color: #fde68a; }
+                .ptw-work-type-row[data-type="electrical"] { border-right-color: #7c3aed; background: linear-gradient(90deg, #fff 62%, #f5f3ff 100%); }
+                .ptw-work-type-row[data-type="electrical"] .ptw-work-type-row__name { color: #6d28d9; }
+                .ptw-work-type-row[data-type="electrical"].is-filled { background: #f5f3ff; border-color: #ddd6fe; }
+                .ptw-work-type-row[data-type="cold"] { border-right-color: #0891b2; background: linear-gradient(90deg, #fff 62%, #ecfeff 100%); }
+                .ptw-work-type-row[data-type="cold"] .ptw-work-type-row__name { color: #0e7490; }
+                .ptw-work-type-row[data-type="cold"].is-filled { background: #ecfeff; border-color: #a5f3fc; }
+                .ptw-work-type-row[data-type="other"] { border-right-color: #003865; background: linear-gradient(90deg, #fff 62%, #eef5fb 100%); }
+                .ptw-work-type-row[data-type="other"] .ptw-work-type-row__name { color: #003865; }
+                .ptw-work-type-row[data-type="other"].is-filled { background: #eef5fb; border-color: #bfdbfe; }
                 .ptw-work-subopt,
                 .ptw-check-option.ptw-work-subopt {
                     display: inline-flex !important;
                     align-items: center;
-                    gap: 6px;
+                    gap: 4px;
                     margin: 0 !important;
-                    padding: 5px 10px !important;
-                    border: 1px solid #d0dbe8 !important;
-                    border-radius: 8px !important;
+                    padding: 3px 7px !important;
+                    border: 1px solid #e2e8f0 !important;
+                    border-radius: 6px !important;
                     background: #fff !important;
-                    font-size: 0.8rem !important;
+                    font-size: 0.72rem !important;
                     font-weight: 600;
-                    color: #334155;
+                    color: #475569;
                     cursor: pointer;
                     white-space: nowrap;
-                    line-height: 1.25;
-                    box-shadow: 0 1px 1px rgba(15, 23, 42, 0.03);
-                    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+                    line-height: 1.2;
                 }
                 .ptw-work-subopt:hover,
                 .ptw-check-option.ptw-work-subopt:hover {
-                    border-color: #003865 !important;
-                    background: #eef5fb !important;
-                    color: #003865;
+                    border-color: #94a3b8 !important;
+                    background: #f8fafc !important;
                 }
                 .ptw-work-subopt:has(input:checked),
                 .ptw-check-option.ptw-work-subopt:has(input:checked) {
                     border-color: #003865 !important;
-                    background: linear-gradient(135deg, #003865 0%, #004C8C 100%) !important;
+                    background: #003865 !important;
                     color: #fff !important;
-                    box-shadow: 0 2px 6px rgba(0, 56, 101, 0.22);
                 }
                 .ptw-work-subopt:has(input:checked) span,
-                .ptw-check-option.ptw-work-subopt:has(input:checked) span {
-                    color: #fff !important;
-                }
+                .ptw-check-option.ptw-work-subopt:has(input:checked) span { color: #fff !important; }
+                .ptw-work-type-row[data-type="hot"] .ptw-work-subopt:has(input:checked) { background: #dc2626 !important; border-color: #dc2626 !important; }
+                .ptw-work-type-row[data-type="confined"] .ptw-work-subopt:has(input:checked) { background: #475569 !important; border-color: #475569 !important; }
+                .ptw-work-type-row[data-type="height"] .ptw-work-subopt:has(input:checked) { background: #2563eb !important; border-color: #2563eb !important; }
+                .ptw-work-type-row[data-type="excavation"] .ptw-work-subopt:has(input:checked) { background: #d97706 !important; border-color: #d97706 !important; }
+                .ptw-work-type-row[data-type="electrical"] .ptw-work-subopt:has(input:checked),
+                .ptw-work-type-row[data-type="electrical"] .ptw-check-option:has(input:checked) { background: #7c3aed !important; border-color: #7c3aed !important; }
+                .ptw-work-type-row[data-type="cold"] .ptw-work-subopt:has(input:checked),
+                .ptw-work-type-row[data-type="cold"] .ptw-check-option:has(input:checked) { background: #0891b2 !important; border-color: #0891b2 !important; }
+                .ptw-work-type-row[data-type="other"] .ptw-work-subopt:has(input:checked),
+                .ptw-work-type-row[data-type="other"] .ptw-check-option:has(input:checked) { background: #003865 !important; border-color: #003865 !important; }
                 .ptw-work-subopt input,
                 .ptw-check-option.ptw-work-subopt input {
                     margin: 0 !important;
-                    width: 14px;
-                    height: 14px;
+                    width: 12px;
+                    height: 12px;
                     flex-shrink: 0;
                     accent-color: #FFC72C;
                 }
                 .ptw-work-subopt-input {
                     width: auto !important;
-                    min-width: 92px;
-                    max-width: 168px;
-                    height: 32px !important;
-                    padding: 5px 10px !important;
-                    font-size: 0.8rem !important;
-                    border-radius: 8px !important;
-                    border: 1px solid #d0dbe8 !important;
+                    min-width: 72px;
+                    max-width: 140px;
+                    height: 26px !important;
+                    padding: 2px 7px !important;
+                    font-size: 0.72rem !important;
+                    border-radius: 6px !important;
+                    border: 1px solid #e2e8f0 !important;
                     background: #fff !important;
                     color: #1e293b;
                 }
                 .ptw-work-subopt-input:focus {
                     outline: none;
                     border-color: #003865 !important;
-                    box-shadow: 0 0 0 3px rgba(0, 56, 101, 0.12);
+                    box-shadow: 0 0 0 2px rgba(0, 56, 101, 0.12);
                 }
-                .ptw-work-subopt-input--wide { min-width: 180px; max-width: 320px; flex: 1 1 200px; }
+                .ptw-work-subopt-input--wide { min-width: 140px; max-width: 260px; flex: 1 1 160px; height: 26px !important; }
                 @media (max-width: 700px) {
                     .ptw-work-type-row {
                         grid-template-columns: 1fr;
                         align-items: stretch;
-                        gap: 10px;
+                        gap: 6px;
                     }
                     .ptw-work-type-row__label {
                         padding-left: 0;
                         border-left: none;
-                        padding-bottom: 8px;
-                        border-bottom: 1px dashed #c5d4e4;
+                        padding-bottom: 5px;
+                        border-bottom: 1px solid #e2e8f0;
                     }
                 }
                 .manual-work-type-inline-panel { display: none !important; }
@@ -3601,7 +3613,7 @@ const PTW={approvals:[],formApprovals:[],formCircuitOwnerId:"__default__",formCi
                                 </div>
                                 <div class="ptw-work-type-row" data-type="electrical" id="manual-panel-electrical">
                                     <div class="ptw-work-type-row__label">
-                                        <span class="ptw-work-type-row__icon" style="background:#fefce8;color:#ca8a04;"><i class="fas fa-bolt" aria-hidden="true"></i></span>
+                                        <span class="ptw-work-type-row__icon" style="background:#f5f3ff;color:#7c3aed;"><i class="fas fa-bolt" aria-hidden="true"></i></span>
                                         <span class="ptw-work-type-row__name">\u0623\u0639\u0645\u0627\u0644 \u0643\u0647\u0631\u0628\u0627\u0621</span>
                                     </div>
                                     <div class="ptw-work-type-row__opts">
@@ -4634,73 +4646,77 @@ Stack: `+r.stack)}finally{const r=document.getElementById(a);r&&r.remove()}},col
                 .ptw-section-3 h3 { color: #003865; border-color: #003865; }
                 .ptw-section-3 h3 i { color: #004C8C; background: rgba(0, 56, 101, 0.08); }
                 .ptw-section-3 .ptw-work-type-hint {
-                    display: inline-flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 8px 12px;
-                    background: #fff; border: 1px solid #dbe3ee; border-right: 3px solid #FFC72C; border-radius: 10px;
-                    color: #334155; font-size: 0.82rem; font-weight: 600; line-height: 1.4;
+                    display: inline-flex; align-items: center; gap: 6px; margin: 0 0 8px; padding: 5px 10px;
+                    background: #fff; border: 1px solid #dbe3ee; border-right: 3px solid #FFC72C; border-radius: 8px;
+                    color: #475569; font-size: 0.75rem; font-weight: 600; line-height: 1.3;
                 }
                 .ptw-section-3 .ptw-work-type-hint i { color: #003865; }
-                .ptw-section-3 .ptw-work-type-stack { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+                .ptw-section-3 .ptw-work-type-stack { display: flex; flex-direction: column; gap: 5px; width: 100%; }
                 .ptw-section-3 .ptw-work-type-row {
-                    display: grid;
-                    grid-template-columns: minmax(168px, 220px) minmax(0, 1fr);
-                    gap: 0 14px;
-                    align-items: center;
-                    padding: 10px 12px 10px 14px;
-                    background: linear-gradient(90deg, #ffffff 0%, #f8fafc 100%);
-                    border: 1px solid #dbe3ee;
-                    border-right: 3px solid #003865;
-                    border-radius: 12px;
-                    box-shadow: 0 1px 3px rgba(0, 56, 101, 0.06);
-                    min-width: 0;
-                }
-                .ptw-section-3 .ptw-work-type-row.is-filled {
-                    border-right-color: #FFC72C;
-                    background: linear-gradient(90deg, #fffdf6 0%, #f5f9fc 100%);
+                    display: grid; grid-template-columns: minmax(150px, 190px) minmax(0, 1fr); gap: 0 10px;
+                    align-items: center; padding: 5px 8px 5px 10px; background: #fff; border: 1px solid #e2e8f0;
+                    border-right: 3px solid #94a3b8; border-radius: 8px; min-width: 0;
                 }
                 .ptw-section-3 .ptw-work-type-row__label {
-                    display: flex; align-items: center; gap: 10px; min-width: 0;
-                    padding-left: 12px; border-left: 1px dashed #c5d4e4; align-self: stretch;
+                    display: flex; align-items: center; gap: 8px; min-width: 0; padding-left: 8px;
+                    border-left: 1px solid #e2e8f0; align-self: stretch;
                 }
                 .ptw-section-3 .ptw-work-type-row__icon {
-                    width: 36px; height: 36px; border-radius: 10px;
-                    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.92rem;
-                    box-shadow: inset 0 0 0 1px rgba(0, 56, 101, 0.06);
+                    width: 28px; height: 28px; border-radius: 7px;
+                    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.78rem;
                 }
                 .ptw-section-3 .ptw-work-type-row__name {
-                    font-weight: 800; font-size: 0.98rem; color: #003865; line-height: 1.35; letter-spacing: 0.01em;
+                    font-weight: 800; font-size: 0.88rem; line-height: 1.25; color: #0f172a;
                 }
-                .ptw-section-3 .ptw-work-type-row__opts { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; min-width: 0; }
+                .ptw-section-3 .ptw-work-type-row__opts { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-width: 0; }
+                .ptw-section-3 .ptw-work-type-row[data-type="hot"] { border-right-color: #dc2626; background: linear-gradient(90deg, #fff 62%, #fef2f2 100%); }
+                .ptw-section-3 .ptw-work-type-row[data-type="hot"] .ptw-work-type-row__name { color: #b91c1c; }
+                .ptw-section-3 .ptw-work-type-row[data-type="confined"] { border-right-color: #64748b; background: linear-gradient(90deg, #fff 62%, #f8fafc 100%); }
+                .ptw-section-3 .ptw-work-type-row[data-type="confined"] .ptw-work-type-row__name { color: #334155; }
+                .ptw-section-3 .ptw-work-type-row[data-type="height"] { border-right-color: #2563eb; background: linear-gradient(90deg, #fff 62%, #eff6ff 100%); }
+                .ptw-section-3 .ptw-work-type-row[data-type="height"] .ptw-work-type-row__name { color: #1d4ed8; }
+                .ptw-section-3 .ptw-work-type-row[data-type="excavation"] { border-right-color: #d97706; background: linear-gradient(90deg, #fff 62%, #fffbeb 100%); }
+                .ptw-section-3 .ptw-work-type-row[data-type="excavation"] .ptw-work-type-row__name { color: #b45309; }
+                .ptw-section-3 .ptw-work-type-row[data-type="electrical"] { border-right-color: #7c3aed; background: linear-gradient(90deg, #fff 62%, #f5f3ff 100%); }
+                .ptw-section-3 .ptw-work-type-row[data-type="electrical"] .ptw-work-type-row__name { color: #6d28d9; }
+                .ptw-section-3 .ptw-work-type-row[data-type="cold"] { border-right-color: #0891b2; background: linear-gradient(90deg, #fff 62%, #ecfeff 100%); }
+                .ptw-section-3 .ptw-work-type-row[data-type="cold"] .ptw-work-type-row__name { color: #0e7490; }
+                .ptw-section-3 .ptw-work-type-row[data-type="other"] { border-right-color: #003865; background: linear-gradient(90deg, #fff 62%, #eef5fb 100%); }
+                .ptw-section-3 .ptw-work-type-row[data-type="other"] .ptw-work-type-row__name { color: #003865; }
                 .ptw-section-3 .ptw-work-subopt,
                 .ptw-section-3 .ptw-check-option {
-                    display: inline-flex !important; align-items: center; gap: 6px; margin: 0 !important;
-                    padding: 5px 10px !important; border: 1px solid #d0dbe8 !important; border-radius: 8px !important;
-                    background: #fff !important; font-size: 0.8rem !important; font-weight: 600; color: #334155; white-space: nowrap;
-                    box-shadow: 0 1px 1px rgba(15, 23, 42, 0.03);
-                }
-                .ptw-section-3 .ptw-work-subopt:hover,
-                .ptw-section-3 .ptw-check-option:hover {
-                    border-color: #003865 !important; background: #eef5fb !important; color: #003865;
+                    display: inline-flex !important; align-items: center; gap: 4px; margin: 0 !important;
+                    padding: 3px 7px !important; border: 1px solid #e2e8f0 !important; border-radius: 6px !important;
+                    background: #fff !important; font-size: 0.72rem !important; font-weight: 600; color: #475569; white-space: nowrap;
                 }
                 .ptw-section-3 .ptw-work-subopt:has(input:checked),
                 .ptw-section-3 .ptw-check-option:has(input:checked) {
-                    border-color: #003865 !important;
-                    background: linear-gradient(135deg, #003865 0%, #004C8C 100%) !important;
-                    color: #fff !important;
+                    background: #003865 !important; border-color: #003865 !important; color: #fff !important;
                 }
-                .ptw-section-3 .ptw-work-subopt:has(input:checked) span,
-                .ptw-section-3 .ptw-check-option:has(input:checked) span { color: #fff !important; }
+                .ptw-section-3 .ptw-work-type-row[data-type="hot"] .ptw-work-subopt:has(input:checked),
+                .ptw-section-3 .ptw-work-type-row[data-type="hot"] .ptw-check-option:has(input:checked) { background: #dc2626 !important; border-color: #dc2626 !important; }
+                .ptw-section-3 .ptw-work-type-row[data-type="confined"] .ptw-work-subopt:has(input:checked),
+                .ptw-section-3 .ptw-work-type-row[data-type="confined"] .ptw-check-option:has(input:checked) { background: #475569 !important; border-color: #475569 !important; }
+                .ptw-section-3 .ptw-work-type-row[data-type="height"] .ptw-work-subopt:has(input:checked),
+                .ptw-section-3 .ptw-work-type-row[data-type="height"] .ptw-check-option:has(input:checked) { background: #2563eb !important; border-color: #2563eb !important; }
+                .ptw-section-3 .ptw-work-type-row[data-type="excavation"] .ptw-work-subopt:has(input:checked),
+                .ptw-section-3 .ptw-work-type-row[data-type="excavation"] .ptw-check-option:has(input:checked) { background: #d97706 !important; border-color: #d97706 !important; }
+                .ptw-section-3 .ptw-work-type-row[data-type="electrical"] .ptw-work-subopt:has(input:checked),
+                .ptw-section-3 .ptw-work-type-row[data-type="electrical"] .ptw-check-option:has(input:checked) { background: #7c3aed !important; border-color: #7c3aed !important; }
+                .ptw-section-3 .ptw-work-type-row[data-type="cold"] .ptw-work-subopt:has(input:checked),
+                .ptw-section-3 .ptw-work-type-row[data-type="cold"] .ptw-check-option:has(input:checked) { background: #0891b2 !important; border-color: #0891b2 !important; }
                 .ptw-section-3 .ptw-work-subopt input,
-                .ptw-section-3 .ptw-check-option input { margin: 0 !important; width: 14px; height: 14px; accent-color: #FFC72C; }
+                .ptw-section-3 .ptw-check-option input { margin: 0 !important; width: 12px; height: 12px; accent-color: #FFC72C; }
                 .ptw-section-3 .ptw-work-subopt-input {
-                    width: auto !important; min-width: 92px; max-width: 168px; height: 32px !important;
-                    padding: 5px 10px !important; font-size: 0.8rem !important; border-radius: 8px !important;
-                    border: 1px solid #d0dbe8 !important;
+                    width: auto !important; min-width: 72px; max-width: 140px; height: 26px !important;
+                    padding: 2px 7px !important; font-size: 0.72rem !important; border-radius: 6px !important;
+                    border: 1px solid #e2e8f0 !important;
                 }
-                .ptw-section-3 .ptw-work-subopt-input--wide { min-width: 180px; max-width: 320px; flex: 1 1 200px; }
+                .ptw-section-3 .ptw-work-subopt-input--wide { min-width: 140px; max-width: 260px; flex: 1 1 160px; }
                 @media (max-width: 700px) {
-                    .ptw-section-3 .ptw-work-type-row { grid-template-columns: 1fr; gap: 10px; }
+                    .ptw-section-3 .ptw-work-type-row { grid-template-columns: 1fr; gap: 6px; }
                     .ptw-section-3 .ptw-work-type-row__label {
-                        padding-left: 0; border-left: none; padding-bottom: 8px; border-bottom: 1px dashed #c5d4e4;
+                        padding-left: 0; border-left: none; padding-bottom: 5px; border-bottom: 1px solid #e2e8f0;
                     }
                 }
                 
@@ -5151,7 +5167,7 @@ Stack: `+r.stack)}finally{const r=document.getElementById(a);r&&r.remove()}},col
                                 </div>
                                 <div class="ptw-work-type-row" data-type="electrical">
                                     <div class="ptw-work-type-row__label">
-                                        <span class="ptw-work-type-row__icon" style="background:#fefce8;color:#ca8a04;"><i class="fas fa-bolt" aria-hidden="true"></i></span>
+                                        <span class="ptw-work-type-row__icon" style="background:#f5f3ff;color:#7c3aed;"><i class="fas fa-bolt" aria-hidden="true"></i></span>
                                         <span class="ptw-work-type-row__name">\u0623\u0639\u0645\u0627\u0644 \u0643\u0647\u0631\u0628\u0627\u0621</span>
                                     </div>
                                     <div class="ptw-work-type-row__opts">
