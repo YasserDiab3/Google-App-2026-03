@@ -2898,14 +2898,17 @@ const Contractors = {
             // تحديد الإجراءات بناءً على نوع السجل
             const isRegular = record.isRegularContractor;
             const contractorId = record.contractorId || record.id;
+            // P1.2: JSON.stringify آمن داخل onclick (لا يكفي escapeAttr لوحده في سياق JS)
+            const safeRecordId = JSON.stringify(String(record.id || ''));
+            const safeContractorId = JSON.stringify(String(contractorId || ''));
 
             // زر التفعيل/التعطيل (للمسؤول فقط)
             const toggleButtonHtml = isAdmin ? (
                 isEnabled
-                    ? `<button class="btn-icon btn-icon-warning" title="تعطيل المقاول" data-i18n-title="module.contractors.disable" onclick="Contractors.toggleEntityActive('${record.id}', 'inactive')">
+                    ? `<button class="btn-icon btn-icon-warning" title="تعطيل المقاول" data-i18n-title="module.contractors.disable" onclick="Contractors.toggleEntityActive(${safeRecordId}, 'inactive')">
                         <i class="fas fa-toggle-off"></i>
                     </button>`
-                    : `<button class="btn-icon btn-icon-success" title="تفعيل المقاول" data-i18n-title="module.contractors.enable" onclick="Contractors.toggleEntityActive('${record.id}', 'active')">
+                    : `<button class="btn-icon btn-icon-success" title="تفعيل المقاول" data-i18n-title="module.contractors.enable" onclick="Contractors.toggleEntityActive(${safeRecordId}, 'active')">
                         <i class="fas fa-toggle-on"></i>
                     </button>`
             ) : '';
@@ -2913,42 +2916,42 @@ const Contractors = {
             // أزرار الإجراءات - دعم كلا النوعين
             const actionsHtml = isRegular ? `
                 <div class="flex items-center gap-2">
-                    <button class="btn-icon btn-icon-primary" title="عرض المقاول" onclick="Contractors.viewContractor('${contractorId}')">
+                    <button class="btn-icon btn-icon-primary" title="عرض المقاول" onclick="Contractors.viewContractor(${safeContractorId})">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="btn-icon btn-icon-info" title="تعديل المقاول" onclick="Contractors.editContractor('${contractorId}')">
+                    <button class="btn-icon btn-icon-info" title="تعديل المقاول" onclick="Contractors.editContractor(${safeContractorId})">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn-icon btn-icon-success" title="إضافة تقييم" onclick="Contractors.showEvaluationForm('${contractorId}')">
+                    <button class="btn-icon btn-icon-success" title="إضافة تقييم" onclick="Contractors.showEvaluationForm(${safeContractorId})">
                         <i class="fas fa-clipboard-check"></i>
                     </button>
-                    <button class="btn-icon btn-icon-warning" title="سجل التقييمات" onclick="Contractors.openEvaluationHistory('${contractorId}')">
+                    <button class="btn-icon btn-icon-warning" title="سجل التقييمات" onclick="Contractors.openEvaluationHistory(${safeContractorId})">
                         <i class="fas fa-clipboard-list"></i>
                     </button>
                     ${toggleButtonHtml}
                     ${isAdmin ? `
-                    <button class="btn-icon btn-icon-danger" title="حذف المقاول" onclick="Contractors.requestDeleteContractor('${contractorId}')">
+                    <button class="btn-icon btn-icon-danger" title="حذف المقاول" onclick="Contractors.requestDeleteContractor(${safeContractorId})">
                         <i class="fas fa-trash"></i>
                     </button>
                     ` : ''}
                 </div>
             ` : `
                 <div class="flex items-center gap-2">
-                    <button class="btn-icon btn-icon-info" title="عرض التفاصيل" onclick="Contractors.viewApprovedEntity('${record.id}')">
+                    <button class="btn-icon btn-icon-info" title="عرض التفاصيل" onclick="Contractors.viewApprovedEntity(${safeRecordId})">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="btn-icon btn-icon-primary" title="تعديل" onclick="Contractors.showApprovedEntityForm('${record.id}')">
+                    <button class="btn-icon btn-icon-primary" title="تعديل" onclick="Contractors.showApprovedEntityForm(${safeRecordId})">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn-icon btn-icon-success" title="إضافة تقييم" onclick="Contractors.showEvaluationFormForApproved('${record.id}')">
+                    <button class="btn-icon btn-icon-success" title="إضافة تقييم" onclick="Contractors.showEvaluationFormForApproved(${safeRecordId})">
                         <i class="fas fa-clipboard-check"></i>
                     </button>
-                    <button class="btn-icon btn-icon-warning" title="سجل التقييمات" onclick="Contractors.openEvaluationHistoryForApproved('${record.id}')">
+                    <button class="btn-icon btn-icon-warning" title="سجل التقييمات" onclick="Contractors.openEvaluationHistoryForApproved(${safeRecordId})">
                         <i class="fas fa-clipboard-list"></i>
                     </button>
                     ${toggleButtonHtml}
                     ${isAdmin ? `
-                    <button class="btn-icon btn-icon-danger" title="حذف" onclick="Contractors.requestDeleteApprovedEntity('${record.id}')">
+                    <button class="btn-icon btn-icon-danger" title="حذف" onclick="Contractors.requestDeleteApprovedEntity(${safeRecordId})">
                         <i class="fas fa-trash"></i>
                     </button>
                     ` : ''}

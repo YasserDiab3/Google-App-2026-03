@@ -1,15 +1,13 @@
 {
-  "version": "1.0.724",
+  "version": "1.0.726",
   "highlights": {
     "ar": [
-      "P0 أمان: كتابة الأوراق بهوية مسجّلة فقط.",
-      "موافقات العيادة (حذف/توريد/أدوية) بصلاحية مدير وختم خادم.",
-      "إغلاق قراءة طلبات الموافقة العامة بدون CSRF."
+      "P1: إصلاح XSS في نسخ بيانات الحساب ومعرفات القوائم.",
+      "حماية سلوك/PPE/مخالفات من مسح البيانات المحلية بمصفوفة فارغة."
     ],
     "en": [
-      "P0 security: sheet writes require a registered actor.",
-      "Clinic approvals (delete/supply/meds) require admin + server stamp.",
-      "Public approval-list reads without CSRF closed."
+      "P1: XSS fixes for credential copy and list ID onclick handlers.",
+      "Behavior/PPE/violations guarded against empty-array local wipe."
     ]
   }
 }

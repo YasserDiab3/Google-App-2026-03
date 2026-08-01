@@ -1471,18 +1471,23 @@ const Violations = {
                 const serverNormalized = violationsData
                     .map((item) => this.normalizeViolationRecord(item))
                     .filter(Boolean);
-                // ✅ حماية من race condition: لا تستبدل مخالفات محلية حديثة لم تصلها الخادم بعد
                 const localViolations = Array.isArray(AppState.appData.violations) ? AppState.appData.violations : [];
-                const serverIds = new Set(serverNormalized.map(v => v && v.id).filter(Boolean));
-                const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-                const localOnlyRecent = localViolations.filter(v => {
-                    if (!v || !v.id || serverIds.has(v.id)) return false;
-                    const created = new Date(v.createdAt || v.timestamp || 0).getTime();
-                    return created >= fiveMinutesAgo;
-                });
-                AppState.appData.violations = localOnlyRecent.length > 0
-                    ? [...localOnlyRecent, ...serverNormalized]
-                    : serverNormalized;
+                // P1.4: لا تستبدل محلياً غير فارغ بمصفوفة فارغة من الخادم (مثل العيادة)
+                if (serverNormalized.length === 0 && localViolations.length > 0) {
+                    Utils.safeWarn(`⚠️ تجاهل مخالفات فارغة من الخادم — الإبقاء على ${localViolations.length} مخالفة محلية`);
+                } else {
+                    // حماية إضافية: لا تفقد مخالفات محلية حديثة لم تصلها الخادم بعد
+                    const serverIds = new Set(serverNormalized.map(v => v && v.id).filter(Boolean));
+                    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+                    const localOnlyRecent = localViolations.filter(v => {
+                        if (!v || !v.id || serverIds.has(v.id)) return false;
+                        const created = new Date(v.createdAt || v.timestamp || 0).getTime();
+                        return created >= fiveMinutesAgo;
+                    });
+                    AppState.appData.violations = localOnlyRecent.length > 0
+                        ? [...localOnlyRecent, ...serverNormalized]
+                        : serverNormalized;
+                }
             }
             // لا تستبدل أنواعاً محلية/مستوردة بمصفوفة فارغة من الشيت (استجابة خاطئة أو تأخر) — يمنع الرجوع للافتراضي بعد التحديث
             if (Array.isArray(typesData)) {

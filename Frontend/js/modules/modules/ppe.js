@@ -576,10 +576,15 @@ const PPE = {
                 try {
                     const ppeResult = await GoogleIntegration.sendToAppsScript('getAllPPE', {});
                     if (ppeResult && ppeResult.success && Array.isArray(ppeResult.data)) {
-                        AppState.appData.ppe = ppeResult.data;
-                        // ✅ حفظ البيانات في localStorage للاستخدام لاحقاً
-                        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                            window.DataManager.save();
+                        const localPpe = Array.isArray(AppState.appData.ppe) ? AppState.appData.ppe : [];
+                        if (ppeResult.data.length === 0 && localPpe.length > 0) {
+                            Utils.safeWarn(`⚠️ PPE preload: تجاهل مصفوفة فارغة من الخادم — الإبقاء على ${localPpe.length} سجل محلي`);
+                        } else {
+                            AppState.appData.ppe = ppeResult.data;
+                            // ✅ حفظ البيانات في localStorage للاستخدام لاحقاً
+                            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                                window.DataManager.save();
+                            }
                         }
                     }
                 } catch (error) {
@@ -739,10 +744,15 @@ const PPE = {
                         try {
                             const ppeResult = await GoogleIntegration.sendToAppsScript('getAllPPE', {});
                             if (ppeResult && ppeResult.success && Array.isArray(ppeResult.data)) {
-                                AppState.appData.ppe = ppeResult.data;
-                                // ✅ حفظ البيانات في localStorage
-                                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                                    window.DataManager.save();
+                                const localPpe = Array.isArray(AppState.appData.ppe) ? AppState.appData.ppe : [];
+                                if (ppeResult.data.length === 0 && localPpe.length > 0) {
+                                    Utils.safeWarn(`⚠️ PPE refresh: تجاهل مصفوفة فارغة من الخادم — الإبقاء على ${localPpe.length} سجل محلي`);
+                                } else {
+                                    AppState.appData.ppe = ppeResult.data;
+                                    // ✅ حفظ البيانات في localStorage
+                                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                                        window.DataManager.save();
+                                    }
                                 }
                             }
                         } catch (error) {

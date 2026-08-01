@@ -1629,10 +1629,10 @@ const SafetyPerformanceKPIs={filters:{period:"monthly",department:"",location:""
                 <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: bold; background: #fef3c7;">${o}</td>
                 ${s?`
                 <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">
-                    <button onclick="SafetyPerformanceKPIs.editKPIAnnualPlan('${i.id}')" class="text-blue-600 hover:text-blue-800 mx-1" title="\u062A\u0639\u062F\u064A\u0644">
+                    <button onclick="SafetyPerformanceKPIs.editKPIAnnualPlan(${JSON.stringify(String(i.id||""))})" class="text-blue-600 hover:text-blue-800 mx-1" title="\u062A\u0639\u062F\u064A\u0644">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button onclick="SafetyPerformanceKPIs.deleteKPIAnnualPlan('${i.id}')" class="text-red-600 hover:text-red-800 mx-1" title="\u062D\u0630\u0641">
+                    <button onclick="SafetyPerformanceKPIs.deleteKPIAnnualPlan(${JSON.stringify(String(i.id||""))})" class="text-red-600 hover:text-red-800 mx-1" title="\u062D\u0630\u0641">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
@@ -1740,10 +1740,10 @@ const SafetyPerformanceKPIs={filters:{period:"monthly",department:"",location:""
                     <td style="padding: 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: bold; background: #ede9fe;">${u}%</td>
                     ${s?`
                     <td style="padding: 6px; border: 1px solid #e5e7eb; text-align: center;">
-                        <button onclick="SafetyPerformanceKPIs.editHSEMonitoringPlan('${c.id}')" class="text-blue-600 hover:text-blue-800 mx-1" title="\u062A\u0639\u062F\u064A\u0644">
+                        <button onclick="SafetyPerformanceKPIs.editHSEMonitoringPlan(${JSON.stringify(String(c.id||""))})" class="text-blue-600 hover:text-blue-800 mx-1" title="\u062A\u0639\u062F\u064A\u0644">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button onclick="SafetyPerformanceKPIs.deleteHSEMonitoringPlan('${c.id}')" class="text-red-600 hover:text-red-800 mx-1" title="\u062D\u0630\u0641">
+                        <button onclick="SafetyPerformanceKPIs.deleteHSEMonitoringPlan(${JSON.stringify(String(c.id||""))})" class="text-red-600 hover:text-red-800 mx-1" title="\u062D\u0630\u0641">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>

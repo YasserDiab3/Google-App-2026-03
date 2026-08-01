@@ -270,16 +270,16 @@ const PeriodicInspections={INSPECTION_TEMPLATES:{"emergency-lights":{id:"emergen
                                             </td>
                                             <td>
                                                 <div class="flex items-center gap-2">
-                                                    <button onclick="PeriodicInspections.viewInspection('${s.id}')" class="btn-icon btn-icon-info hover:scale-110 transition-transform" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
+                                                    <button onclick="PeriodicInspections.viewInspection(${JSON.stringify(String(s.id||""))})" class="btn-icon btn-icon-info hover:scale-110 transition-transform" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
                                                         <i class="fas fa-eye"></i>
                                                     </button>
-                                                    <button onclick="PeriodicInspections.exportInspectionById('${s.id}')" class="btn-icon btn-icon-success hover:scale-110 transition-transform" title="\u062A\u062D\u0645\u064A\u0644 PDF">
+                                                    <button onclick="PeriodicInspections.exportInspectionById(${JSON.stringify(String(s.id||""))})" class="btn-icon btn-icon-success hover:scale-110 transition-transform" title="\u062A\u062D\u0645\u064A\u0644 PDF">
                                                         <i class="fas fa-file-pdf"></i>
                                                     </button>
-                                                    <button onclick="PeriodicInspections.editInspection('${s.id}')" class="btn-icon btn-icon-primary hover:scale-110 transition-transform" title="\u062A\u0639\u062F\u064A\u0644">
+                                                    <button onclick="PeriodicInspections.editInspection(${JSON.stringify(String(s.id||""))})" class="btn-icon btn-icon-primary hover:scale-110 transition-transform" title="\u062A\u0639\u062F\u064A\u0644">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
-                                                    <button onclick="PeriodicInspections.deleteInspection('${s.id}')" class="btn-icon btn-icon-danger hover:scale-110 transition-transform" title="\u062D\u0630\u0641">
+                                                    <button onclick="PeriodicInspections.deleteInspection(${JSON.stringify(String(s.id||""))})" class="btn-icon btn-icon-danger hover:scale-110 transition-transform" title="\u062D\u0630\u0641">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </div>
@@ -731,10 +731,10 @@ const PeriodicInspections={INSPECTION_TEMPLATES:{"emergency-lights":{id:"emergen
                                         </div>
                                     </div>
                                     <div class="flex gap-2">
-                                        <button onclick="PeriodicInspections.editTemplate('${i.id}')" class="btn-icon btn-icon-primary" title="\u062A\u0639\u062F\u064A\u0644">
+                                        <button onclick="PeriodicInspections.editTemplate(${JSON.stringify(String(i.id||""))})" class="btn-icon btn-icon-primary" title="\u062A\u0639\u062F\u064A\u0644">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button onclick="PeriodicInspections.deleteTemplate('${i.id}')" class="btn-icon btn-icon-danger" title="\u062D\u0630\u0641">
+                                        <button onclick="PeriodicInspections.deleteTemplate(${JSON.stringify(String(i.id||""))})" class="btn-icon btn-icon-danger" title="\u062D\u0630\u0641">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
@@ -1047,15 +1047,15 @@ const PeriodicInspections={INSPECTION_TEMPLATES:{"emergency-lights":{id:"emergen
                             <i class="fas fa-times ml-2"></i>
                             \u0625\u063A\u0644\u0627\u0642
                         </button>
-                        <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%); border: 1px solid #1e293b;" onclick="PeriodicInspections.printInspectionById('${e}');">
+                        <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%); border: 1px solid #1e293b;" onclick="PeriodicInspections.printInspectionById(${JSON.stringify(String(e||""))});">
                             <i class="fas fa-print ml-2"></i>
                             \u0637\u0628\u0627\u0639\u0629
                         </button>
-                        <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); border: 1px solid #991b1b;" onclick="PeriodicInspections.exportInspectionById('${e}');">
+                        <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); border: 1px solid #991b1b;" onclick="PeriodicInspections.exportInspectionById(${JSON.stringify(String(e||""))});">
                             <i class="fas fa-file-pdf ml-2"></i>
                             \u062A\u062D\u0645\u064A\u0644 PDF
                         </button>
-                        <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%); border: 1px solid #1e40af;" onclick="PeriodicInspections.editInspection('${e}'); this.closest('.modal-overlay').remove();">
+                        <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%); border: 1px solid #1e40af;" onclick="PeriodicInspections.editInspection(${JSON.stringify(String(e||""))}); this.closest('.modal-overlay').remove();">
                             <i class="fas fa-edit ml-2"></i>
                             \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0641\u062D\u0635
                         </button>

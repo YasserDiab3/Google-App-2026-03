@@ -1,13 +1,13 @@
 {
-  "version": "1.0.723",
+  "version": "1.0.726",
   "highlights": {
     "ar": [
-      "SEC-01 مرحلة 4: تنظيف بقايا مسار bootstrap نهائياً.",
-      "رفض أي @hse.local دائماً؛ لا جلسات bootstrap جديدة."
+      "P1: إصلاح XSS في نسخ بيانات الحساب ومعرفات القوائم.",
+      "حماية سلوك/PPE/مخالفات من مسح البيانات المحلية بمصفوفة فارغة."
     ],
     "en": [
-      "SEC-01 phase 4: remaining bootstrap path cleaned up.",
-      "Any @hse.local email always rejected; no new bootstrap sessions."
+      "P1: XSS fixes for credential copy and list ID onclick handlers.",
+      "Behavior/PPE/violations guarded against empty-array local wipe."
     ]
   }
 }

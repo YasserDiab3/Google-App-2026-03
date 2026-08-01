@@ -438,15 +438,25 @@ const BehaviorMonitoring = {
                 return { success: false, data: [] };
             });
 
-            // معالجة نتائج البيانات
+            // معالجة نتائج البيانات — P1.3: لا تستبدل محلياً غير فارغ بمصفوفة فارغة
             if (behaviorResult && behaviorResult.success && Array.isArray(behaviorResult.data)) {
-                AppState.appData.behaviorMonitoring = behaviorResult.data;
-                Utils.safeLog(`✅ تم تحميل ${behaviorResult.data.length} سجل من Google Sheets`);
+                const localBehavior = Array.isArray(AppState.appData.behaviorMonitoring) ? AppState.appData.behaviorMonitoring : [];
+                if (behaviorResult.data.length === 0 && localBehavior.length > 0) {
+                    Utils.safeWarn(`⚠️ تجاهل behaviorMonitoring فارغ من الخادم — الإبقاء على ${localBehavior.length} سجل محلي`);
+                } else {
+                    AppState.appData.behaviorMonitoring = behaviorResult.data;
+                    Utils.safeLog(`✅ تم تحميل ${behaviorResult.data.length} سجل من Google Sheets`);
+                }
             }
 
             if (contractorResult && contractorResult.success && Array.isArray(contractorResult.data)) {
-                AppState.appData.contractorBehaviorMonitoring = contractorResult.data;
-                Utils.safeLog(`✅ تم تحميل ${contractorResult.data.length} سجل تصرفات مقاولين`);
+                const localContractor = Array.isArray(AppState.appData.contractorBehaviorMonitoring) ? AppState.appData.contractorBehaviorMonitoring : [];
+                if (contractorResult.data.length === 0 && localContractor.length > 0) {
+                    Utils.safeWarn(`⚠️ تجاهل contractorBehaviorMonitoring فارغ من الخادم — الإبقاء على ${localContractor.length} سجل محلي`);
+                } else {
+                    AppState.appData.contractorBehaviorMonitoring = contractorResult.data;
+                    Utils.safeLog(`✅ تم تحميل ${contractorResult.data.length} سجل تصرفات مقاولين`);
+                }
             }
 
             if ((behaviorResult && behaviorResult.success) || (contractorResult && contractorResult.success)) {

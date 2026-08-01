@@ -1223,16 +1223,16 @@ const PeriodicInspections = {
                                             </td>
                                             <td>
                                                 <div class="flex items-center gap-2">
-                                                    <button onclick="PeriodicInspections.viewInspection('${inspection.id}')" class="btn-icon btn-icon-info hover:scale-110 transition-transform" title="عرض التفاصيل">
+                                                    <button onclick="PeriodicInspections.viewInspection(${JSON.stringify(String(inspection.id || ''))})" class="btn-icon btn-icon-info hover:scale-110 transition-transform" title="عرض التفاصيل">
                                                         <i class="fas fa-eye"></i>
                                                     </button>
-                                                    <button onclick="PeriodicInspections.exportInspectionById('${inspection.id}')" class="btn-icon btn-icon-success hover:scale-110 transition-transform" title="تحميل PDF">
+                                                    <button onclick="PeriodicInspections.exportInspectionById(${JSON.stringify(String(inspection.id || ''))})" class="btn-icon btn-icon-success hover:scale-110 transition-transform" title="تحميل PDF">
                                                         <i class="fas fa-file-pdf"></i>
                                                     </button>
-                                                    <button onclick="PeriodicInspections.editInspection('${inspection.id}')" class="btn-icon btn-icon-primary hover:scale-110 transition-transform" title="تعديل">
+                                                    <button onclick="PeriodicInspections.editInspection(${JSON.stringify(String(inspection.id || ''))})" class="btn-icon btn-icon-primary hover:scale-110 transition-transform" title="تعديل">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
-                                                    <button onclick="PeriodicInspections.deleteInspection('${inspection.id}')" class="btn-icon btn-icon-danger hover:scale-110 transition-transform" title="حذف">
+                                                    <button onclick="PeriodicInspections.deleteInspection(${JSON.stringify(String(inspection.id || ''))})" class="btn-icon btn-icon-danger hover:scale-110 transition-transform" title="حذف">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </div>
@@ -2562,10 +2562,10 @@ const PeriodicInspections = {
                                         </div>
                                     </div>
                                     <div class="flex gap-2">
-                                        <button onclick="PeriodicInspections.editTemplate('${template.id}')" class="btn-icon btn-icon-primary" title="تعديل">
+                                        <button onclick="PeriodicInspections.editTemplate(${JSON.stringify(String(template.id || ''))})" class="btn-icon btn-icon-primary" title="تعديل">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button onclick="PeriodicInspections.deleteTemplate('${template.id}')" class="btn-icon btn-icon-danger" title="حذف">
+                                        <button onclick="PeriodicInspections.deleteTemplate(${JSON.stringify(String(template.id || ''))})" class="btn-icon btn-icon-danger" title="حذف">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
@@ -3040,15 +3040,15 @@ const PeriodicInspections = {
                             <i class="fas fa-times ml-2"></i>
                             إغلاق
                         </button>
-                        <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%); border: 1px solid #1e293b;" onclick="PeriodicInspections.printInspectionById('${id}');">
+                        <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%); border: 1px solid #1e293b;" onclick="PeriodicInspections.printInspectionById(${JSON.stringify(String(id || ''))});">
                             <i class="fas fa-print ml-2"></i>
                             طباعة
                         </button>
-                        <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); border: 1px solid #991b1b;" onclick="PeriodicInspections.exportInspectionById('${id}');">
+                        <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); border: 1px solid #991b1b;" onclick="PeriodicInspections.exportInspectionById(${JSON.stringify(String(id || ''))});">
                             <i class="fas fa-file-pdf ml-2"></i>
                             تحميل PDF
                         </button>
-                        <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%); border: 1px solid #1e40af;" onclick="PeriodicInspections.editInspection('${id}'); this.closest('.modal-overlay').remove();">
+                        <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%); border: 1px solid #1e40af;" onclick="PeriodicInspections.editInspection(${JSON.stringify(String(id || ''))}); this.closest('.modal-overlay').remove();">
                             <i class="fas fa-edit ml-2"></i>
                             تعديل الفحص
                         </button>

@@ -110,7 +110,7 @@ const Users = {
                             <span style="font-size: 12px; font-weight: 600; color: #64748b;"><i class="fas fa-envelope ml-1 text-blue-600"></i> البريد الإلكتروني</span>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <code style="font-size: 13px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 2px 8px; border-radius: 6px; direction: ltr;">${Utils.escapeHTML(creds.email || '')}</code>
-                                <button type="button" onclick="navigator.clipboard.writeText('${creds.email}').then(() => Notification.success('تم نسخ البريد الإلكتروني')).catch(() => {})" title="نسخ البريد" style="background: #e2e8f0; border: none; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #475569;">
+                                <button type="button" data-copy="email" title="نسخ البريد" style="background: #e2e8f0; border: none; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #475569;">
                                     <i class="fas fa-copy text-xs"></i>
                                 </button>
                             </div>
@@ -120,7 +120,7 @@ const Users = {
                             <span style="font-size: 12px; font-weight: 600; color: #64748b;"><i class="fas fa-key ml-1 text-amber-600"></i> كلمة المرور</span>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <code id="cred-modal-pass-text" style="font-size: 15px; font-weight: 800; color: #059669; background: #ecfdf5; padding: 4px 10px; border-radius: 6px; letter-spacing: 1px; direction: ltr;">${Utils.escapeHTML(creds.password || '••••••••')}</code>
-                                <button type="button" onclick="navigator.clipboard.writeText('${creds.password}').then(() => Notification.success('تم نسخ كلمة المرور')).catch(() => {})" title="نسخ كلمة المرور" style="background: #d1fae5; border: none; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #047857;">
+                                <button type="button" data-copy="password" title="نسخ كلمة المرور" style="background: #d1fae5; border: none; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #047857;">
                                     <i class="fas fa-copy text-xs"></i>
                                 </button>
                             </div>
@@ -171,6 +171,18 @@ const Users = {
                 });
             });
         }
+
+        // P1.1: نسخ البريد/كلمة المرور عبر listener — لا حقن داخل onclick
+        modal.querySelectorAll('[data-copy]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const kind = btn.getAttribute('data-copy');
+                const text = kind === 'password' ? String(creds.password || '') : String(creds.email || '');
+                const okMsg = kind === 'password' ? 'تم نسخ كلمة المرور' : 'تم نسخ البريد الإلكتروني';
+                navigator.clipboard.writeText(text).then(() => {
+                    Notification.success(okMsg);
+                }).catch(() => {});
+            });
+        });
     },
 
     // ===== Photo loading guards (avoid repeated 503) =====

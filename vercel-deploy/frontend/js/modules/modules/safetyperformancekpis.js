@@ -4805,10 +4805,10 @@ SafetyPerformanceKPIs.renderKPIAnnualPlanTable = function(data) {
                 <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: bold; background: #fef3c7;">${total}</td>
                 ${canEdit ? `
                 <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">
-                    <button onclick="SafetyPerformanceKPIs.editKPIAnnualPlan('${plan.id}')" class="text-blue-600 hover:text-blue-800 mx-1" title="تعديل">
+                    <button onclick="SafetyPerformanceKPIs.editKPIAnnualPlan(${JSON.stringify(String(plan.id || ''))})" class="text-blue-600 hover:text-blue-800 mx-1" title="تعديل">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button onclick="SafetyPerformanceKPIs.deleteKPIAnnualPlan('${plan.id}')" class="text-red-600 hover:text-red-800 mx-1" title="حذف">
+                    <button onclick="SafetyPerformanceKPIs.deleteKPIAnnualPlan(${JSON.stringify(String(plan.id || ''))})" class="text-red-600 hover:text-red-800 mx-1" title="حذف">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
@@ -5178,10 +5178,10 @@ SafetyPerformanceKPIs.renderHSEMonitoringTables = function(data) {
                     <td style="padding: 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: bold; background: #ede9fe;">${score}%</td>
                     ${canEdit ? `
                     <td style="padding: 6px; border: 1px solid #e5e7eb; text-align: center;">
-                        <button onclick="SafetyPerformanceKPIs.editHSEMonitoringPlan('${plan.id}')" class="text-blue-600 hover:text-blue-800 mx-1" title="تعديل">
+                        <button onclick="SafetyPerformanceKPIs.editHSEMonitoringPlan(${JSON.stringify(String(plan.id || ''))})" class="text-blue-600 hover:text-blue-800 mx-1" title="تعديل">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button onclick="SafetyPerformanceKPIs.deleteHSEMonitoringPlan('${plan.id}')" class="text-red-600 hover:text-red-800 mx-1" title="حذف">
+                        <button onclick="SafetyPerformanceKPIs.deleteHSEMonitoringPlan(${JSON.stringify(String(plan.id || ''))})" class="text-red-600 hover:text-red-800 mx-1" title="حذف">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
