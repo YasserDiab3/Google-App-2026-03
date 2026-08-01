@@ -28,14 +28,23 @@ var ActionHandlers = {
         var result = { success: false, message: '' };
         (function() {
 
-                    if (payload && payload.sheetName != null) {
-                        var writeGate = (typeof checkSheetDirectWriteAccess_ === 'function')
-                            ? checkSheetDirectWriteAccess_(payload.sheetName, actorUserData, action)
-                            : { ok: true };
-                        if (!writeGate.ok) {
-                            result = writeGate;
-                            return;
-                        }
+                    // P0.1: بوابة هوية دائماً (حتى بدون sheetName)
+                    var writeGate = (typeof checkSheetDirectWriteAccess_ === 'function')
+                        ? checkSheetDirectWriteAccess_(
+                            (payload && payload.sheetName != null) ? payload.sheetName : '',
+                            actorUserData,
+                            action
+                        )
+                        : ((typeof requireAuthenticatedActor_ === 'function')
+                            ? requireAuthenticatedActor_(actorUserData, action)
+                            : { ok: false, success: false, message: 'بوابة الكتابة غير متاحة', errorCode: 'WRITE_GATE_UNAVAILABLE' });
+                    if (!writeGate.ok) {
+                        result = writeGate;
+                        return;
+                    }
+                    if (!payload || payload.sheetName == null || String(payload.sheetName).trim() === '') {
+                        result = { success: false, message: 'اسم الورقة مطلوب', errorCode: 'SHEET_NAME_REQUIRED' };
+                        return;
                     }
                     if (payload && payload.sheetName != null && payload.data !== undefined && typeof clampPayloadToDefaultHeaders === 'function') {
                         payload.data = clampPayloadToDefaultHeaders(payload.sheetName, payload.data);
@@ -87,14 +96,23 @@ var ActionHandlers = {
         var result = { success: false, message: '' };
         (function() {
 
-                    if (payload && payload.sheetName != null) {
-                        var appendWriteGate = (typeof checkSheetDirectWriteAccess_ === 'function')
-                            ? checkSheetDirectWriteAccess_(payload.sheetName, actorUserData, action)
-                            : { ok: true };
-                        if (!appendWriteGate.ok) {
-                            result = appendWriteGate;
-                            return;
-                        }
+                    // P0.1: بوابة هوية دائماً (حتى بدون sheetName)
+                    var appendWriteGate = (typeof checkSheetDirectWriteAccess_ === 'function')
+                        ? checkSheetDirectWriteAccess_(
+                            (payload && payload.sheetName != null) ? payload.sheetName : '',
+                            actorUserData,
+                            action
+                        )
+                        : ((typeof requireAuthenticatedActor_ === 'function')
+                            ? requireAuthenticatedActor_(actorUserData, action)
+                            : { ok: false, success: false, message: 'بوابة الكتابة غير متاحة', errorCode: 'WRITE_GATE_UNAVAILABLE' });
+                    if (!appendWriteGate.ok) {
+                        result = appendWriteGate;
+                        return;
+                    }
+                    if (!payload || payload.sheetName == null || String(payload.sheetName).trim() === '') {
+                        result = { success: false, message: 'اسم الورقة مطلوب', errorCode: 'SHEET_NAME_REQUIRED' };
+                        return;
                     }
                     if (payload && payload.sheetName != null && payload.data !== undefined && typeof clampPayloadToDefaultHeaders === 'function') {
                         payload.data = clampPayloadToDefaultHeaders(payload.sheetName, payload.data);

@@ -868,9 +868,16 @@ function checkSheetReadAccess_(sheetName, actorUserData, actionName) {
     return requireAdminActor_(actorUserData, actionName || ('read:' + sheetName));
 }
 
+/**
+ * P0.1: كل كتابة مباشرة عبر saveToSheet/appendToSheet تتطلب هوية مسجّلة في Users.
+ * أوراق Users/UserVersions تبقى محظورة/مدير كما كانت.
+ */
 function checkSheetDirectWriteAccess_(sheetName, actorUserData, actionName) {
-    if (!isDirectWriteBlockedSheet_(sheetName)) return { ok: true };
     var name = String(sheetName || '').trim();
+    var action = actionName || ('write:' + (name || 'unknown'));
+    var authGate = requireAuthenticatedActor_(actorUserData, action);
+    if (!authGate.ok) return authGate;
+    if (!isDirectWriteBlockedSheet_(name)) return { ok: true };
     if (name === 'UserVersions') {
         if (typeof logSecurityEvent === 'function') {
             logSecurityEvent('direct_write_blocked', {
@@ -888,7 +895,7 @@ function checkSheetDirectWriteAccess_(sheetName, actorUserData, actionName) {
             sheetName: name
         };
     }
-    return requireAdminActor_(actorUserData, actionName || ('write:' + name));
+    return requireAdminActor_(actorUserData, action);
 }
 
 /**
