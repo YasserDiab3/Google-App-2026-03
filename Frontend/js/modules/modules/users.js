@@ -438,8 +438,302 @@ const Users = {
         }
     },
 
+    /**
+     * إحصائيات سريعة لمدير النظام من بيانات المستخدمين الحالية
+     */
+    computeUsersAdminStats(users) {
+        const list = Array.isArray(users) ? users : [];
+        const now = Date.now();
+        const dayMs = 24 * 60 * 60 * 1000;
+        let active = 0;
+        let inactive = 0;
+        let online = 0;
+        let admins = 0;
+        let safety = 0;
+        let mfa = 0;
+        let linked = 0;
+        let neverLogin = 0;
+        let stale30 = 0;
+
+        list.forEach((u) => {
+            if (!u || typeof u !== 'object') return;
+            const isActive = u.active !== false;
+            if (isActive) active += 1;
+            else inactive += 1;
+            if (u.isOnline === true) online += 1;
+            const role = String(u.role || '').toLowerCase();
+            if (role === 'admin') admins += 1;
+            if (role === 'safety_officer') safety += 1;
+            try {
+                if (typeof Auth !== 'undefined' && typeof Auth._isMfaEnabledForUser === 'function' && Auth._isMfaEnabledForUser(u)) {
+                    mfa += 1;
+                } else if (u.mfaEnabled === true || u.mfa === true || u.totpEnabled === true) {
+                    mfa += 1;
+                }
+            } catch (_e) { /* ignore */ }
+            if (u.employeeCode || u.employeeId || u.linkedEmployeeId) linked += 1;
+            if (!u.lastLogin) {
+                neverLogin += 1;
+            } else {
+                const t = new Date(u.lastLogin).getTime();
+                if (Number.isFinite(t) && isActive && (now - t) > 30 * dayMs) stale30 += 1;
+            }
+        });
+
+        return {
+            total: list.length,
+            active,
+            inactive,
+            online,
+            admins,
+            safety,
+            mfa,
+            linked,
+            neverLogin,
+            stale30
+        };
+    },
+
+    ensureUsersAdminStatsStyles() {
+        const styleId = 'users-admin-stats-styles-v1';
+        if (document.getElementById(styleId)) return;
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            #users-admin-stats {
+                --uas-navy: #003865;
+                --uas-gold: #c9a227;
+                --uas-slate: #0f172a;
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+                gap: 0.85rem;
+                margin-bottom: 1.25rem;
+                align-items: stretch;
+            }
+            #users-admin-stats .uas-card {
+                --uas-accent: var(--uas-navy);
+                --uas-accent-soft: #e8f1f8;
+                position: relative;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                gap: 0.55rem;
+                min-height: 118px;
+                padding: 1rem 1.05rem 0.95rem;
+                border-radius: 14px;
+                background: linear-gradient(155deg, #ffffff 0%, var(--uas-accent-soft) 125%);
+                border: 1px solid color-mix(in srgb, var(--uas-accent) 16%, #e2e8f0);
+                box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 20px rgba(15, 23, 42, 0.035);
+                transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            }
+            #users-admin-stats .uas-card::after {
+                content: '';
+                position: absolute;
+                inset-inline-start: 0;
+                top: 0;
+                bottom: 0;
+                width: 3px;
+                background: linear-gradient(180deg, var(--uas-accent), color-mix(in srgb, var(--uas-accent) 40%, #fff));
+                border-radius: 14px 0 0 14px;
+            }
+            [dir="rtl"] #users-admin-stats .uas-card::after {
+                border-radius: 0 14px 14px 0;
+            }
+            #users-admin-stats .uas-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(15, 23, 42, 0.07), 0 12px 28px rgba(15, 23, 42, 0.05);
+                border-color: color-mix(in srgb, var(--uas-accent) 28%, #e2e8f0);
+            }
+            #users-admin-stats .uas-card__top {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 0.5rem;
+                position: relative;
+                z-index: 1;
+            }
+            #users-admin-stats .uas-card__icon {
+                width: 38px;
+                height: 38px;
+                border-radius: 11px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                background: color-mix(in srgb, var(--uas-accent) 12%, #fff);
+                color: var(--uas-accent);
+                font-size: 0.95rem;
+                box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--uas-accent) 14%, transparent);
+            }
+            #users-admin-stats .uas-card__label {
+                margin: 0;
+                font-size: 0.78rem;
+                font-weight: 700;
+                color: #334155;
+                line-height: 1.35;
+            }
+            #users-admin-stats .uas-card__hint {
+                margin: 0.15rem 0 0;
+                font-size: 0.68rem;
+                color: #64748b;
+                line-height: 1.4;
+            }
+            #users-admin-stats .uas-card__value {
+                position: relative;
+                z-index: 1;
+                margin-top: auto;
+                font-size: 1.7rem;
+                font-weight: 800;
+                letter-spacing: -0.03em;
+                line-height: 1;
+                color: var(--uas-accent);
+                font-variant-numeric: tabular-nums;
+            }
+            #users-admin-stats .uas-card__foot {
+                position: relative;
+                z-index: 1;
+                font-size: 0.68rem;
+                color: #64748b;
+                font-weight: 600;
+            }
+            #users-admin-stats .uas-card--total { --uas-accent: #003865; --uas-accent-soft: #e8f1f8; }
+            #users-admin-stats .uas-card--active { --uas-accent: #0f766e; --uas-accent-soft: #ecfdf8; }
+            #users-admin-stats .uas-card--online { --uas-accent: #15803d; --uas-accent-soft: #f0fdf4; }
+            #users-admin-stats .uas-card--admin { --uas-accent: #b45309; --uas-accent-soft: #fffbeb; }
+            #users-admin-stats .uas-card--mfa { --uas-accent: #1d4ed8; --uas-accent-soft: #eff6ff; }
+            #users-admin-stats .uas-card--linked { --uas-accent: #0369a1; --uas-accent-soft: #f0f9ff; }
+            #users-admin-stats .uas-card--never { --uas-accent: #475569; --uas-accent-soft: #f8fafc; }
+            #users-admin-stats .uas-card--stale { --uas-accent: #b91c1c; --uas-accent-soft: #fef2f2; }
+            @media (max-width: 640px) {
+                #users-admin-stats {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+                #users-admin-stats .uas-card__value { font-size: 1.45rem; }
+            }
+        `;
+        document.head.appendChild(style);
+    },
+
+    renderUsersAdminStatsCards(stats) {
+        this.ensureUsersAdminStatsStyles();
+        const s = stats || this.computeUsersAdminStats(AppState.appData?.users || []);
+        const inactiveFoot = s.inactive
+            ? `${s.inactive} ${this.t('module.users.stats.inactive', 'غير نشط')}`
+            : this.t('module.users.stats.allActiveHint', 'لا حسابات معطّلة');
+        const cards = [
+            {
+                key: 'total',
+                cls: 'uas-card--total',
+                icon: 'fa-users',
+                label: this.t('module.users.stats.total', 'إجمالي الحسابات'),
+                hint: this.t('module.users.stats.totalHint', 'كل المستخدمين المسجّلين'),
+                value: s.total,
+                foot: inactiveFoot
+            },
+            {
+                key: 'active',
+                cls: 'uas-card--active',
+                icon: 'fa-user-check',
+                label: this.t('module.users.stats.active', 'حسابات نشطة'),
+                hint: this.t('module.users.stats.activeHint', 'مسموح لها بتسجيل الدخول'),
+                value: s.active,
+                foot: `${s.total ? Math.round((s.active / Math.max(s.total, 1)) * 100) : 0}% ${this.t('module.users.stats.ofTotal', 'من الإجمالي')}`
+            },
+            {
+                key: 'online',
+                cls: 'uas-card--online',
+                icon: 'fa-signal',
+                label: this.t('module.users.stats.online', 'متصل الآن'),
+                hint: this.t('module.users.stats.onlineHint', 'جلسات نشطة حالياً'),
+                value: s.online,
+                foot: this.t('module.users.stats.liveHint', 'يتحدّث تلقائياً')
+            },
+            {
+                key: 'admins',
+                cls: 'uas-card--admin',
+                icon: 'fa-user-shield',
+                label: this.t('module.users.stats.admins', 'مدراء النظام'),
+                hint: this.t('module.users.stats.adminsHint', 'صلاحيات إدارية كاملة'),
+                value: s.admins,
+                foot: `${s.safety} ${this.t('module.users.stats.safetyOfficers', 'مسؤول سلامة')}`
+            },
+            {
+                key: 'mfa',
+                cls: 'uas-card--mfa',
+                icon: 'fa-shield-halved',
+                label: this.t('module.users.stats.mfa', 'مصادقة ثنائية MFA'),
+                hint: this.t('module.users.stats.mfaHint', 'حسابات محمية بخطوة ثانية'),
+                value: s.mfa,
+                foot: s.total
+                    ? `${Math.round((s.mfa / Math.max(s.total, 1)) * 100)}% ${this.t('module.users.stats.coverage', 'تغطية')}`
+                    : this.t('module.users.stats.noUsers', 'لا مستخدمين')
+            },
+            {
+                key: 'linked',
+                cls: 'uas-card--linked',
+                icon: 'fa-id-badge',
+                label: this.t('module.users.stats.linked', 'مرتبط بموظف'),
+                hint: this.t('module.users.stats.linkedHint', 'حساب مربوط بسجل موظفين'),
+                value: s.linked,
+                foot: `${Math.max(0, s.total - s.linked)} ${this.t('module.users.stats.unlinked', 'غير مربوط')}`
+            },
+            {
+                key: 'never',
+                cls: 'uas-card--never',
+                icon: 'fa-user-clock',
+                label: this.t('module.users.stats.neverLogin', 'لم يسجّلوا دخولاً'),
+                hint: this.t('module.users.stats.neverLoginHint', 'حسابات بلا آخر دخول'),
+                value: s.neverLogin,
+                foot: this.t('module.users.stats.reviewHint', 'مراجعة دعوات/تفعيل')
+            },
+            {
+                key: 'stale',
+                cls: 'uas-card--stale',
+                icon: 'fa-triangle-exclamation',
+                label: this.t('module.users.stats.stale', 'خمول +30 يوماً'),
+                hint: this.t('module.users.stats.staleHint', 'نشط لكن بدون دخول حديث'),
+                value: s.stale30,
+                foot: this.t('module.users.stats.staleFoot', 'قد يحتاج مراجعة صلاحيات')
+            }
+        ];
+
+        return `
+            <div id="users-admin-stats" class="users-admin-stats" role="region" aria-label="${Utils.escapeHTML(this.t('module.users.stats.region', 'ملخص إدارة المستخدمين'))}">
+                ${cards.map((c) => `
+                    <article class="uas-card ${c.cls}" data-uas="${c.key}">
+                        <div class="uas-card__top">
+                            <div>
+                                <p class="uas-card__label">${Utils.escapeHTML(c.label)}</p>
+                                <p class="uas-card__hint">${Utils.escapeHTML(c.hint)}</p>
+                            </div>
+                            <div class="uas-card__icon" aria-hidden="true"><i class="fas ${c.icon}"></i></div>
+                        </div>
+                        <div class="uas-card__value" data-uas-value="${c.key}">${Number(c.value) || 0}</div>
+                        <div class="uas-card__foot" data-uas-foot="${c.key}">${Utils.escapeHTML(c.foot)}</div>
+                    </article>
+                `).join('')}
+            </div>
+        `;
+    },
+
+    updateUsersAdminStatsCards(users) {
+        const root = document.getElementById('users-admin-stats');
+        if (!root) return;
+        const parent = root.parentElement;
+        if (!parent) return;
+        const html = this.renderUsersAdminStatsCards(this.computeUsersAdminStats(users || AppState.appData?.users || []));
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html.trim();
+        const next = tmp.firstElementChild;
+        if (next) {
+            root.replaceWith(next);
+            this.applyModuleI18n(next);
+        }
+    },
+
     async renderList() {
         return `
+            ${this.renderUsersAdminStatsCards(this.computeUsersAdminStats(AppState.appData?.users || []))}
             <div class="content-card">
                 <div class="card-header">
                     <div class="flex items-center justify-between">
@@ -823,6 +1117,7 @@ const Users = {
                 </div>
             `;
             this.applyModuleI18n(container);
+            this.updateUsersAdminStatsCards([]);
             return;
         }
 
@@ -956,6 +1251,7 @@ const Users = {
 
         container.innerHTML = tableHTML;
         this.applyModuleI18n(container);
+        this.updateUsersAdminStatsCards(users);
 
         // ✅ تثبيت fallback لصور المستخدمين (503 Drive) بعد تحديث DOM
         const runUserPhotoEnhancements = () => {
@@ -2903,6 +3199,8 @@ const Users = {
                 `;
             }
         });
+
+        this.updateUsersAdminStatsCards(users);
     },
 
     /**
