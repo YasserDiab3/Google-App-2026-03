@@ -269,10 +269,8 @@ function doPost(e) {
             'getAuthBootstrapPolicy',
             // ✅ مؤشر تحديثات المستخدمين (للـ sync الفوري بين الأجهزة)
             'getUsersMeta',
-            // ✅ طلبات موافقة - عيادة
-            'getAllMedicationDeletionRequests',
-            'getAllSupplyRequests',
-            'getAllClinicVisitDeletionRequests',
+            // ✅ طلبات موافقة العيادة — أُخرجت من readOnly (P0.3): تتطلب CSRF + مدير
+            // getAllMedicationDeletionRequests, getAllSupplyRequests, getAllClinicVisitDeletionRequests
             'getContractorDetailedAnalytics',
             'getAllAppEmergencyNumbers',
             'getAllIssuingAuthorities',

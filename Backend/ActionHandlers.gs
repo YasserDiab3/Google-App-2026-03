@@ -23,6 +23,55 @@ function actionRequireAdmin_(actorUserData, actionName, extraFields) {
     return null;
 }
 
+/** بوابة هوية مسجّلة — تُرجع كائن خطأ جاهز أو null */
+function actionRequireAuth_(actorUserData, actionName, extraFields) {
+    if (typeof requireAuthenticatedActor_ !== 'function') {
+        return {
+            success: false,
+            message: 'بوابة المصادقة غير متاحة',
+            errorCode: 'AUTH_GATE_UNAVAILABLE',
+            action: actionName
+        };
+    }
+    var gate = requireAuthenticatedActor_(actorUserData, actionName);
+    if (!gate.ok) {
+        var fail = {
+            success: false,
+            message: gate.message,
+            errorCode: gate.errorCode,
+            action: gate.action
+        };
+        if (extraFields && typeof extraFields === 'object') {
+            for (var k in extraFields) {
+                if (extraFields.hasOwnProperty(k)) fail[k] = extraFields[k];
+            }
+        }
+        return fail;
+    }
+    return null;
+}
+
+/**
+ * هوية الموافق من الخادم (Users) — لا تُؤخذ من payload العميل.
+ */
+function buildServerActorStamp_(actorUserData) {
+    var sheetUser = null;
+    try {
+        if (typeof getCachedActorRecordForActor_ === 'function') {
+            sheetUser = getCachedActorRecordForActor_(actorUserData);
+        }
+    } catch (_e) { sheetUser = null; }
+    var src = sheetUser || actorUserData || {};
+    return {
+        id: src.id || src.userId || '',
+        email: src.email || '',
+        name: src.name || src.fullName || '',
+        role: src.role || '',
+        stampedAt: new Date().toISOString(),
+        stampedByServer: true
+    };
+}
+
 var ActionHandlers = {
     'saveToSheet': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
@@ -1544,6 +1593,8 @@ var ActionHandlers = {
     'migrateContractorVisits': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action);
+            if (adminFail) { result = adminFail; return; }
             result = migrateContractorVisits();
         })();
         return result;
@@ -1551,6 +1602,8 @@ var ActionHandlers = {
     'debugMigration': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action);
+            if (adminFail) { result = adminFail; return; }
             result = debugMigration();
         })();
         return result;
@@ -1572,7 +1625,8 @@ var ActionHandlers = {
     'addMedication': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    var authFail = actionRequireAuth_(actorUserData, action);
+                    if (authFail) { result = authFail; return; }
                     result = addMedicationToSheet(payload);
                     return;
 
@@ -1712,7 +1766,8 @@ var ActionHandlers = {
     'addMedicationDeletionRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    var authFail = actionRequireAuth_(actorUserData, action);
+                    if (authFail) { result = authFail; return; }
                     result = addMedicationDeletionRequest(payload);
                     return;
 
@@ -1732,7 +1787,9 @@ var ActionHandlers = {
     'getAllMedicationDeletionRequests': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    // P0.3: CSRF + هوية (لم تعد readOnly عامة)
+                    var authFail = actionRequireAuth_(actorUserData, action, { data: [] });
+                    if (authFail) { result = authFail; return; }
                     result = getAllMedicationDeletionRequests(payload.filters || {});
                     return;
 
@@ -1742,8 +1799,9 @@ var ActionHandlers = {
     'approveMedicationDeletion': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
-                    result = approveMedicationDeletion(payload.requestId || payload.id, payload.approverData || payload.approver);
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
+                    result = approveMedicationDeletion(payload.requestId || payload.id, buildServerActorStamp_(actorUserData));
                     return;
 
         })();
@@ -1752,8 +1810,9 @@ var ActionHandlers = {
     'rejectMedicationDeletion': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
-                    result = rejectMedicationDeletion(payload.requestId || payload.id, payload.rejectorData || payload.rejector, payload.reason);
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
+                    result = rejectMedicationDeletion(payload.requestId || payload.id, buildServerActorStamp_(actorUserData), payload.reason);
                     return;
 
         })();
@@ -1762,7 +1821,8 @@ var ActionHandlers = {
     'addSupplyRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    var authFail = actionRequireAuth_(actorUserData, action);
+                    if (authFail) { result = authFail; return; }
                     result = addSupplyRequest(payload);
                     return;
 
@@ -1772,7 +1832,8 @@ var ActionHandlers = {
     'updateSupplyRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    var authFail = actionRequireAuth_(actorUserData, action);
+                    if (authFail) { result = authFail; return; }
                     result = updateSupplyRequest(payload.requestId || payload.id, payload.updateData || payload);
                     return;
 
@@ -1782,7 +1843,9 @@ var ActionHandlers = {
     'getAllSupplyRequests': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    // P0.3: CSRF + هوية (لم تعد readOnly عامة)
+                    var authFail = actionRequireAuth_(actorUserData, action, { data: [] });
+                    if (authFail) { result = authFail; return; }
                     result = getAllSupplyRequests(payload.filters || {});
                     return;
 
@@ -1792,8 +1855,9 @@ var ActionHandlers = {
     'approveSupplyRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
-                    result = approveSupplyRequest(payload.requestId || payload.id, payload.approverData || payload.approver);
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
+                    result = approveSupplyRequest(payload.requestId || payload.id, buildServerActorStamp_(actorUserData));
                     return;
 
         })();
@@ -1802,8 +1866,9 @@ var ActionHandlers = {
     'rejectSupplyRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
-                    result = rejectSupplyRequest(payload.requestId || payload.id, payload.rejectorData || payload.rejector, payload.reason);
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
+                    result = rejectSupplyRequest(payload.requestId || payload.id, buildServerActorStamp_(actorUserData), payload.reason);
                     return;
 
         })();
@@ -1812,7 +1877,8 @@ var ActionHandlers = {
     'addClinicVisitDeletionRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    var authFail = actionRequireAuth_(actorUserData, action);
+                    if (authFail) { result = authFail; return; }
                     result = addClinicVisitDeletionRequest(payload);
                     return;
 
@@ -1822,7 +1888,8 @@ var ActionHandlers = {
     'updateClinicVisitDeletionRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
                     result = updateClinicVisitDeletionRequest(payload.requestId || payload.id, payload.updateData || payload);
                     return;
 
@@ -1832,7 +1899,9 @@ var ActionHandlers = {
     'getAllClinicVisitDeletionRequests': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    // P0.3: CSRF + هوية (لم تعد readOnly عامة)
+                    var authFail = actionRequireAuth_(actorUserData, action, { data: [] });
+                    if (authFail) { result = authFail; return; }
                     result = getAllClinicVisitDeletionRequests(payload.filters || {});
                     return;
 
@@ -1842,8 +1911,10 @@ var ActionHandlers = {
     'approveClinicVisitDeletion': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
-                    result = approveClinicVisitDeletion(payload.requestId || payload.id, payload.approverData || payload.approver);
+                    // P0.2: موافقة حذف زيارة — مدير فقط + ختم موافق من الخادم
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
+                    result = approveClinicVisitDeletion(payload.requestId || payload.id, buildServerActorStamp_(actorUserData));
                     return;
 
         })();
@@ -1852,8 +1923,9 @@ var ActionHandlers = {
     'rejectClinicVisitDeletion': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
-                    result = rejectClinicVisitDeletion(payload.requestId || payload.id, payload.rejectorData || payload.rejector, payload.reason);
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
+                    result = rejectClinicVisitDeletion(payload.requestId || payload.id, buildServerActorStamp_(actorUserData), payload.reason);
                     return;
 
         })();
@@ -1862,16 +1934,11 @@ var ActionHandlers = {
     'deleteClinicVisit': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
                     result = deleteClinicVisit(payload.visitId || payload.id);
                     return;
 
-                // ============================================
-                // المقاولين والموظفين (Contractors & Employees)
-                // ============================================
-                // ✅ تم إزالة case 'addContractor' - نعتمد الآن فقط على ApprovedContractors
-                // ✅ تم إزالة حالات Contractors - نعتمد الآن فقط على ApprovedContractors
-                //
         })();
         return result;
     },
