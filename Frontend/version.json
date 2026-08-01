@@ -1,3 +1,13 @@
 {
-  "version": "1.0.1"
+  "version": "1.0.752",
+  "highlights": {
+    "ar": [
+      "كروت ملخص احترافية أعلى قسم المصرح لهم باعتماد تصاريح العمل (إجمالي، نشط، صلاحيات G/Y/X، مصانع، إدارات، أدوار اعتماد).",
+      "تصميم بطاقات إحصائيات بأسلوب إدارة المستخدمين مع تحديث فوري عند تحميل أو تصفية القائمة."
+    ],
+    "en": [
+      "Professional summary cards above Issuing Authorities (total, active, G/Y/X permissions, plants, departments, approval roles).",
+      "User-management-style stats cards that refresh when the list loads or filters change."
+    ]
+  }
 }
