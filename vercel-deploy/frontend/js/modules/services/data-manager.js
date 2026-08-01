@@ -12,6 +12,30 @@ const DataManager = {
     _lastLightSaveNotification: 0,
     _hasShownLargeDataWarning: false,
 
+    /**
+     * P4.2: إعلام المستخدم أن النسخة المحلية مختصرة (Quota / حجم)
+     */
+    _notifyLightLocalSave(reason) {
+        try {
+            if (typeof OfflineBanner !== 'undefined' && typeof OfflineBanner.setLightLocalData === 'function') {
+                OfflineBanner.setLightLocalData(true);
+            }
+            const now = Date.now();
+            if (now - (this._lastLightSaveNotification || 0) < 60000) return;
+            this._lastLightSaveNotification = now;
+            const isEn = (typeof I18n !== 'undefined' && typeof I18n.isEn === 'function')
+                ? I18n.isEn()
+                : (typeof localStorage !== 'undefined' && localStorage.getItem('language') === 'en');
+            const msg = isEn
+                ? 'Local storage is limited — a shortened copy was saved. Full data remains in memory / Google Sheets.'
+                : 'التخزين المحلي محدود — حُفظت نسخة مختصرة. البيانات الكاملة في الذاكرة / Google Sheets.';
+            if (typeof Notification !== 'undefined' && typeof Notification.warning === 'function') {
+                Notification.warning(msg, { duration: 6000 });
+            }
+            Utils.safeLog('ℹ️ [DataManager] light save notified:', reason || '');
+        } catch (_e) { /* ignore */ }
+    },
+
     /** حقول حساسة لا تُحفظ في localStorage أبداً */
     _USER_SENSITIVE_FIELDS: ['password', 'passwordHash', 'token', 'loginHistory', 'activeSessionId', 'profilePublicToken', 'profilePublicTokenExpiry', 'mfaSecretEnc'],
 
@@ -34,6 +58,9 @@ const DataManager = {
                 }
             }
             keysToRemove.forEach((k) => localStorage.removeItem(k));
+            if (typeof LocalDBCache !== 'undefined' && typeof LocalDBCache.clear === 'function') {
+                LocalDBCache.clear().catch(err => Utils.safeWarn('⚠️ فشل تفريغ IndexedDB:', err));
+            }
         } catch (e) {
             if (typeof Utils !== 'undefined' && Utils.safeWarn) {
                 Utils.safeWarn('⚠️ فشل مسح localStorage:', e);
@@ -592,9 +619,44 @@ const DataManager = {
                     AppState._localDataIsTruncated = true;
                     AppState._truncatedFields = parsedData._lightDataMeta.fields || {};
                     Utils.safeLog('⚠️ البيانات المحلية مبتورة - سيتم إعادة التحميل من الخادم:', AppState._truncatedFields);
+                    try {
+                        if (typeof OfflineBanner !== 'undefined' && typeof OfflineBanner.setLightLocalData === 'function') {
+                            OfflineBanner.setLightLocalData(true);
+                        }
+                    } catch (_eLight) { /* ignore */ }
                 } else {
                     AppState._localDataIsTruncated = false;
                     AppState._truncatedFields = {};
+                }
+            }
+
+            // ✅ تحميل الكاش عالي السعة من IndexedDB لمنع الفقدان عند تجاوز 5MB
+            if (typeof LocalDBCache !== 'undefined') {
+                try {
+                    const dbData = await LocalDBCache.get('hse_app_data');
+                    if (dbData && typeof dbData === 'object') {
+                        let restoredCount = 0;
+                        Object.keys(dbData).forEach(key => {
+                            if (Array.isArray(dbData[key]) && dbData[key].length > 0) {
+                                const currentArr = Array.isArray(AppState.appData[key]) ? AppState.appData[key] : [];
+                                if (currentArr.length === 0 || dbData[key].length > currentArr.length) {
+                                    AppState.appData[key] = LocalDBCache.sanitizeData(key, dbData[key]);
+                                    restoredCount += dbData[key].length;
+                                }
+                            }
+                        });
+                        if (restoredCount > 0 && AppState.debugMode) {
+                            Utils.safeLog(`⚡ [IndexedDB] تم استعادة ${restoredCount} سجل من الكاش عالي السعة بنجاح (0ms)`);
+                        }
+                    }
+                    // تنظيف صامت للكاش القديم لتخفيف المساحة
+                    if (typeof LocalDBCache.purgeStaleCache === 'function') {
+                        LocalDBCache.purgeStaleCache(60).catch(() => {});
+                    }
+                } catch (dbErr) {
+                    if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                        Utils.safeWarn('⚠️ استثناء أثناء التحميل من IndexedDB:', dbErr);
+                    }
                 }
             }
 
@@ -778,6 +840,16 @@ const DataManager = {
             }
             
             const dataToSave = this.sanitizeAppDataForStorage(AppState.appData);
+            
+            // ✅ حفظ كامل البيانات في IndexedDB لتفادي قيد الـ 5MB في localStorage وحماية البيانات من الفقد
+            if (typeof LocalDBCache !== 'undefined' && typeof LocalDBCache.set === 'function') {
+                LocalDBCache.set('hse_app_data', dataToSave).catch(e => {
+                    if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                        Utils.safeWarn('⚠️ فشل الحفظ في IndexedDB:', e);
+                    }
+                });
+            }
+
             const serialized = Utils.safeStringify(dataToSave);
             if (!serialized) {
                 Utils.safeWarn('⚠️ فشل تسلسل البيانات');
@@ -795,6 +867,7 @@ const DataManager = {
                         this.saveCompanySettings();
                         // تسجيل في الـ console فقط — لا إشعار مرئي للمستخدم (البيانات الكاملة في الذاكرة وGoogle Sheets)
                         Utils.safeLog('ℹ️ [DataManager] تم حفظ نسخة مخففة محلياً. البيانات الكاملة في الذاكرة وGoogle Sheets.');
+                        this._notifyLightLocalSave('over_safe_limit');
                         return true;
                     } catch (e) {
                         Utils.safeWarn('⚠️ فشل حفظ النسخة المخففة:', e);
@@ -852,6 +925,7 @@ const DataManager = {
                         this._saveSyncMeta();
                         this.saveCompanySettings();
                         Utils.safeLog('ℹ️ [DataManager] تم حفظ نسخة مخففة بعد امتلاء التخزين.');
+                        this._notifyLightLocalSave('quota_exceeded');
                         return true;
                     }
                 } catch (e2) {

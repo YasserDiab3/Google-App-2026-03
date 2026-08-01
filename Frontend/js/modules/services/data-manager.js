@@ -12,6 +12,30 @@ const DataManager = {
     _lastLightSaveNotification: 0,
     _hasShownLargeDataWarning: false,
 
+    /**
+     * P4.2: إعلام المستخدم أن النسخة المحلية مختصرة (Quota / حجم)
+     */
+    _notifyLightLocalSave(reason) {
+        try {
+            if (typeof OfflineBanner !== 'undefined' && typeof OfflineBanner.setLightLocalData === 'function') {
+                OfflineBanner.setLightLocalData(true);
+            }
+            const now = Date.now();
+            if (now - (this._lastLightSaveNotification || 0) < 60000) return;
+            this._lastLightSaveNotification = now;
+            const isEn = (typeof I18n !== 'undefined' && typeof I18n.isEn === 'function')
+                ? I18n.isEn()
+                : (typeof localStorage !== 'undefined' && localStorage.getItem('language') === 'en');
+            const msg = isEn
+                ? 'Local storage is limited — a shortened copy was saved. Full data remains in memory / Google Sheets.'
+                : 'التخزين المحلي محدود — حُفظت نسخة مختصرة. البيانات الكاملة في الذاكرة / Google Sheets.';
+            if (typeof Notification !== 'undefined' && typeof Notification.warning === 'function') {
+                Notification.warning(msg, { duration: 6000 });
+            }
+            Utils.safeLog('ℹ️ [DataManager] light save notified:', reason || '');
+        } catch (_e) { /* ignore */ }
+    },
+
     /** حقول حساسة لا تُحفظ في localStorage أبداً */
     _USER_SENSITIVE_FIELDS: ['password', 'passwordHash', 'token', 'loginHistory', 'activeSessionId', 'profilePublicToken', 'profilePublicTokenExpiry', 'mfaSecretEnc'],
 
@@ -595,6 +619,11 @@ const DataManager = {
                     AppState._localDataIsTruncated = true;
                     AppState._truncatedFields = parsedData._lightDataMeta.fields || {};
                     Utils.safeLog('⚠️ البيانات المحلية مبتورة - سيتم إعادة التحميل من الخادم:', AppState._truncatedFields);
+                    try {
+                        if (typeof OfflineBanner !== 'undefined' && typeof OfflineBanner.setLightLocalData === 'function') {
+                            OfflineBanner.setLightLocalData(true);
+                        }
+                    } catch (_eLight) { /* ignore */ }
                 } else {
                     AppState._localDataIsTruncated = false;
                     AppState._truncatedFields = {};
@@ -838,6 +867,7 @@ const DataManager = {
                         this.saveCompanySettings();
                         // تسجيل في الـ console فقط — لا إشعار مرئي للمستخدم (البيانات الكاملة في الذاكرة وGoogle Sheets)
                         Utils.safeLog('ℹ️ [DataManager] تم حفظ نسخة مخففة محلياً. البيانات الكاملة في الذاكرة وGoogle Sheets.');
+                        this._notifyLightLocalSave('over_safe_limit');
                         return true;
                     } catch (e) {
                         Utils.safeWarn('⚠️ فشل حفظ النسخة المخففة:', e);
@@ -895,6 +925,7 @@ const DataManager = {
                         this._saveSyncMeta();
                         this.saveCompanySettings();
                         Utils.safeLog('ℹ️ [DataManager] تم حفظ نسخة مخففة بعد امتلاء التخزين.');
+                        this._notifyLightLocalSave('quota_exceeded');
                         return true;
                     }
                 } catch (e2) {

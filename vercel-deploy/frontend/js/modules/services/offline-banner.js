@@ -14,6 +14,7 @@
         _inited: false,
         _browserOffline: false,
         _backendOffline: false,
+        _lightStorage: false,
         _lastToastKey: '',
 
         t(key, fallback) {
@@ -71,6 +72,11 @@
                     ? this.t('common.offline.backend', 'Server unreachable — working locally for now; saves may be delayed until connection returns.')
                     : this.t('common.offline.backend', 'تعذر الوصول للخادم — العمل محلياً مؤقتاً؛ الحفظ قد يتأخر حتى عودة الاتصال.');
             }
+            if (this._lightStorage) {
+                return en
+                    ? this.t('common.storage.light', 'Local copy is shortened (storage limit) — full data stays in memory / Google Sheets.')
+                    : this.t('common.storage.light', 'النسخة المحلية مختصرة (حد التخزين) — البيانات الكاملة في الذاكرة / Google Sheets.');
+            }
             return '';
         },
 
@@ -79,17 +85,20 @@
                 this._browserOffline = (typeof navigator !== 'undefined' && navigator.onLine === false);
                 const el = this.ensureDom();
                 const msgEl = document.getElementById(MSG_ID);
-                const show = this._browserOffline || this._backendOffline;
+                const show = this._browserOffline || this._backendOffline || this._lightStorage;
                 const msg = this.messageForState();
 
                 if (msgEl) msgEl.textContent = msg;
-                el.setAttribute('data-mode', this._browserOffline ? 'browser' : (this._backendOffline ? 'backend' : 'ok'));
+                el.setAttribute(
+                    'data-mode',
+                    this._browserOffline ? 'browser' : (this._backendOffline ? 'backend' : (this._lightStorage ? 'light' : 'ok'))
+                );
                 el.classList.toggle('is-visible', show);
                 el.style.display = show ? 'flex' : 'none';
                 document.body.classList.toggle(BODY_CLASS, show);
 
                 if (show) {
-                    const toastKey = this._browserOffline ? 'browser' : 'backend';
+                    const toastKey = this._browserOffline ? 'browser' : (this._backendOffline ? 'backend' : 'light');
                     if (toastKey !== this._lastToastKey) {
                         this._lastToastKey = toastKey;
                         this.notifyOnce(msg);
@@ -110,6 +119,12 @@
 
         setBackendOffline(isOffline) {
             this._backendOffline = !!isOffline;
+            this.sync();
+        },
+
+        /** P4.2: نسخة localStorage مخففة بسبب Quota / الحجم */
+        setLightLocalData(isLight) {
+            this._lightStorage = !!isLight;
             this.sync();
         },
 

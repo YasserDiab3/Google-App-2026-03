@@ -2815,10 +2815,10 @@ window.UI = {
                 ? String(localStorage.getItem(storageKey)).trim()
                 : '';
 
-            // إذا لم يكن هناك إصدار محفوظ للمستخدم من قبل، خزّن الإصدار الحالي وانهِ بدون إظهار نافذة
+            // P4.1: لا تخزّن last_seen قبل عرض المودال — التخزين عند «تحديث الصفحة الآن» فقط
             if (!lastSeen) {
-                try { if (typeof localStorage !== 'undefined') localStorage.setItem(storageKey, serverVersion); } catch (e) {}
-                if (AppState && AppState.debugMode) console.log('🌐 [UpdateNotif] أول فحص خادم — تخزين ' + serverVersion);
+                if (AppState && AppState.debugMode) console.log('🌐 [UpdateNotif] أول فحص خادم — عرض المودال لـ ' + serverVersion);
+                this._showUpdateModal(serverVersion, data.highlights || null);
                 return;
             }
 
@@ -2872,7 +2872,7 @@ window.UI = {
                 console.log('مقارنة (current vs lastSeen)        : ' + cmp + ' (1=أحدث، 0=نفس الإصدار، -1=أقدم)');
                 console.log('');
                 if (lastSeen === '(فارغ)') {
-                    console.log('📌 السبب: أول زيارة → النظام لا يُظهر المودال (يُخزّن الإصدار للمستقبل فقط)');
+                    console.log('📌 السبب: lastSeen فارغ → يجب عرض المودال (P4.1) دون تخزين مسبق');
                 } else if (cmp === 0) {
                     console.log('📌 السبب: lastSeen = current → المستخدم رأى هذا الإصدار من قبل (طبيعي)');
                 } else if (cmp < 0) {
@@ -2902,9 +2902,10 @@ window.UI = {
             }
             const storageKey = 'hse_last_seen_version';
             const lastSeen = (typeof localStorage !== 'undefined' && localStorage.getItem(storageKey)) ? String(localStorage.getItem(storageKey)).trim() : '';
+            // P4.1: أول زيارة / تخزين فارغ → اعرض المودال؛ لا تخزّن last_seen إلا عند Reload
             if (!lastSeen) {
-                try { localStorage.setItem(storageKey, currentVersion); } catch (e) {}
-                if (AppState && AppState.debugMode) console.log('🔔 [UpdateNotif] أول زيارة — تخزين الإصدار ' + currentVersion + ' بدون عرض المودال');
+                if (AppState && AppState.debugMode) console.log('🔔 [UpdateNotif] أول زيارة — عرض المودال لـ ' + currentVersion);
+                this._showUpdateModal(currentVersion, AppState?._serverReleaseHighlights || null);
                 return;
             }
             // عرض فقط إذا كان الإصدار الحالي أحدث تسلسلياً من آخر إصدار رآه المستخدم
