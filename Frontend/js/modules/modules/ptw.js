@@ -10469,58 +10469,151 @@ const PTW = {
                     font-weight: 600;
                     color: #333;
                 }
-                /* القائمة الجانبية - تنسيق أسهل وأكثر مئونة */
-                #manual-work-type-select-wrap {
-                    flex-shrink: 0; width: 220px;
-                    border: 1px solid #e9d5ff; border-radius: 12px;
-                    background: linear-gradient(180deg, #fdf4ff 0%, #f5e0ff 100%);
-                    padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+                /* كروت أنواع التصريح — نفس روح مربعات القسم الرابع */
+                .manual-section-3 .manual-work-type-card {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    width: 100%;
+                    text-align: start;
+                    padding: 14px 16px;
+                    background: #fff;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+                    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
                 }
-                #manual-work-type-select-wrap label {
-                    display: block; font-weight: 600; color: #6b21a8;
-                    margin-bottom: 10px; font-size: 0.9rem;
+                .manual-section-3 .manual-work-type-card:hover {
+                    border-color: #c4b5fd;
+                    background: #faf5ff;
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.12);
                 }
-                #manual-work-type-select {
-                    width: 100%; padding: 10px 12px; border-radius: 8px;
-                    border: 1px solid #d8b4fe; background: #fff;
-                    font-size: 0.9rem; color: #374151;
+                .manual-section-3 .manual-work-type-card.is-active {
+                    border-color: #7c3aed;
+                    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+                    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.18);
                 }
-                #manual-work-type-select:focus { outline: none; border-color: #9C27B0; box-shadow: 0 0 0 2px rgba(156,39,176,0.2); }
+                .manual-section-3 .manual-work-type-card.is-filled {
+                    border-color: #a78bfa;
+                }
+                .manual-section-3 .manual-work-type-card.is-filled:not(.is-active) {
+                    background: #faf5ff;
+                }
+                .manual-section-3 .manual-work-type-card__icon {
+                    width: 42px;
+                    height: 42px;
+                    border-radius: 11px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                    font-size: 1.05rem;
+                }
+                .manual-section-3 .manual-work-type-card__name {
+                    font-weight: 700;
+                    font-size: 0.92rem;
+                    color: #1f2937;
+                    line-height: 1.35;
+                }
+                .manual-section-3 .manual-selected-types-list {
+                    padding: 12px 14px;
+                    border: 1px solid #e9d5ff;
+                    border-radius: 12px;
+                    background: #faf5ff;
+                }
+                .manual-section-3 .manual-selected-types-title {
+                    font-size: 0.8rem;
+                    font-weight: 700;
+                    color: #6b21a8;
+                    margin-bottom: 8px;
+                }
                 .manual-work-type-inline-panel {
-                    flex: 1; min-width: 280px; min-height: 220px;
-                    border: 1px solid #e9d5ff; border-radius: 12px;
-                    background: #fefefe; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-                    padding: 18px; transition: box-shadow 0.2s ease;
+                    width: 100%;
+                    min-height: 160px;
+                    border: 1px solid #e9d5ff;
+                    border-radius: 12px;
+                    background: #fff;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                    padding: 18px;
+                    transition: box-shadow 0.2s ease;
                 }
                 .manual-work-type-inline-panel:focus-within { box-shadow: 0 0 0 2px rgba(156,39,176,0.15); }
                 #manual-work-type-panel-placeholder {
                     color: #7c3aed; font-size: 0.9rem; text-align: center;
-                    padding: 32px 16px; line-height: 1.6;
+                    padding: 28px 16px; line-height: 1.6;
                 }
                 #manual-work-type-panel-title {
-                    margin: 0 0 14px 0; font-size: 1rem; font-weight: 700;
-                    color: #6b21a8; padding-bottom: 10px;
-                    border-bottom: 2px solid #e9d5ff;
+                    margin: 0; font-size: 1rem; font-weight: 700;
+                    color: #6b21a8; padding-bottom: 0;
                 }
                 .manual-type-panel-body label.manual-opt-row {
                     display: flex; align-items: center; gap: 10px;
                     padding: 10px 12px; margin-bottom: 6px;
                     border-radius: 10px; cursor: pointer;
                     border: 1px solid transparent; transition: all 0.15s ease;
+                    background: #fff;
                 }
                 .manual-type-panel-body label.manual-opt-row:hover { background: #faf5ff !important; }
-                .manual-type-panel-body .manual-other-label { font-size: 0.85rem; font-weight: 600; color: #4b5563; margin-bottom: 6px; }
+                .manual-type-panel-body .manual-other-label { font-size: 0.85rem; font-weight: 600; color: #4b5563; margin-bottom: 6px; display: block; }
                 .manual-type-panel-body .manual-other-input { width: 100%; border-radius: 8px; padding: 8px 12px; border: 1px solid #e5e7eb; }
                 .manual-selected-type-chip { cursor: pointer; transition: background 0.15s ease; }
                 .manual-selected-type-chip:hover { background: #ddd6fe !important; }
                 .manual-selected-types-hint { font-size: 0.75rem; color: #7c3aed; margin-top: 6px; opacity: 0.9; }
                 .manual-selected-types-empty { font-size: 0.8rem; color: #9ca3af; font-style: italic; padding: 8px 0; }
-                .manual-panel-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+                .manual-panel-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #e9d5ff; }
                 .manual-panel-type-badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; background: #d9f99d; color: #365314; font-weight: 600; }
-                @media (max-width: 768px) {
-                    .manual-section-3-content > div[style*="flex"] { flex-wrap: wrap !important; }
-                    #manual-work-type-select-wrap { width: 100% !important; max-width: 100%; }
-                    .manual-work-type-inline-panel { min-width: 100% !important; }
+                /* كروت طبيعة الأعمال — التصريح الأوتوماتيكي */
+                .ptw-section-3 .ptw-work-nature-card {
+                    background: #fff;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 12px;
+                    padding: 14px 16px;
+                    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+                    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+                    height: 100%;
+                }
+                .ptw-section-3 .ptw-work-nature-card:hover {
+                    border-color: #c4b5fd;
+                    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.1);
+                    transform: translateY(-1px);
+                }
+                .ptw-section-3 .ptw-work-nature-card__head {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    margin-bottom: 12px;
+                    padding-bottom: 10px;
+                    border-bottom: 1px solid #f1f5f9;
+                }
+                .ptw-section-3 .ptw-work-nature-card__icon {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 10px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                    font-size: 1rem;
+                }
+                .ptw-section-3 .ptw-work-nature-card__title {
+                    margin: 0;
+                    font-size: 0.95rem;
+                    font-weight: 700;
+                    color: #1f2937;
+                    line-height: 1.35;
+                }
+                .sr-only {
+                    position: absolute !important;
+                    width: 1px !important;
+                    height: 1px !important;
+                    padding: 0 !important;
+                    margin: -1px !important;
+                    overflow: hidden !important;
+                    clip: rect(0, 0, 0, 0) !important;
+                    white-space: nowrap !important;
+                    border: 0 !important;
                 }
                 /* رأس الورق + الشعار: يُحقن عبر renderPermitSystemHeader() ولا يمر بنمط نموذج PTW العادي */
                 .ptw-manual-permit-modal .ptw-paper-header {
@@ -11253,83 +11346,102 @@ const PTW = {
                             </button>
                         </div>
 
-                        <!-- القسم الثالث: تحديد نوع/طبيعة الأعمال (حسب الصور والنص) -->
-                        <div class="ptw-manual-form-section manual-section-3" style="overflow: hidden;">
-                            <div class="manual-section-3-header" style="background: linear-gradient(135deg, #b3e5fc 0%, #81d4fa 50%, #4fc3f7 100%); margin: -24px -24px 0 -24px; padding: 16px 24px; text-align: center; border-bottom: 2px solid #0288d1; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-                                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #fff; display: flex; align-items: center; justify-content: center; gap: 10px;">
-                                    <i class="fas fa-clipboard-check"></i>
-                                    <span>تحديد نوع / طبيعة الأعمال والعناصر التفصيلية لتنفيذ العملية</span>
-                                </h3>
+                        <!-- القسم الثالث: تحديد نوع/طبيعة الأعمال — كروت مربعة مثل القسم الرابع -->
+                        <div class="ptw-manual-form-section manual-section-3">
+                            <h3><i class="fas fa-clipboard-check"></i><span>القسم الثالث : تحديد نوع / طبيعة الأعمال والعناصر التفصيلية لتنفيذ العملية</span></h3>
+                            <p class="text-sm text-gray-600 mb-4 bg-white p-2 rounded border border-gray-100 inline-block">
+                                <i class="fas fa-mouse-pointer text-purple-500 ml-1"></i>
+                                اختر نوع التصريح من الكروت ثم أكمل التفاصيل في اللوحة أسفلها. يمكن اختيار أكثر من نوع.
+                            </p>
+                            <select id="manual-work-type-select" class="sr-only" aria-hidden="true" tabindex="-1" title="اختر نوع التصريح">
+                                <option value="">— اختر نوع التصريح —</option>
+                                <option value="hot">أعمال ساخنة</option>
+                                <option value="confined">أماكن مغلقة</option>
+                                <option value="height">عمل على ارتفاع</option>
+                                <option value="excavation">أعمال حفر</option>
+                                <option value="electrical">أعمال كهرباء</option>
+                                <option value="cold">أعمال على البارد</option>
+                                <option value="other">أعمال أخرى</option>
+                            </select>
+                            <div id="manual-work-type-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-4" role="listbox" aria-label="أنواع التصريح">
+                                <button type="button" class="manual-work-type-card" data-type="hot" role="option" aria-selected="false">
+                                    <span class="manual-work-type-card__icon" style="background:#fef2f2;color:#dc2626;"><i class="fas fa-fire" aria-hidden="true"></i></span>
+                                    <span class="manual-work-type-card__name">أعمال ساخنة</span>
+                                </button>
+                                <button type="button" class="manual-work-type-card" data-type="confined" role="option" aria-selected="false">
+                                    <span class="manual-work-type-card__icon" style="background:#f8fafc;color:#475569;"><i class="fas fa-box" aria-hidden="true"></i></span>
+                                    <span class="manual-work-type-card__name">أماكن مغلقة</span>
+                                </button>
+                                <button type="button" class="manual-work-type-card" data-type="height" role="option" aria-selected="false">
+                                    <span class="manual-work-type-card__icon" style="background:#eff6ff;color:#2563eb;"><i class="fas fa-arrow-up" aria-hidden="true"></i></span>
+                                    <span class="manual-work-type-card__name">عمل على ارتفاع</span>
+                                </button>
+                                <button type="button" class="manual-work-type-card" data-type="excavation" role="option" aria-selected="false">
+                                    <span class="manual-work-type-card__icon" style="background:#fffbeb;color:#d97706;"><i class="fas fa-mountain" aria-hidden="true"></i></span>
+                                    <span class="manual-work-type-card__name">أعمال حفر</span>
+                                </button>
+                                <button type="button" class="manual-work-type-card" data-type="electrical" role="option" aria-selected="false">
+                                    <span class="manual-work-type-card__icon" style="background:#fefce8;color:#ca8a04;"><i class="fas fa-bolt" aria-hidden="true"></i></span>
+                                    <span class="manual-work-type-card__name">أعمال كهرباء</span>
+                                </button>
+                                <button type="button" class="manual-work-type-card" data-type="cold" role="option" aria-selected="false">
+                                    <span class="manual-work-type-card__icon" style="background:#ecfeff;color:#0891b2;"><i class="fas fa-snowflake" aria-hidden="true"></i></span>
+                                    <span class="manual-work-type-card__name">أعمال على البارد</span>
+                                </button>
+                                <button type="button" class="manual-work-type-card" data-type="other" role="option" aria-selected="false">
+                                    <span class="manual-work-type-card__icon" style="background:#f5f3ff;color:#7c3aed;"><i class="fas fa-ellipsis" aria-hidden="true"></i></span>
+                                    <span class="manual-work-type-card__name">أعمال أخرى</span>
+                                </button>
                             </div>
-                            <div class="manual-section-3-content" style="border: 1px solid #90a4ae;">
-                                <p class="text-sm text-gray-600 mb-4 p-2"><strong>خطوتان:</strong> ١) اختر نوع التصريح من القائمة على اليمين ← ٢) حدد التفاصيل أو الإدخال اليدوي في اللوحة بجانبها. تظهر الأنواع المختارة أسفل القائمة.</p>
-                                <div style="display: flex; flex-direction: row; gap: 20px; flex-wrap: nowrap; align-items: flex-start;">
-                                    <!-- القائمة الأساسية ثابتة اتجاه اليمين -->
-                                    <div id="manual-work-type-select-wrap">
-                                        <label for="manual-work-type-select">أنواع التصريح</label>
-                                        <select id="manual-work-type-select" title="اختر نوعاً ثم حدد التفاصيل في اللوحة">
-                                            <option value="">— اختر نوع التصريح —</option>
-                                            <option value="hot">أعمال ساخنة</option>
-                                            <option value="confined">أماكن مغلقة</option>
-                                            <option value="height">عمل على ارتفاع</option>
-                                            <option value="excavation">أعمال حفر</option>
-                                            <option value="electrical">أعمال كهرباء</option>
-                                            <option value="cold">أعمال على البارد</option>
-                                            <option value="other">أعمال أخرى</option>
-                                        </select>
-                                        <div id="manual-work-type-selected-list" class="manual-selected-types-list" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #e9d5ff;">
-                                            <div class="manual-selected-types-title" style="font-size: 0.8rem; font-weight: 600; color: #6b21a8; margin-bottom: 8px;">أنواع التصريح المختارة</div>
-                                            <div id="manual-work-type-selected-chips" style="display: flex; flex-wrap: wrap; gap: 6px; min-height: 24px;"></div>
-                                            <div id="manual-work-type-selected-empty" class="manual-selected-types-empty">لم يتم اختيار أي نوع بعد</div>
-                                            <div id="manual-work-type-selected-hint" class="manual-selected-types-hint" style="display: none;">انقر على أي نوع لتحرير تفاصيله</div>
-                                        </div>
+                            <div id="manual-work-type-selected-list" class="manual-selected-types-list mb-4">
+                                <div class="manual-selected-types-title">أنواع التصريح المختارة</div>
+                                <div id="manual-work-type-selected-chips" style="display: flex; flex-wrap: wrap; gap: 6px; min-height: 24px;"></div>
+                                <div id="manual-work-type-selected-empty" class="manual-selected-types-empty">لم يتم اختيار أي نوع بعد</div>
+                                <div id="manual-work-type-selected-hint" class="manual-selected-types-hint" style="display: none;">انقر على أي نوع أو شريحة لتحرير تفاصيله</div>
+                            </div>
+                            <div id="manual-work-type-panel" class="manual-work-type-inline-panel">
+                                <div id="manual-work-type-panel-placeholder">
+                                    <i class="fas fa-hand-pointer" style="font-size: 1.5rem; margin-bottom: 10px; display: block; opacity: 0.7;"></i>
+                                    <span>اختر نوع تصريح من الكروت أعلاه لعرض العناصر التفصيلية هنا</span>
+                                </div>
+                                <div id="manual-work-type-panel-body" style="display: none;">
+                                    <div class="manual-panel-title-row">
+                                        <h4 id="manual-work-type-panel-title"></h4>
+                                        <span id="manual-work-type-panel-badge" class="manual-panel-type-badge" style="display: none;">مضاف</span>
                                     </div>
-                                    <!-- لوحة الخيارات (تفتح بالعرض عند الاختيار) -->
-                                    <div id="manual-work-type-panel" class="manual-work-type-inline-panel">
-                                        <div id="manual-work-type-panel-placeholder">
-                                            <i class="fas fa-arrow-right" style="font-size: 1.75rem; margin-bottom: 10px; display: block; opacity: 0.7;"></i>
-                                            <span>اختر نوعاً من القائمة ← ثم حدد الخيارات أو الإدخال اليدوي هنا</span>
+                                    <div id="manual-panel-hot" class="manual-type-panel-body" style="display: none;">
+                                        ${['لحام', 'قطع', 'شرر/حرارة', 'أخرى'].map((opt) => `
+                                        <label class="manual-opt-row" style="background: #fef2f2; border-color: #fecaca;"><input type="checkbox" name="manual-hot-work" value="${opt}" class="form-checkbox text-red-600" ${(existingEntry?.hotWorkDetails || []).includes(opt) ? 'checked' : ''}><span>${opt}</span></label>`).join('')}
+                                        <div style="margin-top: 12px;"><label class="manual-other-label">إدخال يدوي</label><input type="text" id="manual-hot-work-other" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.hotWorkOther || '')}" placeholder="تفاصيل إضافية أو إدخال حر"></div>
+                                    </div>
+                                    <div id="manual-panel-confined" class="manual-type-panel-body" style="display: none;">
+                                        ${['خزانات', 'أنابيب', 'مجاري', 'أخرى'].map((opt) => `
+                                        <label class="manual-opt-row" style="background: #f9fafb; border-color: #e5e7eb;"><input type="checkbox" name="manual-confined-space" value="${opt}" class="form-checkbox text-gray-600" ${(existingEntry?.confinedSpaceDetails || []).includes(opt) ? 'checked' : ''}><span>${opt}</span></label>`).join('')}
+                                        <div style="margin-top: 12px;"><label class="manual-other-label">إدخال يدوي</label><input type="text" id="manual-confined-space-other" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.confinedSpaceOther || '')}" placeholder="تفاصيل إضافية أو إدخال حر"></div>
+                                    </div>
+                                    <div id="manual-panel-height" class="manual-type-panel-body" style="display: none;">
+                                        ${['سقالات', 'سطح', 'سلة رافعة', 'أخرى'].map((opt) => `
+                                        <label class="manual-opt-row" style="background: #eff6ff; border-color: #bfdbfe;"><input type="checkbox" name="manual-height-work" value="${opt}" class="form-checkbox text-blue-600" ${(existingEntry?.heightWorkDetails || []).includes(opt) ? 'checked' : ''}><span>${opt}</span></label>`).join('')}
+                                        <div style="margin-top: 12px;"><label class="manual-other-label">إدخال يدوي</label><input type="text" id="manual-height-work-other" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.heightWorkOther || '')}" placeholder="تفاصيل إضافية أو إدخال حر"></div>
+                                    </div>
+                                    <div id="manual-panel-excavation" class="manual-type-panel-body" style="display: none;">
+                                        <label class="manual-opt-row" style="background: #fffbeb; border-color: #fef3c7;"><input type="checkbox" id="manual-excavation-check" class="form-checkbox text-yellow-600" ${(existingEntry?.excavationLength || existingEntry?.excavationWidth || existingEntry?.excavationDepth || existingEntry?.soilType) ? 'checked' : ''}><span>تطبيق أعمال حفر</span></label>
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px;">
+                                            <div><label class="manual-other-label">طول</label><input type="text" id="manual-excavation-length" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.excavationLength || '')}" placeholder="—"></div>
+                                            <div><label class="manual-other-label">عرض</label><input type="text" id="manual-excavation-width" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.excavationWidth || '')}" placeholder="—"></div>
+                                            <div><label class="manual-other-label">عمق</label><input type="text" id="manual-excavation-depth" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.excavationDepth || '')}" placeholder="—"></div>
+                                            <div><label class="manual-other-label">نوع التربة</label><input type="text" id="manual-excavation-soil" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.soilType || '')}" placeholder="—"></div>
                                         </div>
-                                        <div id="manual-work-type-panel-body" style="display: none;">
-                                            <div class="manual-panel-title-row">
-                                                <h4 id="manual-work-type-panel-title"></h4>
-                                                <span id="manual-work-type-panel-badge" class="manual-panel-type-badge" style="display: none;">مضاف</span>
-                                            </div>
-                                            <div id="manual-panel-hot" class="manual-type-panel-body" style="display: none;">
-                                                ${['لحام', 'قطع', 'شرر/حرارة', 'أخرى'].map((opt) => `
-                                                <label class="manual-opt-row" style="background: #fef2f2; border-color: #fecaca;"><input type="checkbox" name="manual-hot-work" value="${opt}" class="form-checkbox text-red-600" ${(existingEntry?.hotWorkDetails || []).includes(opt) ? 'checked' : ''}><span>${opt}</span></label>`).join('')}
-                                                <div style="margin-top: 12px;"><label class="manual-other-label">إدخال يدوي</label><input type="text" id="manual-hot-work-other" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.hotWorkOther || '')}" placeholder="تفاصيل إضافية أو إدخال حر"></div>
-                                            </div>
-                                            <div id="manual-panel-confined" class="manual-type-panel-body" style="display: none;">
-                                                ${['خزانات', 'أنابيب', 'مجاري', 'أخرى'].map((opt) => `
-                                                <label class="manual-opt-row" style="background: #f9fafb; border-color: #e5e7eb;"><input type="checkbox" name="manual-confined-space" value="${opt}" class="form-checkbox text-gray-600" ${(existingEntry?.confinedSpaceDetails || []).includes(opt) ? 'checked' : ''}><span>${opt}</span></label>`).join('')}
-                                                <div style="margin-top: 12px;"><label class="manual-other-label">إدخال يدوي</label><input type="text" id="manual-confined-space-other" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.confinedSpaceOther || '')}" placeholder="تفاصيل إضافية أو إدخال حر"></div>
-                                            </div>
-                                            <div id="manual-panel-height" class="manual-type-panel-body" style="display: none;">
-                                                ${['سقالات', 'سطح', 'سلة رافعة', 'أخرى'].map((opt) => `
-                                                <label class="manual-opt-row" style="background: #eff6ff; border-color: #bfdbfe;"><input type="checkbox" name="manual-height-work" value="${opt}" class="form-checkbox text-blue-600" ${(existingEntry?.heightWorkDetails || []).includes(opt) ? 'checked' : ''}><span>${opt}</span></label>`).join('')}
-                                                <div style="margin-top: 12px;"><label class="manual-other-label">إدخال يدوي</label><input type="text" id="manual-height-work-other" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.heightWorkOther || '')}" placeholder="تفاصيل إضافية أو إدخال حر"></div>
-                                            </div>
-                                            <div id="manual-panel-excavation" class="manual-type-panel-body" style="display: none;">
-                                                <label class="manual-opt-row" style="background: #fffbeb; border-color: #fef3c7;"><input type="checkbox" id="manual-excavation-check" class="form-checkbox text-yellow-600" ${(existingEntry?.excavationLength || existingEntry?.excavationWidth || existingEntry?.excavationDepth || existingEntry?.soilType) ? 'checked' : ''}><span>تطبيق أعمال حفر</span></label>
-                                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px;">
-                                                    <div><label class="manual-other-label">طول</label><input type="text" id="manual-excavation-length" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.excavationLength || '')}" placeholder="—"></div>
-                                                    <div><label class="manual-other-label">عرض</label><input type="text" id="manual-excavation-width" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.excavationWidth || '')}" placeholder="—"></div>
-                                                    <div><label class="manual-other-label">عمق</label><input type="text" id="manual-excavation-depth" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.excavationDepth || '')}" placeholder="—"></div>
-                                                    <div><label class="manual-other-label">نوع التربة</label><input type="text" id="manual-excavation-soil" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.soilType || '')}" placeholder="—"></div>
-                                                </div>
-                                                <div style="margin-top: 12px;"><label class="manual-other-label">إدخال يدوي</label><input type="text" id="manual-excavation-other" class="form-input manual-other-input" placeholder="ملاحظات إضافية (اختياري)"></div>
-                                            </div>
-                                            <div id="manual-panel-electrical" class="manual-type-panel-body" style="display: none;">
-                                                <div><label class="manual-other-label">نوع العمل (من القائمة أو يدوي)</label><input type="text" id="manual-electrical-work-type" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.electricalWorkType || '')}" placeholder="مثال: تركيب، صيانة، فك، أو إدخال حر"></div>
-                                            </div>
-                                            <div id="manual-panel-cold" class="manual-type-panel-body" style="display: none;">
-                                                <div><label class="manual-other-label">نوع العمل (من القائمة أو يدوي)</label><input type="text" id="manual-cold-work-type" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.coldWorkType || '')}" placeholder="مثال: لحام بارد، أو إدخال حر"></div>
-                                            </div>
-                                            <div id="manual-panel-other" class="manual-type-panel-body" style="display: none;">
-                                                <div><label class="manual-other-label">نوع العمل (إدخال يدوي)</label><input type="text" id="manual-other-work-type" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.otherWorkType || '')}" placeholder="اذكر نوع العمل"></div>
-                                            </div>
-                                        </div>
+                                        <div style="margin-top: 12px;"><label class="manual-other-label">إدخال يدوي</label><input type="text" id="manual-excavation-other" class="form-input manual-other-input" placeholder="ملاحظات إضافية (اختياري)"></div>
+                                    </div>
+                                    <div id="manual-panel-electrical" class="manual-type-panel-body" style="display: none;">
+                                        <div><label class="manual-other-label">نوع العمل (من القائمة أو يدوي)</label><input type="text" id="manual-electrical-work-type" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.electricalWorkType || '')}" placeholder="مثال: تركيب، صيانة، فك، أو إدخال حر"></div>
+                                    </div>
+                                    <div id="manual-panel-cold" class="manual-type-panel-body" style="display: none;">
+                                        <div><label class="manual-other-label">نوع العمل (من القائمة أو يدوي)</label><input type="text" id="manual-cold-work-type" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.coldWorkType || '')}" placeholder="مثال: لحام بارد، أو إدخال حر"></div>
+                                    </div>
+                                    <div id="manual-panel-other" class="manual-type-panel-body" style="display: none;">
+                                        <div><label class="manual-other-label">نوع العمل (إدخال يدوي)</label><input type="text" id="manual-other-work-type" class="form-input manual-other-input" value="${Utils.escapeHTML(existingEntry?.otherWorkType || '')}" placeholder="اذكر نوع العمل"></div>
                                     </div>
                                 </div>
                             </div>
@@ -11957,12 +12069,13 @@ const PTW = {
         // تم إلغاء مزامنة مسئول السلامة والصحة المهنية بين القسم السابع والتاسع تلبيةً لطلب المستخدم
         // لأن الشخص الذي يفتح التصريح قد يختلف عن الشخص الذي يغلق التصريح من فريق السلامة
 
-        // القائمة الأساسية ثابتة يمين؛ عند الاختيار من القائمة تفتح اللوحة بالعرض بجانبها
+        // كروت أنواع التصريح → تحدّث select المخفي وتفتح لوحة التفاصيل (نفس منطق الحفظ)
         const panel = modal.querySelector('#manual-work-type-panel');
         const panelPlaceholder = modal.querySelector('#manual-work-type-panel-placeholder');
         const panelBody = modal.querySelector('#manual-work-type-panel-body');
         const panelTitle = modal.querySelector('#manual-work-type-panel-title');
         const typeSelect = modal.querySelector('#manual-work-type-select');
+        const typeCardsRoot = modal.querySelector('#manual-work-type-cards');
         const selectedChipsContainer = modal.querySelector('#manual-work-type-selected-chips');
         const typeMap = { hot: 'manual-panel-hot', confined: 'manual-panel-confined', height: 'manual-panel-height', excavation: 'manual-panel-excavation', electrical: 'manual-panel-electrical', cold: 'manual-panel-cold', other: 'manual-panel-other' };
         const labelMap = { hot: 'أعمال ساخنة', confined: 'أماكن مغلقة', height: 'عمل على ارتفاع', excavation: 'أعمال حفر', electrical: 'أعمال كهرباء', cold: 'أعمال على البارد', other: 'أعمال أخرى' };
@@ -11970,10 +12083,23 @@ const PTW = {
         const selectedEmptyEl = modal.querySelector('#manual-work-type-selected-empty');
         const selectedHintEl = modal.querySelector('#manual-work-type-selected-hint');
         const panelBadgeEl = modal.querySelector('#manual-work-type-panel-badge');
+        const syncWorkTypeCardsUi = () => {
+            if (!typeCardsRoot) return;
+            const active = typeSelect?.value || '';
+            typeCardsRoot.querySelectorAll('.manual-work-type-card').forEach((card) => {
+                const key = card.getAttribute('data-type') || '';
+                const filled = selectedTypesList.some((s) => s.typeKey === key);
+                const isActive = !!active && key === active;
+                card.classList.toggle('is-active', isActive);
+                card.classList.toggle('is-filled', filled);
+                card.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+        };
         const updatePanelBadge = () => {
             if (!panelBadgeEl || !typeSelect) return;
             const inList = selectedTypesList.some(s => s.typeKey === typeSelect.value);
             panelBadgeEl.style.display = typeSelect.value && inList ? 'inline-block' : 'none';
+            syncWorkTypeCardsUi();
         };
         const renderSelectedTypes = () => {
             if (!selectedChipsContainer) return;
@@ -12000,6 +12126,17 @@ const PTW = {
             renderSelectedTypes();
             updatePanelBadge();
         };
+        if (typeCardsRoot && typeSelect) {
+            typeCardsRoot.querySelectorAll('.manual-work-type-card').forEach((card) => {
+                card.addEventListener('click', function() {
+                    const t = this.getAttribute('data-type') || '';
+                    if (!t) return;
+                    typeSelect.value = t;
+                    typeSelect.dispatchEvent(new Event('change'));
+                    updatePanelBadge();
+                });
+            });
+        }
         if (typeSelect && panel && panelBody) {
             typeSelect.addEventListener('change', function() {
                 const type = this.value;
@@ -12008,6 +12145,7 @@ const PTW = {
                     if (panelPlaceholder) panelPlaceholder.style.display = 'block';
                     panelBody.style.display = 'none';
                     if (panelBadgeEl) panelBadgeEl.style.display = 'none';
+                    syncWorkTypeCardsUi();
                     return;
                 }
                 if (panelPlaceholder) panelPlaceholder.style.display = 'none';
@@ -12038,7 +12176,11 @@ const PTW = {
             addIf(existingEntry.otherWorkType, 'other');
         }
         renderSelectedTypes();
-
+        syncWorkTypeCardsUi();
+        if (selectedTypesList.length && typeSelect && !typeSelect.value) {
+            typeSelect.value = selectedTypesList[0].typeKey;
+            typeSelect.dispatchEvent(new Event('change'));
+        }
         // التحقق من اختيار حالة التصريح وتطبيق التنسيق الفاخر
         const statusRadios = modal.querySelectorAll('input[name="manual-permit-status-radio"]');
         const statusHiddenInput = modal.querySelector('#manual-permit-status');
@@ -14819,6 +14961,45 @@ const PTW = {
                 .ptw-section-3 { background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); border-color: #9C27B0; }
                 .ptw-section-3 h3 { color: #6A1B9A; border-color: #9C27B0; }
                 .ptw-section-3 h3 i { color: #7B1FA2; background: rgba(156, 39, 176, 0.1); }
+                .ptw-section-3 .ptw-work-nature-card {
+                    background: #fff;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 12px;
+                    padding: 14px 16px;
+                    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+                    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+                    height: 100%;
+                }
+                .ptw-section-3 .ptw-work-nature-card:hover {
+                    border-color: #c4b5fd;
+                    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.1);
+                    transform: translateY(-1px);
+                }
+                .ptw-section-3 .ptw-work-nature-card__head {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    margin-bottom: 12px;
+                    padding-bottom: 10px;
+                    border-bottom: 1px solid #f1f5f9;
+                }
+                .ptw-section-3 .ptw-work-nature-card__icon {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 10px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                    font-size: 1rem;
+                }
+                .ptw-section-3 .ptw-work-nature-card__title {
+                    margin: 0;
+                    font-size: 0.95rem;
+                    font-weight: 700;
+                    color: #1f2937;
+                    line-height: 1.35;
+                }
                 
                 .ptw-section-4 { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-color: #FF9800; }
                 .ptw-section-4 h3 { color: #E65100; border-color: #FF9800; }
@@ -15225,68 +15406,91 @@ const PTW = {
                             </button>
                         </div>
 
-                        <!-- القسم الثالث: طبيعة الأعمال -->
+                        <!-- القسم الثالث: طبيعة الأعمال — كروت مربعة مثل القسم الرابع -->
                         <div class="ptw-form-section ptw-section-3">
                             <h3>
                                 <i class="fas fa-clipboard-check"></i>
-                                <span>القسم الثالث : تحديد نوع / طبيعة الأعمال</span>
+                                <span>القسم الثالث : تحديد نوع / طبيعة الأعمال والعناصر التفصيلية لتنفيذ العملية</span>
                             </h3>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div class="bg-red-50 p-4 rounded-lg border border-red-100">
-                                    <h4 class="font-bold text-red-800 mb-3 border-b border-red-200 pb-2">أعمال ساخنة</h4>
+                            <p class="text-sm text-gray-600 mb-4 bg-white p-2 rounded border border-gray-100 inline-block">
+                                <i class="fas fa-info-circle text-purple-500 ml-1"></i>
+                                حدّد العناصر التفصيلية داخل كل نوع تصريح حسب طبيعة العمل.
+                            </p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                <div class="ptw-work-nature-card">
+                                    <div class="ptw-work-nature-card__head">
+                                        <span class="ptw-work-nature-card__icon" style="background:#fef2f2;color:#dc2626;"><i class="fas fa-fire" aria-hidden="true"></i></span>
+                                        <h4 class="ptw-work-nature-card__title">أعمال ساخنة</h4>
+                                    </div>
                                     <div class="space-y-2">
                                         ${renderChecklistOptions(hotOptions, hotWorkDetails, 'ptw-hot', hotWorkOther)}
                                     </div>
                                 </div>
-                                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                    <h4 class="font-bold text-gray-800 mb-3 border-b border-gray-200 pb-2">أماكن مغلقة</h4>
+                                <div class="ptw-work-nature-card">
+                                    <div class="ptw-work-nature-card__head">
+                                        <span class="ptw-work-nature-card__icon" style="background:#f8fafc;color:#475569;"><i class="fas fa-box" aria-hidden="true"></i></span>
+                                        <h4 class="ptw-work-nature-card__title">أماكن مغلقة</h4>
+                                    </div>
                                     <div class="space-y-2">
                                         ${renderChecklistOptions(confinedOptions, confinedSpaceDetails, 'ptw-confined', confinedSpaceOther)}
                                     </div>
                                 </div>
-                                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                                    <h4 class="font-bold text-blue-800 mb-3 border-b border-blue-200 pb-2">عمل على ارتفاع</h4>
+                                <div class="ptw-work-nature-card">
+                                    <div class="ptw-work-nature-card__head">
+                                        <span class="ptw-work-nature-card__icon" style="background:#eff6ff;color:#2563eb;"><i class="fas fa-arrow-up" aria-hidden="true"></i></span>
+                                        <h4 class="ptw-work-nature-card__title">عمل على ارتفاع</h4>
+                                    </div>
                                     <div class="space-y-2">
                                         ${renderChecklistOptions(heightOptions, heightWorkDetails, 'ptw-height', heightWorkOther)}
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 bg-gray-50 p-4 rounded-lg">
-                                <div>
-                                    <label class="block text-sm font-bold text-gray-700 mb-2">تفاصيل أعمال الكهرباء</label>
-                                    <input type="text" id="ptw-electrical-work-type" class="form-input" value="${escapeHTML(ptwData?.electricalWorkType)}" placeholder="اذكر تفاصيل أعمال الكهرباء">
+                                <div class="ptw-work-nature-card">
+                                    <div class="ptw-work-nature-card__head">
+                                        <span class="ptw-work-nature-card__icon" style="background:#fefce8;color:#ca8a04;"><i class="fas fa-bolt" aria-hidden="true"></i></span>
+                                        <h4 class="ptw-work-nature-card__title">أعمال كهرباء</h4>
+                                    </div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">نوع / تفاصيل العمل</label>
+                                    <input type="text" id="ptw-electrical-work-type" class="form-input" value="${escapeHTML(ptwData?.electricalWorkType)}" placeholder="مثال: تركيب، صيانة، فك">
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-bold text-gray-700 mb-2">تفاصيل الأعمال على البارد</label>
-                                    <input type="text" id="ptw-cold-work-type" class="form-input" value="${escapeHTML(ptwData?.coldWorkType)}" placeholder="اذكر تفاصيل الأعمال على البارد">
+                                <div class="ptw-work-nature-card">
+                                    <div class="ptw-work-nature-card__head">
+                                        <span class="ptw-work-nature-card__icon" style="background:#ecfeff;color:#0891b2;"><i class="fas fa-snowflake" aria-hidden="true"></i></span>
+                                        <h4 class="ptw-work-nature-card__title">أعمال على البارد</h4>
+                                    </div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">نوع / تفاصيل العمل</label>
+                                    <input type="text" id="ptw-cold-work-type" class="form-input" value="${escapeHTML(ptwData?.coldWorkType)}" placeholder="مثال: لحام بارد">
                                 </div>
-                                <div class="md:col-span-2">
-                                    <label class="block text-sm font-bold text-gray-700 mb-2">تفاصيل أعمال أخرى</label>
+                                <div class="ptw-work-nature-card">
+                                    <div class="ptw-work-nature-card__head">
+                                        <span class="ptw-work-nature-card__icon" style="background:#f5f3ff;color:#7c3aed;"><i class="fas fa-ellipsis" aria-hidden="true"></i></span>
+                                        <h4 class="ptw-work-nature-card__title">أعمال أخرى</h4>
+                                    </div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">نوع / تفاصيل العمل</label>
                                     <input type="text" id="ptw-other-work-type" class="form-input" value="${escapeHTML(ptwData?.otherWorkType)}" placeholder="اذكر تفاصيل أعمال أخرى (إن وجدت)">
                                 </div>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6 bg-yellow-50 p-4 rounded-lg border border-yellow-100">
-                                <div class="md:col-span-4 font-bold text-yellow-800 mb-2 flex items-center">
-                                    <i class="fas fa-digging ml-2"></i>
-                                    بيانات الحفر (إن وجد)
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-1">الطول (م)</label>
-                                    <input type="text" id="ptw-excavation-length" class="form-input" value="${escapeHTML(ptwData?.excavationLength)}" placeholder="—">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-1">العرض (م)</label>
-                                    <input type="text" id="ptw-excavation-width" class="form-input" value="${escapeHTML(ptwData?.excavationWidth)}" placeholder="—">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-1">العمق (م)</label>
-                                    <input type="text" id="ptw-excavation-depth" class="form-input" value="${escapeHTML(ptwData?.excavationDepth)}" placeholder="—">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-1">نوع التربة</label>
-                                    <input type="text" id="ptw-excavation-soil" class="form-input" value="${escapeHTML(ptwData?.soilType)}" placeholder="مثال: رملية">
+                                <div class="ptw-work-nature-card md:col-span-2 xl:col-span-3">
+                                    <div class="ptw-work-nature-card__head">
+                                        <span class="ptw-work-nature-card__icon" style="background:#fffbeb;color:#d97706;"><i class="fas fa-mountain" aria-hidden="true"></i></span>
+                                        <h4 class="ptw-work-nature-card__title">أعمال حفر</h4>
+                                    </div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                        <div>
+                                            <label class="block text-sm font-semibold text-gray-700 mb-1">الطول (م)</label>
+                                            <input type="text" id="ptw-excavation-length" class="form-input" value="${escapeHTML(ptwData?.excavationLength)}" placeholder="—">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-semibold text-gray-700 mb-1">العرض (م)</label>
+                                            <input type="text" id="ptw-excavation-width" class="form-input" value="${escapeHTML(ptwData?.excavationWidth)}" placeholder="—">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-semibold text-gray-700 mb-1">العمق (م)</label>
+                                            <input type="text" id="ptw-excavation-depth" class="form-input" value="${escapeHTML(ptwData?.excavationDepth)}" placeholder="—">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-semibold text-gray-700 mb-1">نوع التربة</label>
+                                            <input type="text" id="ptw-excavation-soil" class="form-input" value="${escapeHTML(ptwData?.soilType)}" placeholder="مثال: رملية">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
