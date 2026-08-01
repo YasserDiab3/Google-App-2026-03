@@ -1,13 +1,13 @@
 {
-  "version": "1.0.754",
+  "version": "1.0.756",
   "highlights": {
     "ar": [
-      "تحسين الشكل البصري للقسم الثالث في نموذج تصريح العمل: صفوف مضغوطة، شرائح اختيارات، وألوان مميزة لكل نوع عمل.",
-      "نطاق CSS عبر .ptw-work-types-section فقط دون تغيير الحقول أو المنطق، مع دعم الطباعة والاستجابة."
+      "إصلاح تبويب المقاولين المعتمدين: إضافة دالة الترجمة المفقودة this.t التي كانت تسبب فشل تحميل القائمة عند وجود سجلات.",
+      "تحصين معالجة السجلات الفارغة وتحسين رسالة الخطأ بالعربية."
     ],
     "en": [
-      "Polished PTW section-3 visuals: compact rows, checkbox chips, and per-type accent colors.",
-      "CSS scoped under .ptw-work-types-section only — no field/logic changes; print and responsive friendly."
+      "Fix approved contractors tab: restore missing Contractors.t() that crashed the list when records existed.",
+      "Harden null-record handling and Arabic error messaging."
     ]
   }
 }

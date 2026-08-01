@@ -188,6 +188,22 @@ const Contractors = {
             i18nCore.applyLiteralTranslations(target);
         }
     },
+
+    /** ترجمة مفاتيح المديول مع fallback عربي — مستخدمة في جداول/عناوين المعتمدين */
+    t(key, fallback = '') {
+        try {
+            const core = (window.AppI18n && typeof window.AppI18n.t === 'function')
+                ? window.AppI18n
+                : ((window.I18n && typeof window.I18n.t === 'function') ? window.I18n : null);
+            if (core) {
+                const translated = core.t(key, null, fallback != null ? String(fallback) : '');
+                if (translated != null && String(translated).trim() !== '' && translated !== key) {
+                    return String(translated);
+                }
+            }
+        } catch (_e) { /* ignore */ }
+        return fallback != null ? String(fallback) : '';
+    },
     
     /**
      * ✅ دالة تنظيف شاملة لإزالة جميع event listeners
@@ -347,16 +363,24 @@ const Contractors = {
         const container = document.getElementById(containerId);
         if (!container) return;
 
+        const sectionLabels = {
+            approved: 'قائمة المعتمدين',
+            'approval-request': 'طلبات الاعتماد',
+            evaluations: 'التقييمات',
+            requirements: 'الاشتراطات',
+            analytics: 'التحليلات'
+        };
         const handleError = (sectionName, error) => {
+            const label = sectionLabels[sectionName] || sectionName;
             if (typeof Utils !== 'undefined' && Utils.safeError) {
-                Utils.safeError(`خطأ في تحميل ${sectionName}:`, error);
+                Utils.safeError(`خطأ في تحميل ${label}:`, error);
             }
             return `
                 <div class="content-card">
                     <div class="card-body">
                         <div class="empty-state">
                             <i class="fas fa-exclamation-triangle text-4xl text-yellow-400 mb-3"></i>
-                            <p class="text-gray-500">حدث خطأ في تحميل ${sectionName}</p>
+                            <p class="text-gray-500">حدث خطأ في تحميل ${label}</p>
                             <button onclick="Contractors.loadContractorsTabContent('${tab}', { forceData: true })" class="btn-secondary mt-3">إعادة المحاولة</button>
                         </div>
                     </div>
@@ -2252,10 +2276,12 @@ const Contractors = {
         }
 
         let mutated = false;
-        AppState.appData.approvedContractors = collection.map((item) => {
+        AppState.appData.approvedContractors = collection.filter((item) => item && typeof item === 'object').map((item) => {
             const normalized = Object.assign({}, item);
             if (!normalized.id) {
-                normalized.id = Utils.generateId('APPCON');
+                normalized.id = (typeof Utils !== 'undefined' && Utils.generateId)
+                    ? Utils.generateId('APPCON')
+                    : (`APPCON_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
                 mutated = true;
             }
 
@@ -2413,7 +2439,7 @@ const Contractors = {
         const regularContractors = (AppState.appData.contractors || []).slice();
 
         // تحويل المقاولين العاديين إلى نفس تنسيق المعتمدين للتوحيد
-        const convertedContractors = regularContractors.map(contractor => {
+        const convertedContractors = regularContractors.filter((c) => c && typeof c === 'object').map(contractor => {
             // التأكد من وجود كود للمقاول
             if (!contractor.code) {
                 contractor.code = this.generateContractorCode();
