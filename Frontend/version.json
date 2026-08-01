@@ -1,13 +1,13 @@
 {
-  "version": "1.0.758",
+  "version": "1.0.760",
   "highlights": {
     "ar": [
-      "تحسين مديول مهمات الوقاية: تبديل تبويبات أسلس بدون تجميد، وتحميل أول أسرع من البيانات المحلية.",
-      "كروت ملخص احترافية في سجل الاستلام مع متابعة أوضح للحالات المعلّقة والموظفين المستفيدين."
+      "حالة «متصل» أصبحت فعلية: نبض حضور دوري ومهلة 5 دقائق بدل العلم العالق بعد إغلاق المتصفح.",
+      "قائمة المستخدمين تحدّث الاتصال من الخادم أثناء فتح المديول، وتتجاهل حالات غير المتصلين فعلياً."
     ],
     "en": [
-      "PPE module performance: smoother tab switching without freezes, faster first paint from local data.",
-      "Professional receipt-log summary cards with clearer pending follow-up and employee coverage."
+      "Online status is now real: presence heartbeat and a 5-minute TTL instead of a stuck flag after closing the browser.",
+      "Users list refreshes presence from the server while the module is open and drops stale «online» states."
     ]
   }
 }

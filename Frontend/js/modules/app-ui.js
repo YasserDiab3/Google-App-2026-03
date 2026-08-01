@@ -10594,31 +10594,13 @@ window.UI = {
             });
         }
 
-        // التحقق من حالة الاتصال
-        // إذا كان المستخدم موجوداً في قاعدة البيانات وكان isOnline = true
-        // أو إذا كان المستخدم الحالي (نعتبره دائماً متصل إذا كان مسجل دخول)
+        // حالة زر الشريط: الجلسة الحالية = متصل للعرض فقط — لا نفرض isOnline على مصفوفة المستخدمين المشتركة
         let isOnline = false;
-        
-        if (user) {
-            // المستخدم موجود في قاعدة البيانات
+        if (user && typeof Auth !== 'undefined' && typeof Auth.isUserEffectivelyOnline === 'function') {
+            isOnline = Auth.isUserEffectivelyOnline(user);
+        } else if (user) {
             isOnline = user.isOnline === true;
-            
-            // إذا كان المستخدم الحالي موجوداً لكن isOnline غير محدد أو false،
-            // نحدثه محلياً ونعتبره متصل (لأنه مسجل دخول حالياً)
-            if (!isOnline && AppState.currentUser && AppState.currentUser.email) {
-                // تحديث حالة الاتصال محلياً للمستخدم الحالي
-                user.isOnline = true;
-                isOnline = true;
-                
-                // حفظ التغييرات محلياً
-                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                    window.DataManager.save();
-                }
-            }
-        } else {
-            // ⚠️ أمان: لا نقوم بإنشاء/إضافة مستخدمين تلقائياً في قاعدة البيانات.
-            // إذا كانت الجلسة الحالية تحمل مستخدم غير موجود في Users sheet، نعرض الحالة كـ "متصل" للجلسة فقط
-            // ونترك إدارة المستخدمين لمدير النظام (مزامنة/إضافة عبر Users).
+        } else if (AppState.currentUser && AppState.currentUser.email) {
             isOnline = true;
         }
 

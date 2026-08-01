@@ -492,16 +492,39 @@ function deleteUserFromSheet(userId, userData) {
 }
 
 /**
+ * مهلة اعتبار الجلسة «متصل» (مللي ثانية) — يجب أن تكون أكبر من فاصل heartbeat في الواجهة.
+ */
+var USER_PRESENCE_TTL_MS_ = 5 * 60 * 1000;
+
+function isTruthyOnlineFlag_(val) {
+    return val === true || val === 'true' || val === 'TRUE' || val === 1 || val === '1' || val === 'نعم';
+}
+
+/**
+ * هل يعتبر المستخدم متصلاً فعلياً بناءً على isOnline + آخر نبضة حضور؟
+ */
+function isUserEffectivelyOnline_(user) {
+    if (!user || !isTruthyOnlineFlag_(user.isOnline)) return false;
+    var ts = user.lastPresenceAt || user.lastLogin || '';
+    if (!ts) return false;
+    var t = new Date(ts).getTime();
+    if (isNaN(t)) return false;
+    return (Date.now() - t) <= USER_PRESENCE_TTL_MS_;
+}
+
+/**
  * تنقية سجل مستخدم للعميل (بدون passwordHash أو tokens)
  */
 function sanitizeUserRecordForClient_(user, isAdmin, actorEmail) {
     if (!user || typeof user !== 'object') return null;
     var out = {};
-    var safeFields = ['id', 'name', 'email', 'department', 'active', 'role', 'jobTitle', 'phone', 'photo', 'isOnline', 'lastLogin', 'passwordChanged', 'forcePasswordChange', 'updatedAt', 'createdAt', 'mfaEnabled'];
+    var safeFields = ['id', 'name', 'email', 'department', 'active', 'role', 'jobTitle', 'phone', 'photo', 'isOnline', 'lastLogin', 'lastLogout', 'lastPresenceAt', 'passwordChanged', 'forcePasswordChange', 'updatedAt', 'createdAt', 'mfaEnabled'];
     for (var i = 0; i < safeFields.length; i++) {
         var f = safeFields[i];
         if (user[f] !== undefined) out[f] = user[f];
     }
+    // عرض اتصال فعلي للعميل (لا نعتمد على علم isOnline العالق وحده)
+    out.isOnline = isUserEffectivelyOnline_(user);
     var email = String(user.email || '').trim().toLowerCase();
     var actor = String(actorEmail || '').trim().toLowerCase();
     if (isAdmin || (email && email === actor)) {
@@ -660,7 +683,7 @@ function resolveActorRecordFromUsersSheet_(actorUserData) {
  * تحديث سريع لحقول تسجيل الدخول دون قراءة الشيت كاملاً.
  * يستخدم getValues على عمود ID فقط لإيجاد الصف ثم setValue للخلايا المستهدفة.
  * @param {string} userId
- * @param {{lastLogin?:string,isOnline?:boolean,activeSessionId?:string}} fields
+ * @param {{lastLogin?:string,lastPresenceAt?:string,isOnline?:boolean,activeSessionId?:string,lastLogout?:string}} fields
  */
 function _fastTouchUserLoginFields_(userId, fields) {
     if (!userId || !fields) return;
@@ -669,6 +692,13 @@ function _fastTouchUserLoginFields_(userId, fields) {
     const ss = SpreadsheetApp.openById(spreadsheetId);
     const sheet = ss.getSheetByName('Users');
     if (!sheet) return;
+
+    // ضمان أعمدة الحضور (lastPresenceAt / activeSessionId) على الأوراق القديمة
+    try {
+        if (typeof ensureSheetHeaders === 'function') {
+            ensureSheetHeaders(sheet, 'Users', [{}]);
+        }
+    } catch (_hdr) { /* ignore */ }
 
     const lastRow = sheet.getLastRow();
     const lastCol = sheet.getLastColumn();
@@ -691,6 +721,14 @@ function _fastTouchUserLoginFields_(userId, fields) {
         const c = headers.indexOf('lastLogin');
         if (c !== -1) cellWrites.push([rowIndex, c + 1, fields.lastLogin]);
     }
+    if ('lastPresenceAt' in fields) {
+        const c = headers.indexOf('lastPresenceAt');
+        if (c !== -1) cellWrites.push([rowIndex, c + 1, fields.lastPresenceAt]);
+    }
+    if ('lastLogout' in fields) {
+        const c = headers.indexOf('lastLogout');
+        if (c !== -1) cellWrites.push([rowIndex, c + 1, fields.lastLogout]);
+    }
     if ('isOnline' in fields) {
         const c = headers.indexOf('isOnline');
         if (c !== -1) cellWrites.push([rowIndex, c + 1, fields.isOnline]);
@@ -700,6 +738,91 @@ function _fastTouchUserLoginFields_(userId, fields) {
         if (c !== -1) cellWrites.push([rowIndex, c + 1, fields.activeSessionId]);
     }
     cellWrites.forEach(w => sheet.getRange(w[0], w[1]).setValue(w[2]));
+}
+
+/**
+ * نبضة حضور من الجلسة الحالية — يسمح للمستخدم بتحديث نفسه فقط (بدون صلاحية Admin).
+ */
+function touchUserPresence(payload, actorUserData) {
+    try {
+        var authGate = requireAuthenticatedActor_(actorUserData, 'touchUserPresence');
+        if (!authGate.ok) return authGate;
+        var actor = authGate.actor || actorUserData || {};
+        var actorId = String(actor.id || '').trim();
+        var actorEmail = String(actor.email || '').trim().toLowerCase();
+        var userId = String((payload && (payload.userId || payload.id)) || actorId || '').trim();
+        if (!userId) return { success: false, message: 'معرف المستخدم مطلوب' };
+
+        // فقط الذات (أو admin)
+        var isAdmin = (typeof checkAdminPermissionsAuthoritative === 'function')
+            ? checkAdminPermissionsAuthoritative(actor)
+            : false;
+        if (!isAdmin) {
+            if (actorId && userId !== actorId) {
+                return { success: false, message: 'لا يمكن تحديث حضور مستخدم آخر', errorCode: 'FORBIDDEN' };
+            }
+            if (!actorId && actorEmail) {
+                var me = getUserRecordFromUsersSheetByEmail_(actorEmail);
+                if (!me || String(me.id || '').trim() !== userId) {
+                    return { success: false, message: 'لا يمكن تحديث حضور مستخدم آخر', errorCode: 'FORBIDDEN' };
+                }
+            }
+        }
+
+        var nowIso = new Date().toISOString();
+        var sessionId = String((payload && payload.sessionId) || '').trim();
+        var fields = {
+            isOnline: true,
+            lastPresenceAt: nowIso
+        };
+        if (sessionId) fields.activeSessionId = sessionId.substring(0, 80);
+        _fastTouchUserLoginFields_(userId, fields);
+        return { success: true, lastPresenceAt: nowIso, isOnline: true };
+    } catch (err) {
+        Logger.log('touchUserPresence error: ' + err.toString());
+        return { success: false, message: 'touchUserPresence: ' + err.toString() };
+    }
+}
+
+/**
+ * تعليم المستخدم غير متصل — للخروج الصريح أو إغلاق التبويب (self فقط).
+ */
+function markUserOffline(payload, actorUserData) {
+    try {
+        var actor = actorUserData || {};
+        var actorId = String(actor.id || '').trim();
+        var actorEmail = String(actor.email || '').trim().toLowerCase();
+        var userId = String((payload && (payload.userId || payload.id)) || actorId || '').trim();
+        var sessionId = String((payload && payload.sessionId) || '').trim();
+        if (!userId && actorEmail) {
+            var me = getUserRecordFromUsersSheetByEmail_(actorEmail);
+            if (me) userId = String(me.id || '').trim();
+        }
+        if (!userId) return { success: false, message: 'معرف المستخدم مطلوب' };
+
+        // إن وُجدت جلسة على الشيت ومُرّر sessionId مختلف — لا نُسقط جلسة جهاز آخر
+        if (sessionId) {
+            try {
+                var row = getUserRecordFromUsersSheetById_(userId);
+                var sheetSession = row ? String(row.activeSessionId || '').trim() : '';
+                if (sheetSession && sheetSession !== sessionId) {
+                    return { success: true, skipped: true, message: 'جلسة أخرى نشطة — لم يتم تغيير الحالة' };
+                }
+            } catch (_e) { /* ignore */ }
+        }
+
+        var nowIso = new Date().toISOString();
+        _fastTouchUserLoginFields_(userId, {
+            isOnline: false,
+            lastLogout: nowIso,
+            lastPresenceAt: nowIso,
+            activeSessionId: ''
+        });
+        return { success: true, isOnline: false, lastLogout: nowIso };
+    } catch (err) {
+        Logger.log('markUserOffline error: ' + err.toString());
+        return { success: false, message: 'markUserOffline: ' + err.toString() };
+    }
 }
 
 /**
@@ -847,7 +970,8 @@ function loginUser(email, password) {
         try {
             _fastTouchUserLoginFields_(user.id, {
                 lastLogin: new Date().toISOString(),
-                isOnline: false
+                lastPresenceAt: new Date().toISOString(),
+                isOnline: true
             });
         } catch (loginTimeError) {
             Logger.log('Warning: Could not update lastLogin: ' + loginTimeError.toString());
@@ -929,7 +1053,8 @@ function verifyMfaLogin(challengeToken, email, code) {
             try {
                 _fastTouchUserLoginFields_(user.id, {
                     lastLogin: new Date().toISOString(),
-                    isOnline: false
+                    lastPresenceAt: new Date().toISOString(),
+                    isOnline: true
                 });
             } catch (loginTimeError) {
                 Logger.log('Warning: Could not update lastLogin after MFA: ' + loginTimeError.toString());

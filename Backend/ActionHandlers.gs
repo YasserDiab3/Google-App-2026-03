@@ -539,6 +539,22 @@ var ActionHandlers = {
         }
         return { success: true };
     },
+    'touchUserPresence': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            try { result = touchUserPresence(payload || {}, actorUserData); }
+            catch (e) { result = { success: false, message: 'touchUserPresence: ' + (e && e.toString ? e.toString() : e) }; }
+        })();
+        return result;
+    },
+    'markUserOffline': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            try { result = markUserOffline(payload || {}, actorUserData); }
+            catch (e) { result = { success: false, message: 'markUserOffline: ' + (e && e.toString ? e.toString() : e) }; }
+        })();
+        return result;
+    },
     'startMfaEnrollment': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

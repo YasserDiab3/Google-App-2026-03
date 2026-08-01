@@ -107,6 +107,137 @@ window.Auth = {
         } catch (e) { /* ignore */ }
     },
 
+    /** مهلة اعتبار «متصل» في الواجهة (أكبر قليلاً من فاصل النبضة) */
+    PRESENCE_TTL_MS: 5 * 60 * 1000,
+    PRESENCE_HEARTBEAT_MS: 2 * 60 * 1000,
+    _presenceHeartbeatTimer: null,
+    _presenceUnloadBound: false,
+
+    isUserEffectivelyOnline(user, options = {}) {
+        if (!user) return false;
+        const currentEmail = String(AppState?.currentUser?.email || '').trim().toLowerCase();
+        const email = String(user.email || '').trim().toLowerCase();
+        if (options.treatCurrentSessionOnline !== false && currentEmail && email && currentEmail === email) {
+            return true;
+        }
+        const flag = user.isOnline === true || user.isOnline === 'true' || user.isOnline === 'TRUE' || user.isOnline === 1 || user.isOnline === '1';
+        if (!flag) return false;
+        const ts = user.lastPresenceAt || user.lastLogin || '';
+        if (!ts) return false;
+        const t = new Date(ts).getTime();
+        if (Number.isNaN(t)) return false;
+        return (Date.now() - t) <= this.PRESENCE_TTL_MS;
+    },
+
+    _getPresenceSessionId() {
+        try {
+            return sessionStorage.getItem('hse_session_id')
+                || AppState?.currentUser?.sessionId
+                || '';
+        } catch (_e) {
+            return AppState?.currentUser?.sessionId || '';
+        }
+    },
+
+    async touchPresence(options = {}) {
+        try {
+            const user = AppState?.currentUser;
+            if (!user || !user.id) return;
+            if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && !Utils.hasCloudBackendSync()) return;
+            if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') return;
+
+            const nowIso = new Date().toISOString();
+            const sessionId = this._getPresenceSessionId();
+            const users = AppState.appData?.users;
+            if (Array.isArray(users)) {
+                const idx = users.findIndex((u) => u && String(u.id) === String(user.id));
+                if (idx !== -1) {
+                    users[idx].isOnline = true;
+                    users[idx].lastPresenceAt = nowIso;
+                    if (sessionId) users[idx].activeSessionId = sessionId;
+                }
+            }
+
+            if (options.localOnly) return;
+
+            await GoogleIntegration.sendRequest({
+                action: 'touchUserPresence',
+                data: {
+                    userId: user.id,
+                    sessionId,
+                    __timeoutMs: 12000,
+                    __highPriority: true
+                }
+            });
+        } catch (_e) { /* ignore */ }
+    },
+
+    markPresenceOffline(options = {}) {
+        try {
+            const user = AppState?.currentUser;
+            if (!user || !user.id) return;
+            const sessionId = this._getPresenceSessionId();
+            const nowIso = new Date().toISOString();
+            const users = AppState.appData?.users;
+            if (Array.isArray(users)) {
+                const idx = users.findIndex((u) => u && String(u.id) === String(user.id));
+                if (idx !== -1) {
+                    users[idx].isOnline = false;
+                    users[idx].lastLogout = nowIso;
+                    users[idx].lastPresenceAt = nowIso;
+                    users[idx].activeSessionId = null;
+                }
+            }
+
+            if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && !Utils.hasCloudBackendSync()) return;
+            if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') return;
+
+            const req = GoogleIntegration.sendRequest({
+                action: 'markUserOffline',
+                data: {
+                    userId: user.id,
+                    sessionId,
+                    __timeoutMs: options.beacon ? 5000 : 12000,
+                    __highPriority: true
+                }
+            });
+            if (req && typeof req.catch === 'function') req.catch(() => {});
+        } catch (_e) { /* ignore */ }
+    },
+
+    startPresenceHeartbeat() {
+        this.stopPresenceHeartbeat();
+        this.touchPresence({ localOnly: false }).catch(() => {});
+        this._presenceHeartbeatTimer = setInterval(() => {
+            if (!AppState?.currentUser?.id) {
+                this.stopPresenceHeartbeat();
+                return;
+            }
+            this.touchPresence().catch(() => {});
+        }, this.PRESENCE_HEARTBEAT_MS);
+
+        if (!this._presenceUnloadBound && typeof window !== 'undefined') {
+            this._presenceUnloadBound = true;
+            const onPageHide = () => {
+                try { this.markPresenceOffline({ beacon: true }); } catch (_e) { /* ignore */ }
+            };
+            window.addEventListener('pagehide', onPageHide);
+            document.addEventListener('visibilitychange', () => {
+                // لا نعلّم غير متصل عند إخفاء التبويب داخل نفس الجلسة
+                if (document.visibilityState === 'visible' && AppState?.currentUser?.id) {
+                    this.touchPresence().catch(() => {});
+                }
+            });
+        }
+    },
+
+    stopPresenceHeartbeat() {
+        if (this._presenceHeartbeatTimer) {
+            clearInterval(this._presenceHeartbeatTimer);
+            this._presenceHeartbeatTimer = null;
+        }
+    },
+
     _recordClinicStaffAttendance(kind) {
         try {
             const user = AppState.currentUser;
@@ -769,8 +900,10 @@ window.Auth = {
                 window.DataManager.save();
             }
 
-            // ✅ ملاحظة أداء: الخادم (loginUser) يحدّث lastLogin/isOnline مباشرةً عبر
-            // مسار سريع (_fastTouchUserLoginFields_)، لذا لا نحتاج لطلب updateUser ثانٍ من العميل.
+            // ✅ الخادم يضبط isOnline=true + lastPresenceAt عند loginUser
+            // نبضة حضور فورية + heartbeat دوري للحفاظ على الحالة الفعلية
+            this.touchPresence().catch(() => {});
+            this.startPresenceHeartbeat();
 
             // تحديث جدول المستخدمين فوراً إذا كان مفتوحاً
             if (typeof Users !== 'undefined' && typeof Users.updateUserStatus === 'function') {
@@ -1117,6 +1250,7 @@ window.Auth = {
             }
         } catch (_inv) { /* ignore */ }
         this._clearServerSessionToken();
+        this.stopPresenceHeartbeat();
 
         // تحديث حالة المستخدم إلى غير متصل
         if (AppState.currentUser && AppState.currentUser.email) {
@@ -1125,6 +1259,7 @@ window.Auth = {
             if (userIndex !== -1) {
                 users[userIndex].isOnline = false;
                 users[userIndex].lastLogout = new Date().toISOString();
+                users[userIndex].lastPresenceAt = users[userIndex].lastLogout;
                 users[userIndex].activeSessionId = null; // مسح معرف الجلسة عند تسجيل الخروج
                 AppState.appData.users = users;
                 
@@ -1132,29 +1267,8 @@ window.Auth = {
                     window.DataManager.saveImmediate();
                 }
 
-                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript &&
-                    typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync()) {
-                    const userId = users[userIndex].id;
-                    const updateData = {
-                        lastLogout: users[userIndex].lastLogout,
-                        isOnline: false,
-                        activeSessionId: null // مسح معرف الجلسة في Google Sheets
-                    };
-                    
-                    GoogleIntegration.sendToAppsScript('updateUser', {
-                        userId: userId,
-                        updateData: updateData
-                    }).then(updateResult => {
-                        if (updateResult && updateResult.success) {
-                            Utils.safeLog('✅ تم مزامنة lastLogout و activeSessionId مع الخادم بنجاح');
-                        } else {
-                            Utils.safeWarn('⚠️ فشل مزامنة lastLogout مع الخادم:', updateResult?.message);
-                        }
-                    }).catch(updateError => {
-                        Utils.safeWarn('⚠️ خطأ في مزامنة lastLogout مع الخادم:', updateError);
-                        // لا نوقف تسجيل الخروج حتى لو فشلت المزامنة
-                    });
-                }
+                // markUserOffline متاح لكل مستخدم (لا يتطلب Admin مثل updateUser)
+                this.markPresenceOffline();
             
             // تحديث جدول المستخدمين فوراً إذا كان مفتوحاً
                 if (typeof Users !== 'undefined' && typeof Users.updateUserStatus === 'function') {
@@ -1397,6 +1511,7 @@ window.Auth = {
                         };
                         sessionStorage.setItem('hse_current_session', JSON.stringify(safeUserData));
                         this._touchSessionActivity();
+                        this.startPresenceHeartbeat();
                         Utils.safeLog('✅ تم استعادة الجلسة من sessionStorage - المستخدم مسجل دخول');
                         return true;
                     }
@@ -1564,6 +1679,7 @@ window.Auth = {
                         };
                         sessionStorage.setItem('hse_current_session', JSON.stringify(safeUserData));
                         this._touchSessionActivity();
+                        this.startPresenceHeartbeat();
                         Utils.safeLog('✅ تم استعادة الجلسة من localStorage - المستخدم مسجل دخول');
                         return true;
                     }

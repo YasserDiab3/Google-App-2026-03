@@ -8,7 +8,9 @@ const Users = {
     currentView: 'list', // list, form, edit
     currentEditId: null,
     autoRefreshInterval: null, // لتخزين معرف التحديث التلقائي
-    refreshInterval: 15000, // تحديث كل 15 ثانية — تقليل الضغط على الخلفية
+    presenceSyncInterval: null, // مزامنة حضور من الخادم أثناء فتح المديول
+    refreshInterval: 15000, // تحديث محلي كل 15 ثانية (TTL stale)
+    presenceSyncMs: 60000, // جلب users من الخادم كل دقيقة
     sectionChangeHandler: null, // لتخزين معالج حدث تغيير القسم
     _getI18nCore() {
         return (window.AppI18n && typeof window.AppI18n.t === 'function')
@@ -460,7 +462,10 @@ const Users = {
             const isActive = u.active !== false;
             if (isActive) active += 1;
             else inactive += 1;
-            if (u.isOnline === true) online += 1;
+            const onlineNow = (typeof Auth !== 'undefined' && typeof Auth.isUserEffectivelyOnline === 'function')
+                ? Auth.isUserEffectivelyOnline(u, { treatCurrentSessionOnline: false })
+                : (u.isOnline === true);
+            if (onlineNow) online += 1;
             const role = String(u.role || '').toLowerCase();
             if (role === 'admin') admins += 1;
             if (role === 'safety_officer') safety += 1;
@@ -1163,7 +1168,9 @@ const Users = {
                     </thead>
                     <tbody>
                         ${users.map(user => {
-            const isOnline = user.isOnline === true;
+            const isOnline = (typeof Auth !== 'undefined' && typeof Auth.isUserEffectivelyOnline === 'function')
+                ? Auth.isUserEffectivelyOnline(user, { treatCurrentSessionOnline: false })
+                : (user.isOnline === true);
             const lastLoginTime = user.lastLogin ? Utils.formatDateTime(user.lastLogin) : '-';
             return `
                             <tr>
@@ -2162,6 +2169,8 @@ const Users = {
             // إضافة حقول جديدة لتسجيل الدخول
             lastLogin: userData?.lastLogin || null,
             lastLogout: userData?.lastLogout || null,
+            lastPresenceAt: userData?.lastPresenceAt || null,
+            activeSessionId: userData?.activeSessionId || null,
             isOnline: userData?.isOnline || false,
             loginHistory: userData?.loginHistory || []
         };
@@ -3141,15 +3150,23 @@ const Users = {
         // إيقاف التحديث السابق إن وجد
         this.stopAutoRefresh();
 
-        // بدء التحديث التلقائي كل 5 ثوان
         this.autoRefreshInterval = setInterval(() => {
-            // التحقق من أن الموديول مفتوح حالياً
             const section = document.getElementById('users-section');
             if (section && section.style.display !== 'none' && !section.hidden) {
-                // تحديث الجدول فقط (بدون إعادة تحميل كامل)
                 this.refreshUsersTable();
             }
         }, this.refreshInterval);
+
+        // مزامنة حضور من الخادم (isOnline الفعلي بعد TTL على الخادم)
+        this.presenceSyncInterval = setInterval(() => {
+            const section = document.getElementById('users-section');
+            if (!section || section.style.display === 'none' || section.hidden) return;
+            if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.syncUsers !== 'function') return;
+            if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && !Utils.hasCloudBackendSync()) return;
+            GoogleIntegration.syncUsers(true)
+                .then(() => { this.refreshUsersTable(); })
+                .catch(() => { /* ignore */ });
+        }, this.presenceSyncMs);
 
         Utils.safeLog('✅ تم تفعيل التحديث التلقائي لحالة الاتصال وآخر تسجيل دخول');
     },
@@ -3162,6 +3179,10 @@ const Users = {
             clearInterval(this.autoRefreshInterval);
             this.autoRefreshInterval = null;
             Utils.safeLog('🛑 تم إيقاف التحديث التلقائي');
+        }
+        if (this.presenceSyncInterval) {
+            clearInterval(this.presenceSyncInterval);
+            this.presenceSyncInterval = null;
         }
     },
 
@@ -3195,7 +3216,9 @@ const Users = {
             const user = users.find(u => u.email && u.email.toLowerCase().trim() === rowEmail.toLowerCase().trim());
             if (!user) return;
 
-            const isOnline = user.isOnline === true;
+            const isOnline = (typeof Auth !== 'undefined' && typeof Auth.isUserEffectivelyOnline === 'function')
+                ? Auth.isUserEffectivelyOnline(user, { treatCurrentSessionOnline: false })
+                : (user.isOnline === true);
             const lastLoginTime = user.lastLogin ? Utils.formatDateTime(user.lastLogin) : '-';
             const onlineLabel = isOnline ? 'متصل' : 'غير متصل';
 
@@ -3259,11 +3282,14 @@ const Users = {
                 const rowEmail = cells[1]?.textContent?.trim();
                 
                 if (rowEmail === userEmail) {
-                    const isOnline = user.isOnline === true;
+                    const isOnline = (typeof Auth !== 'undefined' && typeof Auth.isUserEffectivelyOnline === 'function')
+                        ? Auth.isUserEffectivelyOnline(user, { treatCurrentSessionOnline: false })
+                        : (user.isOnline === true);
                     const lastLoginTime = user.lastLogin ? Utils.formatDateTime(user.lastLogin) : '-';
 
                     // تحديث حالة الاتصال
                     if (cells[7]) {
+                        cells[7].setAttribute('data-online', isOnline ? '1' : '0');
                         cells[7].innerHTML = `
                             <div class="flex items-center gap-2">
                                 <div class="w-3 h-3 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}" style="animation: ${isOnline ? 'pulse 2s infinite' : 'none'};"></div>
