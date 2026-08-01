@@ -13,7 +13,7 @@ const DataManager = {
     _hasShownLargeDataWarning: false,
 
     /**
-     * P4.2: إعلام المستخدم أن النسخة المحلية مختصرة (Quota / حجم)
+     * P4.2: إعلام لمرة واحدة (toast) أن النسخة المحلية مختصرة — بانر قصير يختفي تلقائياً
      */
     _notifyLightLocalSave(reason) {
         try {
@@ -21,7 +21,8 @@ const DataManager = {
                 OfflineBanner.setLightLocalData(true);
             }
             const now = Date.now();
-            if (now - (this._lastLightSaveNotification || 0) < 60000) return;
+            // مرة واحدة كل 10 دقائق كحد أقصى — تجنب الإزعاج
+            if (now - (this._lastLightSaveNotification || 0) < 10 * 60 * 1000) return;
             this._lastLightSaveNotification = now;
             const isEn = (typeof I18n !== 'undefined' && typeof I18n.isEn === 'function')
                 ? I18n.isEn()
@@ -29,8 +30,10 @@ const DataManager = {
             const msg = isEn
                 ? 'Local storage is limited — a shortened copy was saved. Full data remains in memory / Google Sheets.'
                 : 'التخزين المحلي محدود — حُفظت نسخة مختصرة. البيانات الكاملة في الذاكرة / Google Sheets.';
-            if (typeof Notification !== 'undefined' && typeof Notification.warning === 'function') {
-                Notification.warning(msg, { duration: 6000 });
+            if (typeof Notification !== 'undefined' && typeof Notification.info === 'function') {
+                Notification.info(msg, { duration: 5500 });
+            } else if (typeof Notification !== 'undefined' && typeof Notification.warning === 'function') {
+                Notification.warning(msg, { duration: 5500 });
             }
             Utils.safeLog('ℹ️ [DataManager] light save notified:', reason || '');
         } catch (_e) { /* ignore */ }
@@ -621,6 +624,7 @@ const DataManager = {
                     Utils.safeLog('⚠️ البيانات المحلية مبتورة - سيتم إعادة التحميل من الخادم:', AppState._truncatedFields);
                     try {
                         if (typeof OfflineBanner !== 'undefined' && typeof OfflineBanner.setLightLocalData === 'function') {
+                            // بانر قصير فقط عند التحميل — بدون toast إضافي هنا
                             OfflineBanner.setLightLocalData(true);
                         }
                     } catch (_eLight) { /* ignore */ }

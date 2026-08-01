@@ -15,6 +15,7 @@
         _browserOffline: false,
         _backendOffline: false,
         _lightStorage: false,
+        _lightHideTimer: null,
         _lastToastKey: '',
 
         t(key, fallback) {
@@ -99,7 +100,10 @@
 
                 if (show) {
                     const toastKey = this._browserOffline ? 'browser' : (this._backendOffline ? 'backend' : 'light');
-                    if (toastKey !== this._lastToastKey) {
+                    // light: لا toast مكرر من البانر — DataManager يتولى إشعاراً واحداً
+                    if (toastKey === 'light') {
+                        /* banner only, auto-hide via setLightLocalData */
+                    } else if (toastKey !== this._lastToastKey) {
                         this._lastToastKey = toastKey;
                         this.notifyOnce(msg);
                     }
@@ -122,10 +126,29 @@
             this.sync();
         },
 
-        /** P4.2: نسخة localStorage مخففة بسبب Quota / الحجم */
+        /** P4.2: تنبيه مؤقت لنسخة localStorage مخففة — toast عبر DataManager؛ البانر يختفي تلقائياً */
         setLightLocalData(isLight) {
-            this._lightStorage = !!isLight;
+            if (!isLight) {
+                this._lightStorage = false;
+                if (this._lightHideTimer) {
+                    try { clearTimeout(this._lightHideTimer); } catch (_e) { /* ignore */ }
+                    this._lightHideTimer = null;
+                }
+                this.sync();
+                return;
+            }
+            this._lightStorage = true;
             this.sync();
+            if (this._lightHideTimer) {
+                try { clearTimeout(this._lightHideTimer); } catch (_e2) { /* ignore */ }
+            }
+            const self = this;
+            this._lightHideTimer = setTimeout(() => {
+                self._lightStorage = false;
+                self._lightHideTimer = null;
+                // لا تمسح _lastToastKey=light هنا إن أردنا منع إعادة الـ toast فوراً — نُبقي المفتاح حتى يزول وضع آخر
+                try { self.sync(); } catch (_e3) { /* ignore */ }
+            }, 7000);
         },
 
         init() {
