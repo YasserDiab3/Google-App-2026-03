@@ -1,13 +1,13 @@
 {
-  "version": "1.0.748",
+  "version": "1.0.751",
   "highlights": {
     "ar": [
-      "P4: مودال التحديث يظهر عند أول زيارة دون إخفاء الإصدار مبكراً.",
-      "تنبيه عند اختصار التخزين المحلي بسبب امتلاء المساحة."
+      "مواءمة حجم عناصر أنواع التصريح في القسم الثالث مع كروت القسم الرابع.",
+      "الإبقاء على التمييز اللوني لكل نوع تصريح بنفس التخطيط الحالي."
     ],
     "en": [
-      "P4: Update modal shows on first visit without early last_seen hide.",
-      "Notice when local storage is shortened due to quota limits."
+      "PTW section-3 work-type rows now match section-4 card sizing.",
+      "Kept per-type color accents with the same current layout."
     ]
   }
 }

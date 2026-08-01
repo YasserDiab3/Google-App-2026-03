@@ -1,13 +1,13 @@
 {
-  "version": "1.0.749",
+  "version": "1.0.751",
   "highlights": {
     "ar": [
-      "قسم طبيعة الأعمال في تصاريح العمل: صفوف مضغوطة أوضح مع تمييز لوني لكل نوع تصريح.",
-      "تخفيف الثقل والتجميد في مديول تصاريح العمل (ترجمة وتحميل أخف)."
+      "مواءمة حجم عناصر أنواع التصريح في القسم الثالث مع كروت القسم الرابع.",
+      "الإبقاء على التمييز اللوني لكل نوع تصريح بنفس التخطيط الحالي."
     ],
     "en": [
-      "PTW work-nature section: denser clearer rows with a distinct color per permit type.",
-      "Lighter PTW module load to reduce freeze (leaner i18n and deferred heavy work)."
+      "PTW section-3 work-type rows now match section-4 card sizing.",
+      "Kept per-type color accents with the same current layout."
     ]
   }
 }
