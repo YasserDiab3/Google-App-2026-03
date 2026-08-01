@@ -6454,20 +6454,23 @@ window.UI = {
             Utils.safeError('عنصر القائمة غير موجود:', sectionName);
         }
 
+        // القسم المغادر قبل تحديث currentSection — لازم للتنظيف الفعلي (cleanupPreviousModule)
+        const leavingSection = AppState.currentSection || null;
+
         // تحديث سجل التنقل (تجنب الإضافة عند العودة)
-        if (sectionName !== AppState.currentSection && !AppState.isNavigatingBack) {
+        if (sectionName !== leavingSection && !AppState.isNavigatingBack) {
             // إضافة الصفحة السابقة إلى السجل
-            if (AppState.currentSection) {
+            if (leavingSection) {
                 // تجنب إضافة نفس الصفحة مرتين متتاليتين
                 const lastHistoryItem = AppState.navigationHistory[AppState.navigationHistory.length - 1];
-                if (lastHistoryItem !== AppState.currentSection) {
+                if (lastHistoryItem !== leavingSection) {
                     // إزالة أي تكرارات للصفحة الحالية من السجل لتجنب التكرار
                     AppState.navigationHistory = AppState.navigationHistory.filter(
                         item => item !== sectionName
                     );
 
                     // إضافة الصفحة السابقة إلى السجل
-                    AppState.navigationHistory.push(AppState.currentSection);
+                    AppState.navigationHistory.push(leavingSection);
 
                     // الحد الأقصى 10 صفحات في السجل
                     if (AppState.navigationHistory.length > 10) {
@@ -6490,12 +6493,12 @@ window.UI = {
         document.dispatchEvent(new CustomEvent('section-changed', {
             detail: {
                 section: sectionName,
-                previousSection: AppState.previousSection || null
+                previousSection: leavingSection
             }
         }));
 
-        // حفظ القسم السابق
-        AppState.previousSection = sectionName;
+        // القسم المغادر (وليس الجديد) — يُستخدم في cleanupPreviousModule داخل loadSectionData
+        AppState.previousSection = leavingSection;
 
         // التأكد من تحميل البيانات بعد عرض القسم مباشرة مع تقليل الأحمال الثقيلة داخل callbacks
         const isRefresh = AppState.isPageRefresh;

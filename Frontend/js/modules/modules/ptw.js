@@ -35,12 +35,18 @@ const PTW = {
     /** تأجيل i18n بعد Mutations — التطبيق المتزامن كان يجمّد الشاشة عند بناء أقسام/نماذج كبيرة */
     _queuePtwI18nNode(node) {
         if (!node || node.nodeType !== 1) return;
+        // بعد مغادرة/إخفاء PTW لا تُجدول ترجمة — يمنع عمل ثقيل بالخلفية
+        if (!this._ptwI18nActive) return;
         if (!this._ptwI18nPendingNodes) this._ptwI18nPendingNodes = [];
         this._ptwI18nPendingNodes.push(node);
         if (this._ptwI18nFlushScheduled) return;
         this._ptwI18nFlushScheduled = true;
         const flush = () => {
             this._ptwI18nFlushScheduled = false;
+            if (!this._ptwI18nActive) {
+                this._ptwI18nPendingNodes = [];
+                return;
+            }
             const batch = this._ptwI18nPendingNodes || [];
             this._ptwI18nPendingNodes = [];
             batch.forEach((n) => {
@@ -51,6 +57,20 @@ const PTW = {
         };
         if (typeof requestAnimationFrame === 'function') requestAnimationFrame(flush);
         else setTimeout(flush, 32);
+    },
+
+    _disconnectPtwI18nObservers() {
+        this._ptwI18nActive = false;
+        this._ptwI18nPendingNodes = [];
+        this._ptwI18nFlushScheduled = false;
+        if (this._i18nSectionObserver) {
+            try { this._i18nSectionObserver.disconnect(); } catch (_e) { /* ignore */ }
+            this._i18nSectionObserver = null;
+        }
+        if (this._i18nBodyObserver) {
+            try { this._i18nBodyObserver.disconnect(); } catch (_e) { /* ignore */ }
+            this._i18nBodyObserver = null;
+        }
     },
 
     _t(key, fallback) {
@@ -107,13 +127,12 @@ const PTW = {
     },
 
     ensureI18nObservers(section) {
-        if (this._i18nSectionObserver) {
-            this._i18nSectionObserver.disconnect();
-            this._i18nSectionObserver = null;
-        }
+        this._disconnectPtwI18nObservers();
+        this._ptwI18nActive = true;
 
         if (section && typeof MutationObserver !== 'undefined') {
             this._i18nSectionObserver = new MutationObserver((mutations) => {
+                if (!this._ptwI18nActive) return;
                 mutations.forEach((mutation) => {
                     mutation.addedNodes.forEach((node) => {
                         if (node && node.nodeType === 1) this._queuePtwI18nNode(node);
@@ -123,19 +142,9 @@ const PTW = {
             this._i18nSectionObserver.observe(section, { childList: true, subtree: true });
         }
 
-        if (!this._i18nBodyObserver && typeof MutationObserver !== 'undefined') {
-            this._i18nBodyObserver = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    mutation.addedNodes.forEach((node) => {
-                        if (!node || node.nodeType !== 1) return;
-                        if (node.classList?.contains('modal-overlay') || node.querySelector?.('.modal-overlay')) {
-                            this._queuePtwI18nNode(node);
-                        }
-                    });
-                });
-            });
-            this._i18nBodyObserver.observe(document.body, { childList: true, subtree: true });
-        }
+        // لا نراقب document.body هنا — AppI18n.observeDomForI18n يغطي المودالات.
+        // مراقبة body إضافية كانت تُضاعف applyI18n وتُبقي عملاً بعد مغادرة القسم.
+        this._i18nBodyObserver = null;
     },
 
     getDefaultApprovals() {
@@ -20548,12 +20557,24 @@ const PTW = {
                 Utils.safeLog('🧹 تنظيف موارد PTW module...');
             }
 
+            // قطع i18n observers + طابور الترجمة فوراً (يمنع تجمد بعد المغادرة/الإخفاء)
+            this._disconnectPtwI18nObservers();
+
             // إلغاء المزامنة المؤجلة إذا كان المستخدم غادر القسم
             if (this._deferredSyncTimer) {
                 clearTimeout(this._deferredSyncTimer);
                 this._deferredSyncTimer = null;
             }
+            if (this._loadPTWListTimeout) {
+                clearTimeout(this._loadPTWListTimeout);
+                this._loadPTWListTimeout = null;
+            }
+            if (this.mapInitTimeout) {
+                clearTimeout(this.mapInitTimeout);
+                this.mapInitTimeout = null;
+            }
             this._backendSyncStarted = false;
+            this.isMapInitializing = false;
 
             // تنظيف tab protection
             this.cleanupTabProtection();
@@ -20562,6 +20583,13 @@ const PTW = {
             if (typeof this.destroyMap === 'function') {
                 this.destroyMap();
             }
+
+            // إغلاق مودالات PTW المفتوحة حتى لا تبقى مستمعات/DOM ثقيل بعد المغادرة
+            try {
+                document.querySelectorAll('.modal-overlay').forEach((el) => {
+                    try { el.remove(); } catch (_e) { /* ignore */ }
+                });
+            } catch (_e) { /* ignore */ }
 
             if (typeof Utils !== 'undefined' && Utils.safeLog) {
                 Utils.safeLog('✅ تم تنظيف موارد PTW module');
