@@ -1135,7 +1135,8 @@ var ActionHandlers = {
     'getEmployeeByCode': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    var authFail = actionRequireAuth_(actorUserData, action);
+                    if (authFail) { result = authFail; return; }
                     result = getEmployeeByCode(payload.employeeCode || payload.code);
                     return;
 
@@ -2304,7 +2305,8 @@ var ActionHandlers = {
     'getContractorDetailedAnalytics': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    var authFail = actionRequireAuth_(actorUserData, action);
+                    if (authFail) { result = authFail; return; }
                     result = getContractorDetailedAnalytics(payload);
                     return;
 
@@ -2370,7 +2372,8 @@ var ActionHandlers = {
     'getAllContractorApprovalRequests': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    var authFail = actionRequireAuth_(actorUserData, action, { data: [] });
+                    if (authFail) { result = authFail; return; }
                     var filters = (payload && payload.filters) ? payload.filters : {};
                     if (payload && payload.forceRefresh === true) {
                         filters.forceRefresh = true;
@@ -2426,6 +2429,8 @@ var ActionHandlers = {
     'getAllContractorEvaluationApprovalRequests': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
+                    var authFail = actionRequireAuth_(actorUserData, action, { data: [] });
+                    if (authFail) { result = authFail; return; }
                     var filters = (payload && payload.filters) ? payload.filters : {};
                     if (payload && payload.forceRefresh === true) {
                         filters.forceRefresh = true;
@@ -2439,12 +2444,16 @@ var ActionHandlers = {
         return result;
     },
     'ensureContractorEvaluationApprovalRequestsSheet': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var adminFail = actionRequireAdmin_(actorUserData, action);
+        if (adminFail) return adminFail;
         var sid = (typeof resolveContractorSpreadsheetId_ === 'function')
             ? resolveContractorSpreadsheetId_(payload, postData)
             : (spreadsheetId || getSpreadsheetId());
         return ensureContractorEvaluationApprovalRequestsSheet_(sid);
     },
     'repairContractorEvaluationApprovalRequestsSheet': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var adminFail = actionRequireAdmin_(actorUserData, action);
+        if (adminFail) return adminFail;
         var sid = (typeof resolveContractorSpreadsheetId_ === 'function')
             ? resolveContractorSpreadsheetId_(payload, postData)
             : (spreadsheetId || getSpreadsheetId());
@@ -2504,7 +2513,8 @@ var ActionHandlers = {
     'getAllContractorDeletionRequests': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    var authFail = actionRequireAuth_(actorUserData, action, { data: [] });
+                    if (authFail) { result = authFail; return; }
                     var filters = (payload && payload.filters) ? payload.filters : {};
                     if (payload && payload.forceRefresh === true) {
                         filters.forceRefresh = true;

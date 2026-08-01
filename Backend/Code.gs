@@ -256,7 +256,7 @@ function doPost(e) {
             })));
         }
 
-        // قائمة بالـ actions التي لا تتطلب CSRF token (عمليات قراءة فقط)
+        // قائمة بالـ actions التي لا تتطلب CSRF token (عمليات قراءة عامة فقط — P2.2 مضيّقة)
         const readOnlyActions = [
             'getSafetyTeamMembers', 'getSafetyTeamMember', 'getOrganizationalStructure',
             'getJobDescription', 'getSafetyTeamKPIs', 'getSafetyHealthManagementSettings',
@@ -269,26 +269,21 @@ function doPost(e) {
             'getAuthBootstrapPolicy',
             // ✅ مؤشر تحديثات المستخدمين (للـ sync الفوري بين الأجهزة)
             'getUsersMeta',
-            // ✅ طلبات موافقة العيادة — أُخرجت من readOnly (P0.3): تتطلب CSRF + مدير
+            // ✅ طلبات موافقة العيادة — أُخرجت من readOnly (P0.3)
             // getAllMedicationDeletionRequests, getAllSupplyRequests, getAllClinicVisitDeletionRequests
-            'getContractorDetailedAnalytics',
+            // ✅ P2.2: أُخرج — getContractorDetailedAnalytics, getEmployeeByCode,
+            // getAllContractorApprovalRequests, getAllContractorEvaluationApprovalRequests,
+            // getAllContractorDeletionRequests, ensure/repairContractorEvaluationApprovalRequestsSheet
             'getAllAppEmergencyNumbers',
             'getAllIssuingAuthorities',
             'getIssuingAuthoritiesForPermitType',
             'getAllContractorIssuingAuthorities',
             'getContractorIssuingAuthoritiesForPermitType',
-            'getEmployeeByCode',
             // تقرير الجلسات اليومي (قراءة فقط — يتطلب CSRF + مدير)
             // getDailyUserSessionActivityReport, getAllUserActivityLogs, getUserActivityLogs, getLogStatistics, getAllAuditLogs
-            // ✅ مهمات الوقاية — قراءة فقط (تجنب فشل ربط CSRF عند تغيّر المستخدم بعد أول طلب)
+            // ✅ مهمات الوقاية — قراءة بدون CSRF (CSRF self-heal عند تبديل مستخدم)
             'getAllPPE', 'getPPEMatrix', 'getAllPPEMatrices',
-            'getAllPPEStockItems', 'getAllPPETransactions', 'getPPEItemsList',
-            // ✅ طلبات اعتماد المقاولين (قراءة / تهيئة الورقة)
-            'getAllContractorApprovalRequests',
-            'getAllContractorEvaluationApprovalRequests',
-            'getAllContractorDeletionRequests',
-            'ensureContractorEvaluationApprovalRequestsSheet',
-            'repairContractorEvaluationApprovalRequestsSheet'
+            'getAllPPEStockItems', 'getAllPPETransactions', 'getPPEItemsList'
         ];
 
         // قائمة بالـ actions الحساسة التي تتطلب CSRF token إلزامي
@@ -368,32 +363,52 @@ function doPost(e) {
             }
         }
 
-        // SEC-04: جلسة خادم موقعة — مطلوبة عند وجود userData (بعد login)
+        // P2.1 / SEC-04: جلسة خادم موقعة
+        // - كتابات (غير readOnly): هوية + sessionToken إلزاميان دائماً
+        // - قراءات مع userData: التحقق من الجلسة كما كان
         const sessionExemptActions = [
             'login', 'verifyMfaLogin', 'initializeSheets', 'fixClinicSheetHeaders',
             'testConnection', 'getPublicIP', 'invalidateServerSession',
             'getAuthBootstrapPolicy'
         ];
         const isSessionExempt = sessionExemptActions.indexOf(action) !== -1;
-        if (!isSessionExempt && actorUserData && (actorUserData.email || actorUserData.id)) {
-            var sessionToken = String(postData.sessionToken || (payload && payload.sessionToken) || '').trim();
-            if (typeof validateServerSessionToken_ === 'function') {
-                var sessionGate = validateServerSessionToken_(sessionToken, actorUserData);
-                if (!sessionGate.ok) {
+        if (!isSessionExempt) {
+            var needsSessionForWrite = !isReadOnlyAction;
+            var hasActorIdentity = !!(actorUserData && (actorUserData.email || actorUserData.id));
+            if (needsSessionForWrite || hasActorIdentity) {
+                if (!hasActorIdentity) {
                     if (typeof logSecurityEvent === 'function') {
-                        logSecurityEvent('session_gate_denied', {
+                        logSecurityEvent('session_gate_missing_actor', {
                             action: action,
-                            errorCode: sessionGate.errorCode,
-                            actor: actorUserData.email || actorUserData.id || '',
                             severity: 'high'
                         });
                     }
                     return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
                         success: false,
-                        message: sessionGate.message || 'جلسة غير صالحة',
-                        errorCode: sessionGate.errorCode || 'SESSION_REQUIRED',
+                        message: 'رفض أمني: بيانات المستخدم المنفذ وجلسة صالحة مطلوبان لهذه العملية',
+                        errorCode: 'SESSION_ACTOR_REQUIRED',
                         action: action
                     })));
+                }
+                var sessionToken = String(postData.sessionToken || (payload && payload.sessionToken) || '').trim();
+                if (typeof validateServerSessionToken_ === 'function') {
+                    var sessionGate = validateServerSessionToken_(sessionToken, actorUserData);
+                    if (!sessionGate.ok) {
+                        if (typeof logSecurityEvent === 'function') {
+                            logSecurityEvent('session_gate_denied', {
+                                action: action,
+                                errorCode: sessionGate.errorCode,
+                                actor: actorUserData.email || actorUserData.id || '',
+                                severity: 'high'
+                            });
+                        }
+                        return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
+                            success: false,
+                            message: sessionGate.message || 'جلسة غير صالحة',
+                            errorCode: sessionGate.errorCode || 'SESSION_REQUIRED',
+                            action: action
+                        })));
+                    }
                 }
             }
         }
