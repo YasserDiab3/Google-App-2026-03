@@ -164,7 +164,8 @@ function main() {
     ROOTS.forEach(root => bumpRoot(root, newVersion, cacheVersion));
 
     console.log('\n✅ تم توحيد الإصدار في جميع المواضع.');
-    console.log('📌 الخطوة التالية: git add -A && git commit && git push  (Vercel سينشر، وإشعار التحديث سيظهر للمستخدمين).\n');
+    console.log('⚠️  مهم: bump يحدّث رقم الإصدار فقط — أعد كتابة highlights.ar / highlights.en في version.json لتطابق تغييرات هذا الرفع (لا تترك نبذة قديمة).');
+    console.log('📌 ثم: commit + push (كلمة «رفع») — Vercel ينشر وإشعار التحديث يظهر بالنص الجديد.\n');
 }
 
 main();

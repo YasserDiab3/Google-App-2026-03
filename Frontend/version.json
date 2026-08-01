@@ -1,13 +1,13 @@
 {
-  "version": "1.0.748",
+  "version": "1.0.749",
   "highlights": {
     "ar": [
-      "P4: مودال التحديث يظهر عند أول زيارة دون إخفاء الإصدار مبكراً.",
-      "تنبيه عند اختصار التخزين المحلي بسبب امتلاء المساحة."
+      "قسم طبيعة الأعمال في تصاريح العمل: صفوف مضغوطة أوضح مع تمييز لوني لكل نوع تصريح.",
+      "تخفيف الثقل والتجميد في مديول تصاريح العمل (ترجمة وتحميل أخف)."
     ],
     "en": [
-      "P4: Update modal shows on first visit without early last_seen hide.",
-      "Notice when local storage is shortened due to quota limits."
+      "PTW work-nature section: denser clearer rows with a distinct color per permit type.",
+      "Lighter PTW module load to reduce freeze (leaner i18n and deferred heavy work)."
     ]
   }
 }
