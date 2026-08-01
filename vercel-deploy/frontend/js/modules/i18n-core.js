@@ -6586,6 +6586,8 @@
         const exactMap = isEn ? mapArToEnExact : mapEnToArExact;
         const map = isEn ? literalArToEn : literalEnToAr;
         const target = root || document;
+        if (!target || (target.nodeType === 1 && target.closest?.('[data-no-literal-translate]'))) return;
+        if (target.nodeType === 1 && (target.id === 'ptw-section' || target.getAttribute?.('data-no-literal-translate') != null)) return;
 
         const translateTextWithPunctuation = (text) => {
             if (!text || !text.trim()) return null;
@@ -6608,16 +6610,22 @@
             return null;
         };
 
-        // partialEntries: sort by length descending to match longer expressions first
-        const partialEntries = Object.entries(map)
-            .filter(([from, to]) => from && from !== to && from.length >= 2)
-            .sort((a, b) => b[0].length - a[0].length);
+        // partialEntries: cache مرة واحدة لكل لغة — إعادة البناء في كل استدعاء كانت تُجمّد الواجهة
+        if (!global.__hseLiteralPartialCache) global.__hseLiteralPartialCache = {};
+        const cacheKey = isEn ? 'en' : 'ar';
+        if (!global.__hseLiteralPartialCache[cacheKey]) {
+            global.__hseLiteralPartialCache[cacheKey] = Object.entries(map)
+                .filter(([from, to]) => from && from !== to && from.length >= 2)
+                .sort((a, b) => b[0].length - a[0].length);
+        }
+        const partialEntries = global.__hseLiteralPartialCache[cacheKey];
+        const hasLatin = /[A-Za-z]/;
 
         const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, {
             acceptNode(node) {
                 const parent = node.parentElement;
                 if (!parent) return NodeFilter.FILTER_REJECT;
-                if (parent.hasAttribute('data-i18n') || parent.closest('[data-no-literal-translate]') || parent.closest('.hse-update-message-modal')) {
+                if (parent.hasAttribute('data-i18n') || parent.closest('[data-no-literal-translate]') || parent.closest('.hse-update-message-modal') || parent.closest('#ptw-section')) {
                     return NodeFilter.FILTER_REJECT;
                 }
                 const tag = parent.tagName;
@@ -6626,6 +6634,8 @@
                 }
                 const val = node.nodeValue;
                 if (!val || !val.trim()) return NodeFilter.FILTER_REJECT;
+                // واجهة عربية: تجاهل نصوص بلا لاتيني — يوفر آلاف المقارنات على DOM الضخم
+                if (!isEn && !hasLatin.test(val)) return NodeFilter.FILTER_REJECT;
                 return NodeFilter.FILTER_ACCEPT;
             }
         });
@@ -6653,11 +6663,12 @@
 
         // Translate option text, title, placeholder, aria-label
         target.querySelectorAll?.('option, [title], [placeholder], [aria-label]').forEach((el) => {
-            if (el.hasAttribute('data-i18n') || el.closest('[data-no-literal-translate]')) return;
+            if (el.hasAttribute('data-i18n') || el.closest('[data-no-literal-translate]') || el.closest('#ptw-section')) return;
 
             if (el.tagName === 'OPTION') {
                 const text = el.textContent;
                 if (text && text.trim()) {
+                    if (!isEn && !hasLatin.test(text)) return;
                     const translated = translateTextWithPunctuation(text);
                     if (translated && translated !== text.trim()) {
                         el.textContent = translated;
@@ -6669,6 +6680,7 @@
             ['title', 'placeholder', 'aria-label'].forEach((attr) => {
                 const value = el.getAttribute(attr);
                 if (!value || !value.trim()) return;
+                if (!isEn && !hasLatin.test(value)) return;
                 const translated = translateTextWithPunctuation(value);
                 if (translated && translated !== value.trim()) {
                     el.setAttribute(attr, translated);
@@ -6704,11 +6716,48 @@
         const lang = getCurrentLang();
         const nodesToProcess = pendingNodes;
         pendingNodes = [];
-        nodesToProcess.forEach((node) => {
-            if (node && node.isConnected) {
-                applyI18n(node, lang);
-                applyLiteralTranslations(node, lang);
+        const roots = nodesToProcess.filter((n) => n && n.isConnected && n instanceof HTMLElement);
+        if (!roots.length) return;
+
+        // دفعة ضخمة (إعادة بناء مديول) — ترجمة واحدة على القسم/الجسم بدل مئات الاستدعاءات
+        if (roots.length > 20) {
+            try {
+                const ptw = document.getElementById('ptw-section');
+                const heavy = roots.some((n) => n.id === 'ptw-section' || n.closest?.('#ptw-section') || n.classList?.contains('modal-overlay'));
+                if (heavy && ptw) {
+                    applyI18n(ptw, lang);
+                    roots.filter((n) => n.classList?.contains('modal-overlay')).forEach((m) => applyI18n(m, lang));
+                    return;
+                }
+                applyI18n(document.body, lang);
+            } catch (_e) { /* ignore */ }
+            return;
+        }
+
+        const skip = new Set();
+        for (let i = 0; i < roots.length; i++) {
+            for (let j = 0; j < roots.length; j++) {
+                if (i === j) continue;
+                if (roots[i].contains(roots[j])) skip.add(roots[j]);
             }
+        }
+        roots.forEach((node) => {
+            if (skip.has(node)) return;
+            try {
+                applyI18n(node, lang);
+                // PTW DOM / مودالات ضخمة — data-i18n يكفي؛ literal كان يجمّد عند الفتح
+                if (
+                    node.id === 'ptw-section'
+                    || node.closest?.('#ptw-section')
+                    || node.classList?.contains('modal-overlay')
+                    || node.closest?.('.modal-overlay')
+                    || node.getAttribute?.('data-no-literal-translate') != null
+                    || node.closest?.('[data-no-literal-translate]')
+                ) {
+                    return;
+                }
+                applyLiteralTranslations(node, lang);
+            } catch (_e) { /* ignore */ }
         });
     }
 

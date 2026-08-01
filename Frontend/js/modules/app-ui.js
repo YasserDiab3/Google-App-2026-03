@@ -7560,8 +7560,16 @@ window.UI = {
             : ((window.I18n && typeof window.I18n.applyI18n === 'function') ? window.I18n : null);
         if (i18nCore) {
             const sectionRoot = document.getElementById(`${sectionName}-section`) || document;
-            i18nCore.applyI18n(sectionRoot);
-            i18nCore.applyLiteralTranslations(sectionRoot);
+            // PTW: data-i18n فقط — applyLiteral على القسم الكامل كان يسبب تهنيج/تجمد
+            if (sectionName === 'ptw') {
+                if (sectionRoot && sectionRoot.setAttribute) {
+                    sectionRoot.setAttribute('data-no-literal-translate', '1');
+                }
+                i18nCore.applyI18n(sectionRoot);
+            } else {
+                i18nCore.applyI18n(sectionRoot);
+                i18nCore.applyLiteralTranslations(sectionRoot);
+            }
         }
     },
 

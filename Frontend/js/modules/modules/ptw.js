@@ -28,8 +28,8 @@ const PTW = {
             ? window.AppI18n
             : ((window.I18n && typeof window.I18n.applyI18n === 'function') ? window.I18n : null);
         if (!i18nCore) return;
+        // أداء: لا applyLiteralTranslations داخل PTW — DOM ضخم + نص عبر data-i18n/_t
         if (typeof i18nCore.applyI18n === 'function') i18nCore.applyI18n(target);
-        if (typeof i18nCore.applyLiteralTranslations === 'function') i18nCore.applyLiteralTranslations(target);
     },
 
     /** تأجيل i18n بعد Mutations — التطبيق المتزامن كان يجمّد الشاشة عند بناء أقسام/نماذج كبيرة */
@@ -127,23 +127,12 @@ const PTW = {
     },
 
     ensureI18nObservers(section) {
+        // أداء: لا MutationObserver محلي — كان يضاعف i18n عند كل innerHTML داخل PTW
         this._disconnectPtwI18nObservers();
-        this._ptwI18nActive = true;
-
-        if (section && typeof MutationObserver !== 'undefined') {
-            this._i18nSectionObserver = new MutationObserver((mutations) => {
-                if (!this._ptwI18nActive) return;
-                mutations.forEach((mutation) => {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node && node.nodeType === 1) this._queuePtwI18nNode(node);
-                    });
-                });
-            });
-            this._i18nSectionObserver.observe(section, { childList: true, subtree: true });
+        if (section && section.setAttribute) {
+            section.setAttribute('data-no-literal-translate', '1');
         }
-
-        // لا نراقب document.body هنا — AppI18n.observeDomForI18n يغطي المودالات.
-        // مراقبة body إضافية كانت تُضاعف applyI18n وتُبقي عملاً بعد مغادرة القسم.
+        this._ptwI18nActive = false;
         this._i18nBodyObserver = null;
     },
 
@@ -3114,8 +3103,13 @@ const PTW = {
             } finally {
                 this._refreshActiveTabAfterBackendSync();
                 this.updateKPIs();
+                // لا تعيد رسم Dashboard بالكامل بشكل متزامن — كان يسبب تهنيج بعد مزامنة PTW
                 if (typeof Dashboard !== 'undefined' && typeof Dashboard.renderUI === 'function') {
-                    try { Dashboard.renderUI(); } catch (_e) {}
+                    try {
+                        if (typeof requestIdleCallback === 'function') {
+                            requestIdleCallback(() => { try { Dashboard.renderUI(); } catch (_e2) {} }, { timeout: 2500 });
+                        }
+                    } catch (_e) {}
                 }
                 this._ptwBackendLoadPromise = null;
                 this._backendSyncStarted = false;
@@ -3169,9 +3163,15 @@ const PTW = {
                 }
             };
 
-            requestAnimationFrame(() => {
-                hydrateStats();
-            });
+            const scheduleStats = () => {
+                if (typeof requestIdleCallback === 'function') {
+                    requestIdleCallback(hydrateStats, { timeout: 900 });
+                } else {
+                    setTimeout(hydrateStats, 120);
+                }
+            };
+            if (typeof requestAnimationFrame === 'function') requestAnimationFrame(scheduleStats);
+            else scheduleStats();
         } catch (error) {
             Utils.safeWarn('⚠️ خطأ في تحميل القائمة:', error);
             permitsContent.innerHTML = `
@@ -3604,8 +3604,14 @@ const PTW = {
                 </div>
             </div>
         `;
-            this.applyModuleI18n(section);
+            if (section.setAttribute) section.setAttribute('data-no-literal-translate', '1');
             this.ensureI18nObservers(section);
+            // i18n خفيف مؤجّل — لا تُطبَّق literal على القسم بالكامل أثناء البناء
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(() => { try { this.applyModuleI18n(section); } catch (_e) { /* ignore */ } });
+            } else {
+                setTimeout(() => { try { this.applyModuleI18n(section); } catch (_e) { /* ignore */ } }, 0);
+            }
             this.formSettingsState = null;
             this.formSettingsEventsBound = false;
             this.setupEventListeners();
@@ -3616,18 +3622,13 @@ const PTW = {
             if (initialTab !== 'permits') {
                 this.switchTab(initialTab);
             }
-            const mountMap = () => this._mountMapShell();
-            if (typeof requestIdleCallback === 'function') {
-                requestIdleCallback(mountMap, { timeout: 1200 });
-            } else {
-                setTimeout(mountMap, 50);
-            }
-            // تحميل ثانوي — مزامنة الخلفية فوراً دون تأخير (50ms)
+            // لا تُبنى واجهة الخريطة إلا عند فتح تبويب الخريطة (_ensureMapTabDom)
+            // تحميل ثانوي مؤجّل — بعد استقرار الواجهة (تجنب تنافس مع الرسم الأول)
             this._deferredSyncTimer = setTimeout(() => {
                 this._startPtwBackendSync();
                 this._hydrateMapCoordinatesFromLocal();
-                this._scheduleMapCoordinatesBackgroundSync();
-            }, 50);
+                // إحداثيات الخريطة فقط عند الحاجة لاحقاً — لا مزامنة خلفية ثقيلة عند كل دخول
+            }, 600);
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
                 Utils.safeError('❌ خطأ في تحميل مديول PTW:', error);
@@ -3824,6 +3825,8 @@ const PTW = {
                     this._resetMapTabVisibility(mapContent);
                     this._ensureMapTabDom(mapContent);
                     this._prewarmLeafletLibrary();
+                    this._hydrateMapCoordinatesFromLocal();
+                    this._scheduleMapCoordinatesBackgroundSync();
 
                     if (this.mapInitTimeout) clearTimeout(this.mapInitTimeout);
                     this.mapInitTimeout = null;
