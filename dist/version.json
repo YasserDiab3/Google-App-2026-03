@@ -1,3 +1,13 @@
 {
-  "version": "1.0.1"
+  "version": "1.0.754",
+  "highlights": {
+    "ar": [
+      "تحسين الشكل البصري للقسم الثالث في نموذج تصريح العمل: صفوف مضغوطة، شرائح اختيارات، وألوان مميزة لكل نوع عمل.",
+      "نطاق CSS عبر .ptw-work-types-section فقط دون تغيير الحقول أو المنطق، مع دعم الطباعة والاستجابة."
+    ],
+    "en": [
+      "Polished PTW section-3 visuals: compact rows, checkbox chips, and per-type accent colors.",
+      "CSS scoped under .ptw-work-types-section only — no field/logic changes; print and responsive friendly."
+    ]
+  }
 }

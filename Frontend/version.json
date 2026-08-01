@@ -1,13 +1,13 @@
 {
-  "version": "1.0.752",
+  "version": "1.0.754",
   "highlights": {
     "ar": [
-      "كروت ملخص احترافية أعلى قسم المصرح لهم باعتماد تصاريح العمل (إجمالي، نشط، صلاحيات G/Y/X، مصانع، إدارات، أدوار اعتماد).",
-      "تصميم بطاقات إحصائيات بأسلوب إدارة المستخدمين مع تحديث فوري عند تحميل أو تصفية القائمة."
+      "تحسين الشكل البصري للقسم الثالث في نموذج تصريح العمل: صفوف مضغوطة، شرائح اختيارات، وألوان مميزة لكل نوع عمل.",
+      "نطاق CSS عبر .ptw-work-types-section فقط دون تغيير الحقول أو المنطق، مع دعم الطباعة والاستجابة."
     ],
     "en": [
-      "Professional summary cards above Issuing Authorities (total, active, G/Y/X permissions, plants, departments, approval roles).",
-      "User-management-style stats cards that refresh when the list loads or filters change."
+      "Polished PTW section-3 visuals: compact rows, checkbox chips, and per-type accent colors.",
+      "CSS scoped under .ptw-work-types-section only — no field/logic changes; print and responsive friendly."
     ]
   }
 }

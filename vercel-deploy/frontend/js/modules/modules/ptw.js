@@ -8432,8 +8432,16 @@ const PTW = {
             .manual-section-1 h3 { color: #1565C0; border-color: #2196F3; }
             .manual-section-2 { background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%); border-color: #009688; }
             .manual-section-2 h3 { color: #00695C; border-color: #009688; }
-            .manual-section-3 { background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); border-color: #9C27B0; }
-            .manual-section-3 h3 { color: #6A1B9A; border-color: #9C27B0; }
+            .manual-section-3,
+            .manual-section-3.ptw-work-types-section {
+                background: #f5f9fc;
+                border-color: #b8d0e6;
+            }
+            .manual-section-3 h3,
+            .manual-section-3.ptw-work-types-section h3 {
+                color: #003865;
+                border-color: #8fb4d4;
+            }
             .manual-section-4 { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-color: #FF9800; }
             .manual-section-4 h3 { color: #E65100; border-color: #FF9800; }
             .manual-section-5 { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-color: #4CAF50; }
@@ -10429,9 +10437,36 @@ const PTW = {
                 .manual-section-2 h3 { color: #00695C; border-color: #009688; }
                 .manual-section-2 h3 i { color: #00796B; background: rgba(0, 150, 136, 0.1); }
                 
-                .manual-section-3 { background: linear-gradient(135deg, #eef5fb 0%, #e3eef8 100%); border-color: #003865; }
-                .manual-section-3 h3 { color: #003865; border-color: #003865; }
-                .manual-section-3 h3 i { color: #004C8C; background: rgba(0, 56, 101, 0.08); }
+                .manual-section-3.ptw-work-types-section,
+                .ptw-work-types-section.manual-section-3 {
+                    background: #f5f9fc;
+                    border: 1px solid #b8d0e6;
+                    border-radius: 10px;
+                    box-shadow: none;
+                }
+                .ptw-work-types-section.manual-section-3 > h3,
+                .manual-section-3.ptw-work-types-section > h3 {
+                    color: #003865;
+                    border-color: #8fb4d4;
+                    margin-bottom: 8px;
+                    padding-bottom: 6px;
+                    font-size: 0.95rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .ptw-work-types-section.manual-section-3 > h3 i,
+                .manual-section-3.ptw-work-types-section > h3 i {
+                    color: #004C8C;
+                    background: rgba(0, 76, 140, 0.08);
+                    width: 1.6rem;
+                    height: 1.6rem;
+                    border-radius: 6px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 0.8rem;
+                }
                 
                 .manual-section-4 { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-color: #FF9800; }
                 .manual-section-4 h3 { color: #E65100; border-color: #FF9800; }
@@ -10502,183 +10537,229 @@ const PTW = {
                     font-weight: 600;
                     color: #333;
                 }
-                /* صفوف أنواع التصريح — نفس مقياس كروت القسم الرابع (p-3 / rounded-lg / font-medium) */
-                .ptw-work-type-hint {
+                /* القسم الثالث فقط — كل القواعد تحت .ptw-work-types-section */
+                .ptw-work-types-section {
+                    direction: rtl;
+                    background: #f5f9fc;
+                    border: 1px solid #b8d0e6;
+                    border-radius: 10px;
+                }
+                .ptw-work-types-section .ptw-work-type-hint {
                     display: inline-flex;
                     align-items: center;
-                    gap: 8px;
-                    margin: 0 0 12px;
-                    padding: 12px 14px;
+                    gap: 6px;
+                    margin: 0 0 8px;
+                    padding: 6px 10px;
                     background: #fff;
-                    border: 1px solid #e5e7eb;
-                    border-right: 3px solid #FFC72C;
-                    border-radius: 8px;
-                    color: #374151;
-                    font-size: 0.875rem;
+                    border: 1px solid #d4e4f2;
+                    border-right: 3px solid #5b8fb8;
+                    border-radius: 6px;
+                    color: #334155;
+                    font-size: 0.78rem;
                     font-weight: 500;
-                    line-height: 1.4;
+                    line-height: 1.35;
                 }
-                .ptw-work-type-hint i { color: #003865; font-size: 0.9rem; }
-                .ptw-work-type-stack,
-                .manual-section-3 .ptw-work-type-stack,
-                .ptw-section-3 .ptw-work-type-stack {
+                .ptw-work-types-section .ptw-work-type-hint i {
+                    color: #003865;
+                    font-size: 0.8rem;
+                }
+                .ptw-work-types-section .ptw-work-type-stack {
                     display: flex;
                     flex-direction: column;
-                    gap: 12px;
+                    gap: 6px;
                     width: 100%;
                 }
-                .ptw-work-type-row {
+                .ptw-work-types-section .ptw-work-type-row {
                     display: grid;
-                    grid-template-columns: minmax(168px, 210px) minmax(0, 1fr);
-                    gap: 0 12px;
+                    grid-template-columns: minmax(148px, 190px) minmax(0, 1fr);
+                    gap: 0 10px;
                     align-items: center;
-                    padding: 12px 14px;
+                    padding: 6px 10px;
                     background: #fff;
-                    border: 1px solid #e5e7eb;
+                    border: 1px solid #d9e6f2;
                     border-right: 3px solid #94a3b8;
-                    border-radius: 8px;
+                    border-radius: 6px;
                     min-width: 0;
-                    min-height: 48px;
+                    min-height: 36px;
                     box-sizing: border-box;
-                    transition: border-color 0.15s ease, background 0.15s ease;
+                    transition: border-color 0.12s ease, background 0.12s ease;
                 }
-                .ptw-work-type-row:hover { border-color: #fdba74; background: #fff7ed; }
-                .ptw-work-type-row.is-filled { box-shadow: inset 0 0 0 1px rgba(0, 56, 101, 0.08); }
-                .ptw-work-type-row__label {
+                .ptw-work-types-section .ptw-work-type-row:hover {
+                    border-color: #a8c5de;
+                    background: #fbfdff;
+                }
+                .ptw-work-types-section .ptw-work-type-row.is-filled {
+                    box-shadow: inset 0 0 0 1px rgba(0, 56, 101, 0.06);
+                }
+                .ptw-work-types-section .ptw-work-type-row__label {
                     display: flex;
                     align-items: center;
-                    gap: 10px;
+                    gap: 8px;
                     min-width: 0;
-                    padding-left: 12px;
-                    border-left: 1px solid #e5e7eb;
+                    padding-left: 10px;
+                    border-left: 1px solid #e2eaf2;
                     align-self: stretch;
                 }
-                .ptw-work-type-row__icon {
-                    width: 20px;
-                    height: 20px;
-                    border-radius: 4px;
+                .ptw-work-types-section .ptw-work-type-row__icon {
+                    width: 22px;
+                    height: 22px;
+                    border-radius: 5px;
                     display: inline-flex;
                     align-items: center;
                     justify-content: center;
                     flex-shrink: 0;
-                    font-size: 0.75rem;
+                    font-size: 0.7rem;
                 }
-                .ptw-work-type-row__name {
-                    font-weight: 600;
-                    font-size: 0.875rem;
-                    line-height: 1.4;
-                    color: #374151;
-                    font-family: 'Segoe UI', Tahoma, 'Noto Sans Arabic', Arial, sans-serif;
+                .ptw-work-types-section .ptw-work-type-row__name {
+                    font-weight: 700;
+                    font-size: 0.8rem;
+                    line-height: 1.3;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
                 }
-                .ptw-work-type-row__opts {
+                .ptw-work-types-section .ptw-work-type-row__opts {
                     display: flex;
                     flex-wrap: wrap;
-                    gap: 8px;
+                    gap: 5px;
                     align-items: center;
                     min-width: 0;
                 }
-                .ptw-work-type-row__opts--fields { gap: 8px; }
-                /* تمييز الأنواع — أسماء بلون النوع مع مقياس القسم الرابع */
-                .ptw-work-type-row[data-type="hot"] { border-right-color: #dc2626; background: linear-gradient(90deg, #fff 70%, #fef2f2 100%); }
-                .ptw-work-type-row[data-type="hot"] .ptw-work-type-row__name { color: #b91c1c; }
-                .ptw-work-type-row[data-type="hot"].is-filled { background: #fef2f2; border-color: #fecaca; }
-                .ptw-work-type-row[data-type="confined"] { border-right-color: #64748b; background: linear-gradient(90deg, #fff 70%, #f8fafc 100%); }
-                .ptw-work-type-row[data-type="confined"] .ptw-work-type-row__name { color: #334155; }
-                .ptw-work-type-row[data-type="confined"].is-filled { background: #f1f5f9; border-color: #cbd5e1; }
-                .ptw-work-type-row[data-type="height"] { border-right-color: #2563eb; background: linear-gradient(90deg, #fff 70%, #eff6ff 100%); }
-                .ptw-work-type-row[data-type="height"] .ptw-work-type-row__name { color: #1d4ed8; }
-                .ptw-work-type-row[data-type="height"].is-filled { background: #eff6ff; border-color: #bfdbfe; }
-                .ptw-work-type-row[data-type="excavation"] { border-right-color: #d97706; background: linear-gradient(90deg, #fff 70%, #fffbeb 100%); }
-                .ptw-work-type-row[data-type="excavation"] .ptw-work-type-row__name { color: #b45309; }
-                .ptw-work-type-row[data-type="excavation"].is-filled { background: #fffbeb; border-color: #fde68a; }
-                .ptw-work-type-row[data-type="electrical"] { border-right-color: #7c3aed; background: linear-gradient(90deg, #fff 70%, #f5f3ff 100%); }
-                .ptw-work-type-row[data-type="electrical"] .ptw-work-type-row__name { color: #6d28d9; }
-                .ptw-work-type-row[data-type="electrical"].is-filled { background: #f5f3ff; border-color: #ddd6fe; }
-                .ptw-work-type-row[data-type="cold"] { border-right-color: #0891b2; background: linear-gradient(90deg, #fff 70%, #ecfeff 100%); }
-                .ptw-work-type-row[data-type="cold"] .ptw-work-type-row__name { color: #0e7490; }
-                .ptw-work-type-row[data-type="cold"].is-filled { background: #ecfeff; border-color: #a5f3fc; }
-                .ptw-work-type-row[data-type="other"] { border-right-color: #003865; background: linear-gradient(90deg, #fff 70%, #eef5fb 100%); }
-                .ptw-work-type-row[data-type="other"] .ptw-work-type-row__name { color: #003865; }
-                .ptw-work-type-row[data-type="other"].is-filled { background: #eef5fb; border-color: #bfdbfe; }
-                .ptw-work-subopt,
-                .ptw-check-option.ptw-work-subopt {
+                .ptw-work-types-section .ptw-work-type-row__opts--fields { gap: 5px; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="hot"] { border-right-color: #dc2626; background: linear-gradient(270deg, #fff7f7 0%, #fff 55%); }
+                .ptw-work-types-section .ptw-work-type-row[data-type="hot"] .ptw-work-type-row__name { color: #b91c1c; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="hot"].is-filled { background: #fef2f2; border-color: #fecaca; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="confined"] { border-right-color: #64748b; background: linear-gradient(270deg, #f8fafc 0%, #fff 55%); }
+                .ptw-work-types-section .ptw-work-type-row[data-type="confined"] .ptw-work-type-row__name { color: #334155; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="confined"].is-filled { background: #f1f5f9; border-color: #cbd5e1; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="height"] { border-right-color: #2563eb; background: linear-gradient(270deg, #eff6ff 0%, #fff 55%); }
+                .ptw-work-types-section .ptw-work-type-row[data-type="height"] .ptw-work-type-row__name { color: #1d4ed8; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="height"].is-filled { background: #eff6ff; border-color: #bfdbfe; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="excavation"] { border-right-color: #d97706; background: linear-gradient(270deg, #fffbeb 0%, #fff 55%); }
+                .ptw-work-types-section .ptw-work-type-row[data-type="excavation"] .ptw-work-type-row__name { color: #b45309; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="excavation"].is-filled { background: #fffbeb; border-color: #fde68a; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="electrical"] { border-right-color: #7c3aed; background: linear-gradient(270deg, #f5f3ff 0%, #fff 55%); }
+                .ptw-work-types-section .ptw-work-type-row[data-type="electrical"] .ptw-work-type-row__name { color: #6d28d9; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="electrical"].is-filled { background: #f5f3ff; border-color: #ddd6fe; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="cold"] { border-right-color: #0891b2; background: linear-gradient(270deg, #ecfeff 0%, #fff 55%); }
+                .ptw-work-types-section .ptw-work-type-row[data-type="cold"] .ptw-work-type-row__name { color: #0e7490; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="cold"].is-filled { background: #ecfeff; border-color: #a5f3fc; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="other"] { border-right-color: #003865; background: linear-gradient(270deg, #eef5fb 0%, #fff 55%); }
+                .ptw-work-types-section .ptw-work-type-row[data-type="other"] .ptw-work-type-row__name { color: #003865; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="other"].is-filled { background: #eef5fb; border-color: #bfdbfe; }
+                .ptw-work-types-section .ptw-work-subopt,
+                .ptw-work-types-section .ptw-check-option.ptw-work-subopt,
+                .ptw-work-types-section .ptw-check-option {
                     display: inline-flex !important;
                     align-items: center;
-                    gap: 8px;
+                    gap: 5px;
                     margin: 0 !important;
-                    padding: 8px 12px !important;
-                    border: 1px solid #e5e7eb !important;
-                    border-radius: 8px !important;
+                    padding: 3px 8px !important;
+                    height: 28px;
+                    border: 1px solid #d5e2ee !important;
+                    border-radius: 999px !important;
                     background: #fff !important;
-                    font-size: 0.875rem !important;
+                    font-size: 0.75rem !important;
                     font-weight: 500;
                     color: #374151;
                     cursor: pointer;
                     white-space: nowrap;
-                    line-height: 1.4;
+                    line-height: 1.2;
+                    box-sizing: border-box;
                 }
-                .ptw-work-subopt:hover,
-                .ptw-check-option.ptw-work-subopt:hover {
-                    border-color: #fdba74 !important;
-                    background: #fff7ed !important;
+                .ptw-work-types-section .ptw-work-subopt:hover,
+                .ptw-work-types-section .ptw-check-option.ptw-work-subopt:hover {
+                    border-color: #8fb4d4 !important;
+                    background: #f0f7fc !important;
                 }
-                .ptw-work-subopt:has(input:checked),
-                .ptw-check-option.ptw-work-subopt:has(input:checked) {
+                .ptw-work-types-section .ptw-work-subopt:has(input:checked),
+                .ptw-work-types-section .ptw-check-option.ptw-work-subopt:has(input:checked),
+                .ptw-work-types-section .ptw-check-option:has(input:checked) {
                     border-color: #003865 !important;
                     background: #003865 !important;
                     color: #fff !important;
                 }
-                .ptw-work-subopt:has(input:checked) span,
-                .ptw-check-option.ptw-work-subopt:has(input:checked) span { color: #fff !important; }
-                .ptw-work-type-row[data-type="hot"] .ptw-work-subopt:has(input:checked) { background: #dc2626 !important; border-color: #dc2626 !important; }
-                .ptw-work-type-row[data-type="confined"] .ptw-work-subopt:has(input:checked) { background: #475569 !important; border-color: #475569 !important; }
-                .ptw-work-type-row[data-type="height"] .ptw-work-subopt:has(input:checked) { background: #2563eb !important; border-color: #2563eb !important; }
-                .ptw-work-type-row[data-type="excavation"] .ptw-work-subopt:has(input:checked) { background: #d97706 !important; border-color: #d97706 !important; }
-                .ptw-work-type-row[data-type="electrical"] .ptw-work-subopt:has(input:checked),
-                .ptw-work-type-row[data-type="electrical"] .ptw-check-option:has(input:checked) { background: #7c3aed !important; border-color: #7c3aed !important; }
-                .ptw-work-type-row[data-type="cold"] .ptw-work-subopt:has(input:checked),
-                .ptw-work-type-row[data-type="cold"] .ptw-check-option:has(input:checked) { background: #0891b2 !important; border-color: #0891b2 !important; }
-                .ptw-work-type-row[data-type="other"] .ptw-work-subopt:has(input:checked),
-                .ptw-work-type-row[data-type="other"] .ptw-check-option:has(input:checked) { background: #003865 !important; border-color: #003865 !important; }
-                .ptw-work-subopt input,
-                .ptw-check-option.ptw-work-subopt input {
+                .ptw-work-types-section .ptw-work-subopt:has(input:checked) span,
+                .ptw-work-types-section .ptw-check-option:has(input:checked) span { color: #fff !important; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="hot"] .ptw-work-subopt:has(input:checked),
+                .ptw-work-types-section .ptw-work-type-row[data-type="hot"] .ptw-check-option:has(input:checked) { background: #dc2626 !important; border-color: #dc2626 !important; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="confined"] .ptw-work-subopt:has(input:checked),
+                .ptw-work-types-section .ptw-work-type-row[data-type="confined"] .ptw-check-option:has(input:checked) { background: #475569 !important; border-color: #475569 !important; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="height"] .ptw-work-subopt:has(input:checked),
+                .ptw-work-types-section .ptw-work-type-row[data-type="height"] .ptw-check-option:has(input:checked) { background: #2563eb !important; border-color: #2563eb !important; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="excavation"] .ptw-work-subopt:has(input:checked),
+                .ptw-work-types-section .ptw-work-type-row[data-type="excavation"] .ptw-check-option:has(input:checked) { background: #d97706 !important; border-color: #d97706 !important; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="electrical"] .ptw-work-subopt:has(input:checked),
+                .ptw-work-types-section .ptw-work-type-row[data-type="electrical"] .ptw-check-option:has(input:checked) { background: #7c3aed !important; border-color: #7c3aed !important; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="cold"] .ptw-work-subopt:has(input:checked),
+                .ptw-work-types-section .ptw-work-type-row[data-type="cold"] .ptw-check-option:has(input:checked) { background: #0891b2 !important; border-color: #0891b2 !important; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="other"] .ptw-work-subopt:has(input:checked),
+                .ptw-work-types-section .ptw-work-type-row[data-type="other"] .ptw-check-option:has(input:checked) { background: #003865 !important; border-color: #003865 !important; }
+                .ptw-work-types-section .ptw-work-subopt input,
+                .ptw-work-types-section .ptw-check-option input {
                     margin: 0 !important;
-                    width: 1.25rem;
-                    height: 1.25rem;
+                    width: 0.9rem;
+                    height: 0.9rem;
                     flex-shrink: 0;
-                    accent-color: #ea580c;
+                    accent-color: #003865;
                 }
-                .ptw-work-subopt-input {
+                .ptw-work-types-section .ptw-work-subopt-input {
                     width: auto !important;
-                    min-width: 88px;
-                    max-width: 160px;
-                    height: 2.5rem !important;
-                    padding: 8px 12px !important;
-                    font-size: 0.875rem !important;
+                    min-width: 72px;
+                    max-width: 140px;
+                    height: 28px !important;
+                    padding: 2px 8px !important;
+                    font-size: 0.75rem !important;
                     font-weight: 500;
-                    border-radius: 8px !important;
-                    border: 1px solid #e5e7eb !important;
+                    border-radius: 6px !important;
+                    border: 1px solid #d5e2ee !important;
                     background: #fff !important;
                     color: #374151;
                     box-sizing: border-box;
                 }
-                .ptw-work-subopt-input:focus {
+                .ptw-work-types-section .ptw-work-subopt-input:focus {
                     outline: none;
-                    border-color: #fb923c !important;
-                    box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.2);
+                    border-color: #5b8fb8 !important;
+                    box-shadow: 0 0 0 2px rgba(91, 143, 184, 0.2);
                 }
-                .ptw-work-subopt-input--wide { min-width: 180px; max-width: 320px; flex: 1 1 200px; height: 2.5rem !important; }
+                .ptw-work-types-section .ptw-work-subopt-input--wide {
+                    min-width: 160px;
+                    max-width: 280px;
+                    flex: 1 1 180px;
+                    height: 28px !important;
+                }
                 @media (max-width: 700px) {
-                    .ptw-work-type-row {
+                    .ptw-work-types-section .ptw-work-type-row {
                         grid-template-columns: 1fr;
                         align-items: stretch;
-                        gap: 10px;
+                        gap: 6px;
                     }
-                    .ptw-work-type-row__label {
+                    .ptw-work-types-section .ptw-work-type-row__label {
                         padding-left: 0;
                         border-left: none;
-                        padding-bottom: 8px;
-                        border-bottom: 1px solid #e5e7eb;
+                        padding-bottom: 4px;
+                        border-bottom: 1px solid #e2eaf2;
+                    }
+                }
+                @media print {
+                    .ptw-work-types-section {
+                        background: #fff !important;
+                        border-color: #999 !important;
+                        box-shadow: none !important;
+                        break-inside: avoid;
+                    }
+                    .ptw-work-types-section .ptw-work-type-row {
+                        background: #fff !important;
+                        box-shadow: none !important;
+                        border-color: #bbb !important;
+                        min-height: 0;
+                        padding: 4px 8px;
+                    }
+                    .ptw-work-types-section .ptw-work-subopt,
+                    .ptw-work-types-section .ptw-check-option {
+                        border-radius: 4px !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
                     }
                 }
                 .manual-work-type-inline-panel { display: none !important; }
@@ -11426,7 +11507,7 @@ const PTW = {
                         </div>
 
                         <!-- القسم الثالث: أنواع التصريح عمودياً + فرعيات بتشك بوكس على اليسار -->
-                        <div class="ptw-manual-form-section manual-section-3">
+                        <div class="ptw-manual-form-section manual-section-3 ptw-work-types-section">
                             <h3><i class="fas fa-clipboard-check"></i><span>القسم الثالث : تحديد نوع / طبيعة الأعمال والعناصر التفصيلية لتنفيذ العملية</span></h3>
                             <p class="ptw-work-type-hint">
                                 <i class="fas fa-layer-group" aria-hidden="true"></i>
@@ -14946,82 +15027,117 @@ const PTW = {
                 .ptw-section-2 h3 { color: #00695C; border-color: #009688; }
                 .ptw-section-2 h3 i { color: #00796B; background: rgba(0, 150, 136, 0.1); }
                 
-                .ptw-section-3 { background: linear-gradient(135deg, #eef5fb 0%, #e3eef8 100%); border-color: #003865; }
-                .ptw-section-3 h3 { color: #003865; border-color: #003865; }
-                .ptw-section-3 h3 i { color: #004C8C; background: rgba(0, 56, 101, 0.08); }
-                .ptw-section-3 .ptw-work-type-hint {
-                    display: inline-flex; align-items: center; gap: 6px; margin: 0 0 8px; padding: 5px 10px;
-                    background: #fff; border: 1px solid #dbe3ee; border-right: 3px solid #FFC72C; border-radius: 8px;
-                    color: #475569; font-size: 0.75rem; font-weight: 600; line-height: 1.3;
+                .ptw-section-3.ptw-work-types-section,
+                .ptw-work-types-section.ptw-section-3 {
+                    background: #f5f9fc;
+                    border: 1px solid #b8d0e6;
+                    border-radius: 10px;
+                    box-shadow: none;
                 }
-                .ptw-section-3 .ptw-work-type-hint i { color: #003865; }
-                .ptw-section-3 .ptw-work-type-stack { display: flex; flex-direction: column; gap: 5px; width: 100%; }
-                .ptw-section-3 .ptw-work-type-row {
-                    display: grid; grid-template-columns: minmax(150px, 190px) minmax(0, 1fr); gap: 0 10px;
-                    align-items: center; padding: 5px 8px 5px 10px; background: #fff; border: 1px solid #e2e8f0;
-                    border-right: 3px solid #94a3b8; border-radius: 8px; min-width: 0;
+                .ptw-work-types-section.ptw-section-3 > h3,
+                .ptw-section-3.ptw-work-types-section > h3 {
+                    color: #003865;
+                    border-color: #8fb4d4;
+                    margin-bottom: 8px;
+                    padding-bottom: 6px;
+                    font-size: 0.95rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
                 }
-                .ptw-section-3 .ptw-work-type-row__label {
-                    display: flex; align-items: center; gap: 8px; min-width: 0; padding-left: 8px;
-                    border-left: 1px solid #e2e8f0; align-self: stretch;
+                .ptw-work-types-section.ptw-section-3 > h3 i,
+                .ptw-section-3.ptw-work-types-section > h3 i {
+                    color: #004C8C;
+                    background: rgba(0, 76, 140, 0.08);
+                    width: 1.6rem;
+                    height: 1.6rem;
+                    border-radius: 6px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 0.8rem;
                 }
-                .ptw-section-3 .ptw-work-type-row__icon {
-                    width: 28px; height: 28px; border-radius: 7px;
-                    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.78rem;
+                /* أنماط صفوف أنواع العمل للنموذج التلقائي — نفس نطاق .ptw-work-types-section */
+                .ptw-work-types-section .ptw-work-type-hint {
+                    display: inline-flex; align-items: center; gap: 6px; margin: 0 0 8px; padding: 6px 10px;
+                    background: #fff; border: 1px solid #d4e4f2; border-right: 3px solid #5b8fb8; border-radius: 6px;
+                    color: #334155; font-size: 0.78rem; font-weight: 500; line-height: 1.35;
                 }
-                .ptw-section-3 .ptw-work-type-row__name {
-                    font-weight: 800; font-size: 0.88rem; line-height: 1.25; color: #0f172a;
+                .ptw-work-types-section .ptw-work-type-hint i { color: #003865; }
+                .ptw-work-types-section .ptw-work-type-stack { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+                .ptw-work-types-section .ptw-work-type-row {
+                    display: grid; grid-template-columns: minmax(148px, 190px) minmax(0, 1fr); gap: 0 10px;
+                    align-items: center; padding: 6px 10px; background: #fff; border: 1px solid #d9e6f2;
+                    border-right: 3px solid #94a3b8; border-radius: 6px; min-width: 0; min-height: 36px; box-sizing: border-box;
                 }
-                .ptw-section-3 .ptw-work-type-row__opts { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-width: 0; }
-                .ptw-section-3 .ptw-work-type-row[data-type="hot"] { border-right-color: #dc2626; background: linear-gradient(90deg, #fff 62%, #fef2f2 100%); }
-                .ptw-section-3 .ptw-work-type-row[data-type="hot"] .ptw-work-type-row__name { color: #b91c1c; }
-                .ptw-section-3 .ptw-work-type-row[data-type="confined"] { border-right-color: #64748b; background: linear-gradient(90deg, #fff 62%, #f8fafc 100%); }
-                .ptw-section-3 .ptw-work-type-row[data-type="confined"] .ptw-work-type-row__name { color: #334155; }
-                .ptw-section-3 .ptw-work-type-row[data-type="height"] { border-right-color: #2563eb; background: linear-gradient(90deg, #fff 62%, #eff6ff 100%); }
-                .ptw-section-3 .ptw-work-type-row[data-type="height"] .ptw-work-type-row__name { color: #1d4ed8; }
-                .ptw-section-3 .ptw-work-type-row[data-type="excavation"] { border-right-color: #d97706; background: linear-gradient(90deg, #fff 62%, #fffbeb 100%); }
-                .ptw-section-3 .ptw-work-type-row[data-type="excavation"] .ptw-work-type-row__name { color: #b45309; }
-                .ptw-section-3 .ptw-work-type-row[data-type="electrical"] { border-right-color: #7c3aed; background: linear-gradient(90deg, #fff 62%, #f5f3ff 100%); }
-                .ptw-section-3 .ptw-work-type-row[data-type="electrical"] .ptw-work-type-row__name { color: #6d28d9; }
-                .ptw-section-3 .ptw-work-type-row[data-type="cold"] { border-right-color: #0891b2; background: linear-gradient(90deg, #fff 62%, #ecfeff 100%); }
-                .ptw-section-3 .ptw-work-type-row[data-type="cold"] .ptw-work-type-row__name { color: #0e7490; }
-                .ptw-section-3 .ptw-work-type-row[data-type="other"] { border-right-color: #003865; background: linear-gradient(90deg, #fff 62%, #eef5fb 100%); }
-                .ptw-section-3 .ptw-work-type-row[data-type="other"] .ptw-work-type-row__name { color: #003865; }
-                .ptw-section-3 .ptw-work-subopt,
-                .ptw-section-3 .ptw-check-option {
-                    display: inline-flex !important; align-items: center; gap: 4px; margin: 0 !important;
-                    padding: 3px 7px !important; border: 1px solid #e2e8f0 !important; border-radius: 6px !important;
-                    background: #fff !important; font-size: 0.72rem !important; font-weight: 600; color: #475569; white-space: nowrap;
+                .ptw-work-types-section .ptw-work-type-row:hover { border-color: #a8c5de; background: #fbfdff; }
+                .ptw-work-types-section .ptw-work-type-row__label {
+                    display: flex; align-items: center; gap: 8px; min-width: 0; padding-left: 10px;
+                    border-left: 1px solid #e2eaf2; align-self: stretch;
                 }
-                .ptw-section-3 .ptw-work-subopt:has(input:checked),
-                .ptw-section-3 .ptw-check-option:has(input:checked) {
+                .ptw-work-types-section .ptw-work-type-row__icon {
+                    width: 22px; height: 22px; border-radius: 5px;
+                    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.7rem;
+                }
+                .ptw-work-types-section .ptw-work-type-row__name {
+                    font-weight: 700; font-size: 0.8rem; line-height: 1.3; white-space: nowrap;
+                    overflow: hidden; text-overflow: ellipsis;
+                }
+                .ptw-work-types-section .ptw-work-type-row__opts { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; min-width: 0; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="hot"] { border-right-color: #dc2626; background: linear-gradient(270deg, #fff7f7 0%, #fff 55%); }
+                .ptw-work-types-section .ptw-work-type-row[data-type="hot"] .ptw-work-type-row__name { color: #b91c1c; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="confined"] { border-right-color: #64748b; background: linear-gradient(270deg, #f8fafc 0%, #fff 55%); }
+                .ptw-work-types-section .ptw-work-type-row[data-type="confined"] .ptw-work-type-row__name { color: #334155; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="height"] { border-right-color: #2563eb; background: linear-gradient(270deg, #eff6ff 0%, #fff 55%); }
+                .ptw-work-types-section .ptw-work-type-row[data-type="height"] .ptw-work-type-row__name { color: #1d4ed8; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="excavation"] { border-right-color: #d97706; background: linear-gradient(270deg, #fffbeb 0%, #fff 55%); }
+                .ptw-work-types-section .ptw-work-type-row[data-type="excavation"] .ptw-work-type-row__name { color: #b45309; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="electrical"] { border-right-color: #7c3aed; background: linear-gradient(270deg, #f5f3ff 0%, #fff 55%); }
+                .ptw-work-types-section .ptw-work-type-row[data-type="electrical"] .ptw-work-type-row__name { color: #6d28d9; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="cold"] { border-right-color: #0891b2; background: linear-gradient(270deg, #ecfeff 0%, #fff 55%); }
+                .ptw-work-types-section .ptw-work-type-row[data-type="cold"] .ptw-work-type-row__name { color: #0e7490; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="other"] { border-right-color: #003865; background: linear-gradient(270deg, #eef5fb 0%, #fff 55%); }
+                .ptw-work-types-section .ptw-work-type-row[data-type="other"] .ptw-work-type-row__name { color: #003865; }
+                .ptw-work-types-section .ptw-work-subopt,
+                .ptw-work-types-section .ptw-check-option {
+                    display: inline-flex !important; align-items: center; gap: 5px; margin: 0 !important;
+                    padding: 3px 8px !important; height: 28px; border: 1px solid #d5e2ee !important; border-radius: 999px !important;
+                    background: #fff !important; font-size: 0.75rem !important; font-weight: 500; color: #374151; white-space: nowrap;
+                    box-sizing: border-box;
+                }
+                .ptw-work-types-section .ptw-work-subopt:has(input:checked),
+                .ptw-work-types-section .ptw-check-option:has(input:checked) {
                     background: #003865 !important; border-color: #003865 !important; color: #fff !important;
                 }
-                .ptw-section-3 .ptw-work-type-row[data-type="hot"] .ptw-work-subopt:has(input:checked),
-                .ptw-section-3 .ptw-work-type-row[data-type="hot"] .ptw-check-option:has(input:checked) { background: #dc2626 !important; border-color: #dc2626 !important; }
-                .ptw-section-3 .ptw-work-type-row[data-type="confined"] .ptw-work-subopt:has(input:checked),
-                .ptw-section-3 .ptw-work-type-row[data-type="confined"] .ptw-check-option:has(input:checked) { background: #475569 !important; border-color: #475569 !important; }
-                .ptw-section-3 .ptw-work-type-row[data-type="height"] .ptw-work-subopt:has(input:checked),
-                .ptw-section-3 .ptw-work-type-row[data-type="height"] .ptw-check-option:has(input:checked) { background: #2563eb !important; border-color: #2563eb !important; }
-                .ptw-section-3 .ptw-work-type-row[data-type="excavation"] .ptw-work-subopt:has(input:checked),
-                .ptw-section-3 .ptw-work-type-row[data-type="excavation"] .ptw-check-option:has(input:checked) { background: #d97706 !important; border-color: #d97706 !important; }
-                .ptw-section-3 .ptw-work-type-row[data-type="electrical"] .ptw-work-subopt:has(input:checked),
-                .ptw-section-3 .ptw-work-type-row[data-type="electrical"] .ptw-check-option:has(input:checked) { background: #7c3aed !important; border-color: #7c3aed !important; }
-                .ptw-section-3 .ptw-work-type-row[data-type="cold"] .ptw-work-subopt:has(input:checked),
-                .ptw-section-3 .ptw-work-type-row[data-type="cold"] .ptw-check-option:has(input:checked) { background: #0891b2 !important; border-color: #0891b2 !important; }
-                .ptw-section-3 .ptw-work-subopt input,
-                .ptw-section-3 .ptw-check-option input { margin: 0 !important; width: 12px; height: 12px; accent-color: #FFC72C; }
-                .ptw-section-3 .ptw-work-subopt-input {
-                    width: auto !important; min-width: 72px; max-width: 140px; height: 26px !important;
-                    padding: 2px 7px !important; font-size: 0.72rem !important; border-radius: 6px !important;
-                    border: 1px solid #e2e8f0 !important;
+                .ptw-work-types-section .ptw-work-type-row[data-type="hot"] .ptw-work-subopt:has(input:checked),
+                .ptw-work-types-section .ptw-work-type-row[data-type="hot"] .ptw-check-option:has(input:checked) { background: #dc2626 !important; border-color: #dc2626 !important; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="confined"] .ptw-work-subopt:has(input:checked),
+                .ptw-work-types-section .ptw-work-type-row[data-type="confined"] .ptw-check-option:has(input:checked) { background: #475569 !important; border-color: #475569 !important; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="height"] .ptw-work-subopt:has(input:checked),
+                .ptw-work-types-section .ptw-work-type-row[data-type="height"] .ptw-check-option:has(input:checked) { background: #2563eb !important; border-color: #2563eb !important; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="excavation"] .ptw-work-subopt:has(input:checked),
+                .ptw-work-types-section .ptw-work-type-row[data-type="excavation"] .ptw-check-option:has(input:checked) { background: #d97706 !important; border-color: #d97706 !important; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="electrical"] .ptw-work-subopt:has(input:checked),
+                .ptw-work-types-section .ptw-work-type-row[data-type="electrical"] .ptw-check-option:has(input:checked) { background: #7c3aed !important; border-color: #7c3aed !important; }
+                .ptw-work-types-section .ptw-work-type-row[data-type="cold"] .ptw-work-subopt:has(input:checked),
+                .ptw-work-types-section .ptw-work-type-row[data-type="cold"] .ptw-check-option:has(input:checked) { background: #0891b2 !important; border-color: #0891b2 !important; }
+                .ptw-work-types-section .ptw-work-subopt input,
+                .ptw-work-types-section .ptw-check-option input { margin: 0 !important; width: 0.9rem; height: 0.9rem; accent-color: #003865; }
+                .ptw-work-types-section .ptw-work-subopt-input {
+                    width: auto !important; min-width: 72px; max-width: 140px; height: 28px !important;
+                    padding: 2px 8px !important; font-size: 0.75rem !important; border-radius: 6px !important;
+                    border: 1px solid #d5e2ee !important; box-sizing: border-box;
                 }
-                .ptw-section-3 .ptw-work-subopt-input--wide { min-width: 140px; max-width: 260px; flex: 1 1 160px; }
+                .ptw-work-types-section .ptw-work-subopt-input--wide { min-width: 160px; max-width: 280px; flex: 1 1 180px; height: 28px !important; }
                 @media (max-width: 700px) {
-                    .ptw-section-3 .ptw-work-type-row { grid-template-columns: 1fr; gap: 6px; }
-                    .ptw-section-3 .ptw-work-type-row__label {
-                        padding-left: 0; border-left: none; padding-bottom: 5px; border-bottom: 1px solid #e2e8f0;
+                    .ptw-work-types-section .ptw-work-type-row { grid-template-columns: 1fr; gap: 6px; }
+                    .ptw-work-types-section .ptw-work-type-row__label {
+                        padding-left: 0; border-left: none; padding-bottom: 4px; border-bottom: 1px solid #e2eaf2;
                     }
+                }
+                @media print {
+                    .ptw-work-types-section { background: #fff !important; border-color: #999 !important; box-shadow: none !important; }
+                    .ptw-work-types-section .ptw-work-type-row { background: #fff !important; box-shadow: none !important; border-color: #bbb !important; padding: 4px 8px; }
                 }
                 
                 .ptw-section-4 { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-color: #FF9800; }
@@ -15430,7 +15546,7 @@ const PTW = {
                         </div>
 
                         <!-- القسم الثالث: طبيعة الأعمال — صفوف عمودية + فرعيات يسار -->
-                        <div class="ptw-form-section ptw-section-3">
+                        <div class="ptw-form-section ptw-section-3 ptw-work-types-section">
                             <h3>
                                 <i class="fas fa-clipboard-check"></i>
                                 <span>القسم الثالث : تحديد نوع / طبيعة الأعمال والعناصر التفصيلية لتنفيذ العملية</span>
