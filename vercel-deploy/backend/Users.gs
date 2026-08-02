@@ -965,6 +965,13 @@ function loginUser(email, password) {
             return { success: false, message: 'بيانات الاعتماد غير صحيحة' };
         }
 
+        // بعد كلمة مرور صحيحة: ارفع قفل MFA الناتج عن محاولات فاشلة سابقة (رمز/خادم)
+        if (typeof clearMfaLockAfterPasswordOk_ === 'function') {
+            clearMfaLockAfterPasswordOk_(e);
+        } else if (typeof clearMfaFailures_ === 'function') {
+            clearMfaFailures_(e);
+        }
+
         // تحديث الـ Hash تلقائياً إذا لزم الأمر
         if (needsHashUpdate) {
             const newHash = hashPassword(p);

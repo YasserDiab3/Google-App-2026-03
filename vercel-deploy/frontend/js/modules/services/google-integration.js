@@ -1257,10 +1257,17 @@ const GoogleIntegration = {
 
             let result;
             try {
+                const trimmedText = resultText.trim();
+                if (trimmedText.charAt(0) === '<' || /^<!DOCTYPE/i.test(trimmedText) || /^<html/i.test(trimmedText)) {
+                    throw new Error(
+                        'الخادم أعاد صفحة HTML بدل JSON (غالباً نشر Apps Script أو انتهاء مهلة التنفيذ).\n' +
+                        'حدّث نشر Web App (/exec) بعد clasp push، ثم أعد المحاولة.'
+                    );
+                }
                 result = JSON.parse(resultText);
             } catch (e) {
-                // التحقق من هل هو e
-                throw new Error(`فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو resultText: ${resultText.substring(0, 200)}`);
+                if (e && e.message && e.message.includes('HTML بدل JSON')) throw e;
+                throw new Error(`استجابة غير صالحة من الخادم: ${resultText.substring(0, 160)}`);
             }
 
             if (!result || typeof result !== 'object') {

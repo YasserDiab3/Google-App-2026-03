@@ -597,17 +597,17 @@ window.Auth = {
             return { success: false, message: errorMessage };
         }
 
-        // 🔒 قبل أي تحميل محلي: عزل كاش الحساب السابق عن حساب محاولة الدخول
+        // 🔒 عزل كاش سريع قبل الدخول — لا ننتظر ثوانٍ طويلة (الخادم مصدر المصادقة)
         if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.purgeIfUserChanged === 'function') {
             window.DataManager.purgeIfUserChanged(email);
             AppState._loginPurgeEmail = email;
-            if (typeof window.DataManager.ensurePurgeSettledBeforeLoad === 'function') {
-                const settled = await window.DataManager.ensurePurgeSettledBeforeLoad(4000);
-                if (!settled && typeof Utils !== 'undefined' && Utils.safeWarn) {
-                    Utils.safeWarn('⚠️ تفريغ الكاش لم يكتمل قبل الدخول — المتابعة من الخادم فقط');
-                }
-            } else if (typeof window.DataManager.awaitLastPurge === 'function') {
-                await window.DataManager.awaitLastPurge(4000);
+            if (typeof window.DataManager.awaitLastPurge === 'function') {
+                try {
+                    await Promise.race([
+                        window.DataManager.awaitLastPurge(800),
+                        new Promise((resolve) => setTimeout(() => resolve(true), 800))
+                    ]);
+                } catch (_p) { /* ignore */ }
             }
         }
 
@@ -644,7 +644,13 @@ window.Auth = {
                 Utils.safeLog('🔒 محاولة تسجيل الدخول عبر الخادم...');
                 loginResult = await GoogleIntegration.sendRequest({
                     action: 'login',
-                    data: { email, password, __timeoutMs: 25000, __highPriority: true }
+                    data: {
+                        email,
+                        password,
+                        __timeoutMs: 45000,
+                        __highPriority: true,
+                        __allowStructuredFailure: true
+                    }
                 });
 
                 if (loginResult && loginResult.success) {

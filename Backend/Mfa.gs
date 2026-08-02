@@ -6,7 +6,8 @@ var MFA_BASE32_CHARS_ = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 var MFA_CHALLENGE_TTL_SEC_ = 300;
 var MFA_ENROLL_TTL_SEC_ = 600;
 var MFA_MAX_ATTEMPTS_ = 5;
-var MFA_LOCKOUT_SEC_ = 900;
+/** قفل مؤقت بعد محاولات فاشلة (ثوانٍ) — قصير لأن فشلاً سابقاً بسبب خطأ خادم كان يرفع العداد */
+var MFA_LOCKOUT_SEC_ = 180;
 /** نافذة TOTP عند الدخول (± خطوات × 30ث) — أوسع قليلاً لتسامح انحراف ساعة الخادم */
 var MFA_TOTP_WINDOW_ = 3;
 var MFA_ENROLL_TOTP_WINDOW_ = 5;
@@ -329,7 +330,11 @@ function checkMfaRateLimit_(email) {
     var lockKey = 'mfa_lock_' + e;
     var locked = cache.get(lockKey);
     if (locked) {
-        return { ok: false, message: 'تم قفل المصادقة الثنائية مؤقتاً بسبب محاولات فاشلة متعددة. حاول لاحقاً.' };
+        return {
+            ok: false,
+            message: 'تم قفل المصادقة الثنائية مؤقتاً بسبب محاولات فاشلة متعددة. سجّل الدخول بكلمة المرور مجدداً بعد دقائق قليلة، أو انتظر انتهاء القفل.',
+            errorCode: 'MFA_LOCKED'
+        };
     }
     return { ok: true };
 }
@@ -360,6 +365,15 @@ function clearMfaFailures_(email) {
     var cache = CacheService.getScriptCache();
     cache.remove('mfa_fail_' + e);
     cache.remove('mfa_lock_' + e);
+}
+
+/**
+ * رفع قفل MFA بعد إثبات كلمة المرور الصحيحة (يمنع حظر دائم بسبب أخطاء سابقة في التحقق).
+ */
+function clearMfaLockAfterPasswordOk_(email) {
+    try {
+        if (typeof clearMfaFailures_ === 'function') clearMfaFailures_(email);
+    } catch (_e) { /* ignore */ }
 }
 
 function storeMfaEnrollmentPending_(email, secret) {
