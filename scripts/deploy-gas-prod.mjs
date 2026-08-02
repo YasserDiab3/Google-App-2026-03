@@ -9,10 +9,12 @@
  *   node scripts/deploy-gas-prod.mjs "وصف النسخة"
  */
 
-const { execSync } = require('child_process');
-const path = require('path');
-const https = require('https');
+import { execSync } from 'child_process';
+import path from 'path';
+import https from 'https';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const BACKEND = path.join(ROOT, 'Backend');
 const PROD_DEPLOYMENT_ID = 'AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ';
