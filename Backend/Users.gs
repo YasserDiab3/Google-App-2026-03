@@ -691,8 +691,9 @@ function getAuthUserRowByEmail_(email, meta) {
     var emailCol = headers.indexOf('email');
     if (emailCol === -1) return null;
 
-    // نفس نمط المشروع: getRange(startRow, startCol, endRow, endCol) — عمود email فقط
-    var emails = sheet.getRange(2, emailCol + 1, lastRow, emailCol + 1).getValues();
+    // نفس نمط المشروع: getRange(startRow, startCol, numRows, numColumns) — عمود email فقط
+    var numRows = Math.max(1, lastRow - 1);
+    var emails = sheet.getRange(2, emailCol + 1, numRows, 1).getValues();
     var rowIndex = -1;
     for (var i = 0; i < emails.length; i++) {
         if (normalizeSheetScalarField_(emails[i][0]).toLowerCase() === e) {
@@ -704,7 +705,7 @@ function getAuthUserRowByEmail_(email, meta) {
     meta.scanned = true;
     if (rowIndex === -1) return null;
 
-    var row = sheet.getRange(rowIndex, 1, rowIndex, lastCol).getValues()[0];
+    var row = sheet.getRange(rowIndex, 1, 1, lastCol).getValues()[0];
     var rec = {};
     for (var c = 0; c < headers.length; c++) {
         var h = headers[c];

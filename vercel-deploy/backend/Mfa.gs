@@ -170,6 +170,11 @@ function encryptMfaSecret_(plain) {
 function decryptMfaSecret_(encoded) {
     var enc = String(encoded || '').trim();
     if (!enc) return '';
+    var cleanEnc = enc.toUpperCase().replace(/\s/g, '');
+    // إذا كان السر مخزناً أساساً بنص Base32 صريح غير مشفّر (16–64 حرفاً من A-Z و 2-7)
+    if (/^[A-Z2-7]{16,64}$/.test(cleanEnc)) {
+        return cleanEnc;
+    }
     try {
         var key = ensureMfaEncryptionKey_();
         var bytes = Utilities.base64Decode(enc);
@@ -178,11 +183,14 @@ function decryptMfaSecret_(encoded) {
             return (b ^ keyBytes[i % keyBytes.length]) & 0xFF;
         });
         var plain = Utilities.newBlob(out).getDataAsString();
-        // أسرار Authenticator base32 — وحّد الشكل بعد الفك
-        return String(plain || '').toUpperCase().replace(/\s/g, '');
+        var cleanPlain = String(plain || '').toUpperCase().replace(/\s/g, '');
+        if (/^[A-Z2-7]{16,64}$/.test(cleanPlain)) {
+            return cleanPlain;
+        }
+        return cleanPlain;
     } catch (e) {
         Logger.log('decryptMfaSecret_ error: ' + e.toString());
-        return '';
+        return cleanEnc;
     }
 }
 
