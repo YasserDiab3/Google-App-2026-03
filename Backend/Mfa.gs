@@ -209,19 +209,75 @@ function createMfaChallenge_(email, userRecord) {
     var cache = CacheService.getScriptCache();
     cache.put('mfa_ch_' + token, e, MFA_CHALLENGE_TTL_SEC_);
     if (userRecord && userRecord.mfaSecretEnc) {
+        // safeUser مضغوط بدون photo/permissions الضخمة — فشل الكاش كان يجبر verify على قراءة Users
+        var slimSafe = buildMfaChallengeSafeUser_(userRecord);
+        var putOk = false;
         try {
             var cachedData = {
                 email: e,
                 userId: userRecord.id,
                 mfaSecretEnc: userRecord.mfaSecretEnc,
-                safeUser: (typeof buildSafeUserFromRecord_ === 'function') ? buildSafeUserFromRecord_(userRecord) : null
+                safeUser: slimSafe
             };
-            cache.put('mfa_user_' + token, JSON.stringify(cachedData), MFA_CHALLENGE_TTL_SEC_);
+            var jsonStr = JSON.stringify(cachedData);
+            if (jsonStr.length < 90000) {
+                cache.put('mfa_user_' + token, jsonStr, MFA_CHALLENGE_TTL_SEC_);
+                putOk = !!cache.get('mfa_user_' + token);
+            }
+            if (!putOk) {
+                // إعادة محاولة: السر فقط + حد أدنى من الحقول
+                var minimal = {
+                    email: e,
+                    userId: userRecord.id,
+                    mfaSecretEnc: userRecord.mfaSecretEnc,
+                    safeUser: {
+                        id: userRecord.id,
+                        email: e,
+                        name: String(userRecord.name || ''),
+                        role: String(userRecord.role || ''),
+                        mfaEnabled: true
+                    }
+                };
+                cache.put('mfa_user_' + token, JSON.stringify(minimal), MFA_CHALLENGE_TTL_SEC_);
+            }
         } catch (ex) {
             Logger.log('createMfaChallenge_ cache user error: ' + ex.toString());
+            try {
+                cache.put('mfa_user_' + token, JSON.stringify({
+                    email: e,
+                    userId: userRecord.id,
+                    mfaSecretEnc: userRecord.mfaSecretEnc,
+                    safeUser: { id: userRecord.id, email: e, name: String(userRecord.name || ''), role: String(userRecord.role || ''), mfaEnabled: true }
+                }), MFA_CHALLENGE_TTL_SEC_);
+            } catch (_e2) {
+                Logger.log('createMfaChallenge_ minimal cache failed');
+            }
         }
     }
     return token;
+}
+
+/** مستخدم مضغوط لكاش MFA — بدون photo/base64 */
+function buildMfaChallengeSafeUser_(user) {
+    if (!user) return null;
+    return {
+        id: user.id,
+        name: user.name || '',
+        email: user.email || '',
+        role: user.role || '',
+        department: user.department || '',
+        active: user.active,
+        jobTitle: user.jobTitle || '',
+        phone: user.phone || '',
+        mfaEnabled: true,
+        permissions: (typeof user.permissions === 'object' && user.permissions && !Array.isArray(user.permissions))
+            ? user.permissions
+            : (typeof user.permissions === 'string' && user.permissions.length < 2000
+                ? (function () {
+                    try { return JSON.parse(user.permissions); } catch (_e) { return {}; }
+                })()
+                : {})
+    };
 }
 
 /**

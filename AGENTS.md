@@ -16,6 +16,8 @@ Boundaries: code/commits/PRs written normal.
 
 - STRICT RULE: Do not modify any module other than the requested one. ALWAYS execute `clasp pull` before making changes to the Backend to avoid overwriting recent updates on Apps Script.
 
+- STRICT RULE (GAS production publish): `clasp push` updates editor/HEAD only. Production `/exec` URL used by the frontend is fixed (`AKfycbw6ycjx5XAyHKCqW6kz…`). After Backend changes that must reach users, run `clasp deploy -i` on that deploymentId (or `node scripts/deploy-gas-prod.mjs`) and smoke-test JSON — never treat push alone as production publish.
+
 - STRICT RULE (PTW Auto-Save Protection):
   1. NEVER call `syncRegistryWithPermits()` automatically during module load/init. It generates TMP IDs that cause infinite PTWIdMapping growth.
   2. NEVER send records containing `_TMP_` in id/permitId to Backend via `autoSave`. Always filter them out in `saveRegistryData`.

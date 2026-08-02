@@ -203,8 +203,8 @@ window.Auth = {
                 data: {
                     userId: user.id,
                     sessionId,
-                    __timeoutMs: options.beacon ? 5000 : 12000,
-                    __highPriority: true
+                    __timeoutMs: options.beacon ? 5000 : 12000
+                    // لا __highPriority — لا ينافس login/verifyMfaLogin
                 }
             });
             if (req && typeof req.catch === 'function') req.catch(() => {});
@@ -648,7 +648,7 @@ window.Auth = {
                     data: {
                         email,
                         password,
-                        __timeoutMs: 45000,
+                        __timeoutMs: 60000,
                         __highPriority: true,
                         __allowStructuredFailure: true
                     }
@@ -822,14 +822,17 @@ window.Auth = {
             });
         } catch (err) {
             const detail = (err && err.message) ? String(err.message).trim() : '';
-            const isHtml = /<!DOCTYPE|<html|web word processing|HTML بدل JSON|نشر Web App/i.test(detail);
+            const sanitized = (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sanitizeGasErrorText)
+                ? GoogleIntegration.sanitizeGasErrorText(detail, '')
+                : detail;
+            const isHtml = /HTML بدل JSON|نشر Web App|<!DOCTYPE|<html|web word processing/i.test(sanitized || detail);
             const isTimeout = /timeout|انتهت مهلة|AbortError|aborted/i.test(detail);
             const msg = isHtml
                 ? 'تعذر إكمال المصادقة (استجابة غير صالحة من الخادم). انتظر 5 ثوانٍ وأعد إدخال رمز جديد.'
                 : (isTimeout
                     ? 'انتهت مهلة الاتصال أثناء التحقق. أعد إدخال الرمز خلال ثوانٍ.'
-                    : (detail && detail.length < 220 && !detail.includes('فشل المزامنة في التقدم') && detail.charAt(0) !== '<'
-                        ? detail
+                    : (sanitized && sanitized.length < 220 && !sanitized.includes('فشل المزامنة في التقدم') && sanitized.charAt(0) !== '<'
+                        ? sanitized
                         : 'تعذر الاتصال بالخادم لإكمال المصادقة الثنائية'));
             Notification.error(msg);
             return { success: false, message: msg };
@@ -837,7 +840,10 @@ window.Auth = {
 
         if (!verifyResult || !verifyResult.success || !verifyResult.user) {
             let msg = (verifyResult && verifyResult.message) || 'رمز المصادقة الثنائية غير صحيح';
-            if (/<!DOCTYPE|<html|web word processing/i.test(String(msg))) {
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sanitizeGasErrorText) {
+                msg = GoogleIntegration.sanitizeGasErrorText(msg, msg);
+            }
+            if (/<!DOCTYPE|<html|web word processing|HTML بدل JSON/i.test(String(msg))) {
                 msg = 'تعذر إكمال المصادقة (استجابة غير صالحة من الخادم). أعد المحاولة برمز جديد.';
             }
             Notification.error(msg);

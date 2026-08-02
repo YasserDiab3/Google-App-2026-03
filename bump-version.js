@@ -30,10 +30,19 @@ const ROOTS = [
 
 function readJSONVersion(versionJsonPath) {
     try {
-        const raw = fs.readFileSync(versionJsonPath, 'utf8');
+        let raw = fs.readFileSync(versionJsonPath, 'utf8');
+        // رفض BOM — كان يسبب parse fail ثم سقوط خاطئ إلى 1.0.0 → 1.0.1
+        if (raw.charCodeAt(0) === 0xFEFF) {
+            raw = raw.slice(1);
+        }
         const obj = JSON.parse(raw);
-        return String(obj.version || '').trim();
+        const v = String(obj.version || '').trim();
+        if (!/^\d+\.\d+\.\d+$/.test(v)) {
+            throw new Error(`إصدار غير صالح في ${versionJsonPath}: "${v}"`);
+        }
+        return v;
     } catch (e) {
+        console.error(`❌ فشل قراءة الإصدار من ${versionJsonPath}:`, e.message || e);
         return '';
     }
 }
@@ -85,11 +94,13 @@ function bumpRoot(root, newVersion, cacheVersion) {
         path.join(root, 'version.json'),
         (content) => {
             try {
-                const parsed = JSON.parse(content);
+                let raw = content;
+                if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
+                const parsed = JSON.parse(raw);
                 parsed.version = newVersion;
                 return JSON.stringify(parsed, null, 2) + '\n';
             } catch (e) {
-                return JSON.stringify({ version: newVersion }, null, 2) + '\n';
+                throw new Error(`فشل تحديث version.json (لن يُستبدل بـ {version} فقط): ${e.message || e}`);
             }
         },
         `version.json → ${newVersion}`
@@ -146,16 +157,25 @@ function main() {
 
     // الإصدار الحالي من أول version.json موجود
     let current = '';
+    let sourcePath = '';
     for (const root of ROOTS) {
-        current = readJSONVersion(path.join(root, 'version.json'));
-        if (current) break;
+        const p = path.join(root, 'version.json');
+        current = readJSONVersion(p);
+        if (current) {
+            sourcePath = p;
+            break;
+        }
     }
-    if (!current) current = '1.0.0';
+    if (!current) {
+        console.error('❌ تعذر قراءة version.json صالح (BOM/تلف؟). أوقف bump — لن يُخفَّض الإصدار إلى 1.0.0.');
+        process.exit(1);
+    }
 
     const newVersion = computeNewVersion(current, arg);
     const cacheVersion = `hse-app-v${newVersion}-${dateStamp()}`;
 
     console.log('════════════════════════════════════════');
+    console.log(`📂 المصدر         : ${sourcePath}`);
     console.log(`🔢 الإصدار الحالي : ${current}`);
     console.log(`🚀 الإصدار الجديد : ${newVersion}`);
     console.log(`🗂️  cache version  : ${cacheVersion}`);

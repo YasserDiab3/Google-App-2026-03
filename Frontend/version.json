@@ -1,13 +1,15 @@
 {
-  "version": "1.0.774",
+  "version": "1.0.776",
   "highlights": {
     "ar": [
-      "إصلاح نهائي لتسجيل MFA: مسار تحقق بدون كتابة Users + إعادة نشر Web App الإنتاجي.",
-      "تخفيف نبضات الحضور (كاش أولاً) ومنع ظهور HTML الخام عند فشل الخادم."
+      "إصلاح MFA: تحقق بدون كتابة Users + كاش حضور أخف.",
+      "منع عرض HTML الخام عند فشل الخادم + مهلة دخول 60ث.",
+      "أداة نشر إنتاجي clasp deploy-gas-prod + حماية bump."
     ],
     "en": [
-      "Final MFA login fix: verify path with zero Users-sheet writes + production Web App redeploy.",
-      "Presence heartbeats are cache-first; raw HTML server errors are no longer shown."
+      "MFA fix: verify path skips Users writes + lighter presence cache.",
+      "Raw HTML server errors sanitized; login timeout 60s.",
+      "Production GAS deploy script + safer bump-version."
     ]
   }
 }

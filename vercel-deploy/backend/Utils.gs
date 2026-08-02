@@ -621,6 +621,24 @@ function logSecurityEvent(eventName, details) {
 }
 
 /**
+ * تسجيل أمني خفيف لمسار MFA — Logger دائماً؛ كتابة الشيت فقط إن توفّر القفل فوراً
+ */
+function logSecurityEventSoft_(eventName, details) {
+    try {
+        Logger.log('SEC_SOFT ' + String(eventName || '') + ' ' + JSON.stringify(details || {}).substring(0, 500));
+        var lock = LockService.getScriptLock();
+        if (!lock.tryLock(0)) return;
+        try {
+            logSecurityEvent(eventName, details);
+        } finally {
+            try { lock.releaseLock(); } catch (_e) { /* ignore */ }
+        }
+    } catch (e) {
+        Logger.log('logSecurityEventSoft_ error: ' + e.toString());
+    }
+}
+
+/**
  * ============================================
  * ضوابط الوصول للأوراق والعمليات الإدارية
  * ============================================

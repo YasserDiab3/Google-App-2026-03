@@ -4341,7 +4341,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.774',
+    appVersion: '1.0.776',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -4538,7 +4538,7 @@ const AppState = {
                         let parsedUrl = String(parsedApps.scriptUrl || '').trim();
                         // ✅ ترقية تلقائية من نشرات قديمة إلى @124 (إصلاح خصم الأدوية لزيارة جديدة + دائرة اعتماد المخالفات)
                         const OLD_DEPLOYMENT_URLS = [
-                            'AKfycbxkqiYDwVdSUhzi-DOGZO8bBJMORw78FzLhUzRYwSfGldDqvlXerdajhd7byDeuvsP0', // @92
+                            'AKfycbxkqiYDwVdSUhzi-DOGZO8bBJMORw78FzLhUzRYwSfGldDqvlXerdajhd7byDeuvsP0', // @92 / login-init legacy
                             'AKfycbzmZKpLvrFm-zcaY91_a7JsW7O6sHzf7vO-sw1ujsa7FbSELMhCFFxF04_5vReLU9Xr', // @95
                             'AKfycbzzUIVg7t0RNEqL9RtmKlOZd_3yU7VDsHlFLbnMZOjantyBy62vhBTK-xn0K3AWvyme', // @97
                             'AKfycbznQux2RDY-UB56gAhrluEoXYfPt2s0CtAUQpQ8WHwna8w64cUez_QLhm4gRk8ez2Aw', // @98
@@ -4552,6 +4552,7 @@ const AppState = {
                             'AKfycbzxF2wNoo_g0Psy2k9dOG7i4X1wuw1mWSWirdXBpRu61eMBhRFhX1-5DEmNs5Ldjdjv', // @134 — fixed in @135
                             'AKfycbxaIlrBSSHeRR56X3ZEJiTm5iMw-c2Tb3H206WaZKywY0zo-1AgdqdkMkf5MF0yFf-T', // old URL (pre-@149)
                             'AKfycbx88ue81OTEXapNCcfFcBUEoONTJnSypsm9zGT6upSHnIieBDskcyH-Tij9D7lxHP6Y', // @149/@150 (replaced)
+                            'AKfycbweqBqZUiavxb_-23pASfFK8HKbXAICEoAdPa5fWfc', // HEAD-only — لا تستخدم للإنتاج
                         ];
                         const LATEST_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
                         if (parsedUrl && OLD_DEPLOYMENT_URLS.some(old => parsedUrl.includes(old))) {

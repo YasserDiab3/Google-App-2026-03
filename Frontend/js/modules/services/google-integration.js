@@ -12,6 +12,37 @@ const GoogleIntegration = {
     },
 
     /**
+     * تنظيف رسائل خطأ GAS — لا تعرض HTML/DOCTYPE للمستخدم
+     */
+    sanitizeGasErrorText(text, fallback) {
+        const fb = fallback || 'تعذر الاتصال بالخادم. أعد المحاولة.';
+        const raw = String(text || '').replace(/^\uFEFF/, '').trim();
+        if (!raw) return fb;
+        const looksHtml = raw.charAt(0) === '<'
+            || /<!DOCTYPE/i.test(raw)
+            || /<html[\s>]/i.test(raw)
+            || /web word processing/i.test(raw)
+            || /accounts\.google\.com/i.test(raw)
+            || /<meta\s/i.test(raw);
+        if (looksHtml) {
+            return 'الخادم أعاد صفحة HTML بدل JSON (نشر Web App أو مهلة Google). أعد المحاولة بعد ثوانٍ.';
+        }
+        if (raw.length > 280) return raw.substring(0, 280) + '…';
+        return raw;
+    },
+
+    looksLikeGasHtmlResponse(text) {
+        const raw = String(text || '').replace(/^\uFEFF/, '').trim();
+        return !!raw && (
+            raw.charAt(0) === '<'
+            || /<!DOCTYPE/i.test(raw)
+            || /<html[\s>]/i.test(raw)
+            || /web word processing/i.test(raw)
+            || /accounts\.google\.com/i.test(raw)
+        );
+    },
+
+    /**
      * التحقق من المزامنة في التقدم
      */
     isSyncing(sheetName = 'users') {
@@ -1238,8 +1269,10 @@ const GoogleIntegration = {
                             const parsed = JSON.parse(errorData);
                             errorMessage = parsed.message || errorMessage;
                         } catch (parseError) {
-                            // التحقق من هل هو parseError
-                            errorMessage = errorData.substring(0, 200);
+                            errorMessage = this.sanitizeGasErrorText(
+                                errorData,
+                                `HTTP error! status: ${status}`
+                            );
                         }
                     }
                 } catch (e) {
@@ -1258,23 +1291,18 @@ const GoogleIntegration = {
             let result;
             try {
                 let trimmedText = String(resultText || '').replace(/^\uFEFF/, '').trim();
-                const looksHtml = trimmedText.charAt(0) === '<'
-                    || /<!DOCTYPE/i.test(trimmedText)
-                    || /<html[\s>]/i.test(trimmedText)
-                    || /web word processing/i.test(trimmedText)
-                    || /accounts\.google\.com/i.test(trimmedText);
-                if (looksHtml) {
-                    throw new Error(
-                        'الخادم أعاد صفحة HTML بدل JSON (نشر Web App قديم أو مهلة تنفيذ Google).\n' +
-                        'أعد المحاولة بعد ثوانٍ. إن استمر الخطأ: حدّث نشر Apps Script (/exec).'
-                    );
+                if (this.looksLikeGasHtmlResponse(trimmedText)) {
+                    throw new Error(this.sanitizeGasErrorText(trimmedText));
                 }
                 result = JSON.parse(trimmedText);
             } catch (e) {
                 if (e && e.message && (e.message.includes('HTML بدل JSON') || e.message.includes('نشر Web App'))) throw e;
-                const preview = String(resultText || '').replace(/^\uFEFF/, '').trim().substring(0, 120);
-                const safePreview = preview.charAt(0) === '<' ? '[HTML]' : preview;
-                throw new Error(`استجابة غير صالحة من الخادم: ${safePreview}`);
+                const safePreview = this.sanitizeGasErrorText(resultText, 'استجابة غير صالحة من الخادم');
+                throw new Error(
+                    safePreview.indexOf('HTML') !== -1 || safePreview.indexOf('نشر Web') !== -1
+                        ? safePreview
+                        : `استجابة غير صالحة من الخادم: ${safePreview}`
+                );
             }
 
             if (!result || typeof result !== 'object') {

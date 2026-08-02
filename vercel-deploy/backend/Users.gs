@@ -906,13 +906,34 @@ function markUserOffline(payload, actorUserData) {
         }
 
         var nowIso = new Date().toISOString();
-        _fastTouchUserLoginFields_(userId, {
+        var offlineFields = {
             isOnline: false,
             lastLogout: nowIso,
             lastPresenceAt: nowIso,
             activeSessionId: ''
-        });
-        return { success: true, isOnline: false, lastLogout: nowIso };
+        };
+
+        // كاش فوري — لا يقف أمام MFA
+        try {
+            CacheService.getScriptCache().put('presence_v1:' + userId, JSON.stringify(offlineFields), 600);
+        } catch (_c) { /* ignore */ }
+
+        // كتابة الشيت بحذر: tryLock قصير — إن مشغول نتخطى (الكاش يكفي مؤقتاً)
+        var lock = LockService.getScriptLock();
+        var gotLock = false;
+        try {
+            gotLock = lock.tryLock(200);
+            if (gotLock) {
+                _fastTouchUserLoginFields_(userId, offlineFields);
+            }
+        } catch (_w) {
+            Logger.log('markUserOffline sheet soft-fail: ' + _w.toString());
+        } finally {
+            if (gotLock) {
+                try { lock.releaseLock(); } catch (_rl) { /* ignore */ }
+            }
+        }
+        return { success: true, isOnline: false, lastLogout: nowIso, sheetWritten: !!gotLock };
     } catch (err) {
         Logger.log('markUserOffline error: ' + err.toString());
         return { success: false, message: 'markUserOffline: ' + err.toString() };
@@ -1164,9 +1185,14 @@ function verifyMfaLogin(challengeToken, email, code) {
 
         if (!totpOk) {
             if (typeof recordMfaFailure_ === 'function') recordMfaFailure_(e);
-            if (typeof logSecurityEvent === 'function') {
-                logSecurityEvent('mfa_login_failed', { email: e, severity: 'medium' });
-            }
+            // لا تكتب SecurityAuditLog بشكل متزامن ثقيل أثناء مسار MFA (قد يقفل الشيت)
+            try {
+                if (typeof logSecurityEventSoft_ === 'function') {
+                    logSecurityEventSoft_('mfa_login_failed', { email: e, severity: 'medium' });
+                } else {
+                    Logger.log('mfa_login_failed email=' + e);
+                }
+            } catch (_logE) { /* ignore */ }
             return { success: false, message: 'رمز المصادقة الثنائية غير صحيح' };
         }
 
@@ -1183,11 +1209,13 @@ function verifyMfaLogin(challengeToken, email, code) {
         if (typeof clearMfaFailures_ === 'function') clearMfaFailures_(e);
 
         // مهم: بدون كتابة Users هنا — الكتابة كانت تسبب مهلة Google HTML بدل JSON
-        return attachServerSessionToLoginResult_({
+        var loginOk = attachServerSessionToLoginResult_({
             success: true,
             message: 'تم تسجيل الدخول بنجاح',
-            user: safeUser
+            user: safeUser,
+            diag: { path: (cachedUserPayload && cachedUserPayload.mfaSecretEnc) ? 'cache' : 'sheet' }
         }, user || safeUser, { skipSheetTouch: true });
+        return loginOk;
     } catch (error) {
         Logger.log('verifyMfaLogin error: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء التحقق من المصادقة الثنائية' };
