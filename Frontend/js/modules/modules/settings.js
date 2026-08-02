@@ -1611,6 +1611,34 @@ const Settings = {
                             </div>
                         </div>
                     </div>
+
+                    <!-- ✅ مراقبة أخطاء العملاء -->
+                    <div class="settings-group-content mt-4">
+                        <div class="content-card" style="border: 1px solid rgba(185,28,28,0.22);">
+                            <div class="card-header" style="background: linear-gradient(135deg, rgba(185,28,28,0.08), rgba(127,29,29,0.06)); border-bottom: 1px solid rgba(185,28,28,0.18);">
+                                <h2 class="card-title" style="color: #b91c1c;">
+                                    <i class="fas fa-bug ml-2"></i>
+                                    مراقبة أخطاء المستخدمين
+                                </h2>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-sm text-gray-600 mb-4">
+                                    <i class="fas fa-info-circle ml-2 text-red-600"></i>
+                                    تسجيل تلقائي لرسائل الخطأ الظاهرة للمستخدمين، متابعة مباشرة، وتحويل الخطأ إلى بلاغ مشكلة.
+                                </p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                    <button type="button" id="view-client-errors-btn" class="btn-primary w-full" style="background: linear-gradient(135deg, #b91c1c, #7f1d1d);">
+                                        <i class="fas fa-bug ml-2"></i>
+                                        فتح لوحة مراقبة الأخطاء
+                                    </button>
+                                    <button type="button" id="open-client-errors-section-btn" class="btn-secondary w-full">
+                                        <i class="fas fa-broadcast-tower ml-2"></i>
+                                        التبويب المباشر
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 ` : '<div class="settings-group mt-6"><p class="text-gray-600">هذا القسم متاح للمديرين فقط</p></div>'}
             </div>
@@ -2954,6 +2982,30 @@ const Settings = {
                         UserVersionsAdmin.open();
                     } else {
                         Notification.error('لوحة متابعة الإصدارات غير متاحة. حاول تحديث الصفحة.');
+                    }
+                });
+            }
+
+            // ✅ Client Errors Admin
+            const viewClientErrorsBtn = document.getElementById('view-client-errors-btn');
+            if (viewClientErrorsBtn) {
+                viewClientErrorsBtn.addEventListener('click', () => {
+                    if (typeof ClientErrorsAdmin !== 'undefined' && ClientErrorsAdmin.open) {
+                        ClientErrorsAdmin.open();
+                    } else {
+                        Notification.error('لوحة مراقبة الأخطاء غير متاحة. حاول تحديث الصفحة.');
+                    }
+                });
+            }
+            const openClientErrorsSectionBtn = document.getElementById('open-client-errors-section-btn');
+            if (openClientErrorsSectionBtn) {
+                openClientErrorsSectionBtn.addEventListener('click', () => {
+                    if (typeof UI !== 'undefined' && typeof UI.showSection === 'function') {
+                        UI.showSection('client-errors');
+                    } else if (typeof ClientErrorsAdmin !== 'undefined' && ClientErrorsAdmin.open) {
+                        ClientErrorsAdmin.open();
+                    } else {
+                        location.hash = '#client-errors';
                     }
                 });
             }

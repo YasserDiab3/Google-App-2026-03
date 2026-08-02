@@ -804,13 +804,16 @@ window.Auth = {
 
         let verifyResult = null;
         try {
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.resetCircuitBreaker === 'function') {
+                GoogleIntegration.resetCircuitBreaker();
+            }
             verifyResult = await GoogleIntegration.sendRequest({
                 action: 'verifyMfaLogin',
                 data: {
                     email,
                     code: otp,
                     challengeToken: token,
-                    __timeoutMs: 45000,
+                    __timeoutMs: 60000,
                     __highPriority: true,
                     // أعد نتيجة success:false للواجهة بدل رمي استثناء يُعرض كـ «تعذر الاتصال»
                     __allowStructuredFailure: true

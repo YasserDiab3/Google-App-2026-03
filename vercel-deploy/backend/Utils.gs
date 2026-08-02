@@ -449,8 +449,12 @@ function attachServerSessionToLoginResult_(result, userLike) {
             var uid = userLike && userLike.id != null ? userLike.id : (result.user && result.user.id);
             if (uid != null && typeof _fastTouchUserLoginFields_ === 'function') {
                 try {
+                    var nowIso = new Date().toISOString();
                     _fastTouchUserLoginFields_(uid, {
-                        activeSessionId: String(sess.sessionToken).substring(0, 80)
+                        activeSessionId: String(sess.sessionToken).substring(0, 80),
+                        lastLogin: nowIso,
+                        lastPresenceAt: nowIso,
+                        isOnline: true
                     });
                 } catch (_touchErr) { /* ignore */ }
             }
@@ -610,7 +614,7 @@ function logSecurityEvent(eventName, details) {
 
 /** أوراق لا تُقرأ عبر readFromSheet/batchReadSheets/getData إلا لمدير النظام */
 function getAdminOnlyReadSheetNames_() {
-    return ['Users', 'UserVersions', 'AuditLog', 'SecurityAuditLog', 'UserActivityLog'];
+    return ['Users', 'UserVersions', 'AuditLog', 'SecurityAuditLog', 'UserActivityLog', 'ClientErrorLog'];
 }
 
 /** أوراق لا تُكتب مباشرة عبر saveToSheet/appendToSheet */
@@ -1038,6 +1042,7 @@ function ensureSheetHeaders(sheet, sheetName, data) {
         // مهم جداً: لا نغيّر ترتيب الرؤوس الموجودة لورقة Employees تلقائياً
         // لأن تغيير ترتيب الهيدر فقط بدون إعادة ترتيب الأعمدة/البيانات يسبب "تزحلق" القيم (خصوصاً التواريخ)
         // لذلك: نضيف الأعمدة الناقصة فقط، ونحافظ على ترتيب الهيدر الحالي.
+        // ولا نعيد الكتابة فقط لأن ترتيب الافتراضي يختلف عن الموجود (كان يسبب قفل Users مع نبضات الحضور).
         let mergedHeaders = existingHeaders.slice(); // دمج على الموجود
         let headersUpdated = false;
 
@@ -1050,11 +1055,10 @@ function ensureSheetHeaders(sheet, sheetName, data) {
             }
         });
         
-        // ✅ إذا كانت الرؤوس فارغة أو كانت هناك حاجة للتحديث
+        // ✅ إذا كانت الرؤوس فارغة أو أُضيفت أعمدة ناقصة فقط
         const needUpdate = existingHeaders.length === 0 || 
                           existingHeaders[0] === '' || 
-                          headersUpdated ||
-                          JSON.stringify(existingHeaders) !== JSON.stringify(requiredHeaders);
+                          headersUpdated;
         
         if (needUpdate) {
             // ✅ استخدام mergedHeaders بدلاً من requiredHeaders فقط
@@ -1275,6 +1279,10 @@ function getHeaders(sheetName, data) {
     // ✅ سجل نشاط المستخدم: رؤوس ثابتة؛ ensureSheetHeaders يضيف الأعمدة الجديدة للأوراق القديمة دون إعادة ترتيب الصفوف
     if (sheetName === 'UserActivityLog') {
         return getDefaultHeaders('UserActivityLog');
+    }
+
+    if (sheetName === 'ClientErrorLog') {
+        return getDefaultHeaders('ClientErrorLog');
     }
 
     // ✅ PTW: دمج الرؤوس الافتراضية مع مفاتيح أول صف في البيانات — يضمن ظهور أعمدة جديدة (مثل مسار الاعتماد) حتى لو أقدم صف لا يحتويها
@@ -5129,6 +5137,8 @@ function getModulePrefix(moduleName) {
         'AuditLog': 'AUD',
         'useractivitylog': 'UAL',
         'UserActivityLog': 'UAL',
+        'clienterrorlog': 'CEL',
+        'ClientErrorLog': 'CEL',
         'notifications': 'NOT',
         'Notifications': 'NOT',
         'incidentnotifications': 'INO',

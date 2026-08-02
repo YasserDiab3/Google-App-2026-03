@@ -8,8 +8,8 @@ var MFA_ENROLL_TTL_SEC_ = 600;
 var MFA_MAX_ATTEMPTS_ = 5;
 /** قفل مؤقت بعد محاولات فاشلة (ثوانٍ) — قصير لأن فشلاً سابقاً بسبب خطأ خادم كان يرفع العداد */
 var MFA_LOCKOUT_SEC_ = 180;
-/** نافذة TOTP عند الدخول (± خطوات × 30ث) — أوسع قليلاً لتسامح انحراف ساعة الخادم */
-var MFA_TOTP_WINDOW_ = 3;
+/** نافذة TOTP عند الدخول (± خطوات × 30ث) — أوسع لتسامح انحراف ساعة الخادم */
+var MFA_TOTP_WINDOW_ = 5;
 var MFA_ENROLL_TOTP_WINDOW_ = 5;
 
 function ensureMfaEncryptionKey_() {

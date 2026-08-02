@@ -592,20 +592,23 @@ function invalidateUsersAuthCache_() {
  * @param {string} email
  * @return {Object|null}
  */
-function getUserRecordFromUsersSheetByEmail_(email) {
+function getUserRecordFromUsersSheetByEmail_(email, options) {
     try {
         var e = normalizeSheetScalarField_(email).toLowerCase();
         if (!e) return null;
+        options = options || {};
 
         var cache = CacheService.getScriptCache();
-        var cachedMapRaw = cache.get(USERS_AUTH_CACHE_KEY_);
-        if (cachedMapRaw) {
-            try {
-                var map = JSON.parse(cachedMapRaw);
-                if (map && map[e]) {
-                    return map[e];
-                }
-            } catch (pErr) { /* ignore cache parse error */ }
+        if (!options.bypassCache) {
+            var cachedMapRaw = cache.get(USERS_AUTH_CACHE_KEY_);
+            if (cachedMapRaw) {
+                try {
+                    var map = JSON.parse(cachedMapRaw);
+                    if (map && map[e]) {
+                        return map[e];
+                    }
+                } catch (pErr) { /* ignore cache parse error */ }
+            }
         }
 
         var spreadsheetId = getSpreadsheetId();
@@ -693,11 +696,11 @@ function _fastTouchUserLoginFields_(userId, fields) {
     const sheet = ss.getSheetByName('Users');
     if (!sheet) return;
 
-    // ضمان أعمدة الحضور (lastPresenceAt / activeSessionId) على الأوراق القديمة
+    // لا تستدعِ ensureSheetHeaders هنا أبداً — كانت تُعاد كتابتها في كل نبضة حضور
+    // فتقفل ورقة Users وتبطّئ login/verifyMfaLogin حتى ترفض الرمز أو تنتهي المهلة.
+    // إضافة أعمدة الحضور الناقصة مرة واحدة فقط (خفيف + كاش).
     try {
-        if (typeof ensureSheetHeaders === 'function') {
-            ensureSheetHeaders(sheet, 'Users', [{}]);
-        }
+        _ensureUsersPresenceColumnsOnce_(sheet);
     } catch (_hdr) { /* ignore */ }
 
     const lastRow = sheet.getLastRow();
@@ -737,7 +740,43 @@ function _fastTouchUserLoginFields_(userId, fields) {
         const c = headers.indexOf('activeSessionId');
         if (c !== -1) cellWrites.push([rowIndex, c + 1, fields.activeSessionId]);
     }
-    cellWrites.forEach(w => sheet.getRange(w[0], w[1]).setValue(w[2]));
+    // دفعة واحدة بدل setValue لكل خلية (أقل قفل على الشيت)
+    if (cellWrites.length === 1) {
+        sheet.getRange(cellWrites[0][0], cellWrites[0][1]).setValue(cellWrites[0][2]);
+    } else if (cellWrites.length > 1) {
+        cellWrites.forEach(w => sheet.getRange(w[0], w[1]).setValue(w[2]));
+    }
+}
+
+/**
+ * يضمن وجود أعمدة الحضور على Users مرة واحدة لكل عملية تشغيل (بدون إعادة ترتيب الأعمدة).
+ */
+function _ensureUsersPresenceColumnsOnce_(sheet) {
+    if (!sheet) return;
+    try {
+        var cache = CacheService.getScriptCache();
+        if (cache.get('users_presence_cols_ok_v1') === '1') return;
+    } catch (_c) { /* continue */ }
+
+    var lastCol = sheet.getLastColumn();
+    if (lastCol < 1) return;
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) {
+        return String(h || '').trim();
+    });
+    var needed = ['lastPresenceAt', 'activeSessionId', 'isOnline', 'lastLogout', 'lastLogin'];
+    var changed = false;
+    for (var i = 0; i < needed.length; i++) {
+        if (headers.indexOf(needed[i]) === -1) {
+            headers.push(needed[i]);
+            changed = true;
+        }
+    }
+    if (changed) {
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    }
+    try {
+        CacheService.getScriptCache().put('users_presence_cols_ok_v1', '1', 21600);
+    } catch (_p) { /* ignore */ }
 }
 
 /**
@@ -995,15 +1034,7 @@ function loginUser(email, password) {
         }
 
         // تسجيل وقت الدخول — مسار سريع (تحديث خلايا مستهدفة فقط بدون قراءة الشيت كاملاً)
-        try {
-            _fastTouchUserLoginFields_(user.id, {
-                lastLogin: new Date().toISOString(),
-                lastPresenceAt: new Date().toISOString(),
-                isOnline: true
-            });
-        } catch (loginTimeError) {
-            Logger.log('Warning: Could not update lastLogin: ' + loginTimeError.toString());
-        }
+        // الحضور/lastLogin تُحدَّث داخل attachServerSessionToLoginResult_ بكتابة واحدة
 
         // تجهيز كائن المستخدم للإرجاع (بدون بيانات حساسة)
         const safeUser = buildSafeUserFromRecord_(user);
@@ -1066,7 +1097,9 @@ function verifyMfaLogin(challengeToken, email, code) {
             safeUser = cachedUserPayload.safeUser;
             user = { id: cachedUserPayload.userId, email: e };
         } else {
-            user = getUserRecordFromUsersSheetByEmail_(e);
+            // تجاوز كاش المستخدمين — حضور/كتابات الشيت قد تترك كاشاً قديماً بدون السر
+            if (typeof invalidateUsersAuthCache_ === 'function') invalidateUsersAuthCache_();
+            user = getUserRecordFromUsersSheetByEmail_(e, { bypassCache: true });
             if (!user || !isMfaEnabledForUser_(user)) {
                 return { success: false, message: 'المصادقة الثنائية غير مفعّلة لهذا الحساب' };
             }
@@ -1075,7 +1108,27 @@ function verifyMfaLogin(challengeToken, email, code) {
         }
 
         var secret = (typeof decryptMfaSecret_ === 'function') ? decryptMfaSecret_(secretEnc) : '';
-        if (!secret || typeof verifyTotpCode_ !== 'function' || !verifyTotpCode_(secret, otp)) {
+        var totpOk = (secret && typeof verifyTotpCode_ === 'function' && verifyTotpCode_(secret, otp));
+
+        // إعادة محاولة واحدة من الشيت إن فشل التحقق رغم وجود challenge صالح
+        if (!totpOk) {
+            try {
+                if (typeof invalidateUsersAuthCache_ === 'function') invalidateUsersAuthCache_();
+                var freshUser = getUserRecordFromUsersSheetByEmail_(e, { bypassCache: true });
+                if (freshUser && isMfaEnabledForUser_(freshUser)) {
+                    var freshEnc = String(freshUser.mfaSecretEnc || '').trim();
+                    var freshSecret = (typeof decryptMfaSecret_ === 'function') ? decryptMfaSecret_(freshEnc) : '';
+                    if (freshSecret && typeof verifyTotpCode_ === 'function' && verifyTotpCode_(freshSecret, otp)) {
+                        totpOk = true;
+                        secret = freshSecret;
+                        user = freshUser;
+                        safeUser = buildSafeUserFromRecord_(freshUser);
+                    }
+                }
+            } catch (_retry) { /* ignore */ }
+        }
+
+        if (!totpOk) {
             if (typeof recordMfaFailure_ === 'function') recordMfaFailure_(e);
             if (typeof logSecurityEvent === 'function') {
                 logSecurityEvent('mfa_login_failed', { email: e, severity: 'medium' });
@@ -1095,18 +1148,7 @@ function verifyMfaLogin(challengeToken, email, code) {
 
         if (typeof clearMfaFailures_ === 'function') clearMfaFailures_(e);
 
-        if (user && user.id) {
-            try {
-                _fastTouchUserLoginFields_(user.id, {
-                    lastLogin: new Date().toISOString(),
-                    lastPresenceAt: new Date().toISOString(),
-                    isOnline: true
-                });
-            } catch (loginTimeError) {
-                Logger.log('Warning: Could not update lastLogin after MFA: ' + loginTimeError.toString());
-            }
-        }
-
+        // إرجاع الجلسة أولاً — تحديث الحضور داخل attachServerSessionToLoginResult_ (كتابة واحدة)
         return attachServerSessionToLoginResult_({
             success: true,
             message: 'تم تسجيل الدخول بنجاح',

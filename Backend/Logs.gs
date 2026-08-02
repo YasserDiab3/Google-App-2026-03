@@ -571,3 +571,169 @@ function runDailyUserSessionEmailReport() {
     }
 }
 
+/**
+ * ============================================
+ * Client Error Log — أخطاء تظهر للمستخدمين
+ * ============================================
+ */
+
+function addClientErrorLogToSheet(logData, actorUserData) {
+    try {
+        if (!logData || typeof logData !== 'object') {
+            return { success: false, message: 'بيانات الخطأ غير موجودة' };
+        }
+        var msg = String(logData.message || '').trim();
+        if (!msg) return { success: false, message: 'نص الخطأ مطلوب' };
+        if (msg.length > 2000) msg = msg.substring(0, 2000);
+
+        var actor = actorUserData || {};
+        var nowIso = new Date().toISOString();
+        var entry = {
+            id: logData.id || ('CERR_' + Utilities.getUuid().replace(/-/g, '').substring(0, 16)),
+            level: String(logData.level || 'error').toLowerCase(),
+            message: msg,
+            stack: String(logData.stack || '').substring(0, 4000),
+            source: String(logData.source || '').substring(0, 500),
+            line: logData.line != null ? String(logData.line) : '',
+            col: logData.col != null ? String(logData.col) : '',
+            module: String(logData.module || '').substring(0, 120),
+            action: String(logData.action || '').substring(0, 120),
+            pageUrl: String(logData.pageUrl || '').substring(0, 500),
+            userAgent: String(logData.userAgent || '').substring(0, 400),
+            appVersion: String(logData.appVersion || '').substring(0, 40),
+            userId: String(logData.userId || actor.id || ''),
+            userEmail: String(logData.userEmail || actor.email || '').toLowerCase(),
+            username: String(logData.username || actor.name || actor.username || ''),
+            sessionId: String(logData.sessionId || '').substring(0, 80),
+            fingerprint: String(logData.fingerprint || '').substring(0, 80),
+            status: String(logData.status || 'new'),
+            extra: typeof logData.extra === 'string'
+                ? logData.extra.substring(0, 3000)
+                : (logData.extra ? JSON.stringify(logData.extra).substring(0, 3000) : ''),
+            createdAt: nowIso,
+            updatedAt: nowIso
+        };
+
+        if (['error', 'warning', 'unhandled', 'info'].indexOf(entry.level) === -1) {
+            entry.level = 'error';
+        }
+
+        var result = appendToSheet('ClientErrorLog', entry);
+        if (result && result.success) {
+            return { success: true, id: entry.id, message: 'تم تسجيل الخطأ' };
+        }
+        return result || { success: false, message: 'فشل حفظ سجل الخطأ' };
+    } catch (error) {
+        Logger.log('addClientErrorLogToSheet: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء تسجيل الخطأ: ' + error.toString() };
+    }
+}
+
+function getAllClientErrorLogs(filters) {
+    try {
+        filters = filters || {};
+        var data = readFromSheet('ClientErrorLog', getSpreadsheetId()) || [];
+        if (!Array.isArray(data)) data = [];
+
+        if (filters.level) {
+            var lv = String(filters.level).toLowerCase();
+            data = data.filter(function(r) { return String(r.level || '').toLowerCase() === lv; });
+        }
+        if (filters.status) {
+            var st = String(filters.status).toLowerCase();
+            data = data.filter(function(r) { return String(r.status || '').toLowerCase() === st; });
+        }
+        if (filters.module) {
+            var mod = String(filters.module).toLowerCase();
+            data = data.filter(function(r) { return String(r.module || '').toLowerCase().indexOf(mod) !== -1; });
+        }
+        if (filters.userEmail) {
+            var em = String(filters.userEmail).toLowerCase();
+            data = data.filter(function(r) { return String(r.userEmail || '').toLowerCase().indexOf(em) !== -1; });
+        }
+        if (filters.q) {
+            var q = String(filters.q).toLowerCase();
+            data = data.filter(function(r) {
+                return String(r.message || '').toLowerCase().indexOf(q) !== -1
+                    || String(r.source || '').toLowerCase().indexOf(q) !== -1
+                    || String(r.username || '').toLowerCase().indexOf(q) !== -1;
+            });
+        }
+        if (filters.startDate) {
+            var start = new Date(filters.startDate).getTime();
+            data = data.filter(function(r) {
+                var t = new Date(r.createdAt || r.updatedAt || 0).getTime();
+                return !isNaN(t) && t >= start;
+            });
+        }
+        if (filters.endDate) {
+            var end = new Date(filters.endDate).getTime();
+            data = data.filter(function(r) {
+                var t = new Date(r.createdAt || r.updatedAt || 0).getTime();
+                return !isNaN(t) && t <= end;
+            });
+        }
+
+        data.sort(function(a, b) {
+            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        });
+
+        var limit = Math.min(500, Math.max(20, Number(filters.limit) || 200));
+        if (data.length > limit) data = data.slice(0, limit);
+
+        return { success: true, data: data, count: data.length };
+    } catch (error) {
+        Logger.log('getAllClientErrorLogs: ' + error.toString());
+        return { success: false, message: error.toString(), data: [] };
+    }
+}
+
+function getClientErrorStats(filters) {
+    try {
+        var res = getAllClientErrorLogs(Object.assign({}, filters || {}, { limit: 500 }));
+        var rows = (res && res.data) ? res.data : [];
+        var byLevel = {};
+        var byModule = {};
+        var byStatus = {};
+        var last24h = 0;
+        var now = Date.now();
+        rows.forEach(function(r) {
+            var level = String(r.level || 'error').toLowerCase();
+            byLevel[level] = (byLevel[level] || 0) + 1;
+            var mod = String(r.module || 'unknown') || 'unknown';
+            byModule[mod] = (byModule[mod] || 0) + 1;
+            var st = String(r.status || 'new').toLowerCase();
+            byStatus[st] = (byStatus[st] || 0) + 1;
+            var t = new Date(r.createdAt || 0).getTime();
+            if (!isNaN(t) && (now - t) <= 24 * 60 * 60 * 1000) last24h += 1;
+        });
+        return {
+            success: true,
+            total: rows.length,
+            last24h: last24h,
+            byLevel: byLevel,
+            byModule: byModule,
+            byStatus: byStatus
+        };
+    } catch (error) {
+        return { success: false, message: error.toString() };
+    }
+}
+
+function updateClientErrorStatus(payload, actorUserData) {
+    try {
+        var id = String((payload && (payload.id || payload.errorId)) || '').trim();
+        var status = String((payload && payload.status) || '').trim().toLowerCase();
+        if (!id) return { success: false, message: 'معرف السجل مطلوب' };
+        if (['new', 'seen', 'ignored', 'resolved'].indexOf(status) === -1) {
+            return { success: false, message: 'حالة غير صالحة' };
+        }
+        return updateRecordInSheet('ClientErrorLog', id, {
+            status: status,
+            updatedAt: new Date().toISOString()
+        });
+    } catch (error) {
+        return { success: false, message: error.toString() };
+    }
+}
+

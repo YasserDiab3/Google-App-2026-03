@@ -83,7 +83,7 @@ function getRequiredSheets() {
         'SafetyBudgets', 'SafetyBudgetTransactions', 'SafetyBudgetPurchaseOrders', 'SafetyPerformanceKPIs', 'ActionTrackingRegister', 'Budget', 'KPIs', 
         'EmergencyAlerts', 'EmergencyPlans', 'EmergencyPlansUpdates', 'AppEmergencyNumbers', 'EmployeeTrainingMatrix', 'ContractorTrainings', 'ExternalWorkforceMonthly', 'FireEquipmentAssets', 
         'FireEquipmentInspections', 'ViolationTypes', 'ViolationApprovalRequests', 'ViolationApprovalSettings', 'PPEMatrix', 'PPE_Stock', 'PPE_Transactions', 'ApprovedContractors', 'ContractorEvaluations', 'ContractorApprovalRequests', 'ContractorEvaluationApprovalRequests', 'ContractorDeletionRequests',
-        'AuditLog', 'UserActivityLog', 'AIAssistantSettings', 'UserAILog', 'ObservationSites', 'AnnualTrainingPlans',
+        'AuditLog', 'UserActivityLog', 'ClientErrorLog', 'AIAssistantSettings', 'UserAILog', 'ObservationSites', 'AnnualTrainingPlans',
         'SafetyTeamMembers', 'SafetyOrganizationalStructure', 'SafetyJobDescriptions', 'SafetyTeamKPIs', 
         'SafetyTeamPerformanceReports', 'SafetyTeamAttendance', 'SafetyTeamLeaves', 'SafetyHealthManagementSettings',
         'SafetyTeamTasks', 'ActionTrackingSettings',         'Form_Settings_DB', 'Violation_Types_DB',

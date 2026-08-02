@@ -10358,6 +10358,16 @@
                         <i class="fas fa-cog" aria-hidden="true"></i>
                         <span data-i18n="nav.settings">الإعدادات</span>
                     </a>
+                    <a
+                        href="#client-errors"
+                        class="nav-item"
+                        data-section="client-errors"
+                        role="menuitem"
+                        title="مراقبة أخطاء المستخدمين"
+                    >
+                        <i class="fas fa-bug" aria-hidden="true"></i>
+                        <span>مراقبة الأخطاء</span>
+                    </a>
                 </nav>
 
                 <!-- إصدار النظام -->
@@ -12562,6 +12572,13 @@
                         aria-label="قسم الإعدادات"
                     ></section>
 
+                    <section
+                        id="client-errors-section"
+                        class="section"
+                        role="region"
+                        aria-label="قسم مراقبة أخطاء المستخدمين"
+                    ></section>
+
                     <!-- Issue Tracking Section -->
                     <section
                         id="issue-tracking-section"
@@ -12793,7 +12810,7 @@
         <!-- CRITICAL: DataManager is defined here and must be loaded before login-init-fixed.js -->
         <!-- Load individual service modules first (they expose themselves to window) -->
         <script src="js/modules/services/local-db-cache.js" defer></script>
-        <script src="js/modules/services/data-manager.js?v=hse-app-v1.0.768-20260802" defer></script>
+        <script src="js/modules/services/data-manager.js?v=hse-app-v1.0.770-20260802" defer></script>
         <script
             src="js/modules/services/periodic-inspection-store.js"
             defer
@@ -12805,6 +12822,7 @@
         <script src="js/modules/services/approval-circuits.js" defer></script>
         <script src="js/modules/services/audit-log.js" defer></script>
         <script src="js/modules/services/user-activity-log.js" defer></script>
+        <script src="js/modules/services/client-error-log.js" defer></script>
         <script
             src="js/modules/services/cloud-storage-integration.js"
             defer
@@ -12847,15 +12865,16 @@
         <script src="js/modules/modules/users.js" defer></script>
         <!-- ✅ لوحة متابعة إصدارات المستخدمين (admin) — تستخدم google-integration الذي حُمّل أعلاه -->
         <script src="js/modules/modules/user-versions-admin.js" defer></script>
+        <script src="js/modules/modules/client-errors-admin.js" defer></script>
         <script src="js/modules/modules/investigation-rca.js" defer></script>
         <script src="js/modules/modules/incidents.js?v=20260719-incident-forms-v1" defer></script>
         <script src="js/modules/modules/nearmiss.js" defer></script>
-        <script src="js/modules/modules/ptw.js?v=hse-app-v1.0.768-20260802" defer></script>
+        <script src="js/modules/modules/ptw.js?v=hse-app-v1.0.770-20260802" defer></script>
         <script src="js/modules/modules/reports.js" defer></script>
         <script src="js/modules/modules/help-content-en.js" defer></script>
         <script src="js/modules/modules/help.js" defer></script>
         <script src="js/modules/modules/settings.js?v=20260426-2" defer></script>
-        <script src="js/modules/modules/clinic.js?v=hse-app-v1.0.768-20260802" defer></script>
+        <script src="js/modules/modules/clinic.js?v=hse-app-v1.0.770-20260802" defer></script>
         <script src="js/modules/modules/fireequipment.js" defer></script>
         <script src="js/modules/modules/ppe.js?v=20260723-ppe-identity-v2" defer></script>
         <script src="js/modules/modules/periodic-equipment.js?v=20260626-1" defer></script>
@@ -13013,7 +13032,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.768-20260802";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.770-20260802";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

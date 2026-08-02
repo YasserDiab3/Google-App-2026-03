@@ -5199,6 +5199,48 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'addClientErrorLog': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    if (!actorUserData || !(actorUserData.id || actorUserData.email)) {
+                        result = { success: false, message: 'يجب تسجيل الدخول لتسجيل الخطأ' };
+                        return;
+                    }
+                    result = addClientErrorLogToSheet(payload || {}, actorUserData);
+                    return;
+        })();
+        return result;
+    },
+    'getAllClientErrorLogs': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
+                    result = getAllClientErrorLogs((payload && payload.filters) || payload || {});
+                    return;
+        })();
+        return result;
+    },
+    'getClientErrorStats': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
+                    result = getClientErrorStats((payload && payload.filters) || payload || {});
+                    return;
+        })();
+        return result;
+    },
+    'updateClientErrorStatus': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
+                    result = updateClientErrorStatus(payload || {}, actorUserData);
+                    return;
+        })();
+        return result;
+    },
     'addAIAssistantSettings': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

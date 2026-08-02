@@ -7263,6 +7263,22 @@ window.UI = {
                         }
                     }
                     break;
+                case 'client-errors':
+                    if (typeof ClientErrorsAdmin !== 'undefined' && ClientErrorsAdmin.load) {
+                        try {
+                            const loadResult = ClientErrorsAdmin.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل مراقبة الأخطاء:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء ClientErrorsAdmin.load:', error);
+                        }
+                    } else if (!silent) {
+                        Utils.safeError('❌ موديول ClientErrorsAdmin غير متوفر');
+                    }
+                    break;
                 case 'safety-budget':
                     if (typeof SafetyBudget !== 'undefined' && SafetyBudget.load) {
                         SafetyBudget.load();

@@ -267,7 +267,7 @@ function getSystemModules() {
             name: 'السجلات',
             description: 'سجلات النظام',
             file: 'Logs.gs',
-            sheets: ['AuditLog', 'UserActivityLog'],
+            sheets: ['AuditLog', 'UserActivityLog', 'ClientErrorLog'],
             version: '1.0.0',
             enabled: true,
             critical: false

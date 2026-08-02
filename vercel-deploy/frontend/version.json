@@ -1,13 +1,13 @@
 {
-  "version": "1.0.768",
+  "version": "1.0.770",
   "highlights": {
     "ar": [
-      "رفع قفل المصادقة الثنائية تلقائياً بعد إدخال كلمة المرور الصحيحة، وتقليل مدة القفل المؤقت.",
-      "تسريع خطوة تسجيل الدخول قبل MFA، ورسائل أوضح عند استجابة HTML غير صالحة من الخادم."
+      "إصلاح بطء ورفض المصادقة الثنائية الناتج عن قفل ورقة Users بسبب نبضات الحضور.",
+      "مراقبة أخطاء المستخدمين للمدير مع تبويب مباشر وتسجيل تلقائي لرسائل الخطأ."
     ],
     "en": [
-      "MFA lockout clears automatically after a correct password, with a shorter temporary lock window.",
-      "Faster pre-MFA login step and clearer errors when the server returns invalid HTML instead of JSON."
+      "Fix MFA delays/false rejects caused by Users-sheet lock from presence heartbeats.",
+      "Admin client-error monitoring with live tab and automatic capture of user-facing errors."
     ]
   }
 }
