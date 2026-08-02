@@ -11,7 +11,6 @@
 
 import { execSync } from 'child_process';
 import path from 'path';
-import https from 'https';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -30,29 +29,24 @@ function run(cmd, opts = {}) {
     });
 }
 
-function smokePost(url) {
-    return new Promise((resolve, reject) => {
-        const body = JSON.stringify({ action: 'login', data: { email: '', password: '' } });
-        const u = new URL(url);
-        const req = https.request({
-            hostname: u.hostname,
-            path: u.pathname + u.search,
+/** fetch يتابع 302 إلى script.googleusercontent.com — https.request لا يفعل */
+async function smokePost(url) {
+    const body = JSON.stringify({ action: 'login', data: { email: '', password: '' } });
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 60000);
+    try {
+        const res = await fetch(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8',
-                'Content-Length': Buffer.byteLength(body)
-            },
-            timeout: 60000
-        }, (res) => {
-            let data = '';
-            res.on('data', (c) => { data += c; });
-            res.on('end', () => resolve({ status: res.statusCode, body: data }));
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body,
+            redirect: 'follow',
+            signal: ctrl.signal
         });
-        req.on('error', reject);
-        req.on('timeout', () => { req.destroy(); reject(new Error('smoke timeout')); });
-        req.write(body);
-        req.end();
-    });
+        const text = await res.text();
+        return { status: res.status, body: text };
+    } finally {
+        clearTimeout(timer);
+    }
 }
 
 async function main() {
