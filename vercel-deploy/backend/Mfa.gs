@@ -74,19 +74,19 @@ function counterBytesFromStep_(timeStep) {
     return bytes;
 }
 
+/**
+ * GAS يتوقع بايتات موقّعة (-128..127).
+ * المسار القديم base64Encode(قيم 0..255) كان يفسد مفتاح HMAC عندما يكون أي بايت >127
+ * فيُولَّد رمز مختلف عن Google Authenticator رغم صحة السر.
+ */
 function normalizeGasByteArray_(arr) {
     if (!arr || !arr.length) return [];
-    var unsigned = [];
+    var signed = [];
     for (var i = 0; i < arr.length; i++) {
-        unsigned.push(Number(arr[i]) & 0xff);
+        var v = Number(arr[i]) & 0xff;
+        signed.push(v > 127 ? v - 256 : v);
     }
-    try {
-        return Utilities.base64Decode(Utilities.base64Encode(unsigned));
-    } catch (e) {
-        return unsigned.map(function (b) {
-            return b > 127 ? b - 256 : b;
-        });
-    }
+    return signed;
 }
 
 function gasSignatureToUnsigned_(sig) {
@@ -160,12 +160,13 @@ function encryptMfaSecret_(plain) {
     if (!text) return '';
     try {
         var key = ensureMfaEncryptionKey_();
-        var bytes = Utilities.newBlob(text).getBytes();
         var keyBytes = Utilities.newBlob(key).getBytes();
-        var out = bytes.map(function (b, i) {
-            var val = (b ^ keyBytes[i % keyBytes.length]) & 0xFF;
-            return val > 127 ? val - 256 : val;
-        });
+        var out = [];
+        for (var i = 0; i < text.length; i++) {
+            var p = text.charCodeAt(i) & 0xff;
+            var c = (p ^ (Number(keyBytes[i % keyBytes.length]) & 0xff)) & 0xff;
+            out.push(c > 127 ? c - 256 : c);
+        }
         return Utilities.base64Encode(out);
     } catch (_e) {
         return text;
@@ -173,9 +174,28 @@ function encryptMfaSecret_(plain) {
 }
 
 /**
+ * فك XOR إلى نص عبر charCode — يتجنّب فساد getDataAsString مع بايتات GAS.
+ */
+function xorDecryptMfaToString_(enc) {
+    var raw = String(enc || '').trim();
+    if (!raw) return '';
+    try {
+        var key = ensureMfaEncryptionKey_();
+        var bytes = Utilities.base64Decode(raw);
+        var keyBytes = Utilities.newBlob(key).getBytes();
+        var chars = [];
+        for (var i = 0; i < bytes.length; i++) {
+            var p = ((Number(bytes[i]) & 0xff) ^ (Number(keyBytes[i % keyBytes.length]) & 0xff)) & 0xff;
+            chars.push(String.fromCharCode(p));
+        }
+        return chars.join('');
+    } catch (_e) {
+        return '';
+    }
+}
+
+/**
  * مرشّحو سر TOTP من القيمة المخزّنة.
- * لا تعتمد على مسار فك واحد: Base32 الصريح قد يُفسَّر كـ Base64 بالخطأ،
- * وأسرار قديمة/جديدة تختلف في تمثيل بايتات GAS الموقّعة.
  */
 function resolveMfaSecretCandidates_(encoded) {
     var out = [];
@@ -191,33 +211,22 @@ function resolveMfaSecretCandidates_(encoded) {
     var enc = String(encoded || '').trim();
     if (!enc) return out;
 
-    // 1) نص Base32 صريح أولاً (أسرار قديمة غير مشفّرة)
+    // 1) نص Base32 صريح
     add(enc);
 
-    // 2) فك XOR — مسار البايتات الموقّعة (GAS الحالي)
+    // 2) فك عبر charCode (الأوثق على GAS)
+    add(xorDecryptMfaToString_(enc));
+
+    // 3) فك عبر newBlob/getDataAsString — توافق أسرار شُفّرت بالطريقة القديمة
     try {
         var key = ensureMfaEncryptionKey_();
         var bytes = Utilities.base64Decode(enc);
         var keyBytes = Utilities.newBlob(key).getBytes();
         var signedOut = bytes.map(function (b, i) {
-            var val = (b ^ keyBytes[i % keyBytes.length]) & 0xFF;
+            var val = ((Number(b) & 0xff) ^ (Number(keyBytes[i % keyBytes.length]) & 0xff)) & 0xff;
             return val > 127 ? val - 256 : val;
         });
         add(Utilities.newBlob(signedOut).getDataAsString());
-
-        // 3) فك XOR — مسار غير موقّع (توافق مع أسرار شُفّرت قبل تعديل البايتات)
-        var unsignedOut = bytes.map(function (b, i) {
-            return (b ^ keyBytes[i % keyBytes.length]) & 0xFF;
-        });
-        try {
-            add(Utilities.newBlob(unsignedOut).getDataAsString());
-        } catch (_u) {
-            // بعض إصدارات GAS ترفض بايتات >127 — حوّلها ثم أعد المحاولة
-            var coerced = unsignedOut.map(function (v) {
-                return v > 127 ? v - 256 : v;
-            });
-            add(Utilities.newBlob(coerced).getDataAsString());
-        }
     } catch (_e) { /* ignore */ }
 
     return out;
@@ -225,7 +234,6 @@ function resolveMfaSecretCandidates_(encoded) {
 
 function decryptMfaSecret_(encoded) {
     var candidates = resolveMfaSecretCandidates_(encoded);
-    // لا تُرجع النص المشفّر الخام أبداً — كان يسبب رفض كل رموز TOTP
     return candidates.length ? candidates[0] : '';
 }
 
@@ -243,6 +251,51 @@ function verifyTotpAgainstSecretEnc_(secretEnc, code, options) {
         }
     }
     return { ok: false, secret: candidates[0], decryptOk: true, candidateCount: candidates.length };
+}
+
+/**
+ * اختبار ذاتي على الخادم: HOTP المرجعي + دورة تشفير + TOTP ببايتات عالية.
+ */
+function mfaSelfTest_() {
+    var report = {
+        success: true,
+        serverTime: new Date().toISOString(),
+        step: Math.floor(Date.now() / 1000 / 30),
+        hotp0: '',
+        hotp0Ok: false,
+        roundtripOk: false,
+        highByteTotpOk: false,
+        hmacNormalize: 'signed-only'
+    };
+    try {
+        // RFC 4226: secret ASCII 12345678901234567890 = GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ
+        var rfcSecret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
+        report.hotp0 = generateTotpCodeAtStep_(rfcSecret, 0);
+        report.hotp0Ok = (report.hotp0 === '755224');
+
+        var sample = 'JBSWY3DPEHPK3PXP';
+        var enc = encryptMfaSecret_(sample);
+        var candidates = resolveMfaSecretCandidates_(enc);
+        report.roundtripOk = candidates.indexOf(sample) !== -1;
+        report.candidateCountAfterEncrypt = candidates.length;
+
+        // سرّ ببايتات >127 بعد Base32 decode — يكشف فساد HMAC القديم
+        var highSecret = base32Encode_([200, 150, 50, 250, 10, 180, 90, 30, 220, 100]);
+        var code = generateTotpCodeAtStep_(highSecret, report.step);
+        report.highByteTotpOk = verifyTotpCode_(highSecret, code, { window: 0 });
+        report.highSecretLen = highSecret.length;
+
+        report.success = !!(report.hotp0Ok && report.roundtripOk && report.highByteTotpOk);
+        if (!report.success) {
+            report.message = 'فشل اختبار MFA الذاتي';
+        } else {
+            report.message = 'اختبار MFA ناجح';
+        }
+    } catch (e) {
+        report.success = false;
+        report.message = String(e);
+    }
+    return report;
 }
 
 function isMfaEnabledForUser_(user) {

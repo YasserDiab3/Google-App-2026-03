@@ -195,6 +195,11 @@ function doPost(e) {
             })));
         }
 
+        // اختبار ذاتي لـ MFA/TOTP — بدون CSRF، للتحقق بعد النشر
+        if (action === 'mfaSelfTest' && typeof mfaSelfTest_ === 'function') {
+            return setCorsHeaders(ContentService.createTextOutput(JSON.stringify(mfaSelfTest_())));
+        }
+
         // حماية إضافية: تقييد شكل action لمنع القيم غير المتوقعة
         const actionPattern = /^[a-zA-Z][a-zA-Z0-9_]{1,79}$/;
         if (typeof action === 'string' && !actionPattern.test(action)) {
@@ -314,7 +319,7 @@ function doPost(e) {
         const isSensitiveAction = sensitiveActions.includes(action);
 
         // العمليات المعفاة من CSRF (pre-authentication — لا يمكن أن تملك CSRF token صالح)
-        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'fixClinicSheetHeaders', 'warmup', 'testConnection'];
+        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'fixClinicSheetHeaders', 'warmup', 'testConnection', 'mfaSelfTest'];
         const isCsrfExempt = csrfExemptActions.includes(action);
 
         // التحقق من CSRF Token - إلزامي لجميع العمليات غير القراءة
@@ -380,7 +385,7 @@ function doPost(e) {
         const sessionExemptActions = [
             'login', 'verifyMfaLogin', 'initializeSheets', 'fixClinicSheetHeaders',
             'testConnection', 'warmup', 'getPublicIP', 'invalidateServerSession',
-            'getAuthBootstrapPolicy'
+            'getAuthBootstrapPolicy', 'mfaSelfTest'
         ];
         const isSessionExempt = sessionExemptActions.indexOf(action) !== -1;
         if (!isSessionExempt) {

@@ -2,7 +2,7 @@
 /**
  * deploy-gas-prod.mjs — نشر Backend إلى Web App الإنتاجي (نفس /exec في الواجهة)
  *
- * الخطوات: clasp push → clasp version → clasp deploy -i PROD_ID → smoke POST
+ * الخطوات: clasp push → clasp deploy -i PROD_ID → smoke POST + mfaSelfTest
  *
  * الاستخدام من جذر المستودع:
  *   node scripts/deploy-gas-prod.mjs
@@ -29,16 +29,15 @@ function run(cmd, opts = {}) {
     });
 }
 
-/** fetch يتابع 302 إلى script.googleusercontent.com — https.request لا يفعل */
-async function smokePost(url) {
-    const body = JSON.stringify({ action: 'login', data: { email: '', password: '' } });
+/** fetch يتابع 302 إلى script.googleusercontent.com */
+async function postJson(url, action, data) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 60000);
     try {
         const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body,
+            body: JSON.stringify({ action, data: data || {} }),
             redirect: 'follow',
             signal: ctrl.signal
         });
@@ -61,7 +60,7 @@ async function main() {
     run(`clasp deploy -i "${PROD_DEPLOYMENT_ID}" -d "${desc}"`);
 
     console.log('\nSmoke POST…');
-    const result = await smokePost(PROD_EXEC_URL);
+    const result = await postJson(PROD_EXEC_URL, 'login', { email: '', password: '' });
     const preview = String(result.body || '').slice(0, 180);
     const isHtml = /<!DOCTYPE|<html/i.test(preview);
     console.log('HTTP', result.status);
@@ -75,6 +74,22 @@ async function main() {
         console.log('\nOK: JSON response from production /exec');
     } catch (e) {
         console.error('\nFAIL: response is not JSON');
+        process.exit(1);
+    }
+
+    console.log('\nMFA self-test…');
+    const mfa = await postJson(PROD_EXEC_URL, 'mfaSelfTest', {});
+    console.log('HTTP', mfa.status);
+    console.log('Body:', String(mfa.body || '').slice(0, 400));
+    try {
+        const parsed = JSON.parse(mfa.body);
+        if (!parsed.success || !parsed.hotp0Ok || !parsed.roundtripOk || !parsed.highByteTotpOk) {
+            console.error('\nFAIL: mfaSelfTest did not pass');
+            process.exit(1);
+        }
+        console.log('\nOK: mfaSelfTest passed (HOTP + encrypt roundtrip + high-byte TOTP)');
+    } catch (e) {
+        console.error('\nFAIL: mfaSelfTest response is not JSON');
         process.exit(1);
     }
 }
