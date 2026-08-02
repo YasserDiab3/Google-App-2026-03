@@ -1,4 +1,4 @@
-/**
+﻿/**
  * طبقة الاتصال بـ Google Apps Script (Web App) كخلفية للمزامنة مع Google Sheets.
  */
 
@@ -731,7 +731,13 @@ const GoogleIntegration = {
                     errorMsg.includes('service invoked too many times') ||
                     errorMsg.includes('server error') ||
                     errorMsg.includes('limit exceeded') ||
-                    errorMsg.includes('rate limit');
+                    errorMsg.includes('rate limit') ||
+                    // تذبذب تسليم Google (404/HTML/doGet): عابر ولا يجوز أن يفتح Circuit Breaker
+                    // ويحجب كل الطلبات بعد عدة محاولات دخول متعثرة.
+                    errorMsg.includes('html بدل json') ||
+                    errorMsg.includes('تعذّر تسليم') ||
+                    errorMsg.includes('doget') ||
+                    errorMsg.includes('نشر web app');
                 const isAuthOrPermissionError =
                     errorMsg.includes('csrf') ||
                     errorMsg.includes('actor_identity') ||
@@ -824,7 +830,15 @@ const GoogleIntegration = {
     /**
      * التحقق من هل هو executeRequest
      */
-    async _executeRequest(action, data, retryCount = 0, dogetRetry = 0) {
+    _emitAuthRetryProgress_(action, attempt, max) {
+        try {
+            window.dispatchEvent(new CustomEvent('authRetryProgress', {
+                detail: { action, attempt, max }
+            }));
+        } catch (_e) { /* الواجهة اختيارية */ }
+    },
+
+    async _executeRequest(action, data, retryCount = 0, dogetRetry = 0, deadlineAt = 0) {
         if (!this._isBackendRpcConfigured()) {
             return Promise.reject(new Error('الخادم الخلفي غير مُتهيأ أو غير مفعّل'));
         }
@@ -834,6 +848,14 @@ const GoogleIntegration = {
         if (!this.isValidGoogleAppsScriptUrl(scriptUrl)) {
             throw new Error('رابط Web App غير صالح. يجب أن يكون رابط Google Apps Script من النوع https://script.google.com/macros/s/.../exec');
         }
+
+        // سقف زمني إجمالي للمصادقة يشمل كل إعادات الإرسال والمحاولات.
+        // بدونه كانت المهلة تُحسب لكل محاولة على حدة، فتبقى شاشة «جاري التحقق»
+        // معلّقة دقائق بلا أي رسالة عند تكرار تذبذب Google.
+        const AUTH_TOTAL_BUDGET_MS = 75000;
+        const isAuthRpc = ['login', 'verifyMfaLogin', 'confirmMfaEnrollment', 'startMfaEnrollment', 'disableMfa', 'changePassword'].includes(action);
+        const effectiveDeadline = isAuthRpc ? (deadlineAt || (Date.now() + AUTH_TOTAL_BUDGET_MS)) : 0;
+        const canRetryWithinBudget = () => !effectiveDeadline || (effectiveDeadline - Date.now()) > 5000;
 
         try {
             // التحقق من Rate Limiting قبل تنفيذ الطلب
@@ -969,11 +991,14 @@ const GoogleIntegration = {
             const isMediumOperation = mediumOperations.some(op => action.includes(op) || action === op) || isDeleteOperation;
 
             // مهلة MFA/login افتراضياً 90ث — تذبذب توجيه Google (doGet/404) يحتاج هامشاً لإعادة الإرسال
-            const timeoutDuration = Number(data?.__timeoutMs) > 0
+            let timeoutDuration = Number(data?.__timeoutMs) > 0
                 ? Number(data.__timeoutMs)
                 : (action === 'saveFormSettings' ? 120000
                     : (isAuthAction ? 90000
                         : (isHeavyOperation ? 90000 : (isMediumOperation ? 45000 : 15000))));
+            if (effectiveDeadline) {
+                timeoutDuration = Math.min(timeoutDuration, Math.max(8000, effectiveDeadline - Date.now()));
+            }
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => {
@@ -1083,11 +1108,11 @@ const GoogleIntegration = {
                         maxRetries = 3;
                     }
 
-                    if (retryCount < maxRetries) {
+                    if (retryCount < maxRetries && canRetryWithinBudget()) {
                         const delay = Math.min(Math.pow(2, retryCount + 1) * 700, 3000);
                         Utils.safeLog(`⏱️ انتهت مهلة الاتصال للخادم (${Math.round(timeoutDuration / 1000)}s). إعادة المحاولة بعد ${delay / 1000} ثانية (المحاولة ${retryCount + 1}/${maxRetries})`);
                         await new Promise(resolve => setTimeout(resolve, delay));
-                        return this._executeRequest(action, data, retryCount + 1);
+                        return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
                     }
 
                     const timeStr = new Date().toLocaleString('ar-SA');
@@ -1179,14 +1204,14 @@ const GoogleIntegration = {
                         maxRetries = 3;
                     }
 
-                    if (retryCount < maxRetries) {
+                    if (retryCount < maxRetries && canRetryWithinBudget()) {
                         // تأخير تصاعدي أقصر لتجنب الحجز الطويل للطابور
                         const delay = Math.min(Math.pow(2, retryCount + 1) * 700, 3000);
                         Utils.safeLog(`⏱️ انتهت مهلة الاتصال للخادم (${Math.round(timeoutDuration / 1000)}s). إعادة المحاولة بعد ${delay / 1000} ثانية (المحاولة ${retryCount + 1}/${maxRetries})`);
                         await new Promise(resolve => setTimeout(resolve, delay));
 
                         // إعادة المحاولة مع أمر بزيادة المهلة داخلياً إذا أمكن
-                        return this._executeRequest(action, data, retryCount + 1);
+                        return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
                     }
 
                     const timeStr = new Date().toLocaleString('ar-SA');
@@ -1257,11 +1282,11 @@ const GoogleIntegration = {
                 // 429 Too Many Requests — إعادة المحاولة بتأخير تصاعدي
                 if (status === 429) {
                     const maxRetries = 3;
-                    if (retryCount < maxRetries) {
+                    if (retryCount < maxRetries && canRetryWithinBudget()) {
                         const delay = Math.pow(2, retryCount + 1) * 1000;
                         Utils.safeWarn(`429 Too Many Requests - إعادة المحاولة بعد ${delay / 1000}s (${retryCount + 1}/${maxRetries})`);
                         await new Promise(resolve => setTimeout(resolve, delay));
-                        return this._executeRequest(action, data, retryCount + 1);
+                        return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
                     }
                     throw new Error('تجاوز حد الطلبات (429). يرجى الانتظار دقيقة ثم إعادة المحاولة.');
                 }
@@ -1269,11 +1294,11 @@ const GoogleIntegration = {
                 // 503 Service Unavailable / 502 Bad Gateway / 504 Gateway Timeout — الخدمة مؤقتاً غير متاحة
                 if (status === 503 || status === 502 || status === 504) {
                     const maxRetries = 3;
-                    if (retryCount < maxRetries) {
+                    if (retryCount < maxRetries && canRetryWithinBudget()) {
                         const delay = Math.pow(2, retryCount + 1) * 1000;
                         Utils.safeWarn(`الخادم غير متاح (${status}) - إعادة المحاولة بعد ${delay / 1000}s (${retryCount + 1}/${maxRetries})`);
                         await new Promise(resolve => setTimeout(resolve, delay));
-                        return this._executeRequest(action, data, retryCount + 1);
+                        return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
                     }
                     const statusText = status === 503 ? 'الخدمة مؤقتاً غير متاحة (503)' : status === 502 ? 'خطأ في البوابة (502)' : 'انتهت مهلة البوابة (504)';
                     throw new Error(`⚠️ ${statusText}\n\nالخادم لا يستجيب حالياً. جرّب:\n1. تحديث الصفحة بعد دقيقة.\n2. التأكد من أن Google Apps Script منشور وأن الرابط ينتهي بـ /exec.\n3. إن كان السكربت على Google: تحقق من صفحة حالة خدمات Google.`);
@@ -1282,11 +1307,13 @@ const GoogleIntegration = {
                 // 404 من script.googleusercontent.com: محتوى تحويل 302 لم يُسلَّم — doPost لم يُنفَّذ.
                 // إعادة الإرسال آمنة لكل العمليات (لا كتابة ولا استهلاك OTP حدث).
                 // المصادقة: حتى 5 محاولات بتأخير قصير — تذبذب Google شائع على /exec.
-                if (status === 404 && dogetRetry < (isAuthAction ? 5 : 3)) {
+                const max404Retries = isAuthAction ? 5 : 3;
+                if (status === 404 && dogetRetry < max404Retries && canRetryWithinBudget()) {
                     const delay = isAuthAction ? (300 + dogetRetry * 500) : (800 + (dogetRetry * 1200));
-                    Utils.safeWarn(`↩️ 404 لمحتوى التحويل (${action}) — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}) بعد ${delay}ms`);
+                    Utils.safeWarn(`↩️ 404 لمحتوى التحويل (${action}) — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}/${max404Retries}) بعد ${delay}ms`);
+                    this._emitAuthRetryProgress_(action, dogetRetry + 1, max404Retries);
                     await new Promise(resolve => setTimeout(resolve, delay));
-                    return this._executeRequest(action, data, retryCount, dogetRetry + 1);
+                    return this._executeRequest(action, data, retryCount, dogetRetry + 1, effectiveDeadline);
                 }
 
                 // باقي الأخطاء
@@ -1329,11 +1356,13 @@ const GoogleIntegration = {
             } catch (e) {
                 // صفحة HTML من Google تعني أن محتوى تحويل 302 لم يُسلَّم — doPost لم يُنفَّذ.
                 // إعادة الإرسال آمنة (لا كتابة ولا استهلاك OTP حدث على الخادم).
-                if (isHtmlBody && dogetRetry < (isAuthAction ? 5 : 3)) {
+                const maxHtmlRetries = isAuthAction ? 5 : 3;
+                if (isHtmlBody && dogetRetry < maxHtmlRetries && canRetryWithinBudget()) {
                     const delay = isAuthAction ? (300 + dogetRetry * 500) : (800 + (dogetRetry * 1200));
-                    Utils.safeWarn(`↩️ استجابة HTML للعملية ${action} — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}) بعد ${delay}ms`);
+                    Utils.safeWarn(`↩️ استجابة HTML للعملية ${action} — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}/${maxHtmlRetries}) بعد ${delay}ms`);
+                    this._emitAuthRetryProgress_(action, dogetRetry + 1, maxHtmlRetries);
                     await new Promise(resolve => setTimeout(resolve, delay));
-                    return this._executeRequest(action, data, retryCount, dogetRetry + 1);
+                    return this._executeRequest(action, data, retryCount, dogetRetry + 1, effectiveDeadline);
                 }
                 if (e && e.message && (e.message.includes('HTML بدل JSON') || e.message.includes('نشر Web App'))) throw e;
                 const safePreview = this.sanitizeGasErrorText(resultText, 'استجابة غير صالحة من الخادم');
@@ -1357,11 +1386,12 @@ const GoogleIntegration = {
                 // عند تعذّر تسليم محتوى التحويل 302). لذلك إعادة الإرسال آمنة لكل العمليات —
                 // بما فيها verifyMfaLogin: لم يُستهلك أي رمز OTP على الخادم.
                 const maxDogetRetries = isAuthAction ? 5 : 3;
-                if (dogetRetry < maxDogetRetries) {
+                if (dogetRetry < maxDogetRetries && canRetryWithinBudget()) {
                     const delay = isAuthAction ? (300 + dogetRetry * 500) : (800 + (dogetRetry * 1200));
                     Utils.safeWarn(`↩️ رد doGet للعملية ${action} — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}/${maxDogetRetries}) بعد ${delay}ms`);
+                    this._emitAuthRetryProgress_(action, dogetRetry + 1, maxDogetRetries);
                     await new Promise(resolve => setTimeout(resolve, delay));
-                    return this._executeRequest(action, data, retryCount, dogetRetry + 1);
+                    return this._executeRequest(action, data, retryCount, dogetRetry + 1, effectiveDeadline);
                 }
 
                 const dogetMsg = 'تعذّر تسليم الطلب إلى الخادم (تذبذب مؤقت في Google).\n' +
@@ -1480,12 +1510,12 @@ const GoogleIntegration = {
                     sessionStorage.removeItem('client_session_id');
                     Utils.safeWarn('🔐 تم اكتشاف خطأ CSRF؛ إعادة تهيئة جلسة الأمان وإعادة المحاولة...');
                 } catch (_e) { /* ignore */ }
-                return this._executeRequest(action, data, retryCount + 1);
+                return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
             }
 
             // منطق إعادة المحاولة
             const maxRetries = 2;
-            if (retryCount < maxRetries) {
+            if (retryCount < maxRetries && canRetryWithinBudget()) {
                 // إعادة المحاولة فقط للأخطاء الشبكية
                 if (errorMsg && (
                     errorMsg.includes('Failed to fetch') ||
@@ -1501,7 +1531,7 @@ const GoogleIntegration = {
                     const delay = Math.pow(2, retryCount + 1) * 1000; // 2s, 4s
                     Utils.safeLog(`🔄 إعادة المحاولة بعد ${delay}ms (المحاولة ${retryCount + 1}/${maxRetries})`);
                     await new Promise(resolve => setTimeout(resolve, delay));
-                    return this._executeRequest(action, data, retryCount + 1);
+                    return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
                 }
             }
 

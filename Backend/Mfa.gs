@@ -8,8 +8,8 @@ var MFA_ENROLL_TTL_SEC_ = 600;
 var MFA_MAX_ATTEMPTS_ = 5;
 /** قفل مؤقت بعد محاولات فاشلة (ثوانٍ) — قصير لأن فشلاً سابقاً بسبب خطأ خادم كان يرفع العداد */
 var MFA_LOCKOUT_SEC_ = 180;
-/** نافذة TOTP عند الدخول (± خطوات × 30ث) — أوسع لتسامح انحراف ساعة الخادم */
-var MFA_TOTP_WINDOW_ = 5;
+/** نافذة TOTP عند الدخول (± خطوات × 30ث) — ±4 دقائق لتسامح انحراف ساعة الخادم/الجهاز */
+var MFA_TOTP_WINDOW_ = 8;
 var MFA_ENROLL_TOTP_WINDOW_ = 5;
 
 function ensureMfaEncryptionKey_() {
@@ -177,7 +177,9 @@ function decryptMfaSecret_(encoded) {
         var out = bytes.map(function (b, i) {
             return (b ^ keyBytes[i % keyBytes.length]) & 0xFF;
         });
-        return Utilities.newBlob(out).getDataAsString();
+        var plain = Utilities.newBlob(out).getDataAsString();
+        // أسرار Authenticator base32 — وحّد الشكل بعد الفك
+        return String(plain || '').toUpperCase().replace(/\s/g, '');
     } catch (e) {
         Logger.log('decryptMfaSecret_ error: ' + e.toString());
         return '';

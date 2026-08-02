@@ -869,6 +869,20 @@ async function handleMfaVerify() {
     }
 }
 
+// تذبذب تسليم Google يجعل الطلب يُعاد إرساله بصمت؛ بدون هذا المؤشر يبدو الزر معلّقاً.
+window.addEventListener('authRetryProgress', function (ev) {
+    const detail = (ev && ev.detail) || {};
+    const btn = detail.action === 'verifyMfaLogin'
+        ? document.getElementById('mfa-verify-btn')
+        : document.getElementById('login-submit-btn');
+    if (!btn || !btn.disabled) return;
+    const langEn = (typeof localStorage !== 'undefined' && localStorage.getItem('language') === 'en');
+    const label = langEn
+        ? `Retrying ${detail.attempt}/${detail.max}...`
+        : `إعادة المحاولة ${detail.attempt}/${detail.max}...`;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2" aria-hidden="true"></i><span>' + label + '</span>';
+});
+
 async function handleLogin(form, submitBtn) {
     // التأكد من أن submitBtn هو عنصر <button> الفعلي وليس عنصراً داخله (مثل <i>)
     if (submitBtn && submitBtn.tagName !== 'BUTTON') {

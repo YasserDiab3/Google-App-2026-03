@@ -683,7 +683,8 @@ function getAuthUserRowByEmail_(email, meta) {
     var emailCol = headers.indexOf('email');
     if (emailCol === -1) return null;
 
-    var emails = sheet.getRange(2, emailCol + 1, lastRow - 1, 1).getValues();
+    // نفس نمط المشروع: getRange(startRow, startCol, endRow, endCol) — عمود email فقط
+    var emails = sheet.getRange(2, emailCol + 1, lastRow, emailCol + 1).getValues();
     var rowIndex = -1;
     for (var i = 0; i < emails.length; i++) {
         if (normalizeSheetScalarField_(emails[i][0]).toLowerCase() === e) {
@@ -695,7 +696,7 @@ function getAuthUserRowByEmail_(email, meta) {
     meta.scanned = true;
     if (rowIndex === -1) return null;
 
-    var row = sheet.getRange(rowIndex, 1, 1, lastCol).getValues()[0];
+    var row = sheet.getRange(rowIndex, 1, rowIndex, lastCol).getValues()[0];
     var rec = {};
     for (var c = 0; c < headers.length; c++) {
         var h = headers[c];
@@ -703,6 +704,9 @@ function getAuthUserRowByEmail_(email, meta) {
         var v = row[c];
         if (h === 'active' || h === 'mfaEnabled') {
             rec[h] = v;
+        } else if (h === 'mfaSecretEnc') {
+            // لا تُطبّق تطبيعاً عدوانياً على السرّ المشفّر — trim فقط
+            rec[h] = (v === undefined || v === null) ? '' : String(v).trim();
         } else {
             rec[h] = normalizeSheetScalarField_(v);
         }
@@ -905,7 +909,7 @@ function _fastTouchUserLoginFields_(userId, fields) {
     const idCol = headers.indexOf('id');
     if (idCol === -1) return;
 
-    const ids = sheet.getRange(2, idCol + 1, lastRow - 1, 1).getValues();
+    const ids = sheet.getRange(2, idCol + 1, lastRow, idCol + 1).getValues();
     const target = String(userId).trim();
     let rowIndex = -1;
     for (let i = 0; i < ids.length; i++) {
@@ -1317,39 +1321,71 @@ function verifyMfaLogin(challengeToken, email, code) {
         }
 
         var secret = (typeof decryptMfaSecret_ === 'function') ? decryptMfaSecret_(secretEnc) : '';
+        // أسرار TOTP base32 — وحّد الحالة وأزل الفراغات بعد فك التشفير
+        if (secret) secret = String(secret).toUpperCase().replace(/\s/g, '');
         var totpOk = (secret && typeof verifyTotpCode_ === 'function' && verifyTotpCode_(secret, otp));
+        var usedCacheSecret = !!(cachedUserPayload && cachedUserPayload.mfaSecretEnc);
 
-        // إعادة محاولة واحدة من الشيت فقط إن فشل الكاش ولم يكن لدينا سر التحدي
-        if (!totpOk && !(cachedUserPayload && cachedUserPayload.mfaSecretEnc)) {
+        // دائماً أعد من الشيت عند الفشل — كاش التحدي قد يحمل سراً قديماً/فاسداً فيُرفض الرمز الصحيح
+        if (!totpOk) {
             try {
                 if (typeof invalidateUsersAuthCache_ === 'function') invalidateUsersAuthCache_(e);
-                var freshUser = getUserRecordFromUsersSheetByEmail_(e, { bypassCache: true });
+                // قراءة مباشرة من الشيت — تجاوز كاش per-email الذي قد يكون بلا mfaSecretEnc صالح
+                var freshUser = null;
+                try {
+                    var slimMeta2 = {};
+                    freshUser = getAuthUserRowByEmail_(e, slimMeta2);
+                } catch (_slim2) { freshUser = null; }
+                if (!freshUser) {
+                    freshUser = getUserRecordFromUsersSheetByEmail_(e, { bypassCache: true });
+                }
                 if (freshUser && isMfaEnabledForUser_(freshUser)) {
                     var freshEnc = String(freshUser.mfaSecretEnc || '').trim();
                     var freshSecret = (typeof decryptMfaSecret_ === 'function') ? decryptMfaSecret_(freshEnc) : '';
-                    if (freshSecret && typeof verifyTotpCode_ === 'function' && verifyTotpCode_(freshSecret, otp)) {
+                    if (freshSecret) freshSecret = String(freshSecret).toUpperCase().replace(/\s/g, '');
+                    if (freshSecret && typeof verifyTotpCode_ === 'function' && verifyTotpCode_(freshSecret, otp, { window: 8 })) {
                         totpOk = true;
                         secret = freshSecret;
                         user = freshUser;
                         safeUser = (typeof buildMfaChallengeSafeUser_ === 'function')
                             ? buildMfaChallengeSafeUser_(freshUser)
                             : buildSafeUserFromRecord_(freshUser);
+                        usedCacheSecret = false;
+                        // حدّث كاش التحدي حتى لا تتكرر نفس الفجوة
+                        try {
+                            CacheService.getScriptCache().put('mfa_user_' + token, JSON.stringify({
+                                email: e,
+                                userId: freshUser.id,
+                                mfaSecretEnc: freshEnc,
+                                safeUser: safeUser
+                            }), 300);
+                        } catch (_cu) { /* ignore */ }
                     }
                 }
-            } catch (_retry) { /* ignore */ }
+            } catch (_retry) {
+                Logger.log('verifyMfaLogin sheet retry: ' + _retry.toString());
+            }
         }
 
         if (!totpOk) {
             if (typeof recordMfaFailure_ === 'function') recordMfaFailure_(e);
-            // لا تكتب SecurityAuditLog بشكل متزامن ثقيل أثناء مسار MFA (قد يقفل الشيت)
             try {
                 if (typeof logSecurityEventSoft_ === 'function') {
-                    logSecurityEventSoft_('mfa_login_failed', { email: e, severity: 'medium' });
+                    logSecurityEventSoft_('mfa_login_failed', {
+                        email: e,
+                        severity: 'medium',
+                        decryptOk: !!secret,
+                        usedCache: usedCacheSecret
+                    });
                 } else {
-                    Logger.log('mfa_login_failed email=' + e);
+                    Logger.log('mfa_login_failed email=' + e + ' decryptOk=' + !!secret + ' usedCache=' + usedCacheSecret);
                 }
             } catch (_logE) { /* ignore */ }
-            return { success: false, message: 'رمز المصادقة الثنائية غير صحيح' };
+            return {
+                success: false,
+                message: 'رمز المصادقة الثنائية غير صحيح أو منتهٍ. انتظر رمزاً جديداً من التطبيق وأعد المحاولة.',
+                errorCode: 'MFA_CODE_INVALID'
+            };
         }
 
         // منع replay لنفس الرمز قبل إستهلاك challenge
