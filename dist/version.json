@@ -1,13 +1,13 @@
 {
-  "version": "1.0.766",
+  "version": "1.0.768",
   "highlights": {
     "ar": [
-      "إصلاح فشل المصادقة الثنائية رغم صحة الرمز: إزالة فحص كاش خاطئ كان يرفض الدخول ويعرض «تعذر الاتصال».",
-      "رسائل أوضح عند فشل MFA ومهلة تحقق أطول بدون قفل عام يبطئ الخادم."
+      "رفع قفل المصادقة الثنائية تلقائياً بعد إدخال كلمة المرور الصحيحة، وتقليل مدة القفل المؤقت.",
+      "تسريع خطوة تسجيل الدخول قبل MFA، ورسائل أوضح عند استجابة HTML غير صالحة من الخادم."
     ],
     "en": [
-      "Fix MFA rejecting a valid code: remove a faulty cache read-after-write that blocked login and showed a fake connection error.",
-      "Clearer MFA failure messages, longer verify timeout, and no global script lock slowing the server."
+      "MFA lockout clears automatically after a correct password, with a shorter temporary lock window.",
+      "Faster pre-MFA login step and clearer errors when the server returns invalid HTML instead of JSON."
     ]
   }
 }
