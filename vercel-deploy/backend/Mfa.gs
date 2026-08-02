@@ -171,10 +171,8 @@ function decryptMfaSecret_(encoded) {
     var enc = String(encoded || '').trim();
     if (!enc) return '';
     var cleanEnc = enc.toUpperCase().replace(/\s/g, '');
-    // إذا كان السر مخزناً أساساً بنص Base32 صريح غير مشفّر (16–64 حرفاً من A-Z و 2-7)
-    if (/^[A-Z2-7]{16,64}$/.test(cleanEnc)) {
-        return cleanEnc;
-    }
+
+    // 1. محاولة فك التشفير أولاً
     try {
         var key = ensureMfaEncryptionKey_();
         var bytes = Utilities.base64Decode(enc);
@@ -187,11 +185,14 @@ function decryptMfaSecret_(encoded) {
         if (/^[A-Z2-7]{16,64}$/.test(cleanPlain)) {
             return cleanPlain;
         }
-        return cleanPlain;
-    } catch (e) {
-        Logger.log('decryptMfaSecret_ error: ' + e.toString());
+    } catch (_e) { /* ignore */ }
+
+    // 2. إن كان سر Base32 صريح غير مشفّر
+    if (/^[A-Z2-7]{16,64}$/.test(cleanEnc)) {
         return cleanEnc;
     }
+
+    return cleanEnc;
 }
 
 function isMfaEnabledForUser_(user) {

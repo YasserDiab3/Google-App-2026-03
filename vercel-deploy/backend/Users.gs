@@ -1332,7 +1332,7 @@ function verifyMfaLogin(challengeToken, email, code) {
         var secret = (typeof decryptMfaSecret_ === 'function') ? decryptMfaSecret_(secretEnc) : '';
         // أسرار TOTP base32 — وحّد الحالة وأزل الفراغات بعد فك التشفير
         if (secret) secret = String(secret).toUpperCase().replace(/\s/g, '');
-        var totpOk = (secret && typeof verifyTotpCode_ === 'function' && verifyTotpCode_(secret, otp));
+        var totpOk = (secret && typeof verifyTotpCode_ === 'function' && verifyTotpCode_(secret, otp, { window: 10 }));
         var usedCacheSecret = !!(cachedUserPayload && cachedUserPayload.mfaSecretEnc);
 
         // دائماً أعد من الشيت عند الفشل — كاش التحدي قد يحمل سراً قديماً/فاسداً فيُرفض الرمز الصحيح
@@ -1352,7 +1352,7 @@ function verifyMfaLogin(challengeToken, email, code) {
                     var freshEnc = String(freshUser.mfaSecretEnc || '').trim();
                     var freshSecret = (typeof decryptMfaSecret_ === 'function') ? decryptMfaSecret_(freshEnc) : '';
                     if (freshSecret) freshSecret = String(freshSecret).toUpperCase().replace(/\s/g, '');
-                    if (freshSecret && typeof verifyTotpCode_ === 'function' && verifyTotpCode_(freshSecret, otp, { window: 8 })) {
+                    if (freshSecret && typeof verifyTotpCode_ === 'function' && verifyTotpCode_(freshSecret, otp, { window: 10 })) {
                         totpOk = true;
                         secret = freshSecret;
                         user = freshUser;
