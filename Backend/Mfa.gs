@@ -16,7 +16,7 @@ function ensureMfaEncryptionKey_() {
     var props = PropertiesService.getScriptProperties();
     var key = props.getProperty('MFA_ENCRYPTION_KEY');
     if (!key) {
-        key = Utilities.getUuid() + Utilities.getUuid();
+        key = 'HSE_MFA_KEY_' + (typeof ScriptApp !== 'undefined' && ScriptApp.getScriptId ? ScriptApp.getScriptId() : 'STATIC_KEY_2026');
         props.setProperty('MFA_ENCRYPTION_KEY', key);
     }
     return key;

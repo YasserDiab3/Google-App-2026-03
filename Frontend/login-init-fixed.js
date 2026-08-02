@@ -1115,6 +1115,13 @@ if (typeof window !== 'undefined') {
         window.__loginFallbackBound = true;
 
         const run = async (btn) => {
+            const mfaStep = document.getElementById('login-mfa-step');
+            if (mfaStep && mfaStep.style.display !== 'none') {
+                if (typeof window.handleMfaVerify === 'function') {
+                    await window.handleMfaVerify();
+                }
+                return;
+            }
             const form = document.getElementById('login-form');
             if (!form || typeof window.handleLogin !== 'function') return;
             await window.handleLogin(form, btn);

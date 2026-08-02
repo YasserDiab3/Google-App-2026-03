@@ -1048,7 +1048,7 @@ window.Auth = {
         } else if (!foundUser && user) {
             // إضافة المستخدم إلى قاعدة البيانات (إذا كان جديداً)
             const newUser = {
-                id: Utils.generateId('USER'),
+                id: user.id || Utils.generateId('USER'),
                 email: email,
                 name: user.name,
                 password: user.password,
