@@ -800,10 +800,24 @@ window.Auth = {
         try {
             verifyResult = await GoogleIntegration.sendRequest({
                 action: 'verifyMfaLogin',
-                data: { email, code: otp, challengeToken: token, __timeoutMs: 25000, __highPriority: true }
+                data: {
+                    email,
+                    code: otp,
+                    challengeToken: token,
+                    __timeoutMs: 45000,
+                    __highPriority: true,
+                    // أعد نتيجة success:false للواجهة بدل رمي استثناء يُعرض كـ «تعذر الاتصال»
+                    __allowStructuredFailure: true
+                }
             });
         } catch (err) {
-            const msg = 'تعذر الاتصال بالخادم لإكمال المصادقة الثنائية';
+            const detail = (err && err.message) ? String(err.message).trim() : '';
+            const isTimeout = /timeout|انتهت مهلة|AbortError|aborted/i.test(detail);
+            const msg = isTimeout
+                ? 'انتهت مهلة الاتصال أثناء التحقق. أعد إدخال الرمز خلال ثوانٍ.'
+                : (detail && detail.length < 220 && !detail.includes('فشل المزامنة في التقدم')
+                    ? detail
+                    : 'تعذر الاتصال بالخادم لإكمال المصادقة الثنائية');
             Notification.error(msg);
             return { success: false, message: msg };
         }

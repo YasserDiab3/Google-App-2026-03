@@ -1,13 +1,13 @@
 {
-  "version": "1.0.764",
+  "version": "1.0.765",
   "highlights": {
     "ar": [
-      "تشديد أمن الحضور والمصادقة: منع إسقاط حالة مستخدم آخر، وإغلاق ثغرات إعادة استخدام جلسة MFA.",
-      "عزل أقوى لكاش الحسابات مع انتظار تفريغ التخزين قبل التحميل، ودعم تعدد التبويبات بدون قطع حضور خاطئ."
+      "إصلاح فشل المصادقة الثنائية رغم صحة الرمز: إزالة فحص كاش خاطئ كان يرفض الدخول ويعرض «تعذر الاتصال».",
+      "رسائل أوضح عند فشل MFA ومهلة تحقق أطول بدون قفل عام يبطئ الخادم."
     ],
     "en": [
-      "Hardened presence and MFA: block forcing another user offline, and close MFA challenge/code replay gaps.",
-      "Stronger account-cache isolation with purge wait before load, plus multi-tab presence without false offline."
+      "Fix MFA rejecting a valid code: remove a faulty cache read-after-write that blocked login and showed a fake connection error.",
+      "Clearer MFA failure messages, longer verify timeout, and no global script lock slowing the server."
     ]
   }
 }

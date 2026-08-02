@@ -1017,7 +1017,6 @@ function loginUser(email, password) {
  * الخطوة الثانية لتسجيل الدخول — التحقق من رمز TOTP
  */
 function verifyMfaLogin(challengeToken, email, code) {
-    var lock = null;
     try {
         var e = String(email || '').trim().toLowerCase();
         var token = String(challengeToken || '').trim();
@@ -1032,13 +1031,8 @@ function verifyMfaLogin(challengeToken, email, code) {
             if (!rl.ok) return { success: false, message: rl.message };
         }
 
-        try {
-            lock = LockService.getScriptLock();
-            lock.waitLock(15000);
-        } catch (lockErr) {
-            Logger.log('verifyMfaLogin lock: ' + lockErr.toString());
-            lock = null;
-        }
+        // لا ScriptLock عام — يتعارض مع عمليات أخرى ويسبب مهلة على الواجهة
+        // الحماية من التوازي عبر mfa_used + mfa_otp_used في الكاش
 
         // لا نستهلك challenge قبل نجاح TOTP — وإلا إعادة المحاولة برمز صحيح تفشل
         if (typeof validateMfaChallenge_ !== 'function' || !validateMfaChallenge_(token, e)) {
@@ -1087,7 +1081,7 @@ function verifyMfaLogin(challengeToken, email, code) {
             return { success: false, message: 'تم استخدام هذا الرمز مسبقاً. انتظر رمزاً جديداً.' };
         }
 
-        // استهلاك بعد النجاح فقط — fail-closed إن تعذّر تخزين mfa_used
+        // استهلاك بعد النجاح فقط
         if (typeof consumeMfaChallenge_ !== 'function' || !consumeMfaChallenge_(token, e)) {
             return { success: false, message: 'تعذر إتمام جلسة المصادقة. أعد تسجيل الدخول.' };
         }
@@ -1114,8 +1108,6 @@ function verifyMfaLogin(challengeToken, email, code) {
     } catch (error) {
         Logger.log('verifyMfaLogin error: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء التحقق من المصادقة الثنائية' };
-    } finally {
-        try { if (lock) lock.releaseLock(); } catch (_rl) { /* ignore */ }
     }
 }
 

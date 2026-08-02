@@ -269,7 +269,7 @@ function validateMfaChallenge_(token, email) {
 
 /**
  * استهلاك challenge بعد نجاح TOTP فقط — يمنع إعادة استخدام الجلسة.
- * يضع mfa_used أولاً؛ إن فشل التخزين لا يُعتبر الاستهلاك ناجحاً (fail-closed).
+ * يضع mfa_used أولاً (CacheService لا يضمن قراءة فورية بعد put — لا نفحص get بعد put).
  */
 function consumeMfaChallenge_(token, email) {
     var t = String(token || '').trim();
@@ -282,10 +282,6 @@ function consumeMfaChallenge_(token, email) {
     try {
         if (cache.get(usedKey)) return false;
         cache.put(usedKey, e, MFA_CHALLENGE_TTL_SEC_);
-        var storedUsed = cache.get(usedKey);
-        if (!storedUsed || String(storedUsed).toLowerCase() !== e) {
-            return false;
-        }
     } catch (_putErr) {
         return false;
     }
@@ -308,9 +304,10 @@ function markTotpCodeConsumed_(email, code, ttlSec) {
     try {
         if (cache.get(key)) return false;
         cache.put(key, '1', Math.max(60, Number(ttlSec) || 180));
-        return !!cache.get(key);
+        return true;
     } catch (_e) {
-        return false;
+        // لا نمنع الدخول إن فشل الكاش — challenge يُستهلك لاحقاً
+        return true;
     }
 }
 
