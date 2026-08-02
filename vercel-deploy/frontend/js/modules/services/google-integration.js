@@ -1281,6 +1281,23 @@ const GoogleIntegration = {
                 throw new Error('فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو result');
             }
 
+            // فحص إجابات doGet التي ترجع عند توجيه POST أو غياب إذن الوصول "Anyone"
+            const isDoGetStatus = result.errorCode === 'REACHED_DOGET_STATUS' ||
+                result.errorCode === 'WRONG_URL_ENDPOINT' ||
+                (result.status === 'active' && result.message && result.message.includes('running successfully'));
+            if (isDoGetStatus) {
+                const dogetMsg = 'وصل الطلب إلى (doGet) بدلاً من (doPost).\n' +
+                    'يرجى التأكد من إعدادات النشر على Google Apps Script:\n' +
+                    '1. Deploy > Manage deployments > Edit\n' +
+                    '2. Execute as: Me\n' +
+                    '3. Who has access: Anyone (مهم جداً حتى تعمل المصادقة!)\n' +
+                    '4. تأكد أن الرابط ينتهي بـ /exec وليس /dev';
+                if (!allowStructuredFailure) {
+                    throw new Error(dogetMsg);
+                }
+                return { success: false, message: dogetMsg, errorCode: 'REACHED_DOGET_STATUS' };
+            }
+
             if (result.success === false) {
                 if (allowStructuredFailure) {
                     return result;

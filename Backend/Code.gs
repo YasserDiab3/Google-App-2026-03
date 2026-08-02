@@ -690,9 +690,10 @@ function doGet(e) {
         // التحقق من وجود parameters
         if (!e.parameter || Object.keys(e.parameter).length === 0) {
             return ContentService.createTextOutput(JSON.stringify({
-                success: true,
+                success: false,
                 status: 'active',
-                message: 'Google Apps Script Web App is running successfully.',
+                message: 'وصل الطلب إلى (doGet) بدلاً من (doPost). يرجى التأكد من إعداد النشر "Who has access: Anyone" وأن الرابط ينتهي بـ /exec.',
+                errorCode: 'REACHED_DOGET_STATUS',
                 info: 'This Web App handles HSE System data operations.',
                 usage: {
                     method: 'POST (recommended)',
