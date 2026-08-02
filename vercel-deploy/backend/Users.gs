@@ -1010,7 +1010,8 @@ function verifyMfaLogin(challengeToken, email, code) {
             if (!rl.ok) return { success: false, message: rl.message };
         }
 
-        if (typeof consumeMfaChallenge_ !== 'function' || !consumeMfaChallenge_(token, e)) {
+        // لا نستهلك challenge قبل نجاح TOTP — وإلا إعادة المحاولة برمز صحيح تفشل
+        if (typeof validateMfaChallenge_ !== 'function' || !validateMfaChallenge_(token, e)) {
             return { success: false, message: 'انتهت صلاحية جلسة المصادقة. أعد تسجيل الدخول.' };
         }
 
@@ -1045,6 +1046,11 @@ function verifyMfaLogin(challengeToken, email, code) {
                 logSecurityEvent('mfa_login_failed', { email: e, severity: 'medium' });
             }
             return { success: false, message: 'رمز المصادقة الثنائية غير صحيح' };
+        }
+
+        // استهلاك بعد النجاح فقط (يمنع replay بعد الدخول)
+        if (typeof consumeMfaChallenge_ === 'function') {
+            consumeMfaChallenge_(token, e);
         }
 
         if (typeof clearMfaFailures_ === 'function') clearMfaFailures_(e);

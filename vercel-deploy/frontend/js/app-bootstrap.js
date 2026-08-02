@@ -261,6 +261,29 @@
             // تحميل البيانات من localStorage
             if (window.DataManager && window.DataManager.load) {
                 try {
+                    // 🔒 قبل التحميل: إن وُجدت جلسة، امسح كاش مستخدم آخر
+                    try {
+                        let sessionEmail = '';
+                        const sess = sessionStorage.getItem('hse_current_session');
+                        if (sess) {
+                            const parsed = JSON.parse(sess);
+                            sessionEmail = parsed && parsed.email ? String(parsed.email).trim().toLowerCase() : '';
+                        }
+                        if (!sessionEmail) {
+                            const rem = localStorage.getItem('hse_remember_user');
+                            if (rem) {
+                                const parsedRem = JSON.parse(rem);
+                                sessionEmail = parsedRem && parsedRem.email ? String(parsedRem.email).trim().toLowerCase() : '';
+                            }
+                        }
+                        if (sessionEmail && typeof window.DataManager.purgeIfUserChanged === 'function') {
+                            window.DataManager.purgeIfUserChanged(sessionEmail);
+                            if (typeof window.DataManager.awaitLastPurge === 'function') {
+                                await window.DataManager.awaitLastPurge(3500);
+                            }
+                        }
+                    } catch (_secBoot) { /* ignore */ }
+
                     // ✅ مهم عند Reload: ننتظر تحميل البيانات المحلية لتجنّب صفحة بيضاء/جداول فارغة ثم ظهور البيانات لاحقاً
                     await window.DataManager.load();
                     this.updateLoader(55, 'تم تحميل البيانات المحلية');

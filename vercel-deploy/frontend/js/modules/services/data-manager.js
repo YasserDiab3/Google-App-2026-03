@@ -44,25 +44,45 @@ const DataManager = {
 
     /**
      * مسح البيانات المحلية عند logout أو تبديل المستخدم (منع تسريب بين الجلسات)
+     * يعيد Promise إن وُجد IndexedDB حتى يمكن انتظار اكتمال المسح قبل load التالي.
      */
     purgeLocalAppData(reason) {
+        let idbClearPromise = Promise.resolve(true);
         try {
             localStorage.removeItem('hse_app_data');
             localStorage.removeItem('hse_sync_meta');
             localStorage.removeItem('hse_cache_timestamps');
             localStorage.removeItem('hse_cached_users');
             localStorage.removeItem('hse_last_user_email');
-            // مسح كل مفاتيح cache القراءة (قديمة ولكل ورقة)
+            localStorage.removeItem('hse_ptw_list');
+            localStorage.removeItem('hse_ptw_registry');
+            localStorage.removeItem('hse_incidents_registry');
+            // مسح كل مفاتيح cache القراءة + مديولات قد تسرّب بين الحسابات
             const keysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const k = localStorage.key(i);
-                if (k && (k.startsWith('hse_local_readFromSheet') || k.startsWith('hse_local_batchReadSheets') || k.startsWith('hse_cache_') || k.startsWith('hse_user_'))) {
+                if (!k) continue;
+                if (
+                    k.startsWith('hse_local_readFromSheet') ||
+                    k.startsWith('hse_local_batchReadSheets') ||
+                    k.startsWith('hse_cache_') ||
+                    k.startsWith('hse_user_') ||
+                    k.startsWith('hse_ptw_') ||
+                    k.startsWith('hse_incidents_') ||
+                    k.startsWith('hse_clinic_') ||
+                    k.startsWith('hse_module_')
+                ) {
                     keysToRemove.push(k);
                 }
             }
             keysToRemove.forEach((k) => localStorage.removeItem(k));
             if (typeof LocalDBCache !== 'undefined' && typeof LocalDBCache.clear === 'function') {
-                LocalDBCache.clear().catch(err => Utils.safeWarn('⚠️ فشل تفريغ IndexedDB:', err));
+                // مهم: لا نترك clear بدون تتبع — سباق load بعد logout يُعيد بيانات الحساب السابق
+                idbClearPromise = LocalDBCache.clear().catch((err) => {
+                    Utils.safeWarn('⚠️ فشل تفريغ IndexedDB:', err);
+                    return false;
+                });
+                this._lastIdbPurgePromise = idbClearPromise;
             }
         } catch (e) {
             if (typeof Utils !== 'undefined' && Utils.safeWarn) {
@@ -95,12 +115,79 @@ const DataManager = {
             try { if (window.Training) { window.Training._trainingBackendFetchOk = false; window.Training._trainingDataLoadPromise = null; } } catch (e) {}
             try { if (window.ChemicalSafety) { window.ChemicalSafety._chemicalBackendFetchOk = false; window.ChemicalSafety._chemicalDataLoadPromise = null; } } catch (e) {}
             try { if (window.DailyObservations) { window.DailyObservations._dailyObsBackendFetchOk = false; window.DailyObservations._dailyObsLoadPromise = null; } } catch (e) {}
+            try {
+                if (window.PTW) {
+                    window.PTW._metricsDatasetCache = null;
+                    window.PTW._registrySanitizedCache = null;
+                    window.PTW._mergedPermitsCache = null;
+                }
+            } catch (e) {}
         }
 
         if (AppState && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
             Utils.safeLog('🧹 تم مسح البيانات المحلية' + (reason ? ': ' + reason : ''));
         }
+        return idbClearPromise;
+    },
+
+    async awaitLastPurge(timeoutMs) {
+        const p = this._lastIdbPurgePromise;
+        if (!p || typeof p.then !== 'function') return true;
+        const ms = Math.max(500, Number(timeoutMs) || 4000);
+        try {
+            await Promise.race([
+                p,
+                new Promise((resolve) => setTimeout(() => resolve(false), ms))
+            ]);
+        } catch (_e) { /* ignore */ }
         return true;
+    },
+
+    _resolveSessionEmailHint_() {
+        try {
+            const sessionStr = sessionStorage.getItem('hse_current_session');
+            if (sessionStr) {
+                const parsed = JSON.parse(sessionStr);
+                if (parsed && parsed.email) return String(parsed.email).trim().toLowerCase();
+            }
+        } catch (_e) { /* ignore */ }
+        try {
+            const remStr = localStorage.getItem('hse_remember_user');
+            if (remStr) {
+                const parsed = JSON.parse(remStr);
+                if (parsed && parsed.email) return String(parsed.email).trim().toLowerCase();
+            }
+        } catch (_e2) { /* ignore */ }
+        if (AppState && AppState.currentUser && AppState.currentUser.email) {
+            return String(AppState.currentUser.email).trim().toLowerCase();
+        }
+        try {
+            const last = localStorage.getItem('hse_last_user_email');
+            if (last) return String(last).trim().toLowerCase();
+        } catch (_e3) { /* ignore */ }
+        return '';
+    },
+
+    _readStoredCacheOwnerEmail_() {
+        try {
+            const last = localStorage.getItem('hse_last_user_email');
+            if (last) return String(last).trim().toLowerCase();
+        } catch (_e) { /* ignore */ }
+        try {
+            const syncMetaStr = localStorage.getItem('hse_sync_meta');
+            if (syncMetaStr) {
+                const sm = JSON.parse(syncMetaStr);
+                if (sm && sm.userEmail) return String(sm.userEmail).trim().toLowerCase();
+            }
+        } catch (_e2) { /* ignore */ }
+        try {
+            const raw = localStorage.getItem('hse_app_data');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed && parsed._ownerEmail) return String(parsed._ownerEmail).trim().toLowerCase();
+            }
+        } catch (_e3) { /* ignore */ }
+        return '';
     },
 
     /**
@@ -150,12 +237,31 @@ const DataManager = {
             } catch (e) {}
         }
 
+        // 6. مالك الكاش المخزّن (_ownerEmail / syncMeta)
+        if (!prev) {
+            prev = this._readStoredCacheOwnerEmail_() || '';
+        }
+
         let purged = false;
+        const hasLocalPayload = !!(
+            localStorage.getItem('hse_app_data') ||
+            localStorage.getItem('hse_ptw_list') ||
+            localStorage.getItem('hse_ptw_registry') ||
+            localStorage.getItem('hse_incidents_registry')
+        );
+
         if (prev && prev !== next) {
             if (typeof Utils !== 'undefined' && Utils.safeWarn) {
                 Utils.safeWarn(`🔒 [SECURITY DATA PROTECTION] تم اكتشاف تغيير المستخدم من (${prev}) إلى (${next}) — مسح بيانات وكاش الجلسة السابقة.`);
             }
             this.purgeLocalAppData('user_changed');
+            purged = true;
+        } else if (!prev && hasLocalPayload) {
+            // كاش يتيم بدون مالك معروف — لا نربطه بحساب جديد
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('🔒 [SECURITY DATA PROTECTION] كاش محلي بدون مالك — مسح قبل ربط الجلسة الجديدة.');
+            }
+            this.purgeLocalAppData('orphan_cache_no_owner');
             purged = true;
         }
 
@@ -218,6 +324,11 @@ const DataManager = {
         const out = { ...appData };
         if (Array.isArray(out.users)) {
             out.users = out.users.map((u) => this._stripUserRecordForStorage(u, isAdmin, currentEmail));
+        }
+        const owner = String(currentEmail || this._resolveSessionEmailHint_() || '').trim().toLowerCase();
+        if (owner) {
+            out._ownerEmail = owner;
+            try { localStorage.setItem('hse_last_user_email', owner); } catch (_e) { /* ignore */ }
         }
         return out;
     },
@@ -512,10 +623,47 @@ const DataManager = {
             if (!AppState.appData) {
                 AppState.appData = {};
             }
+
+            // انتظار أي تفريغ IndexedDB سابق (logout / تبديل مستخدم) قبل الاستعادة
+            if (typeof this.awaitLastPurge === 'function') {
+                await this.awaitLastPurge(4000);
+            }
+
+            const expectedOwner = this._resolveSessionEmailHint_();
+            const cacheOwner = this._readStoredCacheOwnerEmail_();
+            if (expectedOwner && cacheOwner && expectedOwner !== cacheOwner) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn(`🔒 رفض تحميل كاش محلي لمستخدم آخر (${cacheOwner} ≠ ${expectedOwner})`);
+                }
+                await this.purgeLocalAppData('load_owner_mismatch');
+                return false;
+            }
+            // كاش بدون مالك + توجد جلسة متوقعة → لا نحمّل بيانات يتيمة
+            if (expectedOwner && !cacheOwner) {
+                const orphanPayload = !!(
+                    localStorage.getItem('hse_app_data') ||
+                    localStorage.getItem('hse_ptw_list') ||
+                    localStorage.getItem('hse_ptw_registry')
+                );
+                if (orphanPayload) {
+                    if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                        Utils.safeWarn('🔒 رفض كاش يتيم أثناء استعادة الجلسة — مسح');
+                    }
+                    await this.purgeLocalAppData('load_orphan_with_session');
+                    return false;
+                }
+            }
             
             const saved = localStorage.getItem('hse_app_data');
             if (saved) {
                 const parsedData = JSON.parse(saved);
+                const payloadOwner = parsedData && parsedData._ownerEmail
+                    ? String(parsedData._ownerEmail).trim().toLowerCase()
+                    : '';
+                if (expectedOwner && payloadOwner && expectedOwner !== payloadOwner) {
+                    await this.purgeLocalAppData('load_payload_owner_mismatch');
+                    return false;
+                }
                 
                 // ✅ إصلاح: تحميل البيانات الأساسية أولاً بشكل فوري
                 // 1. بيانات المستخدمين
@@ -639,8 +787,19 @@ const DataManager = {
                 try {
                     const dbData = await LocalDBCache.get('hse_app_data');
                     if (dbData && typeof dbData === 'object') {
+                        const idbOwner = dbData._ownerEmail
+                            ? String(dbData._ownerEmail).trim().toLowerCase()
+                            : '';
+                        if (expectedOwner && idbOwner && expectedOwner !== idbOwner) {
+                            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                                Utils.safeWarn('🔒 رفض IndexedDB لمستخدم آخر');
+                            }
+                        } else if (expectedOwner && !idbOwner) {
+                            // لا نستعيد IndexedDB يتيم أثناء وجود جلسة
+                        } else {
                         let restoredCount = 0;
                         Object.keys(dbData).forEach(key => {
+                            if (key === '_ownerEmail' || key === '_lightDataMeta') return;
                             if (Array.isArray(dbData[key]) && dbData[key].length > 0) {
                                 const currentArr = Array.isArray(AppState.appData[key]) ? AppState.appData[key] : [];
                                 if (currentArr.length === 0 || dbData[key].length > currentArr.length) {
@@ -651,6 +810,7 @@ const DataManager = {
                         });
                         if (restoredCount > 0 && AppState.debugMode) {
                             Utils.safeLog(`⚡ [IndexedDB] تم استعادة ${restoredCount} سجل من الكاش عالي السعة بنجاح (0ms)`);
+                        }
                         }
                     }
                     // تنظيف صامت للكاش القديم لتخفيف المساحة
@@ -750,12 +910,14 @@ const DataManager = {
                 if (syncMetaStr) {
                     const savedSyncMeta = JSON.parse(syncMetaStr);
                     // التحقق من أن syncMeta ينتمي للمستخدم الحالي
-                    const currentUserEmail = AppState.currentUser?.email || null;
-                    if (!currentUserEmail || savedSyncMeta.userEmail === currentUserEmail) {
+                    const currentUserEmail = (AppState.currentUser?.email || this._resolveSessionEmailHint_() || '').toLowerCase();
+                    const metaEmail = savedSyncMeta.userEmail ? String(savedSyncMeta.userEmail).trim().toLowerCase() : '';
+                    if (!currentUserEmail || !metaEmail || metaEmail === currentUserEmail) {
                         AppState.syncMeta = {
                             ...AppState.syncMeta,
                             ...savedSyncMeta,
-                            sheets: savedSyncMeta.sheets || {}
+                            sheets: savedSyncMeta.sheets || {},
+                            userEmail: currentUserEmail || metaEmail || savedSyncMeta.userEmail
                         };
                     } else {
                         // تغيير المستخدم - نمسح syncMeta القديم

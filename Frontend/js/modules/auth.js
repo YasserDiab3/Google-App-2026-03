@@ -511,8 +511,12 @@ window.Auth = {
         email = email.trim().toLowerCase();
 
         // SEC-01: تحديث سياسة الخادم (دفاع إضافي) ثم رفض أي @hse.local دائماً
+        // مهلة قصيرة — لا نعطّل الدخول بانتظار سياسة بطيئة
         try {
-            await this.refreshBootstrapPolicyFromServer();
+            await Promise.race([
+                this.refreshBootstrapPolicyFromServer(),
+                new Promise((resolve) => setTimeout(resolve, 2500))
+            ]);
         } catch (_polErr) { /* ignore — نعتمد الكاش المحلي إن وُجد */ }
 
         if (this.isBootstrapEmail(email)) {
@@ -540,6 +544,14 @@ window.Auth = {
             return { success: false, message: errorMessage };
         }
 
+        // 🔒 قبل أي تحميل محلي: عزل كاش الحساب السابق عن حساب محاولة الدخول
+        if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.purgeIfUserChanged === 'function') {
+            window.DataManager.purgeIfUserChanged(email);
+            if (typeof window.DataManager.awaitLastPurge === 'function') {
+                try { await window.DataManager.awaitLastPurge(3500); } catch (_p) { /* ignore */ }
+            }
+        }
+
         // ✅ تحسين الأداء: لا نقوم بمزامنة Users قبل تسجيل الدخول.
         // الخادم هو مصدر الحقيقة للمصادقة — تجنّب cold-start مزدوج.
         // البيانات المحلية تُستخدم كـ fallback فقط إذا فشل الخادم.
@@ -549,6 +561,7 @@ window.Auth = {
             typeof GoogleIntegration.syncUsers === 'function');
 
         // تحميل سريع للبيانات المحلية فقط (بدون شبكة) لضمان توفّر fallback إذا فشل الخادم
+        // بعد purge أعلاه لا يُحمَّل كاش مستخدم آخر
         if (localUsersCount === 0 && typeof window.DataManager !== 'undefined' && window.DataManager.load) {
             try {
                 await Promise.race([
@@ -742,6 +755,13 @@ window.Auth = {
             return { success: false, message: msg };
         }
 
+        const returnedEmail = String(verifyResult.user.email || '').trim().toLowerCase();
+        if (returnedEmail && returnedEmail !== email) {
+            const msg = 'تعارض هوية المستخدم بعد المصادقة الثنائية. أعد تسجيل الدخول.';
+            Notification.error(msg);
+            return { success: false, message: msg };
+        }
+
         await Utils.RateLimiter.clearAttempts(email);
         this._storeServerSessionToken(verifyResult);
         return await this._finishLoginAfterAuth(verifyResult.user, email, remember, null);
@@ -774,6 +794,9 @@ window.Auth = {
         // 🔒 فحص ومسح بيانات المستخدم السابق فوراً قبل البدء بإنشاء الجلسة
         if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.purgeIfUserChanged === 'function') {
             window.DataManager.purgeIfUserChanged(email);
+            if (typeof window.DataManager.awaitLastPurge === 'function') {
+                try { await window.DataManager.awaitLastPurge(4000); } catch (_p) { /* ignore */ }
+            }
         }
 
         await Utils.RateLimiter.clearAttempts(email);
@@ -791,8 +814,14 @@ window.Auth = {
         // SEC-01 مرحلة 4: لا وسم جلسات جديدة كـ bootstrap (الإبقاء على logout للجلسات القديمة عبر handleUsersSyncSuccess)
         const isBootstrap = false;
         
+        // مصدر الحقيقة للهوية: استجابة الخادم (user) — لا نفضّل كاش محلي قد يكون لمستخدم آخر
         const allUsersList = AppState.appData.users || [];
-        const fullUserData = allUsersList.find(u => u && u.email && u.email.toLowerCase() === email) || user || {};
+        const cachedSameUser = allUsersList.find(u => u && u.email && u.email.toLowerCase() === email) || null;
+        const serverId = user && user.id != null ? String(user.id).trim() : '';
+        const cachedId = cachedSameUser && cachedSameUser.id != null ? String(cachedSameUser.id).trim() : '';
+        const fullUserData = (cachedSameUser && (!serverId || !cachedId || serverId === cachedId))
+            ? { ...cachedSameUser, ...user }
+            : (user || {});
 
         // ✅ الحل الجذري: التأكد من وجود name صحيح
         // إذا كان user.name فارغًا، نستخدم email كبديل
@@ -819,14 +848,15 @@ window.Auth = {
             email,
             name: userName, // ✅ استخدام userName بدلاً من user.name مباشرة
             role: resolvedRole,
-            department: user.department || '',
+            department: user.department || fullUserData.department || '',
             permissions: userPermissions,
-            id: fullUserData?.id || user.id,
-            passwordChanged: fullUserData?.passwordChanged ?? false,
-            forcePasswordChange: fullUserData?.forcePasswordChange === true,
+            // هوية الخادم أولاً — لا نستبدل بمعرّف من كاش قديم
+            id: user.id || fullUserData?.id,
+            passwordChanged: user.passwordChanged ?? fullUserData?.passwordChanged ?? false,
+            forcePasswordChange: user.forcePasswordChange === true || fullUserData?.forcePasswordChange === true,
             isBootstrap: isBootstrap,
             loginTime: loginTime,
-            photo: fullUserData?.photo || user?.photo || '' // ✅ إظهار صورة المستخدم بعد الدخول مباشرة
+            photo: user?.photo || fullUserData?.photo || ''
         };
         this._sanitizeCurrentUserSecrets();
 
@@ -1359,6 +1389,10 @@ window.Auth = {
                             this._clearStoredSession();
                             return false;
                         }
+                        // 🔒 عزل كاش مستخدم آخر قبل دمج الجلسة مع AppState
+                        if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.purgeIfUserChanged === 'function') {
+                            window.DataManager.purgeIfUserChanged(user.email);
+                        }
                         // استعادة hse_session_id من بيانات الجلسة إن فُقد (بعد إعادة تحميل في نفس التبويب)
                         let currentSessionId = sessionStorage.getItem('hse_session_id');
                         if (!currentSessionId && user.sessionId) {
@@ -1409,12 +1443,16 @@ window.Auth = {
                         // لأنه قد يكون هناك تأخير في تحميل البيانات من Google Sheets
                         if (foundUser) {
                             // استخدام بيانات المستخدم الكاملة من قاعدة البيانات
-                            // ✅ ضمان name صحيح حتى في الاستعادة
-                            const mergedName = (foundUser.name || foundUser.displayName || '').trim() || user.email || user.name || '';
+                            // ✅ ضمان name صحيح حتى في الاستعادة — الجلسة تبقى مصدر البريد/المعرّف
+                            const mergedName = (foundUser.name || foundUser.displayName || user.name || '').trim() || user.email || '';
+                            const sessionIdMatch = !user.id || !foundUser.id || String(user.id) === String(foundUser.id);
+                            const safeFound = sessionIdMatch ? foundUser : {};
                             
                             AppState.currentUser = {
+                                ...safeFound,
                                 ...user,
-                                ...foundUser,
+                                email: user.email,
+                                id: user.id || safeFound.id,
                                 name: mergedName,
                                 password: '***', // إخفاء كلمة المرور
                                 loginTime: user.loginTime || AppState.currentUser?.loginTime // الحفاظ على وقت تسجيل الدخول
@@ -1538,6 +1576,9 @@ window.Auth = {
                             Utils.safeWarn('⚠️ انتهت صلاحية الجلسة المحفوظة (تذكرني)');
                             this._clearStoredSession();
                             return false;
+                        }
+                        if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.purgeIfUserChanged === 'function') {
+                            window.DataManager.purgeIfUserChanged(user.email);
                         }
                         let currentSessionId = sessionStorage.getItem('hse_session_id');
                         if (!currentSessionId && user.sessionId) {

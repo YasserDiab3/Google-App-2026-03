@@ -1,13 +1,15 @@
 {
-  "version": "1.0.760",
+  "version": "1.0.762",
   "highlights": {
     "ar": [
-      "حالة «متصل» أصبحت فعلية: نبض حضور دوري ومهلة 5 دقائق بدل العلم العالق بعد إغلاق المتصفح.",
-      "قائمة المستخدمين تحدّث الاتصال من الخادم أثناء فتح المديول، وتتجاهل حالات غير المتصلين فعلياً."
+      "إصلاح المصادقة الثنائية: الرمز الصحيح لم يعد يُرفض بعد محاولة فاشلة أو ضغط مزدوج.",
+      "عزل بيانات الحسابات: منع ظهور بيانات مستخدم آخر من الكاش المحلي بعد تسجيل الدخول.",
+      "تسريع مسار الدخول وتقليل انتظار السياسات غير الحرجة."
     ],
     "en": [
-      "Online status is now real: presence heartbeat and a 5-minute TTL instead of a stuck flag after closing the browser.",
-      "Users list refreshes presence from the server while the module is open and drops stale «online» states."
+      "MFA fix: a valid code is no longer rejected after a failed attempt or double-submit.",
+      "Account data isolation: stop showing another user’s cached data after login.",
+      "Faster login path by shortening non-critical policy waits."
     ]
   }
 }

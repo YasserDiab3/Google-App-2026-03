@@ -7,7 +7,8 @@ var MFA_CHALLENGE_TTL_SEC_ = 300;
 var MFA_ENROLL_TTL_SEC_ = 600;
 var MFA_MAX_ATTEMPTS_ = 5;
 var MFA_LOCKOUT_SEC_ = 900;
-var MFA_TOTP_WINDOW_ = 2;
+/** نافذة TOTP عند الدخول (± خطوات × 30ث) — أوسع قليلاً لتسامح انحراف ساعة الخادم */
+var MFA_TOTP_WINDOW_ = 4;
 var MFA_ENROLL_TOTP_WINDOW_ = 5;
 
 function ensureMfaEncryptionKey_() {
@@ -222,20 +223,24 @@ function createMfaChallenge_(email, userRecord) {
     return token;
 }
 
-function consumeMfaChallenge_(token, email) {
+/**
+ * التحقق من صلاحية challenge دون استهلاكه (يسمح بإعادة المحاولة برمز TOTP صحيح).
+ */
+function validateMfaChallenge_(token, email) {
     var t = String(token || '').trim();
     var e = String(email || '').trim().toLowerCase();
     if (!t || !e) return false;
 
     var cache = CacheService.getScriptCache();
+    if (cache.get('mfa_used_' + t)) return false;
+
     var key = 'mfa_ch_' + t;
     var stored = cache.get(key);
     if (stored && String(stored).toLowerCase() === e) {
-        cache.remove(key);
         return true;
     }
 
-    // Fallback: Verify stateless HMAC signature if CacheService lost key
+    // Fallback: توقيع HMAC عديم الحالة إذا فُقد مفتاح الكاش
     var parts = t.split('_');
     if (parts.length === 3) {
         var nowHex = parts[0];
@@ -260,6 +265,24 @@ function consumeMfaChallenge_(token, email) {
     }
 
     return false;
+}
+
+/**
+ * استهلاك challenge بعد نجاح TOTP فقط — يمنع إعادة استخدام الجلسة.
+ */
+function consumeMfaChallenge_(token, email) {
+    var t = String(token || '').trim();
+    var e = String(email || '').trim().toLowerCase();
+    if (!t || !e) return false;
+    if (!validateMfaChallenge_(t, e)) return false;
+
+    var cache = CacheService.getScriptCache();
+    cache.remove('mfa_ch_' + t);
+    cache.remove('mfa_user_' + t);
+    try {
+        cache.put('mfa_used_' + t, e, MFA_CHALLENGE_TTL_SEC_);
+    } catch (_e) { /* ignore */ }
+    return true;
 }
 
 function checkMfaRateLimit_(email) {

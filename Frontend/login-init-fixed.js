@@ -821,6 +821,7 @@ async function proceedAfterLoginSuccess(result, submitBtn, originalBtnText) {
 }
 
 async function handleMfaVerify() {
+    if (window.__mfaVerifyInFlight) return;
     const pending = __pendingMfaLogin;
     const mfaInput = document.getElementById('mfa-code');
     const verifyBtn = document.getElementById('mfa-verify-btn');
@@ -833,6 +834,7 @@ async function handleMfaVerify() {
         if (typeof window.Notification !== 'undefined') window.Notification.warning('يرجى إدخال رمز المصادقة');
         return;
     }
+    window.__mfaVerifyInFlight = true;
     const originalVerifyHtml = verifyBtn ? verifyBtn.innerHTML : '';
     if (verifyBtn) {
         verifyBtn.disabled = true;
@@ -857,8 +859,13 @@ async function handleMfaVerify() {
             verifyBtn.innerHTML = originalVerifyHtml;
         }
         if (typeof window.Notification !== 'undefined') {
-            window.Notification.error('حدث خطأ أثناء التحقق من الرمز');
+            const msg = (err && err.message) ? String(err.message) : 'حدث خطأ أثناء التحقق من الرمز';
+            window.Notification.error(msg.includes('timeout') || msg.includes('Timeout')
+                ? 'انتهت مهلة الاتصال أثناء التحقق. أعد إدخال الرمز مرة واحدة.'
+                : 'حدث خطأ أثناء التحقق من الرمز');
         }
+    } finally {
+        window.__mfaVerifyInFlight = false;
     }
 }
 
