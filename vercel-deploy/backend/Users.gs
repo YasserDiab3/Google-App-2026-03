@@ -580,6 +580,72 @@ var USERS_AUTH_CACHE_KEY_ = 'users_auth_map_v2';
 var USERS_AUTH_EMAIL_PREFIX_ = 'user_auth_email_v1:';
 var AUTH_QUIET_CACHE_KEY_ = 'auth_quiet_until_ms';
 
+// أعمدة المصادقة فقط — بدون photo/loginHistory (كانت تضخّم القراءة والكاش)
+var AUTH_SLIM_COLUMNS_ = [
+    'id', 'email', 'name', 'role', 'department', 'jobTitle', 'phone',
+    'active', 'passwordHash', 'permissions',
+    'mfaEnabled', 'mfaSecretEnc', 'mfaEnrolledAt'
+];
+
+/**
+ * قراءة صف مصادقة واحد بأقل عمل ممكن.
+ * readFromSheet('Users', id, true) يعطّل الكاش قراءةً وكتابةً (skipSecurityFilter)،
+ * فكان كل login يقرأ الورقة كاملة (getDataRange) ويعالج كل خلية — قِيس 14–45ث،
+ * ما يُفقد مفتاح تحويل 302 فيرتد الطلب إلى doGet ويظهر HTML.
+ * هنا: 3 نطاقات صغيرة فقط (الرؤوس + عمود email + الصف المطلوب).
+ * @param {string} email
+ * @return {Object|null}
+ */
+function getAuthUserRowByEmail_(email, meta) {
+    meta = meta || {};
+    meta.scanned = false;
+    var e = normalizeSheetScalarField_(email).toLowerCase();
+    if (!e) return null;
+
+    var spreadsheetId = getSpreadsheetId();
+    if (!spreadsheetId) return null;
+
+    var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName('Users');
+    if (!sheet) return null;
+
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+    if (lastRow < 2 || lastCol < 1) return null;
+
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) {
+        return String(h || '').trim();
+    });
+    var emailCol = headers.indexOf('email');
+    if (emailCol === -1) return null;
+
+    var emails = sheet.getRange(2, emailCol + 1, lastRow - 1, 1).getValues();
+    var rowIndex = -1;
+    for (var i = 0; i < emails.length; i++) {
+        if (normalizeSheetScalarField_(emails[i][0]).toLowerCase() === e) {
+            rowIndex = i + 2;
+            break;
+        }
+    }
+    // المسح تم بنجاح — النتيجة نهائية (موجود أو غير موجود)
+    meta.scanned = true;
+    if (rowIndex === -1) return null;
+
+    var row = sheet.getRange(rowIndex, 1, 1, lastCol).getValues()[0];
+    var rec = {};
+    for (var c = 0; c < headers.length; c++) {
+        var h = headers[c];
+        if (!h || AUTH_SLIM_COLUMNS_.indexOf(h) === -1) continue;
+        var v = row[c];
+        if (h === 'active' || h === 'mfaEnabled') {
+            rec[h] = v;
+        } else {
+            rec[h] = normalizeSheetScalarField_(v);
+        }
+    }
+    if (!rec.email) rec.email = e;
+    return rec.id || rec.email ? rec : null;
+}
+
 /** نافذة هدوء أثناء login/MFA — حضور لا يكتب Users */
 function setAuthQuietWindow_(sec) {
     try {
@@ -649,6 +715,23 @@ function getUserRecordFromUsersSheetByEmail_(email, options) {
             }
         }
 
+        // 2) قراءة صف واحد بأعمدة المصادقة — بديل getDataRange الكامل
+        try {
+            var slimMeta = {};
+            var slimRec = getAuthUserRowByEmail_(e, slimMeta);
+            if (slimRec) {
+                try {
+                    var slimJson = JSON.stringify(slimRec);
+                    if (slimJson.length < 90000) cache.put(emailKey, slimJson, 600);
+                } catch (_sc) { /* ignore */ }
+                return slimRec;
+            }
+            // بريد غير موجود: لا تسقط إلى المسح الكامل (كان 20–33ث ثم HTML)
+            if (slimMeta.scanned) return null;
+        } catch (slimErr) {
+            Logger.log('getAuthUserRowByEmail_ fallback: ' + slimErr.toString());
+        }
+
         var spreadsheetId = getSpreadsheetId();
         // Skip security filter to get passwordHash for authentication
         var users = readFromSheet('Users', spreadsheetId, true);
@@ -663,9 +746,14 @@ function getUserRecordFromUsersSheetByEmail_(email, options) {
             if (rowEmail) {
                 usersMap[rowEmail] = u;
                 if (rowEmail === e) targetUser = u;
-                // كاش per-email لكل صف (دخول لاحق أسرع)
+                // كاش per-email بأعمدة المصادقة فقط — photo/loginHistory كانت تتجاوز حد الكاش
                 try {
-                    var rowJson = JSON.stringify(u);
+                    var slimRow = {};
+                    for (var sc = 0; sc < AUTH_SLIM_COLUMNS_.length; sc++) {
+                        var col = AUTH_SLIM_COLUMNS_[sc];
+                        if (u[col] !== undefined) slimRow[col] = u[col];
+                    }
+                    var rowJson = JSON.stringify(slimRow);
                     if (rowJson.length < 90000) {
                         cache.put(USERS_AUTH_EMAIL_PREFIX_ + rowEmail, rowJson, 600);
                     }

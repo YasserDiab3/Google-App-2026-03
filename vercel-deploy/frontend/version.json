@@ -1,13 +1,13 @@
 {
-  "version": "1.0.778",
+  "version": "1.0.780",
   "highlights": {
     "ar": [
-      "إصلاح نهائي لتسجيل الدخول/MFA: بدون كتابة Users أثناء الدخول.",
-      "كاش per-email + هدوء حضور 90ث + منع إعادة محاولة OTP بعد المهلة."
+      "إصلاح جذري لفشل الدخول/MFA: إعادة إرسال آمنة عند رد doGet أو HTML أو 404 من Google.",
+      "قراءة صف المصادقة وحده بدل مسح ورقة Users كاملة (45ث ← أقل من ثانية)."
     ],
     "en": [
-      "Final login/MFA fix: zero Users-sheet writes during auth.",
-      "Per-email auth cache + 90s presence quiet window + no OTP retry after timeout."
+      "Root fix for login/MFA failures: safe re-send when Google returns doGet, HTML, or 404.",
+      "Auth reads a single user row instead of scanning the whole Users sheet (45s to under 1s)."
     ]
   }
 }

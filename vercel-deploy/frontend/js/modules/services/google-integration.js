@@ -824,7 +824,7 @@ const GoogleIntegration = {
     /**
      * التحقق من هل هو executeRequest
      */
-    async _executeRequest(action, data, retryCount = 0) {
+    async _executeRequest(action, data, retryCount = 0, dogetRetry = 0) {
         if (!this._isBackendRpcConfigured()) {
             return Promise.reject(new Error('الخادم الخلفي غير مُتهيأ أو غير مفعّل'));
         }
@@ -1276,6 +1276,15 @@ const GoogleIntegration = {
                     throw new Error(`⚠️ ${statusText}\n\nالخادم لا يستجيب حالياً. جرّب:\n1. تحديث الصفحة بعد دقيقة.\n2. التأكد من أن Google Apps Script منشور وأن الرابط ينتهي بـ /exec.\n3. إن كان السكربت على Google: تحقق من صفحة حالة خدمات Google.`);
                 }
 
+                // 404 من script.googleusercontent.com: محتوى تحويل 302 لم يُسلَّم — doPost لم يُنفَّذ.
+                // إعادة الإرسال آمنة لكل العمليات (لا كتابة ولا استهلاك OTP حدث).
+                if (status === 404 && dogetRetry < 3) {
+                    const delay = 800 + (dogetRetry * 1200);
+                    Utils.safeWarn(`↩️ 404 لمحتوى التحويل (${action}) — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}/3) بعد ${delay}ms`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return this._executeRequest(action, data, retryCount, dogetRetry + 1);
+                }
+
                 // باقي الأخطاء
                 let errorMessage = `HTTP error! status: ${status}`;
                 try {
@@ -1305,13 +1314,23 @@ const GoogleIntegration = {
             }
 
             let result;
+            let isHtmlBody = false;
             try {
                 let trimmedText = String(resultText || '').replace(/^\uFEFF/, '').trim();
                 if (this.looksLikeGasHtmlResponse(trimmedText)) {
+                    isHtmlBody = true;
                     throw new Error(this.sanitizeGasErrorText(trimmedText));
                 }
                 result = JSON.parse(trimmedText);
             } catch (e) {
+                // صفحة HTML من Google تعني أن محتوى تحويل 302 لم يُسلَّم — doPost لم يُنفَّذ.
+                // إعادة الإرسال آمنة (لا كتابة ولا استهلاك OTP حدث على الخادم).
+                if (isHtmlBody && dogetRetry < 3) {
+                    const delay = 800 + (dogetRetry * 1200);
+                    Utils.safeWarn(`↩️ استجابة HTML للعملية ${action} — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}/3) بعد ${delay}ms`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return this._executeRequest(action, data, retryCount, dogetRetry + 1);
+                }
                 if (e && e.message && (e.message.includes('HTML بدل JSON') || e.message.includes('نشر Web App'))) throw e;
                 const safePreview = this.sanitizeGasErrorText(resultText, 'استجابة غير صالحة من الخادم');
                 throw new Error(
@@ -1330,12 +1349,20 @@ const GoogleIntegration = {
                 result.errorCode === 'WRONG_URL_ENDPOINT' ||
                 (result.status === 'active' && result.message && result.message.includes('running successfully'));
             if (isDoGetStatus) {
-                const dogetMsg = 'وصل الطلب إلى (doGet) بدلاً من (doPost).\n' +
-                    'يرجى التأكد من إعدادات النشر على Google Apps Script:\n' +
-                    '1. Deploy > Manage deployments > Edit\n' +
-                    '2. Execute as: Me\n' +
-                    '3. Who has access: Anyone (مهم جداً حتى تعمل المصادقة!)\n' +
-                    '4. تأكد أن الرابط ينتهي بـ /exec وليس /dev';
+                // رد doGet يعني أن doPost لم ينفَّذ إطلاقاً (Google أعادت استدعاء السكربت كـ GET
+                // عند تعذّر تسليم محتوى التحويل 302). لذلك إعادة الإرسال آمنة لكل العمليات —
+                // بما فيها verifyMfaLogin: لم يُستهلك أي رمز OTP على الخادم.
+                const maxDogetRetries = 3;
+                if (dogetRetry < maxDogetRetries) {
+                    const delay = 800 + (dogetRetry * 1200);
+                    Utils.safeWarn(`↩️ رد doGet للعملية ${action} — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}/${maxDogetRetries}) بعد ${delay}ms`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return this._executeRequest(action, data, retryCount, dogetRetry + 1);
+                }
+
+                const dogetMsg = 'تعذّر تسليم الطلب إلى الخادم (رد doGet متكرر).\n' +
+                    'لم يُنفَّذ الطلب على الخادم — يمكنك المحاولة مرة أخرى.\n' +
+                    'إن تكرر: تحقق من إعدادات النشر (Execute as: Me / Who has access: Anyone) وأن الرابط ينتهي بـ /exec';
                 if (!allowStructuredFailure) {
                     throw new Error(dogetMsg);
                 }

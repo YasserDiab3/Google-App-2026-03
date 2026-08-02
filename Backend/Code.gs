@@ -30,6 +30,7 @@
 var BUILD_TAG = 'HSE_WEBAPP_BUILD_2026-06-26_cear_sheet_v292';
 
 function doPost(e) {
+    var __t0 = Date.now();
     Logger.log('🚀 [DOPOST] ===== doPost تم استدعاؤها =====');
     Logger.log('🏷️ [DOPOST] BUILD_TAG: ' + BUILD_TAG);
     Logger.log('🚀 [DOPOST] الوقت: ' + new Date().toISOString());
@@ -182,6 +183,14 @@ function doPost(e) {
         // تنظيف action (إزالة المسافات والحروف غير المرئية)
         if (action && typeof action === 'string') {
             action = action.trim();
+        }
+
+        // نبضة تسخين خفيفة — تُبقي نسخة السكربت دافئة وتقيس زمن الخادم فقط (بلا بيانات)
+        if (action === '__warmup') {
+            return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
+                success: true,
+                serverMs: Date.now() - __t0
+            })));
         }
 
         // حماية إضافية: تقييد شكل action لمنع القيم غير المتوقعة
