@@ -107,10 +107,10 @@ window.Auth = {
         } catch (e) { /* ignore */ }
     },
 
-    /** مهلة اعتبار «متصل» في الواجهة (أكبر قليلاً من فاصل النبضة) */
-    PRESENCE_TTL_MS: 5 * 60 * 1000,
-    /** نبضة كل 4 دقائق — لا تنافس MFA (كانت 2د وتكتب الشيت فتقفله) */
-    PRESENCE_HEARTBEAT_MS: 4 * 60 * 1000,
+    /** مهلة اعتبار «متصل» في الواجهة (2 دقيقة كحد أقصى للاتصال الفعلي) */
+    PRESENCE_TTL_MS: 2 * 60 * 1000,
+    /** نبضة حضور كل 40 ثانية لتتبع الاتصال لحظياً ودون إجهاد الخادم */
+    PRESENCE_HEARTBEAT_MS: 40 * 1000,
     _presenceHeartbeatTimer: null,
     _presenceUnloadBound: false,
 
@@ -123,7 +123,7 @@ window.Auth = {
         }
         const flag = user.isOnline === true || user.isOnline === 'true' || user.isOnline === 'TRUE' || user.isOnline === 1 || user.isOnline === '1';
         if (!flag) return false;
-        const ts = user.lastPresenceAt || user.lastLogin || '';
+        const ts = user.lastPresenceAt || '';
         if (!ts) return false;
         const t = new Date(ts).getTime();
         if (Number.isNaN(t)) return false;

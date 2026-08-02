@@ -494,7 +494,7 @@ function deleteUserFromSheet(userId, userData) {
 /**
  * مهلة اعتبار الجلسة «متصل» (مللي ثانية) — يجب أن تكون أكبر من فاصل heartbeat في الواجهة.
  */
-var USER_PRESENCE_TTL_MS_ = 5 * 60 * 1000;
+var USER_PRESENCE_TTL_MS_ = 2 * 60 * 1000;
 
 function isTruthyOnlineFlag_(val) {
     return val === true || val === 'true' || val === 'TRUE' || val === 1 || val === '1' || val === 'نعم';
@@ -547,21 +547,29 @@ function setPresenceInCache_(userId, fields) {
     var id = String(userId || '').trim();
     if (!id) return;
     try {
-        CacheService.getScriptCache().put(PRESENCE_CACHE_PREFIX_ + id, JSON.stringify(fields), 900);
+        CacheService.getScriptCache().put(PRESENCE_CACHE_PREFIX_ + id, JSON.stringify(fields), 180);
     } catch (_e) { /* ignore */ }
 }
 
 /**
- * هل يعتبر المستخدم متصلاً فعلياً؟ الحضور من الكاش أولاً، وlastLogin احتياط لجلسة لحظية.
+ * هل يعتبر المستخدم متصلاً فعلياً؟ الحضور من الكاش أولاً مع التحقق من انتهاء المهلة (2 دقيقة).
  * @param {Object} user
  * @param {Object} [presence] سجل حضور جاهز من الكاش (لتجنّب طلب كاش لكل صف)
  */
 function isUserEffectivelyOnline_(user, presence) {
     if (!user) return false;
     var p = presence !== undefined ? presence : getPresenceFromCache_(user.id);
-    var flagSource = p && p.isOnline !== undefined ? p.isOnline : user.isOnline;
+    if (p && typeof p === 'object') {
+        if (p.isOnline === false || p.isOnline === 'false') return false;
+        var tsP = p.lastPresenceAt || '';
+        if (!tsP) return false;
+        var tP = new Date(tsP).getTime();
+        if (isNaN(tP)) return false;
+        return (Date.now() - tP) <= USER_PRESENCE_TTL_MS_;
+    }
+    var flagSource = user.isOnline;
     if (!isTruthyOnlineFlag_(flagSource)) return false;
-    var ts = (p && p.lastPresenceAt) || user.lastPresenceAt || user.lastLogin || '';
+    var ts = user.lastPresenceAt || '';
     if (!ts) return false;
     var t = new Date(ts).getTime();
     if (isNaN(t)) return false;
