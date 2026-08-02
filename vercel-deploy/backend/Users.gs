@@ -577,10 +577,34 @@ function normalizeSheetScalarField_(val) {
 }
 
 var USERS_AUTH_CACHE_KEY_ = 'users_auth_map_v2';
+var USERS_AUTH_EMAIL_PREFIX_ = 'user_auth_email_v1:';
+var AUTH_QUIET_CACHE_KEY_ = 'auth_quiet_until_ms';
 
-function invalidateUsersAuthCache_() {
+/** نافذة هدوء أثناء login/MFA — حضور لا يكتب Users */
+function setAuthQuietWindow_(sec) {
     try {
-        CacheService.getScriptCache().remove(USERS_AUTH_CACHE_KEY_);
+        var s = Math.max(30, Number(sec) || 90);
+        var until = Date.now() + (s * 1000);
+        CacheService.getScriptCache().put(AUTH_QUIET_CACHE_KEY_, String(until), s);
+    } catch (_e) { /* ignore */ }
+}
+
+function isAuthQuietWindow_() {
+    try {
+        var raw = CacheService.getScriptCache().get(AUTH_QUIET_CACHE_KEY_);
+        if (!raw) return false;
+        return Number(raw) > Date.now();
+    } catch (_e2) {
+        return false;
+    }
+}
+
+function invalidateUsersAuthCache_(emailOpt) {
+    try {
+        var cache = CacheService.getScriptCache();
+        cache.remove(USERS_AUTH_CACHE_KEY_);
+        var em = normalizeSheetScalarField_(emailOpt || '').toLowerCase();
+        if (em) cache.remove(USERS_AUTH_EMAIL_PREFIX_ + em);
         if (typeof __AUTH_ACTOR_RECORD_CACHE_ !== 'undefined') {
             __AUTH_ACTOR_RECORD_CACHE_ = {};
         }
@@ -599,12 +623,26 @@ function getUserRecordFromUsersSheetByEmail_(email, options) {
         options = options || {};
 
         var cache = CacheService.getScriptCache();
+        var emailKey = USERS_AUTH_EMAIL_PREFIX_ + e;
         if (!options.bypassCache) {
+            // 1) كاش per-email — يتجنّب قراءة الشيت عند كل login
+            try {
+                var oneRaw = cache.get(emailKey);
+                if (oneRaw) {
+                    var one = JSON.parse(oneRaw);
+                    if (one && one.email) return one;
+                }
+            } catch (_one) { /* ignore */ }
+
             var cachedMapRaw = cache.get(USERS_AUTH_CACHE_KEY_);
             if (cachedMapRaw) {
                 try {
                     var map = JSON.parse(cachedMapRaw);
                     if (map && map[e]) {
+                        try {
+                            var slimOne = JSON.stringify(map[e]);
+                            if (slimOne.length < 90000) cache.put(emailKey, slimOne, 600);
+                        } catch (_pe) { /* ignore */ }
                         return map[e];
                     }
                 } catch (pErr) { /* ignore cache parse error */ }
@@ -625,6 +663,13 @@ function getUserRecordFromUsersSheetByEmail_(email, options) {
             if (rowEmail) {
                 usersMap[rowEmail] = u;
                 if (rowEmail === e) targetUser = u;
+                // كاش per-email لكل صف (دخول لاحق أسرع)
+                try {
+                    var rowJson = JSON.stringify(u);
+                    if (rowJson.length < 90000) {
+                        cache.put(USERS_AUTH_EMAIL_PREFIX_ + rowEmail, rowJson, 600);
+                    }
+                } catch (_rowC) { /* ignore */ }
             }
         }
 
@@ -740,6 +785,10 @@ function _fastTouchUserLoginFields_(userId, fields) {
         const c = headers.indexOf('activeSessionId');
         if (c !== -1) cellWrites.push([rowIndex, c + 1, fields.activeSessionId]);
     }
+    if ('passwordHash' in fields) {
+        const c = headers.indexOf('passwordHash');
+        if (c !== -1) cellWrites.push([rowIndex, c + 1, fields.passwordHash]);
+    }
     // دفعة واحدة بدل setValue لكل خلية (أقل قفل على الشيت)
     if (cellWrites.length === 1) {
         sheet.getRange(cellWrites[0][0], cellWrites[0][1]).setValue(cellWrites[0][2]);
@@ -821,12 +870,14 @@ function touchUserPresence(payload, actorUserData) {
             CacheService.getScriptCache().put('presence_v1:' + userId, JSON.stringify(fields), 600);
         } catch (_c) { /* ignore */ }
 
-        // كتابة الشيت على الأكثر كل 8 دقائق لكل مستخدم (تخفيف قفل Users)
-        var shouldWriteSheet = true;
+        // أثناء login/MFA: لا تكتب Users أبداً (قفل الشيت = مهلة/HTML)
+        var shouldWriteSheet = !isAuthQuietWindow_();
         try {
             var writeGateKey = 'presence_sheet_gate:' + userId;
             var cache = CacheService.getScriptCache();
-            if (cache.get(writeGateKey)) {
+            if (!shouldWriteSheet) {
+                // quiet
+            } else if (cache.get(writeGateKey)) {
                 shouldWriteSheet = false;
             } else {
                 cache.put(writeGateKey, '1', 480);
@@ -839,6 +890,14 @@ function touchUserPresence(payload, actorUserData) {
             try {
                 gotLock = lock.tryLock(200);
                 if (gotLock) {
+                    // تطبيق ترقية hash مؤجّلة من login (إن وُجدت)
+                    try {
+                        var pendingHash = CacheService.getScriptCache().get('pending_pwd_hash:' + userId);
+                        if (pendingHash) {
+                            fields.passwordHash = pendingHash;
+                            CacheService.getScriptCache().remove('pending_pwd_hash:' + userId);
+                        }
+                    } catch (_ph2) { /* ignore */ }
                     _fastTouchUserLoginFields_(userId, fields);
                 }
             } catch (_w) {
@@ -1014,6 +1073,8 @@ function loginUser(email, password) {
     try {
         const e = String(email || '').trim().toLowerCase();
         const p = String(password || '').trim();
+        // هدوء 90ث: منع كتابات الحضور من قفل Users أثناء الدخول/MFA
+        setAuthQuietWindow_(90);
 
         if (!e || !p) {
             return { success: false, message: 'البريد الإلكتروني وكلمة المرور مطلوبان' };
@@ -1066,10 +1127,12 @@ function loginUser(email, password) {
             clearMfaFailures_(e);
         }
 
-        // تحديث الـ Hash تلقائياً إذا لزم الأمر
+        // ترقية Hash مؤجّلة — لا تكتب Users داخل طلب الدخول (قفل → مهلة → HTML)
         if (needsHashUpdate) {
-            const newHash = hashPassword(p);
-            updateUserInSheet(user.id, { passwordHash: newHash, password: '***' }, null, { internalCall: true });
+            try {
+                var newHash = hashPassword(p);
+                CacheService.getScriptCache().put('pending_pwd_hash:' + String(user.id), newHash, 86400);
+            } catch (_ph) { /* ignore */ }
         }
 
         // MFA: إذا مفعّل — لا نُكمل الجلسة حتى التحقق من TOTP
@@ -1088,17 +1151,15 @@ function loginUser(email, password) {
             };
         }
 
-        // تسجيل وقت الدخول — مسار سريع (تحديث خلايا مستهدفة فقط بدون قراءة الشيت كاملاً)
-        // الحضور/lastLogin تُحدَّث داخل attachServerSessionToLoginResult_ بكتابة واحدة
-
         // تجهيز كائن المستخدم للإرجاع (بدون بيانات حساسة)
         const safeUser = buildSafeUserFromRecord_(user);
 
+        // دائماً بدون كتابة Users في مسار الدخول — الحضور من الكاش ثم نبضات لاحقاً
         return attachServerSessionToLoginResult_({
             success: true,
             message: 'تم تسجيل الدخول بنجاح',
             user: safeUser
-        }, user);
+        }, user, { skipSheetTouch: true });
 
     } catch (error) {
         Logger.log('Error in loginUser: ' + error.toString());
@@ -1114,6 +1175,7 @@ function verifyMfaLogin(challengeToken, email, code) {
         var e = String(email || '').trim().toLowerCase();
         var token = String(challengeToken || '').trim();
         var otp = String(code || '').trim().replace(/\s/g, '');
+        setAuthQuietWindow_(90);
 
         if (!e || !token || !otp) {
             return { success: false, message: 'بيانات المصادقة الثنائية ناقصة' };
@@ -1152,23 +1214,24 @@ function verifyMfaLogin(challengeToken, email, code) {
             safeUser = cachedUserPayload.safeUser;
             user = { id: cachedUserPayload.userId, email: e };
         } else {
-            // مسار احتياطي فقط — يقرأ الشيت (قد يكون بطيئاً تحت ضغط الحضور)
-            if (typeof invalidateUsersAuthCache_ === 'function') invalidateUsersAuthCache_();
-            user = getUserRecordFromUsersSheetByEmail_(e, { bypassCache: true });
+            // مسار احتياطي: كاش per-email أولاً — بدون invalidate/bypass إلا عند الضرورة
+            user = getUserRecordFromUsersSheetByEmail_(e);
             if (!user || !isMfaEnabledForUser_(user)) {
                 return { success: false, message: 'المصادقة الثنائية غير مفعّلة لهذا الحساب' };
             }
             secretEnc = String(user.mfaSecretEnc || '').trim();
-            safeUser = buildSafeUserFromRecord_(user);
+            safeUser = (typeof buildMfaChallengeSafeUser_ === 'function')
+                ? buildMfaChallengeSafeUser_(user)
+                : buildSafeUserFromRecord_(user);
         }
 
         var secret = (typeof decryptMfaSecret_ === 'function') ? decryptMfaSecret_(secretEnc) : '';
         var totpOk = (secret && typeof verifyTotpCode_ === 'function' && verifyTotpCode_(secret, otp));
 
-        // إعادة محاولة من الشيت فقط إن لم يكن لدينا سر من كاش التحدي
+        // إعادة محاولة واحدة من الشيت فقط إن فشل الكاش ولم يكن لدينا سر التحدي
         if (!totpOk && !(cachedUserPayload && cachedUserPayload.mfaSecretEnc)) {
             try {
-                if (typeof invalidateUsersAuthCache_ === 'function') invalidateUsersAuthCache_();
+                if (typeof invalidateUsersAuthCache_ === 'function') invalidateUsersAuthCache_(e);
                 var freshUser = getUserRecordFromUsersSheetByEmail_(e, { bypassCache: true });
                 if (freshUser && isMfaEnabledForUser_(freshUser)) {
                     var freshEnc = String(freshUser.mfaSecretEnc || '').trim();
@@ -1177,7 +1240,9 @@ function verifyMfaLogin(challengeToken, email, code) {
                         totpOk = true;
                         secret = freshSecret;
                         user = freshUser;
-                        safeUser = buildSafeUserFromRecord_(freshUser);
+                        safeUser = (typeof buildMfaChallengeSafeUser_ === 'function')
+                            ? buildMfaChallengeSafeUser_(freshUser)
+                            : buildSafeUserFromRecord_(freshUser);
                     }
                 }
             } catch (_retry) { /* ignore */ }

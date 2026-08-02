@@ -259,7 +259,11 @@ window.Auth = {
     startPresenceHeartbeat() {
         this.stopPresenceHeartbeat();
         this._registerPresenceTab_();
-        this.touchPresence({ localOnly: false }).catch(() => {});
+        // لا تلمس Users فور الدخول — أعطِ مسار MFA/login هدوءاً (~45ث)
+        setTimeout(() => {
+            if (!AppState?.currentUser?.id) return;
+            this.touchPresence({ localOnly: false }).catch(() => {});
+        }, 45000);
         this._presenceHeartbeatTimer = setInterval(() => {
             if (!AppState?.currentUser?.id) {
                 this.stopPresenceHeartbeat();
@@ -1029,9 +1033,8 @@ window.Auth = {
                 window.DataManager.save();
             }
 
-            // ✅ الخادم يضبط isOnline=true + lastPresenceAt عند loginUser
-            // نبضة حضور فورية + heartbeat دوري للحفاظ على الحالة الفعلية
-            this.touchPresence().catch(() => {});
+            // ✅ لا نبضة حضور فورية بعد الدخول — تتنافس مع MFA لمستخدمين آخرين
+            // heartbeat يبدأ بعد ~45ث (انظر startPresenceHeartbeat)
             this.startPresenceHeartbeat();
 
             // تحديث جدول المستخدمين فوراً إذا كان مفتوحاً

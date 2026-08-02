@@ -257,26 +257,18 @@ function createMfaChallenge_(email, userRecord) {
     return token;
 }
 
-/** مستخدم مضغوط لكاش MFA — بدون photo/base64 */
+/** مستخدم مضغوط لكاش MFA — بدون photo/permissions (فشل الكاش = قراءة Users بطيئة) */
 function buildMfaChallengeSafeUser_(user) {
     if (!user) return null;
     return {
         id: user.id,
-        name: user.name || '',
-        email: user.email || '',
-        role: user.role || '',
-        department: user.department || '',
+        name: String(user.name || ''),
+        email: String(user.email || ''),
+        role: String(user.role || ''),
+        department: String(user.department || ''),
         active: user.active,
-        jobTitle: user.jobTitle || '',
-        phone: user.phone || '',
-        mfaEnabled: true,
-        permissions: (typeof user.permissions === 'object' && user.permissions && !Array.isArray(user.permissions))
-            ? user.permissions
-            : (typeof user.permissions === 'string' && user.permissions.length < 2000
-                ? (function () {
-                    try { return JSON.parse(user.permissions); } catch (_e) { return {}; }
-                })()
-                : {})
+        jobTitle: String(user.jobTitle || ''),
+        mfaEnabled: true
     };
 }
 

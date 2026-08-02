@@ -1062,6 +1062,14 @@ const GoogleIntegration = {
                     errorStr.includes('connection_timed_out');
 
                 if (isAbortOrTimeoutError) {
+                    const isAuthAction = authActions.includes(action) || action === 'login';
+                    // login/MFA: لا إعادة محاولة بعد timeout — الطلب قد نجح على الخادم ويستهلك OTP
+                    if (isAuthAction) {
+                        const timeoutSeconds = Math.round(timeoutDuration / 1000);
+                        throw new Error(`⚠️ انتهت مهلة الاتصال بخادم المصادقة (${timeoutSeconds} ثانية).\n` +
+                            `لا تُعد إدخال نفس رمز MFA فوراً.\n` +
+                            `انتظر 30 ثانية، ثم سجّل الدخول من جديد واطلب رمزاً جديداً.`);
+                    }
                     const isWriteOperation = action === 'saveToSheet' || action === 'appendToSheet' ||
                         action.startsWith('save') || action.startsWith('update') || action.startsWith('add') ||
                         isDeleteOperation;
@@ -1148,6 +1156,14 @@ const GoogleIntegration = {
                     errorMsg.includes('timed out') ||
                     fetchError.name === 'AbortError' ||
                     fetchError.message?.includes('aborted')) {
+
+                    const isAuthAction = authActions.includes(action) || action === 'login';
+                    if (isAuthAction) {
+                        const timeoutSeconds = Math.round(timeoutDuration / 1000);
+                        throw new Error(`⚠️ انتهت مهلة الاتصال بخادم المصادقة (${timeoutSeconds} ثانية).\n` +
+                            `لا تُعد إدخال نفس رمز MFA فوراً.\n` +
+                            `انتظر 30 ثانية، ثم سجّل الدخول من جديد واطلب رمزاً جديداً.`);
+                    }
 
                     // إعادة محاولات محدودة لتقليل التأخير التراكمي
                     const isWriteOperation = action === 'saveToSheet' || action === 'appendToSheet' ||

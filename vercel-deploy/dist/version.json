@@ -1,15 +1,13 @@
 {
-  "version": "1.0.776",
+  "version": "1.0.778",
   "highlights": {
     "ar": [
-      "إصلاح MFA: تحقق بدون كتابة Users + كاش حضور أخف.",
-      "منع عرض HTML الخام عند فشل الخادم + مهلة دخول 60ث.",
-      "أداة نشر إنتاجي clasp deploy-gas-prod + حماية bump."
+      "إصلاح نهائي لتسجيل الدخول/MFA: بدون كتابة Users أثناء الدخول.",
+      "كاش per-email + هدوء حضور 90ث + منع إعادة محاولة OTP بعد المهلة."
     ],
     "en": [
-      "MFA fix: verify path skips Users writes + lighter presence cache.",
-      "Raw HTML server errors sanitized; login timeout 60s.",
-      "Production GAS deploy script + safer bump-version."
+      "Final login/MFA fix: zero Users-sheet writes during auth.",
+      "Per-email auth cache + 90s presence quiet window + no OTP retry after timeout."
     ]
   }
 }
