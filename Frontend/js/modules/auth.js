@@ -107,12 +107,20 @@ window.Auth = {
         } catch (e) { /* ignore */ }
     },
 
-    /** مهلة اعتبار «متصل» في الواجهة (2 دقيقة كحد أقصى للاتصال الفعلي) */
-    PRESENCE_TTL_MS: 2 * 60 * 1000,
-    /** نبضة حضور كل 40 ثانية لتتبع الاتصال لحظياً ودون إجهاد الخادم */
-    PRESENCE_HEARTBEAT_MS: 40 * 1000,
+    /**
+     * مهلة «متصل» في الواجهة.
+     * كانت 2د مع نبضة كل 40ث بعد تحديث حالة الاتصال — أغرقت GAS ونافسَت login/MFA
+     * فظهرت HTML/404 وتعليق «جاري التحقق». نبضة أهدأ + TTL متوافق = استقرار.
+     */
+    PRESENCE_TTL_MS: 3 * 60 * 1000,
+    /** نبضة كل 90ث — أقل من TTL بهامش، بلا إغراق طابور الطلبات */
+    PRESENCE_HEARTBEAT_MS: 90 * 1000,
     _presenceHeartbeatTimer: null,
     _presenceUnloadBound: false,
+    /** true أثناء login / verifyMfa — يمنع نبضات الحضور من سرقة طابور الخادم */
+    _authInFlight: false,
+    /** true بين رد MFA المطلوب وإكمال/إلغاء التحقق */
+    _mfaChallengePending: false,
 
     isUserEffectivelyOnline(user, options = {}) {
         if (!user) return false;
@@ -142,6 +150,8 @@ window.Auth = {
 
     async touchPresence(options = {}) {
         try {
+            // أثناء تسجيل الدخول/MFA: لا ترسل حضور — كان يسرق طابور GAS ويسبب 404/تعليق
+            if (this._authInFlight && !options.force) return;
             const user = AppState?.currentUser;
             if (!user || !user.id) return;
             if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && !Utils.hasCloudBackendSync()) return;
@@ -259,11 +269,12 @@ window.Auth = {
     startPresenceHeartbeat() {
         this.stopPresenceHeartbeat();
         this._registerPresenceTab_();
-        // لا تلمس Users فور الدخول — أعطِ مسار MFA/login هدوءاً (~45ث)
+        // لا تلمس Users فور الدخول — أعطِ مسار MFA/login هدوءاً (~60ث)
         setTimeout(() => {
             if (!AppState?.currentUser?.id) return;
+            if (this._authInFlight) return;
             this.touchPresence({ localOnly: false }).catch(() => {});
-        }, 45000);
+        }, 60000);
         this._presenceHeartbeatTimer = setInterval(() => {
             if (!AppState?.currentUser?.id) {
                 this.stopPresenceHeartbeat();
@@ -550,7 +561,22 @@ window.Auth = {
             }
             return { success: false, message: errorMessage };
         }
-        
+
+        this._authInFlight = true;
+        try {
+            return await this._loginInner(email, password, remember);
+        } finally {
+            // إن طُلب MFA نُبقي القفل حتى verifyMfaAndCompleteLogin / إلغاء الخطوة
+            if (!this._mfaChallengePending) {
+                this._authInFlight = false;
+            }
+        }
+    },
+
+    async _loginInner(email, password, remember = false) {
+        let foundUser = null;
+        this._mfaChallengePending = false;
+
         // إزالة تسجيل المعلومات الحساسة في الإنتاج
         const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
         if (!isProduction) {
@@ -677,6 +703,7 @@ window.Auth = {
                     if (loginResult.mfaRequired) {
                         Utils.safeLog('🔐 مطلوب MFA — انتظار رمز TOTP');
                         await Utils.RateLimiter.clearAttempts(email);
+                        this._mfaChallengePending = true;
                         return {
                             success: false,
                             mfaRequired: true,
@@ -841,6 +868,22 @@ window.Auth = {
             return { success: false, message: msg };
         }
 
+        this._authInFlight = true;
+        try {
+            return await this._verifyMfaAndCompleteLoginInner(email, otp, token, remember);
+        } finally {
+            this._mfaChallengePending = false;
+            this._authInFlight = false;
+        }
+    },
+
+    /** إلغاء تحدي MFA (زر رجوع) — يحرّر قفل الحضور */
+    clearMfaChallengePending() {
+        this._mfaChallengePending = false;
+        this._authInFlight = false;
+    },
+
+    async _verifyMfaAndCompleteLoginInner(email, otp, token, remember = false) {
         let verifyResult = null;
         try {
             if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.resetCircuitBreaker === 'function') {

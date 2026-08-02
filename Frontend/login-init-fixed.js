@@ -759,6 +759,11 @@ function showLoginMfaStep(pending) {
 
 function hideLoginMfaStep() {
     __pendingMfaLogin = null;
+    try {
+        if (window.Auth && typeof window.Auth.clearMfaChallengePending === 'function') {
+            window.Auth.clearMfaChallengePending();
+        }
+    } catch (_e) { /* ignore */ }
     document.querySelectorAll('[data-mfa-hidden="1"]').forEach(function (el) {
         el.style.display = '';
         el.removeAttribute('data-mfa-hidden');

@@ -1,15 +1,17 @@
 {
-  "version": "1.0.787",
+  "version": "1.0.789",
   "highlights": {
     "ar": [
-      "إصلاح رفض رمز MFA الصحيح: إعادة قراءة السر من الشيت عند فشل الكاش.",
-      "توسيع نافذة قبول رمز المصادقة (±4 دقائق) لتقليل الرفض بسبب فرق الوقت.",
-      "حد زمني واضح لمحاولات الدخول مع رسائل أوضح عند تذبذب الاتصال."
+      "إصلاح عدم استقرار الدخول بعد تحديث حالة الاتصال: نبضة الحضور كل 90 ثانية بدل 40.",
+      "إيقاف نبضات الحضور تماماً أثناء تسجيل الدخول والمصادقة الثنائية.",
+      "مهلة «متصل» 3 دقائق متوافقة مع النبضة — لا اختفاء مفاجئ لحالة الاتصال.",
+      "زر الرجوع من شاشة رمز MFA يحرّر المصادقة بشكل صحيح."
     ],
     "en": [
-      "Fix rejecting valid MFA codes: re-read secret from sheet when cache fails.",
-      "Wider TOTP acceptance window (±4 minutes) for clock skew.",
-      "Clearer login retry budget and messages when Google delivery flakes."
+      "Fixed login instability after the online-status update: presence heartbeat every 90s instead of 40s.",
+      "Presence heartbeats are fully paused during login and two-factor verification.",
+      "Online TTL raised to 3 minutes to match the heartbeat — no more flickering status.",
+      "Back button on the MFA code screen now releases the auth lock correctly."
     ]
   }
 }

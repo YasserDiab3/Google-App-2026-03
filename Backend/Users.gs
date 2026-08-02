@@ -494,7 +494,7 @@ function deleteUserFromSheet(userId, userData) {
 /**
  * مهلة اعتبار الجلسة «متصل» (مللي ثانية) — يجب أن تكون أكبر من فاصل heartbeat في الواجهة.
  */
-var USER_PRESENCE_TTL_MS_ = 2 * 60 * 1000;
+var USER_PRESENCE_TTL_MS_ = 3 * 60 * 1000;
 
 function isTruthyOnlineFlag_(val) {
     return val === true || val === 'true' || val === 'TRUE' || val === 1 || val === '1' || val === 'نعم';
@@ -547,7 +547,7 @@ function setPresenceInCache_(userId, fields) {
     var id = String(userId || '').trim();
     if (!id) return;
     try {
-        CacheService.getScriptCache().put(PRESENCE_CACHE_PREFIX_ + id, JSON.stringify(fields), 180);
+        CacheService.getScriptCache().put(PRESENCE_CACHE_PREFIX_ + id, JSON.stringify(fields), 240);
     } catch (_e) { /* ignore */ }
 }
 
