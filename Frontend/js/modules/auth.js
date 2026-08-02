@@ -176,6 +176,11 @@ window.Auth = {
         try {
             const user = AppState?.currentUser;
             if (!user || !user.id) return;
+            // تبويبات أخرى لنفس الجلسة ما زالت مفتوحة — لا تُسقط الحضور على الخادم
+            if (options.beacon && !this._shouldMarkOfflineOnUnload_()) {
+                this._unregisterPresenceTab_();
+                return;
+            }
             const sessionId = this._getPresenceSessionId();
             const nowIso = new Date().toISOString();
             const users = AppState.appData?.users;
@@ -202,17 +207,64 @@ window.Auth = {
                 }
             });
             if (req && typeof req.catch === 'function') req.catch(() => {});
+            this._unregisterPresenceTab_();
         } catch (_e) { /* ignore */ }
+    },
+
+    _presenceTabId: null,
+
+    _registerPresenceTab_() {
+        try {
+            if (!this._presenceTabId) {
+                this._presenceTabId = `tab_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+            }
+            const raw = localStorage.getItem('hse_presence_tabs');
+            const tabs = raw ? JSON.parse(raw) : {};
+            const now = Date.now();
+            Object.keys(tabs).forEach((k) => {
+                if (!tabs[k] || (now - Number(tabs[k])) > 6 * 60 * 1000) delete tabs[k];
+            });
+            tabs[this._presenceTabId] = now;
+            localStorage.setItem('hse_presence_tabs', JSON.stringify(tabs));
+        } catch (_e) { /* ignore */ }
+    },
+
+    _unregisterPresenceTab_() {
+        try {
+            if (!this._presenceTabId) return;
+            const raw = localStorage.getItem('hse_presence_tabs');
+            const tabs = raw ? JSON.parse(raw) : {};
+            delete tabs[this._presenceTabId];
+            localStorage.setItem('hse_presence_tabs', JSON.stringify(tabs));
+        } catch (_e) { /* ignore */ }
+    },
+
+    _shouldMarkOfflineOnUnload_() {
+        try {
+            this._unregisterPresenceTab_();
+            const raw = localStorage.getItem('hse_presence_tabs');
+            const tabs = raw ? JSON.parse(raw) : {};
+            const now = Date.now();
+            let live = 0;
+            Object.keys(tabs).forEach((k) => {
+                if (tabs[k] && (now - Number(tabs[k])) <= 6 * 60 * 1000) live += 1;
+            });
+            return live === 0;
+        } catch (_e) {
+            return true;
+        }
     },
 
     startPresenceHeartbeat() {
         this.stopPresenceHeartbeat();
+        this._registerPresenceTab_();
         this.touchPresence({ localOnly: false }).catch(() => {});
         this._presenceHeartbeatTimer = setInterval(() => {
             if (!AppState?.currentUser?.id) {
                 this.stopPresenceHeartbeat();
                 return;
             }
+            this._registerPresenceTab_();
             this.touchPresence().catch(() => {});
         }, this.PRESENCE_HEARTBEAT_MS);
 
@@ -225,6 +277,7 @@ window.Auth = {
             document.addEventListener('visibilitychange', () => {
                 // لا نعلّم غير متصل عند إخفاء التبويب داخل نفس الجلسة
                 if (document.visibilityState === 'visible' && AppState?.currentUser?.id) {
+                    this._registerPresenceTab_();
                     this.touchPresence().catch(() => {});
                 }
             });
@@ -547,8 +600,14 @@ window.Auth = {
         // 🔒 قبل أي تحميل محلي: عزل كاش الحساب السابق عن حساب محاولة الدخول
         if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.purgeIfUserChanged === 'function') {
             window.DataManager.purgeIfUserChanged(email);
-            if (typeof window.DataManager.awaitLastPurge === 'function') {
-                try { await window.DataManager.awaitLastPurge(3500); } catch (_p) { /* ignore */ }
+            AppState._loginPurgeEmail = email;
+            if (typeof window.DataManager.ensurePurgeSettledBeforeLoad === 'function') {
+                const settled = await window.DataManager.ensurePurgeSettledBeforeLoad(4000);
+                if (!settled && typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ تفريغ الكاش لم يكتمل قبل الدخول — المتابعة من الخادم فقط');
+                }
+            } else if (typeof window.DataManager.awaitLastPurge === 'function') {
+                await window.DataManager.awaitLastPurge(4000);
             }
         }
 
@@ -793,8 +852,13 @@ window.Auth = {
 
         // 🔒 فحص ومسح بيانات المستخدم السابق فوراً قبل البدء بإنشاء الجلسة
         if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.purgeIfUserChanged === 'function') {
-            window.DataManager.purgeIfUserChanged(email);
-            if (typeof window.DataManager.awaitLastPurge === 'function') {
+            if (AppState._loginPurgeEmail !== email) {
+                window.DataManager.purgeIfUserChanged(email);
+                AppState._loginPurgeEmail = email;
+            }
+            if (typeof window.DataManager.ensurePurgeSettledBeforeLoad === 'function') {
+                try { await window.DataManager.ensurePurgeSettledBeforeLoad(4000); } catch (_p) { /* ignore */ }
+            } else if (typeof window.DataManager.awaitLastPurge === 'function') {
                 try { await window.DataManager.awaitLastPurge(4000); } catch (_p) { /* ignore */ }
             }
         }
@@ -853,16 +917,15 @@ window.Auth = {
             // هوية الخادم أولاً — لا نستبدل بمعرّف من كاش قديم
             id: user.id || fullUserData?.id,
             passwordChanged: user.passwordChanged ?? fullUserData?.passwordChanged ?? false,
-            forcePasswordChange: user.forcePasswordChange === true || fullUserData?.forcePasswordChange === true,
+            // مصدر الحقيقة: استجابة الخادم فقط — لا OR من كاش محلي قديم
+            forcePasswordChange: user.forcePasswordChange === true,
             isBootstrap: isBootstrap,
             loginTime: loginTime,
             photo: user?.photo || fullUserData?.photo || ''
         };
         this._sanitizeCurrentUserSecrets();
 
-        if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.purgeIfUserChanged === 'function') {
-            window.DataManager.purgeIfUserChanged(email);
-        }
+        // تم المسح أعلى الدالة — لا تكرار purge هنا
 
         Utils.safeLog('✅ تسجيل الدخول ناجح');
         Utils.safeLog('📋 الصلاحيات:', Object.keys(AppState.currentUser.permissions || {}).length, 'صلاحية');
@@ -1020,9 +1083,9 @@ window.Auth = {
             Utils.safeLog('🗑 تم حذف localStorage (لم يختر تذكرني)');
         }
 
-        // التحقق من التسجيل الأول أو عدم تغيير كلمة المرور
-        const requiresPasswordChange = fullUserData?.forcePasswordChange === true;
-        const isFirstLogin = !fullUserData?.passwordChanged;
+        // التحقق من فرض تغيير كلمة المرور — من استجابة الخادم فقط (ضُبطت في currentUser أعلاه)
+        const requiresPasswordChange = AppState.currentUser?.forcePasswordChange === true;
+        const isFirstLogin = !(user?.passwordChanged === true || user?.passwordChanged === 'true');
 
         if (!requiresPasswordChange) {
             Notification.success(`مرحباً ${user.name}`);
@@ -1062,14 +1125,21 @@ window.Auth = {
             try {
                 Utils.safeLog('🚀 بدء تحميل البيانات بعد تسجيل الدخول...');
                 
-                // ✅ الخطوة 1: تحميل البيانات المحلية (بعد purgeIfUserChanged عند تبديل المستخدم)
+                // ✅ الخطوة 1: بعد العزل — انتظار اكتمال تفريغ IDB ثم تحميل محلي لنفس المالك فقط
                 if (typeof DataManager !== 'undefined' && DataManager.load) {
                     try {
-                        if (typeof DataManager.purgeIfUserChanged === 'function' && AppState.currentUser?.email) {
-                            DataManager.purgeIfUserChanged(AppState.currentUser.email);
+                        if (typeof DataManager.ensurePurgeSettledBeforeLoad === 'function') {
+                            const settled = await DataManager.ensurePurgeSettledBeforeLoad(5000);
+                            if (!settled) {
+                                Utils.safeWarn('🔒 تخطي تحميل الكاش بعد الدخول — المسح لم يكتمل');
+                            } else {
+                                await DataManager.load();
+                                Utils.safeLog('✅ تم تحميل البيانات المحلية');
+                            }
+                        } else {
+                            await DataManager.load();
+                            Utils.safeLog('✅ تم تحميل البيانات المحلية');
                         }
-                        await DataManager.load();
-                        Utils.safeLog('✅ تم تحميل البيانات المحلية');
                     } catch (loadError) {
                         Utils.safeWarn('⚠️ فشل تحميل البيانات المحلية:', loadError);
                     }
@@ -1281,6 +1351,7 @@ window.Auth = {
         } catch (_inv) { /* ignore */ }
         this._clearServerSessionToken();
         this.stopPresenceHeartbeat();
+        try { localStorage.removeItem('hse_presence_tabs'); } catch (_pt) { /* ignore */ }
 
         // تحديث حالة المستخدم إلى غير متصل
         if (AppState.currentUser && AppState.currentUser.email) {
@@ -1390,8 +1461,16 @@ window.Auth = {
                             return false;
                         }
                         // 🔒 عزل كاش مستخدم آخر قبل دمج الجلسة مع AppState
+                        // (bootstrap ينتظر IDB؛ هنا نضمن مسح LS/الذاكرة فوراً إن تغيّر المالك)
                         if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.purgeIfUserChanged === 'function') {
-                            window.DataManager.purgeIfUserChanged(user.email);
+                            const purgedNow = window.DataManager.purgeIfUserChanged(user.email);
+                            if (purgedNow && AppState && AppState.appData) {
+                                // الذاكرة قد تبقى حتى يكتمل await في bootstrap — صفِّر المصفوفات الثقيلة فوراً
+                                Object.keys(AppState.appData).forEach((key) => {
+                                    if (key === 'systemStatistics') return;
+                                    if (Array.isArray(AppState.appData[key])) AppState.appData[key] = [];
+                                });
+                            }
                         }
                         // استعادة hse_session_id من بيانات الجلسة إن فُقد (بعد إعادة تحميل في نفس التبويب)
                         let currentSessionId = sessionStorage.getItem('hse_session_id');

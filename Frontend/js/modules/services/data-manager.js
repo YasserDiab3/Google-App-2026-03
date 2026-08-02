@@ -134,12 +134,42 @@ const DataManager = {
         const p = this._lastIdbPurgePromise;
         if (!p || typeof p.then !== 'function') return true;
         const ms = Math.max(500, Number(timeoutMs) || 4000);
+        let timedOut = false;
         try {
-            await Promise.race([
-                p,
-                new Promise((resolve) => setTimeout(() => resolve(false), ms))
+            const result = await Promise.race([
+                Promise.resolve(p).then((v) => (v === false ? false : true)).catch(() => false),
+                new Promise((resolve) => setTimeout(() => {
+                    timedOut = true;
+                    resolve('__timeout__');
+                }, ms))
             ]);
-        } catch (_e) { /* ignore */ }
+            if (result === '__timeout__' || timedOut) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ انتهت مهلة انتظار تفريغ IndexedDB — يُرفض التحميل حتى يكتمل المسح');
+                }
+                return false;
+            }
+            return result !== false;
+        } catch (_e) {
+            return false;
+        }
+    },
+
+    /**
+     * انتظار المسح ثم رفض التحميل إن لم يكتمل — للاستخدام قبل DataManager.load
+     */
+    async ensurePurgeSettledBeforeLoad(timeoutMs) {
+        const ok = await this.awaitLastPurge(timeoutMs);
+        if (!ok) {
+            // محاولة مسح إضافية قصيرة ثم انتظار مرة أخرى
+            try {
+                if (typeof LocalDBCache !== 'undefined' && typeof LocalDBCache.clear === 'function') {
+                    this._lastIdbPurgePromise = LocalDBCache.clear().catch(() => false);
+                }
+            } catch (_e) { /* ignore */ }
+            const retry = await this.awaitLastPurge(Math.max(1500, Number(timeoutMs) || 4000));
+            return retry === true;
+        }
         return true;
     },
 
@@ -247,7 +277,8 @@ const DataManager = {
             localStorage.getItem('hse_app_data') ||
             localStorage.getItem('hse_ptw_list') ||
             localStorage.getItem('hse_ptw_registry') ||
-            localStorage.getItem('hse_incidents_registry')
+            localStorage.getItem('hse_incidents_registry') ||
+            localStorage.getItem('hse_sync_meta')
         );
 
         if (prev && prev !== next) {
@@ -256,13 +287,15 @@ const DataManager = {
             }
             this.purgeLocalAppData('user_changed');
             purged = true;
-        } else if (!prev && hasLocalPayload) {
-            // كاش يتيم بدون مالك معروف — لا نربطه بحساب جديد
-            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                Utils.safeWarn('🔒 [SECURITY DATA PROTECTION] كاش محلي بدون مالك — مسح قبل ربط الجلسة الجديدة.');
+        } else if (!prev) {
+            // بدون مالك معروف: امسح LS إن وُجد + IDB دائماً (قد يكون يتيم بدون مفاتيح LS)
+            if (hasLocalPayload || typeof LocalDBCache !== 'undefined') {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('🔒 [SECURITY DATA PROTECTION] كاش محلي/IDB بدون مالك — مسح قبل ربط الجلسة الجديدة.');
+                }
+                this.purgeLocalAppData('orphan_cache_no_owner');
+                purged = true;
             }
-            this.purgeLocalAppData('orphan_cache_no_owner');
-            purged = true;
         }
 
         // حفظ البريد الإلكتروني للمستخدم الجديد لمنع التسريب في الجلسات القادمة
@@ -273,6 +306,7 @@ const DataManager = {
             if (!AppState.syncMeta) AppState.syncMeta = { sheets: {}, lastSyncTime: 0 };
             AppState.syncMeta.userEmail = next;
         }
+        this._lastPurgeBoundEmail = next;
 
         return purged;
     },
@@ -624,9 +658,18 @@ const DataManager = {
                 AppState.appData = {};
             }
 
-            // انتظار أي تفريغ IndexedDB سابق (logout / تبديل مستخدم) قبل الاستعادة
-            if (typeof this.awaitLastPurge === 'function') {
-                await this.awaitLastPurge(4000);
+            // انتظار أي تفريغ IndexedDB سابق — رفض التحميل إن لم يكتمل
+            if (typeof this.ensurePurgeSettledBeforeLoad === 'function') {
+                const settled = await this.ensurePurgeSettledBeforeLoad(5000);
+                if (!settled) {
+                    if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                        Utils.safeWarn('🔒 تخطي تحميل الكاش — تفريغ IndexedDB لم يكتمل');
+                    }
+                    return false;
+                }
+            } else if (typeof this.awaitLastPurge === 'function') {
+                const ok = await this.awaitLastPurge(5000);
+                if (!ok) return false;
             }
 
             const expectedOwner = this._resolveSessionEmailHint_();
@@ -790,12 +833,15 @@ const DataManager = {
                         const idbOwner = dbData._ownerEmail
                             ? String(dbData._ownerEmail).trim().toLowerCase()
                             : '';
-                        if (expectedOwner && idbOwner && expectedOwner !== idbOwner) {
+                        if (!idbOwner) {
+                            // IndexedDB يتيم بدون مالك — لا يُستعاد أبداً
+                            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                                Utils.safeWarn('🔒 رفض IndexedDB يتيم بدون _ownerEmail');
+                            }
+                        } else if (expectedOwner && expectedOwner !== idbOwner) {
                             if (typeof Utils !== 'undefined' && Utils.safeWarn) {
                                 Utils.safeWarn('🔒 رفض IndexedDB لمستخدم آخر');
                             }
-                        } else if (expectedOwner && !idbOwner) {
-                            // لا نستعيد IndexedDB يتيم أثناء وجود جلسة
                         } else {
                         let restoredCount = 0;
                         Object.keys(dbData).forEach(key => {
@@ -912,7 +958,14 @@ const DataManager = {
                     // التحقق من أن syncMeta ينتمي للمستخدم الحالي
                     const currentUserEmail = (AppState.currentUser?.email || this._resolveSessionEmailHint_() || '').toLowerCase();
                     const metaEmail = savedSyncMeta.userEmail ? String(savedSyncMeta.userEmail).trim().toLowerCase() : '';
-                    if (!currentUserEmail || !metaEmail || metaEmail === currentUserEmail) {
+                    if (currentUserEmail && !metaEmail) {
+                        // جلسة متوقعة + meta بلا مالك — ارفض الدمج
+                        if (AppState.syncMeta) {
+                            AppState.syncMeta.sheets = {};
+                            AppState.syncMeta.userEmail = currentUserEmail;
+                            AppState.syncMeta.lastSyncTime = 0;
+                        }
+                    } else if (!currentUserEmail || metaEmail === currentUserEmail) {
                         AppState.syncMeta = {
                             ...AppState.syncMeta,
                             ...savedSyncMeta,

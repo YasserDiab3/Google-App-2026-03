@@ -261,9 +261,8 @@
             // تحميل البيانات من localStorage
             if (window.DataManager && window.DataManager.load) {
                 try {
-                    // 🔒 قبل التحميل: إن وُجدت جلسة، امسح كاش مستخدم آخر
+                    let sessionEmail = '';
                     try {
-                        let sessionEmail = '';
                         const sess = sessionStorage.getItem('hse_current_session');
                         if (sess) {
                             const parsed = JSON.parse(sess);
@@ -276,18 +275,30 @@
                                 sessionEmail = parsedRem && parsedRem.email ? String(parsedRem.email).trim().toLowerCase() : '';
                             }
                         }
-                        if (sessionEmail && typeof window.DataManager.purgeIfUserChanged === 'function') {
-                            window.DataManager.purgeIfUserChanged(sessionEmail);
-                            if (typeof window.DataManager.awaitLastPurge === 'function') {
-                                await window.DataManager.awaitLastPurge(3500);
-                            }
-                        }
                     } catch (_secBoot) { /* ignore */ }
 
-                    // ✅ مهم عند Reload: ننتظر تحميل البيانات المحلية لتجنّب صفحة بيضاء/جداول فارغة ثم ظهور البيانات لاحقاً
-                    await window.DataManager.load();
-                    this.updateLoader(55, 'تم تحميل البيانات المحلية');
+                    const hasSession = !!sessionEmail;
+                    if (hasSession) {
+                        // 🔒 قبل التحميل: امسح كاش مستخدم آخر وانتظر IDB
+                        if (typeof window.DataManager.purgeIfUserChanged === 'function') {
+                            window.DataManager.purgeIfUserChanged(sessionEmail);
+                            if (typeof window.DataManager.ensurePurgeSettledBeforeLoad === 'function') {
+                                await window.DataManager.ensurePurgeSettledBeforeLoad(4000);
+                            } else if (typeof window.DataManager.awaitLastPurge === 'function') {
+                                await window.DataManager.awaitLastPurge(4000);
+                            }
+                        }
+                        await window.DataManager.load();
+                        this.updateLoader(55, 'تم تحميل البيانات المحلية');
+                    } else {
+                        // شاشة دخول بلا جلسة — لا تحميل كاش تطبيق كامل (يمنع بيانات مستخدم متذكّر سابقاً)
+                        this.updateLoader(55, 'جاهز لتسجيل الدخول');
+                        if (window.DataManager && window.DataManager.loadGoogleConfig) {
+                            try { window.DataManager.loadGoogleConfig(); } catch (_cfg) { /* ignore */ }
+                        }
+                    }
 
+                    if (hasSession) {
                     // 🧹 تنظيف أمني: إزالة أي حسابات افتراضية legacy من البيانات المحلية (إن وُجدت)
                     try {
                         if (typeof window.removeDefaultUsersIfNeeded === 'function') {
@@ -332,6 +343,7 @@
                         } catch (error) {
                             console.warn('⚠️ فشل تحميل إعدادات النماذج مع بدء التطبيق:', error);
                         }
+                    }
                     }
                 } catch (error) {
                     console.error('❌ خطأ في تحميل البيانات المحلية:', error);

@@ -789,7 +789,9 @@ function touchUserPresence(payload, actorUserData) {
  */
 function markUserOffline(payload, actorUserData) {
     try {
-        var actor = actorUserData || {};
+        var authGate = requireAuthenticatedActor_(actorUserData, 'markUserOffline');
+        if (!authGate.ok) return authGate;
+        var actor = authGate.actor || actorUserData || {};
         var actorId = String(actor.id || '').trim();
         var actorEmail = String(actor.email || '').trim().toLowerCase();
         var userId = String((payload && (payload.userId || payload.id)) || actorId || '').trim();
@@ -799,6 +801,25 @@ function markUserOffline(payload, actorUserData) {
             if (me) userId = String(me.id || '').trim();
         }
         if (!userId) return { success: false, message: 'معرف المستخدم مطلوب' };
+
+        // فقط الذات (أو admin) — منع IDOR إسقاط حضور مستخدم آخر
+        var isAdmin = (typeof checkAdminPermissionsAuthoritative === 'function')
+            ? checkAdminPermissionsAuthoritative(actor)
+            : false;
+        if (!isAdmin) {
+            if (actorId && userId !== actorId) {
+                return { success: false, message: 'لا يمكن تحديث حضور مستخدم آخر', errorCode: 'FORBIDDEN' };
+            }
+            if (!actorId && actorEmail) {
+                var meRow = getUserRecordFromUsersSheetByEmail_(actorEmail);
+                if (!meRow || String(meRow.id || '').trim() !== userId) {
+                    return { success: false, message: 'لا يمكن تحديث حضور مستخدم آخر', errorCode: 'FORBIDDEN' };
+                }
+            }
+            if (!actorId && !actorEmail) {
+                return { success: false, message: 'رفض أمني: هوية المنفّذ مطلوبة', errorCode: 'FORBIDDEN' };
+            }
+        }
 
         // إن وُجدت جلسة على الشيت ومُرّر sessionId مختلف — لا نُسقط جلسة جهاز آخر
         if (sessionId) {
@@ -996,10 +1017,11 @@ function loginUser(email, password) {
  * الخطوة الثانية لتسجيل الدخول — التحقق من رمز TOTP
  */
 function verifyMfaLogin(challengeToken, email, code) {
+    var lock = null;
     try {
         var e = String(email || '').trim().toLowerCase();
         var token = String(challengeToken || '').trim();
-        var otp = String(code || '').trim();
+        var otp = String(code || '').trim().replace(/\s/g, '');
 
         if (!e || !token || !otp) {
             return { success: false, message: 'بيانات المصادقة الثنائية ناقصة' };
@@ -1010,9 +1032,21 @@ function verifyMfaLogin(challengeToken, email, code) {
             if (!rl.ok) return { success: false, message: rl.message };
         }
 
+        try {
+            lock = LockService.getScriptLock();
+            lock.waitLock(15000);
+        } catch (lockErr) {
+            Logger.log('verifyMfaLogin lock: ' + lockErr.toString());
+            lock = null;
+        }
+
         // لا نستهلك challenge قبل نجاح TOTP — وإلا إعادة المحاولة برمز صحيح تفشل
         if (typeof validateMfaChallenge_ !== 'function' || !validateMfaChallenge_(token, e)) {
             return { success: false, message: 'انتهت صلاحية جلسة المصادقة. أعد تسجيل الدخول.' };
+        }
+
+        if (typeof isTotpCodeAlreadyUsed_ === 'function' && isTotpCodeAlreadyUsed_(e, otp)) {
+            return { success: false, message: 'تم استخدام هذا الرمز مسبقاً. انتظر رمزاً جديداً.' };
         }
 
         var cachedUserPayload = null;
@@ -1048,9 +1082,14 @@ function verifyMfaLogin(challengeToken, email, code) {
             return { success: false, message: 'رمز المصادقة الثنائية غير صحيح' };
         }
 
-        // استهلاك بعد النجاح فقط (يمنع replay بعد الدخول)
-        if (typeof consumeMfaChallenge_ === 'function') {
-            consumeMfaChallenge_(token, e);
+        // منع replay لنفس الرمز قبل إستهلاك challenge
+        if (typeof markTotpCodeConsumed_ === 'function' && !markTotpCodeConsumed_(e, otp, 180)) {
+            return { success: false, message: 'تم استخدام هذا الرمز مسبقاً. انتظر رمزاً جديداً.' };
+        }
+
+        // استهلاك بعد النجاح فقط — fail-closed إن تعذّر تخزين mfa_used
+        if (typeof consumeMfaChallenge_ !== 'function' || !consumeMfaChallenge_(token, e)) {
+            return { success: false, message: 'تعذر إتمام جلسة المصادقة. أعد تسجيل الدخول.' };
         }
 
         if (typeof clearMfaFailures_ === 'function') clearMfaFailures_(e);
@@ -1075,6 +1114,8 @@ function verifyMfaLogin(challengeToken, email, code) {
     } catch (error) {
         Logger.log('verifyMfaLogin error: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء التحقق من المصادقة الثنائية' };
+    } finally {
+        try { if (lock) lock.releaseLock(); } catch (_rl) { /* ignore */ }
     }
 }
 

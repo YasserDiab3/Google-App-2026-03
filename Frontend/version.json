@@ -1,15 +1,13 @@
 {
-  "version": "1.0.762",
+  "version": "1.0.764",
   "highlights": {
     "ar": [
-      "إصلاح المصادقة الثنائية: الرمز الصحيح لم يعد يُرفض بعد محاولة فاشلة أو ضغط مزدوج.",
-      "عزل بيانات الحسابات: منع ظهور بيانات مستخدم آخر من الكاش المحلي بعد تسجيل الدخول.",
-      "تسريع مسار الدخول وتقليل انتظار السياسات غير الحرجة."
+      "تشديد أمن الحضور والمصادقة: منع إسقاط حالة مستخدم آخر، وإغلاق ثغرات إعادة استخدام جلسة MFA.",
+      "عزل أقوى لكاش الحسابات مع انتظار تفريغ التخزين قبل التحميل، ودعم تعدد التبويبات بدون قطع حضور خاطئ."
     ],
     "en": [
-      "MFA fix: a valid code is no longer rejected after a failed attempt or double-submit.",
-      "Account data isolation: stop showing another user’s cached data after login.",
-      "Faster login path by shortening non-critical policy waits."
+      "Hardened presence and MFA: block forcing another user offline, and close MFA challenge/code replay gaps.",
+      "Stronger account-cache isolation with purge wait before load, plus multi-tab presence without false offline."
     ]
   }
 }

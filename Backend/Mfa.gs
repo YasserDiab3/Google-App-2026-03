@@ -8,7 +8,7 @@ var MFA_ENROLL_TTL_SEC_ = 600;
 var MFA_MAX_ATTEMPTS_ = 5;
 var MFA_LOCKOUT_SEC_ = 900;
 /** نافذة TOTP عند الدخول (± خطوات × 30ث) — أوسع قليلاً لتسامح انحراف ساعة الخادم */
-var MFA_TOTP_WINDOW_ = 4;
+var MFA_TOTP_WINDOW_ = 3;
 var MFA_ENROLL_TOTP_WINDOW_ = 5;
 
 function ensureMfaEncryptionKey_() {
@@ -269,6 +269,7 @@ function validateMfaChallenge_(token, email) {
 
 /**
  * استهلاك challenge بعد نجاح TOTP فقط — يمنع إعادة استخدام الجلسة.
+ * يضع mfa_used أولاً؛ إن فشل التخزين لا يُعتبر الاستهلاك ناجحاً (fail-closed).
  */
 function consumeMfaChallenge_(token, email) {
     var t = String(token || '').trim();
@@ -277,12 +278,51 @@ function consumeMfaChallenge_(token, email) {
     if (!validateMfaChallenge_(t, e)) return false;
 
     var cache = CacheService.getScriptCache();
-    cache.remove('mfa_ch_' + t);
-    cache.remove('mfa_user_' + t);
+    var usedKey = 'mfa_used_' + t;
     try {
-        cache.put('mfa_used_' + t, e, MFA_CHALLENGE_TTL_SEC_);
-    } catch (_e) { /* ignore */ }
+        if (cache.get(usedKey)) return false;
+        cache.put(usedKey, e, MFA_CHALLENGE_TTL_SEC_);
+        var storedUsed = cache.get(usedKey);
+        if (!storedUsed || String(storedUsed).toLowerCase() !== e) {
+            return false;
+        }
+    } catch (_putErr) {
+        return false;
+    }
+    try {
+        cache.remove('mfa_ch_' + t);
+        cache.remove('mfa_user_' + t);
+    } catch (_rm) { /* ignore */ }
     return true;
+}
+
+/**
+ * منع إعادة استخدام نفس رمز TOTP لنفس الحساب خلال نافذة الخطوة.
+ */
+function markTotpCodeConsumed_(email, code, ttlSec) {
+    var e = String(email || '').trim().toLowerCase();
+    var c = String(code || '').replace(/\s/g, '');
+    if (!e || !c) return true;
+    var cache = CacheService.getScriptCache();
+    var key = 'mfa_otp_used_' + e + '_' + c;
+    try {
+        if (cache.get(key)) return false;
+        cache.put(key, '1', Math.max(60, Number(ttlSec) || 180));
+        return !!cache.get(key);
+    } catch (_e) {
+        return false;
+    }
+}
+
+function isTotpCodeAlreadyUsed_(email, code) {
+    var e = String(email || '').trim().toLowerCase();
+    var c = String(code || '').replace(/\s/g, '');
+    if (!e || !c) return false;
+    try {
+        return !!CacheService.getScriptCache().get('mfa_otp_used_' + e + '_' + c);
+    } catch (_e) {
+        return false;
+    }
 }
 
 function checkMfaRateLimit_(email) {
