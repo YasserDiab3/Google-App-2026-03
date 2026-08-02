@@ -500,12 +500,68 @@ function isTruthyOnlineFlag_(val) {
     return val === true || val === 'true' || val === 'TRUE' || val === 1 || val === '1' || val === 'نعم';
 }
 
+/** الحضور يعيش في الكاش فقط — ورقة Users مصدر المصادقة ولا تُكتب من النبضات */
+var PRESENCE_CACHE_PREFIX_ = 'presence_v1:';
+
+function getPresenceFromCache_(userId) {
+    var id = String(userId || '').trim();
+    if (!id) return null;
+    try {
+        var raw = CacheService.getScriptCache().get(PRESENCE_CACHE_PREFIX_ + id);
+        return raw ? JSON.parse(raw) : null;
+    } catch (_e) {
+        return null;
+    }
+}
+
 /**
- * هل يعتبر المستخدم متصلاً فعلياً بناءً على isOnline + آخر نبضة حضور؟
+ * حضور دفعة واحدة لقائمة مستخدمين — getAll بطلب كاش واحد.
+ * @param {Array<string>} userIds
+ * @return {Object} خريطة userId → {isOnline, lastPresenceAt, activeSessionId}
  */
-function isUserEffectivelyOnline_(user) {
-    if (!user || !isTruthyOnlineFlag_(user.isOnline)) return false;
-    var ts = user.lastPresenceAt || user.lastLogin || '';
+function getPresenceMapFromCache_(userIds) {
+    var out = {};
+    if (!Array.isArray(userIds) || userIds.length === 0) return out;
+    var keys = [];
+    var byKey = {};
+    for (var i = 0; i < userIds.length; i++) {
+        var id = String(userIds[i] || '').trim();
+        if (!id || byKey[PRESENCE_CACHE_PREFIX_ + id]) continue;
+        keys.push(PRESENCE_CACHE_PREFIX_ + id);
+        byKey[PRESENCE_CACHE_PREFIX_ + id] = id;
+    }
+    if (keys.length === 0) return out;
+    try {
+        var values = CacheService.getScriptCache().getAll(keys) || {};
+        for (var k in values) {
+            if (!Object.prototype.hasOwnProperty.call(values, k)) continue;
+            try {
+                out[byKey[k]] = JSON.parse(values[k]);
+            } catch (_p) { /* ignore */ }
+        }
+    } catch (_e) { /* ignore */ }
+    return out;
+}
+
+function setPresenceInCache_(userId, fields) {
+    var id = String(userId || '').trim();
+    if (!id) return;
+    try {
+        CacheService.getScriptCache().put(PRESENCE_CACHE_PREFIX_ + id, JSON.stringify(fields), 900);
+    } catch (_e) { /* ignore */ }
+}
+
+/**
+ * هل يعتبر المستخدم متصلاً فعلياً؟ الحضور من الكاش أولاً، وlastLogin احتياط لجلسة لحظية.
+ * @param {Object} user
+ * @param {Object} [presence] سجل حضور جاهز من الكاش (لتجنّب طلب كاش لكل صف)
+ */
+function isUserEffectivelyOnline_(user, presence) {
+    if (!user) return false;
+    var p = presence !== undefined ? presence : getPresenceFromCache_(user.id);
+    var flagSource = p && p.isOnline !== undefined ? p.isOnline : user.isOnline;
+    if (!isTruthyOnlineFlag_(flagSource)) return false;
+    var ts = (p && p.lastPresenceAt) || user.lastPresenceAt || user.lastLogin || '';
     if (!ts) return false;
     var t = new Date(ts).getTime();
     if (isNaN(t)) return false;
@@ -515,7 +571,7 @@ function isUserEffectivelyOnline_(user) {
 /**
  * تنقية سجل مستخدم للعميل (بدون passwordHash أو tokens)
  */
-function sanitizeUserRecordForClient_(user, isAdmin, actorEmail) {
+function sanitizeUserRecordForClient_(user, isAdmin, actorEmail, presence) {
     if (!user || typeof user !== 'object') return null;
     var out = {};
     var safeFields = ['id', 'name', 'email', 'department', 'active', 'role', 'jobTitle', 'phone', 'photo', 'isOnline', 'lastLogin', 'lastLogout', 'lastPresenceAt', 'passwordChanged', 'forcePasswordChange', 'updatedAt', 'createdAt', 'mfaEnabled'];
@@ -523,8 +579,11 @@ function sanitizeUserRecordForClient_(user, isAdmin, actorEmail) {
         var f = safeFields[i];
         if (user[f] !== undefined) out[f] = user[f];
     }
-    // عرض اتصال فعلي للعميل (لا نعتمد على علم isOnline العالق وحده)
-    out.isOnline = isUserEffectivelyOnline_(user);
+    // عرض اتصال فعلي للعميل من كاش الحضور (لا علم isOnline العالق ولا قراءة أعمدة غير موجودة)
+    var p = presence !== undefined ? presence : getPresenceFromCache_(user.id);
+    if (p && p.lastPresenceAt) out.lastPresenceAt = p.lastPresenceAt;
+    if (p && p.lastLogout) out.lastLogout = p.lastLogout;
+    out.isOnline = isUserEffectivelyOnline_(user, p);
     var email = String(user.email || '').trim().toLowerCase();
     var actor = String(actorEmail || '').trim().toLowerCase();
     if (isAdmin || (email && email === actor)) {
@@ -547,9 +606,15 @@ function getUsersForApp(actorUserData) {
         var spreadsheetId = getSpreadsheetId();
         var rows = readFromSheet('Users', spreadsheetId);
         if (!Array.isArray(rows)) rows = [];
+        var ids = [];
+        for (var k = 0; k < rows.length; k++) {
+            if (rows[k] && rows[k].id) ids.push(String(rows[k].id));
+        }
+        var presenceMap = getPresenceMapFromCache_(ids);
         var sanitized = [];
         for (var j = 0; j < rows.length; j++) {
-            var u = sanitizeUserRecordForClient_(rows[j], isAdmin, actorEmail);
+            var pres = presenceMap[String((rows[j] && rows[j].id) || '')] || null;
+            var u = sanitizeUserRecordForClient_(rows[j], isAdmin, actorEmail, pres);
             if (u && u.email) sanitized.push(u);
         }
         return { success: true, data: sanitized, total: sanitized.length };
@@ -829,13 +894,9 @@ function _fastTouchUserLoginFields_(userId, fields) {
     const sheet = ss.getSheetByName('Users');
     if (!sheet) return;
 
-    // لا تستدعِ ensureSheetHeaders هنا أبداً — كانت تُعاد كتابتها في كل نبضة حضور
-    // فتقفل ورقة Users وتبطّئ login/verifyMfaLogin حتى ترفض الرمز أو تنتهي المهلة.
-    // إضافة أعمدة الحضور الناقصة مرة واحدة فقط (خفيف + كاش).
-    try {
-        _ensureUsersPresenceColumnsOnce_(sheet);
-    } catch (_hdr) { /* ignore */ }
-
+    // لا ensureSheetHeaders ولا إضافة أعمدة هنا — إعادة كتابة صف الرؤوس في كل نبضة
+    // كانت تقفل ورقة Users وتبطّئ login/verifyMfaLogin حتى ترفض الرمز أو تنتهي المهلة.
+    // الحضور صار في الكاش (presence_v1:) فلا حاجة لعمودَي lastPresenceAt/activeSessionId.
     const lastRow = sheet.getLastRow();
     const lastCol = sheet.getLastColumn();
     if (lastRow < 2 || lastCol < 1) return;
@@ -886,37 +947,6 @@ function _fastTouchUserLoginFields_(userId, fields) {
 }
 
 /**
- * يضمن وجود أعمدة الحضور على Users مرة واحدة لكل عملية تشغيل (بدون إعادة ترتيب الأعمدة).
- */
-function _ensureUsersPresenceColumnsOnce_(sheet) {
-    if (!sheet) return;
-    try {
-        var cache = CacheService.getScriptCache();
-        if (cache.get('users_presence_cols_ok_v1') === '1') return;
-    } catch (_c) { /* continue */ }
-
-    var lastCol = sheet.getLastColumn();
-    if (lastCol < 1) return;
-    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) {
-        return String(h || '').trim();
-    });
-    var needed = ['lastPresenceAt', 'activeSessionId', 'isOnline', 'lastLogout', 'lastLogin'];
-    var changed = false;
-    for (var i = 0; i < needed.length; i++) {
-        if (headers.indexOf(needed[i]) === -1) {
-            headers.push(needed[i]);
-            changed = true;
-        }
-    }
-    if (changed) {
-        sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    }
-    try {
-        CacheService.getScriptCache().put('users_presence_cols_ok_v1', '1', 21600);
-    } catch (_p) { /* ignore */ }
-}
-
-/**
  * نبضة حضور من الجلسة الحالية — يسمح للمستخدم بتحديث نفسه فقط (بدون صلاحية Admin).
  */
 function touchUserPresence(payload, actorUserData) {
@@ -953,51 +983,43 @@ function touchUserPresence(payload, actorUserData) {
         };
         if (sessionId) fields.activeSessionId = sessionId.substring(0, 80);
 
-        // كاش فوري دائماً — لا يقف أمام MFA
-        try {
-            CacheService.getScriptCache().put('presence_v1:' + userId, JSON.stringify(fields), 600);
-        } catch (_c) { /* ignore */ }
+        // الحضور في الكاش فقط — لا كتابة على ورقة Users مطلقاً (قفلها كان يُسقط login/MFA)
+        setPresenceInCache_(userId, fields);
 
-        // أثناء login/MFA: لا تكتب Users أبداً (قفل الشيت = مهلة/HTML)
-        var shouldWriteSheet = !isAuthQuietWindow_();
+        // الكتابات المؤجّلة من الدخول فقط (ترقية hash + lastLogin) — دفعة واحدة عند وجودها
+        var sheetWritten = false;
         try {
-            var writeGateKey = 'presence_sheet_gate:' + userId;
-            var cache = CacheService.getScriptCache();
-            if (!shouldWriteSheet) {
-                // quiet
-            } else if (cache.get(writeGateKey)) {
-                shouldWriteSheet = false;
-            } else {
-                cache.put(writeGateKey, '1', 480);
-            }
-        } catch (_g) { /* write anyway once */ }
+            var scriptCache = CacheService.getScriptCache();
+            var hashKey = 'pending_pwd_hash:' + userId;
+            var loginKey = 'pending_last_login:' + userId;
+            var deferred = {};
+            var pendingHash = scriptCache.get(hashKey);
+            var pendingLastLogin = scriptCache.get(loginKey);
+            if (pendingHash) deferred.passwordHash = pendingHash;
+            if (pendingLastLogin) deferred.lastLogin = pendingLastLogin;
 
-        if (shouldWriteSheet) {
-            var lock = LockService.getScriptLock();
-            var gotLock = false;
-            try {
-                gotLock = lock.tryLock(200);
-                if (gotLock) {
-                    // تطبيق ترقية hash مؤجّلة من login (إن وُجدت)
-                    try {
-                        var pendingHash = CacheService.getScriptCache().get('pending_pwd_hash:' + userId);
-                        if (pendingHash) {
-                            fields.passwordHash = pendingHash;
-                            CacheService.getScriptCache().remove('pending_pwd_hash:' + userId);
-                        }
-                    } catch (_ph2) { /* ignore */ }
-                    _fastTouchUserLoginFields_(userId, fields);
-                }
-            } catch (_w) {
-                Logger.log('touchUserPresence sheet soft-fail: ' + _w.toString());
-            } finally {
-                if (gotLock) {
-                    try { lock.releaseLock(); } catch (_rl) { /* ignore */ }
+            if (Object.keys(deferred).length > 0 && !isAuthQuietWindow_()) {
+                var lock = LockService.getScriptLock();
+                var gotLock = false;
+                try {
+                    gotLock = lock.tryLock(200);
+                    if (gotLock) {
+                        _fastTouchUserLoginFields_(userId, deferred);
+                        if (pendingHash) scriptCache.remove(hashKey);
+                        if (pendingLastLogin) scriptCache.remove(loginKey);
+                        sheetWritten = true;
+                    }
+                } finally {
+                    if (gotLock) {
+                        try { lock.releaseLock(); } catch (_rl) { /* ignore */ }
+                    }
                 }
             }
+        } catch (_ph2) {
+            Logger.log('touchUserPresence deferred write soft-fail: ' + _ph2.toString());
         }
 
-        return { success: true, lastPresenceAt: nowIso, isOnline: true, sheetWritten: !!shouldWriteSheet };
+        return { success: true, lastPresenceAt: nowIso, isOnline: true, sheetWritten: sheetWritten };
     } catch (err) {
         Logger.log('touchUserPresence error: ' + err.toString());
         return { success: false, message: 'touchUserPresence: ' + err.toString() };
@@ -1041,15 +1063,13 @@ function markUserOffline(payload, actorUserData) {
             }
         }
 
-        // إن وُجدت جلسة على الشيت ومُرّر sessionId مختلف — لا نُسقط جلسة جهاز آخر
+        // جلسة جهاز آخر نشطة؟ المقارنة من كاش الحضور (بلا قراءة ورقة Users)
         if (sessionId) {
-            try {
-                var row = getUserRecordFromUsersSheetById_(userId);
-                var sheetSession = row ? String(row.activeSessionId || '').trim() : '';
-                if (sheetSession && sheetSession !== sessionId) {
-                    return { success: true, skipped: true, message: 'جلسة أخرى نشطة — لم يتم تغيير الحالة' };
-                }
-            } catch (_e) { /* ignore */ }
+            var current = getPresenceFromCache_(userId);
+            var cachedSession = current ? String(current.activeSessionId || '').trim() : '';
+            if (cachedSession && cachedSession !== sessionId && isUserEffectivelyOnline_({ id: userId }, current)) {
+                return { success: true, skipped: true, message: 'جلسة أخرى نشطة — لم يتم تغيير الحالة' };
+            }
         }
 
         var nowIso = new Date().toISOString();
@@ -1060,27 +1080,10 @@ function markUserOffline(payload, actorUserData) {
             activeSessionId: ''
         };
 
-        // كاش فوري — لا يقف أمام MFA
-        try {
-            CacheService.getScriptCache().put('presence_v1:' + userId, JSON.stringify(offlineFields), 600);
-        } catch (_c) { /* ignore */ }
+        // الحضور في الكاش فقط — الخروج لا يلمس ورقة Users
+        setPresenceInCache_(userId, offlineFields);
 
-        // كتابة الشيت بحذر: tryLock قصير — إن مشغول نتخطى (الكاش يكفي مؤقتاً)
-        var lock = LockService.getScriptLock();
-        var gotLock = false;
-        try {
-            gotLock = lock.tryLock(200);
-            if (gotLock) {
-                _fastTouchUserLoginFields_(userId, offlineFields);
-            }
-        } catch (_w) {
-            Logger.log('markUserOffline sheet soft-fail: ' + _w.toString());
-        } finally {
-            if (gotLock) {
-                try { lock.releaseLock(); } catch (_rl) { /* ignore */ }
-            }
-        }
-        return { success: true, isOnline: false, lastLogout: nowIso, sheetWritten: !!gotLock };
+        return { success: true, isOnline: false, lastLogout: nowIso, sheetWritten: false };
     } catch (err) {
         Logger.log('markUserOffline error: ' + err.toString());
         return { success: false, message: 'markUserOffline: ' + err.toString() };

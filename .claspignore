@@ -1,0 +1,7 @@
+# clasp v3 يسحب ملفات Apps Script بامتداد .js، فتصبح نسخة ثانية بجوار ملفات .gs.
+# رفع الاثنين معاً = إعادة إعلان ثوابت المستوى الأعلى (ERROR_CODES, LOG_LEVELS, SHEET_NAME…)
+# = SyntaxError يوقف كل الطلبات بما فيها login/MFA. لذلك .js مستبعدة دائماً.
+**/*.js
+*.js
+**/*.md
+*.md

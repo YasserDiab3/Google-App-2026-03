@@ -58,7 +58,6 @@ async function main() {
     console.log('════════════════════════════════════════');
 
     run('clasp push');
-    run(`clasp version "${desc}"`);
     run(`clasp deploy -i "${PROD_DEPLOYMENT_ID}" -d "${desc}"`);
 
     console.log('\nSmoke POST…');

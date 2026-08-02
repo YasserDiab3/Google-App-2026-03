@@ -451,26 +451,29 @@ function attachServerSessionToLoginResult_(result, userLike, options) {
             result.sessionToken = sess.sessionToken;
             result.sessionExpiresAt = sess.expiresAt;
             var uid = userLike && userLike.id != null ? userLike.id : (result.user && result.user.id);
-            if (uid != null && !options.skipSheetTouch && typeof _fastTouchUserLoginFields_ === 'function') {
-                try {
-                    var nowIso = new Date().toISOString();
-                    _fastTouchUserLoginFields_(uid, {
-                        activeSessionId: String(sess.sessionToken).substring(0, 80),
-                        lastLogin: nowIso,
-                        lastPresenceAt: nowIso,
-                        isOnline: true
-                    });
-                } catch (_touchErr) { /* ignore */ }
-            } else if (uid != null && options.skipSheetTouch) {
-                // حضور مؤقت في الكاش حتى أول نبضة بعد الدخول
-                try {
-                    var cache = CacheService.getScriptCache();
-                    cache.put('presence_v1:' + String(uid), JSON.stringify({
+            if (uid != null) {
+                // الحضور دائماً في الكاش — ورقة Users لا تحمل حالة اتصال
+                if (typeof setPresenceInCache_ === 'function') {
+                    setPresenceInCache_(uid, {
                         isOnline: true,
                         lastPresenceAt: new Date().toISOString(),
                         activeSessionId: String(sess.sessionToken).substring(0, 80)
-                    }), 600);
-                } catch (_pc) { /* ignore */ }
+                    });
+                }
+                // lastLogin سجل تاريخي على الشيت — يُكتب لاحقاً مع أول نبضة حضور، لا داخل طلب الدخول
+                if (options.skipSheetTouch) {
+                    try {
+                        CacheService.getScriptCache().put(
+                            'pending_last_login:' + String(uid),
+                            new Date().toISOString(),
+                            86400
+                        );
+                    } catch (_pl) { /* ignore */ }
+                } else if (typeof _fastTouchUserLoginFields_ === 'function') {
+                    try {
+                        _fastTouchUserLoginFields_(uid, { lastLogin: new Date().toISOString() });
+                    } catch (_touchErr) { /* ignore */ }
+                }
             }
         }
     } catch (e) {
@@ -3682,7 +3685,7 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
         if (cached) {
             try {
                 Logger.log('Cache HIT for readFromSheet: ' + sheetName + (skipSecurityFilter ? ' (RAW)' : ''));
-                return JSON.parse(cached);
+                return overlayUsersPresenceIfNeeded_(sheetName, skipSecurityFilter, JSON.parse(cached));
             } catch (parseError) {
                 Logger.log('Cache parse error for ' + sheetName + ': ' + parseError.toString());
                 // Continue to read from sheet if cache is corrupted
@@ -4001,11 +4004,42 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
             Logger.log('Cache write failed for ' + sheetName + ': ' + cacheError.toString());
         }
 
-        return uniqueObjects;
+        return overlayUsersPresenceIfNeeded_(sheetName, skipSecurityFilter, uniqueObjects);
     } catch (error) {
         Logger.log('Error reading from sheet: ' + error.toString());
         return [];
     }
+}
+
+/**
+ * حالة الاتصال تعيش في كاش الحضور، لا في أعمدة الشيت.
+ * أي قراءة لورقة Users تعود للعميل (مثل جدول المستخدمين للمدير) تُطابَق مع الكاش
+ * حتى لا يظهر «متصل» لعلم isOnline قديم على الشيت.
+ */
+function overlayUsersPresenceIfNeeded_(sheetName, skipSecurityFilter, rows) {
+    if (skipSecurityFilter) return rows;
+    if (sheetName !== 'Users' && sheetName !== 'users_db') return rows;
+    if (!Array.isArray(rows) || rows.length === 0) return rows;
+    if (typeof getPresenceMapFromCache_ !== 'function' || typeof isUserEffectivelyOnline_ !== 'function') return rows;
+
+    try {
+        var ids = [];
+        for (var i = 0; i < rows.length; i++) {
+            if (rows[i] && rows[i].id) ids.push(String(rows[i].id));
+        }
+        var presenceMap = getPresenceMapFromCache_(ids);
+        for (var j = 0; j < rows.length; j++) {
+            var row = rows[j];
+            if (!row) continue;
+            var p = presenceMap[String(row.id || '')] || null;
+            if (p && p.lastPresenceAt) row.lastPresenceAt = p.lastPresenceAt;
+            if (p && p.lastLogout) row.lastLogout = p.lastLogout;
+            row.isOnline = isUserEffectivelyOnline_(row, p);
+        }
+    } catch (e) {
+        Logger.log('overlayUsersPresenceIfNeeded_ error: ' + e.toString());
+    }
+    return rows;
 }
 
 /**
