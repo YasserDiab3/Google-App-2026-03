@@ -848,7 +848,10 @@ const GoogleIntegration = {
             const cleanData = (data && typeof data === 'object')
                 ? { ...data }
                 : data;
-            const allowStructuredFailure = !!(cleanData && typeof cleanData === 'object' && cleanData.__allowStructuredFailure === true);
+            // عمليات المصادقة دائماً فشل مُهيكل — رفض الخادم ليس خطأ اتصال ولا يجوز أن يقود لمسار محلي
+            const isAuthRpcAction = ['login', 'verifyMfaLogin', 'confirmMfaEnrollment', 'startMfaEnrollment', 'disableMfa', 'changePassword'].includes(action);
+            const allowStructuredFailure = isAuthRpcAction ||
+                !!(cleanData && typeof cleanData === 'object' && cleanData.__allowStructuredFailure === true);
             if (cleanData && typeof cleanData === 'object' && '__timeoutMs' in cleanData) {
                 delete cleanData.__timeoutMs;
             }
@@ -965,11 +968,11 @@ const GoogleIntegration = {
             });
             const isMediumOperation = mediumOperations.some(op => action.includes(op) || action === op) || isDeleteOperation;
 
-            // مهلة MFA/login افتراضياً 60ث — كانت 25ث فتُجهض أثناء قفل Users فيظهر HTML
+            // مهلة MFA/login افتراضياً 90ث — تذبذب توجيه Google (doGet/404) يحتاج هامشاً لإعادة الإرسال
             const timeoutDuration = Number(data?.__timeoutMs) > 0
                 ? Number(data.__timeoutMs)
                 : (action === 'saveFormSettings' ? 120000
-                    : (isAuthAction ? 60000
+                    : (isAuthAction ? 90000
                         : (isHeavyOperation ? 90000 : (isMediumOperation ? 45000 : 15000))));
 
             const controller = new AbortController();
@@ -1278,9 +1281,10 @@ const GoogleIntegration = {
 
                 // 404 من script.googleusercontent.com: محتوى تحويل 302 لم يُسلَّم — doPost لم يُنفَّذ.
                 // إعادة الإرسال آمنة لكل العمليات (لا كتابة ولا استهلاك OTP حدث).
-                if (status === 404 && dogetRetry < 3) {
-                    const delay = 800 + (dogetRetry * 1200);
-                    Utils.safeWarn(`↩️ 404 لمحتوى التحويل (${action}) — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}/3) بعد ${delay}ms`);
+                // المصادقة: حتى 5 محاولات بتأخير قصير — تذبذب Google شائع على /exec.
+                if (status === 404 && dogetRetry < (isAuthAction ? 5 : 3)) {
+                    const delay = isAuthAction ? (300 + dogetRetry * 500) : (800 + (dogetRetry * 1200));
+                    Utils.safeWarn(`↩️ 404 لمحتوى التحويل (${action}) — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}) بعد ${delay}ms`);
                     await new Promise(resolve => setTimeout(resolve, delay));
                     return this._executeRequest(action, data, retryCount, dogetRetry + 1);
                 }
@@ -1325,9 +1329,9 @@ const GoogleIntegration = {
             } catch (e) {
                 // صفحة HTML من Google تعني أن محتوى تحويل 302 لم يُسلَّم — doPost لم يُنفَّذ.
                 // إعادة الإرسال آمنة (لا كتابة ولا استهلاك OTP حدث على الخادم).
-                if (isHtmlBody && dogetRetry < 3) {
-                    const delay = 800 + (dogetRetry * 1200);
-                    Utils.safeWarn(`↩️ استجابة HTML للعملية ${action} — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}/3) بعد ${delay}ms`);
+                if (isHtmlBody && dogetRetry < (isAuthAction ? 5 : 3)) {
+                    const delay = isAuthAction ? (300 + dogetRetry * 500) : (800 + (dogetRetry * 1200));
+                    Utils.safeWarn(`↩️ استجابة HTML للعملية ${action} — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}) بعد ${delay}ms`);
                     await new Promise(resolve => setTimeout(resolve, delay));
                     return this._executeRequest(action, data, retryCount, dogetRetry + 1);
                 }
@@ -1352,17 +1356,17 @@ const GoogleIntegration = {
                 // رد doGet يعني أن doPost لم ينفَّذ إطلاقاً (Google أعادت استدعاء السكربت كـ GET
                 // عند تعذّر تسليم محتوى التحويل 302). لذلك إعادة الإرسال آمنة لكل العمليات —
                 // بما فيها verifyMfaLogin: لم يُستهلك أي رمز OTP على الخادم.
-                const maxDogetRetries = 3;
+                const maxDogetRetries = isAuthAction ? 5 : 3;
                 if (dogetRetry < maxDogetRetries) {
-                    const delay = 800 + (dogetRetry * 1200);
+                    const delay = isAuthAction ? (300 + dogetRetry * 500) : (800 + (dogetRetry * 1200));
                     Utils.safeWarn(`↩️ رد doGet للعملية ${action} — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}/${maxDogetRetries}) بعد ${delay}ms`);
                     await new Promise(resolve => setTimeout(resolve, delay));
                     return this._executeRequest(action, data, retryCount, dogetRetry + 1);
                 }
 
-                const dogetMsg = 'تعذّر تسليم الطلب إلى الخادم (رد doGet متكرر).\n' +
-                    'لم يُنفَّذ الطلب على الخادم — يمكنك المحاولة مرة أخرى.\n' +
-                    'إن تكرر: تحقق من إعدادات النشر (Execute as: Me / Who has access: Anyone) وأن الرابط ينتهي بـ /exec';
+                const dogetMsg = 'تعذّر تسليم الطلب إلى الخادم (تذبذب مؤقت في Google).\n' +
+                    'لم يُنفَّذ الطلب — لم تُستهلك كلمة المرور ولا رمز MFA.\n' +
+                    'انتظر ثانيتين ثم أعد المحاولة.';
                 if (!allowStructuredFailure) {
                     throw new Error(dogetMsg);
                 }
@@ -1645,6 +1649,12 @@ const GoogleIntegration = {
             throw new Error('يجب إدخال action في الطلب');
         }
 
+        // فشل مُهيكل: المستدعي يريد { success:false, message } بدل استثناء.
+        // بدون هذا كان رفض الخادم (كلمة مرور خاطئة، رمز MFA غير صحيح…) يُرمى كخطأ اتصال
+        // فيسقط الدخول إلى التحقق المحلي، والحساب المُفعّل عليه MFA يُرفض محلياً.
+        const wantsStructuredFailure = !!(data && typeof data === 'object' && data.__allowStructuredFailure === true);
+        const isAuthAction = ['login', 'verifyMfaLogin', 'confirmMfaEnrollment', 'startMfaEnrollment', 'disableMfa', 'changePassword'].includes(action);
+
         // Actions التي يمكن cache-ها (عمليات قراءة فقط)
         const cacheableActions = ['readFromSheet', 'getData', 'getSafetyTeamMembers',
             'getSafetyTeamMember', 'getOrganizationalStructure', 'getJobDescription',
@@ -1718,6 +1728,10 @@ const GoogleIntegration = {
             // في حال رجع الرد ولم يكن ناجحاً
             if (result && typeof result === 'object') {
                 if (result.success === false) {
+                    // ردّ الخادم وصل فعلاً — أعِده كما هو للمستدعي بدل تحويله إلى خطأ اتصال
+                    if (wantsStructuredFailure || isAuthAction) {
+                        return result;
+                    }
                     if (this._shouldSkipLocalFallbackForRead_(action, result)) {
                         throw new Error(result.message || 'رفض قراءة البيانات من الخادم');
                     }

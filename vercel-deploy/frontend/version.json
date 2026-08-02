@@ -1,13 +1,17 @@
 {
-  "version": "1.0.780",
+  "version": "1.0.783",
   "highlights": {
     "ar": [
-      "إصلاح جذري لفشل الدخول/MFA: إعادة إرسال آمنة عند رد doGet أو HTML أو 404 من Google.",
-      "قراءة صف المصادقة وحده بدل مسح ورقة Users كاملة (45ث ← أقل من ثانية)."
+      "إصلاح جذري لتعذّر تسجيل الدخول: رد الرفض من الخادم لم يعد يُعامَل كخطأ اتصال.",
+      "لن تظهر رسالة «يتطلب مصادقة ثنائية… اتصل بالإنترنت» وأنت متصل بالفعل.",
+      "قرار الخادم نهائي — لا تحقق محلي مضلّل بعد رد الخادم.",
+      "رمز MFA الخاطئ أو المنتهي يعرض سببه الحقيقي بدل «تعذّر الاتصال»."
     ],
     "en": [
-      "Root fix for login/MFA failures: safe re-send when Google returns doGet, HTML, or 404.",
-      "Auth reads a single user row instead of scanning the whole Users sheet (45s to under 1s)."
+      "Root fix for login failures: server rejection is no longer treated as a connection error.",
+      "No more «MFA requires internet» message while you are actually online.",
+      "Server decision is final — no misleading local fallback after a server reply.",
+      "Wrong or expired MFA code now shows its real reason instead of «connection failed»."
     ]
   }
 }

@@ -185,11 +185,13 @@ function doPost(e) {
             action = action.trim();
         }
 
-        // نبضة تسخين خفيفة — تُبقي نسخة السكربت دافئة وتقيس زمن الخادم فقط (بلا بيانات)
-        if (action === '__warmup') {
+        // نبضة تسخين خفيفة — تُبقي السكربت دافئاً قبل login (بلا بيانات)
+        // الاسم warmup (بدون __) يمرّ عبر نمط action؛ __warmup للتوافق الخلفي
+        if (action === 'warmup' || action === '__warmup') {
             return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
                 success: true,
-                serverMs: Date.now() - __t0
+                serverMs: Date.now() - __t0,
+                build: BUILD_TAG
             })));
         }
 
@@ -271,6 +273,7 @@ function doPost(e) {
             'getJobDescription', 'getSafetyTeamKPIs', 'getSafetyHealthManagementSettings',
             'getActionTrackingSettings', 'getAllActionTracking', 'getActionTracking',
             'testConnection',
+            'warmup',
             'getDocumentCodes', 'getDocumentVersions', 'getDocumentCodeAndVersion',
             // Read-only utility actions
             'getPublicIP',
@@ -311,7 +314,7 @@ function doPost(e) {
         const isSensitiveAction = sensitiveActions.includes(action);
 
         // العمليات المعفاة من CSRF (pre-authentication — لا يمكن أن تملك CSRF token صالح)
-        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'fixClinicSheetHeaders'];
+        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'fixClinicSheetHeaders', 'warmup', 'testConnection'];
         const isCsrfExempt = csrfExemptActions.includes(action);
 
         // التحقق من CSRF Token - إلزامي لجميع العمليات غير القراءة
@@ -376,7 +379,7 @@ function doPost(e) {
         // - قراءات مع userData: التحقق من الجلسة كما كان
         const sessionExemptActions = [
             'login', 'verifyMfaLogin', 'initializeSheets', 'fixClinicSheetHeaders',
-            'testConnection', 'getPublicIP', 'invalidateServerSession',
+            'testConnection', 'warmup', 'getPublicIP', 'invalidateServerSession',
             'getAuthBootstrapPolicy'
         ];
         const isSessionExempt = sessionExemptActions.indexOf(action) !== -1;

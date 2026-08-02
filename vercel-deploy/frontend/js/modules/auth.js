@@ -646,13 +646,28 @@ window.Auth = {
 
         if (canSyncUsers && typeof GoogleIntegration !== 'undefined') {
             try {
+                // افتح Circuit Breaker إن كان مغلقاً بسبب فشل سابق — الدخول يجب أن يُحاول دائماً
+                if (typeof GoogleIntegration.resetCircuitBreaker === 'function') {
+                    GoogleIntegration.resetCircuitBreaker();
+                }
+                // تسخين السكربت قبل login — يقلّل سقوط أول طلب إلى doGet بعد cold-start
+                try {
+                    await Promise.race([
+                        GoogleIntegration.sendRequest({
+                            action: 'warmup',
+                            data: { __timeoutMs: 8000, __allowStructuredFailure: true }
+                        }),
+                        new Promise((resolve) => setTimeout(() => resolve(null), 5000))
+                    ]);
+                } catch (_w) { /* التسخين اختياري */ }
+
                 Utils.safeLog('🔒 محاولة تسجيل الدخول عبر الخادم...');
                 loginResult = await GoogleIntegration.sendRequest({
                     action: 'login',
                     data: {
                         email,
                         password,
-                        __timeoutMs: 60000,
+                        __timeoutMs: 90000,
                         __highPriority: true,
                         __allowStructuredFailure: true
                     }
@@ -675,25 +690,44 @@ window.Auth = {
                     loginMethod = 'server';
                 } else if (loginResult && loginResult.message) {
                     Utils.safeWarn('❌ فشل تسجيل الدخول عبر الخادم:', loginResult.message);
-                    // إذا كان الخطأ صريحاً من الخادم (معطل أو خطأ إداري) نوقف فوراً
-                    // لكن "غير صحيحة" وحدها لا تكفي لمنع الـ Fallback المحلي في حال عدم التزامن
-                    const isHardServerError = loginResult.message.includes('معطل') ||
-                        loginResult.message.includes('disabled') ||
-                        loginResult.errorCode === 'ACCOUNT_DISABLED';
-                    if (isHardServerError) {
-                        let hardErrMsg = loginResult.message;
+                    const errCode = String(loginResult.errorCode || '');
+                    // تذبذب تسليم Google — ليس خطأ اعتمادات. لا تسقط للـ fallback المحلي برسالة مضلّلة.
+                    const isDeliveryFailure = errCode === 'REACHED_DOGET_STATUS' ||
+                        errCode === 'WRONG_URL_ENDPOINT' ||
+                        (loginResult.message && (
+                            loginResult.message.includes('تعذّر تسليم') ||
+                            loginResult.message.includes('doGet') ||
+                            loginResult.message.includes('انتهت مهلة الاتصال')
+                        ));
+                    // الخادم ردّ فعلاً ورفض: قراره نهائي. المسار المحلي مخصص لانعدام الاتصال فقط،
+                    // وإلا يُظهر لحساب MFA رسالة «يتطلب مصادقة ثنائية… اتصل بالإنترنت» وهو متصل.
+                    let hardErrMsg = isDeliveryFailure
+                        ? 'تعذّر الاتصال بالخادم مؤقتاً. انتظر ثانيتين ثم أعد المحاولة.'
+                        : loginResult.message;
+                    if (!isDeliveryFailure) {
                         try {
                             await Utils.RateLimiter.recordFailedAttempt(email);
                         } catch (rateLimitErr) {
                             hardErrMsg = rateLimitErr.message || hardErrMsg;
                         }
-                        Notification.error(hardErrMsg);
-                        return { success: false, message: hardErrMsg };
                     }
-                    // أخطاء "غير صحيحة" تسمح بالمحاولة المحلية كـ Fallback
+                    Notification.error(hardErrMsg);
+                    return {
+                        success: false,
+                        message: hardErrMsg,
+                        errorCode: errCode || (isDeliveryFailure ? 'AUTH_DELIVERY_FAILED' : undefined)
+                    };
                 }
             } catch (serverError) {
                 Utils.safeError('⚠️ خطأ في الاتصال بالخادم أثناء تسجيل الدخول:', serverError);
+                const errText = String(serverError && serverError.message ? serverError.message : serverError || '');
+                // مهلة/doGet/404: لا تسقط لمحاولة محلية تُظهر «اعتمادات خاطئة»
+                if (errText.includes('مهلة') || errText.includes('doGet') || errText.includes('تعذّر تسليم') ||
+                    errText.includes('HTML') || errText.includes('404') || errText.includes('Circuit Breaker')) {
+                    const msg = 'تعذّر الاتصال بالخادم مؤقتاً. انتظر ثانيتين ثم أعد المحاولة.';
+                    Notification.error(msg);
+                    return { success: false, message: msg, errorCode: 'AUTH_DELIVERY_FAILED' };
+                }
                 // المتابعة للمحاولة المحلية كبديل (Offline support)
             }
         }
@@ -818,7 +852,7 @@ window.Auth = {
                     email,
                     code: otp,
                     challengeToken: token,
-                    __timeoutMs: 60000,
+                    __timeoutMs: 90000,
                     __highPriority: true,
                     // أعد نتيجة success:false للواجهة بدل رمي استثناء يُعرض كـ «تعذر الاتصال»
                     __allowStructuredFailure: true
@@ -843,15 +877,18 @@ window.Auth = {
         }
 
         if (!verifyResult || !verifyResult.success || !verifyResult.user) {
+            const errCode = verifyResult && verifyResult.errorCode ? String(verifyResult.errorCode) : '';
             let msg = (verifyResult && verifyResult.message) || 'رمز المصادقة الثنائية غير صحيح';
-            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sanitizeGasErrorText) {
+            if (errCode === 'REACHED_DOGET_STATUS' || /تعذّر تسليم|doGet/i.test(String(msg))) {
+                msg = 'تعذّر الاتصال بالخادم مؤقتاً. الرمز لم يُستهلك — أعد المحاولة بنفس الرمز خلال ثوانٍ.';
+            } else if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sanitizeGasErrorText) {
                 msg = GoogleIntegration.sanitizeGasErrorText(msg, msg);
             }
             if (/<!DOCTYPE|<html|web word processing|HTML بدل JSON/i.test(String(msg))) {
                 msg = 'تعذر إكمال المصادقة (استجابة غير صالحة من الخادم). أعد المحاولة برمز جديد.';
             }
             Notification.error(msg);
-            return { success: false, message: msg };
+            return { success: false, message: msg, errorCode: errCode || undefined };
         }
 
         const returnedEmail = String(verifyResult.user.email || '').trim().toLowerCase();
