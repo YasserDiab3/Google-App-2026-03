@@ -1329,6 +1329,14 @@ function verifyMfaLogin(challengeToken, email, code) {
                 : buildSafeUserFromRecord_(user);
         }
 
+        if (!secretEnc) {
+            return {
+                success: false,
+                message: 'لم يتم العثور على مفتاح المصادقة الثنائية لهذا الحساب. يرجى التواصل مع المسؤول لإلغاء تفعيل MFA ثم إتاحة تفعيله من جديد.',
+                errorCode: 'MFA_SECRET_MISSING'
+            };
+        }
+
         var secret = (typeof decryptMfaSecret_ === 'function') ? decryptMfaSecret_(secretEnc) : '';
         // أسرار TOTP base32 — وحّد الحالة وأزل الفراغات بعد فك التشفير
         if (secret) secret = String(secret).toUpperCase().replace(/\s/g, '');

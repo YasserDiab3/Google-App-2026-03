@@ -156,15 +156,20 @@ function buildOtpAuthUri_(email, secret, issuer) {
 }
 
 function encryptMfaSecret_(plain) {
-    var text = String(plain || '');
+    var text = String(plain || '').trim().toUpperCase().replace(/\s/g, '');
     if (!text) return '';
-    var key = ensureMfaEncryptionKey_();
-    var bytes = Utilities.newBlob(text).getBytes();
-    var keyBytes = Utilities.newBlob(key).getBytes();
-    var out = bytes.map(function (b, i) {
-        return (b ^ keyBytes[i % keyBytes.length]) & 0xFF;
-    });
-    return Utilities.base64Encode(out);
+    try {
+        var key = ensureMfaEncryptionKey_();
+        var bytes = Utilities.newBlob(text).getBytes();
+        var keyBytes = Utilities.newBlob(key).getBytes();
+        var out = bytes.map(function (b, i) {
+            var val = (b ^ keyBytes[i % keyBytes.length]) & 0xFF;
+            return val > 127 ? val - 256 : val;
+        });
+        return Utilities.base64Encode(out);
+    } catch (_e) {
+        return text;
+    }
 }
 
 function decryptMfaSecret_(encoded) {
@@ -172,13 +177,14 @@ function decryptMfaSecret_(encoded) {
     if (!enc) return '';
     var cleanEnc = enc.toUpperCase().replace(/\s/g, '');
 
-    // 1. محاولة فك التشفير أولاً
+    // 1. محاولة فك التشفير بواسطة المفتاح مع مراعاة تحويل البايتات السالبة لـ GAS
     try {
         var key = ensureMfaEncryptionKey_();
         var bytes = Utilities.base64Decode(enc);
         var keyBytes = Utilities.newBlob(key).getBytes();
         var out = bytes.map(function (b, i) {
-            return (b ^ keyBytes[i % keyBytes.length]) & 0xFF;
+            var val = (b ^ keyBytes[i % keyBytes.length]) & 0xFF;
+            return val > 127 ? val - 256 : val;
         });
         var plain = Utilities.newBlob(out).getDataAsString();
         var cleanPlain = String(plain || '').toUpperCase().replace(/\s/g, '');
