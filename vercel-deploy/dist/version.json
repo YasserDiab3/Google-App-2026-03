@@ -1,3 +1,13 @@
 {
-  "version": "1.0.1"
+  "version": "1.0.772",
+  "highlights": {
+    "ar": [
+      "إصلاح نهائي لتسجيل MFA: مسار تحقق بدون كتابة Users + إعادة نشر Web App الإنتاجي.",
+      "تخفيف نبضات الحضور (كاش أولاً) ومنع ظهور HTML الخام عند فشل الخادم."
+    ],
+    "en": [
+      "Final MFA login fix: verify path with zero Users-sheet writes + production Web App redeploy.",
+      "Presence heartbeats are cache-first; raw HTML server errors are no longer shown."
+    ]
+  }
 }
