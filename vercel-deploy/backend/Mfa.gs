@@ -172,33 +172,77 @@ function encryptMfaSecret_(plain) {
     }
 }
 
-function decryptMfaSecret_(encoded) {
-    var enc = String(encoded || '').trim();
-    if (!enc) return '';
-    var cleanEnc = enc.toUpperCase().replace(/\s/g, '');
+/**
+ * مرشّحو سر TOTP من القيمة المخزّنة.
+ * لا تعتمد على مسار فك واحد: Base32 الصريح قد يُفسَّر كـ Base64 بالخطأ،
+ * وأسرار قديمة/جديدة تختلف في تمثيل بايتات GAS الموقّعة.
+ */
+function resolveMfaSecretCandidates_(encoded) {
+    var out = [];
+    var seen = {};
+    function add(s) {
+        var clean = String(s || '').toUpperCase().replace(/\s/g, '').replace(/=+$/g, '');
+        if (!/^[A-Z2-7]{16,64}$/.test(clean)) return;
+        if (seen[clean]) return;
+        seen[clean] = true;
+        out.push(clean);
+    }
 
-    // 1. محاولة فك التشفير بواسطة المفتاح مع مراعاة تحويل البايتات السالبة لـ GAS
+    var enc = String(encoded || '').trim();
+    if (!enc) return out;
+
+    // 1) نص Base32 صريح أولاً (أسرار قديمة غير مشفّرة)
+    add(enc);
+
+    // 2) فك XOR — مسار البايتات الموقّعة (GAS الحالي)
     try {
         var key = ensureMfaEncryptionKey_();
         var bytes = Utilities.base64Decode(enc);
         var keyBytes = Utilities.newBlob(key).getBytes();
-        var out = bytes.map(function (b, i) {
+        var signedOut = bytes.map(function (b, i) {
             var val = (b ^ keyBytes[i % keyBytes.length]) & 0xFF;
             return val > 127 ? val - 256 : val;
         });
-        var plain = Utilities.newBlob(out).getDataAsString();
-        var cleanPlain = String(plain || '').toUpperCase().replace(/\s/g, '');
-        if (/^[A-Z2-7]{16,64}$/.test(cleanPlain)) {
-            return cleanPlain;
+        add(Utilities.newBlob(signedOut).getDataAsString());
+
+        // 3) فك XOR — مسار غير موقّع (توافق مع أسرار شُفّرت قبل تعديل البايتات)
+        var unsignedOut = bytes.map(function (b, i) {
+            return (b ^ keyBytes[i % keyBytes.length]) & 0xFF;
+        });
+        try {
+            add(Utilities.newBlob(unsignedOut).getDataAsString());
+        } catch (_u) {
+            // بعض إصدارات GAS ترفض بايتات >127 — حوّلها ثم أعد المحاولة
+            var coerced = unsignedOut.map(function (v) {
+                return v > 127 ? v - 256 : v;
+            });
+            add(Utilities.newBlob(coerced).getDataAsString());
         }
     } catch (_e) { /* ignore */ }
 
-    // 2. إن كان سر Base32 صريح غير مشفّر
-    if (/^[A-Z2-7]{16,64}$/.test(cleanEnc)) {
-        return cleanEnc;
-    }
+    return out;
+}
 
-    return cleanEnc;
+function decryptMfaSecret_(encoded) {
+    var candidates = resolveMfaSecretCandidates_(encoded);
+    // لا تُرجع النص المشفّر الخام أبداً — كان يسبب رفض كل رموز TOTP
+    return candidates.length ? candidates[0] : '';
+}
+
+/**
+ * تحقق TOTP ضد كل مرشّح سرّ صالح.
+ */
+function verifyTotpAgainstSecretEnc_(secretEnc, code, options) {
+    var candidates = resolveMfaSecretCandidates_(secretEnc);
+    if (!candidates.length) {
+        return { ok: false, secret: '', decryptOk: false, candidateCount: 0 };
+    }
+    for (var i = 0; i < candidates.length; i++) {
+        if (verifyTotpCode_(candidates[i], code, options)) {
+            return { ok: true, secret: candidates[i], decryptOk: true, candidateCount: candidates.length };
+        }
+    }
+    return { ok: false, secret: candidates[0], decryptOk: true, candidateCount: candidates.length };
 }
 
 function isMfaEnabledForUser_(user) {

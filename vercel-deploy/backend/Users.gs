@@ -1241,6 +1241,8 @@ function loginUser(email, password) {
 
         // MFA: إذا مفعّل — لا نُكمل الجلسة حتى التحقق من TOTP
         if (typeof isMfaEnabledForUser_ === 'function' && isMfaEnabledForUser_(user)) {
+            // كلمة المرور صحيحة — امسح قفل MFA القديم (محاولات فاشلة بسبب خطأ فك السر سابقاً)
+            if (typeof clearMfaFailures_ === 'function') clearMfaFailures_(e);
             var challengeToken = (typeof createMfaChallenge_ === 'function')
                 ? createMfaChallenge_(e, user)
                 : '';
@@ -1337,10 +1339,23 @@ function verifyMfaLogin(challengeToken, email, code) {
             };
         }
 
-        var secret = (typeof decryptMfaSecret_ === 'function') ? decryptMfaSecret_(secretEnc) : '';
-        // أسرار TOTP base32 — وحّد الحالة وأزل الفراغات بعد فك التشفير
-        if (secret) secret = String(secret).toUpperCase().replace(/\s/g, '');
-        var totpOk = (secret && typeof verifyTotpCode_ === 'function' && verifyTotpCode_(secret, otp, { window: 10 }));
+        var secret = '';
+        var totpCheck = (typeof verifyTotpAgainstSecretEnc_ === 'function')
+            ? verifyTotpAgainstSecretEnc_(secretEnc, otp, { window: 10 })
+            : { ok: false, decryptOk: false, candidateCount: 0 };
+        if (!totpCheck.ok && typeof decryptMfaSecret_ === 'function' && typeof verifyTotpCode_ === 'function') {
+            // توافق خلفي إن لم تُحمَّل الدالة الجديدة بعد
+            secret = decryptMfaSecret_(secretEnc);
+            if (secret) secret = String(secret).toUpperCase().replace(/\s/g, '');
+            totpCheck = {
+                ok: !!(secret && verifyTotpCode_(secret, otp, { window: 10 })),
+                secret: secret,
+                decryptOk: !!secret,
+                candidateCount: secret ? 1 : 0
+            };
+        }
+        var totpOk = !!(totpCheck && totpCheck.ok);
+        secret = (totpCheck && totpCheck.secret) ? totpCheck.secret : '';
         var usedCacheSecret = !!(cachedUserPayload && cachedUserPayload.mfaSecretEnc);
 
         // دائماً أعد من الشيت عند الفشل — كاش التحدي قد يحمل سراً قديماً/فاسداً فيُرفض الرمز الصحيح
@@ -1358,11 +1373,22 @@ function verifyMfaLogin(challengeToken, email, code) {
                 }
                 if (freshUser && isMfaEnabledForUser_(freshUser)) {
                     var freshEnc = String(freshUser.mfaSecretEnc || '').trim();
-                    var freshSecret = (typeof decryptMfaSecret_ === 'function') ? decryptMfaSecret_(freshEnc) : '';
-                    if (freshSecret) freshSecret = String(freshSecret).toUpperCase().replace(/\s/g, '');
-                    if (freshSecret && typeof verifyTotpCode_ === 'function' && verifyTotpCode_(freshSecret, otp, { window: 10 })) {
+                    var freshCheck = (typeof verifyTotpAgainstSecretEnc_ === 'function')
+                        ? verifyTotpAgainstSecretEnc_(freshEnc, otp, { window: 10 })
+                        : null;
+                    if (!freshCheck) {
+                        var freshSecret = (typeof decryptMfaSecret_ === 'function') ? decryptMfaSecret_(freshEnc) : '';
+                        if (freshSecret) freshSecret = String(freshSecret).toUpperCase().replace(/\s/g, '');
+                        freshCheck = {
+                            ok: !!(freshSecret && typeof verifyTotpCode_ === 'function' && verifyTotpCode_(freshSecret, otp, { window: 10 })),
+                            secret: freshSecret,
+                            decryptOk: !!freshSecret
+                        };
+                    }
+                    if (freshCheck && freshCheck.ok) {
                         totpOk = true;
-                        secret = freshSecret;
+                        secret = freshCheck.secret;
+                        totpCheck = freshCheck;
                         user = freshUser;
                         safeUser = (typeof buildMfaChallengeSafeUser_ === 'function')
                             ? buildMfaChallengeSafeUser_(freshUser)
@@ -1391,13 +1417,24 @@ function verifyMfaLogin(challengeToken, email, code) {
                     logSecurityEventSoft_('mfa_login_failed', {
                         email: e,
                         severity: 'medium',
-                        decryptOk: !!secret,
+                        decryptOk: !!(totpCheck && totpCheck.decryptOk),
+                        candidates: totpCheck ? totpCheck.candidateCount : 0,
                         usedCache: usedCacheSecret
                     });
                 } else {
-                    Logger.log('mfa_login_failed email=' + e + ' decryptOk=' + !!secret + ' usedCache=' + usedCacheSecret);
+                    Logger.log('mfa_login_failed email=' + e +
+                        ' decryptOk=' + !!(totpCheck && totpCheck.decryptOk) +
+                        ' candidates=' + (totpCheck ? totpCheck.candidateCount : 0) +
+                        ' usedCache=' + usedCacheSecret);
                 }
             } catch (_logE) { /* ignore */ }
+            if (totpCheck && totpCheck.decryptOk === false) {
+                return {
+                    success: false,
+                    message: 'تعذر قراءة سر المصادقة لهذا الحساب. أعد تفعيل المصادقة الثنائية من الملف الشخصي، أو تواصل مع مدير النظام.',
+                    errorCode: 'MFA_SECRET_CORRUPT'
+                };
+            }
             return {
                 success: false,
                 message: 'رمز المصادقة الثنائية غير صحيح أو منتهٍ. انتظر رمزاً جديداً من التطبيق وأعد المحاولة.',
