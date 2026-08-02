@@ -1,13 +1,3 @@
 {
-  "version": "1.0.770",
-  "highlights": {
-    "ar": [
-      "إصلاح بطء ورفض المصادقة الثنائية الناتج عن قفل ورقة Users بسبب نبضات الحضور.",
-      "مراقبة أخطاء المستخدمين للمدير مع تبويب مباشر وتسجيل تلقائي لرسائل الخطأ."
-    ],
-    "en": [
-      "Fix MFA delays/false rejects caused by Users-sheet lock from presence heartbeats.",
-      "Admin client-error monitoring with live tab and automatic capture of user-facing errors."
-    ]
-  }
+  "version": "1.0.1"
 }

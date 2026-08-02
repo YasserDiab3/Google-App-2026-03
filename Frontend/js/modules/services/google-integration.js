@@ -920,6 +920,7 @@ const GoogleIntegration = {
             const mediumOperations = [
                 'getData', 'readData', 'loadData', 'fetchData', 'add', 'update'
             ];
+            // عمليات المصادقة والـ MFA: 60 ثانية (cold-start + ضغط الشيت)
             const authActions = ['login', 'verifyMfaLogin', 'confirmMfaEnrollment', 'startMfaEnrollment', 'disableMfa', 'changePassword'];
             const isAuthAction = typeof action === 'string' && authActions.includes(action);
             const isDeleteOperation = typeof action === 'string' && action.indexOf('delete') === 0;
@@ -933,12 +934,11 @@ const GoogleIntegration = {
             });
             const isMediumOperation = mediumOperations.some(op => action.includes(op) || action === op) || isDeleteOperation;
 
-            // تقليل المهلات لتفعيل fail-fast ومنع تكدس الطابور لعدة دقائق
-            // زيادة مهلة عمليات المصادقة إلى 25 ثانية لضمان إكمال cold-start في Apps Script بدون إجهاض مبكر
+            // مهلة MFA/login افتراضياً 60ث — كانت 25ث فتُجهض أثناء قفل Users فيظهر HTML
             const timeoutDuration = Number(data?.__timeoutMs) > 0
                 ? Number(data.__timeoutMs)
                 : (action === 'saveFormSettings' ? 120000
-                    : (isAuthAction ? 25000
+                    : (isAuthAction ? 60000
                         : (isHeavyOperation ? 90000 : (isMediumOperation ? 45000 : 15000))));
 
             const controller = new AbortController();
@@ -1257,17 +1257,24 @@ const GoogleIntegration = {
 
             let result;
             try {
-                const trimmedText = resultText.trim();
-                if (trimmedText.charAt(0) === '<' || /^<!DOCTYPE/i.test(trimmedText) || /^<html/i.test(trimmedText)) {
+                let trimmedText = String(resultText || '').replace(/^\uFEFF/, '').trim();
+                const looksHtml = trimmedText.charAt(0) === '<'
+                    || /<!DOCTYPE/i.test(trimmedText)
+                    || /<html[\s>]/i.test(trimmedText)
+                    || /web word processing/i.test(trimmedText)
+                    || /accounts\.google\.com/i.test(trimmedText);
+                if (looksHtml) {
                     throw new Error(
-                        'الخادم أعاد صفحة HTML بدل JSON (غالباً نشر Apps Script أو انتهاء مهلة التنفيذ).\n' +
-                        'حدّث نشر Web App (/exec) بعد clasp push، ثم أعد المحاولة.'
+                        'الخادم أعاد صفحة HTML بدل JSON (نشر Web App قديم أو مهلة تنفيذ Google).\n' +
+                        'أعد المحاولة بعد ثوانٍ. إن استمر الخطأ: حدّث نشر Apps Script (/exec).'
                     );
                 }
-                result = JSON.parse(resultText);
+                result = JSON.parse(trimmedText);
             } catch (e) {
-                if (e && e.message && e.message.includes('HTML بدل JSON')) throw e;
-                throw new Error(`استجابة غير صالحة من الخادم: ${resultText.substring(0, 160)}`);
+                if (e && e.message && (e.message.includes('HTML بدل JSON') || e.message.includes('نشر Web App'))) throw e;
+                const preview = String(resultText || '').replace(/^\uFEFF/, '').trim().substring(0, 120);
+                const safePreview = preview.charAt(0) === '<' ? '[HTML]' : preview;
+                throw new Error(`استجابة غير صالحة من الخادم: ${safePreview}`);
             }
 
             if (!result || typeof result !== 'object') {

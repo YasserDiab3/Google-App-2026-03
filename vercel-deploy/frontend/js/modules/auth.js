@@ -109,7 +109,8 @@ window.Auth = {
 
     /** مهلة اعتبار «متصل» في الواجهة (أكبر قليلاً من فاصل النبضة) */
     PRESENCE_TTL_MS: 5 * 60 * 1000,
-    PRESENCE_HEARTBEAT_MS: 2 * 60 * 1000,
+    /** نبضة كل 4 دقائق — لا تنافس MFA (كانت 2د وتكتب الشيت فتقفله) */
+    PRESENCE_HEARTBEAT_MS: 4 * 60 * 1000,
     _presenceHeartbeatTimer: null,
     _presenceUnloadBound: false,
 
@@ -165,8 +166,8 @@ window.Auth = {
                 data: {
                     userId: user.id,
                     sessionId,
-                    __timeoutMs: 12000,
-                    __highPriority: true
+                    __timeoutMs: 10000
+                    // لا __highPriority — لا تسبق login/verifyMfaLogin في الطابور
                 }
             });
         } catch (_e) { /* ignore */ }
@@ -821,18 +822,24 @@ window.Auth = {
             });
         } catch (err) {
             const detail = (err && err.message) ? String(err.message).trim() : '';
+            const isHtml = /<!DOCTYPE|<html|web word processing|HTML بدل JSON|نشر Web App/i.test(detail);
             const isTimeout = /timeout|انتهت مهلة|AbortError|aborted/i.test(detail);
-            const msg = isTimeout
-                ? 'انتهت مهلة الاتصال أثناء التحقق. أعد إدخال الرمز خلال ثوانٍ.'
-                : (detail && detail.length < 220 && !detail.includes('فشل المزامنة في التقدم')
-                    ? detail
-                    : 'تعذر الاتصال بالخادم لإكمال المصادقة الثنائية');
+            const msg = isHtml
+                ? 'تعذر إكمال المصادقة (استجابة غير صالحة من الخادم). انتظر 5 ثوانٍ وأعد إدخال رمز جديد.'
+                : (isTimeout
+                    ? 'انتهت مهلة الاتصال أثناء التحقق. أعد إدخال الرمز خلال ثوانٍ.'
+                    : (detail && detail.length < 220 && !detail.includes('فشل المزامنة في التقدم') && detail.charAt(0) !== '<'
+                        ? detail
+                        : 'تعذر الاتصال بالخادم لإكمال المصادقة الثنائية'));
             Notification.error(msg);
             return { success: false, message: msg };
         }
 
         if (!verifyResult || !verifyResult.success || !verifyResult.user) {
-            const msg = (verifyResult && verifyResult.message) || 'رمز المصادقة الثنائية غير صحيح';
+            let msg = (verifyResult && verifyResult.message) || 'رمز المصادقة الثنائية غير صحيح';
+            if (/<!DOCTYPE|<html|web word processing/i.test(String(msg))) {
+                msg = 'تعذر إكمال المصادقة (استجابة غير صالحة من الخادم). أعد المحاولة برمز جديد.';
+            }
             Notification.error(msg);
             return { success: false, message: msg };
         }

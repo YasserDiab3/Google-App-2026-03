@@ -438,16 +438,20 @@ function invalidateServerSessionToken_(sessionToken) {
 
 /**
  * إرفاق sessionToken بنتيجة login ناجحة (بدون MFA)
+ * @param {Object} result
+ * @param {Object} userLike
+ * @param {{skipSheetTouch?:boolean}=} options — MFA: لا تكتب Users (تجنب قفل الشيت → مهلة → HTML من Google)
  */
-function attachServerSessionToLoginResult_(result, userLike) {
+function attachServerSessionToLoginResult_(result, userLike, options) {
     try {
         if (!result || result.success !== true || result.mfaRequired) return result;
+        options = options || {};
         var sess = issueServerSessionToken_(userLike || result.user);
         if (sess && sess.sessionToken) {
             result.sessionToken = sess.sessionToken;
             result.sessionExpiresAt = sess.expiresAt;
             var uid = userLike && userLike.id != null ? userLike.id : (result.user && result.user.id);
-            if (uid != null && typeof _fastTouchUserLoginFields_ === 'function') {
+            if (uid != null && !options.skipSheetTouch && typeof _fastTouchUserLoginFields_ === 'function') {
                 try {
                     var nowIso = new Date().toISOString();
                     _fastTouchUserLoginFields_(uid, {
@@ -457,6 +461,16 @@ function attachServerSessionToLoginResult_(result, userLike) {
                         isOnline: true
                     });
                 } catch (_touchErr) { /* ignore */ }
+            } else if (uid != null && options.skipSheetTouch) {
+                // حضور مؤقت في الكاش حتى أول نبضة بعد الدخول
+                try {
+                    var cache = CacheService.getScriptCache();
+                    cache.put('presence_v1:' + String(uid), JSON.stringify({
+                        isOnline: true,
+                        lastPresenceAt: new Date().toISOString(),
+                        activeSessionId: String(sess.sessionToken).substring(0, 80)
+                    }), 600);
+                } catch (_pc) { /* ignore */ }
             }
         }
     } catch (e) {

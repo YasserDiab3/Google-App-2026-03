@@ -815,8 +815,42 @@ function touchUserPresence(payload, actorUserData) {
             lastPresenceAt: nowIso
         };
         if (sessionId) fields.activeSessionId = sessionId.substring(0, 80);
-        _fastTouchUserLoginFields_(userId, fields);
-        return { success: true, lastPresenceAt: nowIso, isOnline: true };
+
+        // كاش فوري دائماً — لا يقف أمام MFA
+        try {
+            CacheService.getScriptCache().put('presence_v1:' + userId, JSON.stringify(fields), 600);
+        } catch (_c) { /* ignore */ }
+
+        // كتابة الشيت على الأكثر كل 8 دقائق لكل مستخدم (تخفيف قفل Users)
+        var shouldWriteSheet = true;
+        try {
+            var writeGateKey = 'presence_sheet_gate:' + userId;
+            var cache = CacheService.getScriptCache();
+            if (cache.get(writeGateKey)) {
+                shouldWriteSheet = false;
+            } else {
+                cache.put(writeGateKey, '1', 480);
+            }
+        } catch (_g) { /* write anyway once */ }
+
+        if (shouldWriteSheet) {
+            var lock = LockService.getScriptLock();
+            var gotLock = false;
+            try {
+                gotLock = lock.tryLock(200);
+                if (gotLock) {
+                    _fastTouchUserLoginFields_(userId, fields);
+                }
+            } catch (_w) {
+                Logger.log('touchUserPresence sheet soft-fail: ' + _w.toString());
+            } finally {
+                if (gotLock) {
+                    try { lock.releaseLock(); } catch (_rl) { /* ignore */ }
+                }
+            }
+        }
+
+        return { success: true, lastPresenceAt: nowIso, isOnline: true, sheetWritten: !!shouldWriteSheet };
     } catch (err) {
         Logger.log('touchUserPresence error: ' + err.toString());
         return { success: false, message: 'touchUserPresence: ' + err.toString() };
@@ -1097,7 +1131,7 @@ function verifyMfaLogin(challengeToken, email, code) {
             safeUser = cachedUserPayload.safeUser;
             user = { id: cachedUserPayload.userId, email: e };
         } else {
-            // تجاوز كاش المستخدمين — حضور/كتابات الشيت قد تترك كاشاً قديماً بدون السر
+            // مسار احتياطي فقط — يقرأ الشيت (قد يكون بطيئاً تحت ضغط الحضور)
             if (typeof invalidateUsersAuthCache_ === 'function') invalidateUsersAuthCache_();
             user = getUserRecordFromUsersSheetByEmail_(e, { bypassCache: true });
             if (!user || !isMfaEnabledForUser_(user)) {
@@ -1110,8 +1144,8 @@ function verifyMfaLogin(challengeToken, email, code) {
         var secret = (typeof decryptMfaSecret_ === 'function') ? decryptMfaSecret_(secretEnc) : '';
         var totpOk = (secret && typeof verifyTotpCode_ === 'function' && verifyTotpCode_(secret, otp));
 
-        // إعادة محاولة واحدة من الشيت إن فشل التحقق رغم وجود challenge صالح
-        if (!totpOk) {
+        // إعادة محاولة من الشيت فقط إن لم يكن لدينا سر من كاش التحدي
+        if (!totpOk && !(cachedUserPayload && cachedUserPayload.mfaSecretEnc)) {
             try {
                 if (typeof invalidateUsersAuthCache_ === 'function') invalidateUsersAuthCache_();
                 var freshUser = getUserRecordFromUsersSheetByEmail_(e, { bypassCache: true });
@@ -1148,12 +1182,12 @@ function verifyMfaLogin(challengeToken, email, code) {
 
         if (typeof clearMfaFailures_ === 'function') clearMfaFailures_(e);
 
-        // إرجاع الجلسة أولاً — تحديث الحضور داخل attachServerSessionToLoginResult_ (كتابة واحدة)
+        // مهم: بدون كتابة Users هنا — الكتابة كانت تسبب مهلة Google HTML بدل JSON
         return attachServerSessionToLoginResult_({
             success: true,
             message: 'تم تسجيل الدخول بنجاح',
             user: safeUser
-        }, user || safeUser);
+        }, user || safeUser, { skipSheetTouch: true });
     } catch (error) {
         Logger.log('verifyMfaLogin error: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء التحقق من المصادقة الثنائية' };
