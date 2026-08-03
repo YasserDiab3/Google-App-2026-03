@@ -8,6 +8,8 @@ const BehaviorMonitoring = {
     _setupTimeoutId: null,
     _eventListenersAbortController: null,
     _modalAbortController: null,
+    _employeeSubmitLock: false,
+    _contractorSubmitLock: false,
 
     /**
      * معالجة الصور (تحويل روابط Google Drive القديمة و Base64)
@@ -632,6 +634,79 @@ const BehaviorMonitoring = {
         if (!behavior) return null;
         return behavior.date || behavior.Date || behavior['التاريخ'] || behavior.behaviorDate
             || behavior.createdAt || behavior.updatedAt || null;
+    },
+
+    /** يوم YYYY-MM-DD للمقارنة بدون وقت */
+    normalizeBehaviorDayKey(dateValue) {
+        const d = this.parseDateSafe ? this.parseDateSafe(dateValue) : null;
+        if (!d || Number.isNaN(d.getTime())) {
+            const raw = String(dateValue || '').trim();
+            const m = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+            return m ? m[1] : '';
+        }
+        const y = d.getFullYear();
+        const mo = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${mo}-${day}`;
+    },
+
+    normalizeBehaviorCompareText(value) {
+        return String(value ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+    },
+
+    isSameBehaviorEmployeePerson(existing, candidate) {
+        const codeA = this.normalizeBehaviorCompareText(existing?.employeeCode || existing?.employeeNumber || existing?.employeeId);
+        const codeB = this.normalizeBehaviorCompareText(candidate?.employeeCode || candidate?.employeeNumber || candidate?.employeeId);
+        const nameA = this.normalizeBehaviorCompareText(existing?.employeeName);
+        const nameB = this.normalizeBehaviorCompareText(candidate?.employeeName);
+        if (codeA && codeB && codeA === codeB) return true;
+        if (nameA && nameB && nameA === nameB) return true;
+        return false;
+    },
+
+    isSameBehaviorContractorPerson(existing, candidate) {
+        const idA = this.normalizeBehaviorCompareText(existing?.contractorId);
+        const idB = this.normalizeBehaviorCompareText(candidate?.contractorId);
+        const nameA = this.normalizeBehaviorCompareText(existing?.contractorName);
+        const nameB = this.normalizeBehaviorCompareText(candidate?.contractorName);
+        const workerA = this.normalizeBehaviorCompareText(existing?.contractorWorker);
+        const workerB = this.normalizeBehaviorCompareText(candidate?.contractorWorker);
+        const sameContractor = (idA && idB && idA === idB) || (nameA && nameB && nameA === nameB);
+        if (!sameContractor) return false;
+        return workerA === workerB;
+    },
+
+    isSameBehaviorPayload(existing, candidate) {
+        if (this.normalizeBehaviorDayKey(this.getBehaviorDate(existing) || existing?.date) !== this.normalizeBehaviorDayKey(candidate?.date)) {
+            return false;
+        }
+        if (this.normalizeBehaviorCompareText(existing?.behaviorType) !== this.normalizeBehaviorCompareText(candidate?.behaviorType)) return false;
+        if (this.normalizeBehaviorCompareText(existing?.description) !== this.normalizeBehaviorCompareText(candidate?.description)) return false;
+        if (this.normalizeBehaviorCompareText(existing?.rating) !== this.normalizeBehaviorCompareText(candidate?.rating)) return false;
+        if (this.normalizeBehaviorCompareText(existing?.factoryId || existing?.factory) !== this.normalizeBehaviorCompareText(candidate?.factoryId || candidate?.factory)) return false;
+        if (this.normalizeBehaviorCompareText(existing?.subLocationId || existing?.subLocation) !== this.normalizeBehaviorCompareText(candidate?.subLocationId || candidate?.subLocation)) return false;
+        if (this.normalizeBehaviorCompareText(existing?.correctiveAction) !== this.normalizeBehaviorCompareText(candidate?.correctiveAction)) return false;
+        return true;
+    },
+
+    /** سجل موظف مكرر: نفس الشخص + نفس اليوم + نفس بيانات التصرف */
+    findDuplicateEmployeeBehavior(candidate, excludeId = null) {
+        const list = Array.isArray(AppState?.appData?.behaviorMonitoring) ? AppState.appData.behaviorMonitoring : [];
+        return list.find((b) => {
+            if (!b || (excludeId && b.id === excludeId)) return false;
+            if (!this.isSameBehaviorEmployeePerson(b, candidate)) return false;
+            return this.isSameBehaviorPayload(b, candidate);
+        }) || null;
+    },
+
+    /** سجل مقاول مكرر: نفس المقاول/العامل + نفس اليوم + نفس بيانات التصرف */
+    findDuplicateContractorBehavior(candidate, excludeId = null) {
+        const list = Array.isArray(AppState?.appData?.contractorBehaviorMonitoring) ? AppState.appData.contractorBehaviorMonitoring : [];
+        return list.find((b) => {
+            if (!b || (excludeId && b.id === excludeId)) return false;
+            if (!this.isSameBehaviorContractorPerson(b, candidate)) return false;
+            return this.isSameBehaviorPayload(b, candidate);
+        }) || null;
     },
 
     getBehaviorTypeBadgeClass(behaviorType) {
@@ -1679,104 +1754,136 @@ const BehaviorMonitoring = {
     },
 
     async handleSubmit({ uid, form, editId = null, modal }) {
-        // معالجة الصورة
-        let photoBase64 = editId ? (this.getBehaviors().find(b => b.id === editId)?.photo || '') : '';
-        const photoInput = document.getElementById(`${uid}-photo-input`);
-        if (photoInput && photoInput.files.length > 0) {
-            const file = photoInput.files[0];
-            if (file.size > 2 * 1024 * 1024) {
-                Notification.error('حجم الصورة كبير جداً. الحد الأقصى 2MB');
+        if (this._employeeSubmitLock) {
+            Notification.warning('جاري حفظ التصرف... يرجى الانتظار لمنع التكرار');
+            return;
+        }
+
+        const saveBtn = document.getElementById(`${uid}-save-btn`);
+        this._employeeSubmitLock = true;
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.setAttribute('aria-busy', 'true');
+        }
+
+        try {
+            // معالجة الصورة
+            let photoBase64 = editId ? (this.getBehaviors().find(b => b.id === editId)?.photo || '') : '';
+            const photoInput = document.getElementById(`${uid}-photo-input`);
+            if (photoInput && photoInput.files.length > 0) {
+                const file = photoInput.files[0];
+                if (file.size > 2 * 1024 * 1024) {
+                    Notification.error('حجم الصورة كبير جداً. الحد الأقصى 2MB');
+                    return;
+                }
+                photoBase64 = await this.convertImageToBase64(file);
+            }
+
+            const employeeCode = (document.getElementById(`${uid}-employee-code`)?.value || '').trim();
+            const employeeName = (document.getElementById(`${uid}-employee-name`)?.value || '').trim();
+            const employees = Array.isArray(AppState?.appData?.employees) ? AppState.appData.employees : [];
+            const employee = employees.find(e =>
+                (e.employeeNumber && e.employeeNumber === employeeCode) ||
+                (e.sapId && e.sapId === employeeCode) ||
+                e.name === employeeName
+            );
+
+            // فحص العناصر قبل الاستخدام
+            const behaviorTypeEl = document.getElementById(`${uid}-type`);
+            const behaviorDateEl = document.getElementById(`${uid}-date`);
+            const behaviorRatingEl = document.getElementById(`${uid}-rating`);
+            const behaviorDescriptionEl = document.getElementById(`${uid}-description`);
+            const departmentEl = document.getElementById(`${uid}-department`);
+            const jobEl = document.getElementById(`${uid}-job`);
+            const factoryEl = document.getElementById(`${uid}-factory`);
+            const subEl = document.getElementById(`${uid}-sublocation`);
+            const correctiveActionEl = document.getElementById(`${uid}-corrective-action`);
+            const correctiveActionDetailsEl = document.getElementById(`${uid}-corrective-action-details`);
+
+            if (!behaviorTypeEl || !behaviorDateEl || !behaviorRatingEl || !behaviorDescriptionEl || !departmentEl || !jobEl || !factoryEl || !subEl) {
+                Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
                 return;
             }
-            photoBase64 = await this.convertImageToBase64(file);
-        }
 
-        const employeeCode = (document.getElementById(`${uid}-employee-code`)?.value || '').trim();
-        const employeeName = (document.getElementById(`${uid}-employee-name`)?.value || '').trim();
-        const employees = Array.isArray(AppState?.appData?.employees) ? AppState.appData.employees : [];
-        const employee = employees.find(e =>
-            (e.employeeNumber && e.employeeNumber === employeeCode) ||
-            (e.sapId && e.sapId === employeeCode) ||
-            e.name === employeeName
-        );
-
-        // فحص العناصر قبل الاستخدام
-        const behaviorTypeEl = document.getElementById(`${uid}-type`);
-        const behaviorDateEl = document.getElementById(`${uid}-date`);
-        const behaviorRatingEl = document.getElementById(`${uid}-rating`);
-        const behaviorDescriptionEl = document.getElementById(`${uid}-description`);
-        const departmentEl = document.getElementById(`${uid}-department`);
-        const jobEl = document.getElementById(`${uid}-job`);
-        const factoryEl = document.getElementById(`${uid}-factory`);
-        const subEl = document.getElementById(`${uid}-sublocation`);
-        const correctiveActionEl = document.getElementById(`${uid}-corrective-action`);
-        const correctiveActionDetailsEl = document.getElementById(`${uid}-corrective-action-details`);
-        
-        if (!behaviorTypeEl || !behaviorDateEl || !behaviorRatingEl || !behaviorDescriptionEl || !departmentEl || !jobEl || !factoryEl || !subEl) {
-            Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
-            return;
-        }
-
-        // تحقق إضافي: عند التصرف السلبي يجب إدخال إجراء تصحيحي
-        const isNegative = (behaviorTypeEl.value || '') === 'سلبي';
-        if (isNegative && (!correctiveActionEl || !correctiveActionEl.value)) {
-            Notification.error('يرجى اختيار الإجراء التصحيحي للتصرف السلبي');
-            return;
-        }
-
-        const formData = {
-            id: editId || Utils.generateId('BEHAV'),
-            isoCode: generateISOCode('BEH', AppState.appData.behaviorMonitoring),
-            employeeId: employee?.id || '',
-            employeeCode: employeeCode,
-            employeeNumber: employeeCode,
-            employeeName: employeeName,
-            department: (departmentEl.value || '').trim(),
-            job: (jobEl.value || '').trim(),
-            factory: (factoryEl.value || '').trim(),
-            factoryId: factoryEl.value ? String(factoryEl.value).trim() : null,
-            factoryName: this.resolveSiteName(factoryEl.value),
-            subLocation: (subEl.value || '').trim(),
-            subLocationId: subEl.value ? String(subEl.value).trim() : null,
-            subLocationName: this.resolvePlaceName(subEl.value, factoryEl.value),
-            photo: photoBase64,
-            behaviorType: behaviorTypeEl.value,
-            date: new Date(behaviorDateEl.value).toISOString(),
-            rating: behaviorRatingEl.value,
-            correctiveAction: isNegative ? (correctiveActionEl?.value || '') : '',
-            correctiveActionDetails: isNegative ? ((correctiveActionDetailsEl?.value || '').trim()) : '',
-            description: behaviorDescriptionEl.value.trim(),
-            createdAt: editId ? this.getBehaviors().find(b => b.id === editId)?.createdAt : new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        Loading.show();
-        try {
-            if (editId) {
-                const index = AppState.appData.behaviorMonitoring.findIndex(b => b.id === editId);
-                if (index !== -1) AppState.appData.behaviorMonitoring[index] = formData;
-                Notification.success('تم تحديث التصرف بنجاح');
-            } else {
-                AppState.appData.behaviorMonitoring.push(formData);
-                Notification.success('تم تسجيل التصرف بنجاح');
+            // تحقق إضافي: عند التصرف السلبي يجب إدخال إجراء تصحيحي
+            const isNegative = (behaviorTypeEl.value || '') === 'سلبي';
+            if (isNegative && (!correctiveActionEl || !correctiveActionEl.value)) {
+                Notification.error('يرجى اختيار الإجراء التصحيحي للتصرف السلبي');
+                return;
             }
 
-            // حفظ البيانات باستخدام window.DataManager
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
-            } else {
-                Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+            const formData = {
+                id: editId || Utils.generateId('BEHAV'),
+                isoCode: generateISOCode('BEH', AppState.appData.behaviorMonitoring),
+                employeeId: employee?.id || '',
+                employeeCode: employeeCode,
+                employeeNumber: employeeCode,
+                employeeName: employeeName,
+                department: (departmentEl.value || '').trim(),
+                job: (jobEl.value || '').trim(),
+                factory: (factoryEl.value || '').trim(),
+                factoryId: factoryEl.value ? String(factoryEl.value).trim() : null,
+                factoryName: this.resolveSiteName(factoryEl.value),
+                subLocation: (subEl.value || '').trim(),
+                subLocationId: subEl.value ? String(subEl.value).trim() : null,
+                subLocationName: this.resolvePlaceName(subEl.value, factoryEl.value),
+                photo: photoBase64,
+                behaviorType: behaviorTypeEl.value,
+                date: new Date(behaviorDateEl.value).toISOString(),
+                rating: behaviorRatingEl.value,
+                correctiveAction: isNegative ? (correctiveActionEl?.value || '') : '',
+                correctiveActionDetails: isNegative ? ((correctiveActionDetailsEl?.value || '').trim()) : '',
+                description: behaviorDescriptionEl.value.trim(),
+                createdAt: editId ? this.getBehaviors().find(b => b.id === editId)?.createdAt : new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            // منع تكرار نفس الشخص + نفس اليوم + نفس بيانات التصرف
+            const duplicate = this.findDuplicateEmployeeBehavior(formData, editId);
+            if (duplicate) {
+                Notification.warning('تم تسجيل نفس التصرف لنفس الشخص في نفس التاريخ مسبقاً. لن يتم التكرار.');
+                return;
             }
 
-            // حفظ تلقائي في Google Sheets
-            await GoogleIntegration.autoSave('BehaviorMonitoring', AppState.appData.behaviorMonitoring);
+            Loading.show();
+            try {
+                if (editId) {
+                    const index = AppState.appData.behaviorMonitoring.findIndex(b => b.id === editId);
+                    if (index !== -1) AppState.appData.behaviorMonitoring[index] = formData;
+                    Notification.success('تم تحديث التصرف بنجاح');
+                } else {
+                    // فحص أخير قبل الدفع (ضغط مزدوج سريع)
+                    if (this.findDuplicateEmployeeBehavior(formData, editId)) {
+                        Notification.warning('تم تسجيل نفس التصرف مسبقاً. لن يتم التكرار.');
+                        return;
+                    }
+                    AppState.appData.behaviorMonitoring.push(formData);
+                    Notification.success('تم تسجيل التصرف بنجاح');
+                }
 
-            Loading.hide();
-            if (modal) modal.remove();
-            this.refreshCurrentTab();
-        } catch (error) {
-            Loading.hide();
-            Notification.error('حدث خطأ: ' + error.message);
+                // حفظ البيانات باستخدام window.DataManager
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                } else {
+                    Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+                }
+
+                // حفظ تلقائي في Google Sheets
+                await GoogleIntegration.autoSave('BehaviorMonitoring', AppState.appData.behaviorMonitoring);
+
+                if (modal) modal.remove();
+                this.refreshCurrentTab();
+            } catch (error) {
+                Notification.error('حدث خطأ: ' + error.message);
+            } finally {
+                Loading.hide();
+            }
+        } finally {
+            this._employeeSubmitLock = false;
+            if (saveBtn && document.body.contains(saveBtn)) {
+                saveBtn.disabled = false;
+                saveBtn.removeAttribute('aria-busy');
+            }
         }
     },
 
@@ -2593,100 +2700,130 @@ const BehaviorMonitoring = {
     },
 
     async handleContractorSubmit({ uid, form, editId = null, modal }) {
-        let photoBase64 = editId ? (this.getRawContractorBehaviorById(editId)?.photo || '') : '';
-        const photoInput = document.getElementById(`${uid}-cb-photo-input`);
-        if (photoInput && photoInput.files.length > 0) {
-            const file = photoInput.files[0];
-            if (file.size > 2 * 1024 * 1024) {
-                Notification.error('حجم الصورة كبير جداً. الحد الأقصى 2MB');
+        if (this._contractorSubmitLock) {
+            Notification.warning('جاري حفظ التصرف... يرجى الانتظار لمنع التكرار');
+            return;
+        }
+
+        const saveBtn = document.getElementById(`${uid}-cb-save-btn`);
+        this._contractorSubmitLock = true;
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.setAttribute('aria-busy', 'true');
+        }
+
+        try {
+            let photoBase64 = editId ? (this.getRawContractorBehaviorById(editId)?.photo || '') : '';
+            const photoInput = document.getElementById(`${uid}-cb-photo-input`);
+            if (photoInput && photoInput.files.length > 0) {
+                const file = photoInput.files[0];
+                if (file.size > 2 * 1024 * 1024) {
+                    Notification.error('حجم الصورة كبير جداً. الحد الأقصى 2MB');
+                    return;
+                }
+                photoBase64 = await this.convertImageToBase64(file);
+            }
+
+            const contractorSel = document.getElementById(`${uid}-contractor-select`);
+            const opt = contractorSel?.selectedOptions?.[0];
+            const contractorName = (contractorSel?.value || '').trim();
+            const contractorId = (opt?.dataset?.contractorId || '').trim();
+            if (!contractorName) {
+                Notification.error('يرجى اختيار المقاول');
                 return;
             }
-            photoBase64 = await this.convertImageToBase64(file);
-        }
 
-        const contractorSel = document.getElementById(`${uid}-contractor-select`);
-        const opt = contractorSel?.selectedOptions?.[0];
-        const contractorName = (contractorSel?.value || '').trim();
-        const contractorId = (opt?.dataset?.contractorId || '').trim();
-        if (!contractorName) {
-            Notification.error('يرجى اختيار المقاول');
-            return;
-        }
+            const behaviorTypeEl = document.getElementById(`${uid}-cb-type`);
+            const behaviorDateEl = document.getElementById(`${uid}-cb-date`);
+            const behaviorRatingEl = document.getElementById(`${uid}-cb-rating`);
+            const behaviorDescriptionEl = document.getElementById(`${uid}-cb-description`);
+            const departmentEl = document.getElementById(`${uid}-cb-department`);
+            const jobEl = document.getElementById(`${uid}-cb-job`);
+            const factoryEl = document.getElementById(`${uid}-cb-factory`);
+            const subEl = document.getElementById(`${uid}-cb-sublocation`);
+            const correctiveActionEl = document.getElementById(`${uid}-cb-corrective`);
+            const correctiveActionDetailsEl = document.getElementById(`${uid}-cb-corrective-details`);
+            const workerEl = document.getElementById(`${uid}-contractor-worker`);
 
-        const behaviorTypeEl = document.getElementById(`${uid}-cb-type`);
-        const behaviorDateEl = document.getElementById(`${uid}-cb-date`);
-        const behaviorRatingEl = document.getElementById(`${uid}-cb-rating`);
-        const behaviorDescriptionEl = document.getElementById(`${uid}-cb-description`);
-        const departmentEl = document.getElementById(`${uid}-cb-department`);
-        const jobEl = document.getElementById(`${uid}-cb-job`);
-        const factoryEl = document.getElementById(`${uid}-cb-factory`);
-        const subEl = document.getElementById(`${uid}-cb-sublocation`);
-        const correctiveActionEl = document.getElementById(`${uid}-cb-corrective`);
-        const correctiveActionDetailsEl = document.getElementById(`${uid}-cb-corrective-details`);
-        const workerEl = document.getElementById(`${uid}-contractor-worker`);
-
-        if (!behaviorTypeEl || !behaviorDateEl || !behaviorRatingEl || !behaviorDescriptionEl || !factoryEl || !subEl) {
-            Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة.');
-            return;
-        }
-
-        const isNegative = (behaviorTypeEl.value || '') === 'سلبي';
-        if (isNegative && (!correctiveActionEl || !correctiveActionEl.value)) {
-            Notification.error('يرجى اختيار الإجراء التصحيحي للتصرف السلبي');
-            return;
-        }
-
-        const list = AppState.appData.contractorBehaviorMonitoring || [];
-        const existing = editId ? this.getRawContractorBehaviorById(editId) : null;
-        const isoFn = typeof generateISOCode === 'function' ? generateISOCode : null;
-        const formData = {
-            id: editId || Utils.generateId('CBHM'),
-            isoCode: (existing && existing.isoCode) ? existing.isoCode : (isoFn ? isoFn('BHC', list) : (`BHC-${Date.now()}`)),
-            contractorId,
-            contractorName,
-            contractorWorker: (workerEl?.value || '').trim(),
-            department: (departmentEl?.value || '').trim(),
-            job: (jobEl?.value || '').trim(),
-            factory: (factoryEl.value || '').trim(),
-            factoryId: factoryEl.value ? String(factoryEl.value).trim() : null,
-            factoryName: this.resolveSiteName(factoryEl.value),
-            subLocation: (subEl.value || '').trim(),
-            subLocationId: subEl.value ? String(subEl.value).trim() : null,
-            subLocationName: this.resolvePlaceName(subEl.value, factoryEl.value),
-            photo: photoBase64,
-            behaviorType: behaviorTypeEl.value,
-            date: new Date(behaviorDateEl.value).toISOString(),
-            rating: behaviorRatingEl.value,
-            correctiveAction: isNegative ? (correctiveActionEl?.value || '') : '',
-            correctiveActionDetails: isNegative ? ((correctiveActionDetailsEl?.value || '').trim()) : '',
-            description: behaviorDescriptionEl.value.trim(),
-            createdAt: editId ? this.getRawContractorBehaviorById(editId)?.createdAt : new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        Loading.show();
-        try {
-            if (!Array.isArray(AppState.appData.contractorBehaviorMonitoring)) {
-                AppState.appData.contractorBehaviorMonitoring = [];
+            if (!behaviorTypeEl || !behaviorDateEl || !behaviorRatingEl || !behaviorDescriptionEl || !factoryEl || !subEl) {
+                Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة.');
+                return;
             }
-            if (editId) {
-                const index = AppState.appData.contractorBehaviorMonitoring.findIndex((b) => b.id === editId);
-                if (index !== -1) AppState.appData.contractorBehaviorMonitoring[index] = formData;
-                Notification.success('تم تحديث التصرف بنجاح');
-            } else {
-                AppState.appData.contractorBehaviorMonitoring.push(formData);
-                Notification.success('تم تسجيل التصرف بنجاح');
+
+            const isNegative = (behaviorTypeEl.value || '') === 'سلبي';
+            if (isNegative && (!correctiveActionEl || !correctiveActionEl.value)) {
+                Notification.error('يرجى اختيار الإجراء التصحيحي للتصرف السلبي');
+                return;
             }
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
+
+            const list = AppState.appData.contractorBehaviorMonitoring || [];
+            const existing = editId ? this.getRawContractorBehaviorById(editId) : null;
+            const isoFn = typeof generateISOCode === 'function' ? generateISOCode : null;
+            const formData = {
+                id: editId || Utils.generateId('CBHM'),
+                isoCode: (existing && existing.isoCode) ? existing.isoCode : (isoFn ? isoFn('BHC', list) : (`BHC-${Date.now()}`)),
+                contractorId,
+                contractorName,
+                contractorWorker: (workerEl?.value || '').trim(),
+                department: (departmentEl?.value || '').trim(),
+                job: (jobEl?.value || '').trim(),
+                factory: (factoryEl.value || '').trim(),
+                factoryId: factoryEl.value ? String(factoryEl.value).trim() : null,
+                factoryName: this.resolveSiteName(factoryEl.value),
+                subLocation: (subEl.value || '').trim(),
+                subLocationId: subEl.value ? String(subEl.value).trim() : null,
+                subLocationName: this.resolvePlaceName(subEl.value, factoryEl.value),
+                photo: photoBase64,
+                behaviorType: behaviorTypeEl.value,
+                date: new Date(behaviorDateEl.value).toISOString(),
+                rating: behaviorRatingEl.value,
+                correctiveAction: isNegative ? (correctiveActionEl?.value || '') : '',
+                correctiveActionDetails: isNegative ? ((correctiveActionDetailsEl?.value || '').trim()) : '',
+                description: behaviorDescriptionEl.value.trim(),
+                createdAt: editId ? this.getRawContractorBehaviorById(editId)?.createdAt : new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            const duplicate = this.findDuplicateContractorBehavior(formData, editId);
+            if (duplicate) {
+                Notification.warning('تم تسجيل نفس التصرف لنفس الشخص في نفس التاريخ مسبقاً. لن يتم التكرار.');
+                return;
             }
-            await GoogleIntegration.autoSave('ContractorBehaviorMonitoring', AppState.appData.contractorBehaviorMonitoring);
-            Loading.hide();
-            if (modal) modal.remove();
-            this.refreshCurrentTab();
-        } catch (error) {
-            Loading.hide();
-            Notification.error('حدث خطأ: ' + error.message);
+
+            Loading.show();
+            try {
+                if (!Array.isArray(AppState.appData.contractorBehaviorMonitoring)) {
+                    AppState.appData.contractorBehaviorMonitoring = [];
+                }
+                if (editId) {
+                    const index = AppState.appData.contractorBehaviorMonitoring.findIndex((b) => b.id === editId);
+                    if (index !== -1) AppState.appData.contractorBehaviorMonitoring[index] = formData;
+                    Notification.success('تم تحديث التصرف بنجاح');
+                } else {
+                    if (this.findDuplicateContractorBehavior(formData, editId)) {
+                        Notification.warning('تم تسجيل نفس التصرف مسبقاً. لن يتم التكرار.');
+                        return;
+                    }
+                    AppState.appData.contractorBehaviorMonitoring.push(formData);
+                    Notification.success('تم تسجيل التصرف بنجاح');
+                }
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                }
+                await GoogleIntegration.autoSave('ContractorBehaviorMonitoring', AppState.appData.contractorBehaviorMonitoring);
+                if (modal) modal.remove();
+                this.refreshCurrentTab();
+            } catch (error) {
+                Notification.error('حدث خطأ: ' + error.message);
+            } finally {
+                Loading.hide();
+            }
+        } finally {
+            this._contractorSubmitLock = false;
+            if (saveBtn && document.body.contains(saveBtn)) {
+                saveBtn.disabled = false;
+                saveBtn.removeAttribute('aria-busy');
+            }
         }
     },
 

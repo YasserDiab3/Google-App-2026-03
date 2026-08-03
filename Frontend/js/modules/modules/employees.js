@@ -4636,11 +4636,32 @@ const Employees = {
         };
     },
 
+    /**
+     * تاريخ التعيين للجدد عند الاستيراد: خلال آخر 3 أشهر حتى اليوم فقط.
+     * أقدم من 3 أشهر أو تاريخ مستقبلي أو فارغ/غير صالح → مرفوض.
+     */
+    isEmployeeImportHireDateAllowed(hireDateRaw) {
+        const normalized = this.normalizeDateOnly(hireDateRaw);
+        if (!normalized) return false;
+        const hire = new Date(`${normalized}T12:00:00`);
+        if (Number.isNaN(hire.getTime())) return false;
+
+        const today = new Date();
+        today.setHours(12, 0, 0, 0);
+
+        const minDate = new Date(today);
+        minDate.setMonth(minDate.getMonth() - 3);
+
+        return hire.getTime() >= minDate.getTime() && hire.getTime() <= today.getTime();
+    },
+
     /** تصنيف مسودة: new | exists | invalid — بدون مطابقة بالاسم */
     classifyEmployeeImportDraft(draft, seenKeys) {
         const empKey = this.normalizeEmployeeImportKey(draft.employeeNumber);
         const sapKey = this.normalizeEmployeeImportKey(draft.sapId);
         const primaryKey = empKey || sapKey;
+        draft._dupInFile = false;
+        draft._hireDateRejected = false;
 
         if (!primaryKey || !String(draft.name || '').trim()) {
             draft.status = 'invalid';
@@ -4657,7 +4678,19 @@ const Employees = {
         }
 
         const existing = this.findExistingEmployeeByImportKey(draft.employeeNumber, draft.sapId);
-        draft.status = existing ? 'exists' : 'new';
+        if (existing) {
+            draft.status = 'exists';
+            return draft;
+        }
+
+        // جدد فقط: تاريخ التعيين يجب ألا يتجاوز 3 أشهر قبل يوم الاستيراد
+        if (!this.isEmployeeImportHireDateAllowed(draft.hireDate)) {
+            draft.status = 'invalid';
+            draft._hireDateRejected = true;
+            return draft;
+        }
+
+        draft.status = 'new';
         return draft;
     },
 
@@ -4667,7 +4700,8 @@ const Employees = {
             total: list.length,
             newCount: list.filter(d => d.status === 'new').length,
             existsCount: list.filter(d => d.status === 'exists').length,
-            invalidCount: list.filter(d => d.status === 'invalid').length
+            invalidCount: list.filter(d => d.status === 'invalid').length,
+            hireDateRejectedCount: list.filter(d => d._hireDateRejected).length
         };
     },
 
@@ -4684,13 +4718,16 @@ const Employees = {
         const employeeNumber = this.normalizeEmployeeImportKey(draft.employeeNumber)
             || this.normalizeEmployeeImportKey(draft.sapId);
         if (!employeeNumber || !String(draft.name || '').trim()) return null;
+        if (!this.isEmployeeImportHireDateAllowed(draft.hireDate)) return null;
+        const hireDate = this.normalizeDateOnly(draft.hireDate);
+        if (!hireDate) return null;
         const now = new Date().toISOString();
         return {
             id: employeeNumber,
             name: String(draft.name || '').trim(),
             employeeNumber,
             sapId: String(draft.sapId || '').trim(),
-            hireDate: this.normalizeDateOnly(draft.hireDate) || this.normalizeDateOnly(new Date()),
+            hireDate,
             job: String(draft.job || '').trim(),
             position: String(draft.job || '').trim(),
             department: String(draft.department || '').trim(),
@@ -4730,12 +4767,15 @@ const Employees = {
                 <span style="background:#fee2e2;color:#991b1b;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;">
                     ناقص/غير صالح: ${counts.invalidCount}
                 </span>
+                <span style="background:#ffedd5;color:#9a3412;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;">
+                    تعيين أقدم من 3 أشهر / غير مقبول: ${counts.hireDateRejectedCount}
+                </span>
                 <span style="background:#e0f2fe;color:#075985;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;">
                     إجمالي الملف: ${counts.total}
                 </span>
             </div>
             <p style="font-size:12px;color:#1e3a8a;margin:0;">
-                الجدول يعرض فقط الموظفين غير الموجودين في النظام. الموجودون والمستقيلون لا يُعدَّلون ولا يُحذفون من الاستيراد.
+                الجدول يعرض فقط الجدد غير الموجودين بالنظام وتاريخ تعيينهم خلال آخر 3 أشهر. الموجودون والمستقيلون لا يُعدَّلون ولا يُحذفون.
             </p>
         `;
 
@@ -4800,6 +4840,7 @@ const Employees = {
                             <p class="text-sm text-amber-900 mb-2"><strong>حماية البيانات:</strong></p>
                             <ul class="text-sm text-amber-800 list-disc mr-6 mt-2 space-y-1">
                                 <li>الاستيراد <strong>يضيف الجدد فقط</strong> (غير الموجودين في النظام).</li>
+                                <li>تاريخ التعيين للجدد يجب أن يكون خلال <strong>آخر 3 أشهر</strong> من يوم الاستيراد (وليس مستقبلاً).</li>
                                 <li><strong>لا يُعدَّل</strong> ولا <strong>يُحذف</strong> أي موظف موجود أو مستقيل.</li>
                                 <li>راجع القائمة جيداً قبل التأكيد — يمكنك تعديل أو حذف صف من قائمة الإضافة فقط.</li>
                             </ul>
@@ -4945,7 +4986,8 @@ const Employees = {
             const ok = window.confirm(
                 `سيتم إضافة ${newDrafts.length} موظف جديد فقط.\n` +
                 `تخطّي موجود مسبقاً: ${counts.existsCount}\n` +
-                `ناقص/غير صالح: ${counts.invalidCount}\n\n` +
+                `ناقص/غير صالح: ${counts.invalidCount}\n` +
+                `تعيين خارج آخر 3 أشهر: ${counts.hireDateRejectedCount}\n\n` +
                 `الموجودون والمستقيلون لن يُعدَّلوا ولن يُحذفوا.\nهل تريد المتابعة؟`
             );
             if (!ok) return;
@@ -4993,7 +5035,8 @@ const Employees = {
                 Notification.success(
                     `أُضيف ${addedCount} موظف جديد` +
                     (counts.existsCount > 0 ? ` — تُخطي موجود ${counts.existsCount}` : '') +
-                    (counts.invalidCount > 0 ? ` — ناقص ${counts.invalidCount}` : '') +
+                    (counts.hireDateRejectedCount > 0 ? ` — تعيين خارج 3 أشهر ${counts.hireDateRejectedCount}` : '') +
+                    (counts.invalidCount > counts.hireDateRejectedCount ? ` — ناقص ${counts.invalidCount - counts.hireDateRejectedCount}` : '') +
                     (skippedDuringWrite > 0 ? ` — استُبعد عند الحفظ ${skippedDuringWrite}` : '')
                 );
                 modal.remove();

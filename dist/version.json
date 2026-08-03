@@ -1,15 +1,15 @@
 {
-  "version": "1.0.811",
+  "version": "1.0.813",
   "highlights": {
     "ar": [
-      "استيراد الموظفين يضيف الجدد فقط دون تعديل أو حذف الموجودين.",
-      "شاشة مراجعة قبل التأكيد تعرض غير الموجودين بالنظام مع إمكانية التعديل أو الحذف.",
-      "ملخص أعداد (جديد / موجود / ناقص) وتأكيد ثانٍ قبل الحفظ لحماية البيانات."
+      "منع تسجيل تصرف مكرر لنفس الشخص ونفس التاريخ ونفس البيانات مع قفل الإرسال المزدوج.",
+      "استيراد الموظفين يرفض تاريخ تعيين أقدم من 3 أشهر أو مستقبلي للجدد فقط.",
+      "عرض عدد المستبعدين بسبب تاريخ التعيين في ملخص الاستيراد قبل التأكيد."
     ],
     "en": [
-      "Employee import adds new staff only without updating or deleting existing records.",
-      "Pre-confirm review shows only employees missing from the system, with edit or remove.",
-      "Summary counts (new / existing / invalid) and a second confirm before save."
+      "Block duplicate behavior records for the same person, date, and data, with double-submit lock.",
+      "Employee import rejects hire dates older than 3 months or in the future for new staff only.",
+      "Import summary shows how many rows were excluded due to hire date before confirm."
     ]
   }
 }
