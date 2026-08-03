@@ -1,15 +1,15 @@
 {
-  "version": "1.0.813",
+  "version": "1.0.814",
   "highlights": {
     "ar": [
-      "منع تسجيل تصرف مكرر لنفس الشخص ونفس التاريخ ونفس البيانات مع قفل الإرسال المزدوج.",
-      "استيراد الموظفين يرفض تاريخ تعيين أقدم من 3 أشهر أو مستقبلي للجدد فقط.",
-      "عرض عدد المستبعدين بسبب تاريخ التعيين في ملخص الاستيراد قبل التأكيد."
+      "تحديث إجباري لكاش التطبيق لضمان ظهور الإصدار الجديد بعد النشر.",
+      "منع تسجيل تصرف مكرر لنفس الشخص ونفس التاريخ ونفس البيانات.",
+      "استيراد الموظفين: جدد فقط + مراجعة قبل التأكيد + تعيين خلال آخر 3 أشهر."
     ],
     "en": [
-      "Block duplicate behavior records for the same person, date, and data, with double-submit lock.",
-      "Employee import rejects hire dates older than 3 months or in the future for new staff only.",
-      "Import summary shows how many rows were excluded due to hire date before confirm."
+      "Forced app-cache refresh so the new version appears after deploy.",
+      "Block duplicate behavior records for the same person, date, and data.",
+      "Employee import: new-only review before confirm, hire date within last 3 months."
     ]
   }
 }
