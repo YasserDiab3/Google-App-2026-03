@@ -1,17 +1,15 @@
 {
-  "version": "1.0.803",
+  "version": "1.0.805",
   "highlights": {
     "ar": [
-      "مراقبة الأخطاء فوق الإعدادات في القائمة الجانبية.",
-      "تسجيل أخطاء المستخدمين بدون منافسة تسجيل الدخول.",
-      "ربط هوية سجل الخطأ بجلسة الخادم ومنع التزوير.",
-      "إيقاف التحديث المباشر عند مغادرة لوحة مراقبة الأخطاء."
+      "تصميم أنيق لبطاقة تفاصيل أحداث التقويم في لوحة التحكم.",
+      "عرض التاريخ والمكلف والفئة بهوية الألوان الرسمية.",
+      "تفاصيل الحدث بطاقات مرتبة مع حركة ظهور سلسة."
     ],
     "en": [
-      "Client error monitor moved above Settings in the sidebar.",
-      "Error logging no longer competes with login/MFA queue.",
-      "Error log identity bound to server session (anti-spoof).",
-      "Live polling stops when leaving the error monitor section."
+      "Polished calendar event detail card on the dashboard.",
+      "Date, assignee, and category styled with brand colors.",
+      "Event fields as tidy cards with smooth open animation."
     ]
   }
 }

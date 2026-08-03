@@ -48,6 +48,71 @@ const SafetyCalendar = {
         return c?.label || key;
     },
 
+    _getCategoryIcon(category) {
+        const map = {
+            'periodic-schedule': 'fa-clipboard-check',
+            'periodic-record': 'fa-clipboard-list',
+            'daily-safety-check': 'fa-list-check',
+            training: 'fa-chalkboard-user',
+            'legal-training': 'fa-scale-balanced',
+            ptw: 'fa-helmet-safety',
+            incidents: 'fa-triangle-exclamation',
+            nearmiss: 'fa-bolt',
+            observations: 'fa-eye',
+            'user-tasks': 'fa-list-check',
+            'safety-team-task': 'fa-user-shield',
+            'hse-audit': 'fa-search',
+            'fire-inspection': 'fa-fire-extinguisher',
+            emergency: 'fa-bell',
+            'action-tracking': 'fa-clipboard-list',
+            violations: 'fa-gavel',
+            behavior: 'fa-users',
+            'clinic-visit': 'fa-briefcase-medical',
+            'clinic-injury': 'fa-user-injured',
+            'clinic-sick-leave': 'fa-notes-medical',
+            'egypt-holiday': 'fa-flag',
+            'intl-hse-env': 'fa-globe',
+            'custom-event': 'fa-star'
+        };
+        return map[category] || 'fa-calendar-day';
+    },
+
+    _formatEventDate(eventLike) {
+        try {
+            const raw = eventLike?.startStr
+                || (eventLike?.start instanceof Date ? eventLike.start : null)
+                || eventLike?.start
+                || eventLike?.extendedProps?.start
+                || '';
+            if (!raw) return '';
+            const d = raw instanceof Date ? raw : new Date(raw);
+            if (isNaN(d.getTime())) return String(raw).slice(0, 16);
+            const lang = this._getLang() === 'en' ? 'en-GB' : 'ar-EG';
+            return d.toLocaleDateString(lang, {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        } catch (_e) {
+            return '';
+        }
+    },
+
+    _sortDetailFields(fields) {
+        const order = [
+            'الحالة', 'status', 'الأولوية', 'priority', 'الشدة', 'severity',
+            'التاريخ', 'date', 'تاريخ الاستحقاق', 'dueDate', 'تاريخ البداية', 'startDate',
+            'تاريخ النهاية', 'endDate', 'المكلف', 'assignedTo', 'المسؤول', 'responsible',
+            'العنوان', 'title', 'الاسم', 'name', 'الوصف', 'description', 'الموقع', 'location'
+        ];
+        const rank = (label) => {
+            const i = order.findIndex((k) => String(label || '').toLowerCase().includes(String(k).toLowerCase()));
+            return i === -1 ? 500 : i;
+        };
+        return (fields || []).slice().sort((a, b) => rank(a.label) - rank(b.label));
+    },
+
     esc(str) {
         if (window.SafetyCalendarEvents && SafetyCalendarEvents.esc) {
             return SafetyCalendarEvents.esc(str);
@@ -790,75 +855,121 @@ const SafetyCalendar = {
         if (!window.SafetyCalendarEvents) return;
 
         const record = SafetyCalendarEvents.getRecordForEvent(category, sourceId);
-        const fields = record ? SafetyCalendarEvents.buildDetailFields(record) : [];
+        const fields = this._sortDetailFields(record ? SafetyCalendarEvents.buildDetailFields(record) : []);
         const catInfo = SafetyCalendarEvents.SAFETY_CALENDAR_CATEGORIES[category] || {};
+        const catColor = catInfo.color || 'var(--primary-color, #2563eb)';
         const catLabel = props.categoryLabel || this._getCategoryLabel(category);
         const moduleKey = props.moduleKey || catInfo.moduleKey;
+        const catIcon = this._getCategoryIcon(category);
+        const eventDate = this._formatEventDate(eventLike);
 
-        const rows = fields.map((f) => `
-            <tr>
-                <th>${this.esc(f.label)}</th>
-                <td>${this.esc(f.value)}</td>
-            </tr>`).join('');
+        const fieldCards = fields.map((f) => `
+            <div class="sc-event-detail__field">
+                <span class="sc-event-detail__field-label">${this.esc(f.label)}</span>
+                <span class="sc-event-detail__field-value">${this.esc(f.value)}</span>
+            </div>`).join('');
 
         const canEdit = category === 'user-tasks' && record && this.canEditUserTask(record);
         const canEditCustom = category === 'custom-event' && record && this.canManageCustomEvents();
         const isReference = props.isReference === true;
-        const assigneeHint = props.assigneeHint ? `
-            <p class="sc-modal-assignee"><i class="fas fa-user ml-1"></i>${this.esc(this.t('module.sc.assignee', 'المكلف:'))} ${this.esc(props.assigneeHint)}</p>` : '';
+        const emptyHint = isReference
+            ? this.t('module.sc.refEventHint', 'حدث مرجعي (عطلة أو يوم عالمي) — للعرض فقط.')
+            : this.t('module.sc.noDetails', 'لا تتوفر تفاصيل إضافية لهذا الحدث.');
+
+        const metaBits = [];
+        if (eventDate) {
+            metaBits.push(`<span class="sc-event-detail__meta-item"><i class="fas fa-calendar-day" aria-hidden="true"></i>${this.esc(eventDate)}</span>`);
+        }
+        if (props.assigneeHint) {
+            metaBits.push(`<span class="sc-event-detail__meta-item"><i class="fas fa-user" aria-hidden="true"></i>${this.esc(this.t('module.sc.assignee', 'المكلف:'))} ${this.esc(props.assigneeHint)}</span>`);
+        }
+        if (isReference) {
+            metaBits.push(`<span class="sc-event-detail__meta-item sc-event-detail__meta-item--ref"><i class="fas fa-bookmark" aria-hidden="true"></i>${this.esc(this.t('module.sc.refBadge', 'مرجعي'))}</span>`);
+        }
 
         const html = `
-        <div class="modal-overlay sc-modal-overlay" id="sc-event-modal">
-            <div class="modal-content sc-modal-content" role="dialog" aria-modal="true">
-                <div class="sc-modal-header" style="border-color:${this.esc(catInfo.color || '#2563eb')}">
-                    <div>
-                        <span class="sc-modal-badge" style="background:${this.esc(catInfo.color || '#2563eb')}">
-                            ${this.esc(catLabel)}
-                        </span>
-                        <h3 class="sc-modal-title">${this.esc(eventLike.title || '')}</h3>
-                        ${assigneeHint}
+        <div class="modal-overlay sc-modal-overlay sc-event-detail-overlay" id="sc-event-modal" role="presentation">
+            <div class="modal-content sc-modal-content sc-event-detail" role="dialog" aria-modal="true" aria-labelledby="sc-event-detail-title" style="--sc-cat-color:${this.esc(catColor)}">
+                <div class="sc-event-detail__glow" aria-hidden="true"></div>
+                <div class="sc-event-detail__accent" aria-hidden="true"></div>
+                <header class="sc-event-detail__header">
+                    <div class="sc-event-detail__header-row">
+                        <div class="sc-event-detail__identity">
+                            <span class="sc-event-detail__icon" aria-hidden="true"><i class="fas ${catIcon}"></i></span>
+                            <div class="sc-event-detail__identity-text">
+                                <span class="sc-event-detail__badge">${this.esc(catLabel)}</span>
+                                <h3 class="sc-event-detail__title" id="sc-event-detail-title">${this.esc(eventLike.title || '')}</h3>
+                            </div>
+                        </div>
+                        <button type="button" class="sc-event-detail__close" id="sc-modal-close" aria-label="${this.esc(this.t('module.sc.close', 'إغلاق'))}">
+                            <i class="fas fa-times" aria-hidden="true"></i>
+                        </button>
                     </div>
-                    <button type="button" class="sc-modal-close" id="sc-modal-close" aria-label="${this.esc(this.t('module.sc.close', 'إغلاق'))}">
-                        <i class="fas fa-times"></i>
+                    ${metaBits.length ? `<div class="sc-event-detail__meta">${metaBits.join('')}</div>` : ''}
+                </header>
+                <div class="sc-event-detail__body sc-modal-body">
+                    ${fieldCards
+                        ? `<div class="sc-event-detail__section-label"><i class="fas fa-circle-info" aria-hidden="true"></i>${this.esc(this.t('module.sc.detailsHeading', 'تفاصيل الحدث'))}</div>
+                           <div class="sc-event-detail__fields">${fieldCards}</div>`
+                        : `<div class="sc-event-detail__empty">
+                                <span class="sc-event-detail__empty-icon" aria-hidden="true"><i class="fas ${isReference ? 'fa-flag' : 'fa-inbox'}"></i></span>
+                                <p>${this.esc(emptyHint)}</p>
+                           </div>`}
+                </div>
+                <footer class="sc-event-detail__footer sc-modal-footer">
+                    <button type="button" class="sc-event-detail__btn sc-event-detail__btn--ghost" id="sc-copy-id" data-id="${this.esc(sourceId)}">
+                        <i class="fas fa-copy" aria-hidden="true"></i>${this.esc(this.t('module.sc.copyId', 'نسخ المعرف'))}
                     </button>
-                </div>
-                <div class="sc-modal-body">
-                    ${rows ? `<table class="sc-detail-table"><tbody>${rows}</tbody></table>`
-                        : (isReference
-                            ? `<p class="text-gray-500">${this.esc(this.t('module.sc.refEventHint', 'حدث مرجعي (عطلة أو يوم عالمي) — للعرض فقط.'))}</p>`
-                            : `<p class="text-gray-500">${this.esc(this.t('module.sc.noDetails', 'لا تتوفر تفاصيل إضافية لهذا الحدث.'))}</p>`)}
-                </div>
-                <div class="sc-modal-footer">
-                    <button type="button" class="btn-secondary btn-sm" id="sc-copy-id" data-id="${this.esc(sourceId)}">
-                        <i class="fas fa-copy ml-1"></i>${this.esc(this.t('module.sc.copyId', 'نسخ المعرف'))}
-                    </button>
-                    ${canEditCustom ? `<button type="button" class="btn-secondary btn-sm" id="sc-edit-custom">
-                        <i class="fas fa-pen ml-1"></i>${this.esc(this.t('module.sc.editEvent', 'تعديل الحدث'))}
+                    ${canEditCustom ? `<button type="button" class="sc-event-detail__btn sc-event-detail__btn--soft" id="sc-edit-custom">
+                        <i class="fas fa-pen" aria-hidden="true"></i>${this.esc(this.t('module.sc.editEvent', 'تعديل الحدث'))}
                     </button>` : ''}
-                    ${canEdit ? `<button type="button" class="btn-secondary btn-sm" id="sc-edit-task">
-                        <i class="fas fa-pen ml-1"></i>${this.esc(this.t('module.sc.editTask', 'تعديل المهمة'))}
+                    ${canEdit ? `<button type="button" class="sc-event-detail__btn sc-event-detail__btn--soft" id="sc-edit-task">
+                        <i class="fas fa-pen" aria-hidden="true"></i>${this.esc(this.t('module.sc.editTask', 'تعديل المهمة'))}
                     </button>` : ''}
-                    ${moduleKey && !isReference ? `<button type="button" class="btn-primary btn-sm" id="sc-open-module" data-module="${this.esc(moduleKey)}">
-                        <i class="fas fa-external-link-alt ml-1"></i>${this.esc(this.t('module.sc.openModule', 'فتح في الموديول'))}
+                    ${moduleKey && !isReference ? `<button type="button" class="sc-event-detail__btn sc-event-detail__btn--primary" id="sc-open-module" data-module="${this.esc(moduleKey)}">
+                        <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>${this.esc(this.t('module.sc.openModule', 'فتح في الموديول'))}
                     </button>` : ''}
-                </div>
+                </footer>
             </div>
         </div>`;
 
         if (this._modalEl) {
-            try { this._modalEl.remove(); } catch (_e) { /* ignore */ }
+            try {
+                if (this._modalEscHandler) {
+                    document.removeEventListener('keydown', this._modalEscHandler);
+                    this._modalEscHandler = null;
+                }
+                this._modalEl.remove();
+            } catch (_e) { /* ignore */ }
         }
         const wrap = document.createElement('div');
         wrap.innerHTML = html;
         this._modalEl = wrap.firstElementChild;
         document.body.appendChild(this._modalEl);
+        requestAnimationFrame(() => {
+            try { this._modalEl?.classList.add('is-open'); } catch (_e) { /* ignore */ }
+        });
 
         const close = () => {
-            if (this._modalEl) {
-                this._modalEl.remove();
-                this._modalEl = null;
+            if (this._modalEscHandler) {
+                document.removeEventListener('keydown', this._modalEscHandler);
+                this._modalEscHandler = null;
             }
+            if (!this._modalEl) return;
+            const el = this._modalEl;
+            el.classList.remove('is-open');
+            el.classList.add('is-closing');
+            const done = () => {
+                try { el.remove(); } catch (_e) { /* ignore */ }
+                if (this._modalEl === el) this._modalEl = null;
+            };
+            window.setTimeout(done, 180);
         };
+
+        this._modalEscHandler = (e) => {
+            if (e.key === 'Escape') close();
+        };
+        document.addEventListener('keydown', this._modalEscHandler);
 
         this._modalEl.querySelector('#sc-modal-close')?.addEventListener('click', close);
         this._modalEl.addEventListener('click', (e) => {
@@ -901,6 +1012,7 @@ const SafetyCalendar = {
             close();
             if (record) this.openCustomEventForm(record, {});
         });
+        try { this._modalEl.querySelector('#sc-modal-close')?.focus(); } catch (_f) { /* ignore */ }
     },
 
     destroyCalendar() {
