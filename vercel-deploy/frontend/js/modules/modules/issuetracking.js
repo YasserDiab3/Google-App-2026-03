@@ -581,9 +581,16 @@ const IssueTracking = {
                         </div>
                     </div>
                 </div>
+                <div class="modal-footer flex justify-end gap-2">
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('issue-tracking') : ''}
+                </div>
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'issue-tracking', record: issue, recordId: issue.id || '' });
+        }
     },
 
     /**

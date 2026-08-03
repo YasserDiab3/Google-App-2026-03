@@ -1212,8 +1212,12 @@ const NearMiss = {
             Notification.error('تعذر العثور على الملاحظة المحددة');
             return;
         }
-        const modal = this.buildDetailModal(this.normalizeRecord(record));
+        const normalized = this.normalizeRecord(record);
+        const modal = this.buildDetailModal(normalized);
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'nearmiss', record: normalized, recordId: normalized.id || normalized.isoCode || '' });
+        }
         this.applyModuleI18n(modal);
         modal.addEventListener('click', (event) => {
             if (event.target === modal) {
@@ -1326,6 +1330,7 @@ const NearMiss = {
                 </div>
                 <div class="modal-footer">
                     <button class="btn-secondary" data-action="close-modal">إغلاق</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('nearmiss') : ''}
                     <button class="btn-secondary" data-action="detail-print" data-id="${record.id}">
                         <i class="fas fa-print ml-2"></i>
                         طباعة

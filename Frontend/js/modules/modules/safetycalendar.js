@@ -929,6 +929,7 @@ const SafetyCalendar = {
                     ${moduleKey && !isReference ? `<button type="button" class="sc-event-detail__btn sc-event-detail__btn--primary" id="sc-open-module" data-module="${this.esc(moduleKey)}">
                         <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>${this.esc(this.t('module.sc.openModule', 'فتح في الموديول'))}
                     </button>` : ''}
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('safety-calendar') : ''}
                 </footer>
             </div>
         </div>`;
@@ -946,6 +947,19 @@ const SafetyCalendar = {
         wrap.innerHTML = html;
         this._modalEl = wrap.firstElementChild;
         document.body.appendChild(this._modalEl);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(this._modalEl, {
+                moduleKey: 'safety-calendar',
+                record: record || {
+                    id: sourceId || '',
+                    title: eventLike.title || '',
+                    start: eventDate || '',
+                    end: eventLike.end || eventLike.endStr || '',
+                    location: (record && record.location) || props.location || ''
+                },
+                recordId: sourceId || (record && record.id) || ''
+            });
+        }
         requestAnimationFrame(() => {
             try { this._modalEl?.classList.add('is-open'); } catch (_e) { /* ignore */ }
         });

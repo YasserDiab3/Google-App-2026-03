@@ -1296,6 +1296,7 @@ const RiskAssessment = (() => {
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                        ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('risk-assessment') : ''}
                         <div class="flex-1"></div>
                         <button type="button" class="btn-primary" data-action="view-edit" data-id="${assessment.id}">
                             <i class="fas fa-edit ml-1"></i>
@@ -1305,6 +1306,9 @@ const RiskAssessment = (() => {
                 </div>
             `;
             document.body.appendChild(modal);
+            if (typeof EmailDispatch !== 'undefined') {
+                EmailDispatch.bindFooterButtons(modal, { moduleKey: 'risk-assessment', record: assessment, recordId: assessment.id || assessment.isoCode || '' });
+            }
 
             modal.addEventListener('click', (event) => {
                 if (event.target === modal) modal.remove();

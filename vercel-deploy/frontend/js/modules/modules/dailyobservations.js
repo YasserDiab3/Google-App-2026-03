@@ -9788,6 +9788,9 @@ const DailyObservations = {
         // ✅ فتح النموذج أولاً (فوري) باستخدام البيانات المحلية
         const modal = this.createObservationModal(observation);
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'daily-observations', record: observation, recordId: observation.id || observation.isoCode || '' });
+        }
         this.attachWorkflowPanelListeners(modal);
 
         // ✅ تحديث البيانات من Backend في الخلفية (بدون انتظار)
@@ -10105,6 +10108,7 @@ const DailyObservations = {
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="margin: 0 5px;">
                         <i class="fas fa-times ml-2"></i>إغلاق
                     </button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('daily-observations') : ''}
                     <button type="button" onclick="DailyObservations.exportPDF('${observation.id}');" class="btn-secondary" style="margin: 0 5px;">
                         <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
                     </button>
@@ -10983,16 +10987,21 @@ const DailyObservations = {
     },
 
     async sendEmailNotifications(notificationData) {
-        // في الإنتاج، يجب إرسال إيميلات علية
-        // هنا سنعرض قطعة من الكود في Console وإشعار للمستخدم
-        Utils.safeLog('إرسال إشعارات لإيميلات:', AppState.notificationEmails);
-        Utils.safeLog('بيانات الإشعار:', notificationData);
-
-        // يمكن إضافة تكامل مع خدمة إرسال إيميلات هنا
-        // مثلاً: SendGrid, Mailgun, AWS SES, ...
-
-        if (AppState.notificationEmails && AppState.notificationEmails.length > 0) {
-            Notification.success(`تم إرسال إشعار إلى ${AppState.notificationEmails.length} إيميل`);
+        if (typeof EmailDispatch !== 'undefined') {
+            const allowed = await EmailDispatch.ensureCanManualSend('daily-observations');
+            if (allowed) {
+                const record = notificationData && typeof notificationData === 'object' ? notificationData : {};
+                EmailDispatch.openSendModal({
+                    moduleKey: 'daily-observations',
+                    recordId: record.id || record.isoCode || '',
+                    title: EmailDispatch.getModuleLabel('daily-observations'),
+                    fields: EmailDispatch.fieldsFromRecord('daily-observations', record)
+                });
+                return;
+            }
+        }
+        if (typeof Notification !== 'undefined') {
+            Notification.warning('استخدم زر إرسال البريد من شاشة تفاصيل الملاحظة، أو فعّل الإرسال في إعدادات البريد.');
         }
     },
 

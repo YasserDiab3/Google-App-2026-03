@@ -2296,6 +2296,19 @@ const SafetyPerformanceKPIs = {
             this.exportToPDF();
         });
 
+        const kpiExportBar = document.getElementById('kpis-export-pdf-btn')?.parentElement;
+        if (kpiExportBar && typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(kpiExportBar, {
+                moduleKey: 'safety-performance-kpis',
+                record: {
+                    id: 'kpi-scorecard-' + (this.scorecardYear || new Date().getFullYear()),
+                    title: 'مؤشرات أداء السلامة',
+                    date: new Date().toISOString().slice(0, 10)
+                },
+                recordId: 'kpi-scorecard-' + (this.scorecardYear || new Date().getFullYear())
+            });
+        }
+
         // Settings button
         document.getElementById('kpis-settings-btn')?.addEventListener('click', () => {
             this.showSettingsModal();
@@ -4040,6 +4053,7 @@ SafetyPerformanceKPIs.render = async function () {
                         <i class="fas fa-file-pdf me-2"></i>
                         ${t('module.kpi.exportPDF','تصدير PDF')}
                     </button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('safety-performance-kpis') : ''}
                     <button id="kpis-settings-btn" class="btn-primary">
                         <i class="fas fa-cog me-2"></i>
                         ${t('module.kpi.settings','إعدادات الأهداف')}

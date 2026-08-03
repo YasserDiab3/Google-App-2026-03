@@ -10068,6 +10068,7 @@ const Incidents = {
                 </div>
                 <div class="modal-footer">
                     <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('incidents') : ''}
                     <button class="btn-secondary" onclick="Incidents.exportPDF('${incident.id}');">
                         <i class="fas fa-file-pdf ml-2"></i>تصدير تقرير الحادث
                     </button>
@@ -10095,6 +10096,9 @@ const Incidents = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'incidents', record: incident, recordId: incident.id || incident.isoCode || '' });
+        }
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });

@@ -1136,34 +1136,21 @@ window.UI = {
     },
 
     async sendAlertEmail(alert) {
-        const notificationEmails = AppState.notificationEmails || [];
-        if (notificationEmails.length === 0) {
-            Utils.safeLog('⚠ لا توجد إيميلات للإشعارات في الإعدادات');
-            return;
+        if (typeof EmailDispatch !== 'undefined') {
+            const allowed = await EmailDispatch.ensureCanManualSend('emergency');
+            if (allowed && alert) {
+                EmailDispatch.openSendModal({
+                    moduleKey: 'emergency',
+                    recordId: alert.id || '',
+                    title: alert.title || EmailDispatch.getModuleLabel('emergency'),
+                    subject: alert.title ? `تنبيه طوارئ: ${alert.title}` : '',
+                    fields: EmailDispatch.fieldsFromRecord('emergency', alert)
+                });
+                return;
+            }
         }
-
-        try {
-            const emailSubject = `تنبيه طوارئ: ${alert.title}`;
-            const emailBody = `
-                <h2>تنبيه طوارئ</h2>
-                <p><strong>العنوان:</strong> ${alert.title}</p>
-                <p><strong>الوصف:</strong> ${alert.description}</p>
-                <p><strong>الخطورة:</strong> ${alert.severity}</p>
-                <p><strong>المنطقة المتأثرة:</strong> ${alert.impactArea}</p>
-                <p><strong>القنوات:</strong> ${(alert.channels || []).join(', ')}</p>
-                <p><strong>التاريخ:</strong> ${Utils.formatDate(alert.date)}</p>
-            `;
-
-            Utils.safeLog('📧 إرسال إيميل للتنبيه:', {
-                to: notificationEmails,
-                subject: emailSubject,
-                body: emailBody
-            });
-
-            Notification.success(`تم إرسال التنبيه إلى ${notificationEmails.length} بريد إلكتروني`);
-        } catch (error) {
-            Utils.safeError('خطأ في إرسال الإيميل:', error);
-            Notification.warning('تم حفظ التنبيه لكن فشل إرسال الإيميل');
+        if (typeof Notification !== 'undefined') {
+            Notification.warning('استخدم زر إرسال البريد من شاشة تفاصيل التنبيه، أو فعّل الإرسال في إعدادات البريد.');
         }
     },
 
@@ -1752,34 +1739,21 @@ window.UI = {
     },
 
     async sendAlertEmail(alert) {
-        const notificationEmails = AppState.notificationEmails || [];
-        if (notificationEmails.length === 0) {
-            Utils.safeLog('⚠ لا توجد إيميلات للإشعارات في الإعدادات');
-            return;
+        if (typeof EmailDispatch !== 'undefined') {
+            const allowed = await EmailDispatch.ensureCanManualSend('emergency');
+            if (allowed && alert) {
+                EmailDispatch.openSendModal({
+                    moduleKey: 'emergency',
+                    recordId: alert.id || '',
+                    title: alert.title || EmailDispatch.getModuleLabel('emergency'),
+                    subject: alert.title ? `تنبيه طوارئ: ${alert.title}` : '',
+                    fields: EmailDispatch.fieldsFromRecord('emergency', alert)
+                });
+                return;
+            }
         }
-
-        try {
-            const emailSubject = `تنبيه طوارئ: ${alert.title}`;
-            const emailBody = `
-                <h2>تنبيه طوارئ</h2>
-                <p><strong>العنوان:</strong> ${alert.title}</p>
-                <p><strong>الوصف:</strong> ${alert.description}</p>
-                <p><strong>الخطورة:</strong> ${alert.severity}</p>
-                <p><strong>المنطقة المتأثرة:</strong> ${alert.impactArea}</p>
-                <p><strong>القنوات:</strong> ${(alert.channels || []).join(', ')}</p>
-                <p><strong>التاريخ:</strong> ${Utils.formatDate(alert.date)}</p>
-            `;
-
-            Utils.safeLog('📧 إرسال إيميل للتنبيه:', {
-                to: notificationEmails,
-                subject: emailSubject,
-                body: emailBody
-            });
-
-            Notification.success(`تم إرسال التنبيه إلى ${notificationEmails.length} بريد إلكتروني`);
-        } catch (error) {
-            Utils.safeError('خطأ في إرسال الإيميل:', error);
-            Notification.warning('تم حفظ التنبيه لكن فشل إرسال الإيميل');
+        if (typeof Notification !== 'undefined') {
+            Notification.warning('استخدم زر إرسال البريد من شاشة تفاصيل التنبيه، أو فعّل الإرسال في إعدادات البريد.');
         }
     },
 

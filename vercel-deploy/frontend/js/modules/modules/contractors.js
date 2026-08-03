@@ -7504,6 +7504,7 @@ const Contractors = {
                 </div>
                 <div class="modal-footer">
                     <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('contractors') : ''}
                     <button class="btn-success" onclick="Contractors.showEvaluationForm('${contractor.id}'); this.closest('.modal-overlay').remove();">
                         <i class="fas fa-clipboard-check ml-2"></i>
                         تقييم المقاول
@@ -7515,6 +7516,9 @@ const Contractors = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'contractors', record: contractor, recordId: contractor.id || contractor.code || contractor.isoCode || '' });
+        }
         this.applyModuleI18n(modal);
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();

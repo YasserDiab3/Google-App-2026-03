@@ -1225,6 +1225,18 @@ function _dobPushInAppForEmails_(emails, title, message, relatedObservationId) {
  * رسالة بريد لحدث سير العمل (لا يوقف العملية عند الفشل)
  */
 function _dobSendWorkflowEmail_(toList, subject, body) {
+    // احترام إعدادات المدير: إن وُجدت خدمة البريد وتوقف auto للملاحظات — لا ترسل
+    try {
+        if (typeof isEmailModuleAllowed_ === 'function') {
+            const gate = isEmailModuleAllowed_('daily-observations', 'auto');
+            if (!gate.allowed) {
+                Logger.log('_dobSendWorkflowEmail_ skipped: ' + (gate.reason || 'disabled'));
+                return;
+            }
+        }
+    } catch (gateErr) {
+        Logger.log('_dobSendWorkflowEmail_ gate: ' + gateErr.toString());
+    }
     const recipients = (toList || []).filter(function (e) {
         return e && String(e).indexOf('@') !== -1;
     });

@@ -1352,10 +1352,11 @@ const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u06
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n<"u"?I18n.t("core.buttons.close","\u0625\u063A\u0644\u0627\u0642"):"\u0625\u063A\u0644\u0627\u0642"}</button>
+                    ${typeof EmailDispatch<"u"?EmailDispatch.renderFooterButtonHtml("iso"):""}
                     <button type="button" onclick="ISO.showDocumentForm(${JSON.stringify(t).replace(/"/g,"&quot;")}); this.closest('.modal-overlay').remove();" class="btn-primary">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.actions.edit","\u062A\u0639\u062F\u064A\u0644"):"\u062A\u0639\u062F\u064A\u0644"}</button>
                 </div>
             </div>
-        `,document.body.appendChild(o),o.addEventListener("click",a=>{a.target===o&&o.remove()})},async viewProcedure(e){const t=AppState.appData.isoProcedures.find(a=>a.id===e);if(!t){Notification.error(typeof I18n<"u"?I18n.t("module.iso.procedures.notFound","\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F"):"\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const o=document.createElement("div");o.className="modal-overlay iso-professional-modal",o.innerHTML=`
+        `,document.body.appendChild(o),typeof EmailDispatch<"u"&&EmailDispatch.bindFooterButtons(o,{moduleKey:"iso",record:{...t,title:t.name||"",code:t.isoCode||""},recordId:t.id||t.isoCode||""}),o.addEventListener("click",a=>{a.target===o&&o.remove()})},async viewProcedure(e){const t=AppState.appData.isoProcedures.find(a=>a.id===e);if(!t){Notification.error(typeof I18n<"u"?I18n.t("module.iso.procedures.notFound","\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F"):"\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const o=document.createElement("div");o.className="modal-overlay iso-professional-modal",o.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
                     <h2 class="modal-title">${typeof I18n<"u"?I18n.t("module.iso.procedures.detailsTitle","\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0625\u062C\u0631\u0627\u0621"):"\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0625\u062C\u0631\u0627\u0621"}</h2>

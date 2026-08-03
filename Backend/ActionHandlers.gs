@@ -4714,6 +4714,48 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'getEmailSettings': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = getEmailSettings(payload || {});
+                    return;
+        })();
+        return result;
+    },
+    'saveEmailSettings': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    if (payload && !payload.userData && !payload.user) {
+                        payload.userData = actorUserData || payload.userData || payload.user || {};
+                    } else if (payload && actorUserData) {
+                        payload.userData = payload.userData || actorUserData;
+                    }
+                    result = saveEmailSettings(payload || {});
+                    return;
+        })();
+        return result;
+    },
+    'sendDirectEmail': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = sendDirectEmail(payload || {});
+                    return;
+        })();
+        return result;
+    },
+    'sendTestEmail': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    if (payload && !payload.userData && !payload.user) {
+                        payload.userData = actorUserData || {};
+                    } else if (payload && actorUserData) {
+                        payload.userData = payload.userData || actorUserData;
+                    }
+                    result = sendTestEmail(payload || {});
+                    return;
+        })();
+        return result;
+    },
     'initCompanySettingsTable': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

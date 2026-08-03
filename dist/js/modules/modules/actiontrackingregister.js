@@ -776,6 +776,7 @@ const ActionTrackingRegister={settings:null,currentView:"register",async load(){
                         
                         <div class="flex items-center justify-end gap-4 pt-4 border-t">
                             <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u063A\u0644\u0627\u0642</button>
+                            ${typeof EmailDispatch<"u"?EmailDispatch.renderFooterButtonHtml("action-tracking"):""}
                             <button type="button" class="btn-primary" onclick="ActionTrackingRegister.editEntry('${t.id}'); this.closest('.modal-overlay').remove();">
                                 <i class="fas fa-edit ml-2"></i>\u062A\u0639\u062F\u064A\u0644
                             </button>
@@ -783,7 +784,7 @@ const ActionTrackingRegister={settings:null,currentView:"register",async load(){
                     </div>
                 </div>
             </div>
-        `,document.body.appendChild(i),setTimeout(()=>{const o=i.querySelector(".dropdown > button"),m=i.querySelector(".dropdown-menu");o&&m&&o.addEventListener("click",r=>{r.stopPropagation();const d=m.style.display==="block";m.style.display=d?"none":"block"})},100);const p=o=>{const m=i.querySelector(".dropdown > button"),r=i.querySelector(".dropdown-menu");r&&m&&!m.contains(o.target)&&!r.contains(o.target)&&(r.style.display="none")};document.addEventListener("click",p),i.addEventListener("click",o=>{o.target===i&&(document.removeEventListener("click",p),i.remove())})},async showAddUpdateModal(e){const t=document.createElement("div");t.className="modal-overlay",t.innerHTML=`
+        `,document.body.appendChild(i),typeof EmailDispatch<"u"&&EmailDispatch.bindFooterButtons(i,{moduleKey:"action-tracking",record:t,recordId:t.id||t.isoCode||""}),setTimeout(()=>{const o=i.querySelector(".dropdown > button"),m=i.querySelector(".dropdown-menu");o&&m&&o.addEventListener("click",r=>{r.stopPropagation();const d=m.style.display==="block";m.style.display=d?"none":"block"})},100);const p=o=>{const m=i.querySelector(".dropdown > button"),r=i.querySelector(".dropdown-menu");r&&m&&!m.contains(o.target)&&!r.contains(o.target)&&(r.style.display="none")};document.addEventListener("click",p),i.addEventListener("click",o=>{o.target===i&&(document.removeEventListener("click",p),i.remove())})},async showAddUpdateModal(e){const t=document.createElement("div");t.className="modal-overlay",t.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
                     <h2 class="modal-title">\u0625\u0636\u0627\u0641\u0629 \u062A\u062D\u062F\u064A\u062B</h2>

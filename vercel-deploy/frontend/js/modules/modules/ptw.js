@@ -17718,6 +17718,7 @@ const PTW = {
                 </div>
                 <div class="modal-footer form-actions-centered ptw-permit-details-footer">
                     <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('ptw') : ''}
                     <button class="btn-primary" onclick="PTW.exportPDF('${item.id}'); this.closest('.modal-overlay').remove();">
                         <i class="fas fa-file-pdf ml-2"></i>
                         تصدير/طباعة PDF
@@ -17726,6 +17727,9 @@ const PTW = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'ptw', record: item, recordId: item.id || item.permitId || item.isoCode || '' });
+        }
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 const ok = confirm(PTW._t('module.ptw.mapSettings.closeUnsaved', 'تنبيه: سيتم إغلاق النافذة.\\nقد تفقد أي بيانات غير محفوظة.\\n\\nهل تريد الإغلاق؟').replace(/\\n/g, '\n'));

@@ -1438,6 +1438,7 @@ const LegalDocuments = {
                 </div>
                 <div class="modal-footer">
                     <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('legal-documents') : ''}
                     <button class="btn-success" onclick="LegalDocuments.exportPDF('${doc.id}');">
                         <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
                     </button>
@@ -1448,6 +1449,9 @@ const LegalDocuments = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'legal-documents', record: doc, recordId: doc.id || doc.isoCode || '' });
+        }
         if (typeof Utils.hydrateDriveProxyImages === 'function') {
             Utils.hydrateDriveProxyImages(modal, {
                 onFetchFail: (img) => {
@@ -1663,13 +1667,22 @@ const LegalDocuments = {
     },
 
     async sendEmailNotifications(alerts) {
-        // في الإنتاج، يجب إرسال إيميلات علية
-        Utils.safeLog('إرسال إشعارات لإيميلات:', AppState.notificationEmails);
-        Utils.safeLog('التنبيهات:', alerts);
-
-        // يمكن إضافة تكامل مع خدمة إرسال إيميلات هنا
-        if (AppState.notificationEmails && AppState.notificationEmails.length > 0) {
-            Notification.success(`تم إرسال إشعارات قانونية إلى ${AppState.notificationEmails.length} إيميل`);
+        if (typeof EmailDispatch !== 'undefined') {
+            const allowed = await EmailDispatch.ensureCanManualSend('legal-documents');
+            if (allowed) {
+                const firstAlert = Array.isArray(alerts) ? alerts[0] : alerts;
+                const record = firstAlert && typeof firstAlert === 'object' ? firstAlert : {};
+                EmailDispatch.openSendModal({
+                    moduleKey: 'legal-documents',
+                    recordId: record.id || record.isoCode || record.documentId || '',
+                    title: EmailDispatch.getModuleLabel('legal-documents'),
+                    fields: EmailDispatch.fieldsFromRecord('legal-documents', record)
+                });
+                return;
+            }
+        }
+        if (typeof Notification !== 'undefined') {
+            Notification.warning('استخدم زر إرسال البريد من شاشة تفاصيل المستند، أو فعّل الإرسال في إعدادات البريد.');
         }
     },
 

@@ -1477,6 +1477,7 @@ const SafetyBudget = {
                 </div>
                 <div class="modal-footer">
                     <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('safety-budget') : ''}
                     ${Permissions.hasAccess('safety-budget') ? `
                         <button class="btn-primary" onclick="SafetyBudget.editExpense('${expense.id}'); this.closest('.modal-overlay').remove();">
                             <i class="fas fa-edit ml-2"></i>تعديل
@@ -1486,6 +1487,13 @@ const SafetyBudget = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, {
+                moduleKey: 'safety-budget',
+                record: { ...expense, title: expense.description || expense.category || '' },
+                recordId: expense.id || ''
+            });
+        }
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });

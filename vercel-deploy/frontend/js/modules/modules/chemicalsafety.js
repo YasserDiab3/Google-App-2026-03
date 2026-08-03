@@ -2620,6 +2620,7 @@ const ChemicalSafety = {
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px;">
                         <i class="fas fa-times ml-2"></i>إغلاق
                     </button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('chemical-safety') : ''}
                     <button type="button" onclick="ChemicalSafety.exportPDF('${chemical.id}');"
                         class="btn-success" style="padding: 10px 20px;">
                         <i class="fas fa-file-pdf ml-2"></i>طباعة / تصدير PDF
@@ -2636,6 +2637,9 @@ const ChemicalSafety = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'chemical-safety', record: chemical, recordId: chemical.id || chemical.isoCode || '' });
+        }
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });

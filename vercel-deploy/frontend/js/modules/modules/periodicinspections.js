@@ -3040,6 +3040,7 @@ const PeriodicInspections = {
                             <i class="fas fa-times ml-2"></i>
                             إغلاق
                         </button>
+                        ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('periodic-inspections') : ''}
                         <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%); border: 1px solid #1e293b;" onclick="PeriodicInspections.printInspectionById(${JSON.stringify(String(id || ''))});">
                             <i class="fas fa-print ml-2"></i>
                             طباعة
@@ -3057,6 +3058,9 @@ const PeriodicInspections = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'periodic-inspections', record: inspection, recordId: inspection.id || inspection.isoCode || '' });
+        }
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });

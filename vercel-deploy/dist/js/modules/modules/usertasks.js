@@ -608,13 +608,14 @@ const UserTasks={cache:{members:null,tasks:new Map,lastLoad:null},config:{cacheT
                         <i class="fas fa-edit ml-2"></i>
                         \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u0627\u0644\u0629
                     </button>
+                    ${typeof EmailDispatch<"u"?EmailDispatch.renderFooterButtonHtml("user-tasks"):""}
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times ml-2"></i>
                         \u0625\u063A\u0644\u0627\u0642
                     </button>
                 </div>
             </div>
-        `,this.applyModuleI18n(r),document.body.appendChild(r)},async updateTaskStatus(t){const e=AppState.appData.userTasks.find(r=>r.id===t);if(!e){Notification.error("\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
+        `,this.applyModuleI18n(r),document.body.appendChild(r),typeof EmailDispatch<"u"&&EmailDispatch.bindFooterButtons(r,{moduleKey:"user-tasks",record:e,recordId:e.id||""})},async updateTaskStatus(t){const e=AppState.appData.userTasks.find(r=>r.id===t);if(!e){Notification.error("\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
             <div class="modal-container" style="max-width: 500px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
@@ -938,13 +939,14 @@ const UserTasks={cache:{members:null,tasks:new Map,lastLoad:null},config:{cacheT
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-secondary" data-action="close">\u0625\u063A\u0644\u0627\u0642</button>
+                    ${typeof EmailDispatch<"u"?EmailDispatch.renderFooterButtonHtml("user-tasks"):""}
                     <button type="button" class="btn-primary" onclick="UserTasks.editTask('${t}'); this.closest('.modal-overlay').remove();">
                         <i class="fas fa-edit ml-2"></i>
                         \u062A\u0639\u062F\u064A\u0644
                     </button>
                 </div>
             </div>
-        `,document.body.appendChild(i);const l=()=>i.remove();i.querySelector(".modal-close")?.addEventListener("click",l),i.querySelector('[data-action="close"]')?.addEventListener("click",l),i.addEventListener("click",d=>{d.target===i&&l()})},editTask(t){this.ensureData();const e=AppState.appData.userTasks.find(s=>s.id===t);if(!e){Notification.error("\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}this.showTaskForm(e)},async deleteTask(t){if(confirm(`\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0647 \u0627\u0644\u0645\u0647\u0645\u0629\u061F
+        `,document.body.appendChild(i),typeof EmailDispatch<"u"&&EmailDispatch.bindFooterButtons(i,{moduleKey:"user-tasks",record:e,recordId:e.id||""});const l=()=>i.remove();i.querySelector(".modal-close")?.addEventListener("click",l),i.querySelector('[data-action="close"]')?.addEventListener("click",l),i.addEventListener("click",d=>{d.target===i&&l()})},editTask(t){this.ensureData();const e=AppState.appData.userTasks.find(s=>s.id===t);if(!e){Notification.error("\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}this.showTaskForm(e)},async deleteTask(t){if(confirm(`\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0647 \u0627\u0644\u0645\u0647\u0645\u0629\u061F
 
 \u0647\u0630\u0647 \u0627\u0644\u0639\u0645\u0644\u064A\u0629 \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646\u0647\u0627.`))try{Loading.show(),this.ensureData();const e=AppState.appData.userTasks.findIndex(s=>s.id===t);if(e!==-1){if(AppState.appData.userTasks.splice(e,1),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig?.appsScript?.enabled&&typeof GoogleIntegration<"u"&&GoogleIntegration.sendRequest)try{const s=await GoogleIntegration.sendRequest({action:"deleteUserTask",data:{taskId:t}});if(s&&s.success===!1)throw new Error(s.message||"\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0645\u0647\u0645\u0629")}catch(s){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062D\u0630\u0641 \u0627\u0644\u0645\u0647\u0645\u0629 \u0645\u0646 Google Sheets:",s)}Notification.success("\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0645\u0647\u0645\u0629 \u0628\u0646\u062C\u0627\u062D"),await this.loadTasks(),this.updateStats()}else Notification.error("\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629")}catch(e){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0630\u0641 \u0627\u0644\u0645\u0647\u0645\u0629:",e),Notification.error("\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0645\u0647\u0645\u0629: "+e.message)}finally{Loading.hide()}},async exportToPDF(){try{Loading.show(),this.ensureData();const t=AppState.appData.userTasks||[];if(t.length===0){Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0647\u0627\u0645 \u0644\u0644\u062A\u0635\u062F\u064A\u0631"),Loading.hide();return}const e=this.getStats(),s=t.map((o,c)=>{const p=this.getUserName(o.userId||o.assignedTo);return`
                     <tr>

@@ -484,6 +484,27 @@ function getDailyActivityReportRecipients_() {
             }
         }
     }
+    // أولوية: إعدادات البريد من المدير
+    try {
+        if (typeof getEmailSettings === 'function') {
+            const es = getEmailSettings({});
+            const cfg = es && es.data ? es.data : null;
+            if (cfg && cfg.globalEnabled !== false) {
+                const mod = cfg.modules && cfg.modules['daily-activity-report'];
+                if (mod && mod.enabled !== false) {
+                    if (mod.recipients && mod.recipients.length) {
+                        mod.recipients.forEach(function (r) { addEmail(String(r || '')); });
+                    } else if (cfg.defaultRecipients && cfg.defaultRecipients.length) {
+                        cfg.defaultRecipients.forEach(function (r) { addEmail(String(r || '')); });
+                    }
+                }
+            }
+        }
+    } catch (eMailCfg) {
+        Logger.log('getDailyActivityReportRecipients_ emailSettings: ' + eMailCfg.toString());
+    }
+    if (out.length > 0) return out;
+
     try {
         const prop = PropertiesService.getScriptProperties().getProperty('DAILY_ACTIVITY_REPORT_EMAILS');
         addEmail(prop || '');
@@ -547,6 +568,17 @@ function buildDailySessionReportEmailBody_(report) {
  */
 function runDailyUserSessionEmailReport() {
     try {
+        try {
+            if (typeof isEmailModuleAllowed_ === 'function') {
+                const gate = isEmailModuleAllowed_('daily-activity-report', 'auto');
+                if (!gate.allowed) {
+                    Logger.log('runDailyUserSessionEmailReport skipped: ' + (gate.reason || 'disabled'));
+                    return { success: false, skipped: true, message: gate.reason || 'معطّل من إعدادات البريد', sent: false };
+                }
+            }
+        } catch (gateErr) {
+            Logger.log('runDailyUserSessionEmailReport gate: ' + gateErr.toString());
+        }
         const tz = Session.getScriptTimeZone();
         const y = new Date();
         y.setDate(y.getDate() - 1);

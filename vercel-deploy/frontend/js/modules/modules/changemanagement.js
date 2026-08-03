@@ -1341,11 +1341,15 @@ const ChangeManagement = {
                         ${isApproved && canApprove ? `<button type="button" onclick="ChangeManagement.updateRequestStatus('${safe(req.id)}','In Implementation'); this.closest('.modal-overlay').remove();" class="btn-primary"><i class="fas fa-play ml-2"></i> بدء التنفيذ</button>` : ''}
                         ${isInImpl && canApprove ? `<button type="button" onclick="ChangeManagement.updateRequestStatus('${safe(req.id)}','Completed'); this.closest('.modal-overlay').remove();" class="btn-primary"><i class="fas fa-check-double ml-2"></i> تم التنفيذ</button>` : ''}
                         ${(isCompleted || isInImpl) && canApprove && !isClosed ? `<button type="button" onclick="ChangeManagement.updateRequestStatus('${safe(req.id)}','Closed'); this.closest('.modal-overlay').remove();" class="btn-secondary"><i class="fas fa-lock ml-2"></i> إغلاق</button>` : ''}
+                        ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('change-management') : ''}
                         <button type="button" onclick="this.closest('.modal-overlay').remove()" class="btn-secondary">إغلاق</button>
                     </div>
                 </div>
             `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'change-management', record: req, recordId: req.id || req.requestNumber || '' });
+        }
     },
 
     async updateRequestStatus(requestId, status) {

@@ -1,0 +1,415 @@
+/**
+ * EmailDispatch — إرسال مباشر من شاشات التفاصيل حسب إعدادات مدير النظام.
+ * لا يغيّر مسارات التحميل؛ فقط زر + مودال + استدعاء API.
+ */
+const EmailDispatch = {
+    _settings: null,
+    _loadingPromise: null,
+    _cacheAt: 0,
+
+    GROUP_LABELS: {
+        ops: 'التشغيل والسلامة',
+        clinic: 'العيادة',
+        reports: 'التقارير',
+        system: 'النظام'
+    },
+
+    async loadSettings(force) {
+        const now = Date.now();
+        if (!force && this._settings && (now - this._cacheAt) < 60000) {
+            return this._settings;
+        }
+        if (this._loadingPromise && !force) return this._loadingPromise;
+        this._loadingPromise = (async () => {
+            try {
+                if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendToAppsScript) {
+                    this._settings = this._fallbackSettings();
+                    this._cacheAt = Date.now();
+                    return this._settings;
+                }
+                const result = await GoogleIntegration.sendToAppsScript('getEmailSettings', {});
+                if (result && result.success && result.data) {
+                    this._settings = result.data;
+                } else {
+                    this._settings = this._fallbackSettings();
+                }
+            } catch (e) {
+                console.warn('EmailDispatch.loadSettings', e);
+                this._settings = this._fallbackSettings();
+            }
+            this._cacheAt = Date.now();
+            return this._settings;
+        })();
+        try {
+            return await this._loadingPromise;
+        } finally {
+            this._loadingPromise = null;
+        }
+    },
+
+    _fallbackSettings() {
+        return {
+            globalEnabled: false,
+            defaultRecipients: Array.isArray(AppState?.notificationEmails) ? AppState.notificationEmails.slice() : [],
+            modules: {}
+        };
+    },
+
+    getCachedSettings() {
+        return this._settings;
+    },
+
+    invalidateCache() {
+        this._settings = null;
+        this._cacheAt = 0;
+    },
+
+    canManualSend(moduleKey) {
+        const cfg = this._settings;
+        if (!cfg || !cfg.globalEnabled) return false;
+        const mod = cfg.modules && cfg.modules[moduleKey];
+        return !!(mod && mod.enabled && mod.manualSend);
+    },
+
+    async ensureCanManualSend(moduleKey) {
+        await this.loadSettings();
+        return this.canManualSend(moduleKey);
+    },
+
+    getDefaultRecipients(moduleKey) {
+        const cfg = this._settings || this._fallbackSettings();
+        const mod = cfg.modules && cfg.modules[moduleKey];
+        if (mod && Array.isArray(mod.recipients) && mod.recipients.length) {
+            return mod.recipients.slice();
+        }
+        if (Array.isArray(cfg.defaultRecipients) && cfg.defaultRecipients.length) {
+            return cfg.defaultRecipients.slice();
+        }
+        return Array.isArray(AppState?.notificationEmails) ? AppState.notificationEmails.slice() : [];
+    },
+
+    getModuleLabel(moduleKey) {
+        const mod = this._settings?.modules?.[moduleKey];
+        return (mod && mod.labelAr) || moduleKey;
+    },
+
+    /**
+     * زر للـ footer — فارغ إن النوع غير مفعّل (بعد تحميل الإعدادات).
+     * الاستخدام: ${EmailDispatch.renderFooterButtonHtml('violations')}
+     * ثم EmailDispatch.bindFooterButtons(modal, { moduleKey, record, fields })
+     */
+    renderFooterButtonHtml(moduleKey, opts) {
+        const options = opts || {};
+        const btnId = options.btnId || ('email-dispatch-btn-' + String(moduleKey).replace(/[^a-z0-9._-]/gi, '_'));
+        // يظهر دائماً كحاوية؛ يُخفى عبر JS إن لم يُسمح
+        return `<button type="button" id="${btnId}" data-email-module="${String(moduleKey).replace(/"/g, '')}" class="btn-primary email-dispatch-send-btn" style="display:none; background: linear-gradient(135deg, #0369a1, #0284c7); padding: 10px 18px; border-radius: 10px;">
+            <i class="fas fa-envelope ml-2"></i>إرسال بريد
+        </button>`;
+    },
+
+    /**
+     * إظهار الزر وربطه بعد إدراج المودال في DOM.
+     */
+    async bindFooterButtons(rootEl, context) {
+        if (!rootEl || !context || !context.moduleKey) return;
+        const allowed = await this.ensureCanManualSend(context.moduleKey);
+        const btns = rootEl.querySelectorAll('.email-dispatch-send-btn[data-email-module="' + context.moduleKey + '"], .email-dispatch-send-btn');
+        btns.forEach((btn) => {
+            const key = btn.getAttribute('data-email-module') || context.moduleKey;
+            if (key !== context.moduleKey) return;
+            if (!allowed) {
+                btn.style.display = 'none';
+                return;
+            }
+            btn.style.display = '';
+            if (btn._emailDispatchBound) return;
+            btn._emailDispatchBound = true;
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.openSendModal({
+                    moduleKey: context.moduleKey,
+                    recordId: context.recordId || (context.record && (context.record.id || context.record.isoCode)) || '',
+                    title: context.title || this.getModuleLabel(context.moduleKey),
+                    subject: context.subject || '',
+                    fields: typeof context.buildFields === 'function'
+                        ? context.buildFields(context.record)
+                        : (context.fields || this.fieldsFromRecord(context.moduleKey, context.record || {}))
+                });
+            });
+        });
+    },
+
+    /**
+     * خريطة حقول عامة آمنة — تتجاهل الداخلي.
+     */
+    fieldsFromRecord(moduleKey, record) {
+        const r = record || {};
+        const skip = /^(password|token|csrf|hash|_)/i;
+        const labels = this._labelMap(moduleKey);
+        const fields = [];
+        const preferred = labels._order || Object.keys(labels).filter((k) => k !== '_order');
+        preferred.forEach((key) => {
+            if (skip.test(key)) return;
+            let val = r[key];
+            if (val == null || val === '') return;
+            if (typeof val === 'object') {
+                try { val = JSON.stringify(val); } catch (_e) { return; }
+            }
+            fields.push({ label: labels[key] || key, value: String(val) });
+        });
+        if (!fields.length) {
+            Object.keys(r).slice(0, 25).forEach((key) => {
+                if (skip.test(key)) return;
+                let val = r[key];
+                if (val == null || val === '' || typeof val === 'object') return;
+                fields.push({ label: key, value: String(val) });
+            });
+        }
+        return fields;
+    },
+
+    _labelMap(moduleKey) {
+        const maps = {
+            violations: {
+                _order: ['id', 'employeeName', 'employeeId', 'violationType', 'severity', 'status', 'location', 'violationDetails', 'actionTaken', 'date'],
+                id: 'الرقم', employeeName: 'الموظف', employeeId: 'الرقم الوظيفي', violationType: 'نوع المخالفة',
+                severity: 'الشدة', status: 'الحالة', location: 'الموقع', violationDetails: 'التفاصيل', actionTaken: 'الإجراء', date: 'التاريخ'
+            },
+            'violations.blacklist': {
+                _order: ['id', 'name', 'nationalId', 'reason', 'status', 'date'],
+                id: 'الرقم', name: 'الاسم', nationalId: 'الهوية', reason: 'السبب', status: 'الحالة', date: 'التاريخ'
+            },
+            'daily-observations': {
+                _order: ['isoCode', 'id', 'details', 'responsibleDepartment', 'workflowStage', 'observationType', 'location', 'date'],
+                isoCode: 'رمز الملاحظة', id: 'المعرّف', details: 'التفاصيل', responsibleDepartment: 'الإدارة المسؤولة',
+                workflowStage: 'المرحلة', observationType: 'النوع', location: 'الموقع', date: 'التاريخ'
+            },
+            incidents: {
+                _order: ['id', 'title', 'type', 'severity', 'status', 'location', 'description', 'date', 'injuredCount'],
+                id: 'الرقم', title: 'العنوان', type: 'النوع', severity: 'الشدة', status: 'الحالة',
+                location: 'الموقع', description: 'الوصف', date: 'التاريخ', injuredCount: 'عدد المصابين'
+            },
+            nearmiss: {
+                _order: ['id', 'title', 'location', 'description', 'status', 'date'],
+                id: 'الرقم', title: 'العنوان', location: 'الموقع', description: 'الوصف', status: 'الحالة', date: 'التاريخ'
+            },
+            'behavior-monitoring': {
+                _order: ['id', 'employeeName', 'behaviorType', 'location', 'details', 'date'],
+                id: 'الرقم', employeeName: 'الموظف', behaviorType: 'نوع التصرف', location: 'الموقع', details: 'التفاصيل', date: 'التاريخ'
+            },
+            'clinic.injury': {
+                _order: ['id', 'patientName', 'injuryType', 'bodyPart', 'severity', 'treatment', 'date'],
+                id: 'الرقم', patientName: 'المصاب', injuryType: 'نوع الإصابة', bodyPart: 'موضع الإصابة',
+                severity: 'الشدة', treatment: 'العلاج', date: 'التاريخ'
+            },
+            'clinic.visit': {
+                _order: ['id', 'patientName', 'visitType', 'diagnosis', 'notes', 'date'],
+                id: 'الرقم', patientName: 'المراجع', visitType: 'نوع الزيارة', diagnosis: 'التشخيص', notes: 'ملاحظات', date: 'التاريخ'
+            },
+            'clinic.sickLeave': {
+                _order: ['id', 'employeeName', 'days', 'reason', 'fromDate', 'toDate'],
+                id: 'الرقم', employeeName: 'الموظف', days: 'الأيام', reason: 'السبب', fromDate: 'من', toDate: 'إلى'
+            },
+            ptw: {
+                _order: ['id', 'permitId', 'workType', 'location', 'status', 'startDate', 'endDate'],
+                id: 'الرقم', permitId: 'رقم التصريح', workType: 'نوع العمل', location: 'الموقع', status: 'الحالة', startDate: 'البداية', endDate: 'النهاية'
+            },
+            employees: {
+                _order: ['id', 'name', 'employeeId', 'department', 'position', 'email', 'phone'],
+                id: 'الرقم', name: 'الاسم', employeeId: 'الرقم الوظيفي', department: 'الإدارة', position: 'المسمى', email: 'البريد', phone: 'الهاتف'
+            },
+            training: {
+                _order: ['id', 'title', 'trainer', 'date', 'status', 'location'],
+                id: 'الرقم', title: 'العنوان', trainer: 'المدرب', date: 'التاريخ', status: 'الحالة', location: 'الموقع'
+            },
+            'action-tracking': {
+                _order: ['id', 'title', 'status', 'assignee', 'dueDate', 'description'],
+                id: 'الرقم', title: 'العنوان', status: 'الحالة', assignee: 'المسؤول', dueDate: 'الاستحقاق', description: 'الوصف'
+            },
+            'chemical-safety': {
+                _order: ['id', 'name', 'casNumber', 'location', 'hazardClass', 'status'],
+                id: 'الرقم', name: 'المادة', casNumber: 'CAS', location: 'الموقع', hazardClass: 'التصنيف', status: 'الحالة'
+            },
+            ppe: {
+                _order: ['id', 'itemName', 'employeeName', 'quantity', 'status', 'date'],
+                id: 'الرقم', itemName: 'المعدة', employeeName: 'الموظف', quantity: 'الكمية', status: 'الحالة', date: 'التاريخ'
+            },
+            'legal-documents': {
+                _order: ['id', 'title', 'documentType', 'status', 'expiryDate'],
+                id: 'الرقم', title: 'العنوان', documentType: 'النوع', status: 'الحالة', expiryDate: 'الانتهاء'
+            },
+            'sop-jha': {
+                _order: ['id', 'title', 'type', 'status', 'department'],
+                id: 'الرقم', title: 'العنوان', type: 'النوع', status: 'الحالة', department: 'الإدارة'
+            },
+            'change-management': {
+                _order: ['id', 'title', 'status', 'requester', 'description'],
+                id: 'الرقم', title: 'العنوان', status: 'الحالة', requester: 'مقدّم الطلب', description: 'الوصف'
+            },
+            'periodic-inspections': {
+                _order: ['id', 'title', 'location', 'status', 'date', 'result'],
+                id: 'الرقم', title: 'العنوان', location: 'الموقع', status: 'الحالة', date: 'التاريخ', result: 'النتيجة'
+            },
+            emergency: {
+                _order: ['id', 'title', 'type', 'status', 'location', 'description'],
+                id: 'الرقم', title: 'العنوان', type: 'النوع', status: 'الحالة', location: 'الموقع', description: 'الوصف'
+            },
+            'risk-assessment': {
+                _order: ['id', 'title', 'riskLevel', 'status', 'location'],
+                id: 'الرقم', title: 'العنوان', riskLevel: 'مستوى الخطر', status: 'الحالة', location: 'الموقع'
+            },
+            iso: {
+                _order: ['id', 'title', 'type', 'status', 'code'],
+                id: 'الرقم', title: 'العنوان', type: 'النوع', status: 'الحالة', code: 'الرمز'
+            },
+            contractors: {
+                _order: ['id', 'name', 'company', 'status', 'trade'],
+                id: 'الرقم', name: 'الاسم', company: 'الشركة', status: 'الحالة', trade: 'النشاط'
+            },
+            'fire-equipment': {
+                _order: ['id', 'assetName', 'type', 'location', 'status'],
+                id: 'الرقم', assetName: 'الأصل', type: 'النوع', location: 'الموقع', status: 'الحالة'
+            },
+            'user-tasks': {
+                _order: ['id', 'title', 'status', 'assignee', 'dueDate'],
+                id: 'الرقم', title: 'العنوان', status: 'الحالة', assignee: 'المسؤول', dueDate: 'الاستحقاق'
+            },
+            'issue-tracking': {
+                _order: ['id', 'title', 'status', 'priority', 'description'],
+                id: 'الرقم', title: 'العنوان', status: 'الحالة', priority: 'الأولوية', description: 'الوصف'
+            },
+            'safety-calendar': {
+                _order: ['id', 'title', 'start', 'end', 'location'],
+                id: 'الرقم', title: 'العنوان', start: 'البداية', end: 'النهاية', location: 'الموقع'
+            },
+            'safety-budget': {
+                _order: ['id', 'title', 'amount', 'status', 'category'],
+                id: 'الرقم', title: 'العنوان', amount: 'المبلغ', status: 'الحالة', category: 'التصنيف'
+            },
+            sustainability: {
+                _order: ['id', 'title', 'type', 'quantity', 'date'],
+                id: 'الرقم', title: 'العنوان', type: 'النوع', quantity: 'الكمية', date: 'التاريخ'
+            }
+        };
+        return maps[moduleKey] || { _order: ['id', 'title', 'name', 'status', 'date', 'description', 'details'] };
+    },
+
+    openSendModal(opts) {
+        const options = opts || {};
+        const moduleKey = options.moduleKey;
+        if (!moduleKey) return;
+        if (!this.canManualSend(moduleKey)) {
+            if (typeof Notification !== 'undefined') {
+                Notification.warning('الإرسال اليدوي غير مفعّل لهذا النوع. راجع إعدادات البريد.');
+            }
+            return;
+        }
+        const existing = document.getElementById('email-dispatch-modal');
+        if (existing) existing.remove();
+
+        const recipients = this.getDefaultRecipients(moduleKey);
+        const label = this.getModuleLabel(moduleKey);
+        const title = options.title || label;
+        const fields = options.fields || [];
+        const subjectDefault = options.subject || (title + (options.recordId ? ' — ' + options.recordId : ''));
+
+        const fieldsPreview = fields.map((f) =>
+            `<tr><td style="padding:6px 8px;border:1px solid #e5e7eb;background:#f8fafc;font-weight:600;">${this._esc(f.label)}</td>` +
+            `<td style="padding:6px 8px;border:1px solid #e5e7eb;white-space:pre-wrap;">${this._esc(f.value)}</td></tr>`
+        ).join('');
+
+        const modal = document.createElement('div');
+        modal.id = 'email-dispatch-modal';
+        modal.className = 'modal-overlay';
+        modal.style.zIndex = '10050';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width:640px; width:95%;">
+                <div class="modal-header" style="background:linear-gradient(135deg,#0c4a6e,#0369a1); color:#fff;">
+                    <h3 class="modal-title" style="color:#fff;"><i class="fas fa-envelope ml-2"></i>إرسال بريد — ${this._esc(label)}</h3>
+                    <button type="button" class="modal-close" style="color:#fff;" data-close="1">&times;</button>
+                </div>
+                <div class="modal-body space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">الموضوع</label>
+                        <input type="text" id="email-dispatch-subject" class="form-input w-full" value="${this._escAttr(subjectDefault)}">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">المستلمون (افصل بفاصلة)</label>
+                        <textarea id="email-dispatch-to" class="form-input w-full" rows="2">${this._esc(recipients.join(', '))}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">معاينة المحتوى</label>
+                        <div style="max-height:220px; overflow:auto; border:1px solid #e5e7eb; border-radius:8px; padding:8px;">
+                            <table style="width:100%; border-collapse:collapse; font-size:13px;">${fieldsPreview || '<tr><td class="text-gray-500 p-2">لا حقول للعرض</td></tr>'}</table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
+                    <button type="button" class="btn-secondary" data-close="1">إلغاء</button>
+                    <button type="button" class="btn-primary" id="email-dispatch-confirm" style="background:linear-gradient(135deg,#0369a1,#0284c7);">
+                        <i class="fas fa-paper-plane ml-2"></i>إرسال الآن
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.querySelectorAll('[data-close]').forEach((el) => {
+            el.addEventListener('click', () => modal.remove());
+        });
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+        const confirmBtn = modal.querySelector('#email-dispatch-confirm');
+        confirmBtn.addEventListener('click', async () => {
+            const subject = modal.querySelector('#email-dispatch-subject')?.value?.trim() || subjectDefault;
+            const toRaw = modal.querySelector('#email-dispatch-to')?.value || '';
+            const to = toRaw.split(/[,;\s]+/).map((s) => s.trim().toLowerCase()).filter((s) => s.includes('@'));
+            if (!to.length) {
+                Notification.error('أدخل مستلماً واحداً على الأقل');
+                return;
+            }
+            confirmBtn.disabled = true;
+            const prev = confirmBtn.innerHTML;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i>جاري الإرسال...';
+            try {
+                const userData = AppState.currentUser || {};
+                const result = await GoogleIntegration.sendToAppsScript('sendDirectEmail', {
+                    moduleKey,
+                    recordId: options.recordId || '',
+                    subject,
+                    title,
+                    to,
+                    fields,
+                    userData
+                });
+                if (result && result.success) {
+                    Notification.success(result.message || 'تم الإرسال');
+                    modal.remove();
+                } else {
+                    Notification.error((result && result.message) || 'فشل الإرسال');
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = prev;
+                }
+            } catch (err) {
+                console.error(err);
+                Notification.error('خطأ في الإرسال: ' + (err.message || err));
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = prev;
+            }
+        });
+    },
+
+    _esc(v) {
+        if (typeof Utils !== 'undefined' && Utils.escapeHTML) return Utils.escapeHTML(String(v == null ? '' : v));
+        return String(v == null ? '' : v)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    },
+
+    _escAttr(v) {
+        return this._esc(v).replace(/'/g, '&#39;');
+    }
+};
+
+if (typeof window !== 'undefined') {
+    window.EmailDispatch = EmailDispatch;
+}

@@ -663,11 +663,19 @@ const PeriodicEquipment = {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-secondary" data-close>إغلاق</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('periodic-equipment') : ''}
                     <button type="button" class="btn-primary" id="pe-detail-inspect"><i class="fas fa-clipboard-check ml-1"></i>فحص الآن</button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, {
+                moduleKey: 'periodic-equipment',
+                record: asset,
+                recordId: asset.id || asset.assetNumber || ''
+            });
+        }
         const close = () => modal.remove();
         modal.querySelector('.modal-close')?.addEventListener('click', close);
         modal.querySelector('[data-close]')?.addEventListener('click', close);

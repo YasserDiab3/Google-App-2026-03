@@ -5706,6 +5706,7 @@ const Employees = {
                 </div>
                 <div class="modal-footer">
                     <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${this.t('module.common.close', 'إغلاق')}</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('employees') : ''}
                     <button class="btn-secondary" onclick="Employees.printEmployee('${employee.id}')">
                         <i class="fas fa-print ml-2"></i>${this.t('module.common.print', 'طباعة')}
                     </button>
@@ -5719,6 +5720,9 @@ const Employees = {
         `;
         this.applyModuleI18n(modal);
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'employees', record: employee, recordId: employee.id || employee.employeeNumber || employee.isoCode || '' });
+        }
         if (typeof Utils.hydrateDriveProxyImages === 'function') {
             Utils.hydrateDriveProxyImages(modal, {
                 onFetchFail: (img) => {

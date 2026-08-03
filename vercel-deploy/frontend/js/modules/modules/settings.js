@@ -1256,54 +1256,59 @@ const Settings = {
 
             <!-- Tab Content: إدارة الإشعارات الإلكترونية -->
             <div class="tab-content" id="tab-notifications">
+                ${isAdmin ? `
                 <div class="settings-group mt-6">
                     <div class="settings-group-header">
                         <h2 class="settings-group-title">
-                            <i class="fas fa-envelope text-red-600 ml-2"></i>
-                            إدارة الإشعارات الإلكترونية
+                            <i class="fas fa-envelope text-sky-700 ml-2"></i>
+                            إعدادات البريد والإرسال المباشر
                         </h2>
-                        <p class="settings-group-subtitle">إدارة قائمة الإيميلات للإشعارات</p>
+                        <p class="settings-group-subtitle">تفعيل البريد وتحديد المستلمين وأنواع المحتوى التي يُسمح بإرسالها من شاشات التفاصيل</p>
                     </div>
-                    <div class="settings-group-content">
+                    <div class="settings-group-content space-y-4">
                         <div class="content-card">
-                            <div class="card-header">
-                                <h2 class="card-title"><i class="fas fa-envelope ml-2"></i>إدارة الإشعارات الإلكترونية</h2>
-                            </div>
                             <div class="card-body space-y-4">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="email-settings-global-enabled" class="rounded border-gray-300 text-sky-600">
+                                    <span class="text-sm font-semibold text-gray-800">تفعيل نظام البريد في التطبيق</span>
+                                </label>
+                                <p class="text-xs text-gray-500">عند الإيقاف: لا يظهر زر الإرسال اليدوي ولا يعمل الإرسال التلقائي المضبوط هنا. مسارات البريد القديمة تبقى حتى أول حفظ.</p>
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                        <i class="fas fa-envelope-open-text ml-2"></i>
-                                        قائمة الإيميلات للإشعارات
-                                    </label>
-                                    <p class="text-xs text-gray-500 mb-2">
-                                        <i class="fas fa-info-circle ml-1"></i>
-                                        سيتم إرسال الإشعارات إلى جميع الإيميلات المسجلة عند تسجيل ملاحظة أو تنبيه
-                                    </p>
-                                    <div id="notification-emails-list" class="space-y-2 mb-3">
-                                        ${(AppState.notificationEmails || []).map((email, index) => `
-                                            <div class="flex items-center gap-2 p-2 border rounded bg-gray-50">
-                                                <span class="flex-1">${Utils.escapeHTML(email)}</span>
-                                                <button type="button" onclick="Settings.removeNotificationEmail(${index})" class="text-red-600 hover:text-red-800">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <input type="email" id="notification-email-input" class="form-input flex-1" 
-                                            placeholder="أدخل الإيميل للإشعارات">
-                                        <button type="button" id="add-notification-email-btn" class="btn-primary">
-                                            <i class="fas fa-plus ml-2"></i>إضافة إيميل
+                                    <label class="block text-sm font-semibold text-gray-700 mb-1">المستلمون الافتراضيون (فاصلة بين الإيميلات)</label>
+                                    <textarea id="email-settings-default-recipients" class="form-input w-full" rows="2" placeholder="admin@company.com, hse@company.com"></textarea>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" id="email-settings-save-btn" class="btn-primary">
+                                        <i class="fas fa-save ml-2"></i>حفظ إعدادات البريد
+                                    </button>
+                                    <button type="button" id="email-settings-reload-btn" class="btn-secondary">
+                                        <i class="fas fa-sync ml-2"></i>إعادة تحميل
+                                    </button>
+                                    <div class="flex gap-2 items-center flex-1 min-w-[220px]">
+                                        <input type="email" id="email-settings-test-to" class="form-input flex-1" placeholder="إيميل للاختبار">
+                                        <button type="button" id="email-settings-test-btn" class="btn-secondary">
+                                            <i class="fas fa-paper-plane ml-2"></i>تجريبي
                                         </button>
                                     </div>
-                                    <button type="button" id="save-notification-emails-btn" class="btn-primary mt-2">
-                                        <i class="fas fa-save ml-2"></i>حفظ قائمة الإيميلات
-                                    </button>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="content-card">
+                            <div class="card-header flex flex-wrap items-center justify-between gap-2">
+                                <h2 class="card-title"><i class="fas fa-list-check ml-2"></i>أنواع المحتوى</h2>
+                                <input type="search" id="email-settings-module-filter" class="form-input" style="max-width:240px;" placeholder="بحث في الأنواع...">
+                            </div>
+                            <div class="card-body">
+                                <div id="email-settings-modules-list" class="space-y-3 max-h-[520px] overflow-y-auto"></div>
                             </div>
                         </div>
                     </div>
                 </div>
+                ` : `
+                <div class="settings-group mt-6">
+                    <p class="text-gray-600">إعدادات البريد متاحة لمدير النظام فقط.</p>
+                </div>
+                `}
             </div>
 
             <!-- Tab Content: محتوى المساعدة و Q&A -->
@@ -3015,70 +3020,172 @@ const Settings = {
                 Permissions.bindFormSettingsEvents();
             }
 
-            // إضافة إيميل للإشعارات
-            const addEmailBtn = document.getElementById('add-notification-email-btn');
-            const emailInput = document.getElementById('notification-email-input');
-            if (addEmailBtn && emailInput) {
-                addEmailBtn.addEventListener('click', () => {
-                    const email = emailInput.value.trim().toLowerCase();
-                    if (!email || !Utils.isValidEmail(email)) {
-                        Notification.error('يرجى إدخال إيميل صحيح');
-                        return;
-                    }
-
-                    if (!AppState.notificationEmails) {
-                        AppState.notificationEmails = [];
-                    }
-
-                    if (AppState.notificationEmails.includes(email)) {
-                        Notification.warning('الإيميل مسجل مسبقاً');
-                        return;
-                    }
-
-                    AppState.notificationEmails.push(email);
-                    emailInput.value = '';
-                    // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-
-                    const list = document.getElementById('notification-emails-list');
-                    if (list) {
-                        const emailDiv = document.createElement('div');
-                        emailDiv.className = 'flex items-center gap-2 p-2 border rounded bg-gray-50';
-                        emailDiv.innerHTML = `
-                            <span class="flex-1">${Utils.escapeHTML(email)}</span>
-                            <button type="button" onclick="Settings.removeNotificationEmail(${AppState.notificationEmails.length - 1})" class="text-red-600 hover:text-red-800">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        `;
-                        list.appendChild(emailDiv);
-                    }
-
-                    Notification.success('تم إضافة الإيميل بنجاح');
-                });
-            }
-
-            // حفظ قائمة الإيميلات
-            const saveEmailsBtn = document.getElementById('save-notification-emails-btn');
-            if (saveEmailsBtn) {
-                saveEmailsBtn.addEventListener('click', () => {
-                    // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-                    Notification.success('تم حفظ قائمة الإيميلات بنجاح');
-                });
+            // إعدادات البريد (مدير النظام)
+            if (this.isCurrentUserAdmin()) {
+                this.bindEmailSettingsEvents();
+                this.loadEmailSettingsUI();
             }
 
             this.bindViolationTypesEvents();
             this.initializeApprovalCircuitsUI();
             this.bindCloudStorageSettingsEvents();
         }, 100);
+    },
+
+    async loadEmailSettingsUI() {
+        const listEl = document.getElementById('email-settings-modules-list');
+        if (!listEl) return;
+        listEl.innerHTML = '<p class="text-sm text-gray-500"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل إعدادات البريد...</p>';
+        try {
+            let data = null;
+            if (typeof EmailDispatch !== 'undefined') {
+                data = await EmailDispatch.loadSettings(true);
+            } else if (typeof GoogleIntegration !== 'undefined') {
+                const res = await GoogleIntegration.sendToAppsScript('getEmailSettings', {});
+                data = res && res.data ? res.data : null;
+            }
+            this._emailSettingsDraft = data || { globalEnabled: false, defaultRecipients: [], modules: {} };
+            const globalEl = document.getElementById('email-settings-global-enabled');
+            const recipientsEl = document.getElementById('email-settings-default-recipients');
+            if (globalEl) globalEl.checked = !!this._emailSettingsDraft.globalEnabled;
+            if (recipientsEl) recipientsEl.value = (this._emailSettingsDraft.defaultRecipients || []).join(', ');
+            this.renderEmailModulesList(document.getElementById('email-settings-module-filter')?.value || '');
+        } catch (e) {
+            console.error(e);
+            listEl.innerHTML = '<p class="text-sm text-red-600">تعذّر تحميل إعدادات البريد</p>';
+        }
+    },
+
+    renderEmailModulesList(filterText) {
+        const listEl = document.getElementById('email-settings-modules-list');
+        if (!listEl || !this._emailSettingsDraft) return;
+        const q = String(filterText || '').trim().toLowerCase();
+        const modules = this._emailSettingsDraft.modules || {};
+        const groupLabels = (typeof EmailDispatch !== 'undefined' && EmailDispatch.GROUP_LABELS)
+            ? EmailDispatch.GROUP_LABELS
+            : { ops: 'التشغيل والسلامة', clinic: 'العيادة', reports: 'التقارير', system: 'النظام' };
+        const keys = Object.keys(modules).sort((a, b) => {
+            const ga = modules[a].group || 'ops';
+            const gb = modules[b].group || 'ops';
+            if (ga !== gb) return ga.localeCompare(gb);
+            return String(modules[a].labelAr || a).localeCompare(String(modules[b].labelAr || b), 'ar');
+        });
+        let html = '';
+        let lastGroup = '';
+        keys.forEach((key) => {
+            const m = modules[key];
+            const label = m.labelAr || key;
+            if (q && !label.toLowerCase().includes(q) && !key.toLowerCase().includes(q)) return;
+            if (m.group !== lastGroup) {
+                lastGroup = m.group;
+                html += `<div class="text-xs font-bold text-sky-800 mt-2 mb-1 border-b pb-1">${Utils.escapeHTML(groupLabels[m.group] || m.group || '')}</div>`;
+            }
+            const rec = (m.recipients || []).join(', ');
+            html += `
+                <div class="border rounded-lg p-3 bg-gray-50 email-module-row" data-module-key="${Utils.escapeHTML(key)}">
+                    <div class="flex flex-wrap items-center gap-3 mb-2">
+                        <span class="font-semibold text-sm text-gray-800 flex-1 min-w-[140px]">${Utils.escapeHTML(label)}</span>
+                        <label class="text-xs flex items-center gap-1"><input type="checkbox" class="em-enabled" ${m.enabled ? 'checked' : ''}> تفعيل</label>
+                        <label class="text-xs flex items-center gap-1"><input type="checkbox" class="em-manual" ${m.manualSend ? 'checked' : ''}> يدوي</label>
+                        <label class="text-xs flex items-center gap-1"><input type="checkbox" class="em-auto" ${m.autoSend ? 'checked' : ''}> تلقائي</label>
+                    </div>
+                    <input type="text" class="form-input w-full text-sm em-recipients" placeholder="مستلمون خاصون (اختياري)" value="${Utils.escapeHTML(rec)}">
+                    <p class="text-[11px] text-gray-400 mt-1">${Utils.escapeHTML(key)}</p>
+                </div>`;
+        });
+        listEl.innerHTML = html || '<p class="text-sm text-gray-500">لا نتائج</p>';
+    },
+
+    collectEmailSettingsFromUI() {
+        const draft = this._emailSettingsDraft || { modules: {} };
+        draft.globalEnabled = !!document.getElementById('email-settings-global-enabled')?.checked;
+        const rawRec = document.getElementById('email-settings-default-recipients')?.value || '';
+        draft.defaultRecipients = rawRec.split(/[,;\s]+/).map((s) => s.trim().toLowerCase()).filter((s) => s.includes('@'));
+        document.querySelectorAll('#email-settings-modules-list .email-module-row').forEach((row) => {
+            const key = row.getAttribute('data-module-key');
+            if (!key || !draft.modules[key]) return;
+            draft.modules[key].enabled = !!row.querySelector('.em-enabled')?.checked;
+            draft.modules[key].manualSend = !!row.querySelector('.em-manual')?.checked;
+            draft.modules[key].autoSend = !!row.querySelector('.em-auto')?.checked;
+            const rec = row.querySelector('.em-recipients')?.value || '';
+            draft.modules[key].recipients = rec.split(/[,;\s]+/).map((s) => s.trim().toLowerCase()).filter((s) => s.includes('@'));
+        });
+        this._emailSettingsDraft = draft;
+        return draft;
+    },
+
+    bindEmailSettingsEvents() {
+        const saveBtn = document.getElementById('email-settings-save-btn');
+        if (!saveBtn || saveBtn.dataset.emailBound === '1') return;
+        saveBtn.dataset.emailBound = '1';
+        const filter = document.getElementById('email-settings-module-filter');
+        if (filter) {
+            filter.addEventListener('input', () => {
+                this.collectEmailSettingsFromUI();
+                this.renderEmailModulesList(filter.value);
+            });
+        }
+        if (saveBtn) {
+            saveBtn.addEventListener('click', async () => {
+                const settings = this.collectEmailSettingsFromUI();
+                saveBtn.disabled = true;
+                try {
+                    const userData = AppState.currentUser || {};
+                    const result = await GoogleIntegration.sendToAppsScript('saveEmailSettings', {
+                        settings,
+                        userData
+                    });
+                    if (result && result.success) {
+                        AppState.notificationEmails = (settings.defaultRecipients || []).slice();
+                        if (typeof EmailDispatch !== 'undefined') {
+                            EmailDispatch.invalidateCache();
+                            EmailDispatch._settings = result.data || settings;
+                        }
+                        Notification.success(result.message || 'تم حفظ إعدادات البريد');
+                    } else {
+                        Notification.error((result && result.message) || 'فشل الحفظ');
+                    }
+                } catch (e) {
+                    Notification.error('خطأ: ' + (e.message || e));
+                } finally {
+                    saveBtn.disabled = false;
+                }
+            });
+        }
+        const reloadBtn = document.getElementById('email-settings-reload-btn');
+        if (reloadBtn) {
+            reloadBtn.addEventListener('click', () => this.loadEmailSettingsUI());
+        }
+        const testBtn = document.getElementById('email-settings-test-btn');
+        if (testBtn) {
+            testBtn.addEventListener('click', async () => {
+                const to = document.getElementById('email-settings-test-to')?.value?.trim();
+                if (!to || !to.includes('@')) {
+                    Notification.error('أدخل إيميل صحيح للاختبار');
+                    return;
+                }
+                testBtn.disabled = true;
+                try {
+                    const result = await GoogleIntegration.sendToAppsScript('sendTestEmail', {
+                        to,
+                        userData: AppState.currentUser || {}
+                    });
+                    if (result && result.success) Notification.success(result.message || 'تم الإرسال التجريبي');
+                    else Notification.error((result && result.message) || 'فشل التجريبي');
+                } catch (e) {
+                    Notification.error(String(e.message || e));
+                } finally {
+                    testBtn.disabled = false;
+                }
+            });
+        }
+    },
+
+    // إبقاء الدالة للتوافق إن وُجدت استدعاءات قديمة
+    removeNotificationEmail(index) {
+        if (AppState.notificationEmails && AppState.notificationEmails[index] != null) {
+            AppState.notificationEmails.splice(index, 1);
+        }
     },
 
     bindCloudStorageSettingsEvents() {
@@ -4644,19 +4751,6 @@ const Settings = {
         }
     },
 
-    removeNotificationEmail(index) {
-        if (AppState.notificationEmails && AppState.notificationEmails[index]) {
-            AppState.notificationEmails.splice(index, 1);
-            // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-            this.load(); // إعادة تحميل الإعدادات لعرض القائمة المحدثة
-        }
-    },
-
     setupSettingsListeners() {
         setTimeout(() => {
             // حفظ إعدادات التاريخ      
@@ -4675,57 +4769,7 @@ const Settings = {
                 });
             }
 
-            // إضافة إيميل للإشعارات
-            const addEmailBtn = document.getElementById('add-notification-email-btn');
-            const emailInput = document.getElementById('notification-email-input');
-            if (addEmailBtn && emailInput) {
-                addEmailBtn.addEventListener('click', () => {
-                    const email = emailInput.value.trim().toLowerCase();
-                    if (!email || !Utils.isValidEmail(email)) {
-                        Notification.error('يرجى إدخال إيميل صحيح');
-                        return;
-                    }
-
-                    if (!AppState.notificationEmails) {
-                        AppState.notificationEmails = [];
-                    }
-
-                    if (AppState.notificationEmails.includes(email)) {
-                        Notification.warning('الإيميل مسجل مسبقاً');
-                        return;
-                    }
-
-                    AppState.notificationEmails.push(email);
-                    emailInput.value = '';
-
-                    const list = document.getElementById('notification-emails-list');
-                    if (list) {
-                        const emailDiv = document.createElement('div');
-                        emailDiv.className = 'flex items-center gap-2 p-2 border rounded bg-gray-50';
-                        emailDiv.innerHTML = `
-                            <span class="flex-1">${Utils.escapeHTML(email)}</span>
-                            <button type="button" onclick="Settings.removeNotificationEmail(${AppState.notificationEmails.length - 1})" class="text-red-600 hover:text-red-800">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        `;
-                        list.appendChild(emailDiv);
-                    }
-                });
-            }
-
-            // حفظ قائمة الإيميلات
-            const saveEmailsBtn = document.getElementById('save-notification-emails-btn');
-            if (saveEmailsBtn) {
-                saveEmailsBtn.addEventListener('click', () => {
-                    // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-                    Notification.success('تم حفظ قائمة الإيميلات بنجاح');
-                });
-            }
+            // إعدادات البريد تُربط عبر bindEmailSettingsEvents في bindEvents
 
             // رفع شعار الشركة
             const uploadLogoBtn = document.getElementById('upload-logo-btn');

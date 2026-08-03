@@ -1,15 +1,15 @@
 {
-  "version": "1.0.816",
+  "version": "1.0.818",
   "highlights": {
     "ar": [
-      "إصلاح صفحة بيضاء في تبويبي تحليل البيانات والعمالة الخارجية / المقاولين.",
-      "إغلاق صحيح لهيكل قائمة الموظفين حتى تظهر لوحات التحليل بشكل مستقل.",
-      "تصحيح تحميل تبويب العمالة الخارجية عند فتح الموديول."
+      "إعدادات بريد لمدير النظام: تفعيل وإرسال يدوي/تلقائي لكل أنواع المحتوى.",
+      "زر إرسال بريد من شاشات التفاصيل (مخالفات، ملاحظات، حوادث، عيادة، وغيرها).",
+      "حفظ إعدادات البريد في الخادم مع رسالة تجريبية للتحقق."
     ],
     "en": [
-      "Fix blank page on Data Analysis and External Workforce / Contractors tabs.",
-      "Correct employees list panel markup so analysis panels render independently.",
-      "Fix External Workforce tab loading when opening the module."
+      "Admin email settings: enable manual/auto send per content type.",
+      "Send-email button on detail screens (violations, observations, incidents, clinic, and more).",
+      "Persisted email settings on the server with a test-email check."
     ]
   }
 }

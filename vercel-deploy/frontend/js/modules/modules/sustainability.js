@@ -2599,6 +2599,7 @@ ${innerContent}
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
                         إغلاق
                     </button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('sustainability') : ''}
                     ${this.canEdit() ? `
                     <button type="button" class="btn-primary" onclick="Sustainability.editResourceRecord('${type}', '${recordId}'); this.closest('.modal-overlay').remove();">
                         <i class="fas fa-edit ml-2"></i>
@@ -2609,6 +2610,19 @@ ${innerContent}
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, {
+                moduleKey: 'sustainability',
+                record: {
+                    ...record,
+                    title: `${typeInfo.name} — ${record.serialNumber || recordId}`,
+                    type: typeInfo.name,
+                    quantity: record.totalConsumption != null ? String(record.totalConsumption) + ' ' + (record.unit || '') : '',
+                    date: record.date || record.monthYear || ''
+                },
+                recordId: record.id || recordId || ''
+            });
+        }
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });

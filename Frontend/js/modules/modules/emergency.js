@@ -1375,44 +1375,21 @@ const Emergency = {
     },
 
     async sendAlertEmail(alert) {
-        // الحصول على قائمة الإيميلات من الإعدادات
-        const notificationEmails = AppState.notificationEmails || [];
-        if (notificationEmails.length === 0) {
-            Utils.safeLog('⚠ لا توجد إيميلات للإشعارات في الإعدادات');
-            return;
+        if (typeof EmailDispatch !== 'undefined') {
+            const allowed = await EmailDispatch.ensureCanManualSend('emergency');
+            if (allowed && alert) {
+                EmailDispatch.openSendModal({
+                    moduleKey: 'emergency',
+                    recordId: alert.id || '',
+                    title: alert.title || EmailDispatch.getModuleLabel('emergency'),
+                    subject: alert.title ? `تنبيه طوارئ: ${alert.title}` : '',
+                    fields: EmailDispatch.fieldsFromRecord('emergency', alert)
+                });
+                return;
+            }
         }
-
-        try {
-            // في الإنتاج، يجب استخدام خدمة إرسال إيميلات علية (مثل SendGrid, AWS SES, etc.)
-            // هنا سنعرض قطعة من الكود في Console وإشعار للمستخدم
-            const emailSubject = `تنبيه طوارئ: ${alert.title}`;
-            const emailBody = `
-                <h2>تنبيه طوارئ</h2>
-                <p><strong>العنوان:</strong> ${alert.title}</p>
-                <p><strong>الوصف:</strong> ${alert.description}</p>
-                <p><strong>الخطورة:</strong> ${alert.severity}</p>
-                <p><strong>التاريخ:</strong> ${Utils.formatDate(alert.date)}</p>
-            `;
-
-            Utils.safeLog('📧 إرسال إيميل للتنبيه:', {
-                to: notificationEmails,
-                subject: emailSubject,
-                body: emailBody
-            });
-
-            // في الإنتاج، استخدم خدمة إرسال إيميلات علية هنا
-            // مثال: await EmailService.send({ to: notificationEmails, subject: emailSubject, body: emailBody });
-
-            Notification.success(`تم إرسال التنبيه إلى ${notificationEmails.length} إيميل`, {
-                title: 'إرسال الإيميلات',
-                description: `تم إرسال التنبيه إلى ${notificationEmails.length} عنوان بريد إلكتروني`
-            });
-        } catch (error) {
-            Utils.safeError(' خطأ في إرسال الإيميل:', error);
-            Notification.warning('تم حفظ التنبيه لكن فشل إرسال الإيميل', {
-                title: 'تحذير',
-                description: 'تم حفظ التنبيه بنجاح ولكن حدث خطأ في إرسال الإيميلات'
-            });
+        if (typeof Notification !== 'undefined') {
+            Notification.warning('استخدم زر إرسال البريد من شاشة تفاصيل التنبيه، أو فعّل الإرسال في إعدادات البريد.');
         }
     },
 
@@ -1815,12 +1792,16 @@ const Emergency = {
                         <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
                             <i class="fas fa-times ml-2"></i>إغلاق
                         </button>
+                        ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('emergency') : ''}
                     </div>
                 </div>
             </div>
         `;
         
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'emergency', record: structuredAlert, recordId: structuredAlert.id || '' });
+        }
         
         // إغلاق عند النقر خارج النافذة
         modal.addEventListener('click', (e) => {

@@ -2696,6 +2696,19 @@ const IssuingAuthorities = {
             }
         });
         this._applyModalReadOnly(readOnly);
+        if (readOnly && record && typeof EmailDispatch !== 'undefined') {
+            const footer = document.querySelector('.ia-modal-footer');
+            if (footer && !footer.querySelector('.email-dispatch-send-btn[data-email-module="issuing-authorities"]')) {
+                footer.insertAdjacentHTML('beforeend', EmailDispatch.renderFooterButtonHtml('issuing-authorities'));
+            }
+            EmailDispatch.bindFooterButtons(modal, {
+                moduleKey: 'issuing-authorities',
+                record,
+                recordId: record.id || ''
+            });
+        } else {
+            document.querySelector('.ia-modal-footer .email-dispatch-send-btn[data-email-module="issuing-authorities"]')?.remove();
+        }
     },
 
     _closeModal() {

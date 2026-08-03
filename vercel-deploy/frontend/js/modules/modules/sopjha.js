@@ -552,6 +552,7 @@ const SOPJHA = {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('sop-jha') : ''}
                     <button type="button" onclick="SOPJHA.exportPDF('${item.id}');" class="btn-success">
                         <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
                     </button>
@@ -560,6 +561,9 @@ const SOPJHA = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'sop-jha', record: item, recordId: item.id || item.isoCode || '' });
+        }
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });

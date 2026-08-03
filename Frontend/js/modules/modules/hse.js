@@ -127,6 +127,7 @@ const HSE = {
                             <i class="fas fa-file-pdf ml-2"></i>
                             تصدير PDF
                         </button>
+                        ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('hse') : ''}
                     </div>
                 </div>
             </div>
@@ -780,6 +781,15 @@ const HSE = {
         if (exportPdfBtn) {
             exportPdfBtn.addEventListener('click', () => {
                 Notification.info('ميزة التصدير قيد التطوير');
+            });
+        }
+
+        const exportBar = exportPdfBtn?.parentElement;
+        if (exportBar && typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(exportBar, {
+                moduleKey: 'hse',
+                record: { id: 'hse-dashboard', title: 'لوحة HSE', date: new Date().toISOString().slice(0, 10) },
+                recordId: 'hse-dashboard'
             });
         }
 

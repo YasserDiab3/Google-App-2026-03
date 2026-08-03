@@ -51,6 +51,7 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                             <i class="fas fa-file-pdf ml-2"></i>
                             \u062A\u0635\u062F\u064A\u0631 PDF
                         </button>
+                        ${typeof EmailDispatch<"u"?EmailDispatch.renderFooterButtonHtml("hse"):""}
                     </div>
                 </div>
             </div>
@@ -110,7 +111,7 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                     </div>
                 </div>
             </div>
-        `},async switchTab(e){this.currentTab=e,document.querySelectorAll(".hse-tab-btn").forEach(n=>{n.classList.remove("active"),n.dataset.tab===e&&n.classList.add("active"),n.style.flexShrink||(n.style.setProperty("flex-shrink","0","important"),n.style.setProperty("min-width","fit-content","important"),n.style.setProperty("white-space","nowrap","important"),n.style.setProperty("width","auto","important"),n.style.setProperty("max-width","none","important"))});const t=document.querySelector(".flex.items-center.gap-2.border-b.border-gray-200");t&&!t.style.flexWrap&&(t.style.setProperty("flex-wrap","nowrap","important"),t.style.setProperty("overflow-x","auto","important"),t.style.setProperty("overflow-y","visible","important"));const i=document.getElementById("hse-tab-content");i&&(e==="dashboard"?(i.innerHTML=await this.renderDashboard(),this.loadDashboard()):e==="audits"?(i.innerHTML=await this.renderAudits(),this.loadAudits()):e==="non-conformities"?(i.innerHTML=await this.renderNonConformities(),this.loadNonConformities()):e==="corrective-actions"?(i.innerHTML=await this.renderCorrectiveActions(),this.loadCorrectiveActions()):e==="objectives"?(i.innerHTML=await this.renderObjectives(),this.loadObjectives()):e==="risk-assessments"&&(i.innerHTML=await this.renderRiskAssessments(),this.loadRiskAssessments()))},async renderDashboard(){const e=AppState.appData?.hseAudits||[],s=AppState.appData?.hseNonConformities||[],t=AppState.appData?.hseCorrectiveActions||[],i=AppState.appData?.hseObjectives||[],n=AppState.appData?.hseRiskAssessments||[],r=t.filter(d=>d.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"||d.status==="pending").length,o=t.filter(d=>d.status==="\u0645\u0643\u062A\u0645\u0644"||d.status==="completed").length,a=t.filter(d=>d.dueDate?new Date(d.dueDate)<new Date&&(d.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"||d.status==="pending"):!1).length;return`
+        `},async switchTab(e){this.currentTab=e,document.querySelectorAll(".hse-tab-btn").forEach(n=>{n.classList.remove("active"),n.dataset.tab===e&&n.classList.add("active"),n.style.flexShrink||(n.style.setProperty("flex-shrink","0","important"),n.style.setProperty("min-width","fit-content","important"),n.style.setProperty("white-space","nowrap","important"),n.style.setProperty("width","auto","important"),n.style.setProperty("max-width","none","important"))});const t=document.querySelector(".flex.items-center.gap-2.border-b.border-gray-200");t&&!t.style.flexWrap&&(t.style.setProperty("flex-wrap","nowrap","important"),t.style.setProperty("overflow-x","auto","important"),t.style.setProperty("overflow-y","visible","important"));const a=document.getElementById("hse-tab-content");a&&(e==="dashboard"?(a.innerHTML=await this.renderDashboard(),this.loadDashboard()):e==="audits"?(a.innerHTML=await this.renderAudits(),this.loadAudits()):e==="non-conformities"?(a.innerHTML=await this.renderNonConformities(),this.loadNonConformities()):e==="corrective-actions"?(a.innerHTML=await this.renderCorrectiveActions(),this.loadCorrectiveActions()):e==="objectives"?(a.innerHTML=await this.renderObjectives(),this.loadObjectives()):e==="risk-assessments"&&(a.innerHTML=await this.renderRiskAssessments(),this.loadRiskAssessments()))},async renderDashboard(){const e=AppState.appData?.hseAudits||[],s=AppState.appData?.hseNonConformities||[],t=AppState.appData?.hseCorrectiveActions||[],a=AppState.appData?.hseObjectives||[],n=AppState.appData?.hseRiskAssessments||[],r=t.filter(d=>d.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"||d.status==="pending").length,o=t.filter(d=>d.status==="\u0645\u0643\u062A\u0645\u0644"||d.status==="completed").length,i=t.filter(d=>d.dueDate?new Date(d.dueDate)<new Date&&(d.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"||d.status==="pending"):!1).length;return`
             <!-- KPI Cards -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
                 <div class="content-card">
@@ -157,7 +158,7 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-gray-600 mb-1">\u0627\u0644\u0623\u0647\u062F\u0627\u0641</p>
-                                <p class="text-2xl font-bold text-green-600">${i.length}</p>
+                                <p class="text-2xl font-bold text-green-600">${a.length}</p>
                             </div>
                             <div class="bg-green-100 rounded-full p-4">
                                 <i class="fas fa-bullseye text-2xl text-green-600"></i>
@@ -214,7 +215,7 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                         </h2>
                     </div>
                     <div class="card-body">
-                        <p class="text-3xl font-bold text-red-600">${a}</p>
+                        <p class="text-3xl font-bold text-red-600">${i}</p>
                         <p class="text-sm text-gray-600 mt-2">\u064A\u062D\u062A\u0627\u062C \u0645\u062A\u0627\u0628\u0639\u0629 \u0639\u0627\u062C\u0644\u0629</p>
                     </div>
                 </div>
@@ -376,15 +377,15 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                     </div>
                 </div>
             </div>
-        `},loadDashboard(){const e=document.getElementById("hse-recent-activity");if(!e)return;const s=AppState.appData?.hseAudits||[],t=AppState.appData?.hseNonConformities||[],i=AppState.appData?.hseCorrectiveActions||[],n=AppState.appData?.hseObjectives||[],r=AppState.appData?.hseRiskAssessments||[],o=[...s.map(a=>({...a,type:"audit",icon:"fa-clipboard-check",color:"blue"})),...t.map(a=>({...a,type:"non-conformity",icon:"fa-exclamation-triangle",color:"red"})),...i.map(a=>({...a,type:"corrective-action",icon:"fa-tools",color:"yellow"})),...n.map(a=>({...a,type:"objective",icon:"fa-bullseye",color:"green"})),...r.map(a=>({...a,type:"risk-assessment",icon:"fa-shield-alt",color:"purple"}))].sort((a,d)=>{const c=new Date(a.date||a.createdAt||0);return new Date(d.date||d.createdAt||0)-c}).slice(0,10);if(o.length===0){e.innerHTML=`
+        `},loadDashboard(){const e=document.getElementById("hse-recent-activity");if(!e)return;const s=AppState.appData?.hseAudits||[],t=AppState.appData?.hseNonConformities||[],a=AppState.appData?.hseCorrectiveActions||[],n=AppState.appData?.hseObjectives||[],r=AppState.appData?.hseRiskAssessments||[],o=[...s.map(i=>({...i,type:"audit",icon:"fa-clipboard-check",color:"blue"})),...t.map(i=>({...i,type:"non-conformity",icon:"fa-exclamation-triangle",color:"red"})),...a.map(i=>({...i,type:"corrective-action",icon:"fa-tools",color:"yellow"})),...n.map(i=>({...i,type:"objective",icon:"fa-bullseye",color:"green"})),...r.map(i=>({...i,type:"risk-assessment",icon:"fa-shield-alt",color:"purple"}))].sort((i,d)=>{const c=new Date(i.date||i.createdAt||0);return new Date(d.date||d.createdAt||0)-c}).slice(0,10);if(o.length===0){e.innerHTML=`
                 <div class="text-center text-gray-500 py-8">
                     <i class="fas fa-inbox text-4xl mb-2"></i>
                     <p>\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0646\u0634\u0637\u0629 \u062D\u062F\u064A\u062B\u0629</p>
                 </div>
-            `;return}e.innerHTML=o.map(a=>{const c=new Date(a.date||a.createdAt).toLocaleDateString("ar-SA",{year:"numeric",month:"long",day:"numeric"}),l=a.title||a.description||a.name||"\u0628\u062F\u0648\u0646 \u0639\u0646\u0648\u0627\u0646";return`
+            `;return}e.innerHTML=o.map(i=>{const c=new Date(i.date||i.createdAt).toLocaleDateString("ar-SA",{year:"numeric",month:"long",day:"numeric"}),l=i.title||i.description||i.name||"\u0628\u062F\u0648\u0646 \u0639\u0646\u0648\u0627\u0646";return`
                 <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <div class="bg-${a.color}-100 rounded-full p-3">
-                        <i class="fas ${a.icon} text-${a.color}-600"></i>
+                    <div class="bg-${i.color}-100 rounded-full p-3">
+                        <i class="fas ${i.icon} text-${i.color}-600"></i>
                     </div>
                     <div class="flex-1">
                         <h3 class="font-semibold text-gray-800">${Utils.escapeHTML(l)}</h3>
@@ -396,30 +397,30 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                     <i class="fas fa-inbox text-4xl mb-2"></i>
                     <p>\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u062F\u0642\u064A\u0642\u0627\u062A \u0645\u0633\u062C\u0644\u0629</p>
                 </div>
-            `;return}e.innerHTML=s.map(t=>{const i=t.date?new Date(t.date).toLocaleDateString("ar-SA"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";return`
+            `;return}e.innerHTML=s.map(t=>{const a=t.date?new Date(t.date).toLocaleDateString("ar-SA"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";return`
                 <div class="p-4 bg-gray-50 rounded-lg">
                     <h3 class="font-semibold text-gray-800">${Utils.escapeHTML(t.title||t.type||"\u062A\u062F\u0642\u064A\u0642")}</h3>
-                    <p class="text-sm text-gray-600 mt-2">\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ${i}</p>
+                    <p class="text-sm text-gray-600 mt-2">\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ${a}</p>
                 </div>
             `}).join("")},loadNonConformities(){const e=document.getElementById("hse-non-conformities-list");if(!e)return;const s=AppState.appData?.hseNonConformities||[];if(s.length===0){e.innerHTML=`
                 <div class="text-center text-gray-500 py-8">
                     <i class="fas fa-inbox text-4xl mb-2"></i>
                     <p>\u0644\u0627 \u062A\u0648\u062C\u062F \u062D\u0627\u0644\u0627\u062A \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629 \u0645\u0633\u062C\u0644\u0629</p>
                 </div>
-            `;return}e.innerHTML=s.map(t=>{const i=t.date?new Date(t.date).toLocaleDateString("ar-SA"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";return`
+            `;return}e.innerHTML=s.map(t=>{const a=t.date?new Date(t.date).toLocaleDateString("ar-SA"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";return`
                 <div class="p-4 bg-gray-50 rounded-lg">
                     <h3 class="font-semibold text-gray-800">${Utils.escapeHTML(t.title||t.description||"\u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629")}</h3>
-                    <p class="text-sm text-gray-600 mt-2">\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ${i}</p>
+                    <p class="text-sm text-gray-600 mt-2">\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ${a}</p>
                 </div>
             `}).join("")},loadCorrectiveActions(){const e=document.getElementById("hse-corrective-actions-list");if(!e)return;const s=AppState.appData?.hseCorrectiveActions||[];if(s.length===0){e.innerHTML=`
                 <div class="text-center text-gray-500 py-8">
                     <i class="fas fa-inbox text-4xl mb-2"></i>
                     <p>\u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u062C\u0631\u0627\u0621\u0627\u062A \u062A\u0635\u062D\u064A\u062D\u064A\u0629 \u0645\u0633\u062C\u0644\u0629</p>
                 </div>
-            `;return}e.innerHTML=s.map(t=>{const i=t.date?new Date(t.date).toLocaleDateString("ar-SA"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",n=t.status||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",r=n==="\u0645\u0643\u062A\u0645\u0644"||n==="completed"?"green":n==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"||n==="pending"?"yellow":"gray";return`
+            `;return}e.innerHTML=s.map(t=>{const a=t.date?new Date(t.date).toLocaleDateString("ar-SA"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",n=t.status||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",r=n==="\u0645\u0643\u062A\u0645\u0644"||n==="completed"?"green":n==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"||n==="pending"?"yellow":"gray";return`
                 <div class="p-4 bg-gray-50 rounded-lg">
                     <h3 class="font-semibold text-gray-800">${Utils.escapeHTML(t.title||t.description||"\u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A")}</h3>
-                    <p class="text-sm text-gray-600 mt-2">\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ${i}</p>
+                    <p class="text-sm text-gray-600 mt-2">\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ${a}</p>
                     <span class="inline-block mt-2 px-3 py-1 bg-${r}-100 text-${r}-800 rounded-full text-xs">${n}</span>
                 </div>
             `}).join("")},loadObjectives(){const e=document.getElementById("hse-objectives-list");if(!e)return;const s=AppState.appData?.hseObjectives||[];if(s.length===0){e.innerHTML=`
@@ -427,19 +428,19 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                     <i class="fas fa-inbox text-4xl mb-2"></i>
                     <p>\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0647\u062F\u0627\u0641 \u0645\u0633\u062C\u0644\u0629</p>
                 </div>
-            `;return}e.innerHTML=s.map(t=>{const i=t.date?new Date(t.date).toLocaleDateString("ar-SA"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";return`
+            `;return}e.innerHTML=s.map(t=>{const a=t.date?new Date(t.date).toLocaleDateString("ar-SA"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";return`
                 <div class="p-4 bg-gray-50 rounded-lg">
                     <h3 class="font-semibold text-gray-800">${Utils.escapeHTML(t.title||t.description||"\u0647\u062F\u0641")}</h3>
-                    <p class="text-sm text-gray-600 mt-2">\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ${i}</p>
+                    <p class="text-sm text-gray-600 mt-2">\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ${a}</p>
                 </div>
             `}).join("")},loadRiskAssessments(){const e=document.getElementById("hse-risk-assessments-list");if(!e)return;const s=AppState.appData?.hseRiskAssessments||[];if(s.length===0){e.innerHTML=`
                 <div class="text-center text-gray-500 py-8">
                     <i class="fas fa-inbox text-4xl mb-2"></i>
                     <p>\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0642\u064A\u064A\u0645\u0627\u062A \u0645\u062E\u0627\u0637\u0631 \u0645\u0633\u062C\u0644\u0629</p>
                 </div>
-            `;return}e.innerHTML=s.map(t=>{const i=t.date?new Date(t.date).toLocaleDateString("ar-SA"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";return`
+            `;return}e.innerHTML=s.map(t=>{const a=t.date?new Date(t.date).toLocaleDateString("ar-SA"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";return`
                 <div class="p-4 bg-gray-50 rounded-lg">
                     <h3 class="font-semibold text-gray-800">${Utils.escapeHTML(t.title||t.description||"\u062A\u0642\u064A\u064A\u0645 \u0645\u062E\u0627\u0637\u0631")}</h3>
-                    <p class="text-sm text-gray-600 mt-2">\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ${i}</p>
+                    <p class="text-sm text-gray-600 mt-2">\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ${a}</p>
                 </div>
-            `}).join("")},setupEventListeners(){const e=document.getElementById("hse-export-excel-btn");e&&e.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u062A\u0635\u062F\u064A\u0631 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")});const s=document.getElementById("hse-export-pdf-btn");s&&s.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u062A\u0635\u062F\u064A\u0631 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")});const t=document.getElementById("add-audit-btn");t&&t.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")});const i=document.getElementById("add-non-conformity-btn");i&&i.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")});const n=document.getElementById("add-corrective-action-btn");n&&n.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")});const r=document.getElementById("add-objective-btn");r&&r.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")});const o=document.getElementById("add-risk-assessment-btn");o&&o.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")})}};(function(){"use strict";try{typeof window<"u"&&typeof HSE<"u"&&(window.HSE=HSE,typeof AppState<"u"&&AppState.debugMode&&typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 HSE module loaded and available on window.HSE"))}catch{if(typeof window<"u"&&typeof HSE<"u")try{window.HSE=HSE}catch{}}})();
+            `}).join("")},setupEventListeners(){const e=document.getElementById("hse-export-excel-btn");e&&e.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u062A\u0635\u062F\u064A\u0631 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")});const s=document.getElementById("hse-export-pdf-btn");s&&s.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u062A\u0635\u062F\u064A\u0631 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")});const t=s?.parentElement;t&&typeof EmailDispatch<"u"&&EmailDispatch.bindFooterButtons(t,{moduleKey:"hse",record:{id:"hse-dashboard",title:"\u0644\u0648\u062D\u0629 HSE",date:new Date().toISOString().slice(0,10)},recordId:"hse-dashboard"});const a=document.getElementById("add-audit-btn");a&&a.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")});const n=document.getElementById("add-non-conformity-btn");n&&n.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")});const r=document.getElementById("add-corrective-action-btn");r&&r.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")});const o=document.getElementById("add-objective-btn");o&&o.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")});const i=document.getElementById("add-risk-assessment-btn");i&&i.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")})}};(function(){"use strict";try{typeof window<"u"&&typeof HSE<"u"&&(window.HSE=HSE,typeof AppState<"u"&&AppState.debugMode&&typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 HSE module loaded and available on window.HSE"))}catch{if(typeof window<"u"&&typeof HSE<"u")try{window.HSE=HSE}catch{}}})();

@@ -6019,6 +6019,7 @@ const Violations = {
                 </div>
                 <div class="modal-footer violation-view-actions-footer" style="background: #f8fafc; padding: 16px 24px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end;">
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 18px; border-radius: 10px;">إغلاق</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('violations') : ''}
                     <button type="button" class="btn-primary" onclick='Violations.printViolationProfessional(${this._escapeIdForHandler(violation.id)})' style="background: linear-gradient(135deg, #0f766e, #0d9488); padding: 10px 18px; border-radius: 10px;">
                         <i class="fas fa-print ml-2"></i>طباعة منسّقة
                     </button>
@@ -6032,6 +6033,9 @@ const Violations = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'violations', record: violation, recordId: violation.id });
+        }
         modal.querySelector('#violation-view-quick-save')?.addEventListener('click', async () => {
             await this.saveViolationQuickEditsFromView(violation.id, modal);
         });
@@ -7930,6 +7934,7 @@ ${inner}
                     <button type="button" class="btn-secondary" onclick="Violations.printBlacklistDetails('${recordId}')">
                         <i class="fas fa-print ml-2"></i>طباعة
                     </button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('violations.blacklist') : ''}
                     <button type="button" class="btn-warning" onclick="Violations.editBlacklistRecord('${recordId}'); this.closest('.modal-overlay').remove();">
                         <i class="fas fa-edit ml-2"></i>تعديل
                     </button>
@@ -7941,6 +7946,19 @@ ${inner}
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, {
+                moduleKey: 'violations.blacklist',
+                record: {
+                    ...record,
+                    name: record.fullName || '',
+                    nationalId: record.idNumber || '',
+                    reason: record.banReason || '',
+                    date: record.banDate || record.createdAt || ''
+                },
+                recordId: record.id || recordId || ''
+            });
+        }
         if (typeof Utils.hydrateDriveProxyImages === 'function') {
             Utils.hydrateDriveProxyImages(modal, {
                 onFetchFail: (img) => this._onBlacklistTablePhotoError(img)

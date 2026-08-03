@@ -272,6 +272,10 @@ const Reports = {
                             <i class="fas fa-file-pdf ml-2"></i>
                             ${t('btn.generate')}
                         </button>
+                        <button type="button" onclick="Reports.sendReportEmail('${t('report.incidents')}', [{label:'نوع التقرير',value:'${t('report.incidents')}'}])" class="btn-secondary w-full mt-2">
+                            <i class="fas fa-envelope ml-2"></i>
+                            إرسال بريد
+                        </button>
                     </div>
                 </div>
 
@@ -287,6 +291,10 @@ const Reports = {
                         <button onclick="Reports.generateAndExport('training')" class="btn-primary w-full">
                             <i class="fas fa-file-pdf ml-2"></i>
                             ${t('btn.generate')}
+                        </button>
+                        <button type="button" onclick="Reports.sendReportEmail('${t('report.training')}', [{label:'نوع التقرير',value:'${t('report.training')}'}])" class="btn-secondary w-full mt-2">
+                            <i class="fas fa-envelope ml-2"></i>
+                            إرسال بريد
                         </button>
                     </div>
                 </div>
@@ -304,6 +312,10 @@ const Reports = {
                             <i class="fas fa-file-pdf ml-2"></i>
                             ${t('btn.generate')}
                         </button>
+                        <button type="button" onclick="Reports.sendReportEmail('${t('report.periodSummary')}', [{label:'نوع التقرير',value:'${t('card.period')}'}])" class="btn-secondary w-full mt-2">
+                            <i class="fas fa-envelope ml-2"></i>
+                            إرسال بريد
+                        </button>
                     </div>
                 </div>
 
@@ -319,6 +331,10 @@ const Reports = {
                         <button onclick="Reports.generateAndExport('full')" class="btn-primary w-full">
                             <i class="fas fa-file-pdf ml-2"></i>
                             ${t('btn.generate')}
+                        </button>
+                        <button type="button" onclick="Reports.sendReportEmail('${t('report.full')}', [{label:'نوع التقرير',value:'${t('card.full')}'}])" class="btn-secondary w-full mt-2">
+                            <i class="fas fa-envelope ml-2"></i>
+                            إرسال بريد
                         </button>
                     </div>
                 </div>
@@ -1498,6 +1514,23 @@ html,body,.report-wrapper,.report-wrapper *,.msr-report,.msr-report *{font-famil
         } finally {
             iframe.remove();
         }
+    },
+
+    async sendReportEmail(title, fields) {
+        if (typeof EmailDispatch === 'undefined') return;
+        await EmailDispatch.loadSettings();
+        if (!EmailDispatch.canManualSend('reports')) {
+            if (typeof Notification !== 'undefined') {
+                Notification.warning('الإرسال اليدوي غير مفعّل لتقارير النظام. راجع إعدادات البريد.');
+            }
+            return;
+        }
+        EmailDispatch.openSendModal({
+            moduleKey: 'reports',
+            recordId: 'report-' + Date.now(),
+            title: title || 'تقرير',
+            fields: Array.isArray(fields) ? fields : []
+        });
     },
 
     async generateAndExport(type, options = {}) {

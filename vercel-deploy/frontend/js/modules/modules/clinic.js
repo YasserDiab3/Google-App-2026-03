@@ -2249,6 +2249,7 @@ const Clinic = {
                 </div>
                 <div class="modal-footer form-actions-centered" style="background: #f8fafc;">
                     <button type="button" class="btn-secondary modal-close-btn">إغلاق</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('clinic.injury') : ''}
                     <button type="button" class="btn-primary modal-edit-btn">
                         <i class="fas fa-edit ml-2"></i>تعديل
                     </button>
@@ -2257,6 +2258,9 @@ const Clinic = {
         `;
 
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'clinic.injury', record: record, recordId: record.id || '' });
+        }
         const closeModal = () => modal.remove();
 
         modal.querySelectorAll('.modal-close, .modal-close-btn').forEach((btn) => btn.addEventListener('click', closeModal));
@@ -6035,6 +6039,7 @@ const Clinic = {
                 </div>
                 <div class="modal-footer form-actions-centered">
                     <button type="button" class="btn-secondary modal-close-btn">إغلاق</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('clinic.sickLeave') : ''}
                     <button type="button" class="btn-secondary modal-print-btn">
                         <i class="fas fa-print ml-2"></i>طباعة
                     </button>
@@ -6046,6 +6051,9 @@ const Clinic = {
         `;
 
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'clinic.sickLeave', record: record, recordId: record.id || '' });
+        }
         const closeModal = () => modal.remove();
 
         modal.querySelectorAll('.modal-close, .modal-close-btn').forEach((btn) => btn.addEventListener('click', closeModal));
@@ -10755,6 +10763,7 @@ const Clinic = {
                     <button class="btn-secondary" style="background: #6b7280; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times ml-2"></i>إغلاق
                     </button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('clinic.visit') : ''}
                     <button class="btn-success" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 15px 0 rgba(17, 153, 142, 0.4);" onclick="Clinic.exportVisitToPDF(${JSON.stringify(visit).replace(/"/g, '&quot;')});">
                         <i class="fas fa-file-pdf ml-2"></i>طباعة
                     </button>
@@ -10771,6 +10780,9 @@ const Clinic = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'clinic.visit', record: visit, recordId: visit.id || '' });
+        }
 
         modal.addEventListener('click', (event) => {
             if (event.target === modal) {
@@ -14223,6 +14235,7 @@ const Clinic = {
                     <button class="btn-secondary" style="background: #6b7280; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times ml-2"></i>إغلاق
                     </button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('clinic.visit') : ''}
                     <button class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 15px 0 rgba(102, 126, 234, 0.4);" onclick="Clinic.showVisitForm(${JSON.stringify(visit).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();">
                         <i class="fas fa-edit ml-2"></i>تعديل
                     </button>
@@ -14242,6 +14255,9 @@ const Clinic = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'clinic.visit', record: visit, recordId: visit.id || '' });
+        }
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 const ok = confirm('تنبيه: سيتم إغلاق النافذة.\nقد تفقد أي بيانات غير محفوظة.\n\nهل تريد الإغلاق؟');

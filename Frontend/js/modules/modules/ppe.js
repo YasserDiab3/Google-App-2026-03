@@ -2876,6 +2876,7 @@ const PPE = {
                 </div>
                 <div class="modal-footer" style="display: flex; justify-content: center; gap: 10px;">
                     <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${ut(t('module.common.close', 'إغلاق'))}</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('ppe') : ''}
                     <button class="btn-success" onclick="PPE.exportPDF('${idJs}');">
                         <i class="fas fa-file-pdf ml-2"></i>${ut(t('module.kpi.exportPDF', 'تصدير PDF'))}
                     </button>
@@ -2889,6 +2890,9 @@ const PPE = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'ppe', record: item, recordId: item.id || item.isoCode || '' });
+        }
         this.applyModuleI18n(modal);
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();

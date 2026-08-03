@@ -709,6 +709,207 @@ const BehaviorMonitoring = {
         }) || null;
     },
 
+    isAdmin() {
+        if (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserAdmin === 'function') {
+            return !!Permissions.isCurrentUserAdmin();
+        }
+        const role = String(AppState?.currentUser?.role || '').trim().toLowerCase();
+        return role === 'admin' || role === 'administrator' || role === 'system_admin' || role === 'مدير النظام';
+    },
+
+    canDeleteBehavior() {
+        return this.isAdmin();
+    },
+
+    getEmployeeBehaviorDedupKey(b) {
+        const person = this.normalizeBehaviorCompareText(b?.employeeCode || b?.employeeNumber || b?.employeeId || b?.employeeName);
+        const day = this.normalizeBehaviorDayKey(this.getBehaviorDate(b) || b?.date);
+        return [
+            person,
+            day,
+            this.normalizeBehaviorCompareText(b?.behaviorType),
+            this.normalizeBehaviorCompareText(b?.description),
+            this.normalizeBehaviorCompareText(b?.rating),
+            this.normalizeBehaviorCompareText(b?.factoryId || b?.factory),
+            this.normalizeBehaviorCompareText(b?.subLocationId || b?.subLocation),
+            this.normalizeBehaviorCompareText(b?.correctiveAction)
+        ].join('|');
+    },
+
+    getContractorBehaviorDedupKey(b) {
+        const person = [
+            this.normalizeBehaviorCompareText(b?.contractorId || b?.contractorName),
+            this.normalizeBehaviorCompareText(b?.contractorWorker)
+        ].join('::');
+        const day = this.normalizeBehaviorDayKey(this.getBehaviorDate(b) || b?.date);
+        return [
+            person,
+            day,
+            this.normalizeBehaviorCompareText(b?.behaviorType),
+            this.normalizeBehaviorCompareText(b?.description),
+            this.normalizeBehaviorCompareText(b?.rating),
+            this.normalizeBehaviorCompareText(b?.factoryId || b?.factory),
+            this.normalizeBehaviorCompareText(b?.subLocationId || b?.subLocation),
+            this.normalizeBehaviorCompareText(b?.correctiveAction)
+        ].join('|');
+    },
+
+    collectDuplicateBehaviorIdsToRemove(list, keyFn) {
+        const groups = new Map();
+        (Array.isArray(list) ? list : []).forEach((b) => {
+            if (!b || !b.id) return;
+            const key = keyFn.call(this, b);
+            if (!key) return;
+            const personPart = String(key).split('|')[0] || '';
+            if (!personPart.trim()) return;
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(b);
+        });
+        const removeIds = [];
+        groups.forEach((items) => {
+            if (items.length < 2) return;
+            items.sort((a, b) => {
+                const ta = Date.parse(a.createdAt || a.updatedAt || a.date || 0) || 0;
+                const tb = Date.parse(b.createdAt || b.updatedAt || b.date || 0) || 0;
+                if (ta !== tb) return ta - tb;
+                return String(a.id).localeCompare(String(b.id));
+            });
+            items.slice(1).forEach((dup) => removeIds.push(dup.id));
+        });
+        return removeIds;
+    },
+
+    async persistBehaviorList(sheetName, listKey) {
+        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+            window.DataManager.save();
+        }
+        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
+            await GoogleIntegration.autoSave(sheetName, AppState.appData[listKey] || []);
+        }
+    },
+
+    async deleteBehaviorById(id) {
+        if (!this.canDeleteBehavior()) {
+            Notification.error('الحذف متاح للمدير فقط');
+            return;
+        }
+        const behaviorId = String(id || '').trim();
+        if (!behaviorId) return;
+        const raw = this.getRawBehaviorById(behaviorId);
+        if (!raw) {
+            Notification.error('التصرف غير موجود');
+            return;
+        }
+        const label = `${raw.employeeName || raw.employeeCode || behaviorId} — ${this.formatBehaviorDateDisplay(raw) || ''}`;
+        if (!window.confirm(`حذف تصرف الموظف؟\n${label}\n\nلا يمكن التراجع.`)) return;
+
+        Loading.show();
+        try {
+            AppState.appData.behaviorMonitoring = (AppState.appData.behaviorMonitoring || []).filter((b) => b && b.id !== behaviorId);
+            await this.persistBehaviorList('BehaviorMonitoring', 'behaviorMonitoring');
+            Notification.success('تم حذف التصرف');
+            document.querySelectorAll('.modal-overlay').forEach((m) => {
+                if (m.classList.contains('bhm-detail-overlay') || m.querySelector('.bhm-detail-title')) {
+                    m.remove();
+                }
+            });
+            this.refreshCurrentTab();
+        } catch (error) {
+            Notification.error('فشل الحذف: ' + (error?.message || error));
+        } finally {
+            Loading.hide();
+        }
+    },
+
+    async deleteContractorBehaviorById(id) {
+        if (!this.canDeleteBehavior()) {
+            Notification.error('الحذف متاح للمدير فقط');
+            return;
+        }
+        const behaviorId = String(id || '').trim();
+        if (!behaviorId) return;
+        const raw = this.getRawContractorBehaviorById(behaviorId);
+        if (!raw) {
+            Notification.error('التصرف غير موجود');
+            return;
+        }
+        const label = `${raw.contractorName || ''} / ${raw.contractorWorker || behaviorId} — ${this.formatBehaviorDateDisplay(raw) || ''}`;
+        if (!window.confirm(`حذف تصرف المقاول؟\n${label}\n\nلا يمكن التراجع.`)) return;
+
+        Loading.show();
+        try {
+            AppState.appData.contractorBehaviorMonitoring = (AppState.appData.contractorBehaviorMonitoring || [])
+                .filter((b) => b && b.id !== behaviorId);
+            await this.persistBehaviorList('ContractorBehaviorMonitoring', 'contractorBehaviorMonitoring');
+            Notification.success('تم حذف التصرف');
+            this.refreshCurrentTab();
+        } catch (error) {
+            Notification.error('فشل الحذف: ' + (error?.message || error));
+        } finally {
+            Loading.hide();
+        }
+    },
+
+    async cleanupDuplicateEmployeeBehaviors() {
+        if (!this.canDeleteBehavior()) {
+            Notification.error('حذف المكررات متاح للمدير فقط');
+            return;
+        }
+        const list = Array.isArray(AppState.appData.behaviorMonitoring) ? AppState.appData.behaviorMonitoring : [];
+        const removeIds = this.collectDuplicateBehaviorIdsToRemove(list, this.getEmployeeBehaviorDedupKey);
+        if (!removeIds.length) {
+            Notification.info('لا توجد تصرفات موظفين مكررة');
+            return;
+        }
+        if (!window.confirm(
+            `سيتم حذف ${removeIds.length} سجل مكرر لتصرفات الموظفين.\n` +
+            `يُبقى أقدم سجل لكل مجموعة (نفس الشخص + نفس اليوم + نفس البيانات).\nهل تريد المتابعة؟`
+        )) return;
+
+        Loading.show();
+        try {
+            const removeSet = new Set(removeIds.map(String));
+            AppState.appData.behaviorMonitoring = list.filter((b) => b && !removeSet.has(String(b.id)));
+            await this.persistBehaviorList('BehaviorMonitoring', 'behaviorMonitoring');
+            Notification.success(`تم حذف ${removeIds.length} تصرف مكرر`);
+            this.refreshCurrentTab();
+        } catch (error) {
+            Notification.error('فشل حذف المكررات: ' + (error?.message || error));
+        } finally {
+            Loading.hide();
+        }
+    },
+
+    async cleanupDuplicateContractorBehaviors() {
+        if (!this.canDeleteBehavior()) {
+            Notification.error('حذف المكررات متاح للمدير فقط');
+            return;
+        }
+        const list = Array.isArray(AppState.appData.contractorBehaviorMonitoring) ? AppState.appData.contractorBehaviorMonitoring : [];
+        const removeIds = this.collectDuplicateBehaviorIdsToRemove(list, this.getContractorBehaviorDedupKey);
+        if (!removeIds.length) {
+            Notification.info('لا توجد تصرفات مقاولين مكررة');
+            return;
+        }
+        if (!window.confirm(
+            `سيتم حذف ${removeIds.length} سجل مكرر لتصرفات المقاولين.\n` +
+            `يُبقى أقدم سجل لكل مجموعة (نفس المقاول/العامل + نفس اليوم + نفس البيانات).\nهل تريد المتابعة؟`
+        )) return;
+
+        Loading.show();
+        try {
+            const removeSet = new Set(removeIds.map(String));
+            AppState.appData.contractorBehaviorMonitoring = list.filter((b) => b && !removeSet.has(String(b.id)));
+            await this.persistBehaviorList('ContractorBehaviorMonitoring', 'contractorBehaviorMonitoring');
+            Notification.success(`تم حذف ${removeIds.length} تصرف مكرر`);
+            this.refreshCurrentTab();
+        } catch (error) {
+            Notification.error('فشل حذف المكررات: ' + (error?.message || error));
+        } finally {
+            Loading.hide();
+        }
+    },
+
     getBehaviorTypeBadgeClass(behaviorType) {
         if (behaviorType === 'إيجابي') return 'badge-success';
         if (behaviorType === 'سلبي') return 'badge-danger';
@@ -981,6 +1182,11 @@ const BehaviorMonitoring = {
                             <span class="badge badge-secondary" id="behavior-filter-count">${isSkeleton ? '—' : this.getFilteredBehaviors().length}</span>
                         </div>
                         <div class="flex items-center gap-2 flex-wrap">
+                            ${this.canDeleteBehavior() ? `
+                            <button type="button" id="behavior-cleanup-duplicates-btn" class="btn-danger btn-sm" title="حذف السجلات المكررة لنفس الشخص ونفس اليوم ونفس البيانات">
+                                <i class="fas fa-clone ml-1"></i>حذف المكررات
+                            </button>
+                            ` : ''}
                             <button id="behavior-export-csv-btn" class="btn-success btn-sm">
                                 <i class="fas fa-file-csv ml-1"></i>${this.t('common.exportCSV', 'تصدير CSV')}
                             </button>
@@ -1123,6 +1329,11 @@ const BehaviorMonitoring = {
                                         <button type="button" onclick="BehaviorMonitoring.viewBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-primary bhm-action-icon" title="${this.t('common.view', 'عرض')}">
                                             <i class="fas fa-eye"></i>
                                         </button>
+                                        ${this.canDeleteBehavior() ? `
+                                        <button type="button" onclick="BehaviorMonitoring.deleteBehaviorById(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-danger bhm-action-icon" title="${this.t('common.delete', 'حذف')}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        ` : ''}
                                         <button type="button" onclick="BehaviorMonitoring.exportPDF(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-success bhm-action-icon" title="${this.t('common.exportPDF', 'تصدير PDF')}">
                                             <i class="fas fa-file-pdf"></i>
                                         </button>
@@ -1257,6 +1468,8 @@ const BehaviorMonitoring = {
             sort?.addEventListener('change', onAnyChange, { signal });
             clearBtn?.addEventListener('click', () => this.clearFilters(), { signal });
             exportBtn?.addEventListener('click', () => this.exportLogCSV(), { signal });
+            document.getElementById('behavior-cleanup-duplicates-btn')
+                ?.addEventListener('click', () => this.cleanupDuplicateEmployeeBehaviors(), { signal });
 
             // first render
             this.renderLogTable();
@@ -1316,6 +1529,8 @@ const BehaviorMonitoring = {
             clearBtn?.addEventListener('click', () => this.clearContractorFilters(), { signal });
             exportBtn?.addEventListener('click', () => this.exportContractorLogCSV(), { signal });
             addBtn?.addEventListener('click', () => this.showContractorForm(null), { signal });
+            document.getElementById('bhmc-cleanup-duplicates-btn')
+                ?.addEventListener('click', () => this.cleanupDuplicateContractorBehaviors(), { signal });
 
             this.renderContractorLogTable();
         }
@@ -2000,6 +2215,12 @@ const BehaviorMonitoring = {
                     <button type="button" class="btn-primary" onclick="BehaviorMonitoring.editBehavior(${JSON.stringify(String(behavior.id || ''))}); this.closest('.modal-overlay').remove();">
                         <i class="fas fa-pen ml-2"></i>تعديل
                     </button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('behavior-monitoring') : ''}
+                    ${this.canDeleteBehavior() ? `
+                    <button type="button" class="btn-danger" onclick="BehaviorMonitoring.deleteBehaviorById(${JSON.stringify(String(behavior.id || ''))});">
+                        <i class="fas fa-trash ml-2"></i>حذف
+                    </button>
+                    ` : ''}
                     <button type="button" class="btn-secondary" onclick="BehaviorMonitoring.printReport(${JSON.stringify(String(behavior.id || ''))});">
                         <i class="fas fa-print ml-2"></i>طباعة
                     </button>
@@ -2011,6 +2232,9 @@ const BehaviorMonitoring = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'behavior-monitoring', record: behavior, recordId: behavior.id || behavior.isoCode || '' });
+        }
         if (typeof Utils.hydrateDriveProxyImages === 'function') {
             Utils.hydrateDriveProxyImages(modal, {
                 onFetchFail: (img) => {
@@ -2252,6 +2476,11 @@ const BehaviorMonitoring = {
                             <button type="button" id="behavior-add-contractor-btn" class="btn-primary btn-sm">
                                 <i class="fas fa-plus ml-1"></i>${this.t('module.behavior.addContractor', 'تسجيل تصرف مقاول')}
                             </button>
+                            ${this.canDeleteBehavior() ? `
+                            <button type="button" id="bhmc-cleanup-duplicates-btn" class="btn-danger btn-sm" title="حذف السجلات المكررة لنفس المقاول/العامل ونفس اليوم ونفس البيانات">
+                                <i class="fas fa-clone ml-1"></i>حذف المكررات
+                            </button>
+                            ` : ''}
                             <button id="bhmc-export-csv-btn" class="btn-success btn-sm">
                                 <i class="fas fa-file-csv ml-1"></i>${this.t('common.exportCSV', 'تصدير CSV')}
                             </button>
@@ -2367,6 +2596,9 @@ const BehaviorMonitoring = {
                                     <div class="flex items-center justify-center gap-2 flex-wrap">
                                         <button type="button" onclick="BehaviorMonitoring.viewContractorBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-primary" title="${this.t('common.view', 'عرض')}"><i class="fas fa-eye"></i></button>
                                         <button type="button" onclick="BehaviorMonitoring.editContractorBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-warning" title="${this.t('common.edit', 'تعديل')}"><i class="fas fa-edit"></i></button>
+                                        ${this.canDeleteBehavior() ? `
+                                        <button type="button" onclick="BehaviorMonitoring.deleteContractorBehaviorById(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-danger" title="${this.t('common.delete', 'حذف')}"><i class="fas fa-trash"></i></button>
+                                        ` : ''}
                                         <button type="button" onclick="BehaviorMonitoring.exportContractorPDF(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-success" title="${this.t('common.exportPDF', 'تصدير PDF')}"><i class="fas fa-file-pdf"></i></button>
                                         <button type="button" onclick="BehaviorMonitoring.printContractorReport(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-info" title="${this.t('common.print', 'طباعة')}"><i class="fas fa-print"></i></button>
                                     </div>
@@ -2910,12 +3142,19 @@ const BehaviorMonitoring = {
                 </div>
                 <div class="bhm-detail-footer">
                     <button type="button" class="btn-primary" onclick="BehaviorMonitoring.editContractorBehavior(${JSON.stringify(String(b.id || ''))}); this.closest('.modal-overlay').remove();"><i class="fas fa-pen ml-2"></i>تعديل</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('behavior-monitoring') : ''}
+                    ${this.canDeleteBehavior() ? `
+                    <button type="button" class="btn-danger" onclick="BehaviorMonitoring.deleteContractorBehaviorById(${JSON.stringify(String(b.id || ''))})"><i class="fas fa-trash ml-2"></i>حذف</button>
+                    ` : ''}
                     <button type="button" class="btn-secondary" onclick="BehaviorMonitoring.printContractorReport(${JSON.stringify(String(b.id || ''))})"><i class="fas fa-print ml-2"></i>طباعة</button>
                     <button type="button" class="btn-secondary" onclick="BehaviorMonitoring.exportContractorPDF(${JSON.stringify(String(b.id || ''))})"><i class="fas fa-file-pdf ml-2"></i>PDF</button>
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
                 </div>
             </div>`;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'behavior-monitoring', record: b, recordId: b.id || b.isoCode || '' });
+        }
     },
 
     async exportContractorPDF(id) {

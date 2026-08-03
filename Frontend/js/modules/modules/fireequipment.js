@@ -4129,6 +4129,7 @@ FireEquipment = {
                 </div>
                 <div class="modal-footer flex justify-center gap-2 form-actions-centered">
                     <button class="btn-secondary" onclick="FireEquipment.closeModal(this)">إغلاق</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('fire-equipment') : ''}
                     <button class="btn-primary" onclick="FireEquipment.showAssetForm(${assetJson}); this.closest('.modal-overlay').remove();">
                         <i class="fas fa-edit ml-2"></i>تعديل الجهاز
                     </button>
@@ -4137,6 +4138,9 @@ FireEquipment = {
         `;
 
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'fire-equipment', record: asset, recordId: asset.id || asset.number || asset.isoCode || '' });
+        }
 
         // إضافة معالج لإغلاق النموذج عند النقر على الخلفية
         modal.addEventListener('click', (e) => {

@@ -8308,6 +8308,7 @@ const Training = {
                 </div>
                 <div class="modal-footer">
                     <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('training') : ''}
                     <button type="button" class="btn-secondary" onclick="Training.printTraining('${training.id}'); this.closest('.modal-overlay').remove();" style="display: inline-flex; align-items: center; gap: 6px;">
                         <i class="fas fa-print"></i>
                         الطباعة
@@ -8320,6 +8321,9 @@ const Training = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'training', record: training, recordId: training.id || training.isoCode || '' });
+        }
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });

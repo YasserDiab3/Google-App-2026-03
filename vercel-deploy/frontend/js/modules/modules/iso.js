@@ -1927,11 +1927,19 @@ const ISO = {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('iso') : ''}
                     <button type="button" onclick="ISO.showDocumentForm(${JSON.stringify(doc).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}</button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, {
+                moduleKey: 'iso',
+                record: { ...doc, title: doc.name || '', code: doc.isoCode || '' },
+                recordId: doc.id || doc.isoCode || ''
+            });
+        }
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });

@@ -1205,6 +1205,7 @@ const UserTasks = {
                         <i class="fas fa-edit ml-2"></i>
                         تحديث الحالة
                     </button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('user-tasks') : ''}
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times ml-2"></i>
                         إغلاق
@@ -1214,6 +1215,9 @@ const UserTasks = {
         `;
         this.applyModuleI18n(modal);
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'user-tasks', record: task, recordId: task.id || '' });
+        }
     },
 
     /**
@@ -2108,6 +2112,7 @@ const UserTasks = {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-secondary" data-action="close">إغلاق</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('user-tasks') : ''}
                     <button type="button" class="btn-primary" onclick="UserTasks.editTask('${taskId}'); this.closest('.modal-overlay').remove();">
                         <i class="fas fa-edit ml-2"></i>
                         تعديل
@@ -2117,6 +2122,9 @@ const UserTasks = {
         `;
 
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'user-tasks', record: task, recordId: task.id || '' });
+        }
         const close = () => modal.remove();
         modal.querySelector('.modal-close')?.addEventListener('click', close);
         modal.querySelector('[data-action="close"]')?.addEventListener('click', close);

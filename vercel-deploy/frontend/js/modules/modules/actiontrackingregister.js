@@ -1807,6 +1807,7 @@ const ActionTrackingRegister = {
                         
                         <div class="flex items-center justify-end gap-4 pt-4 border-t">
                             <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                            ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('action-tracking') : ''}
                             <button type="button" class="btn-primary" onclick="ActionTrackingRegister.editEntry('${action.id}'); this.closest('.modal-overlay').remove();">
                                 <i class="fas fa-edit ml-2"></i>تعديل
                             </button>
@@ -1816,6 +1817,9 @@ const ActionTrackingRegister = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'action-tracking', record: action, recordId: action.id || action.isoCode || '' });
+        }
 
         // إضافة event listeners للقائمة المنسدلة في modal
         setTimeout(() => {
