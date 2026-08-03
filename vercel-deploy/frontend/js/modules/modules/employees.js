@@ -4588,6 +4588,191 @@ const Employees = {
         `;
     },
 
+    /** تطبيع مفتاح هوية الموظف للاستيراد (رقم وظيفي / SAP) */
+    normalizeEmployeeImportKey(value) {
+        if (value === null || value === undefined) return '';
+        return String(value).trim().replace(/\s+/g, '');
+    },
+
+    /** هل يوجد موظف بنفس الرقم الوظيفي أو SAP أو id */
+    findExistingEmployeeByImportKey(employeeNumber, sapId) {
+        const empKey = this.normalizeEmployeeImportKey(employeeNumber);
+        const sapKey = this.normalizeEmployeeImportKey(sapId);
+        const list = AppState.appData.employees || [];
+        return list.find(e => {
+            const eNum = this.normalizeEmployeeImportKey(e.employeeNumber || e.id);
+            const eSap = this.normalizeEmployeeImportKey(e.sapId);
+            const eId = this.normalizeEmployeeImportKey(e.id);
+            if (empKey && (eNum === empKey || eId === empKey || eSap === empKey)) return true;
+            if (sapKey && (eSap === sapKey || eNum === sapKey || eId === sapKey)) return true;
+            return false;
+        }) || null;
+    },
+
+    /** استخراج حقول صف Excel إلى مسودة موحّدة */
+    parseEmployeeImportRow(row, uid) {
+        const safeStr = (v) => (v === null || v === undefined) ? '' : String(v).trim();
+        const name = safeStr(row['اسم الموظ'] || row['اسم الموظف'] || row['Employee Name'] || row['Name'] || row['name'] || '');
+        const sapId = safeStr(row['ID SAP'] || row['رقم SAP'] || row['SAP ID'] || row['sap_id'] || '');
+        const employeeNumberRaw = safeStr(row['رقم الموظف'] || row['الرقم الوظيفي'] || row['Employee Number'] || row['employee_number'] || '');
+        const employeeNumber = employeeNumberRaw || sapId;
+        return {
+            uid,
+            name,
+            sapId,
+            employeeNumber,
+            hireDate: safeStr(row['تاريخ التعيين'] || row['Hire Date'] || row['hire_date'] || ''),
+            job: safeStr(row['Job'] || row['job'] || row['المنصب'] || ''),
+            department: safeStr(row['Department'] || row['department'] || row['القسم'] || ''),
+            branch: safeStr(row['Branch'] || row['branch'] || row['الرع'] || row['الفرع'] || ''),
+            location: safeStr(row['Location'] || row['location'] || row['الموقع'] || ''),
+            gender: safeStr(row['Gender'] || row['gender'] || row['الجنس'] || ''),
+            nationalId: safeStr(row['رقم البطاقة القومى'] || row['رقم البطاقة القومي'] || row['National ID'] || row['national_id'] || ''),
+            birthDate: safeStr(row['تاريخ الميلاد'] || row['Date of Birth'] || row['birth_date'] || ''),
+            email: safeStr(row['Email'] || row['email'] || row['البريد الإلكتروني'] || ''),
+            phone: safeStr(row['Phone'] || row['phone'] || row['الهاتف'] || row['الهات'] || ''),
+            insuranceNumber: safeStr(row['الرقم التأميني'] || row['Insurance Number'] || row['insurance_number'] || row['رقم التأمين'] || ''),
+            status: 'invalid'
+        };
+    },
+
+    /** تصنيف مسودة: new | exists | invalid — بدون مطابقة بالاسم */
+    classifyEmployeeImportDraft(draft, seenKeys) {
+        const empKey = this.normalizeEmployeeImportKey(draft.employeeNumber);
+        const sapKey = this.normalizeEmployeeImportKey(draft.sapId);
+        const primaryKey = empKey || sapKey;
+
+        if (!primaryKey || !String(draft.name || '').trim()) {
+            draft.status = 'invalid';
+            return draft;
+        }
+
+        if (seenKeys) {
+            if (seenKeys.has(primaryKey)) {
+                draft.status = 'invalid';
+                draft._dupInFile = true;
+                return draft;
+            }
+            seenKeys.add(primaryKey);
+        }
+
+        const existing = this.findExistingEmployeeByImportKey(draft.employeeNumber, draft.sapId);
+        draft.status = existing ? 'exists' : 'new';
+        return draft;
+    },
+
+    getEmployeeImportCounts(drafts) {
+        const list = Array.isArray(drafts) ? drafts : [];
+        return {
+            total: list.length,
+            newCount: list.filter(d => d.status === 'new').length,
+            existsCount: list.filter(d => d.status === 'exists').length,
+            invalidCount: list.filter(d => d.status === 'invalid').length
+        };
+    },
+
+    reclassifyAllEmployeeImportDrafts(drafts) {
+        const seenKeys = new Set();
+        drafts.forEach(d => {
+            d._dupInFile = false;
+            this.classifyEmployeeImportDraft(d, seenKeys);
+        });
+        return drafts;
+    },
+
+    buildEmployeeFromImportDraft(draft) {
+        const employeeNumber = this.normalizeEmployeeImportKey(draft.employeeNumber)
+            || this.normalizeEmployeeImportKey(draft.sapId);
+        if (!employeeNumber || !String(draft.name || '').trim()) return null;
+        const now = new Date().toISOString();
+        return {
+            id: employeeNumber,
+            name: String(draft.name || '').trim(),
+            employeeNumber,
+            sapId: String(draft.sapId || '').trim(),
+            hireDate: this.normalizeDateOnly(draft.hireDate) || this.normalizeDateOnly(new Date()),
+            job: String(draft.job || '').trim(),
+            position: String(draft.job || '').trim(),
+            department: String(draft.department || '').trim(),
+            branch: String(draft.branch || '').trim(),
+            location: String(draft.location || '').trim(),
+            gender: String(draft.gender || '').trim(),
+            nationalId: String(draft.nationalId || '').trim(),
+            birthDate: this.normalizeDateOnly(draft.birthDate),
+            email: String(draft.email || '').trim(),
+            phone: String(draft.phone || '').trim(),
+            insuranceNumber: String(draft.insuranceNumber || '').trim(),
+            photo: '',
+            status: 'active',
+            createdAt: now,
+            updatedAt: now
+        };
+    },
+
+    renderEmployeeImportReview(modal, drafts) {
+        const summaryEl = modal.querySelector('#employee-import-summary');
+        const preview = modal.querySelector('#employee-import-preview');
+        const tbody = modal.querySelector('#employee-import-new-body');
+        const confirmBtn = modal.querySelector('#employee-import-confirm-btn');
+        if (!summaryEl || !preview || !tbody || !confirmBtn) return;
+
+        const counts = this.getEmployeeImportCounts(drafts);
+        const newRows = drafts.filter(d => d.status === 'new');
+
+        summaryEl.innerHTML = `
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+                <span style="background:#dcfce7;color:#166534;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;">
+                    جديد (سيُضاف): ${counts.newCount}
+                </span>
+                <span style="background:#f1f5f9;color:#475569;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;">
+                    موجود مسبقاً (تخطّي — غير معروض): ${counts.existsCount}
+                </span>
+                <span style="background:#fee2e2;color:#991b1b;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;">
+                    ناقص/غير صالح: ${counts.invalidCount}
+                </span>
+                <span style="background:#e0f2fe;color:#075985;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;">
+                    إجمالي الملف: ${counts.total}
+                </span>
+            </div>
+            <p style="font-size:12px;color:#1e3a8a;margin:0;">
+                الجدول يعرض فقط الموظفين غير الموجودين في النظام. الموجودون والمستقيلون لا يُعدَّلون ولا يُحذفون من الاستيراد.
+            </p>
+        `;
+
+        if (newRows.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align:center;padding:16px;color:#64748b;">
+                        لا يوجد موظفون جدد للاستيراد من هذا الملف.
+                    </td>
+                </tr>
+            `;
+        } else {
+            tbody.innerHTML = newRows.map(d => `
+                <tr data-import-uid="${Utils.escapeHTML(d.uid)}">
+                    <td><input type="text" class="form-input emp-imp-field" data-field="employeeNumber" value="${Utils.escapeHTML(d.employeeNumber || '')}" style="min-width:90px;padding:4px 6px;font-size:12px;"></td>
+                    <td><input type="text" class="form-input emp-imp-field" data-field="sapId" value="${Utils.escapeHTML(d.sapId || '')}" style="min-width:80px;padding:4px 6px;font-size:12px;"></td>
+                    <td><input type="text" class="form-input emp-imp-field" data-field="name" value="${Utils.escapeHTML(d.name || '')}" style="min-width:120px;padding:4px 6px;font-size:12px;"></td>
+                    <td><input type="text" class="form-input emp-imp-field" data-field="department" value="${Utils.escapeHTML(d.department || '')}" style="min-width:90px;padding:4px 6px;font-size:12px;"></td>
+                    <td><input type="text" class="form-input emp-imp-field" data-field="job" value="${Utils.escapeHTML(d.job || '')}" style="min-width:90px;padding:4px 6px;font-size:12px;"></td>
+                    <td><input type="text" class="form-input emp-imp-field" data-field="branch" value="${Utils.escapeHTML(d.branch || '')}" style="min-width:80px;padding:4px 6px;font-size:12px;"></td>
+                    <td><input type="text" class="form-input emp-imp-field" data-field="hireDate" value="${Utils.escapeHTML(d.hireDate || '')}" style="min-width:90px;padding:4px 6px;font-size:12px;"></td>
+                    <td style="white-space:nowrap;">
+                        <button type="button" class="btn-icon btn-icon-danger emp-imp-remove" title="حذف من قائمة الإضافة" style="padding:4px 8px;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        preview.classList.remove('hidden');
+        confirmBtn.disabled = counts.newCount === 0;
+        confirmBtn.innerHTML = counts.newCount > 0
+            ? `<i class="fas fa-check ml-2"></i>تأكيد إضافة ${counts.newCount} موظف جديد`
+            : `<i class="fas fa-ban ml-2"></i>لا يوجد جدد للإضافة`;
+    },
+
     async showImportExcel() {
         // التحقق من الصلاحيات
         if (!this.canAddOrImport()) {
@@ -4595,10 +4780,14 @@ const Employees = {
             return;
         }
 
+        try {
+            await this.ensureEmployeesLoaded(false);
+        } catch (_e) { /* استخدام البيانات المحلية إن وُجدت */ }
+
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-content" style="max-width: 1100px; width: 96%;">
                 <div class="modal-header">
                     <h2 class="modal-title"><i class="fas fa-file-excel ml-2"></i>${this.t('module.employees.importModalTitle', 'استيراد الموظفين من ملف Excel')}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
@@ -4607,40 +4796,50 @@ const Employees = {
                 </div>
                 <div class="modal-body">
                     <div class="space-y-4">
+                        <div class="bg-amber-50 border border-amber-200 rounded p-4">
+                            <p class="text-sm text-amber-900 mb-2"><strong>حماية البيانات:</strong></p>
+                            <ul class="text-sm text-amber-800 list-disc mr-6 mt-2 space-y-1">
+                                <li>الاستيراد <strong>يضيف الجدد فقط</strong> (غير الموجودين في النظام).</li>
+                                <li><strong>لا يُعدَّل</strong> ولا <strong>يُحذف</strong> أي موظف موجود أو مستقيل.</li>
+                                <li>راجع القائمة جيداً قبل التأكيد — يمكنك تعديل أو حذف صف من قائمة الإضافة فقط.</li>
+                            </ul>
+                        </div>
                         <div class="bg-blue-50 border border-blue-200 rounded p-4">
-                            <p class="text-sm text-blue-800 mb-2"><strong>ملاحظة مهمة:</strong></p>
-                            <p class="text-sm text-blue-700 mb-2">يجب أن يحتوي ملف Excel على الأعمدة التالية:</p>
+                            <p class="text-sm text-blue-800 mb-2"><strong>أعمدة الملف المدعومة:</strong></p>
                             <ul class="text-sm text-blue-700 list-disc mr-6 mt-2 space-y-1">
-                                <li><strong>ID SAP</strong> أو <strong>رقم SAP</strong> - الكود الوظيفي</li>
-                                <li><strong>رقم الموظف</strong> أو <strong>الرقم الوظيفي</strong> أو <strong>Employee Number</strong> - (سيتم استخدامه كـ ID)</li>
-                                <li><strong>اسم الموظف</strong> أو <strong>Employee Name</strong> - إلزامي</li>
-                                <li><strong>تاريخ التعيين</strong> أو <strong>Hire Date</strong></li>
-                                <li><strong>Job</strong> أو <strong>المنصب</strong></li>
-                                <li><strong>Department</strong> أو <strong>القسم</strong></li>
-                                <li><strong>Branch</strong> أو <strong>الرع</strong></li>
-                                <li><strong>Location</strong> أو <strong>الموقع</strong></li>
-                                <li><strong>Gender</strong> أو <strong>الجنس</strong></li>
-                                <li><strong>رقم البطاقة القومى</strong> أو <strong>National ID</strong></li>
-                                <li><strong>تاريخ الميلاد</strong> أو <strong>Date of Birth</strong></li>
-                                <li><strong>الرقم التأميني</strong> أو <strong>Insurance Number</strong></li>
+                                <li><strong>ID SAP</strong> أو <strong>رقم SAP</strong></li>
+                                <li><strong>رقم الموظف</strong> / <strong>الرقم الوظيفي</strong> / <strong>Employee Number</strong></li>
+                                <li><strong>اسم الموظف</strong> / <strong>Employee Name</strong></li>
+                                <li>تاريخ التعيين، Job، Department، Branch، Location، Gender، رقم البطاقة، تاريخ الميلاد، الرقم التأميني</li>
                             </ul>
                         </div>
                         <div>
                             <label for="employee-excel-file-input" class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-file-excel ml-2"></i>
-                                اختر مل Excel (.xlsx, .xls)
+                                اختر ملف Excel (.xlsx, .xls)
                             </label>
                             <input type="file" id="employee-excel-file-input" accept=".xlsx,.xls" class="form-input">
                         </div>
+                        <div id="employee-import-summary"></div>
                         <div id="employee-import-preview" class="hidden">
-                            <h3 class="text-sm font-semibold mb-2">معاينة البيانات (أول 5 صورة):</h3>
-                            <div class="max-h-60 overflow-auto border rounded">
-                                <table class="data-table text-xs">
-                                    <thead id="employee-preview-head"></thead>
-                                    <tbody id="employee-preview-body"></tbody>
+                            <h3 class="text-sm font-semibold mb-2">الموظفون الجدد فقط (غير الموجودين بالنظام):</h3>
+                            <div class="max-h-80 overflow-auto border rounded">
+                                <table class="data-table text-xs" style="min-width:100%;">
+                                    <thead>
+                                        <tr>
+                                            <th>الرقم الوظيفي</th>
+                                            <th>SAP</th>
+                                            <th>الاسم</th>
+                                            <th>القسم</th>
+                                            <th>الوظيفة</th>
+                                            <th>الفرع</th>
+                                            <th>تاريخ التعيين</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="employee-import-new-body"></tbody>
                                 </table>
                             </div>
-                            <p id="employee-preview-count" class="text-sm text-gray-600 mt-2"></p>
                         </div>
                     </div>
                 </div>
@@ -4656,10 +4855,11 @@ const Employees = {
         this.applyModuleI18n(modal);
         document.body.appendChild(modal);
 
-        const fileInput = document.getElementById('employee-excel-file-input');
-        const preview = document.getElementById('employee-import-preview');
-        const confirmBtn = document.getElementById('employee-import-confirm-btn');
-        let importedData = [];
+        const fileInput = modal.querySelector('#employee-excel-file-input');
+        const confirmBtn = modal.querySelector('#employee-import-confirm-btn');
+        let importDrafts = [];
+
+        const refreshReview = () => this.renderEmployeeImportReview(modal, importDrafts);
 
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
@@ -4667,7 +4867,6 @@ const Employees = {
 
             Loading.show();
             try {
-                // قراءة مل Excel باستخدام SheetJS
                 const buffer = await file.arrayBuffer();
                 const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
                 const sheetName = workbook.SheetNames[0];
@@ -4676,34 +4875,29 @@ const Employees = {
 
                 if (data.length < 2) {
                     Notification.error(this.t('module.employees.invalidFile', 'الملف فارغ أو غير صحيح'));
+                    importDrafts = [];
+                    refreshReview();
                     Loading.hide();
                     return;
                 }
 
                 const headers = data[0].map(h => String(h || '').trim());
-                importedData = data.slice(1).map(row => {
+                const rawRows = data.slice(1).map(row => {
                     const obj = {};
                     headers.forEach((header, index) => {
                         const cell = row[index];
                         obj[header] = (cell === undefined || cell === null) ? '' : cell;
                     });
                     return obj;
-                }).filter(row => String(row[headers[0]] || '').trim() !== ''); // تصفية الصفوف الفارغة
+                }).filter(row => headers.some(h => String(row[h] || '').trim() !== ''));
 
-                // عرض المعاينة
-                const previewHead = document.getElementById('employee-preview-head');
-                const previewBody = document.getElementById('employee-preview-body');
-                const previewCount = document.getElementById('employee-preview-count');
+                const seenKeys = new Set();
+                importDrafts = rawRows.map((row, idx) => {
+                    const draft = this.parseEmployeeImportRow(row, `imp-${idx}-${Date.now()}`);
+                    return this.classifyEmployeeImportDraft(draft, seenKeys);
+                });
 
-                previewHead.innerHTML = `<tr>${headers.map(h => `<th>${Utils.escapeHTML(h)}</th>`).join('')}</tr>`;
-                previewBody.innerHTML = importedData.slice(0, 5).map(row =>
-                    `<tr>${headers.map(h => `<td>${Utils.escapeHTML(String(row[h] || ''))}</td>`).join('')}</tr>`
-                ).join('');
-
-                previewCount.textContent = `${this.t('module.employees.totalRows', 'إجمالي الصفوف')}: ${importedData.length}`;
-                preview.classList.remove('hidden');
-                confirmBtn.disabled = false;
-
+                refreshReview();
                 Loading.hide();
             } catch (error) {
                 Loading.hide();
@@ -4711,104 +4905,100 @@ const Employees = {
             }
         });
 
+        modal.addEventListener('change', (e) => {
+            const input = e.target.closest('.emp-imp-field');
+            if (!input) return;
+            const tr = input.closest('tr[data-import-uid]');
+            if (!tr) return;
+            const uid = tr.getAttribute('data-import-uid');
+            const draft = importDrafts.find(d => d.uid === uid);
+            if (!draft) return;
+            const field = input.getAttribute('data-field');
+            if (!field) return;
+            draft[field] = input.value;
+            this.reclassifyAllEmployeeImportDrafts(importDrafts);
+            refreshReview();
+        });
+
+        modal.addEventListener('click', (e) => {
+            const removeBtn = e.target.closest('.emp-imp-remove');
+            if (removeBtn) {
+                const tr = removeBtn.closest('tr[data-import-uid]');
+                if (!tr) return;
+                const uid = tr.getAttribute('data-import-uid');
+                importDrafts = importDrafts.filter(d => d.uid !== uid);
+                this.reclassifyAllEmployeeImportDrafts(importDrafts);
+                refreshReview();
+                return;
+            }
+            if (e.target === modal) modal.remove();
+        });
+
         confirmBtn.addEventListener('click', async () => {
-            if (importedData.length === 0) return;
+            const newDrafts = importDrafts.filter(d => d.status === 'new');
+            if (newDrafts.length === 0) {
+                Notification.warning('لا يوجد موظفون جدد للإضافة');
+                return;
+            }
+
+            const counts = this.getEmployeeImportCounts(importDrafts);
+            const ok = window.confirm(
+                `سيتم إضافة ${newDrafts.length} موظف جديد فقط.\n` +
+                `تخطّي موجود مسبقاً: ${counts.existsCount}\n` +
+                `ناقص/غير صالح: ${counts.invalidCount}\n\n` +
+                `الموجودون والمستقيلون لن يُعدَّلوا ولن يُحذفوا.\nهل تريد المتابعة؟`
+            );
+            if (!ok) return;
 
             Loading.show();
             try {
-                let successCount = 0;
-                let errorCount = 0;
-                const safeStr = (v) => (v === null || v === undefined) ? '' : String(v).trim();
+                let addedCount = 0;
+                let skippedDuringWrite = 0;
 
-                importedData.forEach(row => {
+                newDrafts.forEach(draft => {
                     try {
-                        // محاولة العثور على البيانات في أي عمود ممكن
-                        const name = row['اسم الموظ'] || row['اسم الموظف'] || row['Employee Name'] || row['Name'] || row['name'] || '';
-                        const sapId = row['ID SAP'] || row['رقم SAP'] || row['SAP ID'] || row['sap_id'] || '';
-                        const employeeNumberRaw = row['رقم الموظف'] || row['الرقم الوظيفي'] || row['Employee Number'] || row['employee_number'] || '';
-                        const hireDate = row['تاريخ التعيين'] || row['Hire Date'] || row['hire_date'] || '';
-                        const job = row['Job'] || row['job'] || row['المنصب'] || '';
-                        const dept = row['Department'] || row['department'] || row['القسم'] || '';
-                        const branch = row['Branch'] || row['branch'] || row['الرع'] || '';
-                        const location = row['Location'] || row['location'] || row['الموقع'] || '';
-                        const gender = row['Gender'] || row['gender'] || row['الجنس'] || '';
-                        const nationalId = row['رقم البطاقة القومى'] || row['National ID'] || row['national_id'] || '';
-                        const birthDate = row['تاريخ الميلاد'] || row['Date of Birth'] || row['birth_date'] || '';
-                        const email = row['Email'] || row['email'] || row['البريد الإلكتروني'] || '';
-                        const phone = row['Phone'] || row['phone'] || row['الهات'] || '';
-                        const insuranceNumber = row['الرقم التأميني'] || row['Insurance Number'] || row['insurance_number'] || row['رقم التأمين'] || '';
-
-                        const employeeNumber = safeStr(employeeNumberRaw) || safeStr(sapId);
-
-                        if (!name && !employeeNumber) {
-                            errorCount++;
+                        // إعادة فحص الهوية قبل الكتابة (حماية إضافية)
+                        if (this.findExistingEmployeeByImportKey(draft.employeeNumber, draft.sapId)) {
+                            skippedDuringWrite++;
                             return;
                         }
-
-                        // التحقق من عدم وجود الموظف مسبقاً
-                        const existing = AppState.appData.employees.find(e =>
-                            (e.employeeNumber && e.employeeNumber === employeeNumber) ||
-                            (e.name && e.name.toLowerCase() === safeStr(name).toLowerCase())
-                        );
-
-                        if (!existing) {
-                            const employee = {
-                                // ✅ مطلوب: id = رقم الموظف (employeeNumber)
-                                id: employeeNumber || Utils.generateId('EMP'),
-                                name: safeStr(name),
-                                employeeNumber: employeeNumber || Utils.generateId('EMP'),
-                                sapId: safeStr(sapId),
-                                // ✅ مطلوب: تواريخ بصيغة YYYY-MM-DD بدون ISO Z / timezone shift
-                                hireDate: this.normalizeDateOnly(hireDate) || this.normalizeDateOnly(new Date()),
-                                // ✅ توافق مع Header Employees: لدينا job و position
-                                job: safeStr(job),
-                                position: safeStr(job),
-                                department: safeStr(dept),
-                                branch: safeStr(branch),
-                                location: safeStr(location),
-                                gender: safeStr(gender),
-                                // ✅ رقم البطاقة: تخزين كنص
-                                nationalId: safeStr(nationalId),
-                                birthDate: this.normalizeDateOnly(birthDate),
-                                email: safeStr(email),
-                                phone: safeStr(phone),
-                                insuranceNumber: safeStr(insuranceNumber),
-                                photo: '',
-                                createdAt: new Date().toISOString(),
-                                updatedAt: new Date().toISOString()
-                            };
-
-                            AppState.appData.employees.push(employee);
-                            successCount++;
-                        } else {
-                            errorCount++;
+                        const employee = this.buildEmployeeFromImportDraft(draft);
+                        if (!employee) {
+                            skippedDuringWrite++;
+                            return;
                         }
-                    } catch (err) {
-                        errorCount++;
+                        if (this.findExistingEmployeeByImportKey(employee.employeeNumber, employee.sapId)) {
+                            skippedDuringWrite++;
+                            return;
+                        }
+                        AppState.appData.employees.push(employee);
+                        addedCount++;
+                    } catch (_err) {
+                        skippedDuringWrite++;
                     }
                 });
 
-                // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                } else {
+                    Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+                }
                 await GoogleIntegration.autoSave('Employees', AppState.appData.employees);
 
-                // تحديث Cache
                 this.cache.data = AppState.appData.employees;
                 this.cache.lastLoad = Date.now();
                 this.cache.lastUpdate = Date.now();
 
                 Loading.hide();
-                Notification.success(`تم استيراد ${successCount} موظف${errorCount > 0 ? ` (فشل ${errorCount} موظفين)` : ''}`);
+                Notification.success(
+                    `أُضيف ${addedCount} موظف جديد` +
+                    (counts.existsCount > 0 ? ` — تُخطي موجود ${counts.existsCount}` : '') +
+                    (counts.invalidCount > 0 ? ` — ناقص ${counts.invalidCount}` : '') +
+                    (skippedDuringWrite > 0 ? ` — استُبعد عند الحفظ ${skippedDuringWrite}` : '')
+                );
                 modal.remove();
-                
-                // تحديث الكروت الإحصائية
+
                 this.renderStatsCards();
-                
-                // ✅ تطبيق جميع الفلاتر بعد الاستيراد
                 const showInactive = document.getElementById('show-inactive-employees')?.checked || false;
                 this.loadEmployeesList(showInactive);
                 requestAnimationFrame(() => {
@@ -4818,10 +5008,6 @@ const Employees = {
                 Loading.hide();
                 Notification.error('فشل الاستيراد: ' + error.message);
             }
-        });
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
         });
     },
 

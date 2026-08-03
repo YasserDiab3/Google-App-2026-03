@@ -1,15 +1,15 @@
 {
-  "version": "1.0.809",
+  "version": "1.0.811",
   "highlights": {
     "ar": [
-      "هيكل وكروت مراقبة الأخطاء تظهر فوراً قبل اكتمال التحميل.",
-      "تصميم ثابت بـ CSS مستقل مع هيكل skeleton أثناء الجلب.",
-      "تحديث أرقام الكروت دون اختفاء اللوحة أو وميض الهيكل."
+      "استيراد الموظفين يضيف الجدد فقط دون تعديل أو حذف الموجودين.",
+      "شاشة مراجعة قبل التأكيد تعرض غير الموجودين بالنظام مع إمكانية التعديل أو الحذف.",
+      "ملخص أعداد (جديد / موجود / ناقص) وتأكيد ثانٍ قبل الحفظ لحماية البيانات."
     ],
     "en": [
-      "Client-error layout and cards appear immediately before load finishes.",
-      "Stable dedicated CSS with skeleton structure while fetching.",
-      "Stat card values update without vanishing the panel layout."
+      "Employee import adds new staff only without updating or deleting existing records.",
+      "Pre-confirm review shows only employees missing from the system, with edit or remove.",
+      "Summary counts (new / existing / invalid) and a second confirm before save."
     ]
   }
 }
