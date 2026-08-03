@@ -497,9 +497,16 @@ const Employees = {
                     // ✅ تحميل التبويب النشط بعد إعداد event listeners
                     if (this.activeTab === 'data-analysis' && this.canViewEmployeesAnalysisTab()) {
                         await this.loadEmployeesAnalysis();
+                    } else if (this.activeTab === 'external-workforce' && this.canViewExternalWorkforceTab()) {
+                        await this.ensureExternalWorkforceDataLoaded();
+                        this.renderExternalWorkforceTable();
+                    } else if (this.activeTab === 'employees-list' && this.canViewEmployeesRegistryTab()) {
+                        await this.loadEmployeesList();
                     } else if (this.canViewEmployeesRegistryTab()) {
                         await this.loadEmployeesList();
-                    } else if (this.activeTab === 'external-workforce' && this.canViewExternalWorkforceTab()) {
+                    } else if (this.canViewEmployeesAnalysisTab()) {
+                        await this.loadEmployeesAnalysis();
+                    } else if (this.canViewExternalWorkforceTab()) {
                         await this.ensureExternalWorkforceDataLoaded();
                         this.renderExternalWorkforceTable();
                     }
@@ -3187,6 +3194,7 @@ const Employees = {
                             </button>
                         </div>
                     </div>
+                </div>
                 </div>
                 <div class="card-body">
                     <div id="employees-table-container">
