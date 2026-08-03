@@ -56,6 +56,66 @@ window.Auth = {
     /**
      * جلب سياسة bootstrap من الخادم (قراءة فقط). فشل الشبكة لا يفتح الباب إن كان مغلقاً محلياً مسبقاً.
      */
+    /** آخر تسخين ناجح/مكتمل لـ GAS — لتجنّب warmup مزدوج قبل login */
+    _lastWarmupAt: 0,
+    _warmupInFlight: null,
+    /** اعتبار التسخين طازجاً لهذه المدة (تجنّب cold-start دون انتظار إضافي) */
+    WARMUP_FRESH_MS: 2 * 60 * 1000,
+
+    /**
+     * تسخين خفيف لـ Apps Script قبل/أثناء شاشة الدخول.
+     * لا يحجب أكثر من maxWaitMs — إن اكتمل مسبقاً يتخطى فوراً.
+     */
+    async ensureWarmBackend(options = {}) {
+        const maxWaitMs = (options && options.maxWaitMs != null) ? Number(options.maxWaitMs) : 1200;
+        const force = !!(options && options.force);
+        const now = Date.now();
+        if (!force && this._lastWarmupAt && (now - this._lastWarmupAt) < this.WARMUP_FRESH_MS) {
+            return true;
+        }
+        if (
+            typeof GoogleIntegration === 'undefined' ||
+            typeof GoogleIntegration.sendRequest !== 'function' ||
+            typeof Utils === 'undefined' ||
+            typeof Utils.hasCloudBackendSync !== 'function' ||
+            !Utils.hasCloudBackendSync()
+        ) {
+            return false;
+        }
+
+        if (!this._warmupInFlight) {
+            this._warmupInFlight = (async () => {
+                try {
+                    await GoogleIntegration.sendRequest({
+                        action: 'warmup',
+                        data: {
+                            __timeoutMs: 8000,
+                            __allowStructuredFailure: true,
+                            // أولوية منخفضة نسبياً أمام login إن تداخلا — لكن على شاشة الدخول لا يوجد login بعد
+                            __highPriority: false
+                        }
+                    });
+                    this._lastWarmupAt = Date.now();
+                } catch (_e) {
+                    /* التسخين اختياري */
+                } finally {
+                    this._warmupInFlight = null;
+                }
+            })();
+        }
+
+        if (maxWaitMs <= 0) {
+            return !!(this._lastWarmupAt && (Date.now() - this._lastWarmupAt) < this.WARMUP_FRESH_MS);
+        }
+        try {
+            await Promise.race([
+                this._warmupInFlight || Promise.resolve(),
+                new Promise((resolve) => setTimeout(resolve, maxWaitMs))
+            ]);
+        } catch (_e) { /* ignore */ }
+        return !!(this._lastWarmupAt && (Date.now() - this._lastWarmupAt) < this.WARMUP_FRESH_MS);
+    },
+
     async refreshBootstrapPolicyFromServer() {
         try {
             if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
@@ -594,20 +654,13 @@ window.Auth = {
 
         email = email.trim().toLowerCase();
 
-        // SEC-01: تحديث سياسة الخادم (دفاع إضافي) ثم رفض أي @hse.local دائماً
-        // مهلة قصيرة — لا نعطّل الدخول بانتظار سياسة بطيئة
-        try {
-            await Promise.race([
-                this.refreshBootstrapPolicyFromServer(),
-                new Promise((resolve) => setTimeout(resolve, 2500))
-            ]);
-        } catch (_polErr) { /* ignore — نعتمد الكاش المحلي إن وُجد */ }
-
+        // SEC-01: رفض @hse.local فوراً محلياً — سياسة الخادم بالخلفية (لا تحجب «جاري التحقق»)
         if (this.isBootstrapEmail(email)) {
             const errorMessage = 'حساب التجهيز الافتراضي معطّل من الخادم. يرجى الدخول بحساب النظام.';
             Notification.error(errorMessage);
             return { success: false, message: errorMessage, errorCode: 'BOOTSTRAP_DISABLED' };
         }
+        void this.refreshBootstrapPolicyFromServer().catch(() => {});
 
         // التحقق من Rate Limiting
         try {
@@ -628,39 +681,25 @@ window.Auth = {
             return { success: false, message: errorMessage };
         }
 
-        // 🔒 عزل كاش سريع قبل الدخول — لا ننتظر ثوانٍ طويلة (الخادم مصدر المصادقة)
+        // 🔒 عزل كاش سريع — مهلة قصيرة جداً؛ الخادم مصدر المصادقة
         if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.purgeIfUserChanged === 'function') {
             window.DataManager.purgeIfUserChanged(email);
             AppState._loginPurgeEmail = email;
             if (typeof window.DataManager.awaitLastPurge === 'function') {
                 try {
                     await Promise.race([
-                        window.DataManager.awaitLastPurge(800),
-                        new Promise((resolve) => setTimeout(() => resolve(true), 800))
+                        window.DataManager.awaitLastPurge(300),
+                        new Promise((resolve) => setTimeout(() => resolve(true), 300))
                     ]);
                 } catch (_p) { /* ignore */ }
             }
         }
 
-        // ✅ تحسين الأداء: لا نقوم بمزامنة Users قبل تسجيل الدخول.
-        // الخادم هو مصدر الحقيقة للمصادقة — تجنّب cold-start مزدوج.
-        // البيانات المحلية تُستخدم كـ fallback فقط إذا فشل الخادم.
-        let localUsersCount = Array.isArray(AppState.appData.users) ? AppState.appData.users.length : 0;
+        // ✅ لا مزامنة Users قبل الدخول. لا تحميل كاش ضخم هنا — كان يطيل «جاري التحقق» بلا داعٍ.
+        // الخادم مصدر الحقيقة؛ التحميل المحلي يُكمَّل بعد النجاح إن لزم.
         const canSyncUsers = !!(typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync() &&
             typeof GoogleIntegration !== 'undefined' &&
             typeof GoogleIntegration.syncUsers === 'function');
-
-        // تحميل سريع للبيانات المحلية فقط (بدون شبكة) لضمان توفّر fallback إذا فشل الخادم
-        // بعد purge أعلاه لا يُحمَّل كاش مستخدم آخر
-        if (localUsersCount === 0 && typeof window.DataManager !== 'undefined' && window.DataManager.load) {
-            try {
-                await Promise.race([
-                    window.DataManager.load(),
-                    new Promise(resolve => setTimeout(resolve, 400))
-                ]);
-                localUsersCount = Array.isArray(AppState.appData.users) ? AppState.appData.users.length : 0;
-            } catch (_e) { /* تجاهل: سنعتمد على الخادم */ }
-        }
 
         // ملاحظة: تم إزالة المستخدمين الثابتين لأسباب أمنية
         // جميع المستخدمين يجب أن يكونوا من قاعدة البيانات قط
@@ -676,16 +715,8 @@ window.Auth = {
                 if (typeof GoogleIntegration.resetCircuitBreaker === 'function') {
                     GoogleIntegration.resetCircuitBreaker();
                 }
-                // تسخين السكربت قبل login — يقلّل سقوط أول طلب إلى doGet بعد cold-start
-                try {
-                    await Promise.race([
-                        GoogleIntegration.sendRequest({
-                            action: 'warmup',
-                            data: { __timeoutMs: 8000, __allowStructuredFailure: true }
-                        }),
-                        new Promise((resolve) => setTimeout(() => resolve(null), 5000))
-                    ]);
-                } catch (_w) { /* التسخين اختياري */ }
+                // تسخين قصير فقط إن لم يُسخَّن مسبقاً من شاشة الدخول (كان ينتظر حتى 5ث قبل login)
+                await this.ensureWarmBackend({ maxWaitMs: 1000 });
 
                 Utils.safeLog('🔒 محاولة تسجيل الدخول عبر الخادم...');
                 loginResult = await GoogleIntegration.sendRequest({
@@ -698,7 +729,10 @@ window.Auth = {
                         __allowStructuredFailure: true
                     }
                 });
-
+                // نجاح التسخين الضمني إن نجح login
+                if (loginResult && loginResult.success) {
+                    this._lastWarmupAt = Date.now();
+                }
                 if (loginResult && loginResult.success) {
                     if (loginResult.mfaRequired) {
                         Utils.safeLog('🔐 مطلوب MFA — انتظار رمز TOTP');
@@ -870,6 +904,10 @@ window.Auth = {
 
         this._authInFlight = true;
         try {
+            // تسخين قصير إن برد السكربت أثناء إدخال MFA — لا يتجاوز ~0.8ث
+            if (typeof this.ensureWarmBackend === 'function') {
+                await this.ensureWarmBackend({ maxWaitMs: 800 });
+            }
             return await this._verifyMfaAndCompleteLoginInner(email, otp, token, remember);
         } finally {
             this._mfaChallengePending = false;

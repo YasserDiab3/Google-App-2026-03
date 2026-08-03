@@ -1306,7 +1306,38 @@ Yasser.diab@icapp.com.eg`;
         setupLanguageToggle();
         
         log('✅ تم تفعيل نموذج تسجيل الدخول');
+        scheduleLoginBackendWarmup();
         return true;
+    }
+
+    /** تسخين GAS مسبقاً على شاشة الدخول — يقلّل انتظار «جاري التحقق» عند الضغط */
+    function scheduleLoginBackendWarmup() {
+        const kick = function () {
+            try {
+                if (typeof window.Auth !== 'undefined' && typeof window.Auth.ensureWarmBackend === 'function') {
+                    // لا ننتظر — يعمل بالخلفية أثناء كتابة كلمة المرور
+                    window.Auth.ensureWarmBackend({ maxWaitMs: 0 });
+                }
+            } catch (_e) { /* ignore */ }
+        };
+        // تأخير قصير بعد رسم الشاشة حتى لا ينافس تحميل السكربتات
+        setTimeout(kick, 400);
+        setTimeout(kick, 2500);
+        try {
+            const userEl = document.getElementById('username');
+            const passEl = document.getElementById('password');
+            const onFocusWarm = function () {
+                kick();
+            };
+            if (userEl && userEl.dataset.warmupBound !== '1') {
+                userEl.addEventListener('focus', onFocusWarm, { passive: true });
+                userEl.dataset.warmupBound = '1';
+            }
+            if (passEl && passEl.dataset.warmupBound !== '1') {
+                passEl.addEventListener('focus', onFocusWarm, { passive: true });
+                passEl.dataset.warmupBound = '1';
+            }
+        } catch (_e2) { /* ignore */ }
     }
     
     // انتظار تحميل الوحدات
@@ -1316,6 +1347,7 @@ Yasser.diab@icapp.com.eg`;
         
         if (checkDependencies()) {
             log('✅ جميع الوحدات محملة');
+            scheduleLoginBackendWarmup();
             return;
         }
         
@@ -1329,6 +1361,7 @@ Yasser.diab@icapp.com.eg`;
             if (checkDependencies()) {
                 clearInterval(checkInterval);
                 log('✅ جميع الوحدات محملة بعد ' + attempts + ' محاولة');
+                scheduleLoginBackendWarmup();
             } else if (attempts >= maxAttempts) {
                 clearInterval(checkInterval);
                 console.error('❌ انتهت محاولات انتظار الوحدات');

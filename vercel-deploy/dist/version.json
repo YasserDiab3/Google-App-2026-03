@@ -1,17 +1,17 @@
 {
-  "version": "1.0.795",
+  "version": "1.0.797",
   "highlights": {
     "ar": [
-      "تحميل الكاش المحلي الضخم بدون تجميد متصل: تحليل JSON عبر Worker عند الإمكان.",
-      "تعيين بيانات التطبيق على دفعات مع إفساح للمتصفح أثناء الاستعادة.",
-      "نفس الحماية لكاش IndexedDB وقوائم PTW الكبيرة عند فتح النظام.",
-      "واجهة أكثر استجابة عند boot حتى مع كاش محلي ثقيل جداً."
+      "تسريع تسجيل الدخول: إزالة انتظار السياسة والتسخين الطويل قبل «جاري التحقق».",
+      "تسخين الخادم مسبقاً على شاشة الدخول أثناء كتابة البريد/كلمة المرور.",
+      "لا تحميل كاش ضخم قبل المصادقة عبر الخادم — انتقال أسرع للتحقق.",
+      "تحقق MFA أسلس مع تسخين قصير عند الحاجة فقط."
     ],
     "en": [
-      "Large local cache loads without a long freeze: JSON parse via Worker when available.",
-      "App data is applied in chunks with yields so the UI can stay responsive during restore.",
-      "Same protection for IndexedDB cache and large PTW lists on open.",
-      "More responsive boot even with a very heavy local cache."
+      "Faster login: removed long policy/warmup waits before the verifying state.",
+      "Backend warms up on the login screen while you type email/password.",
+      "No heavy local cache load before server auth — quicker path to verification.",
+      "Smoother MFA verify with a short warmup only when needed."
     ]
   }
 }
