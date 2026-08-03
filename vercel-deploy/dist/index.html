@@ -8701,6 +8701,7 @@
         <link rel="stylesheet" href="css/ui-ux-enhancements.css" />
         <link rel="stylesheet" href="css/form-settings-card.css?v=20260627-1" />
         <link rel="stylesheet" href="css/safety-calendar.css?v=20260620-12" />
+        <link rel="stylesheet" href="css/client-errors-admin.css?v=20260803-1" />
         <link rel="stylesheet" href="css/browser-compatibility.css" />
 
         <!-- Contractors Tabs CSS -->
@@ -12577,7 +12578,26 @@
                         class="section"
                         role="region"
                         aria-label="قسم مراقبة أخطاء المستخدمين"
-                    ></section>
+                    >
+                        <div id="cea-section-root" class="cea-panel cea-boot-shell" aria-busy="true">
+                            <div class="cea-toolbar">
+                                <div class="cea-toolbar__meta">
+                                    <i class="fas fa-bug" style="color:#b91c1c" aria-hidden="true"></i>
+                                    <span>مراقبة أخطاء المستخدمين</span>
+                                    <span class="cea-sync-hint">جاري تجهيز اللوحة…</span>
+                                </div>
+                            </div>
+                            <div class="cea-stats" aria-hidden="true">
+                                <div class="cea-stat is-loading" style="--cea-accent:#0f766e"><div class="cea-stat__label">إجمالي السجلات</div><div class="cea-stat__value">—</div></div>
+                                <div class="cea-stat is-loading" style="--cea-accent:#b91c1c"><div class="cea-stat__label">آخر 24 ساعة</div><div class="cea-stat__value">—</div></div>
+                                <div class="cea-stat is-loading" style="--cea-accent:#0e7490"><div class="cea-stat__label">جديد</div><div class="cea-stat__value">—</div></div>
+                                <div class="cea-stat is-loading" style="--cea-accent:#7f1d1d"><div class="cea-stat__label">أخطاء</div><div class="cea-stat__value">—</div></div>
+                            </div>
+                            <div class="cea-table-wrap">
+                                <div class="cea-empty">جاري تحميل الهيكل…</div>
+                            </div>
+                        </div>
+                    </section>
 
                     <!-- Issue Tracking Section -->
                     <section
@@ -12810,7 +12830,7 @@
         <!-- CRITICAL: DataManager is defined here and must be loaded before login-init-fixed.js -->
         <!-- Load individual service modules first (they expose themselves to window) -->
         <script src="js/modules/services/local-db-cache.js" defer></script>
-        <script src="js/modules/services/data-manager.js?v=hse-app-v1.0.807-20260803" defer></script>
+        <script src="js/modules/services/data-manager.js?v=hse-app-v1.0.809-20260803" defer></script>
         <script
             src="js/modules/services/periodic-inspection-store.js"
             defer
@@ -12869,12 +12889,12 @@
         <script src="js/modules/modules/investigation-rca.js" defer></script>
         <script src="js/modules/modules/incidents.js?v=20260719-incident-forms-v1" defer></script>
         <script src="js/modules/modules/nearmiss.js" defer></script>
-        <script src="js/modules/modules/ptw.js?v=hse-app-v1.0.807-20260803" defer></script>
+        <script src="js/modules/modules/ptw.js?v=hse-app-v1.0.809-20260803" defer></script>
         <script src="js/modules/modules/reports.js" defer></script>
         <script src="js/modules/modules/help-content-en.js" defer></script>
         <script src="js/modules/modules/help.js" defer></script>
         <script src="js/modules/modules/settings.js?v=20260426-2" defer></script>
-        <script src="js/modules/modules/clinic.js?v=hse-app-v1.0.807-20260803" defer></script>
+        <script src="js/modules/modules/clinic.js?v=hse-app-v1.0.809-20260803" defer></script>
         <script src="js/modules/modules/fireequipment.js" defer></script>
         <script src="js/modules/modules/ppe.js?v=20260723-ppe-identity-v2" defer></script>
         <script src="js/modules/modules/periodic-equipment.js?v=20260626-1" defer></script>
@@ -13032,7 +13052,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.807-20260803";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.809-20260803";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

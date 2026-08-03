@@ -80,7 +80,60 @@ const ClientErrorsAdmin = {
         }
     },
 
+    _ensureStyles() {
+        if (document.getElementById('cea-admin-css')) return;
+        const link = document.createElement('link');
+        link.id = 'cea-admin-css';
+        link.rel = 'stylesheet';
+        link.href = 'css/client-errors-admin.css?v=20260803-1';
+        document.head.appendChild(link);
+    },
+
+    _statsCardsHtml(loading) {
+        const cards = [
+            { key: 'total', label: 'إجمالي السجلات', accent: '#0f766e' },
+            { key: 'last24h', label: 'آخر 24 ساعة', accent: '#b91c1c' },
+            { key: 'new', label: 'جديد', accent: '#0e7490' },
+            { key: 'errors', label: 'أخطاء', accent: '#7f1d1d' }
+        ];
+        return cards.map((c) => `
+            <div class="cea-stat${loading ? ' is-loading' : ''}" data-stat="${c.key}" style="--cea-accent:${c.accent}">
+                <div class="cea-stat__label">${c.label}</div>
+                <div class="cea-stat__value" data-stat-value>${loading ? '—' : '0'}</div>
+            </div>
+        `).join('');
+    },
+
+    _tableSkeletonHtml() {
+        const row = `
+            <tr class="cea-skeleton-row">
+                <td><span class="cea-skel cea-skel--sm"></span></td>
+                <td><span class="cea-skel cea-skel--sm"></span></td>
+                <td><span class="cea-skel cea-skel--lg"></span><span class="cea-skel cea-skel--md" style="margin-top:6px"></span></td>
+                <td><span class="cea-skel cea-skel--md"></span></td>
+                <td><span class="cea-skel cea-skel--sm"></span></td>
+                <td><span class="cea-skel cea-skel--sm"></span></td>
+                <td><span class="cea-skel cea-skel--md"></span></td>
+            </tr>`;
+        return `
+            <table class="cea-table" aria-hidden="true">
+                <thead>
+                    <tr>
+                        <th>الوقت</th>
+                        <th>المستوى</th>
+                        <th>الرسالة</th>
+                        <th>المستخدم</th>
+                        <th>الموديول</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>${row}${row}${row}${row}${row}</tbody>
+            </table>`;
+    },
+
     async open() {
+        this._ensureStyles();
         if (!this._isAdmin()) {
             if (typeof Notification !== 'undefined' && Notification.error) {
                 Notification.error('هذه الصفحة متاحة لمدير النظام فقط');
@@ -120,8 +173,9 @@ const ClientErrorsAdmin = {
         this.mount(modal.querySelector('#cea-modal-body'), { liveDefault: true });
     },
 
-    /** تحميل داخل قسم الصفحة — لا يعيد البناء إن كان مُثبّتاً */
+    /** تحميل داخل قسم الصفحة — هيكل فوري ثم بيانات */
     async load() {
+        this._ensureStyles();
         if (!this._isAdmin()) {
             const section = document.getElementById('client-errors-section');
             if (section) {
@@ -135,39 +189,53 @@ const ClientErrorsAdmin = {
 
         let root = section.querySelector('#cea-section-root');
         if (root && this._mounted && this._rootId === 'cea-section-root' && this._getRoot()) {
+            // أبقي الهيكل ظاهراً وحدّث فقط
             this.refresh({ silent: true });
             if (!this._live) this.startLive();
             return;
         }
 
-        section.innerHTML = '<div id="cea-section-root" class="p-4 cea-panel"></div>';
-        root = section.querySelector('#cea-section-root');
+        if (!root) {
+            section.innerHTML = '<div id="cea-section-root" class="cea-panel"></div>';
+            root = section.querySelector('#cea-section-root');
+        }
         this.mount(root, { liveDefault: true });
     },
 
     mount(root, opts = {}) {
         if (!root) return;
+        this._ensureStyles();
         this._rootId = root.id || ('cea-root-' + Date.now());
         if (!root.id) root.id = this._rootId;
+        // رسم الهيكل فوراً قبل أي طلب شبكة
+        root.className = 'cea-panel is-booting';
+        root.setAttribute('aria-busy', 'true');
         root.innerHTML = this._shellHtml(!!opts.liveDefault);
         this._bindShell(root);
         this._mounted = true;
+        // عرض كروت/هيكل الجدول فوراً من الكاش المحلي إن وُجد
+        this._renderStats({ keepLoading: !this._stats });
+        if (this._data && this._data.length) {
+            this._renderTable(0);
+            root.classList.remove('is-booting');
+            root.setAttribute('aria-busy', 'false');
+        }
         this.refresh({ force: true });
         if (opts.liveDefault) this.startLive();
     },
 
     _shellHtml(liveOn) {
         return `
-            <div class="cea-toolbar flex flex-wrap items-center justify-between gap-2 mb-4">
-                <div class="text-sm text-slate-600">
-                    <i class="fas fa-satellite-dish text-red-600 ml-1"></i>
-                    مراقبة أخطاء المستخدمين الظاهرة في الواجهة
-                    <span id="cea-live-indicator" class="mr-2" style="font-weight:700;color:${liveOn ? '#047857' : '#64748b'};">
+            <div class="cea-toolbar">
+                <div class="cea-toolbar__meta">
+                    <i class="fas fa-satellite-dish" style="color:#b91c1c" aria-hidden="true"></i>
+                    <span>مراقبة أخطاء المستخدمين الظاهرة في الواجهة</span>
+                    <span id="cea-live-indicator" class="cea-live-dot" style="color:${liveOn ? '#047857' : '#64748b'};">
                         ${liveOn ? '● مباشر' : '○ متوقف'}
                     </span>
-                    <span id="cea-sync-hint" class="text-xs text-slate-400 mr-2"></span>
+                    <span id="cea-sync-hint" class="cea-sync-hint">جاري التحميل…</span>
                 </div>
-                <div class="flex flex-wrap gap-2">
+                <div class="cea-toolbar__actions">
                     <button type="button" id="cea-refresh-btn" class="btn-secondary"><i class="fas fa-sync-alt ml-2"></i>تحديث</button>
                     <button type="button" id="cea-live-btn" class="btn-primary" style="background:linear-gradient(135deg,#b91c1c,#7f1d1d);">
                         <i class="fas fa-broadcast-tower ml-2"></i>${liveOn ? 'إيقاف المباشر' : 'تشغيل المباشر'}
@@ -176,10 +244,10 @@ const ClientErrorsAdmin = {
                 </div>
             </div>
 
-            <div id="cea-stats" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4"></div>
-            <div id="cea-banner" class="mb-3" hidden></div>
+            <div id="cea-stats" class="cea-stats">${this._statsCardsHtml(true)}</div>
+            <div id="cea-banner" class="cea-banner" hidden></div>
 
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">
+            <div class="cea-filters">
                 <input id="cea-q" class="form-input" placeholder="بحث في الرسالة / المستخدم..." value="${this._esc(this._filters.q)}" />
                 <select id="cea-level" class="form-input">
                     <option value="">كل المستويات</option>
@@ -197,18 +265,7 @@ const ClientErrorsAdmin = {
                 <button type="button" id="cea-apply-filters" class="btn-secondary"><i class="fas fa-filter ml-2"></i>تطبيق الفلتر</button>
             </div>
 
-            <div id="cea-table" class="overflow-x-auto"></div>
-            <style>
-                .cea-badge{border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;display:inline-block;}
-                .cea-row-actions{display:flex;flex-wrap:wrap;gap:4px;}
-                .cea-row-actions button{font-size:11px;padding:4px 8px;white-space:nowrap;}
-                .cea-row-actions button:disabled{opacity:.55;cursor:not-allowed;}
-                #cea-stats .cea-stat{border:1px solid rgba(0,0,0,.06);border-radius:12px;padding:12px;min-height:72px;}
-                #cea-banner .cea-alert{padding:10px 12px;border-radius:10px;font-size:.85rem;font-weight:600;}
-                #cea-banner .cea-alert-warn{background:#fffbeb;color:#92400e;border:1px solid #fde68a;}
-                #cea-banner .cea-alert-err{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;}
-                #cea-banner .cea-alert-ok{background:#f0fdfa;color:#0f766e;border:1px solid #99f6e4;}
-            </style>
+            <div id="cea-table" class="cea-table-wrap">${this._tableSkeletonHtml()}</div>
         `;
     },
 
@@ -372,7 +429,7 @@ const ClientErrorsAdmin = {
             if (statsOk) {
                 this._stats = statsRes;
             }
-            this._renderStats();
+            this._renderStats({ keepLoading: false });
             this._setSyncHint(listOk ? ('آخر تحديث: ' + new Date().toLocaleTimeString('ar-EG')) : 'تحديث جزئي');
         } catch (error) {
             if (seq !== this._refreshSeq) return;
@@ -384,82 +441,106 @@ const ClientErrorsAdmin = {
             if (!opts.silent && typeof Notification !== 'undefined' && Notification.error) {
                 Notification.error('فشل تحميل سجل الأخطاء: ' + this._lastError);
             }
-            this._renderStats();
+            this._renderStats({ keepLoading: !this._stats });
             if (!this._data.length) this._renderTable(0);
             this._setSyncHint('فشل التحديث');
         } finally {
-            if (seq === this._refreshSeq) this._loading = false;
+            if (seq === this._refreshSeq) {
+                this._loading = false;
+                const root = this._getRoot();
+                if (root) {
+                    root.classList.remove('is-booting');
+                    root.setAttribute('aria-busy', 'false');
+                }
+            }
         }
     },
 
-    _renderStats() {
+    _renderStats(opts = {}) {
         const root = this._getRoot();
         const box = root && root.querySelector('#cea-stats');
         if (!box) return;
+
+        if (!box.querySelector('[data-stat="total"]')) {
+            box.innerHTML = this._statsCardsHtml(!!opts.keepLoading);
+        }
+
         const s = this._stats || {};
         const byLevel = s.byLevel || {};
         const byStatus = s.byStatus || {};
-        const cards = [
-            { label: 'إجمالي السجلات', value: s.total != null ? s.total : (this._data.length || 0), color: '#0f766e', bg: '#f0fdfa' },
-            { label: 'آخر 24 ساعة', value: s.last24h || 0, color: '#b91c1c', bg: '#fef2f2' },
-            { label: 'جديد', value: byStatus.new || 0, color: '#0e7490', bg: '#ecfeff' },
-            { label: 'أخطاء', value: byLevel.error || 0, color: '#7f1d1d', bg: '#fff1f2' }
-        ];
-        box.innerHTML = cards.map((c) => `
-            <div class="cea-stat" style="background:${c.bg};">
-                <div style="font-size:1.4rem;font-weight:800;color:${c.color};" dir="ltr">${c.value}</div>
-                <div style="font-size:0.75rem;color:#64748b;">${c.label}</div>
-            </div>
-        `).join('');
+        const values = {
+            total: s.total != null ? s.total : (this._data.length || 0),
+            last24h: s.last24h || 0,
+            new: byStatus.new || 0,
+            errors: byLevel.error || 0
+        };
+
+        Object.keys(values).forEach((key) => {
+            const card = box.querySelector(`[data-stat="${key}"]`);
+            if (!card) return;
+            const valEl = card.querySelector('[data-stat-value]');
+            if (!valEl) return;
+            if (opts.keepLoading && !this._stats) {
+                card.classList.add('is-loading');
+                valEl.textContent = '—';
+            } else {
+                card.classList.remove('is-loading');
+                valEl.textContent = String(values[key]);
+            }
+        });
     },
 
     _renderTable(newCount) {
         const root = this._getRoot();
         const box = root && root.querySelector('#cea-table');
         if (!box) return;
+        box.classList.add('cea-table-wrap');
+
         if (!this._data.length) {
-            box.innerHTML = `<div class="text-center text-slate-500 py-10">
+            box.innerHTML = `<div class="cea-empty">
                 لا توجد أخطاء مطابقة للفلتر حالياً.
                 ${this._filters.status || this._filters.level || this._filters.q
-                    ? '<div class="mt-2 text-xs">جرّب اختيار «كل الحالات» ثم تحديث.</div>'
+                    ? '<div style="margin-top:8px;font-size:12px;">جرّب اختيار «كل الحالات» ثم تحديث.</div>'
                     : ''}
             </div>`;
             return;
         }
+
         const banner = newCount > 0
-            ? `<div class="mb-3 p-2 rounded" style="background:#fef2f2;color:#b91c1c;font-weight:700;">ورد ${newCount} خطأ جديد في هذه الجولة</div>`
+            ? `<div class="cea-alert cea-alert-ok" style="margin:10px;">ورد ${newCount} خطأ جديد في هذه الجولة</div>`
             : '';
+
         box.innerHTML = banner + `
-            <table class="w-full text-sm" style="border-collapse:collapse;">
+            <table class="cea-table">
                 <thead>
-                    <tr style="background:#f8fafc;text-align:right;">
-                        <th class="p-2">الوقت</th>
-                        <th class="p-2">المستوى</th>
-                        <th class="p-2">الرسالة</th>
-                        <th class="p-2">المستخدم</th>
-                        <th class="p-2">الموديول</th>
-                        <th class="p-2">الحالة</th>
-                        <th class="p-2">إجراءات</th>
+                    <tr>
+                        <th>الوقت</th>
+                        <th>المستوى</th>
+                        <th>الرسالة</th>
+                        <th>المستخدم</th>
+                        <th>الموديول</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${this._data.map((r) => {
                         const rid = this._esc(r.id);
                         return `
-                        <tr data-cea-row="${rid}" style="border-top:1px solid #e2e8f0;vertical-align:top;">
-                            <td class="p-2 whitespace-nowrap" dir="ltr">${this._esc(this._fmtTime(r.createdAt))}</td>
-                            <td class="p-2">${this._levelBadge(r.level)}</td>
-                            <td class="p-2" style="max-width:340px;">
+                        <tr data-cea-row="${rid}">
+                            <td class="whitespace-nowrap" dir="ltr">${this._esc(this._fmtTime(r.createdAt))}</td>
+                            <td>${this._levelBadge(r.level)}</td>
+                            <td style="max-width:340px;">
                                 <div style="font-weight:600;">${this._esc(String(r.message || '').slice(0, 160))}</div>
-                                <div class="text-xs text-slate-500" dir="ltr">${this._esc(String(r.appVersion || ''))} · ${this._esc(String(r.source || '').slice(0, 60))}</div>
+                                <div style="font-size:12px;color:#64748b;" dir="ltr">${this._esc(String(r.appVersion || ''))} · ${this._esc(String(r.source || '').slice(0, 60))}</div>
                             </td>
-                            <td class="p-2">
+                            <td>
                                 <div>${this._esc(r.username || '—')}</div>
-                                <div class="text-xs text-slate-500" dir="ltr">${this._esc(r.userEmail || '')}</div>
+                                <div style="font-size:12px;color:#64748b;" dir="ltr">${this._esc(r.userEmail || '')}</div>
                             </td>
-                            <td class="p-2">${this._esc(r.module || '—')}</td>
-                            <td class="p-2 cea-status-cell">${this._statusBadge(r.status)}</td>
-                            <td class="p-2">
+                            <td>${this._esc(r.module || '—')}</td>
+                            <td class="cea-status-cell">${this._statusBadge(r.status)}</td>
+                            <td>
                                 <div class="cea-row-actions">
                                     <button type="button" class="btn-secondary" data-cea-action="detail" data-id="${rid}">تفاصيل</button>
                                     <button type="button" class="btn-secondary" data-cea-action="status" data-status="seen" data-id="${rid}">مشاهدة</button>
