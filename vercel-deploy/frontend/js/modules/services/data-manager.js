@@ -12,57 +12,57 @@ const DataManager = {
     /** عتبة اعتبار hse_app_data ضخماً — نُفسح الـ main thread قبل/أثناء التحليل والتعيين */
     LARGE_APP_DATA_CHARS: 350 * 1024,
     /** بعد كم سجل (عناصر مصفوفات) نُعيد التحكم للمتصفح أثناء التعيين */
-    LOAD_YIELD_EVERY_ITEMS: 800,
+    LOAD_YIELD_EVERY_ITEMS: 400,
     _lastLightSaveNotification: 0,
     _hasShownLargeDataWarning: false,
 
-    /** إفساح الـ main thread لإبقاء الواجهة مستجيبة أثناء boot */
-    async _yieldToMain_() {
-        await new Promise((resolve) => setTimeout(resolve, 0));
+    /**
+     * إفساح الـ main thread (رسم إطار + macrotask).
+     * @param {number} [rounds=1] عدد دورات الإفساح
+     */
+    async _yieldToMain_(rounds) {
+        const n = Math.max(1, Number(rounds) || 1);
+        for (let i = 0; i < n; i++) {
+            await new Promise((resolve) => {
+                if (typeof requestAnimationFrame === 'function') {
+                    requestAnimationFrame(() => setTimeout(resolve, 0));
+                } else {
+                    setTimeout(resolve, 0);
+                }
+            });
+        }
     },
 
     /**
-     * JSON.parse عبر Worker — يعزل تكلفة التحليل عن رسم الواجهة.
-     * ملاحظة: postMessage ينسخ الكائن؛ ما زال هناك تكلفة، لكنها أفضل من تجميد طويل متصل.
+     * انتظار idle قصير قبل تحليل كاش ضخم — يعطي الأولوية للرسم/الإدخال.
      */
-    _parseJsonInWorker_(text) {
-        return new Promise((resolve, reject) => {
-            let url = null;
-            let worker = null;
-            let settled = false;
-            const finish = (fn, arg) => {
-                if (settled) return;
-                settled = true;
-                try { if (worker) worker.terminate(); } catch (_e) { /* ignore */ }
-                try { if (url) URL.revokeObjectURL(url); } catch (_e2) { /* ignore */ }
-                fn(arg);
+    async _waitForIdleBrief_(timeoutMs) {
+        const ms = Math.max(0, Number(timeoutMs) || 120);
+        if (typeof requestIdleCallback !== 'function') {
+            await new Promise((r) => setTimeout(r, Math.min(ms, 32)));
+            return;
+        }
+        await new Promise((resolve) => {
+            let done = false;
+            const finish = () => {
+                if (done) return;
+                done = true;
+                resolve();
             };
             try {
-                const blob = new Blob([
-                    'self.onmessage=function(e){try{self.postMessage({ok:1,d:JSON.parse(e.data)})}catch(err){self.postMessage({ok:0,e:String(err&&err.message||err)})}}'
-                ], { type: 'application/javascript' });
-                url = URL.createObjectURL(blob);
-                worker = new Worker(url);
-                const timer = setTimeout(() => finish(reject, new Error('JSON worker timeout')), 45000);
-                worker.onmessage = (ev) => {
-                    clearTimeout(timer);
-                    if (ev && ev.data && ev.data.ok) finish(resolve, ev.data.d);
-                    else finish(reject, new Error((ev && ev.data && ev.data.e) || 'worker parse failed'));
-                };
-                worker.onerror = (err) => {
-                    clearTimeout(timer);
-                    finish(reject, err || new Error('worker error'));
-                };
-                worker.postMessage(text);
-            } catch (err) {
-                finish(reject, err);
+                requestIdleCallback(finish, { timeout: ms });
+            } catch (_e) {
+                finish();
             }
+            setTimeout(finish, ms + 30);
         });
     },
 
     /**
-     * تحليل JSON بدون تجميد متصل قدر الإمكان.
-     * للكاش الضخم: yield قبل التحليل + Worker إن توفّر، وإلا JSON.parse مع fallback.
+     * تحليل JSON مع إبقاء الواجهة مستجيبة قدر الإمكان.
+     * ملاحظة إنتاج: لا نستخدم Worker هنا — postMessage يعمل structured clone
+     * للكائن الكامل فيضاعف الذاكرة والتكلفة على كاش ضخم. الأفضل:
+     * إفساح للرسم → JSON.parse مرة واحدة على الـ main → تعيين على دفعات.
      */
     async _parseJsonNonBlocking_(text, label) {
         if (text == null || text === '') return null;
@@ -70,30 +70,19 @@ const DataManager = {
         const threshold = this.LARGE_APP_DATA_CHARS || (350 * 1024);
         const large = str.length >= threshold;
         if (large) {
-            await this._yieldToMain_();
-        }
-        if (
-            large &&
-            typeof Worker !== 'undefined' &&
-            typeof Blob !== 'undefined' &&
-            typeof URL !== 'undefined' &&
-            typeof URL.createObjectURL === 'function'
-        ) {
-            try {
-                const parsed = await this._parseJsonInWorker_(str);
-                if (AppState && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
-                    Utils.safeLog(
-                        `⚡ [DataManager] JSON عبر Worker (${label || 'payload'}, ${(str.length / 1024).toFixed(0)}KB)`
-                    );
-                }
-                return parsed;
-            } catch (_wErr) {
-                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                    Utils.safeWarn('⚠️ [DataManager] Worker parse فشل — fallback sync:', _wErr);
-                }
+            await this._yieldToMain_(2);
+            await this._waitForIdleBrief_(120);
+            if (AppState && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
+                Utils.safeLog(
+                    `⚡ [DataManager] JSON.parse بعد idle (${label || 'payload'}, ${(str.length / 1024).toFixed(0)}KB) — بدون Worker/clone`
+                );
             }
         }
-        return JSON.parse(str);
+        const parsed = JSON.parse(str);
+        if (large) {
+            await this._yieldToMain_(1);
+        }
+        return parsed;
     },
 
     _normalizeObservationSites_(sites) {
@@ -183,7 +172,7 @@ const DataManager = {
             _lightDataMeta: 1
         };
         const keys = Object.keys(parsedData);
-        const yieldEvery = this.LOAD_YIELD_EVERY_ITEMS || 800;
+        const yieldEvery = this.LOAD_YIELD_EVERY_ITEMS || 400;
         let itemsSinceYield = 0;
 
         for (let i = 0; i < keys.length; i++) {
@@ -193,9 +182,10 @@ const DataManager = {
             if (val && Array.isArray(val)) {
                 AppState.appData[key] = val;
                 itemsSinceYield += val.length;
-                if (itemsSinceYield >= yieldEvery) {
+                // مصفوفة كبيرة وحدها → إفساح فوري بعد التعيين (مرجع فقط، بدون نسخ)
+                if (val.length >= 300 || itemsSinceYield >= yieldEvery) {
                     itemsSinceYield = 0;
-                    await this._yieldToMain_();
+                    await this._yieldToMain_(1);
                 }
             } else if (key === 'systemStatistics' && val && typeof val === 'object') {
                 AppState.appData.systemStatistics = val;
