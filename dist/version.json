@@ -1,15 +1,15 @@
 {
-  "version": "1.0.805",
+  "version": "1.0.807",
   "highlights": {
     "ar": [
-      "تصميم أنيق لبطاقة تفاصيل أحداث التقويم في لوحة التحكم.",
-      "عرض التاريخ والمكلف والفئة بهوية الألوان الرسمية.",
-      "تفاصيل الحدث بطاقات مرتبة مع حركة ظهور سلسة."
+      "استقرار مراقبة الأخطاء: لا تُمسح البيانات عند فشل التحديث.",
+      "فلتر كل الحالات افتراضياً وإبقاء الصفوف بعد تغيير الحالة.",
+      "إصلاح أزرار مشاهدة/حل/تجاهل وإبلاغ عبر تتبع المشاكل."
     ],
     "en": [
-      "Polished calendar event detail card on the dashboard.",
-      "Date, assignee, and category styled with brand colors.",
-      "Event fields as tidy cards with smooth open animation."
+      "Client-error monitor keeps last good data when refresh fails.",
+      "Default filter shows all statuses; rows stay after status change.",
+      "Fixed seen/resolve/ignore/report actions via issue tracking."
     ]
   }
 }

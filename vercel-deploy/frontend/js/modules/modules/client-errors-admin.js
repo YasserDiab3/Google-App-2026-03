@@ -1,6 +1,6 @@
 /**
  * ClientErrorsAdmin — لوحة مراقبة أخطاء العملاء للمدير
- * إعدادات + تبويب مباشر بتحديث تلقائي
+ * استقرار العرض: لا تُمسح البيانات عند فشل التحديث؛ فلتر افتراضي = الكل
  */
 const ClientErrorsAdmin = {
     _data: [],
@@ -9,15 +9,19 @@ const ClientErrorsAdmin = {
     _pollTimer: null,
     _live: false,
     _knownIds: new Set(),
-    _filters: { level: '', status: 'new', q: '', limit: 150 },
+    _filters: { level: '', status: '', q: '', limit: 200 },
     _rootId: null,
+    _mounted: false,
+    _refreshSeq: 0,
+    _actionBusy: false,
+    _lastError: '',
 
     _isAdmin() {
         try {
             if (typeof Permissions !== 'undefined' && Permissions.isCurrentUserAdmin) {
                 return Permissions.isCurrentUserAdmin();
             }
-        } catch (_e) {}
+        } catch (_e) { /* ignore */ }
         return String(AppState.currentUser?.role || '').toLowerCase() === 'admin';
     },
 
@@ -46,7 +50,7 @@ const ClientErrorsAdmin = {
             info: { bg: '#eff6ff', color: '#1d4ed8', label: 'معلومة' }
         };
         const m = map[lv] || map.error;
-        return `<span style="background:${m.bg};color:${m.color};border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;">${m.label}</span>`;
+        return `<span class="cea-badge" style="background:${m.bg};color:${m.color};">${m.label}</span>`;
     },
 
     _statusBadge(status) {
@@ -58,12 +62,29 @@ const ClientErrorsAdmin = {
             resolved: { bg: '#ecfdf5', color: '#047857', label: 'محلول' }
         };
         const m = map[st] || map.new;
-        return `<span style="background:${m.bg};color:${m.color};border-radius:999px;padding:2px 8px;font-size:11px;font-weight:600;">${m.label}</span>`;
+        return `<span class="cea-badge" style="background:${m.bg};color:${m.color};">${m.label}</span>`;
+    },
+
+    _getRoot() {
+        if (!this._rootId) return null;
+        return document.getElementById(this._rootId);
+    },
+
+    _isPanelVisible() {
+        try {
+            const onSection = typeof AppState !== 'undefined' && AppState.currentSection === 'client-errors';
+            const modalOpen = !!document.getElementById('client-errors-admin-modal');
+            return !!(onSection || modalOpen);
+        } catch (_e) {
+            return !!this._getRoot();
+        }
     },
 
     async open() {
         if (!this._isAdmin()) {
-            Notification.error('هذه الصفحة متاحة لمدير النظام فقط');
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('هذه الصفحة متاحة لمدير النظام فقط');
+            }
             return;
         }
         const existing = document.getElementById('client-errors-admin-modal');
@@ -73,13 +94,13 @@ const ClientErrorsAdmin = {
         modal.className = 'modal-overlay';
         modal.id = 'client-errors-admin-modal';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 1180px; max-height: 92vh; overflow-y: auto;">
+            <div class="modal-content cea-panel-modal" style="max-width: 1180px; max-height: 92vh; overflow-y: auto;">
                 <div class="modal-header" style="background: linear-gradient(135deg, #b91c1c, #7f1d1d); color: #fff;">
                     <h2 class="modal-title" style="color:#fff;">
                         <i class="fas fa-bug ml-2"></i>
                         مراقبة أخطاء المستخدمين
                     </h2>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" style="color:#fff;" title="إغلاق">
+                    <button type="button" class="modal-close" id="cea-modal-x" style="color:#fff;" title="إغلاق">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -87,29 +108,41 @@ const ClientErrorsAdmin = {
             </div>
         `;
         document.body.appendChild(modal);
+        const closeModal = () => {
+            this.stopLive();
+            this._mounted = false;
+            modal.remove();
+        };
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                this.stopLive();
-                modal.remove();
-            }
+            if (e.target === modal) closeModal();
         });
-        modal.querySelector('.modal-close')?.addEventListener('click', () => this.stopLive());
+        modal.querySelector('#cea-modal-x')?.addEventListener('click', closeModal);
         this.mount(modal.querySelector('#cea-modal-body'), { liveDefault: true });
     },
 
-    /** تحميل داخل قسم الصفحة */
+    /** تحميل داخل قسم الصفحة — لا يعيد البناء إن كان مُثبّتاً */
     async load() {
         if (!this._isAdmin()) {
             const section = document.getElementById('client-errors-section');
             if (section) {
                 section.innerHTML = '<div class="p-6 text-slate-600">هذا القسم متاح لمدير النظام فقط.</div>';
             }
+            this._mounted = false;
             return;
         }
         const section = document.getElementById('client-errors-section');
         if (!section) return;
-        section.innerHTML = '<div id="cea-section-root" class="p-4"></div>';
-        this.mount(section.querySelector('#cea-section-root'), { liveDefault: true });
+
+        let root = section.querySelector('#cea-section-root');
+        if (root && this._mounted && this._rootId === 'cea-section-root' && this._getRoot()) {
+            this.refresh({ silent: true });
+            if (!this._live) this.startLive();
+            return;
+        }
+
+        section.innerHTML = '<div id="cea-section-root" class="p-4 cea-panel"></div>';
+        root = section.querySelector('#cea-section-root');
+        this.mount(root, { liveDefault: true });
     },
 
     mount(root, opts = {}) {
@@ -118,19 +151,21 @@ const ClientErrorsAdmin = {
         if (!root.id) root.id = this._rootId;
         root.innerHTML = this._shellHtml(!!opts.liveDefault);
         this._bindShell(root);
-        this.refresh();
+        this._mounted = true;
+        this.refresh({ force: true });
         if (opts.liveDefault) this.startLive();
     },
 
     _shellHtml(liveOn) {
         return `
-            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div class="cea-toolbar flex flex-wrap items-center justify-between gap-2 mb-4">
                 <div class="text-sm text-slate-600">
                     <i class="fas fa-satellite-dish text-red-600 ml-1"></i>
-                    مراقبة مباشرة لرسائل الخطأ الظاهرة للمستخدمين
+                    مراقبة أخطاء المستخدمين الظاهرة في الواجهة
                     <span id="cea-live-indicator" class="mr-2" style="font-weight:700;color:${liveOn ? '#047857' : '#64748b'};">
                         ${liveOn ? '● مباشر' : '○ متوقف'}
                     </span>
+                    <span id="cea-sync-hint" class="text-xs text-slate-400 mr-2"></span>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <button type="button" id="cea-refresh-btn" class="btn-secondary"><i class="fas fa-sync-alt ml-2"></i>تحديث</button>
@@ -142,6 +177,7 @@ const ClientErrorsAdmin = {
             </div>
 
             <div id="cea-stats" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4"></div>
+            <div id="cea-banner" class="mb-3" hidden></div>
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">
                 <input id="cea-q" class="form-input" placeholder="بحث في الرسالة / المستخدم..." value="${this._esc(this._filters.q)}" />
@@ -152,7 +188,7 @@ const ClientErrorsAdmin = {
                     <option value="unhandled" ${this._filters.level === 'unhandled' ? 'selected' : ''}>غير معالج</option>
                 </select>
                 <select id="cea-status" class="form-input">
-                    <option value="">كل الحالات</option>
+                    <option value="" ${!this._filters.status ? 'selected' : ''}>كل الحالات</option>
                     <option value="new" ${this._filters.status === 'new' ? 'selected' : ''}>جديد</option>
                     <option value="seen" ${this._filters.status === 'seen' ? 'selected' : ''}>تمت المشاهدة</option>
                     <option value="ignored" ${this._filters.status === 'ignored' ? 'selected' : ''}>متجاهل</option>
@@ -162,38 +198,61 @@ const ClientErrorsAdmin = {
             </div>
 
             <div id="cea-table" class="overflow-x-auto"></div>
+            <style>
+                .cea-badge{border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;display:inline-block;}
+                .cea-row-actions{display:flex;flex-wrap:wrap;gap:4px;}
+                .cea-row-actions button{font-size:11px;padding:4px 8px;white-space:nowrap;}
+                .cea-row-actions button:disabled{opacity:.55;cursor:not-allowed;}
+                #cea-stats .cea-stat{border:1px solid rgba(0,0,0,.06);border-radius:12px;padding:12px;min-height:72px;}
+                #cea-banner .cea-alert{padding:10px 12px;border-radius:10px;font-size:.85rem;font-weight:600;}
+                #cea-banner .cea-alert-warn{background:#fffbeb;color:#92400e;border:1px solid #fde68a;}
+                #cea-banner .cea-alert-err{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;}
+                #cea-banner .cea-alert-ok{background:#f0fdfa;color:#0f766e;border:1px solid #99f6e4;}
+            </style>
         `;
     },
 
     _bindShell(root) {
-        root.querySelector('#cea-refresh-btn')?.addEventListener('click', () => this.refresh());
+        root.querySelector('#cea-refresh-btn')?.addEventListener('click', () => this.refresh({ force: true }));
         root.querySelector('#cea-live-btn')?.addEventListener('click', () => {
             if (this._live) this.stopLive();
             else this.startLive();
-            const btn = root.querySelector('#cea-live-btn');
-            const ind = root.querySelector('#cea-live-indicator');
-            if (btn) btn.innerHTML = `<i class="fas fa-broadcast-tower ml-2"></i>${this._live ? 'إيقاف المباشر' : 'تشغيل المباشر'}`;
-            if (ind) {
-                ind.style.color = this._live ? '#047857' : '#64748b';
-                ind.textContent = this._live ? '● مباشر' : '○ متوقف';
-            }
+            this._updateLiveUi(root);
         });
         root.querySelector('#cea-export-btn')?.addEventListener('click', () => this.exportToExcel());
         root.querySelector('#cea-apply-filters')?.addEventListener('click', () => {
             this._filters.q = root.querySelector('#cea-q')?.value?.trim() || '';
             this._filters.level = root.querySelector('#cea-level')?.value || '';
             this._filters.status = root.querySelector('#cea-status')?.value || '';
-            this.refresh();
+            this.refresh({ force: true });
         });
+        // تفويض أحداث الصف — يمنع فقدان الأزرار بعد إعادة الرسم
         root.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-cea-action]');
-            if (!btn) return;
+            if (!btn || !root.contains(btn)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            if (this._actionBusy || btn.disabled) return;
             const id = btn.getAttribute('data-id');
             const action = btn.getAttribute('data-cea-action');
+            if (!id || !action) return;
             if (action === 'status') this.setStatus(id, btn.getAttribute('data-status'));
-            if (action === 'report') this.reportIssue(id);
-            if (action === 'detail') this.showDetail(id);
+            else if (action === 'report') this.reportIssue(id);
+            else if (action === 'detail') this.showDetail(id);
+            else if (action === 'ignore') this.setStatus(id, 'ignored');
         });
+    },
+
+    _updateLiveUi(root) {
+        const host = root || this._getRoot();
+        if (!host) return;
+        const btn = host.querySelector('#cea-live-btn');
+        const ind = host.querySelector('#cea-live-indicator');
+        if (btn) btn.innerHTML = `<i class="fas fa-broadcast-tower ml-2"></i>${this._live ? 'إيقاف المباشر' : 'تشغيل المباشر'}`;
+        if (ind) {
+            ind.style.color = this._live ? '#047857' : '#64748b';
+            ind.textContent = this._live ? '● مباشر' : '○ متوقف';
+        }
     },
 
     startLive() {
@@ -201,8 +260,13 @@ const ClientErrorsAdmin = {
         this._live = true;
         this._pollTimer = setInterval(() => {
             if (document.visibilityState === 'hidden') return;
+            if (!this._isPanelVisible()) {
+                this.stopLive();
+                return;
+            }
             this.refresh({ silent: true });
-        }, 12000);
+        }, 20000);
+        this._updateLiveUi();
     },
 
     stopLive() {
@@ -211,73 +275,138 @@ const ClientErrorsAdmin = {
             clearInterval(this._pollTimer);
             this._pollTimer = null;
         }
+        this._updateLiveUi();
     },
 
-    /** عند مغادرة القسم — يوقف الاستطلاع المباشر */
     cleanup() {
         this.stopLive();
+        this._mounted = false;
+    },
+
+    _setSyncHint(text) {
+        const root = this._getRoot();
+        const el = root && root.querySelector('#cea-sync-hint');
+        if (el) el.textContent = text || '';
+    },
+
+    _setBanner(html, kind) {
+        const root = this._getRoot();
+        const box = root && root.querySelector('#cea-banner');
+        if (!box) return;
+        if (!html) {
+            box.hidden = true;
+            box.innerHTML = '';
+            return;
+        }
+        const cls = kind === 'ok' ? 'cea-alert-ok' : (kind === 'warn' ? 'cea-alert-warn' : 'cea-alert-err');
+        box.hidden = false;
+        box.innerHTML = `<div class="cea-alert ${cls}">${html}</div>`;
     },
 
     async refresh(opts = {}) {
-        if (this._loading) return;
-        // لا تُحدّث بالخلفية إن غادر المستخدم القسم ولم يبقَ modal مفتوح
-        try {
-            const onSection = typeof AppState !== 'undefined' && AppState.currentSection === 'client-errors';
-            const modalOpen = !!document.getElementById('client-errors-admin-modal');
-            if (opts.silent && !onSection && !modalOpen) {
-                this.stopLive();
-                return;
-            }
-        } catch (_g) { /* ignore */ }
+        if (this._loading && !opts.force) return;
+        if (opts.silent && !this._isPanelVisible()) {
+            this.stopLive();
+            return;
+        }
+        if (!this._getRoot()) return;
+
         this._loading = true;
+        const seq = ++this._refreshSeq;
+        this._setSyncHint('جاري التحديث…');
         try {
-            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.resetCircuitBreaker) {
-                GoogleIntegration.resetCircuitBreaker();
-            }
-            const filters = Object.assign({}, this._filters);
+            const filters = {
+                level: this._filters.level || '',
+                status: this._filters.status || '',
+                q: this._filters.q || '',
+                limit: Number(this._filters.limit) || 200
+            };
             const [listRes, statsRes] = await Promise.all([
-                GoogleIntegration.sendToAppsScript('getAllClientErrorLogs', { filters: filters, __timeoutMs: 45000, __highPriority: false }),
-                GoogleIntegration.sendToAppsScript('getClientErrorStats', { filters: {}, __timeoutMs: 45000, __highPriority: false })
+                GoogleIntegration.sendToAppsScript('getAllClientErrorLogs', {
+                    filters: filters,
+                    __timeoutMs: 45000,
+                    __highPriority: false
+                }),
+                GoogleIntegration.sendToAppsScript('getClientErrorStats', {
+                    filters: {},
+                    __timeoutMs: 45000,
+                    __highPriority: false
+                })
             ]);
-            const rows = (listRes && listRes.success && Array.isArray(listRes.data)) ? listRes.data : [];
-            let newCount = 0;
-            rows.forEach((r) => {
-                if (r.id && !this._knownIds.has(r.id)) {
-                    if (this._knownIds.size > 0) newCount += 1;
-                    this._knownIds.add(r.id);
+
+            if (seq !== this._refreshSeq) return;
+
+            const listOk = !!(listRes && listRes.success && Array.isArray(listRes.data));
+            const statsOk = !!(statsRes && statsRes.success);
+
+            if (listOk) {
+                const rows = listRes.data;
+                let newCount = 0;
+                rows.forEach((r) => {
+                    if (r.id && !this._knownIds.has(r.id)) {
+                        if (this._knownIds.size > 0) newCount += 1;
+                        this._knownIds.add(r.id);
+                    }
+                });
+                this._data = rows;
+                this._lastError = '';
+                this._renderTable(newCount);
+                if (newCount > 0) {
+                    this._setBanner(`ورد ${newCount} خطأ جديد`, 'ok');
+                } else {
+                    this._setBanner('');
                 }
-            });
-            this._data = rows;
-            this._stats = (statsRes && statsRes.success) ? statsRes : null;
+            } else {
+                // لا تمسح البيانات السابقة عند الفشل
+                this._lastError = (listRes && listRes.message) || 'فشل تحميل السجل';
+                this._setBanner(
+                    `تعذر تحديث القائمة — تم الإبقاء على آخر بيانات ناجحة. ${this._esc(this._lastError)}`,
+                    'warn'
+                );
+                if (!opts.silent && typeof Notification !== 'undefined' && Notification.error) {
+                    Notification.error('فشل تحميل سجل الأخطاء: ' + this._lastError);
+                }
+                if (!this._data.length) this._renderTable(0);
+            }
+
+            if (statsOk) {
+                this._stats = statsRes;
+            }
             this._renderStats();
-            this._renderTable(newCount);
-            if (!opts.silent && listRes && listRes.success === false) {
-                Notification.error('فشل تحميل سجل الأخطاء: ' + (listRes.message || ''));
-            }
+            this._setSyncHint(listOk ? ('آخر تحديث: ' + new Date().toLocaleTimeString('ar-EG')) : 'تحديث جزئي');
         } catch (error) {
-            if (!opts.silent) {
-                Notification.error('فشل تحميل سجل الأخطاء: ' + (error.message || error));
+            if (seq !== this._refreshSeq) return;
+            this._lastError = error && error.message ? error.message : String(error || 'خطأ شبكة');
+            this._setBanner(
+                `تعذر الاتصال — الإبقاء على آخر بيانات. ${this._esc(this._lastError)}`,
+                'err'
+            );
+            if (!opts.silent && typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('فشل تحميل سجل الأخطاء: ' + this._lastError);
             }
+            this._renderStats();
+            if (!this._data.length) this._renderTable(0);
+            this._setSyncHint('فشل التحديث');
         } finally {
-            this._loading = false;
+            if (seq === this._refreshSeq) this._loading = false;
         }
     },
 
     _renderStats() {
-        const root = document.getElementById(this._rootId);
+        const root = this._getRoot();
         const box = root && root.querySelector('#cea-stats');
         if (!box) return;
         const s = this._stats || {};
         const byLevel = s.byLevel || {};
         const byStatus = s.byStatus || {};
         const cards = [
-            { label: 'إجمالي السجلات', value: s.total || 0, color: '#0f766e', bg: '#f0fdfa' },
+            { label: 'إجمالي السجلات', value: s.total != null ? s.total : (this._data.length || 0), color: '#0f766e', bg: '#f0fdfa' },
             { label: 'آخر 24 ساعة', value: s.last24h || 0, color: '#b91c1c', bg: '#fef2f2' },
             { label: 'جديد', value: byStatus.new || 0, color: '#0e7490', bg: '#ecfeff' },
             { label: 'أخطاء', value: byLevel.error || 0, color: '#7f1d1d', bg: '#fff1f2' }
         ];
         box.innerHTML = cards.map((c) => `
-            <div style="background:${c.bg};border:1px solid rgba(0,0,0,0.06);border-radius:12px;padding:12px;">
+            <div class="cea-stat" style="background:${c.bg};">
                 <div style="font-size:1.4rem;font-weight:800;color:${c.color};" dir="ltr">${c.value}</div>
                 <div style="font-size:0.75rem;color:#64748b;">${c.label}</div>
             </div>
@@ -285,15 +414,20 @@ const ClientErrorsAdmin = {
     },
 
     _renderTable(newCount) {
-        const root = document.getElementById(this._rootId);
+        const root = this._getRoot();
         const box = root && root.querySelector('#cea-table');
         if (!box) return;
         if (!this._data.length) {
-            box.innerHTML = '<div class="text-center text-slate-500 py-10">لا توجد أخطاء مطابقة للفلتر حالياً.</div>';
+            box.innerHTML = `<div class="text-center text-slate-500 py-10">
+                لا توجد أخطاء مطابقة للفلتر حالياً.
+                ${this._filters.status || this._filters.level || this._filters.q
+                    ? '<div class="mt-2 text-xs">جرّب اختيار «كل الحالات» ثم تحديث.</div>'
+                    : ''}
+            </div>`;
             return;
         }
         const banner = newCount > 0
-            ? `<div class="mb-3 p-2 rounded" style="background:#fef2f2;color:#b91c1c;font-weight:700;">ورد ${newCount} خطأ جديد</div>`
+            ? `<div class="mb-3 p-2 rounded" style="background:#fef2f2;color:#b91c1c;font-weight:700;">ورد ${newCount} خطأ جديد في هذه الجولة</div>`
             : '';
         box.innerHTML = banner + `
             <table class="w-full text-sm" style="border-collapse:collapse;">
@@ -309,8 +443,10 @@ const ClientErrorsAdmin = {
                     </tr>
                 </thead>
                 <tbody>
-                    ${this._data.map((r) => `
-                        <tr style="border-top:1px solid #e2e8f0;vertical-align:top;">
+                    ${this._data.map((r) => {
+                        const rid = this._esc(r.id);
+                        return `
+                        <tr data-cea-row="${rid}" style="border-top:1px solid #e2e8f0;vertical-align:top;">
                             <td class="p-2 whitespace-nowrap" dir="ltr">${this._esc(this._fmtTime(r.createdAt))}</td>
                             <td class="p-2">${this._levelBadge(r.level)}</td>
                             <td class="p-2" style="max-width:340px;">
@@ -322,18 +458,35 @@ const ClientErrorsAdmin = {
                                 <div class="text-xs text-slate-500" dir="ltr">${this._esc(r.userEmail || '')}</div>
                             </td>
                             <td class="p-2">${this._esc(r.module || '—')}</td>
-                            <td class="p-2">${this._statusBadge(r.status)}</td>
-                            <td class="p-2 whitespace-nowrap">
-                                <button type="button" class="btn-secondary text-xs mb-1" data-cea-action="detail" data-id="${this._esc(r.id)}">تفاصيل</button>
-                                <button type="button" class="btn-secondary text-xs mb-1" data-cea-action="status" data-status="seen" data-id="${this._esc(r.id)}">مشاهدة</button>
-                                <button type="button" class="btn-secondary text-xs mb-1" data-cea-action="status" data-status="resolved" data-id="${this._esc(r.id)}">حل</button>
-                                <button type="button" class="btn-primary text-xs mb-1" data-cea-action="report" data-id="${this._esc(r.id)}">إبلاغ</button>
+                            <td class="p-2 cea-status-cell">${this._statusBadge(r.status)}</td>
+                            <td class="p-2">
+                                <div class="cea-row-actions">
+                                    <button type="button" class="btn-secondary" data-cea-action="detail" data-id="${rid}">تفاصيل</button>
+                                    <button type="button" class="btn-secondary" data-cea-action="status" data-status="seen" data-id="${rid}">مشاهدة</button>
+                                    <button type="button" class="btn-secondary" data-cea-action="status" data-status="resolved" data-id="${rid}">حل</button>
+                                    <button type="button" class="btn-secondary" data-cea-action="ignore" data-id="${rid}">تجاهل</button>
+                                    <button type="button" class="btn-primary" data-cea-action="report" data-id="${rid}">إبلاغ</button>
+                                </div>
                             </td>
-                        </tr>
-                    `).join('')}
+                        </tr>`;
+                    }).join('')}
                 </tbody>
             </table>
         `;
+    },
+
+    _patchRowStatus(id, status) {
+        const row = this._data.find((r) => String(r.id) === String(id));
+        if (row) row.status = status;
+        const root = this._getRoot();
+        const tr = root && root.querySelector(`[data-cea-row="${CSS.escape ? CSS.escape(String(id)) : String(id).replace(/"/g, '\\"')}"]`);
+        const cell = tr && tr.querySelector('.cea-status-cell');
+        if (cell) cell.innerHTML = this._statusBadge(status);
+        // إن كان الفلتر يستبعد الحالة الجديدة — أعد الجلب لاحقاً فقط
+        if (this._filters.status && this._filters.status !== status) {
+            // أبقِ الصف حتى التحديث اليدوي؛ لا تُفرغ القائمة فوراً
+        }
+        this._renderStats();
     },
 
     showDetail(id) {
@@ -344,35 +497,60 @@ const ClientErrorsAdmin = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width:720px;">
                 <div class="modal-header"><h3 class="modal-title">تفاصيل الخطأ</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                    <button type="button" class="modal-close" id="cea-detail-close"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="modal-body text-sm" style="white-space:pre-wrap;direction:ltr;text-align:left;">
 ${this._esc(JSON.stringify(row, null, 2))}
                 </div>
             </div>`;
         document.body.appendChild(modal);
-        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+        const close = () => modal.remove();
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+        modal.querySelector('#cea-detail-close')?.addEventListener('click', close);
     },
 
     async setStatus(id, status) {
+        if (!id || !status) return;
+        if (this._actionBusy) return;
+        this._actionBusy = true;
         try {
             const res = await GoogleIntegration.sendToAppsScript('updateClientErrorStatus', {
-                id, status, __timeoutMs: 30000
+                id: id,
+                status: status,
+                __timeoutMs: 30000,
+                __highPriority: false
             });
             if (res && res.success) {
-                Notification.success('تم تحديث الحالة');
-                this.refresh({ silent: true });
+                this._patchRowStatus(id, status);
+                if (typeof Notification !== 'undefined' && Notification.success) {
+                    Notification.success('تم تحديث الحالة');
+                }
+                // تحديث صامت لاحقاً دون مسح القائمة
+                setTimeout(() => this.refresh({ silent: true }), 800);
             } else {
-                Notification.error(res?.message || 'فشل تحديث الحالة');
+                if (typeof Notification !== 'undefined' && Notification.error) {
+                    Notification.error((res && res.message) || 'فشل تحديث الحالة');
+                }
             }
         } catch (e) {
-            Notification.error(e.message || 'فشل تحديث الحالة');
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error(e.message || 'فشل تحديث الحالة');
+            }
+        } finally {
+            this._actionBusy = false;
         }
     },
 
     async reportIssue(id) {
         const row = this._data.find((r) => String(r.id) === String(id));
-        if (!row) return;
+        if (!row) {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('لم يُعثر على سجل الخطأ في الذاكرة — حدّث القائمة ثم أعد المحاولة');
+            }
+            return;
+        }
+        if (this._actionBusy) return;
+        this._actionBusy = true;
         try {
             const title = ('خطأ واجهة: ' + String(row.message || '').slice(0, 80)).trim();
             const description = [
@@ -392,34 +570,79 @@ ${this._esc(JSON.stringify(row, null, 2))}
                 row.stack || '—'
             ].join('\n');
 
-            const payload = {
-                title,
-                description,
-                category: 'technical',
-                priority: String(row.level).toLowerCase() === 'warning' ? 'Medium' : 'High',
-                status: 'New',
-                module: row.module || 'client-errors',
-                reportedBy: AppState.currentUser?.email || '',
-                sourceErrorId: row.id || '',
-                __timeoutMs: 45000
-            };
-
-            const res = await GoogleIntegration.sendToAppsScript('addIssue', payload);
-            if (res && res.success) {
-                await this.setStatus(id, 'seen');
-                Notification.success('تم إنشاء بلاغ مشكلة من الخطأ');
+            let res = null;
+            if (typeof IssueTrackingService !== 'undefined' && typeof IssueTrackingService.reportIssue === 'function') {
+                res = await IssueTrackingService.reportIssue(
+                    {
+                        title: title,
+                        description: description,
+                        category: 'Bug',
+                        priority: String(row.level || '').toLowerCase() === 'warning' ? 'Medium' : 'High'
+                    },
+                    {
+                        module: row.module || 'client-errors',
+                        recordId: row.id || null,
+                        section: 'client-errors',
+                        action: 'client-error-report'
+                    }
+                );
             } else {
-                Notification.error(res?.message || 'فشل إنشاء البلاغ');
+                res = await GoogleIntegration.sendToAppsScript('addIssue', {
+                    title: title,
+                    description: description,
+                    category: 'Bug',
+                    priority: String(row.level || '').toLowerCase() === 'warning' ? 'Medium' : 'High',
+                    status: 'New',
+                    module: row.module || 'client-errors',
+                    reportedBy: AppState.currentUser?.name || AppState.currentUser?.email || '',
+                    createdBy: AppState.currentUser?.email || '',
+                    sourceErrorId: row.id || '',
+                    __timeoutMs: 45000,
+                    __highPriority: false
+                });
+            }
+
+            if (res && res.success) {
+                this._patchRowStatus(id, 'seen');
+                // تحديث الخادم دون انتظار فشل يمنع الرسالة
+                GoogleIntegration.sendToAppsScript('updateClientErrorStatus', {
+                    id: id,
+                    status: 'seen',
+                    __timeoutMs: 30000,
+                    __highPriority: false
+                }).catch(() => {});
+                if (typeof Notification !== 'undefined' && Notification.success) {
+                    const issueId = res.issueId || res.data?.id || '';
+                    Notification.success(issueId
+                        ? ('تم إنشاء بلاغ مشكلة: ' + issueId)
+                        : 'تم إنشاء بلاغ مشكلة من الخطأ');
+                }
+            } else {
+                if (typeof Notification !== 'undefined' && Notification.error) {
+                    Notification.error((res && res.message) || 'فشل إنشاء البلاغ');
+                }
             }
         } catch (e) {
-            Notification.error(e.message || 'فشل إنشاء البلاغ');
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error(e.message || 'فشل إنشاء البلاغ');
+            }
+        } finally {
+            this._actionBusy = false;
         }
     },
 
     exportToExcel() {
         try {
             if (typeof XLSX === 'undefined') {
-                Notification.error('مكتبة Excel غير متاحة');
+                if (typeof Notification !== 'undefined' && Notification.error) {
+                    Notification.error('مكتبة Excel غير متاحة');
+                }
+                return;
+            }
+            if (!this._data.length) {
+                if (typeof Notification !== 'undefined' && Notification.warning) {
+                    Notification.warning('لا توجد بيانات للتصدير');
+                }
                 return;
             }
             const rows = this._data.map((r) => ({
@@ -440,9 +663,13 @@ ${this._esc(JSON.stringify(row, null, 2))}
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'ClientErrors');
             XLSX.writeFile(wb, 'client-errors-' + new Date().toISOString().slice(0, 10) + '.xlsx');
-            Notification.success('تم التصدير');
+            if (typeof Notification !== 'undefined' && Notification.success) {
+                Notification.success('تم التصدير');
+            }
         } catch (e) {
-            Notification.error(e.message || 'فشل التصدير');
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error(e.message || 'فشل التصدير');
+            }
         }
     }
 };
