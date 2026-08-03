@@ -1,17 +1,17 @@
 {
-  "version": "1.0.789",
+  "version": "1.0.791",
   "highlights": {
     "ar": [
-      "إصلاح عدم استقرار الدخول بعد تحديث حالة الاتصال: نبضة الحضور كل 90 ثانية بدل 40.",
-      "إيقاف نبضات الحضور تماماً أثناء تسجيل الدخول والمصادقة الثنائية.",
-      "مهلة «متصل» 3 دقائق متوافقة مع النبضة — لا اختفاء مفاجئ لحالة الاتصال.",
-      "زر الرجوع من شاشة رمز MFA يحرّر المصادقة بشكل صحيح."
+      "تعزيز أمان الخلفية: مسارات تعطيل MFA الطارئة وتصحيح رؤوس العيادة تتطلب مدير النظام فقط.",
+      "إصلاح حذف زيارات المقاولين في العيادة (كانت تبقى في جدول المقاولين).",
+      "حماية إضافة/تعديل/حذف طاقم العيادة بصلاحية المدير على الخادم.",
+      "مزامنة موديول مراقبة السلوك ومنع رجوع ثغرات الإعفاءات الأمنية."
     ],
     "en": [
-      "Fixed login instability after the online-status update: presence heartbeat every 90s instead of 40s.",
-      "Presence heartbeats are fully paused during login and two-factor verification.",
-      "Online TTL raised to 3 minutes to match the heartbeat — no more flickering status.",
-      "Back button on the MFA code screen now releases the auth lock correctly."
+      "Hardened backend security: emergency MFA clear and clinic header fix now require a system admin.",
+      "Fixed deleting contractor clinic visits (they previously remained in the contractor sheet).",
+      "Clinic staff add/update/delete now enforced as admin-only on the server.",
+      "Synced behavior-monitoring module and locked security-exemption regressions."
     ]
   }
 }

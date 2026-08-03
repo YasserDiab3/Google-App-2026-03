@@ -532,6 +532,50 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'mfaClearUser': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action);
+            if (adminFail) { result = adminFail; return; }
+            var clearEmail = (payload && payload.email) || (postData && postData.email) || '';
+            if (typeof emergencyClearUserMfa !== 'function') {
+                result = { success: false, message: 'دالة الاستعادة غير متاحة', errorCode: 'MFA_CLEAR_UNAVAILABLE' };
+                return;
+            }
+            result = emergencyClearUserMfa(clearEmail);
+            try {
+                if (typeof logSecurityEventSoft_ === 'function') {
+                    logSecurityEventSoft_('mfa_emergency_clear_user', {
+                        email: String(clearEmail || ''),
+                        actor: (actorUserData && (actorUserData.email || actorUserData.id)) || '',
+                        severity: 'high'
+                    });
+                }
+            } catch (_le) { /* ignore */ }
+        })();
+        return result;
+    },
+    'mfaClearCorruptSecrets': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action);
+            if (adminFail) { result = adminFail; return; }
+            if (typeof emergencyClearCorruptMfaSecrets !== 'function') {
+                result = { success: false, message: 'دالة الاستعادة غير متاحة', errorCode: 'MFA_CLEAR_CORRUPT_UNAVAILABLE' };
+                return;
+            }
+            result = emergencyClearCorruptMfaSecrets();
+            try {
+                if (typeof logSecurityEventSoft_ === 'function') {
+                    logSecurityEventSoft_('mfa_emergency_clear_corrupt', {
+                        actor: (actorUserData && (actorUserData.email || actorUserData.id)) || '',
+                        severity: 'high'
+                    });
+                }
+            } catch (_le) { /* ignore */ }
+        })();
+        return result;
+    },
     'invalidateServerSession': function(payload, postData, action, actorUserData, spreadsheetId) {
         var token = (postData && postData.sessionToken) || (payload && payload.sessionToken) || '';
         if (typeof invalidateServerSessionToken_ === 'function') {
@@ -1580,6 +1624,8 @@ var ActionHandlers = {
     'fixClinicSheetHeaders': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action);
+            if (adminFail) { result = adminFail; return; }
             result = fixClinicSheetHeaders();
         })();
         return result;
@@ -1587,6 +1633,8 @@ var ActionHandlers = {
     'compactClinicSheets': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action);
+            if (adminFail) { result = adminFail; return; }
             result = compactClinicSheets();
         })();
         return result;
@@ -1969,6 +2017,8 @@ var ActionHandlers = {
     'addClinicStaff': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action);
+            if (adminFail) { result = adminFail; return; }
             result = addClinicStaff(payload);
         })();
         return result;
@@ -1976,6 +2026,8 @@ var ActionHandlers = {
     'updateClinicStaff': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action);
+            if (adminFail) { result = adminFail; return; }
             result = updateClinicStaff(payload.staffId || payload.id, payload.updateData || payload);
         })();
         return result;
@@ -1983,6 +2035,8 @@ var ActionHandlers = {
     'deleteClinicStaff': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action);
+            if (adminFail) { result = adminFail; return; }
             result = deleteClinicStaff(payload.staffId || payload.id);
         })();
         return result;

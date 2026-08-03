@@ -2747,31 +2747,37 @@ function deleteClinicVisit(visitId) {
         if (!visitId) {
             return { success: false, message: 'معرف الزيارة غير محدد' };
         }
-        const sheetName = 'ClinicVisits';
+        // نفس نطاق updateClinicVisit: موظفين + مقاولين
+        const visitIdStr = String(visitId);
         const spreadsheetId = getSpreadsheetId();
-        
-        // ✅ تحسين الأداء: حذف الصف مباشرة بدلاً من قراءة وإعادة كتابة كل البيانات
-        const visits = readFromSheet(sheetName, spreadsheetId);
-        let rowIndex = -1;
-        
-        for (let i = 0; i < visits.length; i++) {
-            if (visits[i].id === visitId) {
-                rowIndex = i + 2; // +2 لأن الصف 1 هو الهيدر والـ array يبدأ من 0
-                break;
-            }
-        }
-        
-        if (rowIndex === -1) {
-            return { success: false, message: 'الزيارة غير موجودة' };
-        }
-        
-        // حذف الصف مباشرة من الشيت
         var ss = SpreadsheetApp.openById(spreadsheetId);
-        var sheet = ss.getSheetByName(sheetName);
-        sheet.deleteRow(rowIndex);
-        
-        Logger.log('تم حذف الزيارة ' + visitId + ' من الصف ' + rowIndex);
-        return { success: true, message: 'تم حذف الزيارة بنجاح' };
+        const sheetCandidates = ['ClinicVisits', 'ClinicContractorVisits'];
+
+        for (var s = 0; s < sheetCandidates.length; s++) {
+            const sheetName = sheetCandidates[s];
+            const visits = readFromSheet(sheetName, spreadsheetId) || [];
+            let rowIndex = -1;
+
+            for (let i = 0; i < visits.length; i++) {
+                if (visits[i] && String(visits[i].id) === visitIdStr) {
+                    rowIndex = i + 2; // +2: صف 1 هيدر، المصفوفة من 0
+                    break;
+                }
+            }
+
+            if (rowIndex === -1) continue;
+
+            var sheet = ss.getSheetByName(sheetName);
+            if (!sheet) {
+                return { success: false, message: 'ورقة الزيارات غير موجودة: ' + sheetName };
+            }
+            sheet.deleteRow(rowIndex);
+
+            Logger.log('تم حذف الزيارة ' + visitIdStr + ' من ' + sheetName + ' الصف ' + rowIndex);
+            return { success: true, message: 'تم حذف الزيارة بنجاح', sheetName: sheetName };
+        }
+
+        return { success: false, message: 'الزيارة غير موجودة' };
     } catch (error) {
         Logger.log('Error deleting clinic visit: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء حذف الزيارة: ' + error.toString() };

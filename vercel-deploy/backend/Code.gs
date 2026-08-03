@@ -200,6 +200,10 @@ function doPost(e) {
             return setCorsHeaders(ContentService.createTextOutput(JSON.stringify(mfaSelfTest_())));
         }
 
+        // SEC: mfaClearUser / mfaClearCorruptSecrets لم تعد تُنفَّذ هنا بدون مصادقة.
+        // المسار الآمن: ActionHandlers + جلسة + CSRF + مدير نظام (strictAdminActions).
+        // الاستعادة الطارئة بدون جلسة: clasp run emergencyClearUserMfa / emergencyClearCorruptMfaSecrets
+
         // حماية إضافية: تقييد شكل action لمنع القيم غير المتوقعة
         const actionPattern = /^[a-zA-Z][a-zA-Z0-9_]{1,79}$/;
         if (typeof action === 'string' && !actionPattern.test(action)) {
@@ -310,7 +314,8 @@ function doPost(e) {
         ];
         const strictAdminActions = [
             'addUser', 'deleteUser', 'updateUser', 'resetUserPassword', 'fixUsersSheetHeaders',
-            'fixMissingSheetHeaders', 'initializeSheets'
+            'fixMissingSheetHeaders', 'initializeSheets',
+            'fixClinicSheetHeaders', 'mfaClearUser', 'mfaClearCorruptSecrets'
         ];
         const isDeleteAction = (typeof action === 'string') && action.indexOf('delete') === 0;
         const actorUserData = (postData && postData.userData) || (payload && payload.userData) || (payload && payload.user) || null;
@@ -319,7 +324,8 @@ function doPost(e) {
         const isSensitiveAction = sensitiveActions.includes(action);
 
         // العمليات المعفاة من CSRF (pre-authentication — لا يمكن أن تملك CSRF token صالح)
-        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'fixClinicSheetHeaders', 'warmup', 'testConnection', 'mfaSelfTest'];
+        // SEC: أُزيل fixClinicSheetHeaders / mfaClear* — تتطلب جلسة مدير + CSRF
+        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest'];
         const isCsrfExempt = csrfExemptActions.includes(action);
 
         // التحقق من CSRF Token - إلزامي لجميع العمليات غير القراءة
@@ -383,7 +389,7 @@ function doPost(e) {
         // - كتابات (غير readOnly): هوية + sessionToken إلزاميان دائماً
         // - قراءات مع userData: التحقق من الجلسة كما كان
         const sessionExemptActions = [
-            'login', 'verifyMfaLogin', 'initializeSheets', 'fixClinicSheetHeaders',
+            'login', 'verifyMfaLogin', 'initializeSheets',
             'testConnection', 'warmup', 'getPublicIP', 'invalidateServerSession',
             'getAuthBootstrapPolicy', 'mfaSelfTest'
         ];

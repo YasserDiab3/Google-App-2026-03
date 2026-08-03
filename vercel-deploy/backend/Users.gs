@@ -1241,20 +1241,44 @@ function loginUser(email, password) {
 
         // MFA: إذا مفعّل — لا نُكمل الجلسة حتى التحقق من TOTP
         if (typeof isMfaEnabledForUser_ === 'function' && isMfaEnabledForUser_(user)) {
-            // كلمة المرور صحيحة — امسح قفل MFA القديم (محاولات فاشلة بسبب خطأ فك السر سابقاً)
-            if (typeof clearMfaFailures_ === 'function') clearMfaFailures_(e);
-            var challengeToken = (typeof createMfaChallenge_ === 'function')
-                ? createMfaChallenge_(e, user)
-                : '';
-            if (!challengeToken) {
-                return { success: false, message: 'تعذر بدء خطوة المصادقة الثنائية. حاول لاحقاً.' };
+            var secretEncLogin = String(user.mfaSecretEnc || '').trim();
+            var secretCandidates = (typeof resolveMfaSecretCandidates_ === 'function')
+                ? resolveMfaSecretCandidates_(secretEncLogin)
+                : [];
+            // سر تالف/فارغ بعد كلمة مرور صحيحة = حظر دائم بدون ذنب المستخدم.
+            // عطّل MFA تلقائياً وأكمل الدخول ثم يُعاد التفعيل من الملف الشخصي.
+            if (!secretEncLogin || !secretCandidates.length) {
+                try {
+                    if (typeof _fastWriteUserMfaFields_ === 'function') {
+                        _fastWriteUserMfaFields_(user.id || e, {
+                            mfaEnabled: false,
+                            mfaSecretEnc: '',
+                            mfaEnrolledAt: ''
+                        });
+                    }
+                    if (typeof invalidateUsersAuthCache_ === 'function') invalidateUsersAuthCache_(e);
+                    if (typeof clearMfaFailures_ === 'function') clearMfaFailures_(e);
+                    Logger.log('loginUser: cleared corrupt MFA for ' + e);
+                } catch (_clr) {
+                    Logger.log('loginUser corrupt MFA clear failed: ' + _clr.toString());
+                }
+                // تابع كدخول عادي بدون MFA
+            } else {
+                // كلمة المرور صحيحة — امسح قفل MFA القديم (محاولات فاشلة بسبب خطأ فك السر سابقاً)
+                if (typeof clearMfaFailures_ === 'function') clearMfaFailures_(e);
+                var challengeToken = (typeof createMfaChallenge_ === 'function')
+                    ? createMfaChallenge_(e, user)
+                    : '';
+                if (!challengeToken) {
+                    return { success: false, message: 'تعذر بدء خطوة المصادقة الثنائية. حاول لاحقاً.' };
+                }
+                return {
+                    success: true,
+                    mfaRequired: true,
+                    challengeToken: challengeToken,
+                    message: 'مطلوب رمز المصادقة الثنائية'
+                };
             }
-            return {
-                success: true,
-                mfaRequired: true,
-                challengeToken: challengeToken,
-                message: 'مطلوب رمز المصادقة الثنائية'
-            };
         }
 
         // تجهيز كائن المستخدم للإرجاع (بدون بيانات حساسة)
@@ -1429,10 +1453,24 @@ function verifyMfaLogin(challengeToken, email, code) {
                 }
             } catch (_logE) { /* ignore */ }
             if (totpCheck && totpCheck.decryptOk === false) {
+                // عطّل السر التالف فوراً حتى لا تبقى الشاشة معلّقة على MFA
+                try {
+                    var clearId = (user && user.id) || e;
+                    if (typeof _fastWriteUserMfaFields_ === 'function') {
+                        _fastWriteUserMfaFields_(clearId, {
+                            mfaEnabled: false,
+                            mfaSecretEnc: '',
+                            mfaEnrolledAt: ''
+                        });
+                    }
+                    if (typeof invalidateUsersAuthCache_ === 'function') invalidateUsersAuthCache_(e);
+                    if (typeof clearMfaFailures_ === 'function') clearMfaFailures_(e);
+                    if (typeof consumeMfaChallenge_ === 'function') consumeMfaChallenge_(token, e);
+                } catch (_clr2) { /* ignore */ }
                 return {
                     success: false,
-                    message: 'تعذر قراءة سر المصادقة لهذا الحساب. أعد تفعيل المصادقة الثنائية من الملف الشخصي، أو تواصل مع مدير النظام.',
-                    errorCode: 'MFA_SECRET_CORRUPT'
+                    message: 'سر المصادقة لهذا الحساب تالف وتم تعطيله تلقائياً. أعد تسجيل الدخول بكلمة المرور فقط، ثم فعّل MFA من جديد من الملف الشخصي.',
+                    errorCode: 'MFA_SECRET_CORRUPT_CLEARED'
                 };
             }
             return {
@@ -1622,6 +1660,92 @@ function confirmMfaEnrollment(code, actorUserData) {
     } catch (error) {
         Logger.log('confirmMfaEnrollment error: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء تأكيد MFA: ' + error.toString() };
+    }
+}
+
+/**
+ * استعادة طارئة — تعطيل MFA لبريد محدد.
+ * عبر HTTP: يتطلب مدير نظام + جلسة + CSRF (ActionHandlers.mfaClearUser).
+ * بدون جلسة: clasp run emergencyClearUserMfa فقط.
+ */
+function emergencyClearUserMfa(email) {
+    try {
+        var e = String(email || '').trim().toLowerCase();
+        if (!e || e.indexOf('@') === -1) {
+            return { success: false, message: 'بريد غير صالح' };
+        }
+        var user = getUserRecordFromUsersSheetByEmail_(e, { bypassCache: true });
+        if (!user) {
+            return { success: false, message: 'المستخدم غير موجود: ' + e };
+        }
+        var wr = _fastWriteUserMfaFields_(user.id || e, {
+            mfaEnabled: false,
+            mfaSecretEnc: '',
+            mfaEnrolledAt: ''
+        });
+        if (typeof invalidateUsersAuthCache_ === 'function') invalidateUsersAuthCache_(e);
+        if (typeof clearMfaFailures_ === 'function') clearMfaFailures_(e);
+        return {
+            success: !!(wr && wr.success),
+            email: e,
+            message: (wr && wr.success) ? ('تم تعطيل MFA لـ ' + e) : ((wr && wr.message) || 'فشل التعطيل')
+        };
+    } catch (err) {
+        return { success: false, message: String(err) };
+    }
+}
+
+/**
+ * استعادة طارئة — تعطيل MFA لكل حساب سرّه غير قابل للقراءة.
+ * عبر HTTP: يتطلب مدير نظام + جلسة + CSRF (ActionHandlers.mfaClearCorruptSecrets).
+ * بدون جلسة: clasp run emergencyClearCorruptMfaSecrets
+ */
+function emergencyClearCorruptMfaSecrets() {
+    try {
+        var spreadsheetId = getSpreadsheetId();
+        var rows = readFromSheet('Users', spreadsheetId, true);
+        if (!rows || !Array.isArray(rows)) {
+            return { success: false, message: 'فشل قراءة Users' };
+        }
+        var cleared = [];
+        var kept = [];
+        var skipped = [];
+        for (var i = 0; i < rows.length; i++) {
+            var u = rows[i];
+            if (!u || !isMfaEnabledForUser_(u)) {
+                skipped.push(String((u && u.email) || ''));
+                continue;
+            }
+            var email = String(u.email || '').trim().toLowerCase();
+            var enc = String(u.mfaSecretEnc || '').trim();
+            var candidates = (typeof resolveMfaSecretCandidates_ === 'function')
+                ? resolveMfaSecretCandidates_(enc)
+                : [];
+            if (enc && candidates.length) {
+                kept.push(email);
+                continue;
+            }
+            var wr = _fastWriteUserMfaFields_(u.id || email, {
+                mfaEnabled: false,
+                mfaSecretEnc: '',
+                mfaEnrolledAt: ''
+            });
+            if (wr && wr.success) {
+                cleared.push(email);
+                if (typeof invalidateUsersAuthCache_ === 'function') invalidateUsersAuthCache_(email);
+                if (typeof clearMfaFailures_ === 'function') clearMfaFailures_(email);
+            }
+        }
+        return {
+            success: true,
+            cleared: cleared,
+            kept: kept,
+            clearedCount: cleared.length,
+            keptCount: kept.length,
+            message: 'تم تعطيل MFA للحسابات ذات السر التالف: ' + cleared.length
+        };
+    } catch (e) {
+        return { success: false, message: String(e) };
     }
 }
 

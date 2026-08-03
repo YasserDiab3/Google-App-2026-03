@@ -58,6 +58,22 @@ assert(!/'ensureContractorEvaluationApprovalRequestsSheet'\s*,/.test(code.split(
 const readOnlyBlock = code.split('const readOnlyActions')[1].split('];')[0];
 assert(!/'getAllPPE'\s*,/.test(readOnlyBlock), 'GAS: getAllPPE ليست readOnly (P2.2)');
 assert(!/'getPPEItemsList'\s*,/.test(readOnlyBlock), 'GAS: getPPEItemsList ليست readOnly (P2.2)');
+// SEC P0: لا إعفاء CSRF/جلسة لـ mfaClear* أو fixClinicSheetHeaders
+const csrfExemptBlock = code.split('const csrfExemptActions')[1].split('];')[0];
+const sessionExemptBlock = code.split('const sessionExemptActions')[1].split('];')[0];
+assert(!csrfExemptBlock.includes("'mfaClearUser'") && !csrfExemptBlock.includes("'mfaClearCorruptSecrets'"), 'GAS: mfaClear* ليست CSRF-exempt');
+assert(!csrfExemptBlock.includes("'fixClinicSheetHeaders'"), 'GAS: fixClinicSheetHeaders ليست CSRF-exempt');
+assert(!sessionExemptBlock.includes("'mfaClearUser'") && !sessionExemptBlock.includes("'mfaClearCorruptSecrets'"), 'GAS: mfaClear* ليست session-exempt');
+assert(!sessionExemptBlock.includes("'fixClinicSheetHeaders'"), 'GAS: fixClinicSheetHeaders ليست session-exempt');
+assert(!/action === 'mfaClearUser'[\s\S]{0,80}emergencyClearUserMfa/.test(code), 'GAS: لا مسار mfaClearUser مبكر بدون مصادقة');
+
+const clinicGs = read('Backend/Clinic.gs');
+const deleteFn = clinicGs.split('function deleteClinicVisit')[1] || '';
+assert(deleteFn.includes('ClinicContractorVisits'), 'GAS: deleteClinicVisit يغطي ClinicContractorVisits');
+
+const handlers = read('Backend/ActionHandlers.gs');
+assert(/'addClinicStaff'[\s\S]{0,200}actionRequireAdmin_/.test(handlers), 'GAS: addClinicStaff يتطلب admin');
+assert(/'fixClinicSheetHeaders'[\s\S]{0,200}actionRequireAdmin_/.test(handlers), 'GAS: fixClinicSheetHeaders يتطلب admin');
 
 const utils = read('Backend/Utils.gs');
 assert(utils.includes('requireAuthenticatedActor_') && /checkSheetDirectWriteAccess_[\s\S]*?requireAuthenticatedActor_/.test(utils), 'GAS: P0.1 write actor gate');
