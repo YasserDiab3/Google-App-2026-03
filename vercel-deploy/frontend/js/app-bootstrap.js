@@ -947,8 +947,18 @@
                         sheetNames.forEach(sheetName => {
                             const data = batchResult.data[sheetName];
                             if (Array.isArray(data)) {
-                                // توزيع البيانات على أنواع البيانات المرتبطة بهذه الورقة
                                 const targetDataTypes = sheetToDataTypeMap[sheetName];
+                                // حماية: لا تستبدل محلياً غير فارغ بمصفوفة فارغة من الخادم
+                                if (data.length === 0) {
+                                    const kept = (targetDataTypes || []).some((type) => {
+                                        const cur = AppState.appData[type];
+                                        return Array.isArray(cur) && cur.length > 0;
+                                    });
+                                    if (kept) {
+                                        log(`⚠️ تجاهل ${sheetName} فارغ من الخادم — الإبقاء على البيانات المحلية`);
+                                        return;
+                                    }
+                                }
                                 targetDataTypes.forEach(type => {
                                     AppState.appData[type] = data;
                                     fetchedKeys.push(type);
@@ -1057,8 +1067,11 @@
             if (permissions?.canViewTraining) {
                 requiredData.push('training');
             }
+            // PERF/STABLE: لا تجلب ClinicVisits هنا عبر batchRead خام —
+            // يستبدل البيانات المُطبَّعة ويمنع getAllClinicVisits (clinic_last_sync).
+            // سجل التردد يُحمَّل من Clinic.loadVisitsDataFromBackend فقط.
             if (permissions?.canViewClinic) {
-                requiredData.push('clinicVisits', 'clinicContractorVisits');
+                // لا تدفع clinicVisits / clinicContractorVisits في bootstrap
             }
 
             return [...new Set(requiredData)];

@@ -8863,8 +8863,8 @@ const Clinic = {
                     if (!isNaN(recordTime) && (now - recordTime) < (2 * 60 * 60 * 1000)) { // ساعتين
                         seen.add(id);
                         extras.push(v);
-                    } else if (isNaN(recordTime)) {
-                        // إذا لم يكن هناك تاريخ، نحتفظ به لتجنب فقدان البيانات
+                    } else if (isNaN(recordTime) && (v._pendingSync || v._localOnly || v._offlineCreated)) {
+                        // بلا تاريخ: احتفظ فقط إن وُجدت علامة مزامنة معلّقة — لا سجلات شبح للأبد
                         seen.add(id);
                         extras.push(v);
                     }
@@ -9271,8 +9271,15 @@ const Clinic = {
                     v && v.personType === 'contractor'
                 );
 
-                // ✅ إعادة تطبيع البيانات بعد التحميل
-                this.ensureData();
+                // ✅ إعادة تطبيع خفيفة بعد التحميل — idle لتجنّب تجميد UI بعد normalize الضخم
+                const runEnsure = () => {
+                    try { this.ensureData(); } catch (_eEns) { /* ignore */ }
+                };
+                if (typeof requestIdleCallback === 'function') {
+                    requestIdleCallback(runEnsure, { timeout: 2500 });
+                } else {
+                    setTimeout(runEnsure, 0);
+                }
                 
                 // حفظ البيانات محلياً فوراً
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {

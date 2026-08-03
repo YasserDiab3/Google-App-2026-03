@@ -2118,14 +2118,43 @@ var ActionHandlers = {
     'recordClinicStaffLogin': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-            result = recordClinicStaffLogin(payload);
+            var authFail = actionRequireAuth_(actorUserData, action);
+            if (authFail) { result = authFail; return; }
+            // إلزام هوية الجلسة — لا punch-in نيابة عن مستخدم آخر
+            var safe = Object.assign({}, payload || {});
+            if (actorUserData) {
+                if (actorUserData.id) safe.userId = actorUserData.id;
+                if (actorUserData.email) {
+                    safe.email = actorUserData.email;
+                    safe.userEmail = actorUserData.email;
+                }
+                if (actorUserData.name) {
+                    safe.userName = actorUserData.name;
+                    safe.name = actorUserData.name;
+                }
+            }
+            result = recordClinicStaffLogin(safe);
         })();
         return result;
     },
     'recordClinicStaffLogout': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-            result = recordClinicStaffLogout(payload);
+            var authFail = actionRequireAuth_(actorUserData, action);
+            if (authFail) { result = authFail; return; }
+            var safe = Object.assign({}, payload || {});
+            if (actorUserData) {
+                if (actorUserData.id) safe.userId = actorUserData.id;
+                if (actorUserData.email) {
+                    safe.email = actorUserData.email;
+                    safe.userEmail = actorUserData.email;
+                }
+                if (actorUserData.name) {
+                    safe.userName = actorUserData.name;
+                    safe.name = actorUserData.name;
+                }
+            }
+            result = recordClinicStaffLogout(safe);
         })();
         return result;
     },
@@ -2139,8 +2168,11 @@ var ActionHandlers = {
     'updateContractor': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
- // - تم الإزالة
-                //
+            result = {
+                success: false,
+                message: 'تحديث المقاول عبر هذا المسار غير متاح حالياً. استخدم مسار الاعتماد/التحديث المعتمد في الموديول.',
+                errorCode: 'UPDATE_CONTRACTOR_DISABLED'
+            };
         })();
         return result;
     },
