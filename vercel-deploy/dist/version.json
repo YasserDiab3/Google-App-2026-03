@@ -1,17 +1,17 @@
 {
-  "version": "1.0.793",
+  "version": "1.0.795",
   "highlights": {
     "ar": [
-      "تسريع فتح التطبيق: جلب بيانات الصلاحيات بالخلفية دون تجميد شاشة الاستعادة.",
-      "سجل التردد أسلس: تطبيع الزيارات على دفعات بدل تجميد الشاشة بعد التحميل.",
-      "تسريع دمج وفلترة زيارات العيادة — فلترة تبويب واحد فقط بدون عمل مضاعف.",
-      "تقليل احتمالات التهنيج عند التنقل وفتح تبويبات العيادة تحت الحمل."
+      "تحميل الكاش المحلي الضخم بدون تجميد متصل: تحليل JSON عبر Worker عند الإمكان.",
+      "تعيين بيانات التطبيق على دفعات مع إفساح للمتصفح أثناء الاستعادة.",
+      "نفس الحماية لكاش IndexedDB وقوائم PTW الكبيرة عند فتح النظام.",
+      "واجهة أكثر استجابة عند boot حتى مع كاش محلي ثقيل جداً."
     ],
     "en": [
-      "Faster app open: permission data loads in the background without freezing session restore.",
-      "Smoother clinic visits: normalize records in chunks instead of freezing after fetch.",
-      "Faster visit merge/filter — active tab only, no double pass over the full list.",
-      "Lower freeze risk when navigating and opening clinic tabs under load."
+      "Large local cache loads without a long freeze: JSON parse via Worker when available.",
+      "App data is applied in chunks with yields so the UI can stay responsive during restore.",
+      "Same protection for IndexedDB cache and large PTW lists on open.",
+      "More responsive boot even with a very heavy local cache."
     ]
   }
 }

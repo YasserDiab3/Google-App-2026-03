@@ -9,8 +9,199 @@ const DataManager = {
     SAFE_APP_DATA_BYTES: 6 * 1024 * 1024,
     /** أقصى عدد عناصر للمصفوفات الكبيرة في النسخة المخففة */
     MAX_ITEMS_PER_ARRAY_IN_LIGHT: 400,
+    /** عتبة اعتبار hse_app_data ضخماً — نُفسح الـ main thread قبل/أثناء التحليل والتعيين */
+    LARGE_APP_DATA_CHARS: 350 * 1024,
+    /** بعد كم سجل (عناصر مصفوفات) نُعيد التحكم للمتصفح أثناء التعيين */
+    LOAD_YIELD_EVERY_ITEMS: 800,
     _lastLightSaveNotification: 0,
     _hasShownLargeDataWarning: false,
+
+    /** إفساح الـ main thread لإبقاء الواجهة مستجيبة أثناء boot */
+    async _yieldToMain_() {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+    },
+
+    /**
+     * JSON.parse عبر Worker — يعزل تكلفة التحليل عن رسم الواجهة.
+     * ملاحظة: postMessage ينسخ الكائن؛ ما زال هناك تكلفة، لكنها أفضل من تجميد طويل متصل.
+     */
+    _parseJsonInWorker_(text) {
+        return new Promise((resolve, reject) => {
+            let url = null;
+            let worker = null;
+            let settled = false;
+            const finish = (fn, arg) => {
+                if (settled) return;
+                settled = true;
+                try { if (worker) worker.terminate(); } catch (_e) { /* ignore */ }
+                try { if (url) URL.revokeObjectURL(url); } catch (_e2) { /* ignore */ }
+                fn(arg);
+            };
+            try {
+                const blob = new Blob([
+                    'self.onmessage=function(e){try{self.postMessage({ok:1,d:JSON.parse(e.data)})}catch(err){self.postMessage({ok:0,e:String(err&&err.message||err)})}}'
+                ], { type: 'application/javascript' });
+                url = URL.createObjectURL(blob);
+                worker = new Worker(url);
+                const timer = setTimeout(() => finish(reject, new Error('JSON worker timeout')), 45000);
+                worker.onmessage = (ev) => {
+                    clearTimeout(timer);
+                    if (ev && ev.data && ev.data.ok) finish(resolve, ev.data.d);
+                    else finish(reject, new Error((ev && ev.data && ev.data.e) || 'worker parse failed'));
+                };
+                worker.onerror = (err) => {
+                    clearTimeout(timer);
+                    finish(reject, err || new Error('worker error'));
+                };
+                worker.postMessage(text);
+            } catch (err) {
+                finish(reject, err);
+            }
+        });
+    },
+
+    /**
+     * تحليل JSON بدون تجميد متصل قدر الإمكان.
+     * للكاش الضخم: yield قبل التحليل + Worker إن توفّر، وإلا JSON.parse مع fallback.
+     */
+    async _parseJsonNonBlocking_(text, label) {
+        if (text == null || text === '') return null;
+        const str = String(text);
+        const threshold = this.LARGE_APP_DATA_CHARS || (350 * 1024);
+        const large = str.length >= threshold;
+        if (large) {
+            await this._yieldToMain_();
+        }
+        if (
+            large &&
+            typeof Worker !== 'undefined' &&
+            typeof Blob !== 'undefined' &&
+            typeof URL !== 'undefined' &&
+            typeof URL.createObjectURL === 'function'
+        ) {
+            try {
+                const parsed = await this._parseJsonInWorker_(str);
+                if (AppState && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
+                    Utils.safeLog(
+                        `⚡ [DataManager] JSON عبر Worker (${label || 'payload'}, ${(str.length / 1024).toFixed(0)}KB)`
+                    );
+                }
+                return parsed;
+            } catch (_wErr) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ [DataManager] Worker parse فشل — fallback sync:', _wErr);
+                }
+            }
+        }
+        return JSON.parse(str);
+    },
+
+    _normalizeObservationSites_(sites) {
+        if (!Array.isArray(sites) || sites.length === 0) return [];
+        return sites.map((site) => {
+            const normalizedSite = {
+                id: site.id || site.siteId || (typeof Utils !== 'undefined' && Utils.generateId ? Utils.generateId('SITE') : ('SITE_' + Date.now())),
+                name: site.name || site.title || site.label || '',
+                description: site.description || '',
+                places: []
+            };
+            const placesSource = Array.isArray(site.places) ? site.places : [];
+            normalizedSite.places = placesSource.map((place, idx) => {
+                if (typeof place === 'object' && place !== null) {
+                    return {
+                        id: place.id || place.placeId || place.value || (typeof Utils !== 'undefined' && Utils.generateId ? Utils.generateId('PLACE') : ('PLACE_' + idx)),
+                        name: place.name || place.placeName || place.title || place.label || place.locationName || `مكان ${idx + 1}`,
+                        siteId: normalizedSite.id
+                    };
+                }
+                if (typeof place === 'string') {
+                    return {
+                        id: (typeof Utils !== 'undefined' && Utils.generateId ? Utils.generateId('PLACE') : ('PLACE_' + idx)),
+                        name: place,
+                        siteId: normalizedSite.id
+                    };
+                }
+                return null;
+            }).filter(Boolean);
+            return normalizedSite;
+        }).filter((site) => site.id && site.name);
+    },
+
+    /**
+     * تعيين مفاتيح AppState على دفعات مع yield — يمنع تجميد بعد JSON.parse الضخم.
+     */
+    async _assignParsedAppDataChunked_(parsedData) {
+        if (!parsedData || typeof parsedData !== 'object') return;
+
+        if (parsedData.users && Array.isArray(parsedData.users) && parsedData.users.length > 0) {
+            AppState.appData.users = parsedData.users;
+            if (AppState.debugMode) {
+                Utils.safeLog(`✅ تم تحميل ${parsedData.users.length} مستخدم من البيانات المحلية`);
+            }
+        }
+        if (parsedData.employees && Array.isArray(parsedData.employees) && parsedData.employees.length > 0) {
+            AppState.appData.employees = parsedData.employees;
+            if (AppState.debugMode) {
+                Utils.safeLog(`✅ تم تحميل ${parsedData.employees.length} موظف من البيانات المحلية`);
+            }
+        }
+        if (parsedData.approvedContractors && Array.isArray(parsedData.approvedContractors) && parsedData.approvedContractors.length > 0) {
+            AppState.appData.approvedContractors = parsedData.approvedContractors;
+            if (AppState.debugMode) {
+                Utils.safeLog(`✅ تم تحميل ${parsedData.approvedContractors.length} مقاول معتمد من البيانات المحلية`);
+            }
+        }
+        if (parsedData.contractors && Array.isArray(parsedData.contractors) && parsedData.contractors.length > 0) {
+            AppState.appData.contractors = parsedData.contractors;
+            if (AppState.debugMode) {
+                Utils.safeLog(`✅ تم تحميل ${parsedData.contractors.length} مقاول من البيانات المحلية`);
+            }
+        }
+
+        // إفساح قصير بعد البيانات الحرجة لاستعادة الجلسة/الصلاحيات
+        await this._yieldToMain_();
+
+        if (parsedData.observationSites && Array.isArray(parsedData.observationSites) && parsedData.observationSites.length > 0) {
+            if (parsedData.observationSites.length > 40) {
+                await this._yieldToMain_();
+            }
+            AppState.appData.observationSites = this._normalizeObservationSites_(parsedData.observationSites);
+            if (AppState.debugMode) {
+                Utils.safeLog(`✅ تم تحميل ${AppState.appData.observationSites.length} موقع من البيانات المحلية`);
+            }
+        } else if (!AppState.appData.observationSites) {
+            AppState.appData.observationSites = [];
+        }
+
+        const skipKeys = {
+            users: 1,
+            employees: 1,
+            approvedContractors: 1,
+            contractors: 1,
+            observationSites: 1,
+            _ownerEmail: 1,
+            _lightDataMeta: 1
+        };
+        const keys = Object.keys(parsedData);
+        const yieldEvery = this.LOAD_YIELD_EVERY_ITEMS || 800;
+        let itemsSinceYield = 0;
+
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
+            if (skipKeys[key]) continue;
+            const val = parsedData[key];
+            if (val && Array.isArray(val)) {
+                AppState.appData[key] = val;
+                itemsSinceYield += val.length;
+                if (itemsSinceYield >= yieldEvery) {
+                    itemsSinceYield = 0;
+                    await this._yieldToMain_();
+                }
+            } else if (key === 'systemStatistics' && val && typeof val === 'object') {
+                AppState.appData.systemStatistics = val;
+            }
+        }
+    },
 
     /**
      * P4.2: إعلام لمرة واحدة (toast) أن النسخة المحلية مختصرة — بانر قصير يختفي تلقائياً
@@ -699,7 +890,7 @@ const DataManager = {
             
             const saved = localStorage.getItem('hse_app_data');
             if (saved) {
-                const parsedData = JSON.parse(saved);
+                const parsedData = await this._parseJsonNonBlocking_(saved, 'hse_app_data');
                 const payloadOwner = parsedData && parsedData._ownerEmail
                     ? String(parsedData._ownerEmail).trim().toLowerCase()
                     : '';
@@ -707,96 +898,8 @@ const DataManager = {
                     await this.purgeLocalAppData('load_payload_owner_mismatch');
                     return false;
                 }
-                
-                // ✅ إصلاح: تحميل البيانات الأساسية أولاً بشكل فوري
-                // 1. بيانات المستخدمين
-                if (parsedData.users && Array.isArray(parsedData.users) && parsedData.users.length > 0) {
-                    AppState.appData.users = parsedData.users;
-                    if (AppState.debugMode) {
-                        Utils.safeLog(`✅ تم تحميل ${parsedData.users.length} مستخدم من البيانات المحلية`);
-                    }
-                }
-                
-                // 2. قاعدة بيانات الموظفين
-                if (parsedData.employees && Array.isArray(parsedData.employees) && parsedData.employees.length > 0) {
-                    AppState.appData.employees = parsedData.employees;
-                    if (AppState.debugMode) {
-                        Utils.safeLog(`✅ تم تحميل ${parsedData.employees.length} موظف من البيانات المحلية`);
-                    }
-                }
-                
-                // 3. بيانات المقاولين (المعتمدين والعاديين)
-                if (parsedData.approvedContractors && Array.isArray(parsedData.approvedContractors) && parsedData.approvedContractors.length > 0) {
-                    AppState.appData.approvedContractors = parsedData.approvedContractors;
-                    if (AppState.debugMode) {
-                        Utils.safeLog(`✅ تم تحميل ${parsedData.approvedContractors.length} مقاول معتمد من البيانات المحلية`);
-                    }
-                }
-                if (parsedData.contractors && Array.isArray(parsedData.contractors) && parsedData.contractors.length > 0) {
-                    AppState.appData.contractors = parsedData.contractors;
-                    if (AppState.debugMode) {
-                        Utils.safeLog(`✅ تم تحميل ${parsedData.contractors.length} مقاول من البيانات المحلية`);
-                    }
-                }
-                
-                // 4. قاعدة بيانات المواقع (إعدادات النماذج)
-                if (parsedData.observationSites && Array.isArray(parsedData.observationSites) && parsedData.observationSites.length > 0) {
-                    // ✅ إصلاح: تطبيع المواقع والأماكن الفرعية عند التحميل من localStorage
-                    const normalizedSites = parsedData.observationSites.map(site => {
-                        const normalizedSite = {
-                            id: site.id || site.siteId || Utils.generateId('SITE'),
-                            name: site.name || site.title || site.label || '',
-                            description: site.description || '',
-                            places: []
-                        };
-                        
-                        // تطبيع الأماكن الفرعية
-                        const placesSource = Array.isArray(site.places) ? site.places : [];
-                        normalizedSite.places = placesSource.map((place, idx) => {
-                            if (typeof place === 'object' && place !== null) {
-                                return {
-                                    id: place.id || place.placeId || place.value || Utils.generateId('PLACE'),
-                                    name: place.name || place.placeName || place.title || place.label || place.locationName || `مكان ${idx + 1}`,
-                                    siteId: normalizedSite.id
-                                };
-                            }
-                            if (typeof place === 'string') {
-                                return {
-                                    id: Utils.generateId('PLACE'),
-                                    name: place,
-                                    siteId: normalizedSite.id
-                                };
-                            }
-                            return null;
-                        }).filter(Boolean); // إزالة القيم null
-                        
-                        return normalizedSite;
-                    }).filter(site => site.id && site.name); // إزالة المواقع غير الصالحة
-                    
-                    AppState.appData.observationSites = normalizedSites;
-                    if (AppState.debugMode) {
-                        Utils.safeLog(`✅ تم تحميل ${normalizedSites.length} موقع من البيانات المحلية`);
-                    }
-                } else {
-                    // ✅ إصلاح: تهيئة observationSites كمصفوفة فارغة إذا لم تكن موجودة
-                    if (!AppState.appData.observationSites) {
-                        AppState.appData.observationSites = [];
-                    }
-                }
-                
-                // تحميل باقي البيانات
-                Object.keys(parsedData).forEach(key => {
-                    // تخطي البيانات الأساسية التي تم تحميلها بالفعل
-                    if (['users', 'employees', 'approvedContractors', 'contractors', 'observationSites'].includes(key)) {
-                        return;
-                    }
-                    if (parsedData[key] && Array.isArray(parsedData[key])) {
-                        AppState.appData[key] = parsedData[key];
-                    } else if (key === 'systemStatistics' && parsedData[key] && typeof parsedData[key] === 'object') {
-                        // تحميل إحصائيات النظام
-                        AppState.appData.systemStatistics = parsedData[key];
-                    }
-                });
+
+                await this._assignParsedAppDataChunked_(parsedData);
 
                 if (AppState.debugMode) {
                     const totalRecords = Object.keys(parsedData).reduce((sum, key) => {
@@ -844,16 +947,25 @@ const DataManager = {
                             }
                         } else {
                         let restoredCount = 0;
-                        Object.keys(dbData).forEach(key => {
-                            if (key === '_ownerEmail' || key === '_lightDataMeta') return;
+                        const idbKeys = Object.keys(dbData);
+                        let itemsSinceYield = 0;
+                        const yieldEvery = this.LOAD_YIELD_EVERY_ITEMS || 800;
+                        for (let ik = 0; ik < idbKeys.length; ik++) {
+                            const key = idbKeys[ik];
+                            if (key === '_ownerEmail' || key === '_lightDataMeta') continue;
                             if (Array.isArray(dbData[key]) && dbData[key].length > 0) {
                                 const currentArr = Array.isArray(AppState.appData[key]) ? AppState.appData[key] : [];
                                 if (currentArr.length === 0 || dbData[key].length > currentArr.length) {
                                     AppState.appData[key] = LocalDBCache.sanitizeData(key, dbData[key]);
                                     restoredCount += dbData[key].length;
+                                    itemsSinceYield += dbData[key].length;
+                                    if (itemsSinceYield >= yieldEvery) {
+                                        itemsSinceYield = 0;
+                                        await this._yieldToMain_();
+                                    }
                                 }
                             }
-                        });
+                        }
                         if (restoredCount > 0 && AppState.debugMode) {
                             Utils.safeLog(`⚡ [IndexedDB] تم استعادة ${restoredCount} سجل من الكاش عالي السعة بنجاح (0ms)`);
                         }
@@ -879,12 +991,14 @@ const DataManager = {
             const savedPtwList = localStorage.getItem('hse_ptw_list');
             if (savedPtwList) {
                 try {
-                    const parsedPtw = JSON.parse(savedPtwList);
+                    const parsedPtw = await this._parseJsonNonBlocking_(savedPtwList, 'hse_ptw_list');
                     if (Array.isArray(parsedPtw) && parsedPtw.length > 0) {
                         const currentPtw = Array.isArray(AppState.appData.ptw) ? AppState.appData.ptw : [];
                         const ptwMap = new Map();
                         let ptwCounter = 0;
-                        parsedPtw.concat(currentPtw).forEach(item => {
+                        const mergedPtw = parsedPtw.concat(currentPtw);
+                        for (let pi = 0; pi < mergedPtw.length; pi++) {
+                            const item = mergedPtw[pi];
                             if (item && typeof item === 'object') {
                                 const key = String(item.id || item.permitId || item.paperPermitNumber || item.permitNumber || item.sequentialNumber || `ptw_fallback_${ptwCounter++}`).trim();
                                 if (ptwMap.has(key)) {
@@ -896,7 +1010,10 @@ const DataManager = {
                                     ptwMap.set(key, item);
                                 }
                             }
-                        });
+                            if ((pi + 1) % 400 === 0) {
+                                await this._yieldToMain_();
+                            }
+                        }
                         AppState.appData.ptw = Array.from(ptwMap.values());
                     }
                 } catch (_) {}
@@ -904,12 +1021,14 @@ const DataManager = {
             const savedRegistry = localStorage.getItem('hse_ptw_registry');
             if (savedRegistry) {
                 try {
-                    const parsedReg = JSON.parse(savedRegistry);
+                    const parsedReg = await this._parseJsonNonBlocking_(savedRegistry, 'hse_ptw_registry');
                     if (Array.isArray(parsedReg) && parsedReg.length > 0) {
                         const currentReg = Array.isArray(AppState.appData.ptwRegistry) ? AppState.appData.ptwRegistry : [];
                         const regMap = new Map();
                         let regCounter = 0;
-                        parsedReg.concat(currentReg).forEach(item => {
+                        const mergedReg = parsedReg.concat(currentReg);
+                        for (let ri = 0; ri < mergedReg.length; ri++) {
+                            const item = mergedReg[ri];
                             if (item && typeof item === 'object') {
                                 const key = String(item.id || item.permitId || item.paperPermitNumber || item.sequentialNumber || `reg_fallback_${regCounter++}`).trim();
                                 if (regMap.has(key)) {
@@ -921,7 +1040,10 @@ const DataManager = {
                                     regMap.set(key, item);
                                 }
                             }
-                        });
+                            if ((ri + 1) % 400 === 0) {
+                                await this._yieldToMain_();
+                            }
+                        }
                         AppState.appData.ptwRegistry = Array.from(regMap.values());
                     }
                 } catch (_) {}
