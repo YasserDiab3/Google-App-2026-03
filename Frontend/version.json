@@ -1,17 +1,17 @@
 {
-  "version": "1.0.791",
+  "version": "1.0.793",
   "highlights": {
     "ar": [
-      "تعزيز أمان الخلفية: مسارات تعطيل MFA الطارئة وتصحيح رؤوس العيادة تتطلب مدير النظام فقط.",
-      "إصلاح حذف زيارات المقاولين في العيادة (كانت تبقى في جدول المقاولين).",
-      "حماية إضافة/تعديل/حذف طاقم العيادة بصلاحية المدير على الخادم.",
-      "مزامنة موديول مراقبة السلوك ومنع رجوع ثغرات الإعفاءات الأمنية."
+      "تسريع فتح التطبيق: جلب بيانات الصلاحيات بالخلفية دون تجميد شاشة الاستعادة.",
+      "سجل التردد أسلس: تطبيع الزيارات على دفعات بدل تجميد الشاشة بعد التحميل.",
+      "تسريع دمج وفلترة زيارات العيادة — فلترة تبويب واحد فقط بدون عمل مضاعف.",
+      "تقليل احتمالات التهنيج عند التنقل وفتح تبويبات العيادة تحت الحمل."
     ],
     "en": [
-      "Hardened backend security: emergency MFA clear and clinic header fix now require a system admin.",
-      "Fixed deleting contractor clinic visits (they previously remained in the contractor sheet).",
-      "Clinic staff add/update/delete now enforced as admin-only on the server.",
-      "Synced behavior-monitoring module and locked security-exemption regressions."
+      "Faster app open: permission data loads in the background without freezing session restore.",
+      "Smoother clinic visits: normalize records in chunks instead of freezing after fetch.",
+      "Faster visit merge/filter — active tab only, no double pass over the full list.",
+      "Lower freeze risk when navigating and opening clinic tabs under load."
     ]
   }
 }

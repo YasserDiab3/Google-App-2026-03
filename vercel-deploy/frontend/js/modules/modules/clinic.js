@@ -8805,11 +8805,28 @@ const Clinic = {
         const server = Array.isArray(serverVisits) ? serverVisits : [];
         const local = Array.isArray(previousLocal) ? previousLocal : [];
         const seen = new Set();
+        // PERF: فهارس O(1) بدل server.some لكل سجل محلي (كان O(n×m) ويجمّد مع آلاف الزيارات)
+        const empCodeByDate = new Set();
+        const empNameByDate = new Set();
+        const contractorByDate = new Set();
 
         // سجل المعرفات من الخادم
         server.forEach((v) => {
             if (v && v.id != null && String(v.id).trim() !== '') {
                 seen.add(String(v.id));
+            }
+            if (!v) return;
+            const vd = String(v.visitDate || '');
+            const pType = v.personType || (this.isContractorVisit_(v) ? 'contractor' : 'employee');
+            if (pType === 'employee') {
+                const code = String(v.employeeCode || v.employeeNumber || '').trim();
+                if (code) empCodeByDate.add(code + '|' + vd);
+                const name = Clinic.normalizeArabicText(v.employeeName);
+                if (name) empNameByDate.add(name + '|' + vd);
+            } else {
+                const cName = Clinic.normalizeArabicText(v.contractorName || v.externalName);
+                const wName = Clinic.normalizeArabicText(v.contractorWorkerName);
+                contractorByDate.add(cName + '|' + wName + '|' + vd);
             }
         });
 
@@ -8820,29 +8837,22 @@ const Clinic = {
 
             // ✅ إذا لم يكن السجل المحلي موجوداً في الخادم، نحتفظ به (سجل لم يتم مزامنته بعد أو كاش قديم)
             if (!seen.has(id)) {
-                // محاولة البحث عن بديل (نفس الشخص والوقت) لتجنب التكرار إذا تغير الـ ID
-                const isDuplicate = server.some(sv => {
-                    if (sv.personType !== v.personType) return false;
-                    if (sv.visitDate !== v.visitDate) return false;
-                    
-                    if (sv.personType === 'employee') {
-                        const svCode = String(sv.employeeCode || sv.employeeNumber || '').trim();
-                        const vCode = String(v.employeeCode || v.employeeNumber || '').trim();
-                        if (svCode && vCode && svCode === vCode) return true;
-                        
-                        const svName = Clinic.normalizeArabicText(sv.employeeName);
-                        const vName = Clinic.normalizeArabicText(v.employeeName);
-                        return !!svName && svName === vName;
+                const vd = String(v.visitDate || '');
+                const pType = v.personType || (this.isContractorVisit_(v) ? 'contractor' : 'employee');
+                let isDuplicate = false;
+                if (pType === 'employee') {
+                    const vCode = String(v.employeeCode || v.employeeNumber || '').trim();
+                    if (vCode && empCodeByDate.has(vCode + '|' + vd)) {
+                        isDuplicate = true;
                     } else {
-                        // contractor or external
-                        const svCName = Clinic.normalizeArabicText(sv.contractorName || sv.externalName);
-                        const vCName = Clinic.normalizeArabicText(v.contractorName || v.externalName);
-                        const svWName = Clinic.normalizeArabicText(sv.contractorWorkerName);
-                        const vWName = Clinic.normalizeArabicText(v.contractorWorkerName);
-                        
-                        return svCName === vCName && svWName === vWName;
+                        const vName = Clinic.normalizeArabicText(v.employeeName);
+                        if (vName && empNameByDate.has(vName + '|' + vd)) isDuplicate = true;
                     }
-                });
+                } else {
+                    const vCName = Clinic.normalizeArabicText(v.contractorName || v.externalName);
+                    const vWName = Clinic.normalizeArabicText(v.contractorWorkerName);
+                    if (contractorByDate.has(vCName + '|' + vWName + '|' + vd)) isDuplicate = true;
+                }
 
                 if (!isDuplicate) {
                     // ✅ المشكلة: السجلات التي تُحذف من الخادم تبقى هنا للأبد بسبب الدمج!
@@ -9012,8 +9022,28 @@ const Clinic = {
                 }
 
                 // ✅ تطبيع البيانات للتأكد من وجود جميع الحقول المطلوبة
-                const normalizedVisits = result.data.map(visit => {
-                    if (!visit || typeof visit !== 'object') return visit;
+                // PERF: فهرس مستخدمين O(1) + yield كل 200 سجل — يمنع تجميد الشاشة بعد رجوع getAllClinicVisits
+                const _clinicUsers = AppState.appData.users || [];
+                const _usersByEmail = new Map();
+                const _usersById = new Map();
+                for (let _ui = 0; _ui < _clinicUsers.length; _ui++) {
+                    const u = _clinicUsers[_ui];
+                    if (!u) continue;
+                    const em = (u.email || '').toString().toLowerCase().trim();
+                    const uid = (u.id || '').toString().trim();
+                    if (em) _usersByEmail.set(em, u);
+                    if (uid) _usersById.set(uid, u);
+                }
+                const normalizedVisits = new Array(result.data.length);
+                for (let _vi = 0; _vi < result.data.length; _vi++) {
+                    let visit = result.data[_vi];
+                    if (!visit || typeof visit !== 'object') {
+                        normalizedVisits[_vi] = visit;
+                        if ((_vi + 1) % 200 === 0) {
+                            await new Promise((r) => setTimeout(r, 0));
+                        }
+                        continue;
+                    }
                     
                     // ✅ تحديد شخصية الزيارة بشكل دقيق وتلقائي
                     if (this.isContractorVisit_(visit)) {
@@ -9172,13 +9202,9 @@ const Clinic = {
                                 const userIdFromVisit = (visit.userId || '').toString().trim();
                                 
                                 if (emailFromVisit || userIdFromVisit) {
-                                    const users = AppState.appData.users || [];
-                                    const dbUser = users.find(u => {
-                                        const userEmail = (u.email || '').toString().toLowerCase().trim();
-                                        const userId = (u.id || '').toString().trim();
-                                        return (emailFromVisit && userEmail === emailFromVisit.toLowerCase().trim()) || 
-                                               (userIdFromVisit && userId === userIdFromVisit);
-                                    });
+                                    const dbUser = (emailFromVisit && _usersByEmail.get(emailFromVisit.toLowerCase().trim()))
+                                        || (userIdFromVisit && _usersById.get(userIdFromVisit))
+                                        || null;
                                     
                                     if (dbUser) {
                                         const dbUserName = (dbUser.name || dbUser.displayName || '').toString().trim();
@@ -9228,8 +9254,11 @@ const Clinic = {
                         }
                     }
                     
-                    return visit;
-                });
+                    normalizedVisits[_vi] = visit;
+                    if ((_vi + 1) % 200 === 0) {
+                        await new Promise((r) => setTimeout(r, 0));
+                    }
+                }
                 
                 AppState.appData.clinicVisits = this.mergeClinicVisitsWithLocalOnly(
                     normalizedVisits,
@@ -9403,14 +9432,14 @@ const Clinic = {
                 return dateB - dateA;
             });
 
-            // ✅ فلترة الزيارات حسب النوع باستخدام الفاحص الشامل
-            const employeeVisits = allVisits.filter(v => this.isEmployeeVisit_(v));
-            const contractorVisits = allVisits.filter(v => this.isContractorVisit_(v));
-
-            const baseVisits = activeVisitType === 'employees' ? employeeVisits : contractorVisits;
+            // PERF: فلترة نوع واحد فقط (كان يمرّ على كل القائمة مرتين)
+            const baseVisits = allVisits.filter(v =>
+                activeVisitType === 'employees' ? this.isEmployeeVisit_(v) : this.isContractorVisit_(v)
+            );
             
             // تطبيق الفلاتر والبحث (قبل تحديث الفلاتر لأن updateVisitFilterOptions يحتاج DOM)
-            const visits = baseVisits.filter((visit) => {
+            const hasActiveFilters = !!(searchTerm || filterFactory || filterPosition || filterWorkplace);
+            const visits = !hasActiveFilters ? baseVisits : baseVisits.filter((visit) => {
                 // فلترة المصنع
                 if (filterFactory) {
                     try {

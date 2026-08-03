@@ -320,29 +320,32 @@
                         }
                     }
 
-                    // ✅ تحسين: تحميل ذكي للبيانات حسب الصلاحيات (بدلاً من تحميل كل شيء)
+                    // ✅ PERF: لا await جلب الشبكة هنا — كان يحجب استعادة الجلسة وعرض الواجهة (تهنيج boot).
+                    // البيانات المحلية جاهزة من DataManager.load؛ الجلب من الخادم بالخلفية بعد _tryFastSessionRestore.
                     if (typeof Permissions !== 'undefined' && typeof Permissions.getCurrentUserPermissions === 'function') {
                         try {
                             const userPermissions = Permissions.getCurrentUserPermissions();
-                            await this.loadDataBasedOnPermissions(userPermissions);
+                            void this.loadDataBasedOnPermissions(userPermissions).catch((error) => {
+                                log('⚠️ فشل تحميل البيانات الذكية، سيتم استخدام التحميل التقليدي:', error);
+                                void this.loadSharedDataFallback().catch(() => {});
+                            });
                         } catch (error) {
                             log('⚠️ فشل تحميل البيانات الذكية، سيتم استخدام التحميل التقليدي:', error);
-                            await this.loadSharedDataFallback();
+                            void this.loadSharedDataFallback().catch(() => {});
                         }
                     } else {
-                        await this.loadSharedDataFallback();
+                        void this.loadSharedDataFallback().catch(() => {});
                     }
 
-                    // ✅ إعدادات النماذج (المواقع / المصانع / الأماكن الفرعية)
+                    // ✅ إعدادات النماذج بالخلفية — لا تحجب فتح التطبيق
                     if (typeof Permissions !== 'undefined' && typeof Permissions.initFormSettingsState === 'function') {
-                        try {
-                            await Permissions.initFormSettingsState();
+                        void Permissions.initFormSettingsState().then(() => {
                             if (AppState.debugMode) {
                                 log('✅ تم تحميل إعدادات النماذج (المواقع) مع بدء التطبيق');
                             }
-                        } catch (error) {
+                        }).catch((error) => {
                             console.warn('⚠️ فشل تحميل إعدادات النماذج مع بدء التطبيق:', error);
-                        }
+                        });
                     }
                     }
                 } catch (error) {
