@@ -5288,10 +5288,8 @@ var ActionHandlers = {
     'addClientErrorLog': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-                    if (!actorUserData || !(actorUserData.id || actorUserData.email)) {
-                        result = { success: false, message: 'يجب تسجيل الدخول لتسجيل الخطأ' };
-                        return;
-                    }
+                    var authFail = actionRequireAuth_(actorUserData, action);
+                    if (authFail) { result = authFail; return; }
                     result = addClientErrorLogToSheet(payload || {}, actorUserData);
                     return;
         })();

@@ -1,17 +1,17 @@
 {
-  "version": "1.0.801",
+  "version": "1.0.803",
   "highlights": {
     "ar": [
-      "استقرار سجل التردد: منع استبدال بيانات العيادة المُطبَّعة بجلب bootstrap خام.",
-      "حماية الدمج من سجلات شبح بلا تاريخ بعد الحذف من الخادم.",
-      "تخفيف التجميد بعد تحميل الزيارات عبر تأجيل ensureData.",
-      "حماية batch من استبدال محلي غير فارغ بمصفوفة فارغة عند الإقلاع."
+      "مراقبة الأخطاء فوق الإعدادات في القائمة الجانبية.",
+      "تسجيل أخطاء المستخدمين بدون منافسة تسجيل الدخول.",
+      "ربط هوية سجل الخطأ بجلسة الخادم ومنع التزوير.",
+      "إيقاف التحديث المباشر عند مغادرة لوحة مراقبة الأخطاء."
     ],
     "en": [
-      "Clinic visits stability: stop bootstrap raw batch from overwriting normalized visit data.",
-      "Merge no longer keeps undated ghost local records after server deletes.",
-      "Less freeze after visit load by deferring ensureData.",
-      "Boot batch no longer replaces non-empty local data with an empty array."
+      "Client error monitor moved above Settings in the sidebar.",
+      "Error logging no longer competes with login/MFA queue.",
+      "Error log identity bound to server session (anti-spoof).",
+      "Live polling stops when leaving the error monitor section."
     ]
   }
 }

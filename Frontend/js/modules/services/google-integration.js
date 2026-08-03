@@ -883,6 +883,9 @@ const GoogleIntegration = {
             if (cleanData && typeof cleanData === 'object' && '__allowStructuredFailure' in cleanData) {
                 delete cleanData.__allowStructuredFailure;
             }
+            if (cleanData && typeof cleanData === 'object' && '__silent' in cleanData) {
+                delete cleanData.__silent;
+            }
 
             const payload = {
                 action,

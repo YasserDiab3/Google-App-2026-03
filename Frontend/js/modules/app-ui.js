@@ -11666,7 +11666,8 @@ window.UI = {
                 'user-tasks': 'UserTasks',
                 'sopjha': 'SOPJHA',
                 'ai-assistant': 'AIAssistant',
-                'user-ai-assistant': 'UserAIAssistant'
+                'user-ai-assistant': 'UserAIAssistant',
+                'client-errors': 'ClientErrorsAdmin'
             };
 
             const moduleName = moduleMap[sectionName];

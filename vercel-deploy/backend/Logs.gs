@@ -601,9 +601,10 @@ function addClientErrorLogToSheet(logData, actorUserData) {
             pageUrl: String(logData.pageUrl || '').substring(0, 500),
             userAgent: String(logData.userAgent || '').substring(0, 400),
             appVersion: String(logData.appVersion || '').substring(0, 40),
-            userId: String(logData.userId || actor.id || ''),
-            userEmail: String(logData.userEmail || actor.email || '').toLowerCase(),
-            username: String(logData.username || actor.name || actor.username || ''),
+            // هوية الجلسة أولاً — لا تُصدَّق قيم العميل للهوية
+            userId: String(actor.id || logData.userId || ''),
+            userEmail: String(actor.email || logData.userEmail || '').toLowerCase(),
+            username: String(actor.name || actor.username || logData.username || ''),
             sessionId: String(logData.sessionId || '').substring(0, 80),
             fingerprint: String(logData.fingerprint || '').substring(0, 80),
             status: String(logData.status || 'new'),

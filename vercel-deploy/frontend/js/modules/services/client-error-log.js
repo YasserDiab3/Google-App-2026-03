@@ -143,9 +143,7 @@ const ClientErrorLog = {
                 sessionId: this._sessionId(),
                 fingerprint: fingerprint,
                 status: 'new',
-                extra: payload.extra ? (typeof payload.extra === 'string' ? payload.extra : JSON.stringify(payload.extra)).slice(0, 3000) : '',
-                __timeoutMs: 20000,
-                __silent: true
+                extra: payload.extra ? (typeof payload.extra === 'string' ? payload.extra : JSON.stringify(payload.extra)).slice(0, 3000) : ''
             };
 
             this._queue.push(entry);
@@ -188,13 +186,24 @@ const ClientErrorLog = {
     async flush() {
         if (!this._queue.length) return;
         if (!this._isLoggedIn()) return;
+        // لا تنافس login/MFA في طابور GAS — أعد الجدولة فقط
+        try {
+            if (typeof Auth !== 'undefined' && (Auth._authInFlight || Auth._mfaChallengePending)) {
+                this._scheduleFlush();
+                return;
+            }
+        } catch (_a) { /* ignore */ }
         if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendToAppsScript) return;
 
         const batch = this._queue.splice(0, 8);
         for (let i = 0; i < batch.length; i++) {
             const entry = batch[i];
             try {
-                await GoogleIntegration.sendToAppsScript('addClientErrorLog', entry);
+                await GoogleIntegration.sendToAppsScript('addClientErrorLog', Object.assign({}, entry, {
+                    __timeoutMs: 15000,
+                    __highPriority: false,
+                    __silent: true
+                }));
             } catch (_err) {
                 // أعد للطابور مرة واحدة فقط إن فشل الشبكة
                 if (!entry._retried) {

@@ -307,8 +307,8 @@ const MODULE_PERMISSIONS_CONFIG = [
     { key: 'kpi-annual-plan', label: 'الخطة السنوية لمؤشرات الأداء (KPIs)', icon: 'fa-calendar-alt', parentModule: 'safety-performance-kpis' },
     { key: 'hse-monitoring-plan', label: 'خطة متابعة HSE', icon: 'fa-clipboard-check', parentModule: 'safety-performance-kpis' },
     { key: 'safety-health-management', label: 'إدارة السلامة والصحة', icon: 'fa-user-shield' },
-    { key: 'settings', label: 'الإعدادات', icon: 'fa-cog', adminOnly: true },
     { key: 'client-errors', label: 'مراقبة أخطاء المستخدمين', icon: 'fa-bug', adminOnly: true },
+    { key: 'settings', label: 'الإعدادات', icon: 'fa-cog', adminOnly: true },
     { key: 'action-tracking', label: 'سجل متابعة الإجراءات', icon: 'fa-clipboard-list' },
     { key: 'issue-tracking', label: 'تتبع المشاكل', icon: 'fa-bug', hasDetailedPermissions: true },
     { key: 'change-management', label: 'إدارة التغيرات', icon: 'fa-exchange-alt', hasDetailedPermissions: true },
@@ -4341,7 +4341,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.801',
+    appVersion: '1.0.803',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,

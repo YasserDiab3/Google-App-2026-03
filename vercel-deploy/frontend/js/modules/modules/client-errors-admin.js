@@ -213,20 +213,31 @@ const ClientErrorsAdmin = {
         }
     },
 
+    /** عند مغادرة القسم — يوقف الاستطلاع المباشر */
+    cleanup() {
+        this.stopLive();
+    },
+
     async refresh(opts = {}) {
         if (this._loading) return;
+        // لا تُحدّث بالخلفية إن غادر المستخدم القسم ولم يبقَ modal مفتوح
+        try {
+            const onSection = typeof AppState !== 'undefined' && AppState.currentSection === 'client-errors';
+            const modalOpen = !!document.getElementById('client-errors-admin-modal');
+            if (opts.silent && !onSection && !modalOpen) {
+                this.stopLive();
+                return;
+            }
+        } catch (_g) { /* ignore */ }
         this._loading = true;
         try {
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.resetCircuitBreaker) {
                 GoogleIntegration.resetCircuitBreaker();
             }
-            const filters = {
-                ...this._filters,
-                __timeoutMs: 45000
-            };
+            const filters = Object.assign({}, this._filters);
             const [listRes, statsRes] = await Promise.all([
-                GoogleIntegration.sendToAppsScript('getAllClientErrorLogs', { filters, __timeoutMs: 45000 }),
-                GoogleIntegration.sendToAppsScript('getClientErrorStats', { filters: {}, __timeoutMs: 45000 })
+                GoogleIntegration.sendToAppsScript('getAllClientErrorLogs', { filters: filters, __timeoutMs: 45000, __highPriority: false }),
+                GoogleIntegration.sendToAppsScript('getClientErrorStats', { filters: {}, __timeoutMs: 45000, __highPriority: false })
             ]);
             const rows = (listRes && listRes.success && Array.isArray(listRes.data)) ? listRes.data : [];
             let newCount = 0;
