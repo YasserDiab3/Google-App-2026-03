@@ -1,15 +1,15 @@
 {
-  "version": "1.0.833",
+  "version": "1.0.835",
   "highlights": {
     "ar": [
-      "مزامنة حية لسجل التردد كل ~3 دقائق بدل تخطي طوال الجلسة بعد أول جلب.",
-      "أولوية طابور الزيارات فقط عند العيادة/اللوحة — لا تؤخر باقي الطلبات بلا داعٍ.",
-      "شريط مزامنة عند أول فتح بلا بيانات، وتوافق أفضل لمفاتيح إعدادات البريد."
+      "إصلاح بحث مهمات الوقاية: الكتابة لم تعد تتوقف بعد حرف واحد.",
+      "الفلاتر تبقى أثناء التصفية — يُحدَّث الجدول فقط دون فقدان التركيز.",
+      "بحث متعدد الكلمات على الاستلام والمخزون والمصفوفة."
     ],
     "en": [
-      "Realtime clinic visits refresh about every 3 minutes instead of skipping all session.",
-      "Visit queue priority only on clinic/dashboard — avoids delaying other requests.",
-      "First-open sync banner when empty; email toggles work without CSS :has()."
+      "PPE search fix: typing no longer stops after one character.",
+      "Filters stay while filtering — only the results table refreshes.",
+      "Multi-word search across receipts, stock, and matrix views."
     ]
   }
 }

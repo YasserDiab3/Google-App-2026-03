@@ -270,6 +270,48 @@ const PPE = {
         el.addEventListener(eventName, handler);
     },
 
+    /** حفظ تركيز حقل فلتر قبل إعادة الرسم */
+    _ppeCaptureFocus(root) {
+        try {
+            const ae = document.activeElement;
+            if (!ae || !root || !root.contains(ae) || !ae.id) return null;
+            return {
+                id: ae.id,
+                start: typeof ae.selectionStart === 'number' ? ae.selectionStart : null,
+                end: typeof ae.selectionEnd === 'number' ? ae.selectionEnd : null
+            };
+        } catch (_e) {
+            return null;
+        }
+    },
+
+    _ppeRestoreFocus(meta) {
+        if (!meta || !meta.id) return;
+        try {
+            const el = document.getElementById(meta.id);
+            if (!el) return;
+            el.focus({ preventScroll: true });
+            if (meta.start != null && typeof el.setSelectionRange === 'function') {
+                const len = String(el.value || '').length;
+                const s = Math.min(meta.start, len);
+                const e = Math.min(meta.end != null ? meta.end : s, len);
+                el.setSelectionRange(s, e);
+            }
+        } catch (_e) { /* ignore */ }
+    },
+
+    /** بحث متعدد الكلمات — كل كلمة يجب أن تظهر في النص */
+    _ppeMatchesSearch(hayParts, searchRaw) {
+        const search = String(searchRaw || '').trim().toLowerCase();
+        if (!search) return true;
+        const hay = (Array.isArray(hayParts) ? hayParts : [hayParts])
+            .map((x) => String(x == null ? '' : x).toLowerCase())
+            .join(' | ');
+        const tokens = search.split(/\s+/).filter(Boolean);
+        if (!tokens.length) return true;
+        return tokens.every((tok) => hay.includes(tok));
+    },
+
     showPPEFormById(id) {
         const list = (typeof AppState !== 'undefined' && AppState.appData && Array.isArray(AppState.appData.ppe))
             ? AppState.appData.ppe
@@ -311,11 +353,12 @@ const PPE = {
                 if (to && rd > to) return false;
             }
             if (search) {
-                const hay = [
+                if (!this._ppeMatchesSearch([
                     item.receiptNumber, item.id, item.employeeName, item.employeeCode, item.employeeNumber,
-                    item.equipmentType, item.status, item.employeeDepartment, item.createdBy, item.createdByUser, item.recordedBy, item.recorderName
-                ].map((x) => String(x || '').toLowerCase()).join(' | ');
-                if (!hay.includes(search)) return false;
+                    item.equipmentType, item.status, item.employeeDepartment, item.department,
+                    item.createdBy, item.createdByUser, item.recordedBy, item.recorderName,
+                    item.shoeSize, item.quantity, item.notes, item.remarks, item.site, item.location
+                ], search)) return false;
             }
             return true;
         });
@@ -371,10 +414,10 @@ const PPE = {
                 if (to && rd > to) return false;
             }
             if (search) {
-                const hay = [
-                    item.itemCode, item.itemName, item.category, item.supplier
-                ].map((x) => String(x || '').toLowerCase()).join(' | ');
-                if (!hay.includes(search)) return false;
+                if (!this._ppeMatchesSearch([
+                    item.itemCode, item.itemName, item.category, item.supplier,
+                    item.itemId, item.unit, item.notes, item.balance, item.minThreshold, item.location
+                ], search)) return false;
             }
             return true;
         });
@@ -536,7 +579,9 @@ const PPE = {
 
         if (ppeList.length === 0) {
             const emptyBlock = `<div class="empty-state"><p class="text-gray-500">${esc(t('module.ppe.empty.noReceipts', 'لا توجد استلامات مسجلة'))}</p></div>`;
-            return receiptsKpiGrid + this._buildExcelToolbarHtml('receipts') + filterRow + emptyBlock;
+            return receiptsKpiGrid + this._buildExcelToolbarHtml('receipts')
+                + `<div id="ppe-receipts-filters-host">${filterRow}</div>`
+                + `<div id="ppe-receipts-results-host">${emptyBlock}</div>`;
         }
 
         const noMatchBlock = (hasFilters && filtered.length === 0) ? `
@@ -550,7 +595,9 @@ const PPE = {
         ` : '';
 
         if (filtered.length === 0) {
-            return receiptsKpiGrid + this._buildExcelToolbarHtml('receipts') + filterRow + noMatchBlock;
+            return receiptsKpiGrid + this._buildExcelToolbarHtml('receipts')
+                + `<div id="ppe-receipts-filters-host">${filterRow}</div>`
+                + `<div id="ppe-receipts-results-host">${noMatchBlock}</div>`;
         }
 
         const viewTitle = t('module.common.view', 'عرض');
@@ -616,17 +663,129 @@ const PPE = {
             </table>
         `;
 
-        return receiptsKpiGrid + this._buildExcelToolbarHtml('receipts') + filterRow + table;
+        return receiptsKpiGrid + this._buildExcelToolbarHtml('receipts')
+            + `<div id="ppe-receipts-filters-host">${filterRow}</div>`
+            + `<div id="ppe-receipts-results-host">${table}</div>`;
+    },
+
+    /** نتائج سجل الاستلام فقط (بدون تدمير حقول الفلتر) */
+    buildPPEReceiptsResultsHtml() {
+        const t = (k, f) => this._t(k, f);
+        const esc = (v) => Utils.escapeHTML(v);
+        const ppeList = AppState.appData.ppe || [];
+        const filtered = this.getFilteredPpeReceipts(ppeList);
+        const hasFilters = this.hasActiveReceiptFilters();
+
+        if (ppeList.length === 0) {
+            return `<div class="empty-state"><p class="text-gray-500">${esc(t('module.ppe.empty.noReceipts', 'لا توجد استلامات مسجلة'))}</p></div>`;
+        }
+        if (filtered.length === 0) {
+            return `
+            <div class="empty-state">
+                <i class="fas fa-filter text-4xl text-gray-300 mb-4"></i>
+                <p class="text-gray-500 mb-2">${esc(t('module.ppe.filter.noMatch', 'لا توجد نتائج مطابقة'))}</p>
+                <button type="button" id="ppe-receipts-clear-empty-filters" class="btn-secondary mt-2">
+                    <i class="fas fa-undo-alt ml-2"></i>${esc(t('module.ppe.filter.clearEmpty', 'مسح الفلاتر'))}
+                </button>
+            </div>`;
+        }
+
+        const viewTitle = t('module.common.view', 'عرض');
+        const pdfT = t('module.kpi.exportPDF', 'تصدير PDF');
+        const editTitle = t('module.common.edit', 'تعديل');
+        const delTitle = t('module.ppe.btn.deleteReceipt', 'حذف');
+        return `
+            <table class="data-table table-header-blue">
+                <thead>
+                    <tr>
+                        <th>${esc(t('module.ppe.table.receiptNo', 'رقم الإيصال'))}</th>
+                        <th>${esc(t('module.ppe.table.employeeName', 'اسم الموظف'))}</th>
+                        <th>${esc(t('module.ppe.table.employeeCode', 'الكود الوظيفي'))}</th>
+                        <th>${esc(t('module.ppe.table.equipmentType', 'نوع المعدة'))}</th>
+                        <th>${esc(t('module.ppe.table.quantity', 'الكمية'))}</th>
+                        <th>${esc(t('module.ppe.table.createdBy', 'مسجّل الاستلام'))}</th>
+                        <th>${esc(t('module.ppe.table.receiptDate', 'تاريخ الاستلام'))}</th>
+                        <th>${esc(t('module.ppe.table.status', 'الحالة'))}</th>
+                        <th>${esc(t('module.ppe.table.actions', 'الإجراءات'))}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filtered.map((item) => {
+            const stDisp = this.getDisplayStatus(item.status);
+            const idJs = String(item.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const recordedBy = item.createdBy || item.createdByUser || item.recordedBy || item.recorderName || item.user || '—';
+            return `
+                        <tr>
+                            <td class="font-mono font-semibold">${esc(item.receiptNumber || item.id || '')}</td>
+                            <td>${esc(item.employeeName || '')}</td>
+                            <td>${esc(item.employeeCode || item.employeeNumber || '')}</td>
+                            <td>
+                                ${esc(item.equipmentType || '')}
+                                ${item.shoeSize ? `<span class="block text-[11px] text-blue-600 font-semibold mt-0.5"><i class="fas fa-shoe-prints ml-1 text-[10px]"></i>مقاس: ${esc(item.shoeSize)}</span>` : ''}
+                            </td>
+                            <td>${item.quantity || 0}</td>
+                            <td><span class="text-xs font-semibold text-slate-700"><i class="fas fa-user-edit text-blue-500 ml-1 text-[11px]"></i>${esc(recordedBy)}</span></td>
+                            <td>${item.receiptDate ? Utils.formatDate(item.receiptDate) : '-'}</td>
+                            <td>
+                                <span class="badge badge-${this.isStatusReceived(item.status) ? 'success' : 'warning'}">
+                                    ${esc(stDisp)}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="PPE.viewPPE('${idJs}')" class="btn-icon btn-icon-info" title="${esc(viewTitle)}">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button onclick="PPE.exportPDF('${idJs}')" class="btn-icon btn-icon-success" title="${esc(pdfT)}">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </button>
+                                    <button onclick="PPE.showPPEFormById('${idJs}')" class="btn-icon btn-icon-primary" title="${esc(editTitle)}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="PPE.deletePPE('${idJs}')" class="btn-icon btn-icon-danger" title="${esc(delTitle)}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>`;
+        }).join('')}
+                </tbody>
+            </table>`;
     },
 
     _receiptsFilterTimer: null,
 
-    refreshReceiptsListUI() {
+    refreshReceiptsListUI(opts = {}) {
         const container = document.getElementById('ppe-list');
         if (!container) return;
+        const forceFull = !!(opts && opts.forceFull);
+        const focusMeta = this._ppeCaptureFocus(container);
+        const resultsHost = document.getElementById('ppe-receipts-results-host');
+        const filtersHost = document.getElementById('ppe-receipts-filters-host');
+
+        // تحديث جزئي: لا تُدمَّر حقول البحث/الفلاتر أثناء الكتابة
+        if (!forceFull && resultsHost && filtersHost) {
+            const ppeList = AppState.appData.ppe || [];
+            const filtered = this.getFilteredPpeReceipts(ppeList);
+            const kpiStats = this.computeReceiptsKpiStats(ppeList, filtered);
+            const kpiEl = document.getElementById('ppe-receipts-kpi');
+            if (kpiEl) {
+                const wrap = document.createElement('div');
+                wrap.innerHTML = this.buildReceiptsKpiHtml(kpiStats).trim();
+                const next = wrap.firstElementChild;
+                if (next) kpiEl.replaceWith(next);
+            }
+            resultsHost.innerHTML = this.buildPPEReceiptsResultsHtml();
+            this.applyModuleI18n(resultsHost);
+            this.bindReceiptsFilters();
+            this._ppeRestoreFocus(focusMeta);
+            return;
+        }
+
         container.innerHTML = this.buildPPEListHtml();
         this.applyModuleI18n(container);
         this.bindReceiptsFilters();
+        this._ppeRestoreFocus(focusMeta);
     },
 
     bindReceiptsFilters() {
@@ -642,7 +801,7 @@ const PPE = {
         this._ppeBindOnce(search, 'input', (e) => {
             this.state.filters.receipts.search = (e.target && e.target.value) || '';
             clearTimeout(this._receiptsFilterTimer);
-            this._receiptsFilterTimer = setTimeout(() => run(() => this.refreshReceiptsListUI()), 220);
+            this._receiptsFilterTimer = setTimeout(() => run(() => this.refreshReceiptsListUI()), 180);
         });
         this._ppeBindOnce(document.getElementById('ppe-receipts-filter-type'), 'change', (e) => {
             this.state.filters.receipts.equipmentType = (e.target && e.target.value) || '';
@@ -662,12 +821,16 @@ const PPE = {
         });
         this._ppeBindOnce(document.getElementById('ppe-receipts-reset-filters'), 'click', () => {
             this.resetReceiptFilters();
-            this.refreshReceiptsListUI();
+            this.refreshReceiptsListUI({ forceFull: true });
         });
-        this._ppeBindOnce(document.getElementById('ppe-receipts-clear-empty-filters'), 'click', () => {
-            this.resetReceiptFilters();
-            this.refreshReceiptsListUI();
-        });
+        // زر المسح داخل النتائج يُعاد إنشاؤه — اربطه دائماً
+        const clearEmpty = document.getElementById('ppe-receipts-clear-empty-filters');
+        if (clearEmpty) {
+            clearEmpty.onclick = () => {
+                this.resetReceiptFilters();
+                this.refreshReceiptsListUI({ forceFull: true });
+            };
+        }
     },
 
     /**
@@ -3205,16 +3368,8 @@ const PPE = {
             const code = row.getAttribute('data-employee-code') || '';
             const name = row.getAttribute('data-employee-name') || '';
             const position = row.getAttribute('data-position') || '';
-            const searchLower = searchTerm.toLowerCase();
-
-            if (!searchTerm || 
-                code.toLowerCase().includes(searchLower) ||
-                name.toLowerCase().includes(searchLower) ||
-                position.toLowerCase().includes(searchLower)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
+            const show = this._ppeMatchesSearch([code, name, position], searchTerm);
+            row.style.display = show ? '' : 'none';
         });
     },
 
@@ -4772,14 +4927,8 @@ const PPE = {
                     </div>
                     <div class="card-body">
                         ${excelToolbar}
-                        ${filterRow}
-                        <div class="empty-state">
-                            <i class="fas fa-filter text-4xl text-gray-300 mb-4"></i>
-                            <p class="text-gray-500 mb-2">${ut(t('module.ppe.filter.noMatch', 'لا توجد نتائج مطابقة'))}</p>
-                            <button type="button" id="ppe-stock-clear-empty-filters" class="btn-secondary mt-2">
-                                <i class="fas fa-undo-alt ml-2"></i>${ut(t('module.ppe.filter.clearEmpty', 'مسح الفلاتر'))}
-                            </button>
-                        </div>
+                        <div id="ppe-stock-filters-host">${filterRow}</div>
+                        <div id="ppe-stock-results-host">${this.buildStockResultsInnerHtml(items)}</div>
                     </div>
                 </div>
             `;
@@ -4792,7 +4941,33 @@ const PPE = {
                 </div>
                 <div class="card-body">
                     ${excelToolbar}
-                    ${filterRow}
+                    <div id="ppe-stock-filters-host">${filterRow}</div>
+                    <div id="ppe-stock-results-host">${this.buildStockResultsInnerHtml(items)}</div>
+                </div>
+            </div>
+        `;
+    },
+
+    /** نتائج جدول المخزون فقط — بدون إعادة بناء حقل البحث */
+    buildStockResultsInnerHtml(stockItems) {
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const items = Array.isArray(stockItems) ? stockItems : [];
+        const filtered = this.getFilteredStockItems(items);
+        const hasFilters = this.hasActiveStockFilters();
+
+        if (filtered.length === 0 && hasFilters) {
+            return `
+                <div class="empty-state">
+                    <i class="fas fa-filter text-4xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 mb-2">${ut(t('module.ppe.filter.noMatch', 'لا توجد نتائج مطابقة'))}</p>
+                    <button type="button" id="ppe-stock-clear-empty-filters" class="btn-secondary mt-2">
+                        <i class="fas fa-undo-alt ml-2"></i>${ut(t('module.ppe.filter.clearEmpty', 'مسح الفلاتر'))}
+                    </button>
+                </div>`;
+        }
+
+        return `
                     <div class="table-wrapper" style="overflow-x: auto;">
                         <table class="data-table">
                             <thead>
@@ -4861,10 +5036,7 @@ const PPE = {
                                 }).join('')}
                             </tbody>
                         </table>
-                    </div>
-                </div>
-            </div>
-        `;
+                    </div>`;
     },
 
     /** الحصول على بيانات المخزون الحالية للعرض الجزئي (cache → AppState) */
@@ -4878,11 +5050,24 @@ const PPE = {
         return [];
     },
 
-    /** إعادة رسم بطاقة جدول المخزون فقط (دون لمس لوحة الإحصائيات) */
-    refreshStockListUI() {
+    /** إعادة رسم نتائج المخزون فقط (حقول البحث تبقى كما هي) */
+    refreshStockListUI(opts = {}) {
         const card = document.getElementById('ppe-stock-table-card');
         if (!card) return;
+        const forceFull = !!(opts && opts.forceFull);
+        const focusMeta = this._ppeCaptureFocus(card);
         const items = this._getCurrentStockItems();
+        const resultsHost = document.getElementById('ppe-stock-results-host');
+        const filtersHost = document.getElementById('ppe-stock-filters-host');
+
+        if (!forceFull && resultsHost && filtersHost && items.length > 0) {
+            resultsHost.innerHTML = this.buildStockResultsInnerHtml(items);
+            this.applyModuleI18n(resultsHost);
+            this.bindStockFilters();
+            this._ppeRestoreFocus(focusMeta);
+            return;
+        }
+
         const html = this.renderStockTable(items);
         const wrap = document.createElement('div');
         wrap.innerHTML = html.trim();
@@ -4891,6 +5076,7 @@ const PPE = {
         card.replaceWith(newCard);
         this.applyModuleI18n(newCard);
         this.bindStockFilters();
+        this._ppeRestoreFocus(focusMeta);
     },
 
     _stockFilterTimer: null,
@@ -4912,7 +5098,7 @@ const PPE = {
         this._ppeBindOnce(search, 'input', (e) => {
             this.state.filters.stock.search = (e.target && e.target.value) || '';
             clearTimeout(this._stockFilterTimer);
-            this._stockFilterTimer = setTimeout(() => run(() => this.refreshStockListUI()), 220);
+            this._stockFilterTimer = setTimeout(() => run(() => this.refreshStockListUI()), 180);
         });
         this._ppeBindOnce(document.getElementById('ppe-stock-filter-category'), 'change', (e) => {
             this.state.filters.stock.category = (e.target && e.target.value) || '';
@@ -4936,12 +5122,15 @@ const PPE = {
         });
         this._ppeBindOnce(document.getElementById('ppe-stock-reset-filters'), 'click', () => {
             this.resetStockFilters();
-            this.refreshStockListUI();
+            this.refreshStockListUI({ forceFull: true });
         });
-        this._ppeBindOnce(document.getElementById('ppe-stock-clear-empty-filters'), 'click', () => {
-            this.resetStockFilters();
-            this.refreshStockListUI();
-        });
+        const clearEmpty = document.getElementById('ppe-stock-clear-empty-filters');
+        if (clearEmpty) {
+            clearEmpty.onclick = () => {
+                this.resetStockFilters();
+                this.refreshStockListUI({ forceFull: true });
+            };
+        }
     },
 
     /** طلب واحد لقائمة المخزون مع مهلة بالمللي ثوانٍ */
