@@ -1,15 +1,17 @@
 {
-  "version": "1.0.819",
+  "version": "1.0.821",
   "highlights": {
     "ar": [
-      "مراقبة التصرفات: زر حذف لكل سجل يظهر للمدير فقط.",
-      "زر «حذف المكررات» ينظف نفس الشخص ونفس اليوم ونفس البيانات مع الإبقاء على الأقدم.",
-      "متاح لتصرفات الموظفين والمقاولين مع تأكيد قبل الحذف."
+      "إشعارات البريد: تصميم أوضح وشريط حالة تشغيل/إيقاف.",
+      "فلاتر مجموعات، بحث، تفعيل/إيقاف الظاهر، وملخص أعداد.",
+      "مستلمون كشرائح + اختبار سريع + شريط حفظ مع تنبيه التغييرات.",
+      "خلفية: صلاحية إرسال البريد ودالة تفويض MailApp."
     ],
     "en": [
-      "Behavior monitoring: per-record delete button for admins only.",
-      "Cleanup Duplicates removes same person/day/data copies and keeps the oldest.",
-      "Available for employee and contractor behaviors with confirm before delete."
+      "Email notifications: clearer layout with on/off status bar.",
+      "Group filters, search, bulk enable/disable visible types, and counts.",
+      "Recipient chips, quick test send, and sticky save with dirty hint.",
+      "Backend: MailApp send_mail scope and authorize helper."
     ]
   }
 }

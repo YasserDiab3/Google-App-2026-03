@@ -1257,56 +1257,105 @@ const Settings = {
             <!-- Tab Content: إدارة الإشعارات الإلكترونية -->
             <div class="tab-content" id="tab-notifications">
                 ${isAdmin ? `
-                <div class="settings-group mt-6">
+                <div class="settings-group mt-6 email-settings-panel">
                     <div class="settings-group-header">
                         <h2 class="settings-group-title">
                             <i class="fas fa-envelope text-sky-700 ml-2"></i>
-                            إعدادات البريد والإرسال المباشر
+                            إشعارات البريد الإلكتروني
                         </h2>
-                        <p class="settings-group-subtitle">تفعيل البريد وتحديد المستلمين وأنواع المحتوى التي يُسمح بإرسالها من شاشات التفاصيل</p>
+                        <p class="settings-group-subtitle">تحكّم من مكان واحد: تشغيل النظام، المستلمين، وأنواع المحتوى التي تُرسل يدوياً أو تلقائياً</p>
                     </div>
                     <div class="settings-group-content space-y-4">
-                        <div class="content-card">
-                            <div class="card-body space-y-4">
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" id="email-settings-global-enabled" class="rounded border-gray-300 text-sky-600">
-                                    <span class="text-sm font-semibold text-gray-800">تفعيل نظام البريد في التطبيق</span>
-                                </label>
-                                <p class="text-xs text-gray-500">عند الإيقاف: لا يظهر زر الإرسال اليدوي ولا يعمل الإرسال التلقائي المضبوط هنا. مسارات البريد القديمة تبقى حتى أول حفظ.</p>
+                        <div class="email-settings-status" id="email-settings-status-banner" role="status">
+                            <div class="email-settings-status-main">
+                                <span class="email-settings-status-dot" aria-hidden="true"></span>
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-1">المستلمون الافتراضيون (فاصلة بين الإيميلات)</label>
-                                    <textarea id="email-settings-default-recipients" class="form-input w-full" rows="2" placeholder="admin@company.com, hse@company.com"></textarea>
+                                    <p class="email-settings-status-title" id="email-settings-status-title">جاري التحميل…</p>
+                                    <p class="email-settings-status-hint" id="email-settings-status-hint">—</p>
                                 </div>
-                                <div class="flex flex-wrap gap-2">
-                                    <button type="button" id="email-settings-save-btn" class="btn-primary">
-                                        <i class="fas fa-save ml-2"></i>حفظ إعدادات البريد
-                                    </button>
-                                    <button type="button" id="email-settings-reload-btn" class="btn-secondary">
-                                        <i class="fas fa-sync ml-2"></i>إعادة تحميل
-                                    </button>
-                                    <div class="flex gap-2 items-center flex-1 min-w-[220px]">
-                                        <input type="email" id="email-settings-test-to" class="form-input flex-1" placeholder="إيميل للاختبار">
+                            </div>
+                            <label class="email-settings-switch" for="email-settings-global-enabled">
+                                <input type="checkbox" id="email-settings-global-enabled">
+                                <span class="email-settings-switch-ui" aria-hidden="true"></span>
+                                <span class="email-settings-switch-label">تشغيل النظام</span>
+                            </label>
+                        </div>
+
+                        <div class="email-settings-grid">
+                            <div class="content-card email-settings-card">
+                                <div class="card-body space-y-3">
+                                    <div class="email-settings-card-head">
+                                        <h3 class="email-settings-card-title"><i class="fas fa-users ml-2"></i>المستلمون الافتراضيون</h3>
+                                        <p class="email-settings-card-desc">يُستخدمون لكل نوع لا يملك مستلمين خاصين</p>
+                                    </div>
+                                    <textarea id="email-settings-default-recipients" class="form-input w-full email-settings-recipients-input" rows="2" placeholder="admin@company.com, hse@company.com" dir="ltr"></textarea>
+                                    <div id="email-settings-default-chips" class="email-settings-chips" aria-live="polite"></div>
+                                    <p class="email-settings-help"><i class="fas fa-info-circle ml-1"></i>افصل بفاصلة أو مسافة. مثال: a@x.com, b@x.com</p>
+                                </div>
+                            </div>
+                            <div class="content-card email-settings-card">
+                                <div class="card-body space-y-3">
+                                    <div class="email-settings-card-head">
+                                        <h3 class="email-settings-card-title"><i class="fas fa-vial ml-2"></i>اختبار سريع</h3>
+                                        <p class="email-settings-card-desc">أرسل رسالة تجريبية للتأكد من الصلاحيات</p>
+                                    </div>
+                                    <div class="email-settings-test-row">
+                                        <input type="email" id="email-settings-test-to" class="form-input flex-1" placeholder="your@email.com" dir="ltr">
                                         <button type="button" id="email-settings-test-btn" class="btn-secondary">
-                                            <i class="fas fa-paper-plane ml-2"></i>تجريبي
+                                            <i class="fas fa-paper-plane ml-2"></i>إرسال تجريبي
                                         </button>
                                     </div>
+                                    <p class="email-settings-help">لا يحتاج تفعيل أنواع المحتوى — يختبر الاتصال فقط.</p>
                                 </div>
                             </div>
                         </div>
-                        <div class="content-card">
-                            <div class="card-header flex flex-wrap items-center justify-between gap-2">
-                                <h2 class="card-title"><i class="fas fa-list-check ml-2"></i>أنواع المحتوى</h2>
-                                <input type="search" id="email-settings-module-filter" class="form-input" style="max-width:240px;" placeholder="بحث في الأنواع...">
+
+                        <div class="content-card email-settings-card">
+                            <div class="card-header email-settings-modules-header">
+                                <div>
+                                    <h2 class="card-title mb-1"><i class="fas fa-sliders ml-2"></i>أنواع المحتوى</h2>
+                                    <p class="email-settings-summary" id="email-settings-modules-summary">—</p>
+                                </div>
+                                <div class="email-settings-toolbar">
+                                    <input type="search" id="email-settings-module-filter" class="form-input email-settings-search" placeholder="بحث بالاسم…">
+                                    <button type="button" id="email-settings-enable-visible-btn" class="btn-secondary btn-sm" title="تفعيل الأنواع الظاهرة">
+                                        <i class="fas fa-check-double ml-1"></i>تفعيل الظاهر
+                                    </button>
+                                    <button type="button" id="email-settings-disable-visible-btn" class="btn-secondary btn-sm" title="إيقاف الأنواع الظاهرة">
+                                        <i class="fas fa-ban ml-1"></i>إيقاف الظاهر
+                                    </button>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <div id="email-settings-modules-list" class="space-y-3 max-h-[520px] overflow-y-auto"></div>
+                            <div class="card-body pt-3">
+                                <div class="email-settings-group-filters" id="email-settings-group-filters" role="tablist" aria-label="تصفية المجموعات"></div>
+                                <div class="email-settings-legend">
+                                    <span><i class="fas fa-power-off"></i> مفعّل</span>
+                                    <span><i class="fas fa-hand-pointer"></i> يدوي = زر من التفاصيل</span>
+                                    <span><i class="fas fa-bolt"></i> تلقائي = عند الحفظ</span>
+                                </div>
+                                <div id="email-settings-modules-list" class="email-settings-modules-list"></div>
+                            </div>
+                        </div>
+
+                        <div class="email-settings-sticky-bar" id="email-settings-sticky-bar">
+                            <span class="email-settings-dirty" id="email-settings-dirty-hint" hidden>توجد تغييرات غير محفوظة</span>
+                            <div class="email-settings-sticky-actions">
+                                <button type="button" id="email-settings-reload-btn" class="btn-secondary">
+                                    <i class="fas fa-sync ml-2"></i>إعادة تحميل
+                                </button>
+                                <button type="button" id="email-settings-save-btn" class="btn-primary">
+                                    <i class="fas fa-save ml-2"></i>حفظ الإعدادات
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
                 ` : `
                 <div class="settings-group mt-6">
-                    <p class="text-gray-600">إعدادات البريد متاحة لمدير النظام فقط.</p>
+                    <div class="email-settings-locked">
+                        <i class="fas fa-lock"></i>
+                        <p>إعدادات البريد متاحة لمدير النظام فقط.</p>
+                    </div>
                 </div>
                 `}
             </div>
@@ -3035,7 +3084,9 @@ const Settings = {
     async loadEmailSettingsUI() {
         const listEl = document.getElementById('email-settings-modules-list');
         if (!listEl) return;
-        listEl.innerHTML = '<p class="text-sm text-gray-500"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل إعدادات البريد...</p>';
+        listEl.innerHTML = '<p class="email-settings-loading"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل إعدادات البريد...</p>';
+        this._emailSettingsGroupFilter = this._emailSettingsGroupFilter || 'all';
+        this._emailSettingsDirty = false;
         try {
             let data = null;
             if (typeof EmailDispatch !== 'undefined') {
@@ -3049,17 +3100,101 @@ const Settings = {
             const recipientsEl = document.getElementById('email-settings-default-recipients');
             if (globalEl) globalEl.checked = !!this._emailSettingsDraft.globalEnabled;
             if (recipientsEl) recipientsEl.value = (this._emailSettingsDraft.defaultRecipients || []).join(', ');
+            this.renderEmailDefaultChips();
+            this.renderEmailGroupFilters();
+            this.updateEmailSettingsStatusBanner();
             this.renderEmailModulesList(document.getElementById('email-settings-module-filter')?.value || '');
+            this.setEmailSettingsDirty(false);
         } catch (e) {
             console.error(e);
-            listEl.innerHTML = '<p class="text-sm text-red-600">تعذّر تحميل إعدادات البريد</p>';
+            listEl.innerHTML = '<p class="email-settings-error">تعذّر تحميل إعدادات البريد</p>';
         }
+    },
+
+    parseEmailListText(raw) {
+        return String(raw || '')
+            .split(/[,;\s]+/)
+            .map((s) => s.trim().toLowerCase())
+            .filter((s) => s.includes('@'));
+    },
+
+    renderEmailDefaultChips() {
+        const wrap = document.getElementById('email-settings-default-chips');
+        const recipientsEl = document.getElementById('email-settings-default-recipients');
+        if (!wrap) return;
+        const emails = this.parseEmailListText(recipientsEl?.value || '');
+        if (!emails.length) {
+            wrap.innerHTML = '<span class="email-settings-chip email-settings-chip-muted">لا مستلمين بعد</span>';
+            return;
+        }
+        wrap.innerHTML = emails.map((email) =>
+            `<span class="email-settings-chip" dir="ltr">${Utils.escapeHTML(email)}</span>`
+        ).join('');
+    },
+
+    setEmailSettingsDirty(dirty) {
+        this._emailSettingsDirty = !!dirty;
+        const hint = document.getElementById('email-settings-dirty-hint');
+        const bar = document.getElementById('email-settings-sticky-bar');
+        if (hint) hint.hidden = !dirty;
+        if (bar) bar.classList.toggle('is-dirty', !!dirty);
+    },
+
+    updateEmailSettingsStatusBanner() {
+        const draft = this._emailSettingsDraft || {};
+        const on = !!draft.globalEnabled || !!document.getElementById('email-settings-global-enabled')?.checked;
+        const banner = document.getElementById('email-settings-status-banner');
+        const title = document.getElementById('email-settings-status-title');
+        const hint = document.getElementById('email-settings-status-hint');
+        if (banner) banner.classList.toggle('is-on', on);
+        if (title) title.textContent = on ? 'نظام البريد مفعّل' : 'نظام البريد متوقف';
+        if (hint) {
+            hint.textContent = on
+                ? 'زر الإرسال يظهر في التفاصيل للأنواع المفعّلة يدوياً. التلقائي يعمل عند الحفظ إن كان مفعّلاً.'
+                : 'عند الإيقاف: لا زر يدوي ولا إرسال تلقائي من هذه الإعدادات.';
+        }
+    },
+
+    updateEmailModulesSummary() {
+        const el = document.getElementById('email-settings-modules-summary');
+        if (!el || !this._emailSettingsDraft) return;
+        const modules = this._emailSettingsDraft.modules || {};
+        const keys = Object.keys(modules);
+        const enabled = keys.filter((k) => modules[k].enabled).length;
+        const manual = keys.filter((k) => modules[k].enabled && modules[k].manualSend).length;
+        const auto = keys.filter((k) => modules[k].enabled && modules[k].autoSend).length;
+        el.textContent = `${enabled} مفعّل من ${keys.length} · يدوي ${manual} · تلقائي ${auto}`;
+    },
+
+    renderEmailGroupFilters() {
+        const wrap = document.getElementById('email-settings-group-filters');
+        if (!wrap || !this._emailSettingsDraft) return;
+        const groupLabels = (typeof EmailDispatch !== 'undefined' && EmailDispatch.GROUP_LABELS)
+            ? EmailDispatch.GROUP_LABELS
+            : { ops: 'التشغيل والسلامة', clinic: 'العيادة', reports: 'التقارير', system: 'النظام' };
+        const modules = this._emailSettingsDraft.modules || {};
+        const counts = { all: Object.keys(modules).length };
+        Object.keys(modules).forEach((key) => {
+            const g = modules[key].group || 'ops';
+            counts[g] = (counts[g] || 0) + 1;
+        });
+        const active = this._emailSettingsGroupFilter || 'all';
+        const items = [{ id: 'all', label: 'الكل' }].concat(
+            Object.keys(groupLabels).filter((g) => counts[g]).map((g) => ({ id: g, label: groupLabels[g] }))
+        );
+        wrap.innerHTML = items.map((item) => `
+            <button type="button" class="email-settings-group-chip${active === item.id ? ' is-active' : ''}" data-email-group="${Utils.escapeHTML(item.id)}">
+                ${Utils.escapeHTML(item.label)}
+                <span class="email-settings-group-count">${counts[item.id] || 0}</span>
+            </button>
+        `).join('');
     },
 
     renderEmailModulesList(filterText) {
         const listEl = document.getElementById('email-settings-modules-list');
         if (!listEl || !this._emailSettingsDraft) return;
         const q = String(filterText || '').trim().toLowerCase();
+        const groupFilter = this._emailSettingsGroupFilter || 'all';
         const modules = this._emailSettingsDraft.modules || {};
         const groupLabels = (typeof EmailDispatch !== 'undefined' && EmailDispatch.GROUP_LABELS)
             ? EmailDispatch.GROUP_LABELS
@@ -3075,32 +3210,81 @@ const Settings = {
         keys.forEach((key) => {
             const m = modules[key];
             const label = m.labelAr || key;
+            const group = m.group || 'ops';
+            if (groupFilter !== 'all' && group !== groupFilter) return;
             if (q && !label.toLowerCase().includes(q) && !key.toLowerCase().includes(q)) return;
-            if (m.group !== lastGroup) {
-                lastGroup = m.group;
-                html += `<div class="text-xs font-bold text-sky-800 mt-2 mb-1 border-b pb-1">${Utils.escapeHTML(groupLabels[m.group] || m.group || '')}</div>`;
+            if (group !== lastGroup) {
+                lastGroup = group;
+                html += `<div class="email-settings-group-title">${Utils.escapeHTML(groupLabels[group] || group)}</div>`;
             }
             const rec = (m.recipients || []).join(', ');
+            const on = !!m.enabled;
             html += `
-                <div class="border rounded-lg p-3 bg-gray-50 email-module-row" data-module-key="${Utils.escapeHTML(key)}">
-                    <div class="flex flex-wrap items-center gap-3 mb-2">
-                        <span class="font-semibold text-sm text-gray-800 flex-1 min-w-[140px]">${Utils.escapeHTML(label)}</span>
-                        <label class="text-xs flex items-center gap-1"><input type="checkbox" class="em-enabled" ${m.enabled ? 'checked' : ''}> تفعيل</label>
-                        <label class="text-xs flex items-center gap-1"><input type="checkbox" class="em-manual" ${m.manualSend ? 'checked' : ''}> يدوي</label>
-                        <label class="text-xs flex items-center gap-1"><input type="checkbox" class="em-auto" ${m.autoSend ? 'checked' : ''}> تلقائي</label>
+                <div class="email-module-row${on ? ' is-enabled' : ''}" data-module-key="${Utils.escapeHTML(key)}">
+                    <div class="email-module-row-top">
+                        <div class="email-module-identity">
+                            <span class="email-module-name">${Utils.escapeHTML(label)}</span>
+                            <span class="email-module-key" dir="ltr">${Utils.escapeHTML(key)}</span>
+                        </div>
+                        <div class="email-module-toggles">
+                            <label class="email-toggle" title="تفعيل هذا النوع">
+                                <input type="checkbox" class="em-enabled" ${m.enabled ? 'checked' : ''}>
+                                <span>مفعّل</span>
+                            </label>
+                            <label class="email-toggle" title="زر إرسال من شاشة التفاصيل">
+                                <input type="checkbox" class="em-manual" ${m.manualSend ? 'checked' : ''} ${on ? '' : 'disabled'}>
+                                <span>يدوي</span>
+                            </label>
+                            <label class="email-toggle" title="إرسال تلقائي عند الحفظ">
+                                <input type="checkbox" class="em-auto" ${m.autoSend ? 'checked' : ''} ${on ? '' : 'disabled'}>
+                                <span>تلقائي</span>
+                            </label>
+                        </div>
                     </div>
-                    <input type="text" class="form-input w-full text-sm em-recipients" placeholder="مستلمون خاصون (اختياري)" value="${Utils.escapeHTML(rec)}">
-                    <p class="text-[11px] text-gray-400 mt-1">${Utils.escapeHTML(key)}</p>
+                    <div class="email-module-recipients-wrap">
+                        <label class="email-module-recipients-label">مستلمون خاصون <span>(اختياري — وإلا الافتراضيون)</span></label>
+                        <input type="text" class="form-input w-full text-sm em-recipients" placeholder="فارغ = استخدام المستلمين الافتراضيين" value="${Utils.escapeHTML(rec)}" dir="ltr">
+                    </div>
                 </div>`;
         });
-        listEl.innerHTML = html || '<p class="text-sm text-gray-500">لا نتائج</p>';
+        listEl.innerHTML = html || '<p class="email-settings-empty">لا نتائج مطابقة للبحث أو التصفية</p>';
+        this.updateEmailModulesSummary();
+        listEl.querySelectorAll('.email-module-row').forEach((row) => {
+            const enabledCb = row.querySelector('.em-enabled');
+            if (!enabledCb) return;
+            enabledCb.addEventListener('change', () => {
+                const onNow = enabledCb.checked;
+                row.classList.toggle('is-enabled', onNow);
+                row.querySelectorAll('.em-manual, .em-auto').forEach((cb) => {
+                    cb.disabled = !onNow;
+                });
+                this.collectEmailSettingsFromUI();
+                this.updateEmailModulesSummary();
+                this.setEmailSettingsDirty(true);
+            });
+        });
+    },
+
+    applyEmailBulkVisible(enable) {
+        this.collectEmailSettingsFromUI();
+        const rows = document.querySelectorAll('#email-settings-modules-list .email-module-row');
+        rows.forEach((row) => {
+            const key = row.getAttribute('data-module-key');
+            if (!key || !this._emailSettingsDraft?.modules?.[key]) return;
+            this._emailSettingsDraft.modules[key].enabled = !!enable;
+            if (enable) {
+                this._emailSettingsDraft.modules[key].manualSend = true;
+            }
+        });
+        this.renderEmailModulesList(document.getElementById('email-settings-module-filter')?.value || '');
+        this.setEmailSettingsDirty(true);
     },
 
     collectEmailSettingsFromUI() {
         const draft = this._emailSettingsDraft || { modules: {} };
         draft.globalEnabled = !!document.getElementById('email-settings-global-enabled')?.checked;
         const rawRec = document.getElementById('email-settings-default-recipients')?.value || '';
-        draft.defaultRecipients = rawRec.split(/[,;\s]+/).map((s) => s.trim().toLowerCase()).filter((s) => s.includes('@'));
+        draft.defaultRecipients = this.parseEmailListText(rawRec);
         document.querySelectorAll('#email-settings-modules-list .email-module-row').forEach((row) => {
             const key = row.getAttribute('data-module-key');
             if (!key || !draft.modules[key]) return;
@@ -3108,7 +3292,7 @@ const Settings = {
             draft.modules[key].manualSend = !!row.querySelector('.em-manual')?.checked;
             draft.modules[key].autoSend = !!row.querySelector('.em-auto')?.checked;
             const rec = row.querySelector('.em-recipients')?.value || '';
-            draft.modules[key].recipients = rec.split(/[,;\s]+/).map((s) => s.trim().toLowerCase()).filter((s) => s.includes('@'));
+            draft.modules[key].recipients = this.parseEmailListText(rec);
         });
         this._emailSettingsDraft = draft;
         return draft;
@@ -3118,6 +3302,30 @@ const Settings = {
         const saveBtn = document.getElementById('email-settings-save-btn');
         if (!saveBtn || saveBtn.dataset.emailBound === '1') return;
         saveBtn.dataset.emailBound = '1';
+
+        const markDirty = () => {
+            this.collectEmailSettingsFromUI();
+            this.updateEmailSettingsStatusBanner();
+            this.renderEmailDefaultChips();
+            this.updateEmailModulesSummary();
+            this.setEmailSettingsDirty(true);
+        };
+
+        const globalEl = document.getElementById('email-settings-global-enabled');
+        if (globalEl) {
+            globalEl.addEventListener('change', () => {
+                markDirty();
+            });
+        }
+        const recipientsEl = document.getElementById('email-settings-default-recipients');
+        if (recipientsEl) {
+            recipientsEl.addEventListener('input', () => {
+                this.renderEmailDefaultChips();
+                this.setEmailSettingsDirty(true);
+            });
+            recipientsEl.addEventListener('change', markDirty);
+        }
+
         const filter = document.getElementById('email-settings-module-filter');
         if (filter) {
             filter.addEventListener('input', () => {
@@ -3125,33 +3333,70 @@ const Settings = {
                 this.renderEmailModulesList(filter.value);
             });
         }
-        if (saveBtn) {
-            saveBtn.addEventListener('click', async () => {
-                const settings = this.collectEmailSettingsFromUI();
-                saveBtn.disabled = true;
-                try {
-                    const userData = AppState.currentUser || {};
-                    const result = await GoogleIntegration.sendToAppsScript('saveEmailSettings', {
-                        settings,
-                        userData
-                    });
-                    if (result && result.success) {
-                        AppState.notificationEmails = (settings.defaultRecipients || []).slice();
-                        if (typeof EmailDispatch !== 'undefined') {
-                            EmailDispatch.invalidateCache();
-                            EmailDispatch._settings = result.data || settings;
-                        }
-                        Notification.success(result.message || 'تم حفظ إعدادات البريد');
-                    } else {
-                        Notification.error((result && result.message) || 'فشل الحفظ');
-                    }
-                } catch (e) {
-                    Notification.error('خطأ: ' + (e.message || e));
-                } finally {
-                    saveBtn.disabled = false;
-                }
+
+        const groupWrap = document.getElementById('email-settings-group-filters');
+        if (groupWrap) {
+            groupWrap.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-email-group]');
+                if (!btn) return;
+                this.collectEmailSettingsFromUI();
+                this._emailSettingsGroupFilter = btn.getAttribute('data-email-group') || 'all';
+                this.renderEmailGroupFilters();
+                this.renderEmailModulesList(filter?.value || '');
             });
         }
+
+        const enableVisibleBtn = document.getElementById('email-settings-enable-visible-btn');
+        if (enableVisibleBtn) {
+            enableVisibleBtn.addEventListener('click', () => this.applyEmailBulkVisible(true));
+        }
+        const disableVisibleBtn = document.getElementById('email-settings-disable-visible-btn');
+        if (disableVisibleBtn) {
+            disableVisibleBtn.addEventListener('click', () => this.applyEmailBulkVisible(false));
+        }
+
+        const listEl = document.getElementById('email-settings-modules-list');
+        if (listEl) {
+            listEl.addEventListener('change', (e) => {
+                if (!e.target.matches('.em-manual, .em-auto, .em-recipients')) return;
+                markDirty();
+            });
+            listEl.addEventListener('input', (e) => {
+                if (!e.target.matches('.em-recipients')) return;
+                this.setEmailSettingsDirty(true);
+            });
+        }
+
+        saveBtn.addEventListener('click', async () => {
+            const settings = this.collectEmailSettingsFromUI();
+            saveBtn.disabled = true;
+            try {
+                const userData = AppState.currentUser || {};
+                const result = await GoogleIntegration.sendToAppsScript('saveEmailSettings', {
+                    settings,
+                    userData
+                });
+                if (result && result.success) {
+                    AppState.notificationEmails = (settings.defaultRecipients || []).slice();
+                    if (typeof EmailDispatch !== 'undefined') {
+                        EmailDispatch.invalidateCache();
+                        EmailDispatch._settings = result.data || settings;
+                    }
+                    this._emailSettingsDraft = result.data || settings;
+                    this.setEmailSettingsDirty(false);
+                    this.updateEmailSettingsStatusBanner();
+                    this.updateEmailModulesSummary();
+                    Notification.success(result.message || 'تم حفظ إعدادات البريد');
+                } else {
+                    Notification.error((result && result.message) || 'فشل الحفظ');
+                }
+            } catch (e) {
+                Notification.error('خطأ: ' + (e.message || e));
+            } finally {
+                saveBtn.disabled = false;
+            }
+        });
+
         const reloadBtn = document.getElementById('email-settings-reload-btn');
         if (reloadBtn) {
             reloadBtn.addEventListener('click', () => this.loadEmailSettingsUI());
