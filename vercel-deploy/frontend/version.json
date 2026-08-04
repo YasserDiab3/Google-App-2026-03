@@ -1,15 +1,13 @@
 {
-  "version": "1.0.823",
+  "version": "1.0.825",
   "highlights": {
     "ar": [
-      "إشعارات البريد: ظهور أنواع المحتوى فوراً بدون انتظار الشبكة.",
-      "تحميل التبويب عند فتحه فقط مع كاش محلي أسرع.",
-      "خلفية أسرع لقراءة إعدادات البريد مع تخزين مؤقت."
+      "إصلاح خطأ سجل التردد في العيادة: employeeVisits غير معرّف.",
+      "عودة عدّادات تبويب الموظفين والمقاولين للظهور بشكل صحيح."
     ],
     "en": [
-      "Email settings: content types render instantly before network sync.",
-      "Loads only when the tab opens, with a faster local cache.",
-      "Faster backend email-settings reads with short-lived cache."
+      "Fix clinic visits registry crash: employeeVisits was undefined.",
+      "Employee/contractor visit tab badges work again."
     ]
   }
 }

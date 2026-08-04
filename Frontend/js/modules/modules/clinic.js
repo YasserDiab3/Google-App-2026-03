@@ -9447,10 +9447,14 @@ const Clinic = {
                 return dateB - dateA;
             });
 
-            // PERF: فلترة نوع واحد فقط (كان يمرّ على كل القائمة مرتين)
-            const baseVisits = allVisits.filter(v =>
-                activeVisitType === 'employees' ? this.isEmployeeVisit_(v) : this.isContractorVisit_(v)
-            );
+            // تمريرة واحدة لفصل الموظفين/المقاولين (للشارات + القائمة)
+            const employeeVisits = [];
+            const contractorVisits = [];
+            allVisits.forEach((v) => {
+                if (this.isEmployeeVisit_(v)) employeeVisits.push(v);
+                else if (this.isContractorVisit_(v)) contractorVisits.push(v);
+            });
+            const baseVisits = activeVisitType === 'employees' ? employeeVisits : contractorVisits;
             
             // تطبيق الفلاتر والبحث (قبل تحديث الفلاتر لأن updateVisitFilterOptions يحتاج DOM)
             const hasActiveFilters = !!(searchTerm || filterFactory || filterPosition || filterWorkplace);
