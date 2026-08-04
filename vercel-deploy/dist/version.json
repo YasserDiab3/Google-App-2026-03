@@ -1,15 +1,15 @@
 {
-  "version": "1.0.818",
+  "version": "1.0.819",
   "highlights": {
     "ar": [
-      "إعدادات بريد لمدير النظام: تفعيل وإرسال يدوي/تلقائي لكل أنواع المحتوى.",
-      "زر إرسال بريد من شاشات التفاصيل (مخالفات، ملاحظات، حوادث، عيادة، وغيرها).",
-      "حفظ إعدادات البريد في الخادم مع رسالة تجريبية للتحقق."
+      "مراقبة التصرفات: زر حذف لكل سجل يظهر للمدير فقط.",
+      "زر «حذف المكررات» ينظف نفس الشخص ونفس اليوم ونفس البيانات مع الإبقاء على الأقدم.",
+      "متاح لتصرفات الموظفين والمقاولين مع تأكيد قبل الحذف."
     ],
     "en": [
-      "Admin email settings: enable manual/auto send per content type.",
-      "Send-email button on detail screens (violations, observations, incidents, clinic, and more).",
-      "Persisted email settings on the server with a test-email check."
+      "Behavior monitoring: per-record delete button for admins only.",
+      "Cleanup Duplicates removes same person/day/data copies and keeps the oldest.",
+      "Available for employee and contractor behaviors with confirm before delete."
     ]
   }
 }
