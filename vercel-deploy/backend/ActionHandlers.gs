@@ -2248,6 +2248,14 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'getEmployeesLoadSmoke': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = getEmployeesLoadSmoke();
+                    return;
+        })();
+        return result;
+    },
     'deactivateEmployee': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

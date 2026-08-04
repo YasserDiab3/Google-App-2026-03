@@ -1,15 +1,15 @@
 {
-  "version": "1.0.849",
+  "version": "1.0.851",
   "highlights": {
     "ar": [
-      "إصلاح تعليق «جاري تحميل قائمة الموظفين»: عرض فوري ثم جلب بالخلفية.",
-      "تخفيف حمولة الجلب (بدون صور base64 ثقيلة) + عرض أول 100 صف ثم المزيد.",
-      "مهلة انتظار ومنع قفل التحميل اللانهائي."
+      "تسريع تحميل الموظفين: مسار lite + كاش مجزأ (بدلاً من كاش كامل يفشل فوق 100KB).",
+      "القائمة تجلب أعمدة الجدول فقط بدون صور ثقيلة.",
+      "عرض أولي سريع ثم المزيد — بدون تعليق شريط التحميل."
     ],
     "en": [
-      "Fixed hang on Loading employees: show local list first, then refresh.",
-      "Lighter fetch payload (no heavy base64 photos) + first 100 rows then Load more.",
-      "Load timeout and deadlock guard so the spinner cannot stick forever."
+      "Faster employees load: lite path + chunked cache (full cache failed over 100KB).",
+      "List fetch uses table columns only, no heavy photos.",
+      "Quick first page then Load more — no stuck loading bar."
     ]
   }
 }

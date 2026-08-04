@@ -3624,13 +3624,13 @@ const Employees = {
             // skipCache فقط عند التحديث الإجباري — الجلب العادي أسرع بعد إصلاح الخادم
             try {
                 const employeesFetchData = {
-                    filters: { includeInactive: true },
-                    __timeoutMs: 120000,
+                    filters: { includeInactive: true, lite: true },
+                    __timeoutMs: 90000,
                     ...(forceReload ? { skipCache: true, forceRefresh: true } : {})
                 };
                 if (forceReload && typeof GoogleIntegration._invalidateSmartCacheForRead_ === 'function') {
                     GoogleIntegration._invalidateSmartCacheForRead_('getAllEmployees', {
-                        filters: { includeInactive: true },
+                        filters: { includeInactive: true, lite: true },
                         skipCache: true,
                         forceRefresh: true
                     });
@@ -3748,8 +3748,8 @@ const Employees = {
             }
 
             const employeesFetchData = {
-                filters: { includeInactive: true },
-                __timeoutMs: 120000
+                filters: { includeInactive: true, lite: true },
+                __timeoutMs: 90000
             };
             const result = await GoogleIntegration.sendRequest({
                 action: 'getAllEmployees',

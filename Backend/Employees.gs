@@ -155,6 +155,8 @@ function getEmployee(employeeId) {
 function getAllEmployees(filters = {}) {
     try {
         const sheetName = 'Employees';
+        filters = filters || {};
+        var isLite = filters.lite === true;
 
         // كسر كاش قبل أي قراءة — مرة واحدة بعد إصلاح العرض
         try {
@@ -171,7 +173,106 @@ function getAllEmployees(filters = {}) {
             }
         } catch (_preCacheErr) {}
 
-        // ✅ الكاش أولاً بعد كسر النسخة القديمة
+        // ===== مسار القائمة الخفيف (الافتراضي للواجهة) =====
+        if (isLite) {
+            var liteCacheKey = null;
+            try {
+                var cacheLite = CacheService.getScriptCache();
+                var vLite = _getEmployeesCacheVersion_();
+                liteCacheKey = 'hse_emp_lite_v' + vLite + '_f:' + _stableStringify_({
+                    includeInactive: filters.includeInactive === true,
+                    department: filters.department || '',
+                    branch: filters.branch || '',
+                    location: filters.location || '',
+                    position: filters.position || '',
+                    job: filters.job || '',
+                    gender: filters.gender || '',
+                    search: filters.search || ''
+                });
+                var cachedLiteStr = (typeof getChunkedCache_ === 'function')
+                    ? getChunkedCache_(cacheLite, liteCacheKey)
+                    : cacheLite.get(liteCacheKey);
+                if (cachedLiteStr) {
+                    var parsedLite = JSON.parse(cachedLiteStr);
+                    if (parsedLite && parsedLite.success === true && Array.isArray(parsedLite.data) && parsedLite.data.length > 0) {
+                        return {
+                            success: true,
+                            data: parsedLite.data,
+                            count: parsedLite.data.length,
+                            source: 'cache-lite',
+                            lite: true
+                        };
+                    }
+                }
+            } catch (_liteCacheRead) {}
+
+            var dataLite = _readEmployeesSheetObjects_(getSpreadsheetId()) || [];
+            if (typeof normalizeEmployeesRowColumnDrift_ === 'function') {
+                dataLite = dataLite.map(function (row) {
+                    return normalizeEmployeesRowColumnDrift_(row);
+                });
+            }
+            if (filters.includeInactive !== true) {
+                dataLite = dataLite.filter(function (e) {
+                    if (!e) return false;
+                    var raw = String(e.status === undefined || e.status === null ? '' : e.status).trim().toLowerCase();
+                    if (raw === 'inactive' || raw === 'غير نشط' || raw === 'false' || raw === '0') return false;
+                    return true;
+                });
+            }
+            if (filters.department) dataLite = dataLite.filter(function (e) { return e.department === filters.department; });
+            if (filters.branch) dataLite = dataLite.filter(function (e) { return e.branch === filters.branch; });
+            if (filters.location) dataLite = dataLite.filter(function (e) { return e.location === filters.location; });
+            if (filters.position) dataLite = dataLite.filter(function (e) { return e.position === filters.position; });
+            if (filters.job) dataLite = dataLite.filter(function (e) { return e.job === filters.job; });
+            if (filters.gender) dataLite = dataLite.filter(function (e) { return e.gender === filters.gender; });
+            if (filters.search) {
+                var searchTerm = String(filters.search).toLowerCase();
+                dataLite = dataLite.filter(function (e) {
+                    return (e.name && String(e.name).toLowerCase().indexOf(searchTerm) !== -1) ||
+                        (e.employeeNumber && String(e.employeeNumber).toLowerCase().indexOf(searchTerm) !== -1) ||
+                        (e.email && String(e.email).toLowerCase().indexOf(searchTerm) !== -1);
+                });
+            }
+            dataLite.sort(function (a, b) {
+                return String(a.name || '').toLowerCase().localeCompare(String(b.name || '').toLowerCase());
+            });
+
+            var listFields = [
+                'id', 'employeeNumber', 'name', 'department', 'job', 'nationalId',
+                'birthDate', 'age', 'hireDate', 'gender', 'phone', 'insuranceNumber',
+                'sapId', 'branch', 'location', 'position', 'email', 'status',
+                'resignationDate', 'createdAt', 'updatedAt'
+            ];
+            var projected = [];
+            for (var pi = 0; pi < dataLite.length; pi++) {
+                var src = dataLite[pi] || {};
+                var rowOut = {};
+                for (var lf = 0; lf < listFields.length; lf++) {
+                    var key = listFields[lf];
+                    if (src[key] !== undefined && src[key] !== null && src[key] !== '') {
+                        rowOut[key] = src[key];
+                    }
+                }
+                // احتفظ بالمعرّفات حتى لو فارغة نسبياً
+                if (src.id != null) rowOut.id = src.id;
+                if (src.employeeNumber != null) rowOut.employeeNumber = src.employeeNumber;
+                if (src.name != null) rowOut.name = src.name;
+                if (src.status != null) rowOut.status = src.status;
+                if (src.photo) rowOut.hasPhoto = true;
+                projected.push(rowOut);
+            }
+
+            var liteResult = { success: true, data: projected, count: projected.length, source: 'sheet-lite', lite: true };
+            try {
+                if (liteCacheKey && projected.length > 0 && typeof putChunkedCache_ === 'function') {
+                    putChunkedCache_(CacheService.getScriptCache(), liteCacheKey, JSON.stringify(liteResult), 600);
+                }
+            } catch (_liteCacheWrite) {}
+            return liteResult;
+        }
+
+        // ✅ الكاش أولاً بعد كسر النسخة القديمة (المسار الكامل)
         var cacheKey = null;
         try {
             const cache = CacheService.getScriptCache();
@@ -301,11 +402,16 @@ function getAllEmployees(filters = {}) {
 
         const result = { success: true, data: data, count: data.length };
 
-        // حفظ في الكاش — 10 دقائق (لا تخزّن فراغاً حتى لا يُسمّم التحميل)
+        // حفظ في الكاش — 10 دقائق (لا تخزّن فراغاً؛ استخدم chunked إن وُجد)
         try {
             if (cacheKey && Array.isArray(data) && data.length > 0) {
                 const cache = CacheService.getScriptCache();
-                cache.put(cacheKey, JSON.stringify(result), 600);
+                var payload = JSON.stringify(result);
+                if (typeof putChunkedCache_ === 'function') {
+                    putChunkedCache_(cache, cacheKey, payload, 600);
+                } else if (payload.length < 90000) {
+                    cache.put(cacheKey, payload, 600);
+                }
             }
         } catch (eCacheWrite) {
             // ignore
@@ -365,6 +471,181 @@ function _readEmployeesSheetObjects_(spreadsheetId) {
         }
     }
     return out;
+}
+
+/**
+ * تشخيص دخان تحميل الموظفين: توقيت المراحل + حجم الحمولة
+ * معفى من CSRF/جلسة — للتشخيص التشغيلي فقط
+ */
+function getEmployeesLoadSmoke() {
+    try {
+        var t0 = Date.now();
+        var spreadsheetId = getSpreadsheetId();
+        var ss = SpreadsheetApp.openById(spreadsheetId);
+        var sheet = ss.getSheetByName('Employees');
+        if (!sheet) {
+            return { success: false, errorCode: 'SHEET_MISSING' };
+        }
+
+        var timings = {};
+        var tMeta = Date.now();
+        var lastRow = sheet.getLastRow();
+        var lastCol = sheet.getLastColumn();
+        timings.sheetMetaMs = Date.now() - tMeta;
+
+        var tSimple = Date.now();
+        var simple = _readEmployeesSheetObjects_(spreadsheetId);
+        timings.simpleReaderMs = Date.now() - tSimple;
+        timings.simpleCount = simple.length;
+
+        var listFields = [
+            'id', 'employeeNumber', 'name', 'department', 'job', 'nationalId',
+            'birthDate', 'age', 'hireDate', 'gender', 'phone', 'insuranceNumber',
+            'sapId', 'branch', 'location', 'position', 'email', 'status',
+            'resignationDate', 'createdAt', 'updatedAt', 'hasPhoto'
+        ];
+        var lite = [];
+        for (var i = 0; i < simple.length; i++) {
+            var src = simple[i] || {};
+            var row = {};
+            for (var f = 0; f < listFields.length; f++) {
+                var k = listFields[f];
+                if (src[k] !== undefined && src[k] !== null) row[k] = src[k];
+            }
+            var photo = String(src.photo || '');
+            if (photo) row.hasPhoto = true;
+            // لا تُدرج photo أبداً في مسار القائمة
+            lite.push(row);
+        }
+        var liteJson = JSON.stringify({ success: true, data: lite, count: lite.length });
+        var simpleJson = JSON.stringify({ success: true, data: simple, count: simple.length });
+
+        var tHeavy = Date.now();
+        var heavy = [];
+        var heavyErr = null;
+        try {
+            heavy = readFromSheet('Employees', spreadsheetId, true) || [];
+        } catch (eH) {
+            heavyErr = String(eH);
+        }
+        timings.readFromSheetRawMs = Date.now() - tHeavy;
+        timings.heavyCount = Array.isArray(heavy) ? heavy.length : -1;
+        timings.heavyErr = heavyErr;
+
+        var heavyJsonBytes = 0;
+        var heavyPhotoHeavy = 0;
+        if (Array.isArray(heavy)) {
+            for (var h = 0; h < heavy.length; h++) {
+                var ph = heavy[h] && heavy[h].photo != null ? String(heavy[h].photo) : '';
+                if (ph.indexOf('data:') === 0 || ph.length > 800) heavyPhotoHeavy++;
+            }
+            try {
+                heavyJsonBytes = JSON.stringify({ success: true, data: heavy, count: heavy.length }).length;
+            } catch (_hj) {
+                heavyJsonBytes = -1;
+            }
+        }
+
+        var tAll = Date.now();
+        var all = getAllEmployees({ includeInactive: true });
+        timings.getAllEmployeesMs = Date.now() - tAll;
+
+        var tLiteApi = Date.now();
+        var allLite = getAllEmployees({ includeInactive: true, lite: true });
+        timings.getAllLiteMs = Date.now() - tLiteApi;
+
+        var tLiteApi2 = Date.now();
+        var allLite2 = getAllEmployees({ includeInactive: true, lite: true });
+        timings.getAllLiteCachedMs = Date.now() - tLiteApi2;
+
+        var cacheDiag = { liteChunkedPut: null, fullSinglePut: null, fullSinglePutErr: null };
+        try {
+            var cache = CacheService.getScriptCache();
+            if (typeof putChunkedCache_ === 'function') {
+                cacheDiag.liteChunkedPut = !!putChunkedCache_(cache, 'smoke_emp_lite_v1', liteJson, 120);
+            }
+            try {
+                cache.put('smoke_emp_full_v1', JSON.stringify(all), 120);
+                cacheDiag.fullSinglePut = true;
+            } catch (ePut) {
+                cacheDiag.fullSinglePut = false;
+                cacheDiag.fullSinglePutErr = String(ePut);
+            }
+        } catch (eC) {
+            cacheDiag.error = String(eC);
+        }
+
+        timings.totalMs = Date.now() - t0;
+
+        return {
+            success: true,
+            lastRow: lastRow,
+            lastCol: lastCol,
+            dataRowCount: Math.max(0, lastRow - 1),
+            timings: timings,
+            sizes: {
+                simpleJsonBytes: simpleJson.length,
+                liteJsonBytes: liteJson.length,
+                heavyJsonBytes: heavyJsonBytes,
+                heavyPhotoHeavyCount: heavyPhotoHeavy,
+                liteReductionPct: simpleJson.length
+                    ? Math.round((1 - (liteJson.length / simpleJson.length)) * 100)
+                    : 0
+            },
+            getAllEmployeesProbe: {
+                success: !!(all && all.success),
+                count: all && Array.isArray(all.data) ? all.data.length : (all && all.count) || 0,
+                source: (all && all.source) || 'sheet'
+            },
+            getAllLiteProbe: {
+                success: !!(allLite && allLite.success),
+                count: allLite && Array.isArray(allLite.data) ? allLite.data.length : (allLite && allLite.count) || 0,
+                source: (allLite && allLite.source) || null,
+                cachedSource: (allLite2 && allLite2.source) || null,
+                cachedCount: allLite2 && Array.isArray(allLite2.data) ? allLite2.data.length : null
+            },
+            cacheDiag: cacheDiag,
+            verdict: (function () {
+                var tips = [];
+                if (timings.readFromSheetRawMs > timings.simpleReaderMs * 2) {
+                    tips.push('readFromSheet أثقل بكثير من القراءة البسيطة — القائمة يجب أن تستخدم lite/simple');
+                }
+                if (heavyJsonBytes > 500000 || heavyPhotoHeavy > 0) {
+                    tips.push('حمولة الصور/JSON كبيرة — احذف photo من مسار القائمة');
+                }
+                if (cacheDiag.fullSinglePut === false) {
+                    tips.push('كاش getAllEmployees الكامل يفشل (حد 100KB) — استخدم putChunkedCache_ لمسار lite');
+                }
+                if (timings.getAllEmployeesMs > 8000) {
+                    tips.push('getAllEmployees بطيء على الخادم — مسار lite + كاش مجزأ مطلوب');
+                }
+                if (timings.getAllLiteMs != null && timings.getAllLiteCachedMs != null && timings.getAllLiteCachedMs < Math.max(50, timings.getAllLiteMs / 3)) {
+                    tips.push('كاش lite يعمل — الاعتماد عليه للواجهة');
+                }
+                if (timings.getAllLiteMs != null && timings.getAllEmployeesMs != null && timings.getAllLiteMs < timings.getAllEmployeesMs) {
+                    tips.push('مسار lite أسرع من الكامل — اجعل الواجهة تستخدم filters.lite=true');
+                }
+                if (!tips.length) tips.push('الأداء مقبول نسبياً');
+                return tips;
+            })()
+        };
+    } catch (error) {
+        return { success: false, message: String(error), errorCode: 'SMOKE_FAILED' };
+    }
+}
+
+/**
+ * قائمة موظفين خفيفة للواجهة (أعمدة الجدول فقط، بدون صور)
+ */
+function getEmployeesListLite(filters) {
+    filters = filters || {};
+    try {
+        filters = Object.assign({}, filters, { includeInactive: filters.includeInactive === true, lite: true });
+        // إعادة استخدام getAllEmployees بعد تفعيل مسار lite داخله
+        return getAllEmployees(filters);
+    } catch (error) {
+        return { success: false, message: String(error), data: [], count: 0 };
+    }
 }
 
 /**
