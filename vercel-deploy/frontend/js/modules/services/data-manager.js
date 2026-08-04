@@ -1551,6 +1551,7 @@ const DataManager = {
                             email: result.data.email || AppState.companySettings?.email,
                             postLoginItems: postLoginItems,
                             clinicMonthlyVisitsAlertThreshold: result.data.clinicMonthlyVisitsAlertThreshold ?? AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
+                            employeeImportHireMonths: result.data.employeeImportHireMonths ?? AppState.companySettings?.employeeImportHireMonths ?? 3,
                             clinicVisitTypes: clinicVisitTypes,
                             profileTeamsUrl: String(result.data.profileTeamsUrl ?? AppState.companySettings?.profileTeamsUrl ?? '').trim(),
                             profileWhatsAppUrl: String(result.data.profileWhatsAppUrl ?? AppState.companySettings?.profileWhatsAppUrl ?? '').trim(),

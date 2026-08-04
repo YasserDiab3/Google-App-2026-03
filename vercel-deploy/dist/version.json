@@ -1,13 +1,15 @@
 {
-  "version": "1.0.825",
+  "version": "1.0.827",
   "highlights": {
     "ar": [
-      "إصلاح خطأ سجل التردد في العيادة: employeeVisits غير معرّف.",
-      "عودة عدّادات تبويب الموظفين والمقاولين للظهور بشكل صحيح."
+      "استيراد الموظفين أسرع: فهرس مطابقة ودفعات بدون تجميد الشاشة.",
+      "المدير يضبط فترة قبول تاريخ التعيين عند الاستيراد (بالأشهر) من بيانات الشركة.",
+      "شاشة المراجعة تعرض أول 200 صف مع استمرار إضافة الباقي عند التأكيد."
     ],
     "en": [
-      "Fix clinic visits registry crash: employeeVisits was undefined.",
-      "Employee/contractor visit tab badges work again."
+      "Faster employee Excel import with indexed matching and chunked processing.",
+      "Admins set the hire-date acceptance window (months) in company settings.",
+      "Review shows the first 200 new rows; remaining rows still import on confirm."
     ]
   }
 }

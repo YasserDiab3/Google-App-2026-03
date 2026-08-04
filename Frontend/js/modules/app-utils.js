@@ -575,6 +575,7 @@ const Permissions = {
                         email: companyResult.data.email || AppState.companySettings?.email,
                         postLoginItems: postLoginItems,
                         clinicMonthlyVisitsAlertThreshold: companyResult.data.clinicMonthlyVisitsAlertThreshold ?? AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
+                        employeeImportHireMonths: companyResult.data.employeeImportHireMonths ?? AppState.companySettings?.employeeImportHireMonths ?? 3,
                         clinicVisitTypes: clinicVisitTypes
                     });
 
@@ -4341,7 +4342,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.825',
+    appVersion: '1.0.827',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,

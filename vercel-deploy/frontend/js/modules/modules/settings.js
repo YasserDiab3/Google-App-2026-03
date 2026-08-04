@@ -212,6 +212,7 @@ const Settings = {
                 secondaryNameFontSize: AppState.companySettings.secondaryNameFontSize || 14,
                 secondaryNameColor: AppState.companySettings.secondaryNameColor || '#6B7280',
                 clinicMonthlyVisitsAlertThreshold: AppState.companySettings.clinicMonthlyVisitsAlertThreshold ?? 10,
+                employeeImportHireMonths: AppState.companySettings.employeeImportHireMonths ?? 3,
                 profileTeamsUrl: AppState.companySettings.profileTeamsUrl || '',
                 profileWhatsAppUrl: AppState.companySettings.profileWhatsAppUrl || '',
                 address: AppState.companySettings.address || '',
@@ -636,6 +637,21 @@ const Settings = {
                                 <p class="text-xs text-gray-500 mt-1">
                                     <i class="fas fa-info-circle ml-1"></i>
                                     عند وصول أو تجاوز عدد زيارات موظف/مقاول لهذا الحد في الشهر، يظهر تنبيه للمستخدم ويُرسل إشعار لمدير النظام.
+                                </p>
+                            </div>
+                            <div>
+                                <label for="employee-import-hire-months-input" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-user-plus ml-2"></i>
+                                    فترة استيراد الموظفين (بالأشهر)
+                                </label>
+                                <div class="flex items-center gap-3">
+                                    <input type="number" id="employee-import-hire-months-input" class="form-input" min="1" max="120" step="1"
+                                        placeholder="3" value="${Math.max(1, Math.min(120, parseInt(AppState.companySettings?.employeeImportHireMonths, 10) || 3))}">
+                                    <span class="text-xs text-gray-500">شهر</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    <i class="fas fa-info-circle ml-1"></i>
+                                    عند استيراد Excel: يُقبل فقط الجدد الذين تاريخ تعيينهم خلال هذه المدة حتى اليوم (الافتراضي 3). لا يؤثر على الموظفين الموجودين.
                                 </p>
                             </div>
                             <div>
@@ -2029,6 +2045,7 @@ const Settings = {
                                     secondaryNameFontSize: AppState.companySettings?.secondaryNameFontSize || 14,
                                     secondaryNameColor: AppState.companySettings?.secondaryNameColor || '#6B7280',
                                     clinicMonthlyVisitsAlertThreshold: AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
+                                    employeeImportHireMonths: AppState.companySettings?.employeeImportHireMonths ?? 3,
                                     address: AppState.companySettings?.address || '',
                                     phone: AppState.companySettings?.phone || '',
                                     email: AppState.companySettings?.email || '',
@@ -2131,6 +2148,7 @@ const Settings = {
                                     secondaryNameFontSize: AppState.companySettings?.secondaryNameFontSize || 14,
                                     secondaryNameColor: AppState.companySettings?.secondaryNameColor || '#6B7280',
                                     clinicMonthlyVisitsAlertThreshold: AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
+                                    employeeImportHireMonths: AppState.companySettings?.employeeImportHireMonths ?? 3,
                                     address: AppState.companySettings?.address || '',
                                     phone: AppState.companySettings?.phone || '',
                                     email: AppState.companySettings?.email || '',
@@ -2298,6 +2316,7 @@ const Settings = {
             const companySecondaryNameColorTextInput = document.getElementById('company-secondary-name-color-text-input');
             const formVersionInput = document.getElementById('form-version-input');
             const clinicMonthlyVisitsThresholdInput = document.getElementById('clinic-monthly-visits-threshold-input');
+            const employeeImportHireMonthsInput = document.getElementById('employee-import-hire-months-input');
             const profileTeamsUrlInput = document.getElementById('profile-teams-url-input');
             const profileWhatsAppUrlInput = document.getElementById('profile-whatsapp-url-input');
             const ppeEligibilityRulesContainer = document.getElementById('ppe-eligibility-rules-container');
@@ -2682,6 +2701,12 @@ const Settings = {
                         if (!isNaN(v) && v >= 1 && v <= 1000) clinicMonthlyVisitsAlertThreshold = v;
                     }
 
+                    let employeeImportHireMonths = 3;
+                    if (employeeImportHireMonthsInput) {
+                        const hm = parseInt(employeeImportHireMonthsInput.value, 10);
+                        if (!isNaN(hm) && hm >= 1 && hm <= 120) employeeImportHireMonths = hm;
+                    }
+
                     const profileTeamsUrl = profileTeamsUrlInput ? profileTeamsUrlInput.value.trim() : '';
                     const profileWhatsAppUrl = profileWhatsAppUrlInput ? profileWhatsAppUrlInput.value.trim() : '';
 
@@ -2713,6 +2738,7 @@ const Settings = {
                         secondaryNameFontSize,
                         secondaryNameColor,
                         clinicMonthlyVisitsAlertThreshold,
+                        employeeImportHireMonths,
                         profileTeamsUrl,
                         profileWhatsAppUrl,
                         ppeEligibilityRules
@@ -2732,6 +2758,7 @@ const Settings = {
                                 secondaryNameFontSize,
                                 secondaryNameColor,
                                 clinicMonthlyVisitsAlertThreshold,
+                                employeeImportHireMonths,
                                 profileTeamsUrl,
                                 profileWhatsAppUrl,
                                 ppeEligibilityRules,
@@ -2829,6 +2856,7 @@ const Settings = {
                             secondaryNameFontSize: AppState.companySettings.secondaryNameFontSize || 14,
                             secondaryNameColor: AppState.companySettings.secondaryNameColor || '#6B7280',
                             clinicMonthlyVisitsAlertThreshold: AppState.companySettings.clinicMonthlyVisitsAlertThreshold ?? 10,
+                employeeImportHireMonths: AppState.companySettings.employeeImportHireMonths ?? 3,
                             address: AppState.companySettings.address || '',
                             phone: AppState.companySettings.phone || '',
                             email: AppState.companySettings.email || '',
@@ -2981,6 +3009,7 @@ const Settings = {
                                 secondaryNameFontSize: 14,
                                 secondaryNameColor: '#6B7280',
                                 clinicMonthlyVisitsAlertThreshold: AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
+                                    employeeImportHireMonths: AppState.companySettings?.employeeImportHireMonths ?? 3,
                                 address: AppState.companySettings?.address || '',
                                 phone: AppState.companySettings?.phone || '',
                                 email: AppState.companySettings?.email || '',
@@ -5126,6 +5155,7 @@ const Settings = {
                                     secondaryNameFontSize: AppState.companySettings?.secondaryNameFontSize || 14,
                                     secondaryNameColor: AppState.companySettings?.secondaryNameColor || '#6B7280',
                                     clinicMonthlyVisitsAlertThreshold: AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
+                                    employeeImportHireMonths: AppState.companySettings?.employeeImportHireMonths ?? 3,
                                     address: AppState.companySettings?.address || '',
                                     phone: AppState.companySettings?.phone || '',
                                     email: AppState.companySettings?.email || '',
@@ -5211,6 +5241,7 @@ const Settings = {
                                 secondaryNameFontSize: AppState.companySettings?.secondaryNameFontSize || 14,
                                 secondaryNameColor: AppState.companySettings?.secondaryNameColor || '#6B7280',
                                 clinicMonthlyVisitsAlertThreshold: AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
+                                    employeeImportHireMonths: AppState.companySettings?.employeeImportHireMonths ?? 3,
                                 address: AppState.companySettings?.address || '',
                                 phone: AppState.companySettings?.phone || '',
                                 email: AppState.companySettings?.email || '',

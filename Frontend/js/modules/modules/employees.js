@@ -4602,6 +4602,37 @@ const Employees = {
         return String(value).trim().replace(/\s+/g, '');
     },
 
+    /**
+     * فهرس مفاتيح الموظفين الموجودين (مرة واحدة) — يمنع مسح القائمة لكل صف ملف.
+     * يشمل employeeNumber / sapId / id بعد التطبيع.
+     */
+    buildEmployeeImportExistingKeySet(employeesList) {
+        const set = new Set();
+        const list = Array.isArray(employeesList) ? employeesList : (AppState.appData.employees || []);
+        for (let i = 0; i < list.length; i++) {
+            const e = list[i];
+            if (!e) continue;
+            const eNum = this.normalizeEmployeeImportKey(e.employeeNumber || e.id);
+            const eSap = this.normalizeEmployeeImportKey(e.sapId);
+            const eId = this.normalizeEmployeeImportKey(e.id);
+            if (eNum) set.add(eNum);
+            if (eSap) set.add(eSap);
+            if (eId) set.add(eId);
+        }
+        return set;
+    },
+
+    employeeImportKeysMatchExisting(employeeNumber, sapId, existingKeySet) {
+        const empKey = this.normalizeEmployeeImportKey(employeeNumber);
+        const sapKey = this.normalizeEmployeeImportKey(sapId);
+        if (existingKeySet instanceof Set) {
+            if (empKey && existingKeySet.has(empKey)) return true;
+            if (sapKey && existingKeySet.has(sapKey)) return true;
+            return false;
+        }
+        return !!this.findExistingEmployeeByImportKey(employeeNumber, sapId);
+    },
+
     /** هل يوجد موظف بنفس الرقم الوظيفي أو SAP أو id */
     findExistingEmployeeByImportKey(employeeNumber, sapId) {
         const empKey = this.normalizeEmployeeImportKey(employeeNumber);
@@ -4645,8 +4676,23 @@ const Employees = {
     },
 
     /**
-     * تاريخ التعيين للجدد عند الاستيراد: خلال آخر 3 أشهر حتى اليوم فقط.
-     * أقدم من 3 أشهر أو تاريخ مستقبلي أو فارغ/غير صالح → مرفوض.
+     * عدد أشهر قبول تاريخ التعيين عند استيراد Excel (إعداد المدير، افتراضي 3).
+     */
+    getEmployeeImportHireMonths() {
+        const v = parseInt(AppState?.companySettings?.employeeImportHireMonths, 10);
+        if (!isNaN(v) && v >= 1 && v <= 120) return v;
+        return 3;
+    },
+
+    getEmployeeImportHireWindowLabel() {
+        const months = this.getEmployeeImportHireMonths();
+        if (months === 1) return 'آخر شهر واحد';
+        return `آخر ${months} أشهر`;
+    },
+
+    /**
+     * تاريخ التعيين للجدد عند الاستيراد: خلال فترة الأشهر المضبوطة حتى اليوم فقط.
+     * أقدم من الفترة أو تاريخ مستقبلي أو فارغ/غير صالح → مرفوض.
      */
     isEmployeeImportHireDateAllowed(hireDateRaw) {
         const normalized = this.normalizeDateOnly(hireDateRaw);
@@ -4658,13 +4704,13 @@ const Employees = {
         today.setHours(12, 0, 0, 0);
 
         const minDate = new Date(today);
-        minDate.setMonth(minDate.getMonth() - 3);
+        minDate.setMonth(minDate.getMonth() - this.getEmployeeImportHireMonths());
 
         return hire.getTime() >= minDate.getTime() && hire.getTime() <= today.getTime();
     },
 
     /** تصنيف مسودة: new | exists | invalid — بدون مطابقة بالاسم */
-    classifyEmployeeImportDraft(draft, seenKeys) {
+    classifyEmployeeImportDraft(draft, seenKeys, existingKeySet) {
         const empKey = this.normalizeEmployeeImportKey(draft.employeeNumber);
         const sapKey = this.normalizeEmployeeImportKey(draft.sapId);
         const primaryKey = empKey || sapKey;
@@ -4685,13 +4731,12 @@ const Employees = {
             seenKeys.add(primaryKey);
         }
 
-        const existing = this.findExistingEmployeeByImportKey(draft.employeeNumber, draft.sapId);
-        if (existing) {
+        if (this.employeeImportKeysMatchExisting(draft.employeeNumber, draft.sapId, existingKeySet)) {
             draft.status = 'exists';
             return draft;
         }
 
-        // جدد فقط: تاريخ التعيين يجب ألا يتجاوز 3 أشهر قبل يوم الاستيراد
+        // جدد فقط: تاريخ التعيين ضمن فترة الأشهر المضبوطة من المدير
         if (!this.isEmployeeImportHireDateAllowed(draft.hireDate)) {
             draft.status = 'invalid';
             draft._hireDateRejected = true;
@@ -4713,13 +4758,26 @@ const Employees = {
         };
     },
 
-    reclassifyAllEmployeeImportDrafts(drafts) {
+    reclassifyAllEmployeeImportDrafts(drafts, existingKeySet) {
         const seenKeys = new Set();
+        const keySet = existingKeySet instanceof Set
+            ? existingKeySet
+            : this.buildEmployeeImportExistingKeySet();
         drafts.forEach(d => {
             d._dupInFile = false;
-            this.classifyEmployeeImportDraft(d, seenKeys);
+            this.classifyEmployeeImportDraft(d, seenKeys, keySet);
         });
         return drafts;
+    },
+
+    async yieldEmployeeImportUi_() {
+        await new Promise((resolve) => {
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(() => setTimeout(resolve, 0));
+            } else {
+                setTimeout(resolve, 0);
+            }
+        });
     },
 
     buildEmployeeFromImportDraft(draft) {
@@ -4763,6 +4821,7 @@ const Employees = {
 
         const counts = this.getEmployeeImportCounts(drafts);
         const newRows = drafts.filter(d => d.status === 'new');
+        const hireWindowLabel = this.getEmployeeImportHireWindowLabel();
 
         summaryEl.innerHTML = `
             <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
@@ -4776,14 +4835,14 @@ const Employees = {
                     ناقص/غير صالح: ${counts.invalidCount}
                 </span>
                 <span style="background:#ffedd5;color:#9a3412;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;">
-                    تعيين أقدم من 3 أشهر / غير مقبول: ${counts.hireDateRejectedCount}
+                    تعيين خارج ${Utils.escapeHTML(hireWindowLabel)} / غير مقبول: ${counts.hireDateRejectedCount}
                 </span>
                 <span style="background:#e0f2fe;color:#075985;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;">
                     إجمالي الملف: ${counts.total}
                 </span>
             </div>
             <p style="font-size:12px;color:#1e3a8a;margin:0;">
-                الجدول يعرض فقط الجدد غير الموجودين بالنظام وتاريخ تعيينهم خلال آخر 3 أشهر. الموجودون والمستقيلون لا يُعدَّلون ولا يُحذفون.
+                الجدول يعرض فقط الجدد غير الموجودين بالنظام وتاريخ تعيينهم خلال ${Utils.escapeHTML(hireWindowLabel)}. الموجودون والمستقيلون لا يُعدَّلون ولا يُحذفون.
             </p>
         `;
 
@@ -4796,7 +4855,10 @@ const Employees = {
                 </tr>
             `;
         } else {
-            tbody.innerHTML = newRows.map(d => `
+            const maxPreviewRows = 200;
+            const visibleRows = newRows.slice(0, maxPreviewRows);
+            const hiddenCount = newRows.length - visibleRows.length;
+            tbody.innerHTML = visibleRows.map(d => `
                 <tr data-import-uid="${Utils.escapeHTML(d.uid)}">
                     <td><input type="text" class="form-input emp-imp-field" data-field="employeeNumber" value="${Utils.escapeHTML(d.employeeNumber || '')}" style="min-width:90px;padding:4px 6px;font-size:12px;"></td>
                     <td><input type="text" class="form-input emp-imp-field" data-field="sapId" value="${Utils.escapeHTML(d.sapId || '')}" style="min-width:80px;padding:4px 6px;font-size:12px;"></td>
@@ -4811,7 +4873,11 @@ const Employees = {
                         </button>
                     </td>
                 </tr>
-            `).join('');
+            `).join('') + (hiddenCount > 0
+                ? `<tr><td colspan="8" style="text-align:center;padding:12px;color:#075985;background:#e0f2fe;font-size:12px;">
+                    يُعرض أول ${maxPreviewRows} صف للمراجعة. ${hiddenCount} صف إضافي سيُضاف أيضاً عند التأكيد بدون عرض.
+                   </td></tr>`
+                : '');
         }
 
         preview.classList.remove('hidden');
@@ -4832,6 +4898,9 @@ const Employees = {
             await this.ensureEmployeesLoaded(false);
         } catch (_e) { /* استخدام البيانات المحلية إن وُجدت */ }
 
+        const hireWindowLabel = this.getEmployeeImportHireWindowLabel();
+        const hireMonths = this.getEmployeeImportHireMonths();
+
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
@@ -4848,7 +4917,7 @@ const Employees = {
                             <p class="text-sm text-amber-900 mb-2"><strong>حماية البيانات:</strong></p>
                             <ul class="text-sm text-amber-800 list-disc mr-6 mt-2 space-y-1">
                                 <li>الاستيراد <strong>يضيف الجدد فقط</strong> (غير الموجودين في النظام).</li>
-                                <li>تاريخ التعيين للجدد يجب أن يكون خلال <strong>آخر 3 أشهر</strong> من يوم الاستيراد (وليس مستقبلاً).</li>
+                                <li>تاريخ التعيين للجدد يجب أن يكون خلال <strong>${Utils.escapeHTML(hireWindowLabel)}</strong> من يوم الاستيراد (وليس مستقبلاً) — يضبطها المدير من الإعدادات (${hireMonths} شهر).</li>
                                 <li><strong>لا يُعدَّل</strong> ولا <strong>يُحذف</strong> أي موظف موجود أو مستقيل.</li>
                                 <li>راجع القائمة جيداً قبل التأكيد — يمكنك تعديل أو حذف صف من قائمة الإضافة فقط.</li>
                             </ul>
@@ -4907,6 +4976,8 @@ const Employees = {
         const fileInput = modal.querySelector('#employee-excel-file-input');
         const confirmBtn = modal.querySelector('#employee-import-confirm-btn');
         let importDrafts = [];
+        let existingImportKeySet = this.buildEmployeeImportExistingKeySet();
+        let reclassifyTimer = null;
 
         const refreshReview = () => this.renderEmployeeImportReview(modal, importDrafts);
 
@@ -4914,9 +4985,12 @@ const Employees = {
             const file = e.target.files[0];
             if (!file) return;
 
-            Loading.show();
+            Loading.show('جاري قراءة الملف...');
             try {
+                await this.yieldEmployeeImportUi_();
                 const buffer = await file.arrayBuffer();
+                Loading.show('جاري تحليل Excel...');
+                await this.yieldEmployeeImportUi_();
                 const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
@@ -4940,12 +5014,23 @@ const Employees = {
                     return obj;
                 }).filter(row => headers.some(h => String(row[h] || '').trim() !== ''));
 
+                existingImportKeySet = this.buildEmployeeImportExistingKeySet();
                 const seenKeys = new Set();
-                importDrafts = rawRows.map((row, idx) => {
-                    const draft = this.parseEmployeeImportRow(row, `imp-${idx}-${Date.now()}`);
-                    return this.classifyEmployeeImportDraft(draft, seenKeys);
-                });
+                const stamp = Date.now();
+                importDrafts = new Array(rawRows.length);
+                const chunkSize = 400;
+                for (let start = 0; start < rawRows.length; start += chunkSize) {
+                    const end = Math.min(start + chunkSize, rawRows.length);
+                    Loading.show(`جاري مطابقة الصفوف... ${end} / ${rawRows.length}`);
+                    for (let idx = start; idx < end; idx++) {
+                        const draft = this.parseEmployeeImportRow(rawRows[idx], `imp-${idx}-${stamp}`);
+                        importDrafts[idx] = this.classifyEmployeeImportDraft(draft, seenKeys, existingImportKeySet);
+                    }
+                    await this.yieldEmployeeImportUi_();
+                }
 
+                Loading.show('جاري تجهيز شاشة المراجعة...');
+                await this.yieldEmployeeImportUi_();
                 refreshReview();
                 Loading.hide();
             } catch (error) {
@@ -4965,8 +5050,11 @@ const Employees = {
             const field = input.getAttribute('data-field');
             if (!field) return;
             draft[field] = input.value;
-            this.reclassifyAllEmployeeImportDrafts(importDrafts);
-            refreshReview();
+            if (reclassifyTimer) clearTimeout(reclassifyTimer);
+            reclassifyTimer = setTimeout(() => {
+                this.reclassifyAllEmployeeImportDrafts(importDrafts, existingImportKeySet);
+                refreshReview();
+            }, 180);
         });
 
         modal.addEventListener('click', (e) => {
@@ -4976,7 +5064,7 @@ const Employees = {
                 if (!tr) return;
                 const uid = tr.getAttribute('data-import-uid');
                 importDrafts = importDrafts.filter(d => d.uid !== uid);
-                this.reclassifyAllEmployeeImportDrafts(importDrafts);
+                this.reclassifyAllEmployeeImportDrafts(importDrafts, existingImportKeySet);
                 refreshReview();
                 return;
             }
@@ -4991,59 +5079,78 @@ const Employees = {
             }
 
             const counts = this.getEmployeeImportCounts(importDrafts);
+            const hireWindowLabel = this.getEmployeeImportHireWindowLabel();
             const ok = window.confirm(
                 `سيتم إضافة ${newDrafts.length} موظف جديد فقط.\n` +
                 `تخطّي موجود مسبقاً: ${counts.existsCount}\n` +
                 `ناقص/غير صالح: ${counts.invalidCount}\n` +
-                `تعيين خارج آخر 3 أشهر: ${counts.hireDateRejectedCount}\n\n` +
+                `تعيين خارج ${hireWindowLabel}: ${counts.hireDateRejectedCount}\n\n` +
                 `الموجودون والمستقيلون لن يُعدَّلوا ولن يُحذفوا.\nهل تريد المتابعة؟`
             );
             if (!ok) return;
 
-            Loading.show();
+            Loading.show(`جاري إضافة ${newDrafts.length} موظف...`);
             try {
                 let addedCount = 0;
                 let skippedDuringWrite = 0;
+                const writeKeySet = existingImportKeySet instanceof Set
+                    ? new Set(existingImportKeySet)
+                    : this.buildEmployeeImportExistingKeySet();
 
-                newDrafts.forEach(draft => {
-                    try {
-                        // إعادة فحص الهوية قبل الكتابة (حماية إضافية)
-                        if (this.findExistingEmployeeByImportKey(draft.employeeNumber, draft.sapId)) {
+                const writeChunk = 300;
+                for (let start = 0; start < newDrafts.length; start += writeChunk) {
+                    const end = Math.min(start + writeChunk, newDrafts.length);
+                    for (let i = start; i < end; i++) {
+                        const draft = newDrafts[i];
+                        try {
+                            if (this.employeeImportKeysMatchExisting(draft.employeeNumber, draft.sapId, writeKeySet)) {
+                                skippedDuringWrite++;
+                                continue;
+                            }
+                            const employee = this.buildEmployeeFromImportDraft(draft);
+                            if (!employee) {
+                                skippedDuringWrite++;
+                                continue;
+                            }
+                            if (this.employeeImportKeysMatchExisting(employee.employeeNumber, employee.sapId, writeKeySet)) {
+                                skippedDuringWrite++;
+                                continue;
+                            }
+                            AppState.appData.employees.push(employee);
+                            const k1 = this.normalizeEmployeeImportKey(employee.employeeNumber);
+                            const k2 = this.normalizeEmployeeImportKey(employee.sapId);
+                            const k3 = this.normalizeEmployeeImportKey(employee.id);
+                            if (k1) writeKeySet.add(k1);
+                            if (k2) writeKeySet.add(k2);
+                            if (k3) writeKeySet.add(k3);
+                            addedCount++;
+                        } catch (_err) {
                             skippedDuringWrite++;
-                            return;
                         }
-                        const employee = this.buildEmployeeFromImportDraft(draft);
-                        if (!employee) {
-                            skippedDuringWrite++;
-                            return;
-                        }
-                        if (this.findExistingEmployeeByImportKey(employee.employeeNumber, employee.sapId)) {
-                            skippedDuringWrite++;
-                            return;
-                        }
-                        AppState.appData.employees.push(employee);
-                        addedCount++;
-                    } catch (_err) {
-                        skippedDuringWrite++;
                     }
-                });
+                    Loading.show(`جاري الإضافة... ${end} / ${newDrafts.length}`);
+                    await this.yieldEmployeeImportUi_();
+                }
 
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                     window.DataManager.save();
                 } else {
                     Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
                 }
+                Loading.show('جاري مزامنة السحابة...');
+                await this.yieldEmployeeImportUi_();
                 await GoogleIntegration.autoSave('Employees', AppState.appData.employees);
 
                 this.cache.data = AppState.appData.employees;
                 this.cache.lastLoad = Date.now();
                 this.cache.lastUpdate = Date.now();
+                existingImportKeySet = writeKeySet;
 
                 Loading.hide();
                 Notification.success(
                     `أُضيف ${addedCount} موظف جديد` +
                     (counts.existsCount > 0 ? ` — تُخطي موجود ${counts.existsCount}` : '') +
-                    (counts.hireDateRejectedCount > 0 ? ` — تعيين خارج 3 أشهر ${counts.hireDateRejectedCount}` : '') +
+                    (counts.hireDateRejectedCount > 0 ? ` — تعيين خارج ${this.getEmployeeImportHireWindowLabel()} ${counts.hireDateRejectedCount}` : '') +
                     (counts.invalidCount > counts.hireDateRejectedCount ? ` — ناقص ${counts.invalidCount - counts.hireDateRejectedCount}` : '') +
                     (skippedDuringWrite > 0 ? ` — استُبعد عند الحفظ ${skippedDuringWrite}` : '')
                 );

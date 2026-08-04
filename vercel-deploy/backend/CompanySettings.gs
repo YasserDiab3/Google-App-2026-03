@@ -269,6 +269,7 @@ function initCompanySettingsTable(spreadsheetId = null) {
                 'logo',
                 'postLoginItems',
                 'clinicMonthlyVisitsAlertThreshold',
+                'employeeImportHireMonths',
                 'clinicVisitTypes',
                 'profileTeamsUrl',
                 'profileWhatsAppUrl',
@@ -357,6 +358,10 @@ function saveCompanySettingsToSheet(settingsData) {
         const clinicThresholdNum = (clinicThreshold !== undefined && clinicThreshold !== null && clinicThreshold !== '') ? parseInt(clinicThreshold, 10) : 10;
         const clinicMonthlyVisitsAlertThreshold = (isNaN(clinicThresholdNum) || clinicThresholdNum < 1) ? 10 : Math.min(1000, clinicThresholdNum);
 
+        const hireMonthsRaw = settingsData.employeeImportHireMonths;
+        const hireMonthsNum = (hireMonthsRaw !== undefined && hireMonthsRaw !== null && hireMonthsRaw !== '') ? parseInt(hireMonthsRaw, 10) : 3;
+        const employeeImportHireMonths = (isNaN(hireMonthsNum) || hireMonthsNum < 1) ? 3 : Math.min(120, hireMonthsNum);
+
         // ppeEligibilityRules: يتم حفظها حصريًا في جدول PPE_Eligibility_Rules (جدول مستقل).
         let normalizedPpeRulesArray = [];
         if (settingsData.ppeEligibilityRules !== undefined && settingsData.ppeEligibilityRules !== null) {
@@ -398,6 +403,7 @@ function saveCompanySettingsToSheet(settingsData) {
             logo: settingsData.logo || '',
             postLoginItems: postLoginItemsValue,
             clinicMonthlyVisitsAlertThreshold: clinicMonthlyVisitsAlertThreshold,
+            employeeImportHireMonths: employeeImportHireMonths,
             clinicVisitTypes: clinicVisitTypesValue,
             profileTeamsUrl: settingsData.profileTeamsUrl != null ? String(settingsData.profileTeamsUrl) : '',
             profileWhatsAppUrl: settingsData.profileWhatsAppUrl != null ? String(settingsData.profileWhatsAppUrl) : '',
@@ -424,6 +430,12 @@ function saveCompanySettingsToSheet(settingsData) {
             }
             if (settingsData.helpContent === undefined && existing.helpContent != null && String(existing.helpContent).trim() !== '') {
                 settingsToSave.helpContent = String(existing.helpContent);
+            }
+            if (settingsData.employeeImportHireMonths === undefined && existing.employeeImportHireMonths != null && String(existing.employeeImportHireMonths).trim() !== '') {
+                const keepMonths = parseInt(existing.employeeImportHireMonths, 10);
+                if (!isNaN(keepMonths) && keepMonths >= 1) {
+                    settingsToSave.employeeImportHireMonths = Math.min(120, keepMonths);
+                }
             }
         } else {
             settingsToSave.createdAt = now;
@@ -493,6 +505,7 @@ function buildPublicCompanySettingsView_(settingsData) {
         formVersion: src.formVersion || '1.0',
         logo: src.logo || '',
         clinicMonthlyVisitsAlertThreshold: src.clinicMonthlyVisitsAlertThreshold || 10,
+        employeeImportHireMonths: src.employeeImportHireMonths || 3,
         clinicVisitTypes: src.clinicVisitTypes || '',
         profileTeamsUrl: src.profileTeamsUrl || '',
         profileWhatsAppUrl: src.profileWhatsAppUrl || '',
@@ -586,6 +599,7 @@ function getDefaultCompanySettings() {
         logo: '',
         postLoginItems: '',
         clinicMonthlyVisitsAlertThreshold: 10,
+        employeeImportHireMonths: 3,
         clinicVisitTypes: '',
         profileTeamsUrl: '',
         profileWhatsAppUrl: '',
