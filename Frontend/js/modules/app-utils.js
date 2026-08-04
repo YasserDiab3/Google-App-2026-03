@@ -4342,7 +4342,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.839',
+    appVersion: '1.0.841',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -8994,7 +8994,17 @@ const EmployeeHelper = {
 
                 if (result && result.success && Array.isArray(result.data)) {
                     AppState.appData = AppState.appData || {};
-                    AppState.appData.employees = result.data;
+                    const existing = Array.isArray(AppState.appData.employees) ? AppState.appData.employees : [];
+                    // لا تستبدل قائمة محلية غير فارغة بمصفوفة فارغة من الخادم
+                    if (result.data.length === 0 && existing.length > 0) {
+                        return true;
+                    }
+                    // دمج مع الحفاظ على الأسماء المحلية إن نقصت من الخادم
+                    if (typeof Employees !== 'undefined' && typeof Employees.mergeEmployeesPreservingNames_ === 'function') {
+                        AppState.appData.employees = Employees.mergeEmployeesPreservingNames_(result.data, existing);
+                    } else {
+                        AppState.appData.employees = result.data;
+                    }
                     if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.save === 'function') {
                         window.DataManager.save();
                     }

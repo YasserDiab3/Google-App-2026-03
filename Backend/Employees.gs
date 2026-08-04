@@ -156,12 +156,7 @@ function getAllEmployees(filters = {}) {
     try {
         const sheetName = 'Employees';
 
-        // إصلاح لمرة واحدة قبل الكاش — صفوف الاستيراد المنزلقة
-        try { maybeRepairEmployeesColumnDriftOnce_(); } catch (_driftRepairErr) {}
-
-        // ✅ Cache: تقليل قراءة الشيت المتكررة (خصوصاً عند فتح الموديول/التقارير)
-        // - نعتمد على نسخة employees_cache_v لكسر الكاش بعد أي تعديل
-        // - TTL قصير لتوازن الأداء مع حداثة البيانات
+        // ✅ الكاش أولاً — لا تعطّل الفتح بصيانة/إصلاح قبل الاستجابة السريعة
         var cacheKey = null;
         try {
             const cache = CacheService.getScriptCache();
@@ -177,6 +172,32 @@ function getAllEmployees(filters = {}) {
         } catch (eCacheRead) {
             // ignore cache errors - fall back to sheet read
         }
+
+        // صيانة لمرة واحدة فقط عند غياب الكاش (لا تُنفَّذ في مسار الكاش السريع)
+        try { maybeRepairEmployeesColumnDriftOnce_(); } catch (_driftRepairErr) {}
+
+        // كسر كاش قديم مرة واحدة بعد إصلاح ثبات الأسماء/الدمج
+        try {
+            const props = PropertiesService.getScriptProperties();
+            if (props.getProperty('employees_names_stable_v1') !== '1') {
+                try { _bumpEmployeesCacheVersion_(); } catch (_b) {}
+                try { invalidateHseSheetCaches('Employees'); } catch (_i) {}
+                props.setProperty('employees_names_stable_v1', '1');
+                // أعد محاولة الكاش بعد bump إن وُجد مفتاح جديد
+                try {
+                    const cache2 = CacheService.getScriptCache();
+                    const v2 = _getEmployeesCacheVersion_();
+                    cacheKey = 'hse_employees_all_v' + v2 + '_f:' + _stableStringify_(filters || {});
+                    const cached2 = cache2.get(cacheKey);
+                    if (cached2) {
+                        const parsed2 = JSON.parse(cached2);
+                        if (parsed2 && parsed2.success === true && Array.isArray(parsed2.data)) {
+                            return { success: true, data: parsed2.data, count: parsed2.data.length, source: 'cache' };
+                        }
+                    }
+                } catch (_c2) {}
+            }
+        } catch (_cacheBumpErr) {}
 
         let data = readFromSheet(sheetName, getSpreadsheetId());
         
@@ -229,12 +250,11 @@ function getAllEmployees(filters = {}) {
 
         const result = { success: true, data: data, count: data.length };
 
-        // حفظ في الكاش
+        // حفظ في الكاش — 10 دقائق (يُكسر فوراً عند bump بعد كتابة)
         try {
             if (cacheKey) {
                 const cache = CacheService.getScriptCache();
-                // 120 ثانية (قصير لتقليل stale data، ويكسر أيضاً عند bumpEmployeesCacheVersion_)
-                cache.put(cacheKey, JSON.stringify(result), 120);
+                cache.put(cacheKey, JSON.stringify(result), 600);
             }
         } catch (eCacheWrite) {
             // ignore

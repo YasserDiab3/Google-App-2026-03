@@ -1,15 +1,15 @@
 {
-  "version": "1.0.839",
+  "version": "1.0.841",
   "highlights": {
     "ar": [
-      "نموذج استيراد Excel للموظفين يفتح فوراً دون انتظار جلب القاعدة.",
-      "إصلاح انزلاق أعمدة الموظفين بعد الاستيراد (status/id/التواريخ).",
-      "تقرير وتنظيف آمن لمكررات الموظفين مع نسخة احتياطية ورقم سري."
+      "فتح قاعدة الموظفين أسرع: عرض محلي فوري ثم مزامنة بالخلفية.",
+      "القائمة تعرض أول 100 صف مع زر «عرض المزيد» بدل رسم الكل دفعة واحدة.",
+      "كاش الخادم أطول وأولوية للكاش قبل الصيانة — بدون فقد الأسماء."
     ],
     "en": [
-      "Employee Excel import modal opens instantly without waiting for the roster fetch.",
-      "Fixed Employees sheet column drift after import (status/id/dates).",
-      "Safe duplicate report and cleanup with in-file backup and PIN."
+      "Employees module opens faster: instant local list, then background sync.",
+      "List shows first 100 rows with Load more instead of rendering all at once.",
+      "Longer server cache and cache-first path — names still protected."
     ]
   }
 }

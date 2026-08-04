@@ -4054,6 +4054,30 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
                 const oldIndex = seenIds.get(recordId);
                 const oldObj = uniqueObjects[oldIndex];
 
+                // ✅ Employees: فضّل الصف ذا الاسم/الأكمل بدل صف أحدث بلا اسم
+                if (sheetName === 'Employees') {
+                    const scoreNew = (typeof _employeeDupRowScore_ === 'function') ? _employeeDupRowScore_(obj) : 0;
+                    const scoreOld = (typeof _employeeDupRowScore_ === 'function') ? _employeeDupRowScore_(oldObj) : 0;
+                    const nameNew = String((obj && obj.name) || '').trim();
+                    const nameOld = String((oldObj && oldObj.name) || '').trim();
+                    if (!nameOld && nameNew) {
+                        uniqueObjects[oldIndex] = obj;
+                        return;
+                    }
+                    if (nameOld && !nameNew) {
+                        return;
+                    }
+                    if (scoreNew > scoreOld) {
+                        if (nameOld && !String(obj.name || '').trim()) {
+                            obj.name = oldObj.name;
+                        }
+                        uniqueObjects[oldIndex] = obj;
+                    } else if (nameNew && !nameOld) {
+                        oldObj.name = nameNew;
+                    }
+                    return;
+                }
+
                 // مقارنة المحتوى (بدون ID) لتحديد هل هو تكرار حقيقي أم ID مكرر لبيانات مختلفة
                 const oldStr = JSON.stringify({...oldObj, id: ''});
                 const newStr = JSON.stringify({...obj, id: ''});
