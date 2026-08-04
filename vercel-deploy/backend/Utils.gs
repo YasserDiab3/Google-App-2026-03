@@ -3778,7 +3778,15 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
         if (cached) {
             try {
                 Logger.log('Cache HIT for readFromSheet: ' + sheetName + (skipSecurityFilter ? ' (RAW)' : ''));
-                return overlayUsersPresenceIfNeeded_(sheetName, skipSecurityFilter, JSON.parse(cached));
+                var cachedRows = JSON.parse(cached);
+                if (sheetName === 'Employees' && Array.isArray(cachedRows) && cachedRows.length === 0) {
+                    try {
+                        cache.remove(cacheKey);
+                        cache.remove(cacheKey + '_chunks');
+                    } catch (_rmEmpEmpty) {}
+                } else {
+                    return overlayUsersPresenceIfNeeded_(sheetName, skipSecurityFilter, cachedRows);
+                }
             } catch (parseError) {
                 Logger.log('Cache parse error for ' + sheetName + ': ' + parseError.toString());
                 // Continue to read from sheet if cache is corrupted
@@ -3858,7 +3866,8 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
         // ✅ إصلاح: إزالة التكرار عند القراءة (في حالة وجود تكرار في الورقة نفسها)
         // تحويل الصفوف إلى كائنات
         const allObjects = rows.map((row, rowIndex) => {
-            const obj = {};
+            // let وليس const: normalizeEmployeesRowColumnDrift_ يعيد تعيين obj
+            let obj = {};
             headers.forEach((header, index) => {
                 // تنظيف اسم الرأس (إزالة المسافات الزائدة)
                 const cleanHeader = header ? String(header).trim() : '';
@@ -4115,7 +4124,7 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
 
         // ✅ CacheService: Save to cache before returning (2 minutes TTL) using chunked cache
         try {
-            if (!skipSecurityFilter) {
+            if (!skipSecurityFilter && !(sheetName === 'Employees' && uniqueObjects.length === 0)) {
                 const serialized = JSON.stringify(uniqueObjects);
                 const cachedOk = putChunkedCache_(cache, cacheKey, serialized, 120); // 2 minutes TTL
                 if (cachedOk) {

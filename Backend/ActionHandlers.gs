@@ -2240,6 +2240,14 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'getEmployeesSheetHealth': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = getEmployeesSheetHealth();
+                    return;
+        })();
+        return result;
+    },
     'deactivateEmployee': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

@@ -159,10 +159,10 @@ function getAllEmployees(filters = {}) {
         // كسر كاش قبل أي قراءة — مرة واحدة بعد إصلاح العرض
         try {
             const props = PropertiesService.getScriptProperties();
-            if (props.getProperty('employees_ui_restore_v5') !== '1') {
+            if (props.getProperty('employees_ui_restore_v7') !== '1') {
                 try { _bumpEmployeesCacheVersion_(); } catch (_b0) {}
                 try { invalidateHseSheetCaches('Employees'); } catch (_i0) {}
-                props.setProperty('employees_ui_restore_v5', '1');
+                props.setProperty('employees_ui_restore_v7', '1');
             }
             if (props.getProperty('employees_names_stable_v1') !== '1') {
                 try { _bumpEmployeesCacheVersion_(); } catch (_b1) {}
@@ -181,13 +181,18 @@ function getAllEmployees(filters = {}) {
             if (cached) {
                 const parsed = JSON.parse(cached);
                 if (parsed && parsed.success === true && Array.isArray(parsed.data)) {
-                    var cachedData = parsed.data;
-                    if (typeof normalizeEmployeesRowColumnDrift_ === 'function') {
-                        cachedData = cachedData.map(function(row) {
-                            return normalizeEmployeesRowColumnDrift_(row);
-                        });
+                    // لا تثق بكاش فارغ — قد يكون من عطل سابق بينما الورقة ممتلئة
+                    if (parsed.data.length === 0) {
+                        try { cache.remove(cacheKey); } catch (_rmEmpty) {}
+                    } else {
+                        var cachedData = parsed.data;
+                        if (typeof normalizeEmployeesRowColumnDrift_ === 'function') {
+                            cachedData = cachedData.map(function(row) {
+                                return normalizeEmployeesRowColumnDrift_(row);
+                            });
+                        }
+                        return { success: true, data: cachedData, count: cachedData.length, source: 'cache' };
                     }
-                    return { success: true, data: cachedData, count: cachedData.length, source: 'cache' };
                 }
             }
         } catch (eCacheRead) {
@@ -198,6 +203,25 @@ function getAllEmployees(filters = {}) {
         try { maybeRepairEmployeesColumnDriftOnce_(); } catch (_driftRepairErr) {}
 
         let data = readFromSheet(sheetName, getSpreadsheetId());
+
+        // إن القراءة رجعت فارغة بينما الورقة فيها صفوف — كاش/مسار readFromSheet معطوب
+        if (!data || data.length === 0) {
+            try {
+                var ssCheck = SpreadsheetApp.openById(getSpreadsheetId());
+                var shCheck = ssCheck.getSheetByName(sheetName);
+                var lastRowCheck = shCheck ? shCheck.getLastRow() : 0;
+                if (lastRowCheck > 1) {
+                    try { invalidateHseSheetCaches(sheetName); } catch (_invEmpty) {}
+                    data = readFromSheet(sheetName, getSpreadsheetId(), true);
+                    if (!data || data.length === 0) {
+                        data = _readEmployeesSheetObjects_(getSpreadsheetId());
+                        Logger.log('getAllEmployees: fallback _readEmployeesSheetObjects_ count=' + (data ? data.length : 0));
+                    }
+                }
+            } catch (_emptyGuardErr) {
+                Logger.log('getAllEmployees empty-guard: ' + _emptyGuardErr.toString());
+            }
+        }
 
         // تطبيع انزلاق أعمدة على كل صف قبل أي تصفية (status=تاريخ / resignationDate=رقم)
         if (typeof normalizeEmployeesRowColumnDrift_ === 'function') {
@@ -259,9 +283,9 @@ function getAllEmployees(filters = {}) {
 
         const result = { success: true, data: data, count: data.length };
 
-        // حفظ في الكاش — 10 دقائق (يُكسر فوراً عند bump بعد كتابة)
+        // حفظ في الكاش — 10 دقائق (لا تخزّن فراغاً حتى لا يُسمّم التحميل)
         try {
-            if (cacheKey) {
+            if (cacheKey && Array.isArray(data) && data.length > 0) {
                 const cache = CacheService.getScriptCache();
                 cache.put(cacheKey, JSON.stringify(result), 600);
             }
@@ -273,6 +297,211 @@ function getAllEmployees(filters = {}) {
     } catch (error) {
         Logger.log('Error getting all employees: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء قراءة الموظفين: ' + error.toString(), data: [] };
+    }
+}
+
+/**
+ * قراءة Employees مباشرة (خفيفة) — عند فشل/فراغ readFromSheet رغم وجود صفوف
+ */
+function _readEmployeesSheetObjects_(spreadsheetId) {
+    var ss = SpreadsheetApp.openById(spreadsheetId || getSpreadsheetId());
+    var sheet = ss.getSheetByName('Employees');
+    if (!sheet) return [];
+    var data = sheet.getDataRange().getValues();
+    if (!data || data.length < 2) return [];
+    var sheetTz = ss.getSpreadsheetTimeZone() || Session.getScriptTimeZone();
+    var headers = data[0].map(function (h) {
+        return String(h == null ? '' : h).trim();
+    });
+    var out = [];
+    for (var r = 1; r < data.length; r++) {
+        try {
+            var row = data[r];
+            var obj = {};
+            var has = false;
+            for (var c = 0; c < headers.length; c++) {
+                if (!headers[c]) continue;
+                var v = row[c];
+                if (v === null || v === undefined || v === '') {
+                    obj[headers[c]] = '';
+                } else if (Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v.getTime())) {
+                    try {
+                        obj[headers[c]] = Utilities.formatDate(v, sheetTz, 'yyyy-MM-dd');
+                    } catch (_df) {
+                        obj[headers[c]] = String(v);
+                    }
+                    has = true;
+                } else {
+                    obj[headers[c]] = v;
+                    has = true;
+                }
+            }
+            if (has) {
+                if (typeof normalizeEmployeesRowColumnDrift_ === 'function') {
+                    obj = normalizeEmployeesRowColumnDrift_(obj);
+                }
+                out.push(obj);
+            }
+        } catch (_rowErr) {
+            // تخطّي صف تالف بدل إفراغ القائمة كلها
+        }
+    }
+    return out;
+}
+
+/**
+ * تشخيص دخان: عدد صفوف Employees + أسماء backup (بدون بيانات شخصية كاملة)
+ * معفى من CSRF/جلسة عبر Code.gs — للتشخيص التشغيلي فقط
+ */
+function getEmployeesSheetHealth() {
+    try {
+        var spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) {
+            return { success: false, message: 'spreadsheetId مفقود', errorCode: 'NO_SPREADSHEET' };
+        }
+        var ss = SpreadsheetApp.openById(spreadsheetId);
+        var sheet = ss.getSheetByName('Employees');
+        if (!sheet) {
+            return { success: false, message: 'ورقة Employees غير موجودة', errorCode: 'SHEET_MISSING', spreadsheetId: spreadsheetId };
+        }
+
+        var lastRow = sheet.getLastRow();
+        var lastCol = sheet.getLastColumn();
+        var headers = [];
+        if (lastCol > 0) {
+            headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) {
+                return String(h == null ? '' : h).trim();
+            });
+        }
+
+        var nameIdx = headers.indexOf('name');
+        var statusIdx = headers.indexOf('status');
+        var dataRowCount = Math.max(0, lastRow - 1);
+        var namedCount = 0;
+        var statusInactive = 0;
+        var sampleNames = [];
+
+        if (dataRowCount > 0 && lastCol > 0) {
+            var values = sheet.getRange(2, 1, lastRow, lastCol).getValues();
+            for (var i = 0; i < values.length; i++) {
+                var row = values[i];
+                var nm = nameIdx >= 0 ? String(row[nameIdx] == null ? '' : row[nameIdx]).trim() : '';
+                if (nm) {
+                    namedCount++;
+                    if (sampleNames.length < 3) sampleNames.push(nm.slice(0, 40));
+                }
+                if (statusIdx >= 0) {
+                    var st = String(row[statusIdx] == null ? '' : row[statusIdx]).trim().toLowerCase();
+                    if (st === 'inactive' || st === 'غير نشط') statusInactive++;
+                }
+            }
+        }
+
+        var backupSheets = [];
+        var allSheets = ss.getSheets();
+        for (var s = 0; s < allSheets.length; s++) {
+            var title = allSheets[s].getName();
+            if (/^Employees_backup/i.test(title) || /^Employees_Backup/i.test(title)) {
+                backupSheets.push({
+                    name: title,
+                    rows: Math.max(0, allSheets[s].getLastRow() - 1)
+                });
+            }
+        }
+
+        var props = PropertiesService.getScriptProperties();
+        var diag = {
+            invalidated: false,
+            readCachedCount: null,
+            readRawCount: null,
+            readAfterInvalidateCount: null,
+            dataRangeRows: null,
+            sampleObjectKeys: null,
+            error: null
+        };
+        try {
+            var dataRange = sheet.getDataRange();
+            var rawValues = dataRange ? dataRange.getValues() : [];
+            diag.dataRangeRows = rawValues ? rawValues.length : 0;
+            if (rawValues && rawValues.length > 1) {
+                var hdrs = rawValues[0].map(function (h) { return String(h == null ? '' : h).trim(); });
+                var sampleObj = {};
+                for (var ci = 0; ci < hdrs.length; ci++) {
+                    if (!hdrs[ci]) continue;
+                    sampleObj[hdrs[ci]] = rawValues[1][ci];
+                }
+                diag.sampleObjectKeys = Object.keys(sampleObj);
+                diag.sampleHasName = !!String(sampleObj.name || '').trim();
+            }
+            try {
+                var cachedRead = readFromSheet('Employees', spreadsheetId, false);
+                diag.readCachedCount = Array.isArray(cachedRead) ? cachedRead.length : -1;
+            } catch (e1) {
+                diag.readCachedCount = -1;
+                diag.error = String(e1);
+            }
+            try {
+                var rawRead = readFromSheet('Employees', spreadsheetId, true);
+                diag.readRawCount = Array.isArray(rawRead) ? rawRead.length : -1;
+            } catch (e2) {
+                diag.readRawCount = -1;
+                diag.error = String(e2);
+            }
+            try { invalidateHseSheetCaches('Employees'); diag.invalidated = true; } catch (_inv) {}
+            try {
+                var afterInv = readFromSheet('Employees', spreadsheetId, true);
+                diag.readAfterInvalidateCount = Array.isArray(afterInv) ? afterInv.length : -1;
+            } catch (e3) {
+                diag.readAfterInvalidateCount = -1;
+                diag.error = String(e3);
+            }
+            try {
+                var simpleRead = _readEmployeesSheetObjects_(spreadsheetId);
+                diag.simpleReaderCount = Array.isArray(simpleRead) ? simpleRead.length : -1;
+            } catch (e4) {
+                diag.simpleReaderCount = -1;
+                diag.error = String(e4);
+            }
+        } catch (diagErr) {
+            diag.error = String(diagErr);
+        }
+
+        var apiProbe = null;
+        try {
+            apiProbe = getAllEmployees({ includeInactive: true });
+        } catch (apiErr) {
+            apiProbe = { success: false, message: String(apiErr) };
+        }
+
+        return {
+            success: true,
+            spreadsheetId: spreadsheetId,
+            sheetExists: true,
+            lastRow: lastRow,
+            lastCol: lastCol,
+            headers: headers,
+            dataRowCount: dataRowCount,
+            namedCount: namedCount,
+            statusInactive: statusInactive,
+            sampleNames: sampleNames,
+            backupSheets: backupSheets,
+            cacheVersion: (typeof _getEmployeesCacheVersion_ === 'function') ? _getEmployeesCacheVersion_() : null,
+            restoreFlags: {
+                v5: props.getProperty('employees_ui_restore_v5') || null,
+                v6: props.getProperty('employees_ui_restore_v6') || null,
+                namesStable: props.getProperty('employees_names_stable_v1') || null
+            },
+            readDiag: diag,
+            getAllEmployeesProbe: {
+                success: !!(apiProbe && apiProbe.success),
+                count: apiProbe && Array.isArray(apiProbe.data) ? apiProbe.data.length : (apiProbe && apiProbe.count) || 0,
+                source: (apiProbe && apiProbe.source) || 'sheet',
+                message: (apiProbe && apiProbe.message) || null
+            }
+        };
+    } catch (error) {
+        Logger.log('getEmployeesSheetHealth: ' + error.toString());
+        return { success: false, message: error.toString(), errorCode: 'HEALTH_FAILED' };
     }
 }
 

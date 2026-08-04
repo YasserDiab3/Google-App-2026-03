@@ -300,6 +300,8 @@ function doPost(e) {
             'getIssuingAuthoritiesForPermitType',
             'getAllContractorIssuingAuthorities',
             'getContractorIssuingAuthoritiesForPermitType',
+            // تشخيص دخان موظفين (عدادات فقط — بدون قائمة كاملة)
+            'getEmployeesSheetHealth',
             // تقرير الجلسات اليومي (قراءة فقط — يتطلب CSRF + مدير)
             // getDailyUserSessionActivityReport, getAllUserActivityLogs, getUserActivityLogs, getLogStatistics, getAllAuditLogs
             // ✅ P2.2: قراءات PPE أُخرجت — تتطلب CSRF + جلسة (مثل باقي القراءات الحساسة)
@@ -325,7 +327,7 @@ function doPost(e) {
 
         // العمليات المعفاة من CSRF (pre-authentication — لا يمكن أن تملك CSRF token صالح)
         // SEC: أُزيل fixClinicSheetHeaders / mfaClear* — تتطلب جلسة مدير + CSRF
-        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest'];
+        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth'];
         const isCsrfExempt = csrfExemptActions.includes(action);
 
         // التحقق من CSRF Token - إلزامي لجميع العمليات غير القراءة
@@ -391,7 +393,7 @@ function doPost(e) {
         const sessionExemptActions = [
             'login', 'verifyMfaLogin', 'initializeSheets',
             'testConnection', 'warmup', 'getPublicIP', 'invalidateServerSession',
-            'getAuthBootstrapPolicy', 'mfaSelfTest'
+            'getAuthBootstrapPolicy', 'mfaSelfTest', 'getEmployeesSheetHealth'
         ];
         const isSessionExempt = sessionExemptActions.indexOf(action) !== -1;
         if (!isSessionExempt) {
