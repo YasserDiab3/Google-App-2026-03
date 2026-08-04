@@ -196,41 +196,15 @@ function sendAutoModuleEmail_(moduleKey, subject, bodyText, extraEmails) {
 
 /**
  * تشغيل يدوي من محرر Apps Script (مرة واحدة) لمنح صلاحية MailApp.
- * لا يستدعي MailApp إلا بعد التحقق من حالة التفويض.
- *
- * إن ظهرت رسالة "لا صلاحية" بدون شاشة موافقة:
- * 1) افتح الرابط المسجّل في Logger (authorizationUrl)
- * 2) أو احذف وصول المشروع من https://myaccount.google.com/permissions ثم شغّل مجدداً واقبل كل الصلاحيات
+ * القائمة: EmailService.gs → authorizeMailSending → تشغيل ▶
+ * بعد الموافقة على شاشة Google: انشر مجدداً نسخة Web App إن لزم.
  */
 function authorizeMailSending() {
-    var authInfo = ScriptApp.getAuthorizationInfo(ScriptApp.AuthMode.FULL);
-    var status = authInfo.getAuthorizationStatus();
-    var authUrl = '';
     try {
-        authUrl = authInfo.getAuthorizationUrl() || '';
-    } catch (_u) {
-        authUrl = '';
-    }
-
-    Logger.log('authorizeMailSending status=' + status);
-    if (authUrl) {
-        Logger.log('>>> افتح هذا الرابط للموافقة على إرسال البريد:');
-        Logger.log(authUrl);
-    }
-
-    if (status === ScriptApp.AuthorizationStatus.REQUIRED) {
-        return {
-            success: false,
-            needsAuthorization: true,
-            authorizationStatus: String(status),
-            authorizationUrl: authUrl,
-            message: 'التفويض مطلوب. افتح authorizationUrl من Execution log واقبل صلاحية إرسال البريد، ثم أعد التشغيل.'
-        };
-    }
-
-    try {
+        var authInfo = ScriptApp.getAuthorizationInfo(ScriptApp.AuthMode.FULL);
+        var status = authInfo.getAuthorizationStatus();
         var quota = MailApp.getRemainingDailyQuota();
-        Logger.log('MailApp auth OK. Remaining daily quota: ' + quota);
+        Logger.log('MailApp auth OK. Remaining daily quota: ' + quota + ' status=' + status);
         return {
             success: true,
             message: 'صلاحية إرسال البريد مفعّلة. الحصة المتبقية اليوم: ' + quota,
@@ -238,18 +212,10 @@ function authorizeMailSending() {
             authorizationStatus: String(status)
         };
     } catch (e) {
-        Logger.log('authorizeMailSending MailApp blocked: ' + e.toString());
-        Logger.log('>>> الحل: https://myaccount.google.com/permissions — احذف وصول هذا المشروع، ثم شغّل authorizeMailSending مرة أخرى واقبل الشاشة.');
-        if (authUrl) {
-            Logger.log('>>> أو افتح مباشرة: ' + authUrl);
-        }
+        Logger.log('authorizeMailSending failed: ' + e.toString());
         return {
             success: false,
-            needsAuthorization: true,
-            authorizationStatus: String(status),
-            authorizationUrl: authUrl,
-            revokeUrl: 'https://myaccount.google.com/permissions',
-            message: 'التوكن قديم بدون script.send_mail. احذف وصول المشروع من myaccount.google.com/permissions ثم شغّل authorizeMailSending واقبل كل الصلاحيات. ' + String(e),
+            message: 'يلزم منح صلاحية script.send_mail من المحرر: شغّل authorizeMailSending واقبل الشاشة. ' + String(e),
             error: String(e)
         };
     }
@@ -257,8 +223,8 @@ function authorizeMailSending() {
 
 function formatMailAuthError_(err) {
     var msg = String(err || '');
-    if (/script\.send_mail|MailApp\.sendEmail|MailApp\.getRemainingDailyQuota|do not have permission to call MailApp|Specified permissions are not sufficient/i.test(msg)) {
-        return 'صلاحية إرسال البريد غير ممنوحة. من Apps Script شغّل authorizeMailSending؛ إن فشل بدون شاشة موافقة: احذف وصول المشروع من https://myaccount.google.com/permissions ثم أعد التشغيل واقبل الصلاحيات.';
+    if (/script\.send_mail|MailApp\.sendEmail|do not have permission to call MailApp|Specified permissions are not sufficient/i.test(msg)) {
+        return 'صلاحية إرسال البريد غير ممنوحة لحساب ناشر السكربت. افتح Apps Script → شغّل authorizeMailSending → اقبل الصلاحيات → أعد المحاولة.';
     }
     return msg;
 }

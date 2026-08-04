@@ -1,17 +1,15 @@
 {
-  "version": "1.0.821",
+  "version": "1.0.823",
   "highlights": {
     "ar": [
-      "إشعارات البريد: تصميم أوضح وشريط حالة تشغيل/إيقاف.",
-      "فلاتر مجموعات، بحث، تفعيل/إيقاف الظاهر، وملخص أعداد.",
-      "مستلمون كشرائح + اختبار سريع + شريط حفظ مع تنبيه التغييرات.",
-      "خلفية: صلاحية إرسال البريد ودالة تفويض MailApp."
+      "إشعارات البريد: ظهور أنواع المحتوى فوراً بدون انتظار الشبكة.",
+      "تحميل التبويب عند فتحه فقط مع كاش محلي أسرع.",
+      "خلفية أسرع لقراءة إعدادات البريد مع تخزين مؤقت."
     ],
     "en": [
-      "Email notifications: clearer layout with on/off status bar.",
-      "Group filters, search, bulk enable/disable visible types, and counts.",
-      "Recipient chips, quick test send, and sticky save with dirty hint.",
-      "Backend: MailApp send_mail scope and authorize helper."
+      "Email settings: content types render instantly before network sync.",
+      "Loads only when the tab opens, with a faster local cache.",
+      "Faster backend email-settings reads with short-lived cache."
     ]
   }
 }

@@ -14,6 +14,100 @@ const EmailDispatch = {
         system: 'النظام'
     },
 
+    /** كتالوج افتراضي للرسم الفوري (يطابق Backend/EmailSettings.gs) */
+    DEFAULT_MODULE_CATALOG: [
+        { key: 'incidents', labelAr: 'الحوادث', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'incidents.alert', labelAr: 'تنبيه سلامة (حوادث)', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'incidents.investigation', labelAr: 'تحقيق حادث', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'violations', labelAr: 'المخالفات', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'violations.blacklist', labelAr: 'القائمة السوداء', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'ptw', labelAr: 'تصاريح العمل', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'nearmiss', labelAr: 'الحوادث الوشيكة', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'daily-observations', labelAr: 'الملاحظات اليومية', group: 'ops', enabled: true, manualSend: true, autoSend: true },
+        { key: 'daily-observations.analytics', labelAr: 'تحليل الملاحظات', group: 'reports', enabled: true, manualSend: true, autoSend: false },
+        { key: 'daily-observations.executive', labelAr: 'لوحة تنفيذية للملاحظات', group: 'reports', enabled: true, manualSend: true, autoSend: false },
+        { key: 'behavior-monitoring', labelAr: 'مراقبة التصرفات', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'chemical-safety', labelAr: 'السلامة الكيميائية', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'ppe', labelAr: 'مهمات الوقاية', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'legal-documents', labelAr: 'الوثائق القانونية', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'sop-jha', labelAr: 'إجراءات العمل والتقييمات', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'action-tracking', labelAr: 'متابعة الإجراءات', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'change-management', labelAr: 'إدارة التغيّر', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'periodic-inspections', labelAr: 'الفحوصات الدورية', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'periodic-equipment', labelAr: 'معدات الفحص الدوري', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'training', labelAr: 'التدريب', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'employees', labelAr: 'الموظفون', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'contractors', labelAr: 'المقاولون', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'fire-equipment', labelAr: 'معدات الإطفاء', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'emergency', labelAr: 'الطوارئ', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'risk-assessment', labelAr: 'تقييم المخاطر', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'iso', labelAr: 'نظام ISO', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'sustainability', labelAr: 'الاستدامة', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'safety-budget', labelAr: 'ميزانية السلامة', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'user-tasks', labelAr: 'مهام المستخدمين', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'issue-tracking', labelAr: 'تتبع المشاكل', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'safety-calendar', labelAr: 'تقويم السلامة', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'issuing-authorities', labelAr: 'المصرّحون بالتوقيع', group: 'ops', enabled: true, manualSend: true, autoSend: false },
+        { key: 'clinic.visit', labelAr: 'زيارة عيادة', group: 'clinic', enabled: true, manualSend: true, autoSend: false },
+        { key: 'clinic.injury', labelAr: 'إصابة عيادة', group: 'clinic', enabled: true, manualSend: true, autoSend: false },
+        { key: 'clinic.sickLeave', labelAr: 'إجازة مرضية', group: 'clinic', enabled: true, manualSend: true, autoSend: false },
+        { key: 'clinic.medication', labelAr: 'دواء عيادة', group: 'clinic', enabled: true, manualSend: true, autoSend: false },
+        { key: 'clinic.supply', labelAr: 'طلب مستلزمات عيادة', group: 'clinic', enabled: true, manualSend: true, autoSend: false },
+        { key: 'reports', labelAr: 'التقارير المجمّعة', group: 'reports', enabled: true, manualSend: true, autoSend: false },
+        { key: 'safety-performance-kpis', labelAr: 'مؤشرات أداء السلامة', group: 'reports', enabled: true, manualSend: true, autoSend: false },
+        { key: 'hse', labelAr: 'لوحة HSE', group: 'reports', enabled: true, manualSend: true, autoSend: false },
+        { key: 'daily-activity-report', labelAr: 'تقرير نشاط يومي', group: 'system', enabled: true, manualSend: false, autoSend: true },
+        { key: 'system.deleteAudit', labelAr: 'تدقيق الحذف (مدراء)', group: 'system', enabled: true, manualSend: false, autoSend: true }
+    ],
+
+    getDefaultSettings() {
+        const modules = {};
+        (this.DEFAULT_MODULE_CATALOG || []).forEach((m) => {
+            modules[m.key] = {
+                labelAr: m.labelAr,
+                group: m.group,
+                enabled: !!m.enabled,
+                manualSend: !!m.manualSend,
+                autoSend: !!m.autoSend,
+                autoEvents: [],
+                recipients: []
+            };
+        });
+        return {
+            globalEnabled: false,
+            defaultRecipients: Array.isArray(AppState?.notificationEmails) ? AppState.notificationEmails.slice() : [],
+            modules,
+            updatedAt: '',
+            updatedBy: ''
+        };
+    },
+
+    mergeWithDefaults(raw) {
+        const defaults = this.getDefaultSettings();
+        const src = raw && typeof raw === 'object' ? raw : {};
+        const merged = {
+            globalEnabled: src.globalEnabled === true,
+            defaultRecipients: Array.isArray(src.defaultRecipients) ? src.defaultRecipients.slice() : defaults.defaultRecipients.slice(),
+            modules: {},
+            updatedAt: String(src.updatedAt || ''),
+            updatedBy: String(src.updatedBy || '')
+        };
+        Object.keys(defaults.modules).forEach((key) => {
+            const d = defaults.modules[key];
+            const s = (src.modules && src.modules[key]) ? src.modules[key] : {};
+            merged.modules[key] = {
+                labelAr: d.labelAr,
+                group: d.group,
+                enabled: s.enabled === false ? false : (s.enabled === true ? true : d.enabled),
+                manualSend: s.manualSend === false ? false : (s.manualSend === true ? true : d.manualSend),
+                autoSend: s.autoSend === false ? false : (s.autoSend === true ? true : d.autoSend),
+                autoEvents: Array.isArray(s.autoEvents) ? s.autoEvents : [],
+                recipients: Array.isArray(s.recipients) ? s.recipients.slice() : []
+            };
+        });
+        return merged;
+    },
+
     async loadSettings(force) {
         const now = Date.now();
         if (!force && this._settings && (now - this._cacheAt) < 60000) {
@@ -23,19 +117,22 @@ const EmailDispatch = {
         this._loadingPromise = (async () => {
             try {
                 if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendToAppsScript) {
-                    this._settings = this._fallbackSettings();
+                    this._settings = this.getDefaultSettings();
                     this._cacheAt = Date.now();
                     return this._settings;
                 }
-                const result = await GoogleIntegration.sendToAppsScript('getEmailSettings', {});
+                const result = await GoogleIntegration.sendToAppsScript('getEmailSettings', {
+                    __timeoutMs: 25000,
+                    force: !!force
+                });
                 if (result && result.success && result.data) {
-                    this._settings = result.data;
+                    this._settings = this.mergeWithDefaults(result.data);
                 } else {
-                    this._settings = this._fallbackSettings();
+                    this._settings = this.getCachedSettings() || this.getDefaultSettings();
                 }
             } catch (e) {
                 console.warn('EmailDispatch.loadSettings', e);
-                this._settings = this._fallbackSettings();
+                this._settings = this.getCachedSettings() || this.getDefaultSettings();
             }
             this._cacheAt = Date.now();
             return this._settings;
@@ -48,11 +145,7 @@ const EmailDispatch = {
     },
 
     _fallbackSettings() {
-        return {
-            globalEnabled: false,
-            defaultRecipients: Array.isArray(AppState?.notificationEmails) ? AppState.notificationEmails.slice() : [],
-            modules: {}
-        };
+        return this.getDefaultSettings();
     },
 
     getCachedSettings() {

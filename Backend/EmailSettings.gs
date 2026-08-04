@@ -151,9 +151,50 @@ function initEmailSettingsTable_(spreadsheetId) {
     return { success: true, sheet: sheet };
 }
 
+var EMAIL_SETTINGS_CACHE_KEY_ = 'email_settings_bundle_v1';
+var EMAIL_SETTINGS_CACHE_SEC_ = 180;
+
+function getEmailSettingsBundleCache_() {
+    try {
+        var raw = CacheService.getScriptCache().get(EMAIL_SETTINGS_CACHE_KEY_);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch (e) {
+        return null;
+    }
+}
+
+function putEmailSettingsBundleCache_(bundle) {
+    try {
+        CacheService.getScriptCache().put(
+            EMAIL_SETTINGS_CACHE_KEY_,
+            JSON.stringify(bundle),
+            EMAIL_SETTINGS_CACHE_SEC_
+        );
+    } catch (e) {
+        // تجاهل فشل الكاش
+    }
+}
+
+function clearEmailSettingsBundleCache_() {
+    try {
+        CacheService.getScriptCache().remove(EMAIL_SETTINGS_CACHE_KEY_);
+    } catch (e) {
+        // تجاهل
+    }
+}
+
+/**
+ * قراءة خام بدون إعادة تهيئة الهيدر في كل طلب (أسرع).
+ */
 function readEmailSettingsRaw_(spreadsheetId) {
     var finalId = spreadsheetId || getSpreadsheetId();
-    initEmailSettingsTable_(finalId);
+    if (!finalId) return null;
+    var spreadsheet = SpreadsheetApp.openById(finalId);
+    var sheet = spreadsheet.getSheetByName(EMAIL_SETTINGS_SHEET);
+    if (!sheet) {
+        return null;
+    }
     var rows = readFromSheet(EMAIL_SETTINGS_SHEET, finalId, true);
     if (!rows || !rows.length) return null;
     var row = rows[0] || {};
@@ -170,18 +211,35 @@ function readEmailSettingsRaw_(spreadsheetId) {
     return null;
 }
 
+function loadEmailSettingsBundle_(forceRefresh) {
+    if (!forceRefresh) {
+        var cached = getEmailSettingsBundleCache_();
+        if (cached && cached.data) return cached;
+    }
+    var spreadsheetId = getSpreadsheetId();
+    if (!spreadsheetId) {
+        return { data: getDefaultEmailSettings_(), persisted: false };
+    }
+    var raw = null;
+    try {
+        raw = readEmailSettingsRaw_(spreadsheetId);
+    } catch (eRead) {
+        raw = null;
+    }
+    var data = mergeEmailSettingsWithDefaults_(raw);
+    var bundle = { data: data, persisted: !!raw };
+    putEmailSettingsBundleCache_(bundle);
+    return bundle;
+}
+
 /**
  * قراءة إعدادات البريد (أي مستخدم مسجّل).
  */
 function getEmailSettings(payload) {
     try {
-        var spreadsheetId = getSpreadsheetId();
-        if (!spreadsheetId) {
-            return { success: true, data: getDefaultEmailSettings_(), message: 'افتراضي — لا جدول' };
-        }
-        var raw = readEmailSettingsRaw_(spreadsheetId);
-        var data = mergeEmailSettingsWithDefaults_(raw);
-        return { success: true, data: data };
+        var force = !!(payload && payload.force);
+        var bundle = loadEmailSettingsBundle_(force);
+        return { success: true, data: bundle.data, cached: !force && !!getEmailSettingsBundleCache_() };
     } catch (e) {
         Logger.log('getEmailSettings: ' + e.toString());
         return { success: false, message: String(e), data: getDefaultEmailSettings_() };
@@ -219,6 +277,8 @@ function saveEmailSettings(payload) {
         if (saveResult && saveResult.success === false) {
             return saveResult;
         }
+        clearEmailSettingsBundleCache_();
+        putEmailSettingsBundleCache_({ data: merged, persisted: true });
         return { success: true, message: 'تم حفظ إعدادات البريد', data: merged };
     } catch (e) {
         Logger.log('saveEmailSettings: ' + e.toString());
@@ -233,16 +293,10 @@ function saveEmailSettings(payload) {
  */
 function isEmailModuleAllowed_(moduleKey, mode) {
     try {
-        var spreadsheetId = getSpreadsheetId();
-        var raw = null;
-        try {
-            raw = spreadsheetId ? readEmailSettingsRaw_(spreadsheetId) : null;
-        } catch (eRead) {
-            raw = null;
-        }
-        var cfg = mergeEmailSettingsWithDefaults_(raw);
+        var bundle = loadEmailSettingsBundle_(false);
+        var cfg = bundle.data || getDefaultEmailSettings_();
         // لم يحفظ المدير إعدادات بعد → لا نحظر المسارات التلقائية القديمة
-        if (!raw && mode === 'auto') {
+        if (!bundle.persisted && mode === 'auto') {
             return { allowed: true, settings: cfg, module: (cfg.modules && cfg.modules[moduleKey]) || null, legacy: true };
         }
         if (!cfg.globalEnabled) return { allowed: false, reason: 'نظام البريد متوقف من المدير', settings: cfg };

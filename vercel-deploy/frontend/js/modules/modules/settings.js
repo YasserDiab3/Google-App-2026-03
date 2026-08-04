@@ -1855,6 +1855,9 @@ const Settings = {
                 if (targetTab === 'help-content' && this.isCurrentUserAdmin()) {
                     Settings.bindHelpContentSettingsEvents();
                 }
+                if (targetTab === 'notifications' && this.isCurrentUserAdmin()) {
+                    this.ensureEmailSettingsLoaded(false);
+                }
             });
         });
 
@@ -3069,10 +3072,14 @@ const Settings = {
                 Permissions.bindFormSettingsEvents();
             }
 
-            // إعدادات البريد (مدير النظام)
+            // إعدادات البريد (مدير النظام) — ربط أحداث فقط؛ التحميل عند فتح التبويب
             if (this.isCurrentUserAdmin()) {
+                this._emailSettingsUiReady = false;
                 this.bindEmailSettingsEvents();
-                this.loadEmailSettingsUI();
+                const notificationsTab = document.getElementById('tab-notifications');
+                if (notificationsTab && notificationsTab.classList.contains('active')) {
+                    this.ensureEmailSettingsLoaded(false);
+                }
             }
 
             this.bindViolationTypesEvents();
@@ -3081,33 +3088,73 @@ const Settings = {
         }, 100);
     },
 
-    async loadEmailSettingsUI() {
+    ensureEmailSettingsLoaded(force) {
+        if (!this.isCurrentUserAdmin()) return null;
+        if (!document.getElementById('email-settings-modules-list')) return null;
+        if (this._emailSettingsLoadingPromise && !force) {
+            return this._emailSettingsLoadingPromise;
+        }
+        this._emailSettingsLoadingPromise = this.loadEmailSettingsUI({ force: !!force })
+            .catch((e) => console.error(e))
+            .finally(() => {
+                this._emailSettingsLoadingPromise = null;
+            });
+        return this._emailSettingsLoadingPromise;
+    },
+
+    applyEmailSettingsDraftToUI(data) {
+        this._emailSettingsDraft = data || (typeof EmailDispatch !== 'undefined'
+            ? EmailDispatch.getDefaultSettings()
+            : { globalEnabled: false, defaultRecipients: [], modules: {} });
+        const globalEl = document.getElementById('email-settings-global-enabled');
+        const recipientsEl = document.getElementById('email-settings-default-recipients');
+        if (globalEl) globalEl.checked = !!this._emailSettingsDraft.globalEnabled;
+        if (recipientsEl) recipientsEl.value = (this._emailSettingsDraft.defaultRecipients || []).join(', ');
+        this.renderEmailDefaultChips();
+        this.renderEmailGroupFilters();
+        this.updateEmailSettingsStatusBanner();
+        this.renderEmailModulesList(document.getElementById('email-settings-module-filter')?.value || '');
+    },
+
+    async loadEmailSettingsUI(options) {
+        const opts = options || {};
+        const force = !!opts.force;
         const listEl = document.getElementById('email-settings-modules-list');
         if (!listEl) return;
-        listEl.innerHTML = '<p class="email-settings-loading"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل إعدادات البريد...</p>';
         this._emailSettingsGroupFilter = this._emailSettingsGroupFilter || 'all';
-        this._emailSettingsDirty = false;
+
+        // رسم فوري من الكاش/الافتراضي — لا ننتظر الشبكة
+        const instant = (typeof EmailDispatch !== 'undefined'
+            ? (EmailDispatch.getCachedSettings() || EmailDispatch.getDefaultSettings())
+            : { globalEnabled: false, defaultRecipients: [], modules: {} });
+        this._emailSettingsHydrating = true;
+        this.applyEmailSettingsDraftToUI(instant);
+        this._emailSettingsHydrating = false;
+        this.setEmailSettingsDirty(false);
+
+        const summaryEl = document.getElementById('email-settings-modules-summary');
+        const prevSummary = summaryEl ? summaryEl.textContent : '';
+        if (summaryEl) summaryEl.textContent = (prevSummary || '—') + ' · جاري المزامنة…';
+
         try {
-            let data = null;
+            let data = instant;
             if (typeof EmailDispatch !== 'undefined') {
-                data = await EmailDispatch.loadSettings(true);
+                data = await EmailDispatch.loadSettings(force);
             } else if (typeof GoogleIntegration !== 'undefined') {
-                const res = await GoogleIntegration.sendToAppsScript('getEmailSettings', {});
-                data = res && res.data ? res.data : null;
+                const res = await GoogleIntegration.sendToAppsScript('getEmailSettings', { __timeoutMs: 25000 });
+                data = res && res.data ? res.data : instant;
             }
-            this._emailSettingsDraft = data || { globalEnabled: false, defaultRecipients: [], modules: {} };
-            const globalEl = document.getElementById('email-settings-global-enabled');
-            const recipientsEl = document.getElementById('email-settings-default-recipients');
-            if (globalEl) globalEl.checked = !!this._emailSettingsDraft.globalEnabled;
-            if (recipientsEl) recipientsEl.value = (this._emailSettingsDraft.defaultRecipients || []).join(', ');
-            this.renderEmailDefaultChips();
-            this.renderEmailGroupFilters();
-            this.updateEmailSettingsStatusBanner();
-            this.renderEmailModulesList(document.getElementById('email-settings-module-filter')?.value || '');
+            if (!document.getElementById('email-settings-modules-list')) return;
+            this._emailSettingsHydrating = true;
+            this.applyEmailSettingsDraftToUI(data || instant);
+            this._emailSettingsHydrating = false;
             this.setEmailSettingsDirty(false);
+            this._emailSettingsUiReady = true;
         } catch (e) {
             console.error(e);
-            listEl.innerHTML = '<p class="email-settings-error">تعذّر تحميل إعدادات البريد</p>';
+            this._emailSettingsHydrating = false;
+            if (summaryEl) summaryEl.textContent = 'تعذّر المزامنة — عرض محلي مؤقت';
+            Notification?.warning?.('تعذّر تحديث إعدادات البريد من الخادم؛ العرض الحالي مؤقت.');
         }
     },
 
@@ -3133,6 +3180,7 @@ const Settings = {
     },
 
     setEmailSettingsDirty(dirty) {
+        if (this._emailSettingsHydrating && dirty) return;
         this._emailSettingsDirty = !!dirty;
         const hint = document.getElementById('email-settings-dirty-hint');
         const bar = document.getElementById('email-settings-sticky-bar');
@@ -3304,6 +3352,7 @@ const Settings = {
         saveBtn.dataset.emailBound = '1';
 
         const markDirty = () => {
+            if (this._emailSettingsHydrating) return;
             this.collectEmailSettingsFromUI();
             this.updateEmailSettingsStatusBanner();
             this.renderEmailDefaultChips();
@@ -3399,7 +3448,7 @@ const Settings = {
 
         const reloadBtn = document.getElementById('email-settings-reload-btn');
         if (reloadBtn) {
-            reloadBtn.addEventListener('click', () => this.loadEmailSettingsUI());
+            reloadBtn.addEventListener('click', () => this.ensureEmailSettingsLoaded(true));
         }
         const testBtn = document.getElementById('email-settings-test-btn');
         if (testBtn) {
