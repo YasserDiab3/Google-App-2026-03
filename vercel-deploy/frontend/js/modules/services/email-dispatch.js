@@ -195,7 +195,7 @@ const EmailDispatch = {
         const options = opts || {};
         const btnId = options.btnId || ('email-dispatch-btn-' + String(moduleKey).replace(/[^a-z0-9._-]/gi, '_'));
         // يظهر دائماً كحاوية؛ يُخفى عبر JS إن لم يُسمح
-        return `<button type="button" id="${btnId}" data-email-module="${String(moduleKey).replace(/"/g, '')}" class="btn-primary email-dispatch-send-btn" style="display:none; background: linear-gradient(135deg, #0369a1, #0284c7); padding: 10px 18px; border-radius: 10px;">
+        return `<button type="button" id="${btnId}" data-email-module="${String(moduleKey).replace(/"/g, '')}" class="btn-primary email-dispatch-send-btn" style="display:none;">
             <i class="fas fa-envelope ml-2"></i>إرسال بريد
         </button>`;
     },
@@ -407,50 +407,87 @@ const EmailDispatch = {
         const fields = options.fields || [];
         const subjectDefault = options.subject || (title + (options.recordId ? ' — ' + options.recordId : ''));
 
-        const fieldsPreview = fields.map((f) =>
-            `<tr><td style="padding:6px 8px;border:1px solid #e5e7eb;background:#f8fafc;font-weight:600;">${this._esc(f.label)}</td>` +
-            `<td style="padding:6px 8px;border:1px solid #e5e7eb;white-space:pre-wrap;">${this._esc(f.value)}</td></tr>`
-        ).join('');
+        const fieldsPreview = fields.length
+            ? fields.map((f) =>
+                `<div class="email-dispatch-field">
+                    <span class="email-dispatch-field-label">${this._esc(f.label)}</span>
+                    <span class="email-dispatch-field-value">${this._esc(f.value)}</span>
+                </div>`
+            ).join('')
+            : '<p class="email-dispatch-empty">لا حقول للعرض</p>';
+
+        const chipsHtml = recipients.length
+            ? recipients.map((email) => `<span class="email-dispatch-chip" dir="ltr">${this._esc(email)}</span>`).join('')
+            : '<span class="email-dispatch-chip email-dispatch-chip-muted">أضف مستلمين بالأسفل</span>';
 
         const modal = document.createElement('div');
         modal.id = 'email-dispatch-modal';
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay email-dispatch-overlay';
         modal.style.zIndex = '10050';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width:640px; width:95%;">
-                <div class="modal-header" style="background:linear-gradient(135deg,#0c4a6e,#0369a1); color:#fff;">
-                    <h3 class="modal-title" style="color:#fff;"><i class="fas fa-envelope ml-2"></i>إرسال بريد — ${this._esc(label)}</h3>
-                    <button type="button" class="modal-close" style="color:#fff;" data-close="1">&times;</button>
-                </div>
-                <div class="modal-body space-y-4">
+            <div class="modal-content email-dispatch-panel">
+                <div class="email-dispatch-header">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">الموضوع</label>
+                        <p class="email-dispatch-eyebrow">إرسال فوري</p>
+                        <h3 class="email-dispatch-title"><i class="fas fa-paper-plane"></i> ${this._esc(label)}</h3>
+                    </div>
+                    <button type="button" class="email-dispatch-close" data-close="1" aria-label="إغلاق">&times;</button>
+                </div>
+                <div class="email-dispatch-body">
+                    <div class="email-dispatch-block">
+                        <label for="email-dispatch-subject">الموضوع</label>
                         <input type="text" id="email-dispatch-subject" class="form-input w-full" value="${this._escAttr(subjectDefault)}">
                     </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">المستلمون (افصل بفاصلة)</label>
-                        <textarea id="email-dispatch-to" class="form-input w-full" rows="2">${this._esc(recipients.join(', '))}</textarea>
+                    <div class="email-dispatch-block">
+                        <label for="email-dispatch-to">المستلمون</label>
+                        <div class="email-dispatch-chips">${chipsHtml}</div>
+                        <textarea id="email-dispatch-to" class="form-input w-full" rows="2" placeholder="email@company.com, ...">${this._esc(recipients.join(', '))}</textarea>
                     </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">معاينة المحتوى</label>
-                        <div style="max-height:220px; overflow:auto; border:1px solid #e5e7eb; border-radius:8px; padding:8px;">
-                            <table style="width:100%; border-collapse:collapse; font-size:13px;">${fieldsPreview || '<tr><td class="text-gray-500 p-2">لا حقول للعرض</td></tr>'}</table>
-                        </div>
+                    <div class="email-dispatch-block">
+                        <label>معاينة المحتوى</label>
+                        <div class="email-dispatch-preview">${fieldsPreview}</div>
                     </div>
                 </div>
-                <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
+                <div class="email-dispatch-footer">
                     <button type="button" class="btn-secondary" data-close="1">إلغاء</button>
-                    <button type="button" class="btn-primary" id="email-dispatch-confirm" style="background:linear-gradient(135deg,#0369a1,#0284c7);">
+                    <button type="button" class="btn-primary email-dispatch-confirm-btn" id="email-dispatch-confirm">
                         <i class="fas fa-paper-plane ml-2"></i>إرسال الآن
                     </button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
+        requestAnimationFrame(() => modal.classList.add('is-open'));
+
+        const closeModal = () => {
+            modal.classList.remove('is-open');
+            setTimeout(() => modal.remove(), 160);
+        };
         modal.querySelectorAll('[data-close]').forEach((el) => {
-            el.addEventListener('click', () => modal.remove());
+            el.addEventListener('click', closeModal);
         });
-        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        const onKey = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', onKey);
+            }
+        };
+        document.addEventListener('keydown', onKey);
+
+        const toInput = modal.querySelector('#email-dispatch-to');
+        const chipsEl = modal.querySelector('.email-dispatch-chips');
+        const refreshChips = () => {
+            const list = String(toInput?.value || '')
+                .split(/[,;\s]+/)
+                .map((s) => s.trim().toLowerCase())
+                .filter((s) => s.includes('@'));
+            if (!chipsEl) return;
+            chipsEl.innerHTML = list.length
+                ? list.map((email) => `<span class="email-dispatch-chip" dir="ltr">${this._esc(email)}</span>`).join('')
+                : '<span class="email-dispatch-chip email-dispatch-chip-muted">أضف مستلمين بالأسفل</span>';
+        };
+        if (toInput) toInput.addEventListener('input', refreshChips);
 
         const confirmBtn = modal.querySelector('#email-dispatch-confirm');
         confirmBtn.addEventListener('click', async () => {
@@ -477,7 +514,8 @@ const EmailDispatch = {
                 });
                 if (result && result.success) {
                     Notification.success(result.message || 'تم الإرسال');
-                    modal.remove();
+                    document.removeEventListener('keydown', onKey);
+                    closeModal();
                 } else {
                     Notification.error((result && result.message) || 'فشل الإرسال');
                     confirmBtn.disabled = false;
