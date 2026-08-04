@@ -1,15 +1,15 @@
 {
-  "version": "1.0.829",
+  "version": "1.0.831",
   "highlights": {
     "ar": [
-      "مركز إشعارات البريد بهوية أوضح: شريط إحصائيات، شرائح مستلمين قابلة للحذف، وفلاتر حالة سريعة.",
-      "أزرار جماعية لتفعيل/إيقاف يدوي وتلقائي للأنواع الظاهرة بدون تعقيد.",
-      "مودال إرسال أسرع وأكثر تفاعلًا مع معاينة حقول وشرائح مستلمين حية."
+      "تحميل العيادة أصح: لا ختم مزامنة خاطئ يمنع جلب سجل التردد بعد تسجيل الدخول.",
+      "أولوية أعلى لجلب الزيارات في طابور الطلبات وتخطي realtime عند الكاش الحديث.",
+      "تبويب الحضور أسرع بدون تأخير ثابت، وإحصاءات ثقيلة في وضع التصحيح فقط."
     ],
     "en": [
-      "Clearer email notifications hub: live stats, removable recipient chips, and status filters.",
-      "Bulk enable/disable manual and auto send for visible content types.",
-      "Faster send modal with field preview and live recipient chips."
+      "Clinic load fix: login preload no longer stamps a false sync that blocks visit fetch.",
+      "Higher queue priority for clinic visits; realtime skips when cache is fresh.",
+      "Attendance tab loads faster; heavy post-fetch stats run in debug mode only."
     ]
   }
 }

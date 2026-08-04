@@ -806,8 +806,14 @@ const GoogleIntegration = {
                 timestamp: Date.now()
             };
 
-            // High priority for Auth RPCs (login, verifyMfaLogin) to jump to front of queue
-            const isHighPriority = !!(data && typeof data === 'object' && (data.__highPriority === true || action === 'login' || action === 'verifyMfaLogin' || action === 'confirmMfaEnrollment'));
+            // أولوية عالية: مصادقة + سجل التردد الثقيل + علم __highPriority صريح
+            const isHighPriority = !!(
+                action === 'login'
+                || action === 'verifyMfaLogin'
+                || action === 'confirmMfaEnrollment'
+                || action === 'getAllClinicVisits'
+                || (data && typeof data === 'object' && data.__highPriority === true)
+            );
             if (isHighPriority) {
                 this._requestQueue.unshift(request);
             } else {

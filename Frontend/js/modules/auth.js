@@ -2262,7 +2262,8 @@ window.Auth = {
                 'nearmiss': ['NearMiss'],
                 'ptw': ['PTW', 'PTWRegistry'],
                 'training': ['Training'],
-                'clinic': ['ClinicVisits', 'ClinicContractorVisits', 'Medications', 'SickLeave', 'Injuries', 'ClinicContractorInjuries', 'ClinicInventory'],
+                // سجل التردد عبر getAllClinicVisits فقط — لا preload خام لـ ClinicVisits (يمنع ختم clinic_last_sync الخاطئ)
+                'clinic': ['Medications', 'SickLeave', 'Injuries', 'ClinicContractorInjuries', 'ClinicInventory'],
                 'fire-equipment': ['FireEquipment', 'FireEquipmentAssets', 'FireEquipmentInspections'],
                 'ppe': ['PPE'],
                 'violations': ['Violations', 'ViolationTypes', 'Blacklist_Register'],
@@ -2286,8 +2287,9 @@ window.Auth = {
             };
 
             // خريطة مفاتيح المزامنة في localStorage لكل موديول (لمنع إعادة التحميل عند فتح الموديول)
+            // clinic_sheets_preload_sync ≠ clinic_last_sync (الأخير لـ getAllClinicVisits فقط)
             const moduleSyncKeyMap = {
-                'clinic': 'clinic_last_sync',
+                'clinic': 'clinic_sheets_preload_sync',
                 'violations': 'violations_last_sync',
                 'periodic-inspections': 'periodic_inspections_last_sync',
                 'training': 'training_last_sync',

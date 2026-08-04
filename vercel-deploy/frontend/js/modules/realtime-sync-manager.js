@@ -807,6 +807,14 @@ const RealtimeSyncManager = {
                     if (!silent) realtimeSyncLog('⏳ clinicVisits: جلب عيادة جارٍ — تخطي realtime');
                     return false;
                 }
+                // احترام TTL/كاش العيادة — لا تعِد RPC كاملاً إن الجلب غير مطلوب
+                if (typeof Clinic !== 'undefined'
+                    && typeof Clinic.shouldFetchClinicVisitsFromBackend === 'function'
+                    && !Clinic.shouldFetchClinicVisitsFromBackend({ forceRefresh: false })) {
+                    if (!silent) realtimeSyncLog('⚡ clinicVisits: كاش حديث — تخطي realtime');
+                    this.state.lastSyncTime[module] = now;
+                    return true;
+                }
 
                 const result = await GoogleIntegration.sendRequest({
                     action: 'getAllClinicVisits',
@@ -814,7 +822,8 @@ const RealtimeSyncManager = {
                         filters: (typeof Clinic !== 'undefined' && typeof Clinic.getClinicVisitsFetchFilters === 'function')
                             ? Clinic.getClinicVisitsFetchFilters()
                             : { startDate: undefined, limit: 8000 },
-                        __timeoutMs: 120000
+                        __timeoutMs: 120000,
+                        __highPriority: true
                     }
                 });
 

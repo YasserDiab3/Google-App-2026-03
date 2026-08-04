@@ -9013,7 +9013,8 @@ const Clinic = {
                     action: 'getAllClinicVisits',
                     data: {
                         filters: this.getClinicVisitsFetchFilters(),
-                        __timeoutMs: 120000
+                        __timeoutMs: 120000,
+                        __highPriority: true
                     }
                 }),
                 120000,
@@ -9298,29 +9299,27 @@ const Clinic = {
                 localStorage.setItem('clinic_last_sync', Date.now().toString());
                 this._visitsBackendFetchOk = true;
                 
-                // ✅ إحصاءات البيانات المحملة (للتأكد من عدم فقدان البيانات)
-                const visitsWithMeds = AppState.appData.clinicVisits.filter(v => {
-                    const meds = this.normalizeVisitMedications(v.medications);
-                    if (meds && meds.length > 0) return true;
-                    if (v.medicationsDispensed) {
-                        const medsFromText = this.normalizeVisitMedications(v.medicationsDispensed);
-                        return medsFromText && medsFromText.length > 0;
-                    }
-                    return false;
-                });
-                
-                const mergedVisits = AppState.appData.clinicVisits;
-                const totalMedsCount = mergedVisits.reduce((sum, v) => {
-                    const meds = this.normalizeVisitMedications(v.medications);
-                    if (meds && meds.length > 0) return sum + meds.length;
-                    if (v.medicationsDispensed) {
-                        const medsFromText = this.normalizeVisitMedications(v.medicationsDispensed);
-                        if (medsFromText && medsFromText.length > 0) return sum + medsFromText.length;
-                    }
-                    return sum;
-                }, 0);
-                
+                // إحصاءات ثقيلة — debug فقط (لا تُبطئ المسار الإنتاجي بعد كل جلب)
                 if (AppState.debugMode) {
+                    const mergedVisits = AppState.appData.clinicVisits;
+                    const visitsWithMeds = mergedVisits.filter(v => {
+                        const meds = this.normalizeVisitMedications(v.medications);
+                        if (meds && meds.length > 0) return true;
+                        if (v.medicationsDispensed) {
+                            const medsFromText = this.normalizeVisitMedications(v.medicationsDispensed);
+                            return medsFromText && medsFromText.length > 0;
+                        }
+                        return false;
+                    });
+                    const totalMedsCount = mergedVisits.reduce((sum, v) => {
+                        const meds = this.normalizeVisitMedications(v.medications);
+                        if (meds && meds.length > 0) return sum + meds.length;
+                        if (v.medicationsDispensed) {
+                            const medsFromText = this.normalizeVisitMedications(v.medicationsDispensed);
+                            if (medsFromText && medsFromText.length > 0) return sum + medsFromText.length;
+                        }
+                        return sum;
+                    }, 0);
                     Utils.safeLog(`✅ تم تحميل ${normalizedVisits.length} زيارة من الخادم؛ بعد الدمج مع المحلي: ${mergedVisits.length}`);
                     Utils.safeLog(`   - ${mergedVisits.filter(v => v.personType === 'employee' || !v.personType).length} موظف`);
                     Utils.safeLog(`   - ${mergedVisits.filter(v => v.personType === 'contractor').length} مقاول`);
@@ -16589,7 +16588,13 @@ const Clinic = {
         if (this._clinicVisitsLoadPromise) {
             try { await this._clinicVisitsLoadPromise; } catch (_e) { /* ignore */ }
         }
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // فاصل قصير فقط إن طابور GAS مشغول — لا تأخير ثابت 800ms
+        const queueBusy = typeof GoogleIntegration !== 'undefined'
+            && ((GoogleIntegration._requestQueue?.length || 0) > 0
+                || (GoogleIntegration._queueWorkers || 0) > 0);
+        if (queueBusy) {
+            await new Promise(resolve => setTimeout(resolve, 120));
+        }
 
         const f = this.state.filters?.attendance || {};
         const range = this._resolveAttendanceFilterDates(f);
