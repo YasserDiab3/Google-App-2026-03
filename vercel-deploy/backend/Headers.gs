@@ -130,7 +130,9 @@ function getDefaultHeaders(sheetName) {
         // ✅ ترتيب مطابق لواجهة جدول الموظفين في الواجهة الأمامية + إضافة age (محسوب)
         // ملاحظة: id موجود للحفاظ على التوافق لكنه يساوي employeeNumber (حسب منطق النظام)
         // ✅ إضافة: status (active/inactive) و resignationDate لإدارة استقالات الموظفين
-        'Employees': ['employeeNumber', 'name', 'department', 'job', 'nationalId', 'birthDate', 'age', 'hireDate', 'gender', 'phone', 'insuranceNumber', 'sapId', 'branch', 'location', 'position', 'email', 'photo', 'status', 'resignationDate', 'createdAt', 'updatedAt', 'id'],
+        // ترتيب الذيل يطابق أوراق الإنتاج الشائعة (status/resignationDate بعد id) —
+        // اختلاف الترتيب مع الكتابة الموضعية في append كان يزحلق القيم بعد photo.
+        'Employees': ['employeeNumber', 'name', 'department', 'job', 'nationalId', 'birthDate', 'age', 'hireDate', 'gender', 'phone', 'insuranceNumber', 'sapId', 'branch', 'location', 'position', 'email', 'photo', 'createdAt', 'updatedAt', 'id', 'status', 'resignationDate'],
         'BehaviorMonitoring': ['id', 'isoCode', 'employeeId', 'employeeCode', 'employeeNumber', 'employeeName', 'department', 'job', 'factory', 'factoryId', 'factoryName', 'subLocation', 'subLocationId', 'subLocationName', 'behaviorType', 'date', 'rating', 'correctiveAction', 'correctiveActionDetails', 'description', 'photo', 'createdAt', 'updatedAt'],
         'ContractorBehaviorMonitoring': ['id', 'isoCode', 'contractorId', 'contractorName', 'contractorWorker', 'department', 'job', 'factory', 'factoryId', 'factoryName', 'subLocation', 'subLocationId', 'subLocationName', 'behaviorType', 'date', 'rating', 'correctiveAction', 'correctiveActionDetails', 'description', 'photo', 'createdAt', 'updatedAt'],
         'ChemicalSafety': ['id', 'isoCode', 'chemicalName', 'trainer', 'date', 'status', 'description', 'createdAt', 'updatedAt'],

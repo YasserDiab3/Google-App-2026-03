@@ -1,15 +1,15 @@
 {
-  "version": "1.0.837",
+  "version": "1.0.839",
   "highlights": {
     "ar": [
-      "استيراد الموظفين لم يعد يعلق على «مزامنة السحابة» برفع الجدول كاملاً.",
-      "الحفظ المحلي فوري ثم مزامنة الجدد فقط على دفعات بالخلفية.",
-      "إشعار واضح عند نجاح/تعثر مزامنة السحابة دون إعادة فتح نموذج فارغ."
+      "نموذج استيراد Excel للموظفين يفتح فوراً دون انتظار جلب القاعدة.",
+      "إصلاح انزلاق أعمدة الموظفين بعد الاستيراد (status/id/التواريخ).",
+      "تقرير وتنظيف آمن لمكررات الموظفين مع نسخة احتياطية ورقم سري."
     ],
     "en": [
-      "Employee import no longer hangs on full-sheet cloud sync.",
-      "Local save is instant; only new rows sync in background chunks.",
-      "Clear success/warning if cloud sync finishes or fails."
+      "Employee Excel import modal opens instantly without waiting for the roster fetch.",
+      "Fixed Employees sheet column drift after import (status/id/dates).",
+      "Safe duplicate report and cleanup with in-file backup and PIN."
     ]
   }
 }

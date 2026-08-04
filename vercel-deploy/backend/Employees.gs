@@ -156,6 +156,9 @@ function getAllEmployees(filters = {}) {
     try {
         const sheetName = 'Employees';
 
+        // إصلاح لمرة واحدة قبل الكاش — صفوف الاستيراد المنزلقة
+        try { maybeRepairEmployeesColumnDriftOnce_(); } catch (_driftRepairErr) {}
+
         // ✅ Cache: تقليل قراءة الشيت المتكررة (خصوصاً عند فتح الموديول/التقارير)
         // - نعتمد على نسخة employees_cache_v لكسر الكاش بعد أي تعديل
         // - TTL قصير لتوازن الأداء مع حداثة البيانات
@@ -346,6 +349,520 @@ function deleteAllEmployees(payload) {
     } catch (error) {
         Logger.log('Error in deleteAllEmployees: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء حذف جميع الموظفين: ' + error.toString() };
+    }
+}
+
+/**
+ * إصلاح صفوف Employees التي انزلقت أعمدتها بعد append بترتيب رؤوس افتراضي.
+ * يعمل على القيم الخام في الورقة (قبل تطبيع القراءة).
+ */
+function repairEmployeesColumnDrift(payload) {
+    try {
+        const spreadsheetId = (payload && payload.spreadsheetId) || getSpreadsheetId();
+        if (!spreadsheetId) {
+            return { success: false, message: 'معرف الجدول غير محدد' };
+        }
+        const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+        const sheet = spreadsheet.getSheetByName('Employees');
+        if (!sheet) {
+            return { success: false, message: 'ورقة Employees غير موجودة' };
+        }
+        const dataRange = sheet.getDataRange();
+        if (!dataRange || dataRange.getNumRows() <= 1) {
+            return { success: true, message: 'لا توجد صفوف لإصلاحها', repairedCount: 0 };
+        }
+        const values = dataRange.getValues();
+        const headers = values[0].map(function(h) {
+            return (h === null || h === undefined) ? '' : String(h).trim();
+        });
+        let repairedCount = 0;
+        for (let r = 1; r < values.length; r++) {
+            const obj = {};
+            for (let c = 0; c < headers.length; c++) {
+                const h = headers[c];
+                if (!h) continue;
+                obj[h] = values[r][c];
+            }
+            if (!isEmployeesRowColumnDrifted_(obj)) continue;
+            const fixed = normalizeEmployeesRowColumnDrift_(obj);
+            const rowVals = headers.map(function(h) {
+                if (!h) return '';
+                return toSheetCellValue_(h, fixed[h], 'Employees');
+            });
+            sheet.getRange(r + 1, 1, 1, rowVals.length).setValues([rowVals]);
+            repairedCount++;
+        }
+        try { invalidateHseSheetCaches('Employees'); } catch (_e) {}
+        try { _bumpEmployeesCacheVersion_(); } catch (_e2) {}
+        SpreadsheetApp.flush();
+        return {
+            success: true,
+            message: repairedCount > 0
+                ? ('تم إصلاح ' + repairedCount + ' صف موظف منزلق الأعمدة')
+                : 'لا توجد صفوف منزلقة تحتاج إصلاحاً',
+            repairedCount: repairedCount
+        };
+    } catch (error) {
+        Logger.log('Error in repairEmployeesColumnDrift: ' + error.toString());
+        return { success: false, message: 'فشل إصلاح أعمدة الموظفين: ' + error.toString() };
+    }
+}
+
+/**
+ * تشغيل إصلاح الانزلاق مرة واحدة بعد نشر الإصلاح (ScriptProperties).
+ */
+function maybeRepairEmployeesColumnDriftOnce_() {
+    try {
+        const props = PropertiesService.getScriptProperties();
+        const mark = 'employees_col_drift_repaired_v2';
+        if (props.getProperty(mark) === '1') {
+            return { success: true, skipped: true, repairedCount: 0 };
+        }
+        const result = repairEmployeesColumnDrift({});
+        props.setProperty(mark, '1');
+        return result;
+    } catch (e) {
+        Logger.log('maybeRepairEmployeesColumnDriftOnce_: ' + e.toString());
+        return { success: false, message: e.toString() };
+    }
+}
+
+/** تطبيع مفتاح تكرار موظف (رقم وظيفي / SAP / id) */
+function _normalizeEmployeeDupKey_(value) {
+    if (value === null || value === undefined) return '';
+    if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) {
+        return '';
+    }
+    var s = String(value).trim();
+    if (!s) return '';
+    if (s === 'active' || s === 'inactive') return '';
+    if (typeof looksLikeEmployeeSheetDateValue_ === 'function' && looksLikeEmployeeSheetDateValue_(value)) {
+        return '';
+    }
+    // أرقام شائعة بصيغة 112819 أو 112819.0 من Sheets
+    if (/^\d+(\.0+)?$/.test(s)) {
+        s = String(parseInt(s, 10));
+    }
+    return s.toLowerCase();
+}
+
+/** درجة اكتمال صف لاختيار الفائز عند التكرار (أعلى = أفضل) */
+function _employeeDupRowScore_(obj) {
+    if (!obj || typeof obj !== 'object') return -1000;
+    var score = 0;
+    var fields = [
+        'name', 'department', 'job', 'position', 'hireDate', 'birthDate',
+        'branch', 'location', 'gender', 'email', 'phone', 'nationalId',
+        'insuranceNumber', 'photo', 'sapId'
+    ];
+    for (var i = 0; i < fields.length; i++) {
+        var v = obj[fields[i]];
+        if (v !== null && v !== undefined && String(v).trim() !== '') score += 2;
+    }
+    var st = String(obj.status || '').trim().toLowerCase();
+    if (st === 'active' || st === 'inactive' || st === 'نشط' || st === 'غير نشط') score += 6;
+    if (typeof looksLikeEmployeeSheetDateValue_ === 'function' && looksLikeEmployeeSheetDateValue_(obj.status)) {
+        score -= 12;
+    }
+    if (typeof isEmployeesRowColumnDrifted_ === 'function' && isEmployeesRowColumnDrifted_(obj)) {
+        score -= 10;
+    }
+    var emp = String(obj.employeeNumber || '').trim();
+    var id = String(obj.id || '').trim();
+    if (emp && id && emp === id) score += 6;
+    if (typeof looksLikeEmployeeSheetDateValue_ === 'function' && looksLikeEmployeeSheetDateValue_(obj.id)) {
+        score -= 12;
+    }
+    if (!String(obj.name || '').trim()) score -= 8;
+    if (!_normalizeEmployeeDupKey_(obj.employeeNumber) && !_normalizeEmployeeDupKey_(obj.sapId)) {
+        score -= 20;
+    }
+    return score;
+}
+
+/**
+ * قراءة صفوف Employees الخام + تطبيع انزلاق للتحليل فقط.
+ * لا يكتب في الورقة.
+ */
+function _loadEmployeesSheetRowsForDupAnalysis_(spreadsheetId) {
+    var ss = SpreadsheetApp.openById(spreadsheetId);
+    var sheet = ss.getSheetByName('Employees');
+    if (!sheet) {
+        return { ok: false, message: 'ورقة Employees غير موجودة' };
+    }
+    var dataRange = sheet.getDataRange();
+    if (!dataRange || dataRange.getNumRows() <= 1) {
+        return {
+            ok: true,
+            spreadsheet: ss,
+            sheet: sheet,
+            headers: [],
+            rows: [],
+            totalRows: 0
+        };
+    }
+    var values = dataRange.getValues();
+    var headers = values[0].map(function(h) {
+        return (h === null || h === undefined) ? '' : String(h).trim();
+    });
+    var rows = [];
+    for (var r = 1; r < values.length; r++) {
+        var raw = {};
+        for (var c = 0; c < headers.length; c++) {
+            var h = headers[c];
+            if (!h) continue;
+            raw[h] = values[r][c];
+        }
+        var normalized = (typeof normalizeEmployeesRowColumnDrift_ === 'function')
+            ? normalizeEmployeesRowColumnDrift_(raw)
+            : raw;
+        rows.push({
+            sheetRow: r + 1,
+            raw: raw,
+            data: normalized
+        });
+    }
+    return {
+        ok: true,
+        spreadsheet: ss,
+        sheet: sheet,
+        headers: headers,
+        rows: rows,
+        totalRows: rows.length
+    };
+}
+
+/**
+ * تحليل مكررات Employees — قراءة فقط.
+ * المفتاح الأساسي: employeeNumber ثم sapId للصفوف بدون رقم وظيفي.
+ */
+function _analyzeEmployeeDuplicates_(spreadsheetId) {
+    var loaded = _loadEmployeesSheetRowsForDupAnalysis_(spreadsheetId);
+    if (!loaded.ok) return loaded;
+
+    var byKey = {};
+    var orphans = [];
+    var driftedRows = [];
+    var emptyish = [];
+
+    for (var i = 0; i < loaded.rows.length; i++) {
+        var row = loaded.rows[i];
+        var d = row.data || {};
+        if (typeof isEmployeesRowColumnDrifted_ === 'function' && isEmployeesRowColumnDrifted_(row.raw || d)) {
+            driftedRows.push(row.sheetRow);
+        }
+        var empKey = _normalizeEmployeeDupKey_(d.employeeNumber);
+        var sapKey = _normalizeEmployeeDupKey_(d.sapId);
+        var idKey = _normalizeEmployeeDupKey_(d.id);
+        var name = String(d.name || '').trim();
+        var key = empKey || sapKey || idKey;
+        if (!key) {
+            orphans.push({
+                sheetRow: row.sheetRow,
+                name: name,
+                reason: 'no_key'
+            });
+            if (!name) {
+                emptyish.push(row.sheetRow);
+            }
+            continue;
+        }
+        if (!byKey[key]) byKey[key] = [];
+        byKey[key].push({
+            sheetRow: row.sheetRow,
+            key: key,
+            employeeNumber: String(d.employeeNumber || '').trim(),
+            sapId: String(d.sapId || '').trim(),
+            id: String(d.id || '').trim(),
+            name: name,
+            status: String(d.status || '').trim(),
+            score: _employeeDupRowScore_(d),
+            data: d
+        });
+    }
+
+    var duplicateGroups = [];
+    var rowsToDelete = [];
+    var keepRows = [];
+    var uniqueKeys = 0;
+
+    Object.keys(byKey).forEach(function(key) {
+        var group = byKey[key];
+        uniqueKeys++;
+        if (group.length === 1) {
+            keepRows.push(group[0].sheetRow);
+            return;
+        }
+        group.sort(function(a, b) {
+            if (b.score !== a.score) return b.score - a.score;
+            return b.sheetRow - a.sheetRow; // الأحدث في الورقة عند التعادل
+        });
+        var winner = group[0];
+        keepRows.push(winner.sheetRow);
+        var losers = group.slice(1);
+        for (var li = 0; li < losers.length; li++) {
+            rowsToDelete.push({
+                sheetRow: losers[li].sheetRow,
+                key: key,
+                name: losers[li].name,
+                reason: 'duplicate_of_row_' + winner.sheetRow,
+                winnerSheetRow: winner.sheetRow
+            });
+        }
+        duplicateGroups.push({
+            key: key,
+            count: group.length,
+            keepSheetRow: winner.sheetRow,
+            keepName: winner.name,
+            keepScore: winner.score,
+            deleteSheetRows: losers.map(function(x) { return x.sheetRow; })
+        });
+    });
+
+    // صفوف يتيمة بلا مفتاح وبلا اسم → مرشحة للحذف الآمن
+    for (var oi = 0; oi < orphans.length; oi++) {
+        if (!orphans[oi].name) {
+            rowsToDelete.push({
+                sheetRow: orphans[oi].sheetRow,
+                key: '',
+                name: '',
+                reason: 'empty_orphan',
+                winnerSheetRow: null
+            });
+        }
+    }
+
+    // إزالة تكرار صفوف الحذف إن وُجد
+    var deleteMap = {};
+    var uniqueDeletes = [];
+    for (var di = 0; di < rowsToDelete.length; di++) {
+        var sr = rowsToDelete[di].sheetRow;
+        if (deleteMap[sr]) continue;
+        deleteMap[sr] = true;
+        uniqueDeletes.push(rowsToDelete[di]);
+    }
+    uniqueDeletes.sort(function(a, b) { return b.sheetRow - a.sheetRow; });
+
+    return {
+        ok: true,
+        spreadsheet: loaded.spreadsheet,
+        sheet: loaded.sheet,
+        headers: loaded.headers,
+        totalRows: loaded.totalRows,
+        uniqueKeys: uniqueKeys,
+        duplicateGroupCount: duplicateGroups.length,
+        duplicateExtraRows: uniqueDeletes.filter(function(x) { return x.reason.indexOf('duplicate_') === 0; }).length,
+        orphanCount: orphans.length,
+        emptyOrphanCount: emptyish.length,
+        driftedCount: driftedRows.length,
+        rowsToDeleteCount: uniqueDeletes.length,
+        keepCount: loaded.totalRows - uniqueDeletes.length,
+        duplicateGroups: duplicateGroups,
+        rowsToDelete: uniqueDeletes,
+        orphanSample: orphans.slice(0, 20),
+        driftedSample: driftedRows.slice(0, 20)
+    };
+}
+
+/**
+ * تقرير مكررات موظفين — قراءة فقط، لا يوقف الإنتاج ولا يكتب.
+ * @param {object} payload - { sampleLimit?: number }
+ */
+function reportEmployeeDuplicates(payload) {
+    try {
+        var spreadsheetId = (payload && payload.spreadsheetId) || getSpreadsheetId();
+        if (!spreadsheetId) {
+            return { success: false, message: 'معرف الجدول غير محدد' };
+        }
+        var sampleLimit = 25;
+        if (payload && payload.sampleLimit) {
+            sampleLimit = Math.max(5, Math.min(100, parseInt(payload.sampleLimit, 10) || 25));
+        }
+
+        // إصلاح انزلاق خفيف أولاً إن لزم (مرة واحدة) لتحسين دقة المفاتيح — لا يحذف صفوفاً
+        try { maybeRepairEmployeesColumnDriftOnce_(); } catch (_e) {}
+
+        var analysis = _analyzeEmployeeDuplicates_(spreadsheetId);
+        if (!analysis.ok) {
+            return { success: false, message: analysis.message || 'فشل التحليل' };
+        }
+
+        var groupsSample = (analysis.duplicateGroups || []).slice(0, sampleLimit).map(function(g) {
+            return {
+                key: g.key,
+                count: g.count,
+                keepSheetRow: g.keepSheetRow,
+                keepName: g.keepName,
+                deleteSheetRows: g.deleteSheetRows
+            };
+        });
+        var deleteSample = (analysis.rowsToDelete || []).slice(0, sampleLimit);
+
+        return {
+            success: true,
+            message: analysis.rowsToDeleteCount > 0
+                ? ('وُجد ' + analysis.duplicateGroupCount + ' مجموعة مكررة — صفوف زائدة للحذف: ' + analysis.rowsToDeleteCount)
+                : 'لا توجد مكررات تحتاج تنظيفاً',
+            dryRun: true,
+            totalRows: analysis.totalRows,
+            uniqueKeys: analysis.uniqueKeys,
+            duplicateGroupCount: analysis.duplicateGroupCount,
+            duplicateExtraRows: analysis.duplicateExtraRows,
+            orphanCount: analysis.orphanCount,
+            emptyOrphanCount: analysis.emptyOrphanCount,
+            driftedCount: analysis.driftedCount,
+            rowsToDeleteCount: analysis.rowsToDeleteCount,
+            keepCount: analysis.keepCount,
+            duplicateGroupsSample: groupsSample,
+            rowsToDeleteSample: deleteSample,
+            orphanSample: analysis.orphanSample,
+            driftedSample: analysis.driftedSample
+        };
+    } catch (error) {
+        Logger.log('Error in reportEmployeeDuplicates: ' + error.toString());
+        return { success: false, message: 'فشل تقرير المكررات: ' + error.toString() };
+    }
+}
+
+/**
+ * نسخ احتياطي لورقة Employees داخل نفس الملف قبل الحذف.
+ */
+function _backupEmployeesSheetInPlace_(spreadsheet, sourceSheet) {
+    var ts = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'Africa/Cairo', 'yyyyMMdd_HHmmss');
+    var backupName = 'Employees_backup_' + ts;
+    // تجنّب تعارض الاسم
+    var existing = spreadsheet.getSheetByName(backupName);
+    if (existing) {
+        backupName = backupName + '_' + String(Date.now()).slice(-4);
+    }
+    var copied = sourceSheet.copyTo(spreadsheet);
+    copied.setName(backupName);
+    try {
+        spreadsheet.setActiveSheet(copied);
+        spreadsheet.moveActiveSheet(spreadsheet.getNumSheets());
+        spreadsheet.setActiveSheet(sourceSheet);
+    } catch (_moveErr) {}
+    return backupName;
+}
+
+/**
+ * تنظيف مكررات Employees بأمان:
+ * - افتراضي dryRun=true (لا حذف)
+ * - للحذف: pin + execute:true
+ * - نسخة احتياطية داخل الملف قبل الحذف
+ * - حذف من الأسفل للأعلى فقط للصفوف الزائدة
+ * لا يمس أوراق/موديولات أخرى ولا يوقف الإنتاج.
+ *
+ * @param {object} payload - { pin, execute?: boolean, dryRun?: boolean, alsoDeleteEmptyOrphans?: boolean }
+ */
+function cleanupDuplicateEmployees(payload) {
+    var lock = null;
+    try {
+        payload = payload || {};
+        var execute = payload.execute === true || payload.dryRun === false;
+        var dryRun = !execute;
+
+        if (execute) {
+            var pin = payload.pin || payload.password || payload.secret;
+            var verify = verifyEmployeesDeletePin(pin);
+            if (!verify.ok) {
+                return { success: false, message: verify.message, dryRun: false };
+            }
+        }
+
+        var spreadsheetId = payload.spreadsheetId || getSpreadsheetId();
+        if (!spreadsheetId) {
+            return { success: false, message: 'معرف الجدول غير محدد' };
+        }
+
+        // إصلاح انزلاق الأعمدة أولاً (آمن) حتى لا يُحذف صف سليم بالخطأ
+        try { repairEmployeesColumnDrift({}); } catch (_repairErr) {}
+
+        var analysis = _analyzeEmployeeDuplicates_(spreadsheetId);
+        if (!analysis.ok) {
+            return { success: false, message: analysis.message || 'فشل التحليل' };
+        }
+
+        var toDelete = analysis.rowsToDelete || [];
+        if (payload.alsoDeleteEmptyOrphans === false) {
+            toDelete = toDelete.filter(function(x) { return x.reason !== 'empty_orphan'; });
+        }
+
+        var summary = {
+            success: true,
+            dryRun: dryRun,
+            totalRows: analysis.totalRows,
+            uniqueKeys: analysis.uniqueKeys,
+            duplicateGroupCount: analysis.duplicateGroupCount,
+            rowsToDeleteCount: toDelete.length,
+            keepCount: analysis.totalRows - toDelete.length,
+            deletedCount: 0,
+            backupSheetName: null,
+            duplicateGroupsSample: (analysis.duplicateGroups || []).slice(0, 20).map(function(g) {
+                return {
+                    key: g.key,
+                    count: g.count,
+                    keepSheetRow: g.keepSheetRow,
+                    keepName: g.keepName,
+                    deleteSheetRows: g.deleteSheetRows
+                };
+            }),
+            rowsToDeleteSample: toDelete.slice(0, 25)
+        };
+
+        if (toDelete.length === 0) {
+            summary.message = 'لا توجد صفوف مكررة/يتيمة للحذف';
+            return summary;
+        }
+
+        if (dryRun) {
+            summary.message = 'معاينة فقط: سيُحذف ' + toDelete.length + ' صفاً ويُبقى ' + summary.keepCount + ' (لم يُحذف شيء)';
+            return summary;
+        }
+
+        lock = LockService.getScriptLock();
+        try {
+            lock.waitLock(30000);
+        } catch (lockErr) {
+            return {
+                success: false,
+                message: 'الورقة مشغولة حالياً. أعد المحاولة بعد لحظات دون إيقاف النظام.',
+                dryRun: false
+            };
+        }
+
+        var backupName = _backupEmployeesSheetInPlace_(analysis.spreadsheet, analysis.sheet);
+        summary.backupSheetName = backupName;
+
+        // حذف من الأسفل للأعلى حتى لا تتزحلق أرقام الصفوف
+        toDelete.sort(function(a, b) { return b.sheetRow - a.sheetRow; });
+        var deleted = 0;
+        for (var i = 0; i < toDelete.length; i++) {
+            var rowNum = toDelete[i].sheetRow;
+            if (!rowNum || rowNum < 2) continue;
+            try {
+                analysis.sheet.deleteRow(rowNum);
+                deleted++;
+            } catch (delErr) {
+                Logger.log('cleanupDuplicateEmployees deleteRow ' + rowNum + ': ' + delErr.toString());
+            }
+        }
+
+        try { invalidateHseSheetCaches('Employees'); } catch (_c1) {}
+        try { _bumpEmployeesCacheVersion_(); } catch (_c2) {}
+        SpreadsheetApp.flush();
+
+        summary.deletedCount = deleted;
+        summary.keepCount = Math.max(0, analysis.totalRows - deleted);
+        summary.message = 'تم حذف ' + deleted + ' صف مكرر/يتيم. النسخة الاحتياطية: ' + backupName;
+        return summary;
+    } catch (error) {
+        Logger.log('Error in cleanupDuplicateEmployees: ' + error.toString());
+        return { success: false, message: 'فشل تنظيف المكررات: ' + error.toString() };
+    } finally {
+        if (lock) {
+            try { lock.releaseLock(); } catch (_rl) {}
+        }
     }
 }
 

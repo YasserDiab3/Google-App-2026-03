@@ -2270,6 +2270,36 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'repairEmployeesColumnDrift': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    result = repairEmployeesColumnDrift(payload || {});
+                    return;
+
+        })();
+        return result;
+    },
+    'reportEmployeeDuplicates': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    result = reportEmployeeDuplicates(payload || {});
+                    return;
+
+        })();
+        return result;
+    },
+    'cleanupDuplicateEmployees': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    result = cleanupDuplicateEmployees(payload || {});
+                    return;
+
+        })();
+        return result;
+    },
     'getEmployeeStatistics': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

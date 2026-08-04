@@ -2000,6 +2000,87 @@ function normalizeDateOnlyValue(value) {
 }
 
 /**
+ * هل القيمة تبدو كتاريخ (وليست معرف موظف/حالة)؟
+ * تُستخدم لكشف انزلاق أعمدة Employees بعد append بترتيب رؤوس خاطئ.
+ */
+function looksLikeEmployeeSheetDateValue_(value) {
+    if (value === null || value === undefined || value === '') return false;
+    if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) return true;
+    const s = String(value).trim();
+    if (!s) return false;
+    if (s === 'active' || s === 'inactive') return false;
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return true;
+    if (/^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(s)) return true;
+    if (/^\d{1,2}-\d{1,2}-\d{2,4}/.test(s)) return true;
+    if (s.indexOf('T') > 0 && !isNaN(new Date(s).getTime())) return true;
+    return false;
+}
+
+/**
+ * كشف صف Employees مكتوب بترتيب الرؤوس الافتراضي القديم على ورقة
+ * ترتيبها الفعلي: photo, createdAt, updatedAt, id, status, resignationDate
+ * النتيجة الشائعة: createdAt/photo = active، id/status = تواريخ، resignationDate = رقم الموظف
+ */
+function isEmployeesRowColumnDrifted_(obj) {
+    if (!obj || typeof obj !== 'object') return false;
+    const empNo = String(obj.employeeNumber || '').trim();
+    const id = String(obj.id || '').trim();
+    const status = String(obj.status || '').trim();
+    const resignationDate = String(obj.resignationDate || '').trim();
+    const createdAt = String(obj.createdAt || '').trim();
+    const photo = String(obj.photo || '').trim();
+    const createdAtIsStatus = (createdAt === 'active' || createdAt === 'inactive');
+    const photoIsStatus = (photo === 'active' || photo === 'inactive');
+    const statusIsDate = looksLikeEmployeeSheetDateValue_(obj.status);
+    const idIsDate = looksLikeEmployeeSheetDateValue_(obj.id);
+    const resignationIsEmpNo = !!(empNo && resignationDate && resignationDate === empNo);
+    return (createdAtIsStatus || photoIsStatus) && (statusIsDate || idIsDate || resignationIsEmpNo);
+}
+
+/**
+ * إصلاح صف Employees منزلق الأعمدة (في الذاكرة) دون تغيير الحقول السليمة.
+ */
+function normalizeEmployeesRowColumnDrift_(obj) {
+    if (!isEmployeesRowColumnDrifted_(obj)) return obj;
+    const empNo = String(obj.employeeNumber || '').trim();
+    const photo = String(obj.photo || '').trim();
+    const createdAt = String(obj.createdAt || '').trim();
+    const statusRaw = String(obj.status || '').trim();
+    const idRaw = String(obj.id || '').trim();
+    const resignationDate = String(obj.resignationDate || '').trim();
+    const photoIsStatus = (photo === 'active' || photo === 'inactive');
+    const createdAtIsStatus = (createdAt === 'active' || createdAt === 'inactive');
+    const statusFromMisplaced = photoIsStatus ? photo : (createdAtIsStatus ? createdAt : 'active');
+    const dateA = looksLikeEmployeeSheetDateValue_(obj.id) ? obj.id : '';
+    const dateB = looksLikeEmployeeSheetDateValue_(obj.status) ? obj.status : '';
+    const fixed = {};
+    for (var k in obj) {
+        if (obj.hasOwnProperty(k)) fixed[k] = obj[k];
+    }
+    if (photoIsStatus) fixed.photo = '';
+    fixed.id = empNo || (resignationDate && !looksLikeEmployeeSheetDateValue_(resignationDate) ? resignationDate : idRaw);
+    if (looksLikeEmployeeSheetDateValue_(fixed.id)) {
+        fixed.id = empNo || '';
+    }
+    fixed.status = (statusFromMisplaced === 'inactive') ? 'inactive' : 'active';
+    if (createdAtIsStatus || !fixed.createdAt || looksLikeEmployeeSheetDateValue_(statusRaw) && createdAtIsStatus) {
+        fixed.createdAt = dateA || dateB || fixed.createdAt || '';
+    }
+    if (!fixed.updatedAt || String(fixed.updatedAt).trim() === '') {
+        fixed.updatedAt = dateB || dateA || fixed.createdAt || '';
+    }
+    if (resignationDate && empNo && resignationDate === empNo) {
+        fixed.resignationDate = '';
+    } else if (looksLikeEmployeeSheetDateValue_(resignationDate) && !empNo) {
+        // اتركها
+    }
+    if (fixed.birthDate) {
+        fixed.age = calculateAgeYears(fixed.birthDate);
+    }
+    return fixed;
+}
+
+/**
  * حساب العمر بالسنوات من تاريخ ميلاد بصيغة YYYY-MM-DD (أو أي صيغة يمكن تطبيعها)
  */
 function calculateAgeYears(birthDateValue) {
@@ -2866,6 +2947,23 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                         updatedCount: duplicates.length
                     }, resolvedPTWRegistryForAppend);
                 }
+
+                // ✅ ترتيب الكتابة = رؤوس الورقة الفعلية (بعد ensureSheetHeaders)، لا ترتيب getDefaultHeaders.
+                // لورقة Employees كان الاختلاف بعد photo يضع status داخل createdAt ويزحلق id/التواريخ.
+                let writeHeaders = headers;
+                try {
+                    const writeLastCol = sheet.getLastColumn();
+                    if (writeLastCol > 0) {
+                        const sheetWriteHeaders = sheet.getRange(1, 1, 1, writeLastCol).getValues()[0].map(function(h) {
+                            return (h === null || h === undefined) ? '' : String(h).trim();
+                        });
+                        if (sheetWriteHeaders.length > 0) {
+                            writeHeaders = sheetWriteHeaders;
+                        }
+                    }
+                } catch (writeHdrErr) {
+                    Logger.log('appendToSheet: could not read sheet headers for write, using computed headers: ' + writeHdrErr.toString());
+                }
                 
                 // معالجة البيانات الفريدة بكميات كبيرة - تحسين الأداء
                 const batchSize = 1000; // كتابة 1000 صف في كل دفعة
@@ -2873,7 +2971,11 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                 for (let i = 0; i < uniqueData.length; i += batchSize) {
                     const batch = uniqueData.slice(i, i + batchSize);
                     const batchValues = batch.map(item => {
-                        return headers.map(header => toSheetCellValue_(header, item[header], sheetName));
+                        return writeHeaders.map(header => {
+                            const h = header ? String(header).trim() : '';
+                            if (!h) return '';
+                            return toSheetCellValue_(h, item[h], sheetName);
+                        });
                     });
                     
                     try {
@@ -2931,7 +3033,7 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                             throw new Error('Invalid batchStartRow: ' + batchStartRow + '. Must be > 1');
                         }
                         
-                        sheet.getRange(batchStartRow, 1, batchValues.length, headers.length).setValues(batchValues);
+                        sheet.getRange(batchStartRow, 1, batchValues.length, writeHeaders.length).setValues(batchValues);
                         
                         // ✅ حفظ البيانات مباشرة بعد كل دفعة لضمان التحديث
                         if (i + batchSize >= data.length) {
@@ -3036,21 +3138,12 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                 updatedHeaders = headers; // استخدام headers المحسوبة كبديل
             }
             
-            // ✅ استخدام الرؤوس المحدثة من الورقة (بعد ensureSheetHeaders)
-            // ✅ إذا كانت الرؤوس المحدثة تحتوي على جميع الحقول المطلوبة، نستخدمها
-            // ✅ وإلا نستخدم headers المحسوبة من البيانات
-            const finalHeaders = (updatedHeaders && updatedHeaders.length > 0 && 
-                                 headers.every(h => updatedHeaders.includes(h))) 
-                                 ? updatedHeaders 
+            // ✅ استخدام رؤوس الورقة الفعلية دائماً عند توفرها (ترتيب الأعمدة المادي)
+            const finalHeaders = (updatedHeaders && updatedHeaders.length > 0)
+                                 ? updatedHeaders.map(function(h) {
+                                     return (h === null || h === undefined) ? '' : String(h).trim();
+                                 })
                                  : headers;
-            
-            // ✅ التحقق من أن الرؤوس المحدثة تحتوي على جميع الحقول المطلوبة
-            if (updatedHeaders && updatedHeaders.length > 0) {
-                const missingHeaders = headers.filter(h => !updatedHeaders.includes(h));
-                if (missingHeaders.length > 0) {
-                    Logger.log('⚠️ Warning: Missing headers in sheet after ensureSheetHeaders: ' + missingHeaders.join(', ') + '. Using computed headers instead.');
-                }
-            }
             
             // ✅ إعداد rowValues حسب ترتيب finalHeaders
             // ✅ Fix: write Dates as real Date objects (not ISO JSON strings)
@@ -3909,6 +4002,11 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
             // ✅ تطبيع حقل النوع (gender) لورقة Employees عند القراءة
             if (sheetName === 'Employees' && obj.gender !== undefined) {
                 obj.gender = normalizeGenderValue(obj.gender);
+            }
+
+            // ✅ إصلاح انزلاق أعمدة الاستيراد (append بترتيب رؤوس افتراضي ≠ ترتيب الورقة)
+            if (sheetName === 'Employees') {
+                obj = normalizeEmployeesRowColumnDrift_(obj);
             }
 
             // ✅ تطبيع حقل isActive: يُحوَّل دائماً إلى 'active' أو 'inactive'

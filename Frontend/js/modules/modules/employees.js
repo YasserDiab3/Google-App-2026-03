@@ -2982,6 +2982,14 @@ const Employees = {
                                 <i class="fas fa-font ml-2"></i>
                                 ${this.t('module.employees.refreshNames', 'تحديث الأسماء')}
                             </button>
+                            <button id="report-employee-duplicates-btn" class="btn-secondary" title="تقرير مكررات الموظفين (قراءة فقط — لا حذف)">
+                                <i class="fas fa-clone ml-2"></i>
+                                تقرير المكررات
+                            </button>
+                            <button id="cleanup-employee-duplicates-btn" class="btn-secondary" title="تنظيف المكررات بأمان (نسخة احتياطية + رقم سري)">
+                                <i class="fas fa-broom ml-2"></i>
+                                تنظيف المكررات
+                            </button>
                             <button id="delete-all-employees-btn" class="btn-danger" title="${this.t('module.employees.deleteAllTitle', 'حذف جميع بيانات الموظفين (عملية خطيرة)')}">
                                 <i class="fas fa-trash-alt ml-2"></i>
                                 ${this.t('module.employees.deleteAll', 'حذف الجميع')}
@@ -4022,6 +4030,16 @@ const Employees = {
                 refreshNamesBtn.addEventListener('click', async () => this.refreshEmployeeNames());
             }
 
+            const reportDupBtn = document.getElementById('report-employee-duplicates-btn');
+            if (reportDupBtn && this.canAddOrImport()) {
+                reportDupBtn.addEventListener('click', async () => this.reportEmployeeDuplicates());
+            }
+
+            const cleanupDupBtn = document.getElementById('cleanup-employee-duplicates-btn');
+            if (cleanupDupBtn && this.canAddOrImport()) {
+                cleanupDupBtn.addEventListener('click', async () => this.cleanupDuplicateEmployees());
+            }
+
             if (deleteAllBtn && this.canAddOrImport()) {
                 deleteAllBtn.addEventListener('click', async () => this.deleteAllEmployees());
             }
@@ -4436,6 +4454,166 @@ const Employees = {
             Notification?.success?.(res?.message || 'تم حذف جميع بيانات الموظفين بنجاح');
         } catch (error) {
             Notification?.error?.('حدث خطأ أثناء حذف البيانات: ' + (error?.message || error));
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+        }
+    },
+
+    /**
+     * تقرير مكررات الموظفين — قراءة فقط، لا يحذف ولا يوقف الإنتاج.
+     */
+    async reportEmployeeDuplicates() {
+        if (!this.canAddOrImport()) {
+            Notification?.error?.('ليس لديك صلاحية لتنفيذ هذا الإجراء');
+            return;
+        }
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.callBackend) {
+            Notification?.error?.('GoogleIntegration غير متاح');
+            return;
+        }
+
+        const btn = document.getElementById('report-employee-duplicates-btn');
+        const originalHTML = btn?.innerHTML;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري الفحص...';
+        }
+
+        try {
+            Loading?.show?.('جاري فحص مكررات الموظفين...');
+            const res = await GoogleIntegration.callBackend('reportEmployeeDuplicates', {
+                sampleLimit: 30,
+                __timeoutMs: 120000
+            });
+            Loading?.hide?.();
+            if (!res || !res.success) {
+                throw new Error(res?.message || 'فشل تقرير المكررات');
+            }
+
+            const lines = [
+                res.message || '',
+                '',
+                `إجمالي الصفوف: ${res.totalRows ?? '—'}`,
+                `مفاتيح فريدة: ${res.uniqueKeys ?? '—'}`,
+                `مجموعات مكررة: ${res.duplicateGroupCount ?? 0}`,
+                `صفوف زائدة مرشحة للحذف: ${res.rowsToDeleteCount ?? 0}`,
+                `سيتبقى بعد التنظيف: ${res.keepCount ?? '—'}`,
+                `صفوف منزاحة أعمدة: ${res.driftedCount ?? 0}`,
+                `صفوف يتيمة بلا مفتاح: ${res.orphanCount ?? 0}`
+            ];
+            const sample = Array.isArray(res.duplicateGroupsSample) ? res.duplicateGroupsSample.slice(0, 8) : [];
+            if (sample.length) {
+                lines.push('', 'عيّنة مجموعات:');
+                sample.forEach((g) => {
+                    lines.push(`- ${g.key} ×${g.count} (يُبقى صف ${g.keepSheetRow}: ${g.keepName || '—'})`);
+                });
+            }
+            window.alert(lines.join('\n'));
+            Notification?.success?.(res.message || 'اكتمل تقرير المكررات');
+        } catch (error) {
+            Loading?.hide?.();
+            Notification?.error?.('فشل تقرير المكررات: ' + (error?.message || error));
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+        }
+    },
+
+    /**
+     * تنظيف مكررات الموظفين بأمان: معاينة → تأكيد → PIN → نسخة احتياطية → حذف الزائد فقط.
+     */
+    async cleanupDuplicateEmployees() {
+        if (!this.canAddOrImport()) {
+            Notification?.error?.('ليس لديك صلاحية لتنفيذ هذا الإجراء');
+            return;
+        }
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.callBackend) {
+            Notification?.error?.('GoogleIntegration غير متاح');
+            return;
+        }
+
+        const btn = document.getElementById('cleanup-employee-duplicates-btn');
+        const originalHTML = btn?.innerHTML;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> معاينة...';
+        }
+
+        try {
+            Loading?.show?.('معاينة المكررات (بدون حذف)...');
+            const preview = await GoogleIntegration.callBackend('cleanupDuplicateEmployees', {
+                dryRun: true,
+                __timeoutMs: 120000
+            });
+            Loading?.hide?.();
+            if (!preview || !preview.success) {
+                throw new Error(preview?.message || 'فشلت معاينة التنظيف');
+            }
+
+            const toDelete = preview.rowsToDeleteCount || 0;
+            if (toDelete <= 0) {
+                window.alert(preview.message || 'لا توجد مكررات للحذف');
+                Notification?.success?.(preview.message || 'لا توجد مكررات');
+                return;
+            }
+
+            const okPreview = window.confirm(
+                `${preview.message || ''}\n\n` +
+                `إجمالي الصفوف: ${preview.totalRows ?? '—'}\n` +
+                `سيُحذف: ${toDelete}\n` +
+                `سيُبقى: ${preview.keepCount ?? '—'}\n\n` +
+                `سيتم إنشاء ورقة احتياطية Employees_backup_* قبل الحذف.\n` +
+                `هل تريد المتابعة لطلب الرقم السري؟`
+            );
+            if (!okPreview) {
+                Notification?.warning?.('تم إلغاء التنظيف');
+                return;
+            }
+
+            const pin = window.prompt('أدخل الرقم السري لتنظيف المكررات (EMPLOYEES_DELETE_PIN):');
+            if (pin === null) {
+                Notification?.warning?.('تم إلغاء العملية');
+                return;
+            }
+
+            if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري التنظيف...';
+            Loading?.show?.('جاري تنظيف المكررات مع نسخة احتياطية...');
+            const res = await GoogleIntegration.callBackend('cleanupDuplicateEmployees', {
+                pin: String(pin || '').trim(),
+                execute: true,
+                __timeoutMs: 180000
+            });
+            Loading?.hide?.();
+            if (!res || !res.success) {
+                throw new Error(res?.message || 'فشل تنظيف المكررات');
+            }
+
+            window.alert(
+                `${res.message || 'تم التنظيف'}\n` +
+                `محذوف: ${res.deletedCount ?? 0}\n` +
+                `احتياطي: ${res.backupSheetName || '—'}`
+            );
+
+            // إعادة تحميل القائمة من الخادم دون المساس بمسارات العيادة
+            try {
+                await this.ensureEmployeesLoaded(true);
+            } catch (_loadErr) {
+                const showInactive = document.getElementById('show-inactive-employees')?.checked || false;
+                this.loadEmployeesList(showInactive);
+            }
+            this.renderStatsCards();
+            requestAnimationFrame(() => {
+                try { this.applyFilters(); } catch (_e) {}
+            });
+            Notification?.success?.(res.message || 'تم تنظيف المكررات');
+        } catch (error) {
+            Loading?.hide?.();
+            Notification?.error?.('فشل تنظيف المكررات: ' + (error?.message || error));
         } finally {
             if (btn) {
                 btn.disabled = false;
@@ -4894,10 +5072,7 @@ const Employees = {
             return;
         }
 
-        try {
-            await this.ensureEmployeesLoaded(false);
-        } catch (_e) { /* استخدام البيانات المحلية إن وُجدت */ }
-
+        // فتح النموذج فوراً — لا تنتظر ensureEmployeesLoaded (كان يسبب تأخيراً طويلاً)
         const hireWindowLabel = this.getEmployeeImportHireWindowLabel();
         const hireMonths = this.getEmployeeImportHireMonths();
 
@@ -4931,6 +5106,7 @@ const Employees = {
                                 <li>تاريخ التعيين، Job، Department، Branch، Location، Gender، رقم البطاقة، تاريخ الميلاد، الرقم التأميني</li>
                             </ul>
                         </div>
+                        <div id="employee-import-ready-hint" class="text-xs text-slate-500" hidden></div>
                         <div>
                             <label for="employee-excel-file-input" class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-file-excel ml-2"></i>
@@ -4975,11 +5151,43 @@ const Employees = {
 
         const fileInput = modal.querySelector('#employee-excel-file-input');
         const confirmBtn = modal.querySelector('#employee-import-confirm-btn');
+        const readyHint = modal.querySelector('#employee-import-ready-hint');
         let importDrafts = [];
         let existingImportKeySet = this.buildEmployeeImportExistingKeySet();
         let reclassifyTimer = null;
+        let employeesIndexReady = existingImportKeySet.size > 0;
 
         const refreshReview = () => this.renderEmployeeImportReview(modal, importDrafts);
+
+        const setReadyHint = (text, visible) => {
+            if (!readyHint) return;
+            if (visible && text) {
+                readyHint.hidden = false;
+                readyHint.textContent = text;
+            } else {
+                readyHint.hidden = true;
+                readyHint.textContent = '';
+            }
+        };
+
+        if (!employeesIndexReady) {
+            setReadyHint('جاري تجهيز فهرس الموظفين الحالي بالخلفية لمطابقة المكررات…', true);
+        }
+
+        // تحديث فهرس الموجودين بالخلفية دون حجب فتح النموذج
+        void (async () => {
+            try {
+                await this.ensureEmployeesLoaded(false);
+            } catch (_e) { /* المحلي كافٍ للمطابقة إن وُجد */ }
+            if (!modal.isConnected) return;
+            existingImportKeySet = this.buildEmployeeImportExistingKeySet();
+            employeesIndexReady = true;
+            setReadyHint('', false);
+            if (importDrafts.length > 0) {
+                this.reclassifyAllEmployeeImportDrafts(importDrafts, existingImportKeySet);
+                refreshReview();
+            }
+        })();
 
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
@@ -4987,6 +5195,19 @@ const Employees = {
 
             Loading.show('جاري قراءة الملف...');
             try {
+                // إن كان الفهرس لم يجهز بعد، انتظره هنا فقط (بعد اختيار الملف) وليس عند فتح النموذج
+                if (!employeesIndexReady) {
+                    Loading.show('جاري تجهيز فهرس الموظفين للمطابقة...');
+                    try {
+                        await this.ensureEmployeesLoaded(false);
+                    } catch (_e) { /* continue with local */ }
+                    existingImportKeySet = this.buildEmployeeImportExistingKeySet();
+                    employeesIndexReady = true;
+                    setReadyHint('', false);
+                } else {
+                    existingImportKeySet = this.buildEmployeeImportExistingKeySet();
+                }
+
                 await this.yieldEmployeeImportUi_();
                 const buffer = await file.arrayBuffer();
                 Loading.show('جاري تحليل Excel...');
