@@ -1,15 +1,15 @@
 {
-  "version": "1.0.841",
+  "version": "1.0.843",
   "highlights": {
     "ar": [
-      "فتح قاعدة الموظفين أسرع: عرض محلي فوري ثم مزامنة بالخلفية.",
-      "القائمة تعرض أول 100 صف مع زر «عرض المزيد» بدل رسم الكل دفعة واحدة.",
-      "كاش الخادم أطول وأولوية للكاش قبل الصيانة — بدون فقد الأسماء."
+      "إصلاح قائمة الموظفين الفارغة: رقم وظيفي في تاريخ الاستقالة لم يعد يخفي الجميع.",
+      "تطبيع سجلات الاستيراد المنزاحة عند العرض مع الإبقاء على النشطين.",
+      "إرجاع مسار تحميل قاعدة الموظفين كما كان (عرض ثم مزامنة خلفية)."
     ],
     "en": [
-      "Employees module opens faster: instant local list, then background sync.",
-      "List shows first 100 rows with Load more instead of rendering all at once.",
-      "Longer server cache and cache-first path — names still protected."
+      "Fixed empty employees list: employee numbers in resignationDate no longer hide everyone.",
+      "Sanitize drifted import fields on display so active staff stay visible.",
+      "Restored the previous employees load path (render then background sync)."
     ]
   }
 }

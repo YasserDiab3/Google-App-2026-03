@@ -108,19 +108,23 @@ const Employees = {
         const existing = (AppState.appData && Array.isArray(AppState.appData.employees))
             ? AppState.appData.employees
             : [];
-        const merged = this.mergeEmployeesPreservingNames_(incoming, existing);
+        const cleanedIncoming = Array.isArray(incoming)
+            ? incoming.map((row) => this.sanitizeEmployeeRecordDrift_({ ...(row || {}) }))
+            : incoming;
+        const merged = this.mergeEmployeesPreservingNames_(cleanedIncoming, existing);
         if ((!merged || merged.length === 0) && existing.length > 0) {
             this.cache.data = existing;
             this.cache.lastLoad = Date.now();
             this.cache.lastUpdate = Date.now();
             return existing;
         }
+        const cleanedMerged = (merged || []).map((row) => this.sanitizeEmployeeRecordDrift_(row));
         AppState.appData = AppState.appData || {};
-        AppState.appData.employees = merged;
-        this.cache.data = merged;
+        AppState.appData.employees = cleanedMerged;
+        this.cache.data = cleanedMerged;
         this.cache.lastLoad = Date.now();
         this.cache.lastUpdate = Date.now();
-        return merged;
+        return cleanedMerged;
     },
 
     /**
@@ -633,29 +637,16 @@ const Employees = {
                     // ✅ إعادة إعداد event listeners بعد تحميل المحتوى
                     this.setupEventListeners();
                     
-                    // ✅ تحميل التبويب النشط بعد إعداد event listeners
+                    // ✅ تحميل التبويب النشط — نفس آلية التحميل السابقة
                     if (this.activeTab === 'data-analysis' && this.canViewEmployeesAnalysisTab()) {
                         await this.loadEmployeesAnalysis();
                     } else if (this.activeTab === 'external-workforce' && this.canViewExternalWorkforceTab()) {
                         await this.ensureExternalWorkforceDataLoaded();
                         this.renderExternalWorkforceTable();
-                    } else if ((this.activeTab === 'employees-list' && this.canViewEmployeesRegistryTab()) || this.canViewEmployeesRegistryTab()) {
-                        const localLen = (AppState.appData.employees || []).length;
-                        const tableHost = document.getElementById('employees-table-container');
-                        if (localLen > 0) {
-                            // عرض فوري من المحلي — كما قبل الإصلاحات البطيئة
-                            await this.loadEmployeesList();
-                        } else if (tableHost) {
-                            tableHost.innerHTML = `
-                                <div class="empty-state" style="padding:28px;">
-                                    <i class="fas fa-spinner fa-spin text-3xl text-blue-500 mb-3"></i>
-                                    <p class="text-gray-600">${this.t('module.employees.loadingRoster', 'جاري تحميل قاعدة الموظفين...')}</p>
-                                </div>`;
-                            await this.ensureEmployeesLoaded(false);
-                            await this.loadEmployeesList();
-                        } else {
-                            await this.loadEmployeesList();
-                        }
+                    } else if (this.activeTab === 'employees-list' && this.canViewEmployeesRegistryTab()) {
+                        await this.loadEmployeesList();
+                    } else if (this.canViewEmployeesRegistryTab()) {
+                        await this.loadEmployeesList();
                     } else if (this.canViewEmployeesAnalysisTab()) {
                         await this.loadEmployeesAnalysis();
                     } else if (this.canViewExternalWorkforceTab()) {
@@ -736,14 +727,89 @@ const Employees = {
     },
 
     /**
+     * هل القيمة تاريخ استقالة حقيقي؟ (ترفض رقم وظيفي/تواريخ انزلقت خطأً)
+     */
+    _isRealResignationDateValue_(value, employee) {
+        if (value === null || value === undefined || value === '') return false;
+        if (value instanceof Date && !isNaN(value.getTime())) return true;
+        const s = String(value).trim();
+        if (!s) return false;
+        if (s === 'active' || s === 'inactive' || s === 'نشط' || s === 'غير نشط') return false;
+        const empNo = String((employee && (employee.employeeNumber || employee.id || employee.sapId)) || '').trim();
+        if (empNo && s === empNo) return false;
+        // رقم وظيفي خالص بدون فواصل تاريخ
+        if (/^\d+(\.0+)?$/.test(s) && s.length >= 4 && s.length <= 12) return false;
+        // تواريخ مقبولة
+        if (/^\d{4}-\d{2}-\d{2}/.test(s)) return true;
+        if (/^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(s)) return true;
+        if (/^\d{1,2}-\d{1,2}-\d{2,4}/.test(s)) return true;
+        if (s.indexOf('T') > 0 && !isNaN(new Date(s).getTime())) return true;
+        const d = new Date(s);
+        return !isNaN(d.getTime());
+    },
+
+    /**
+     * تطبيع حقول انزلقت بعد الاستيراد حتى لا تختفي القائمة (resignationDate=رقم، status=تاريخ).
+     */
+    sanitizeEmployeeRecordDrift_(e) {
+        if (!e || typeof e !== 'object') return e;
+        const empNo = String(e.employeeNumber || '').trim();
+        const statusRaw = String(e.status != null ? e.status : '').trim();
+        const resigRaw = String(e.resignationDate != null ? e.resignationDate : '').trim();
+        const idRaw = String(e.id != null ? e.id : '').trim();
+        const createdRaw = String(e.createdAt != null ? e.createdAt : '').trim();
+        const photoRaw = String(e.photo != null ? e.photo : '').trim();
+
+        const looksDate = (s) => {
+            if (!s) return false;
+            if (/^\d{4}-\d{2}-\d{2}/.test(s)) return true;
+            if (/^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(s)) return true;
+            if (/^\d{1,2}-\d{1,2}-\d{2,4}/.test(s)) return true;
+            if (s.indexOf('T') > 0 && !isNaN(new Date(s).getTime())) return true;
+            return false;
+        };
+
+        if (photoRaw === 'active' || photoRaw === 'inactive') e.photo = '';
+
+        if (looksDate(statusRaw) || statusRaw === 'active' && createdRaw === 'active') {
+            // status عمود انزلق — اعتبر نشطاً ما لم يكن inactive صريحاً لاحقاً
+        }
+        if (looksDate(statusRaw)) {
+            if (!e.createdAt || createdRaw === 'active' || createdRaw === 'inactive') e.createdAt = statusRaw;
+            e.status = 'active';
+        } else if (statusRaw && statusRaw !== 'active' && statusRaw !== 'inactive' && statusRaw !== 'نشط' && statusRaw !== 'غير نشط') {
+            // قيمة غير معروفة (غالباً انزلاق) → نشط
+            e.status = 'active';
+        }
+
+        if (createdRaw === 'active' || createdRaw === 'inactive') {
+            if (looksDate(idRaw)) e.createdAt = idRaw;
+            else if (looksDate(statusRaw)) e.createdAt = statusRaw;
+            else e.createdAt = '';
+        }
+
+        if (!this._isRealResignationDateValue_(resigRaw, e)) {
+            e.resignationDate = '';
+        }
+
+        if (empNo && looksDate(idRaw)) {
+            e.id = empNo;
+        } else if (!idRaw && empNo) {
+            e.id = empNo;
+        }
+        return e;
+    },
+
+    /**
      * تحديد إذا كان الموظف غير نشط (مستقيل)
-     * يدعم: status = 'inactive' أو 'غير نشط' أو وجود تاريخ استقالة
+     * يدعم: status = 'inactive' أو 'غير نشط' أو تاريخ استقالة حقيقي فقط
      */
     isEmployeeInactive(employee) {
         if (!employee) return false;
         const status = (employee.status != null && employee.status !== '') ? String(employee.status).trim() : '';
         const resignationDate = (employee.resignationDate != null && employee.resignationDate !== '') ? String(employee.resignationDate).trim() : '';
-        if (resignationDate) return true;
+        // مهم: لا تعتبر رقم الموظف في resignationDate (انزلاق أعمدة) استقالة
+        if (resignationDate && this._isRealResignationDateValue_(resignationDate, employee)) return true;
         if (status === 'inactive' || status.toLowerCase() === 'inactive') return true;
         if (status === 'غير نشط') return true;
         return false;
@@ -3859,7 +3925,9 @@ const Employees = {
         }
 
         // استخدام البيانات من AppState (يجب أن تكون محملة مسبقاً من load())
-        let employees = AppState.appData.employees || [];
+        // تطبيع انزلاق أعمدة قبل التصفية — يمنع قائمة فارغة بسبب resignationDate=رقم وظيفي
+        let employees = (AppState.appData.employees || []).map((e) => this.sanitizeEmployeeRecordDrift_({ ...(e || {}) }));
+        AppState.appData.employees = employees;
         
         if (AppState.debugMode) {
             Utils.safeLog(`📊 loadEmployeesList: إجمالي الموظفين = ${employees.length}, showInactive = ${showInactive}`);
@@ -6617,7 +6685,8 @@ const Employees = {
                 }
             }
         
-        let employees = AppState.appData.employees || [];
+        let employees = (AppState.appData.employees || []).map((e) => this.sanitizeEmployeeRecordDrift_({ ...(e || {}) }));
+        AppState.appData.employees = employees;
         
         // ✅ تصفية الموظفين النشطين فقط (ما لم يُطلب خلاف ذلك) - استخدام isEmployeeInactive
         if (!showInactive) {
