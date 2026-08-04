@@ -159,10 +159,10 @@ function getAllEmployees(filters = {}) {
         // كسر كاش قبل أي قراءة — مرة واحدة بعد إصلاح العرض
         try {
             const props = PropertiesService.getScriptProperties();
-            if (props.getProperty('employees_ui_restore_v4') !== '1') {
+            if (props.getProperty('employees_ui_restore_v5') !== '1') {
                 try { _bumpEmployeesCacheVersion_(); } catch (_b0) {}
                 try { invalidateHseSheetCaches('Employees'); } catch (_i0) {}
-                props.setProperty('employees_ui_restore_v4', '1');
+                props.setProperty('employees_ui_restore_v5', '1');
             }
             if (props.getProperty('employees_names_stable_v1') !== '1') {
                 try { _bumpEmployeesCacheVersion_(); } catch (_b1) {}

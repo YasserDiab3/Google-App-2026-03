@@ -1,15 +1,15 @@
 {
-  "version": "1.0.845",
+  "version": "1.0.847",
   "highlights": {
     "ar": [
-      "استعادة تحميل قاعدة الموظفين: انتظار الجلب ثم عرض القائمة كاملة.",
-      "إصلاح إخفاء الجميع بسبب انزلاق status/تاريخ الاستقالة.",
-      "حماية عرض: إن صُفّي الكل يُعرض الجميع مؤقتاً حتى لا يبقى المديول فارغاً."
+      "إصلاح فراغ قاعدة الموظفين: تجاوز كاش الواجهة عند الجلب.",
+      "إبطال SmartCache لـ getAllEmployees حتى لا يعود فراغ قديم.",
+      "كسر كاش الخلفية (v5) بعد تنظيف الجدول واستعادة الأسماء."
     ],
     "en": [
-      "Restored employees load: wait for fetch, then render the full list.",
-      "Fixed everyone being hidden by drifted status/resignationDate fields.",
-      "Safety net: if active-filter empties the list, show all so the module is not blank."
+      "Fixed empty employees DB: bypass frontend SmartCache on fetch.",
+      "Invalidate getAllEmployees cache so stale empty results cannot stick.",
+      "Backend cache bust (v5) after sheet cleanup so names load again."
     ]
   }
 }

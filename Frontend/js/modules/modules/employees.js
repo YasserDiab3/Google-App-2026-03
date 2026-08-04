@@ -3598,10 +3598,19 @@ const Employees = {
 
             // محاولة تحميل البيانات من Backend باستخدام getAllEmployees
             // ✅ includeInactive: true لاستلام جميع الموظفين (نشطين + مستقيلين) حتى يظهر عداد المستقيلين بشكل صحيح
+            // ✅ دائماً تجاوز SmartCache — كاش فارغ قديم كان يُفرّغ القائمة لساعات
             try {
+                const employeesFetchData = {
+                    filters: { includeInactive: true },
+                    skipCache: true,
+                    forceRefresh: true
+                };
+                if (typeof GoogleIntegration._invalidateSmartCacheForRead_ === 'function') {
+                    GoogleIntegration._invalidateSmartCacheForRead_('getAllEmployees', employeesFetchData);
+                }
                 const result = await GoogleIntegration.sendRequest({
                     action: 'getAllEmployees',
-                    data: { filters: { includeInactive: true } }
+                    data: employeesFetchData
                 });
 
                 if (result && result.success && Array.isArray(result.data)) {
@@ -3632,12 +3641,18 @@ const Employees = {
                         Utils.safeWarn('⚠️ getAllEmployees فشل، جاري المحاولة بـ readFromSheet...');
                     }
                     
+                    const sheetFetchData = {
+                        sheetName: 'Employees',
+                        spreadsheetId: AppState.googleConfig.sheets.spreadsheetId,
+                        skipCache: true,
+                        forceRefresh: true
+                    };
+                    if (typeof GoogleIntegration._invalidateSmartCacheForRead_ === 'function') {
+                        GoogleIntegration._invalidateSmartCacheForRead_('readFromSheet', sheetFetchData);
+                    }
                     const sheetResult = await GoogleIntegration.sendRequest({
                         action: 'readFromSheet',
-                        data: { 
-                            sheetName: 'Employees',
-                            spreadsheetId: AppState.googleConfig.sheets.spreadsheetId
-                        }
+                        data: sheetFetchData
                     });
 
                     if (sheetResult && sheetResult.success && Array.isArray(sheetResult.data)) {
@@ -3715,10 +3730,18 @@ const Employees = {
                 return;
             }
 
-            // محاولة تحميل البيانات من Backend
+            // محاولة تحميل البيانات من Backend — تجاوز SmartCache دائماً
+            const employeesFetchData = {
+                filters: { includeInactive: true },
+                skipCache: true,
+                forceRefresh: true
+            };
+            if (typeof GoogleIntegration._invalidateSmartCacheForRead_ === 'function') {
+                GoogleIntegration._invalidateSmartCacheForRead_('getAllEmployees', employeesFetchData);
+            }
             const result = await GoogleIntegration.sendRequest({
                 action: 'getAllEmployees',
-                data: { filters: { includeInactive: true } }
+                data: employeesFetchData
             });
 
             if (result && result.success && Array.isArray(result.data)) {
