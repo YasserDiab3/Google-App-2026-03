@@ -5061,6 +5061,25 @@ body.app-active {
     }
 }
 
+/* شريط مزامنة سجل التردد — أول فتح بلا بيانات محلية */
+.clinic-visits-sync-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin: 0.75rem 0.85rem 0;
+    padding: 0.55rem 0.85rem;
+    border-radius: 10px;
+    border: 1px solid #99f6e4;
+    background: #f0fdfa;
+    color: #115e59;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.clinic-visits-sync-banner i {
+    color: #0f766e;
+}
+
 /* ===== Email settings panel (notifications tab) — mailroom ===== */
 .email-settings-panel {
     --email-accent: #0f766e;
@@ -5607,13 +5626,13 @@ body.app-active {
     cursor: pointer;
 }
 
-.email-toggle:has(input:checked) {
+.email-toggle.is-checked {
     border-color: #5eead4;
     background: var(--email-accent-soft);
     color: #115e59;
 }
 
-.email-toggle:has(input:disabled) {
+.email-toggle.is-disabled {
     opacity: 0.45;
     cursor: not-allowed;
 }

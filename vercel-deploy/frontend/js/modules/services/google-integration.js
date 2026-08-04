@@ -806,12 +806,11 @@ const GoogleIntegration = {
                 timestamp: Date.now()
             };
 
-            // أولوية عالية: مصادقة + سجل التردد الثقيل + علم __highPriority صريح
+            // أولوية عالية: مصادقة + علم __highPriority صريح (زيارات العيادة تمرّر العلم سياقياً فقط)
             const isHighPriority = !!(
                 action === 'login'
                 || action === 'verifyMfaLogin'
                 || action === 'confirmMfaEnrollment'
-                || action === 'getAllClinicVisits'
                 || (data && typeof data === 'object' && data.__highPriority === true)
             );
             if (isHighPriority) {

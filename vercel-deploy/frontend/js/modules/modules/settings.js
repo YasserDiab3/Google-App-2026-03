@@ -3422,15 +3422,15 @@ const Settings = {
                             <span class="email-module-key" dir="ltr">${Utils.escapeHTML(key)}</span>
                         </div>
                         <div class="email-module-toggles">
-                            <label class="email-toggle" title="تفعيل هذا النوع">
+                            <label class="email-toggle${m.enabled ? ' is-checked' : ''}" title="تفعيل هذا النوع">
                                 <input type="checkbox" class="em-enabled" ${m.enabled ? 'checked' : ''}>
                                 <span>مفعّل</span>
                             </label>
-                            <label class="email-toggle" title="زر إرسال من شاشة التفاصيل">
+                            <label class="email-toggle${m.manualSend ? ' is-checked' : ''}${on ? '' : ' is-disabled'}" title="زر إرسال من شاشة التفاصيل">
                                 <input type="checkbox" class="em-manual" ${m.manualSend ? 'checked' : ''} ${on ? '' : 'disabled'}>
                                 <span>يدوي</span>
                             </label>
-                            <label class="email-toggle" title="إرسال تلقائي عند الحفظ">
+                            <label class="email-toggle${m.autoSend ? ' is-checked' : ''}${on ? '' : ' is-disabled'}" title="إرسال تلقائي عند الحفظ">
                                 <input type="checkbox" class="em-auto" ${m.autoSend ? 'checked' : ''} ${on ? '' : 'disabled'}>
                                 <span>تلقائي</span>
                             </label>
@@ -3447,6 +3447,7 @@ const Settings = {
         });
         listEl.innerHTML = html || '<p class="email-settings-empty">لا نتائج مطابقة للبحث أو التصفية</p>';
         this.updateEmailModulesSummary();
+        this.syncEmailToggleClasses(listEl);
         listEl.querySelectorAll('.email-module-row').forEach((row) => {
             const enabledCb = row.querySelector('.em-enabled');
             if (!enabledCb) return;
@@ -3456,10 +3457,21 @@ const Settings = {
                 row.querySelectorAll('.em-manual, .em-auto').forEach((cb) => {
                     cb.disabled = !onNow;
                 });
+                this.syncEmailToggleClasses(row);
                 this.collectEmailSettingsFromUI();
                 this.updateEmailModulesSummary();
                 this.setEmailSettingsDirty(true);
             });
+        });
+    },
+
+    syncEmailToggleClasses(root) {
+        if (!root || typeof root.querySelectorAll !== 'function') return;
+        root.querySelectorAll('.email-toggle').forEach((label) => {
+            const input = label.querySelector('input[type="checkbox"]');
+            if (!input) return;
+            label.classList.toggle('is-checked', !!input.checked);
+            label.classList.toggle('is-disabled', !!input.disabled);
         });
     },
 
@@ -3611,6 +3623,10 @@ const Settings = {
         if (listEl) {
             listEl.addEventListener('change', (e) => {
                 if (!e.target.matches('.em-manual, .em-auto, .em-recipients')) return;
+                const row = e.target.closest('.email-module-row');
+                if (row && e.target.matches('.em-manual, .em-auto')) {
+                    this.syncEmailToggleClasses(row);
+                }
                 markDirty();
             });
             listEl.addEventListener('input', (e) => {

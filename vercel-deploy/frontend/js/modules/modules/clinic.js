@@ -8768,6 +8768,16 @@ const Clinic = {
             this.renderVisitsTabContent(panel);
 
             if (shouldLoadData && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                const localCount = Array.isArray(AppState.appData?.clinicVisits)
+                    ? AppState.appData.clinicVisits.length
+                    : 0;
+                if (localCount === 0 && !panel.querySelector('.clinic-visits-sync-banner')) {
+                    const banner = document.createElement('div');
+                    banner.className = 'clinic-visits-sync-banner';
+                    banner.setAttribute('role', 'status');
+                    banner.innerHTML = '<i class="fas fa-sync fa-spin" aria-hidden="true"></i><span>جاري مزامنة سجل التردد من الخادم…</span>';
+                    panel.insertBefore(banner, panel.firstChild);
+                }
                 this.loadVisitsDataFromBackend()
                     .then(() => {
                         const p = document.querySelector('.clinic-tab-panel[data-tab-panel="visits"]');
@@ -8956,6 +8966,33 @@ const Clinic = {
     },
 
     /**
+     * TTL أقصر للمزامنة الحية — مستقل عن shouldFetch (فتح/prefetch + _visitsBackendFetchOk).
+     * يمنع تخطي realtime طوال الجلسة بعد أول جلب ناجح.
+     */
+    shouldRefreshClinicVisitsForRealtime() {
+        if (this._clinicVisitsLoadPromise) return false;
+        if (typeof AppState === 'undefined' || !AppState?.appData) return true;
+        const visits = AppState.appData.clinicVisits;
+        if (!Array.isArray(visits) || visits.length === 0) return true;
+        const lastSync = parseInt(localStorage.getItem('clinic_last_sync') || '0', 10);
+        const REALTIME_TTL_MS = 3 * 60 * 1000;
+        if (!lastSync || isNaN(lastSync)) return true;
+        return (Date.now() - lastSync) >= REALTIME_TTL_MS;
+    },
+
+    /** أولوية عالية لـ getAllClinicVisits فقط عندما المستخدم على العيادة/اللوحة */
+    isClinicVisitsHighPriorityContext() {
+        try {
+            const section = (typeof AppState !== 'undefined' && AppState.currentSection)
+                ? String(AppState.currentSection)
+                : '';
+            return section === 'clinic' || section === 'dashboard';
+        } catch (_e) {
+            return false;
+        }
+    },
+
+    /**
      * PERF-01: فلاتر جلب سجل التردد — نافذة زمنية + حد أقصى للأحدث
      * لا يغيّر مسار الدمج/الكاش؛ يقلّل حجم الاستجابة فقط.
      */
@@ -9014,7 +9051,7 @@ const Clinic = {
                     data: {
                         filters: this.getClinicVisitsFetchFilters(),
                         __timeoutMs: 120000,
-                        __highPriority: true
+                        __highPriority: this.isClinicVisitsHighPriorityContext()
                     }
                 }),
                 120000,

@@ -1,15 +1,15 @@
 {
-  "version": "1.0.831",
+  "version": "1.0.833",
   "highlights": {
     "ar": [
-      "تحميل العيادة أصح: لا ختم مزامنة خاطئ يمنع جلب سجل التردد بعد تسجيل الدخول.",
-      "أولوية أعلى لجلب الزيارات في طابور الطلبات وتخطي realtime عند الكاش الحديث.",
-      "تبويب الحضور أسرع بدون تأخير ثابت، وإحصاءات ثقيلة في وضع التصحيح فقط."
+      "مزامنة حية لسجل التردد كل ~3 دقائق بدل تخطي طوال الجلسة بعد أول جلب.",
+      "أولوية طابور الزيارات فقط عند العيادة/اللوحة — لا تؤخر باقي الطلبات بلا داعٍ.",
+      "شريط مزامنة عند أول فتح بلا بيانات، وتوافق أفضل لمفاتيح إعدادات البريد."
     ],
     "en": [
-      "Clinic load fix: login preload no longer stamps a false sync that blocks visit fetch.",
-      "Higher queue priority for clinic visits; realtime skips when cache is fresh.",
-      "Attendance tab loads faster; heavy post-fetch stats run in debug mode only."
+      "Realtime clinic visits refresh about every 3 minutes instead of skipping all session.",
+      "Visit queue priority only on clinic/dashboard — avoids delaying other requests.",
+      "First-open sync banner when empty; email toggles work without CSS :has()."
     ]
   }
 }

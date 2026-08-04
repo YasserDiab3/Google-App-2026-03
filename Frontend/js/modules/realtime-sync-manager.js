@@ -807,11 +807,11 @@ const RealtimeSyncManager = {
                     if (!silent) realtimeSyncLog('⏳ clinicVisits: جلب عيادة جارٍ — تخطي realtime');
                     return false;
                 }
-                // احترام TTL/كاش العيادة — لا تعِد RPC كاملاً إن الجلب غير مطلوب
+                // TTL قصير للمزامنة الحية (≈3د) — مستقل عن shouldFetch / _visitsBackendFetchOk
                 if (typeof Clinic !== 'undefined'
-                    && typeof Clinic.shouldFetchClinicVisitsFromBackend === 'function'
-                    && !Clinic.shouldFetchClinicVisitsFromBackend({ forceRefresh: false })) {
-                    if (!silent) realtimeSyncLog('⚡ clinicVisits: كاش حديث — تخطي realtime');
+                    && typeof Clinic.shouldRefreshClinicVisitsForRealtime === 'function'
+                    && !Clinic.shouldRefreshClinicVisitsForRealtime()) {
+                    if (!silent) realtimeSyncLog('⚡ clinicVisits: مزامنة حية حديثة — تخطي realtime');
                     this.state.lastSyncTime[module] = now;
                     return true;
                 }
@@ -823,7 +823,7 @@ const RealtimeSyncManager = {
                             ? Clinic.getClinicVisitsFetchFilters()
                             : { startDate: undefined, limit: 8000 },
                         __timeoutMs: 120000,
-                        __highPriority: true
+                        __highPriority: false
                     }
                 });
 
