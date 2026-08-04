@@ -5093,6 +5093,7 @@ const Employees = {
             try {
                 let addedCount = 0;
                 let skippedDuringWrite = 0;
+                const addedEmployees = [];
                 const writeKeySet = existingImportKeySet instanceof Set
                     ? new Set(existingImportKeySet)
                     : this.buildEmployeeImportExistingKeySet();
@@ -5117,6 +5118,7 @@ const Employees = {
                                 continue;
                             }
                             AppState.appData.employees.push(employee);
+                            addedEmployees.push(employee);
                             const k1 = this.normalizeEmployeeImportKey(employee.employeeNumber);
                             const k2 = this.normalizeEmployeeImportKey(employee.sapId);
                             const k3 = this.normalizeEmployeeImportKey(employee.id);
@@ -5137,22 +5139,21 @@ const Employees = {
                 } else {
                     Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
                 }
-                Loading.show('جاري مزامنة السحابة...');
-                await this.yieldEmployeeImportUi_();
-                await GoogleIntegration.autoSave('Employees', AppState.appData.employees);
 
                 this.cache.data = AppState.appData.employees;
                 this.cache.lastLoad = Date.now();
                 this.cache.lastUpdate = Date.now();
                 existingImportKeySet = writeKeySet;
 
+                // استجابة فورية: لا ننتظر رفع كل ورقة Employees (كان يعلّق على «مزامنة السحابة»)
                 Loading.hide();
                 Notification.success(
-                    `أُضيف ${addedCount} موظف جديد` +
+                    `أُضيف ${addedCount} موظف جديد محلياً` +
                     (counts.existsCount > 0 ? ` — تُخطي موجود ${counts.existsCount}` : '') +
                     (counts.hireDateRejectedCount > 0 ? ` — تعيين خارج ${this.getEmployeeImportHireWindowLabel()} ${counts.hireDateRejectedCount}` : '') +
                     (counts.invalidCount > counts.hireDateRejectedCount ? ` — ناقص ${counts.invalidCount - counts.hireDateRejectedCount}` : '') +
-                    (skippedDuringWrite > 0 ? ` — استُبعد عند الحفظ ${skippedDuringWrite}` : '')
+                    (skippedDuringWrite > 0 ? ` — استُبعد عند الحفظ ${skippedDuringWrite}` : '') +
+                    (addedEmployees.length > 0 ? ' — جاري مزامنة الجدد مع السحابة بالخلفية' : '')
                 );
                 modal.remove();
 
@@ -5162,11 +5163,102 @@ const Employees = {
                 requestAnimationFrame(() => {
                     this.applyFilters();
                 });
+
+                if (addedEmployees.length > 0) {
+                    void this.syncImportedEmployeesToCloud_(addedEmployees);
+                }
             } catch (error) {
                 Loading.hide();
                 Notification.error('فشل الاستيراد: ' + error.message);
             }
         });
+    },
+
+    /**
+     * مزامنة موظفين مستوردين فقط (append دفعات) — لا ترفع ورقة Employees كاملة عبر autoSave.
+     */
+    async syncImportedEmployeesToCloud_(employees) {
+        const list = Array.isArray(employees) ? employees.filter(Boolean) : [];
+        if (!list.length) return;
+        if (typeof GoogleIntegration === 'undefined') return;
+        if (typeof GoogleIntegration._isBackendRpcConfigured === 'function'
+            && !GoogleIntegration._isBackendRpcConfigured()) {
+            Notification?.warning?.('حُفظ محلياً — الخادم غير مفعّل للمزامنة');
+            return;
+        }
+
+        const toCloudRow = (e) => ({
+            id: e.id,
+            name: e.name,
+            employeeNumber: e.employeeNumber,
+            sapId: e.sapId,
+            hireDate: e.hireDate,
+            job: e.job || e.position || '',
+            position: e.position || e.job || '',
+            department: e.department || '',
+            branch: e.branch || '',
+            location: e.location || '',
+            gender: e.gender || '',
+            nationalId: e.nationalId || '',
+            birthDate: e.birthDate || '',
+            email: e.email || '',
+            phone: e.phone || '',
+            insuranceNumber: e.insuranceNumber || '',
+            photo: '',
+            status: e.status || 'active',
+            resignationDate: e.resignationDate || '',
+            createdAt: e.createdAt || new Date().toISOString(),
+            updatedAt: e.updatedAt || new Date().toISOString()
+        });
+
+        const chunkSize = 40;
+        let synced = 0;
+        let failed = 0;
+
+        for (let i = 0; i < list.length; i += chunkSize) {
+            const chunk = list.slice(i, i + chunkSize).map(toCloudRow);
+            try {
+                const sendPromise = (typeof GoogleIntegration.sendRequest === 'function')
+                    ? GoogleIntegration.sendRequest({
+                        action: 'appendToSheet',
+                        data: {
+                            sheetName: 'Employees',
+                            data: chunk,
+                            __timeoutMs: 90000,
+                            userData: AppState.currentUser || {}
+                        }
+                    })
+                    : GoogleIntegration.sendToAppsScript('appendToSheet', {
+                        sheetName: 'Employees',
+                        data: chunk,
+                        __timeoutMs: 90000,
+                        userData: AppState.currentUser || {}
+                    });
+
+                const result = (typeof Utils !== 'undefined' && Utils.promiseWithTimeout)
+                    ? await Utils.promiseWithTimeout(sendPromise, 95000, 'انتهت مهلة مزامنة دفعة موظفين')
+                    : await sendPromise;
+
+                if (result && result.success) {
+                    synced += chunk.length;
+                } else {
+                    failed += chunk.length;
+                    Utils.safeWarn?.('⚠️ فشل مزامنة دفعة موظفين:', result?.message);
+                }
+            } catch (err) {
+                failed += chunk.length;
+                Utils.safeWarn?.('⚠️ خطأ مزامنة دفعة موظفين:', err?.message || err);
+            }
+            await this.yieldEmployeeImportUi_();
+        }
+
+        if (synced > 0 && failed === 0) {
+            Notification?.success?.(`تمت مزامنة ${synced} موظفاً جديداً مع السحابة`);
+        } else if (synced > 0 && failed > 0) {
+            Notification?.warning?.(`تمت مزامنة ${synced} — تعذّر ${failed}. البيانات محفوظة محلياً.`);
+        } else if (failed > 0) {
+            Notification?.warning?.(`حُفظ محلياً — تعذّرت مزامنة السحابة (${failed}). أعد المحاولة لاحقاً أو من زر التحديث.`);
+        }
     },
 
     async handleSubmit(e) {

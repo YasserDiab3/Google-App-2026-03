@@ -1,15 +1,15 @@
 {
-  "version": "1.0.835",
+  "version": "1.0.837",
   "highlights": {
     "ar": [
-      "إصلاح بحث مهمات الوقاية: الكتابة لم تعد تتوقف بعد حرف واحد.",
-      "الفلاتر تبقى أثناء التصفية — يُحدَّث الجدول فقط دون فقدان التركيز.",
-      "بحث متعدد الكلمات على الاستلام والمخزون والمصفوفة."
+      "استيراد الموظفين لم يعد يعلق على «مزامنة السحابة» برفع الجدول كاملاً.",
+      "الحفظ المحلي فوري ثم مزامنة الجدد فقط على دفعات بالخلفية.",
+      "إشعار واضح عند نجاح/تعثر مزامنة السحابة دون إعادة فتح نموذج فارغ."
     ],
     "en": [
-      "PPE search fix: typing no longer stops after one character.",
-      "Filters stay while filtering — only the results table refreshes.",
-      "Multi-word search across receipts, stock, and matrix views."
+      "Employee import no longer hangs on full-sheet cloud sync.",
+      "Local save is instant; only new rows sync in background chunks.",
+      "Clear success/warning if cloud sync finishes or fails."
     ]
   }
 }
