@@ -645,7 +645,11 @@ const Employees = {
                         this.renderExternalWorkforceTable();
                     } else if (this.activeTab === 'employees-list' && this.canViewEmployeesRegistryTab()) {
                         const tableHost = document.getElementById('employees-table-container');
-                        if (tableHost) {
+                        const hasLocal = Array.isArray(AppState.appData.employees) && AppState.appData.employees.length > 0;
+                        // عرض فوري من المحلي إن وُجد — لا تُعلّق الواجهة على جلب الخادم
+                        if (hasLocal) {
+                            await this.loadEmployeesList();
+                        } else if (tableHost) {
                             tableHost.innerHTML = `
                                 <div class="empty-state" style="padding:28px;">
                                     <div style="width: 280px; margin: 0 auto 14px;">
@@ -656,14 +660,28 @@ const Employees = {
                                     <p class="text-gray-600">${this.t('module.employees.loadingList', 'جاري تحميل قائمة الموظفين...')}</p>
                                 </div>`;
                         }
-                        await this.ensureEmployeesLoaded(false);
-                        if (!(AppState.appData.employees || []).length) {
-                            await this.ensureEmployeesLoaded(true);
+                        try {
+                            await this._ensureEmployeesLoadedWithTimeout_(false, hasLocal ? 45000 : 90000);
+                            if (!(AppState.appData.employees || []).length) {
+                                await this._ensureEmployeesLoadedWithTimeout_(true, 60000);
+                            }
+                        } catch (loadErr) {
+                            Utils.safeWarn('⚠️ انتهاء/فشل جلب الموظفين:', loadErr);
                         }
-                        await this.loadEmployeesList();
+                        if (document.getElementById('employees-table-container')) {
+                            await this.loadEmployeesList();
+                        }
                     } else if (this.canViewEmployeesRegistryTab()) {
-                        await this.ensureEmployeesLoaded(false);
-                        await this.loadEmployeesList();
+                        const hasLocal = Array.isArray(AppState.appData.employees) && AppState.appData.employees.length > 0;
+                        if (hasLocal) {
+                            await this.loadEmployeesList();
+                        }
+                        try {
+                            await this._ensureEmployeesLoadedWithTimeout_(false, hasLocal ? 45000 : 90000);
+                        } catch (_e) { /* ignore */ }
+                        if (document.getElementById('employees-table-container')) {
+                            await this.loadEmployeesList();
+                        }
                     } else if (this.canViewEmployeesAnalysisTab()) {
                         await this.loadEmployeesAnalysis();
                     } else if (this.canViewExternalWorkforceTab()) {
@@ -3479,16 +3497,33 @@ const Employees = {
     },
 
     /**
+     * انتظار انتهاء isUpdating بحد أقصى — يمنع حلقة لا نهائية تعلق الشاشة
+     */
+    async _waitWhileUpdating_(maxMs = 60000) {
+        const start = Date.now();
+        while (this.cache.isUpdating && (Date.now() - start) < maxMs) {
+            await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        if (this.cache.isUpdating) {
+            Utils.safeWarn('⚠️ تجاوز انتظار تحديث الموظفين — فك القفل');
+            this.cache.isUpdating = false;
+        }
+    },
+
+    async _ensureEmployeesLoadedWithTimeout_(forceReload = false, timeoutMs = 90000) {
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('EMPLOYEES_LOAD_TIMEOUT')), timeoutMs);
+        });
+        return Promise.race([this.ensureEmployeesLoaded(forceReload), timeoutPromise]);
+    },
+
+    /**
      * التأكد من تحميل بيانات الموظفين (من Cache أو من Backend)
      */
     async ensureEmployeesLoaded(forceReload = false) {
         // منع التحميل المتزامن المتكرر
         if (this.cache.isUpdating && !forceReload) {
-            // انتظار انتهاء التحميل الحالي
-            // تحسين: تقليل التأخير من 100ms إلى 50ms لتسريع التحميل
-            while (this.cache.isUpdating) {
-                await new Promise(resolve => setTimeout(resolve, 50));
-            }
+            await this._waitWhileUpdating_(60000);
             // التحقق مرة أخرى بعد انتهاء التحميل
             if (AppState.appData.employees && Array.isArray(AppState.appData.employees) && AppState.appData.employees.length > 0) {
                 return true;
@@ -3551,12 +3586,7 @@ const Employees = {
             if (AppState.debugMode) {
                 Utils.safeLog('⚠️ تحميل البيانات قيد التنفيذ بالفعل، انتظار...');
             }
-            // انتظار انتهاء التحميل الحالي
-            // تحسين: تقليل التأخير من 100ms إلى 50ms لتسريع التحميل
-            while (this.cache.isUpdating) {
-                await new Promise(resolve => setTimeout(resolve, 50));
-            }
-            // التحقق مرة أخرى بعد انتهاء التحميل
+            await this._waitWhileUpdating_(60000);
             if (AppState.appData.employees && Array.isArray(AppState.appData.employees) && AppState.appData.employees.length > 0) {
                 return true;
             }
@@ -3571,42 +3601,39 @@ const Employees = {
                 if (AppState.debugMode) {
                     Utils.safeLog('⚠️ Google Apps Script غير مفعّل - استخدام البيانات المحلية فقط');
                 }
-                // استخدام البيانات المحلية إذا كانت موجودة
                 if (AppState.appData.employees && Array.isArray(AppState.appData.employees)) {
                     this.cache.data = AppState.appData.employees;
                     this.cache.lastLoad = Date.now();
                     this.cache.lastUpdate = Date.now();
                 }
-                this.cache.isUpdating = false;
                 return false;
             }
 
-            // التحقق من وجود GoogleIntegration
             if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) {
                 if (AppState.debugMode) {
                     Utils.safeWarn('⚠️ GoogleIntegration غير متاح');
                 }
-                // استخدام البيانات المحلية إذا كانت موجودة
                 if (AppState.appData.employees && Array.isArray(AppState.appData.employees)) {
                     this.cache.data = AppState.appData.employees;
                     this.cache.lastLoad = Date.now();
                     this.cache.lastUpdate = Date.now();
                 }
-                this.cache.isUpdating = false;
                 return false;
             }
 
-            // محاولة تحميل البيانات من Backend باستخدام getAllEmployees
-            // ✅ includeInactive: true لاستلام جميع الموظفين (نشطين + مستقيلين) حتى يظهر عداد المستقيلين بشكل صحيح
-            // ✅ دائماً تجاوز SmartCache — كاش فارغ قديم كان يُفرّغ القائمة لساعات
+            // skipCache فقط عند التحديث الإجباري — الجلب العادي أسرع بعد إصلاح الخادم
             try {
                 const employeesFetchData = {
                     filters: { includeInactive: true },
-                    skipCache: true,
-                    forceRefresh: true
+                    __timeoutMs: 120000,
+                    ...(forceReload ? { skipCache: true, forceRefresh: true } : {})
                 };
-                if (typeof GoogleIntegration._invalidateSmartCacheForRead_ === 'function') {
-                    GoogleIntegration._invalidateSmartCacheForRead_('getAllEmployees', employeesFetchData);
+                if (forceReload && typeof GoogleIntegration._invalidateSmartCacheForRead_ === 'function') {
+                    GoogleIntegration._invalidateSmartCacheForRead_('getAllEmployees', {
+                        filters: { includeInactive: true },
+                        skipCache: true,
+                        forceRefresh: true
+                    });
                 }
                 const result = await GoogleIntegration.sendRequest({
                     action: 'getAllEmployees',
@@ -3614,18 +3641,15 @@ const Employees = {
                 });
 
                 if (result && result.success && Array.isArray(result.data)) {
-                    // حماية: لا تستبدل المحلي بفارغ ولا تفقد الأسماء
                     if (result.data.length === 0 && (AppState.appData.employees || []).length > 0) {
                         this.cache.data = AppState.appData.employees;
                         this.cache.lastLoad = Date.now();
                         this.cache.lastUpdate = Date.now();
-                        this.cache.isUpdating = false;
                         return true;
                     }
 
                     this.applyEmployeesData_(result.data);
-                    
-                    // حفظ البيانات محلياً
+
                     if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                         window.DataManager.save();
                     }
@@ -3633,78 +3657,71 @@ const Employees = {
                     if (AppState.debugMode) {
                         Utils.safeLog(`✅ تم تحميل ${result.data.length} موظف من قاعدة البيانات`);
                     }
-                    this.cache.isUpdating = false;
                     return true;
-                } else {
-                    // إذا فشل getAllEmployees، جرب readFromSheet مباشرة
-                    if (AppState.debugMode) {
-                        Utils.safeWarn('⚠️ getAllEmployees فشل، جاري المحاولة بـ readFromSheet...');
-                    }
-                    
-                    const sheetFetchData = {
-                        sheetName: 'Employees',
-                        spreadsheetId: AppState.googleConfig.sheets.spreadsheetId,
-                        skipCache: true,
-                        forceRefresh: true
-                    };
-                    if (typeof GoogleIntegration._invalidateSmartCacheForRead_ === 'function') {
-                        GoogleIntegration._invalidateSmartCacheForRead_('readFromSheet', sheetFetchData);
-                    }
-                    const sheetResult = await GoogleIntegration.sendRequest({
-                        action: 'readFromSheet',
-                        data: sheetFetchData
-                    });
+                }
 
-                    if (sheetResult && sheetResult.success && Array.isArray(sheetResult.data)) {
-                        if (sheetResult.data.length === 0 && (AppState.appData.employees || []).length > 0) {
-                            this.cache.data = AppState.appData.employees;
-                            this.cache.lastLoad = Date.now();
-                            this.cache.lastUpdate = Date.now();
-                            this.cache.isUpdating = false;
-                            return true;
-                        }
+                if (AppState.debugMode) {
+                    Utils.safeWarn('⚠️ getAllEmployees فشل، جاري المحاولة بـ readFromSheet...');
+                }
 
-                        this.applyEmployeesData_(sheetResult.data);
-                        
-                        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                            window.DataManager.save();
-                        }
+                const sheetFetchData = {
+                    sheetName: 'Employees',
+                    spreadsheetId: AppState.googleConfig.sheets.spreadsheetId,
+                    __timeoutMs: 120000,
+                    ...(forceReload ? { skipCache: true, forceRefresh: true } : {})
+                };
+                if (forceReload && typeof GoogleIntegration._invalidateSmartCacheForRead_ === 'function') {
+                    GoogleIntegration._invalidateSmartCacheForRead_('readFromSheet', sheetFetchData);
+                }
+                const sheetResult = await GoogleIntegration.sendRequest({
+                    action: 'readFromSheet',
+                    data: sheetFetchData
+                });
 
-                        if (AppState.debugMode) {
-                            Utils.safeLog(`✅ تم تحميل ${sheetResult.data.length} موظف من Google Sheets`);
-                        }
-                        this.cache.isUpdating = false;
+                if (sheetResult && sheetResult.success && Array.isArray(sheetResult.data)) {
+                    if (sheetResult.data.length === 0 && (AppState.appData.employees || []).length > 0) {
+                        this.cache.data = AppState.appData.employees;
+                        this.cache.lastLoad = Date.now();
+                        this.cache.lastUpdate = Date.now();
                         return true;
                     }
+
+                    this.applyEmployeesData_(sheetResult.data);
+
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        window.DataManager.save();
+                    }
+
+                    if (AppState.debugMode) {
+                        Utils.safeLog(`✅ تم تحميل ${sheetResult.data.length} موظف من Google Sheets`);
+                    }
+                    return true;
                 }
             } catch (error) {
                 if (AppState.debugMode) {
                     Utils.safeWarn('⚠️ خطأ في تحميل بيانات الموظفين من Backend:', error);
                 }
-                // في حالة الخطأ، نستخدم البيانات المحلية إذا كانت موجودة
                 if (AppState.appData.employees && Array.isArray(AppState.appData.employees)) {
                     this.cache.data = AppState.appData.employees;
                     this.cache.lastLoad = Date.now();
                     this.cache.lastUpdate = Date.now();
                 }
-                this.cache.isUpdating = false;
                 return false;
             }
 
-            this.cache.isUpdating = false;
             return false;
         } catch (error) {
             if (AppState.debugMode) {
                 Utils.safeError('❌ خطأ في loadEmployeesFromBackend:', error);
             }
-            // في حالة الخطأ، نستخدم البيانات المحلية إذا كانت موجودة
             if (AppState.appData.employees && Array.isArray(AppState.appData.employees)) {
                 this.cache.data = AppState.appData.employees;
                 this.cache.lastLoad = Date.now();
                 this.cache.lastUpdate = Date.now();
             }
-            this.cache.isUpdating = false;
             return false;
+        } finally {
+            this.cache.isUpdating = false;
         }
     },
 
@@ -3730,15 +3747,10 @@ const Employees = {
                 return;
             }
 
-            // محاولة تحميل البيانات من Backend — تجاوز SmartCache دائماً
             const employeesFetchData = {
                 filters: { includeInactive: true },
-                skipCache: true,
-                forceRefresh: true
+                __timeoutMs: 120000
             };
-            if (typeof GoogleIntegration._invalidateSmartCacheForRead_ === 'function') {
-                GoogleIntegration._invalidateSmartCacheForRead_('getAllEmployees', employeesFetchData);
-            }
             const result = await GoogleIntegration.sendRequest({
                 action: 'getAllEmployees',
                 data: employeesFetchData
@@ -4067,16 +4079,7 @@ const Employees = {
         `;
 
         const tbody = document.createElement('tbody');
-        // عرض كامل كالآلية السابقة (بدون ترقيم صفحات) — استقرار العرض أولاً
-        const frag = document.createDocumentFragment();
-        for (let i = 0; i < employees.length; i++) {
-            frag.appendChild(this.buildEmployeeTableRowElement_(employees[i], canEditOrDelete));
-        }
-        tbody.appendChild(frag);
-        this._listRowsCache = employees;
-        this._listVisibleCount = employees.length;
-        this._listCanEdit = canEditOrDelete;
-
+        // عرض أولي بصفحات — يمنع تعليق المتصفح عند رسم مئات الصفوف دفعة واحدة
         table.appendChild(thead);
         table.appendChild(tbody);
         tableWrapper.appendChild(table);
@@ -4085,6 +4088,7 @@ const Employees = {
         // تحديث DOM مرة واحدة فقط
         container.innerHTML = '';
         container.appendChild(fragment);
+        this.fillEmployeesTbodyPaged_(tbody, employees, canEditOrDelete, true);
         this.applyModuleI18n(container);
 
         // ✅ تثبيت fallback لصور الموظفين (503 Drive) بعد تحديث DOM

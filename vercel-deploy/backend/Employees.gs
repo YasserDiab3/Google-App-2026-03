@@ -281,6 +281,24 @@ function getAllEmployees(filters = {}) {
             return nameA.localeCompare(nameB);
         });
 
+        // تخفيف الحمولة: لا تُرجع صور base64/نصوص ضخمة في قائمة الجلب (تُعلّق الواجهة)
+        const omitHeavyPhotos = filters.omitPhotos !== false;
+        if (omitHeavyPhotos && Array.isArray(data) && data.length) {
+            data = data.map(function (row) {
+                if (!row || typeof row !== 'object') return row;
+                var photo = row.photo;
+                if (photo == null || photo === '') return row;
+                var s = String(photo);
+                if (s.indexOf('data:') === 0 || s.length > 800) {
+                    var light = Object.assign({}, row);
+                    light.photo = '';
+                    light.hasPhoto = true;
+                    return light;
+                }
+                return row;
+            });
+        }
+
         const result = { success: true, data: data, count: data.length };
 
         // حفظ في الكاش — 10 دقائق (لا تخزّن فراغاً حتى لا يُسمّم التحميل)
