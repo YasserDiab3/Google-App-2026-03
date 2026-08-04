@@ -1,15 +1,15 @@
 {
-  "version": "1.0.843",
+  "version": "1.0.845",
   "highlights": {
     "ar": [
-      "إصلاح قائمة الموظفين الفارغة: رقم وظيفي في تاريخ الاستقالة لم يعد يخفي الجميع.",
-      "تطبيع سجلات الاستيراد المنزاحة عند العرض مع الإبقاء على النشطين.",
-      "إرجاع مسار تحميل قاعدة الموظفين كما كان (عرض ثم مزامنة خلفية)."
+      "استعادة تحميل قاعدة الموظفين: انتظار الجلب ثم عرض القائمة كاملة.",
+      "إصلاح إخفاء الجميع بسبب انزلاق status/تاريخ الاستقالة.",
+      "حماية عرض: إن صُفّي الكل يُعرض الجميع مؤقتاً حتى لا يبقى المديول فارغاً."
     ],
     "en": [
-      "Fixed empty employees list: employee numbers in resignationDate no longer hide everyone.",
-      "Sanitize drifted import fields on display so active staff stay visible.",
-      "Restored the previous employees load path (render then background sync)."
+      "Restored employees load: wait for fetch, then render the full list.",
+      "Fixed everyone being hidden by drifted status/resignationDate fields.",
+      "Safety net: if active-filter empties the list, show all so the module is not blank."
     ]
   }
 }

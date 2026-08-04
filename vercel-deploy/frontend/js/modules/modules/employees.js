@@ -637,15 +637,32 @@ const Employees = {
                     // ✅ إعادة إعداد event listeners بعد تحميل المحتوى
                     this.setupEventListeners();
                     
-                    // ✅ تحميل التبويب النشط — نفس آلية التحميل السابقة
+                    // ✅ آلية التحميل الكلاسيكية: انتظار الجلب ثم عرض القائمة (كما قبل تنظيف الجدول)
                     if (this.activeTab === 'data-analysis' && this.canViewEmployeesAnalysisTab()) {
                         await this.loadEmployeesAnalysis();
                     } else if (this.activeTab === 'external-workforce' && this.canViewExternalWorkforceTab()) {
                         await this.ensureExternalWorkforceDataLoaded();
                         this.renderExternalWorkforceTable();
                     } else if (this.activeTab === 'employees-list' && this.canViewEmployeesRegistryTab()) {
+                        const tableHost = document.getElementById('employees-table-container');
+                        if (tableHost) {
+                            tableHost.innerHTML = `
+                                <div class="empty-state" style="padding:28px;">
+                                    <div style="width: 280px; margin: 0 auto 14px;">
+                                        <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
+                                            <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
+                                        </div>
+                                    </div>
+                                    <p class="text-gray-600">${this.t('module.employees.loadingList', 'جاري تحميل قائمة الموظفين...')}</p>
+                                </div>`;
+                        }
+                        await this.ensureEmployeesLoaded(false);
+                        if (!(AppState.appData.employees || []).length) {
+                            await this.ensureEmployeesLoaded(true);
+                        }
                         await this.loadEmployeesList();
                     } else if (this.canViewEmployeesRegistryTab()) {
+                        await this.ensureEmployeesLoaded(false);
                         await this.loadEmployeesList();
                     } else if (this.canViewEmployeesAnalysisTab()) {
                         await this.loadEmployeesAnalysis();
@@ -802,16 +819,25 @@ const Employees = {
 
     /**
      * تحديد إذا كان الموظف غير نشط (مستقيل)
-     * يدعم: status = 'inactive' أو 'غير نشط' أو تاريخ استقالة حقيقي فقط
+     * نشط صريح يفوز دائماً — تاريخ الاستقالة يجب أن يكون تاريخاً حقيقياً فقط
      */
     isEmployeeInactive(employee) {
         if (!employee) return false;
         const status = (employee.status != null && employee.status !== '') ? String(employee.status).trim() : '';
-        const resignationDate = (employee.resignationDate != null && employee.resignationDate !== '') ? String(employee.resignationDate).trim() : '';
-        // مهم: لا تعتبر رقم الموظف في resignationDate (انزلاق أعمدة) استقالة
-        if (resignationDate && this._isRealResignationDateValue_(resignationDate, employee)) return true;
-        if (status === 'inactive' || status.toLowerCase() === 'inactive') return true;
-        if (status === 'غير نشط') return true;
+        const statusLower = status.toLowerCase();
+        // صريح نشط → ليس مستقيل (يمنع انزلاق resignationDate=رقم وظيفي من إخفاء الجميع)
+        if (statusLower === 'active' || status === 'نشط' || statusLower === 'true' || status === '1') {
+            return false;
+        }
+        const resignationDate = (employee.resignationDate != null && employee.resignationDate !== '')
+            ? String(employee.resignationDate).trim()
+            : '';
+        if (resignationDate && this._isRealResignationDateValue_(resignationDate, employee)) {
+            return true;
+        }
+        if (statusLower === 'inactive' || status === 'غير نشط' || statusLower === 'false' || status === '0') {
+            return true;
+        }
         return false;
     },
 
@@ -3924,7 +3950,6 @@ const Employees = {
             return;
         }
 
-        // استخدام البيانات من AppState (يجب أن تكون محملة مسبقاً من load())
         // تطبيع انزلاق أعمدة قبل التصفية — يمنع قائمة فارغة بسبب resignationDate=رقم وظيفي
         let employees = (AppState.appData.employees || []).map((e) => this.sanitizeEmployeeRecordDrift_({ ...(e || {}) }));
         AppState.appData.employees = employees;
@@ -3933,16 +3958,22 @@ const Employees = {
             Utils.safeLog(`📊 loadEmployeesList: إجمالي الموظفين = ${employees.length}, showInactive = ${showInactive}`);
         }
 
-        // ✅ تصفية الموظفين النشطين فقط (ما لم يُطلب خلاف ذلك) - استخدام isEmployeeInactive
+        // ✅ تصفية الموظفين النشطين فقط (ما لم يُطلب خلاف ذلك)
         if (!showInactive) {
             const beforeFilter = employees.length;
-            employees = employees.filter(e => !this.isEmployeeInactive(e));
+            const activeOnly = employees.filter(e => !this.isEmployeeInactive(e));
+            // حماية حرجة: إن صُفّي الجميع رغم وجود بيانات → اعرض الكل (انزلاق أعمدة / تنظيف جزئي)
+            if (activeOnly.length === 0 && beforeFilter > 0) {
+                Utils.safeWarn(`⚠️ تصفية النشطين أخفت ${beforeFilter} موظفاً — عرض الكل مؤقتاً لحماية الواجهة`);
+            } else {
+                employees = activeOnly;
+            }
             if (AppState.debugMode) {
-                Utils.safeLog(`📊 بعد التصفية (نشطين فقط): ${employees.length} من ${beforeFilter}`);
+                Utils.safeLog(`📊 بعد التصفية (نشطين): ${employees.length} من ${beforeFilter}`);
             }
         } else {
             if (AppState.debugMode) {
-                Utils.safeLog(`📊 عرض جميع الموظفين (بما في ذلك غير النشطين): ${employees.length}`);
+                Utils.safeLog(`📊 عرض جميع الموظفين: ${employees.length}`);
             }
         }
 
@@ -4013,7 +4044,15 @@ const Employees = {
         `;
 
         const tbody = document.createElement('tbody');
-        this.fillEmployeesTbodyPaged_(tbody, employees, canEditOrDelete, true);
+        // عرض كامل كالآلية السابقة (بدون ترقيم صفحات) — استقرار العرض أولاً
+        const frag = document.createDocumentFragment();
+        for (let i = 0; i < employees.length; i++) {
+            frag.appendChild(this.buildEmployeeTableRowElement_(employees[i], canEditOrDelete));
+        }
+        tbody.appendChild(frag);
+        this._listRowsCache = employees;
+        this._listVisibleCount = employees.length;
+        this._listCanEdit = canEditOrDelete;
 
         table.appendChild(thead);
         table.appendChild(tbody);
@@ -6690,7 +6729,13 @@ const Employees = {
         
         // ✅ تصفية الموظفين النشطين فقط (ما لم يُطلب خلاف ذلك) - استخدام isEmployeeInactive
         if (!showInactive) {
-            employees = employees.filter(e => !this.isEmployeeInactive(e));
+            const beforeFilter = employees.length;
+            const activeOnly = employees.filter(e => !this.isEmployeeInactive(e));
+            if (activeOnly.length === 0 && beforeFilter > 0) {
+                Utils.safeWarn(`⚠️ filterEmployees: التصفية أخفت الجميع — عرض الكل`);
+            } else {
+                employees = activeOnly;
+            }
         }
         
         let filtered = employees;
@@ -6750,7 +6795,17 @@ const Employees = {
             this._listRowsCache = [];
             this._listVisibleCount = 0;
         } else {
-            this.fillEmployeesTbodyPaged_(tbody, filtered, canEditOrDelete, true);
+            const frag = document.createDocumentFragment();
+            for (let i = 0; i < filtered.length; i++) {
+                frag.appendChild(this.buildEmployeeTableRowElement_(filtered[i], canEditOrDelete));
+            }
+            tbody.innerHTML = '';
+            tbody.appendChild(frag);
+            this._listRowsCache = filtered;
+            this._listVisibleCount = filtered.length;
+            this._listCanEdit = canEditOrDelete;
+            const moreWrap = document.getElementById('employees-load-more-wrap');
+            if (moreWrap) moreWrap.remove();
         }
 
         if (typeof Utils.hydrateDriveProxyImages === 'function') {

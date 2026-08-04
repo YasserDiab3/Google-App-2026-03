@@ -156,7 +156,22 @@ function getAllEmployees(filters = {}) {
     try {
         const sheetName = 'Employees';
 
-        // ✅ الكاش أولاً — لا تعطّل الفتح بصيانة/إصلاح قبل الاستجابة السريعة
+        // كسر كاش قبل أي قراءة — مرة واحدة بعد إصلاح العرض
+        try {
+            const props = PropertiesService.getScriptProperties();
+            if (props.getProperty('employees_ui_restore_v4') !== '1') {
+                try { _bumpEmployeesCacheVersion_(); } catch (_b0) {}
+                try { invalidateHseSheetCaches('Employees'); } catch (_i0) {}
+                props.setProperty('employees_ui_restore_v4', '1');
+            }
+            if (props.getProperty('employees_names_stable_v1') !== '1') {
+                try { _bumpEmployeesCacheVersion_(); } catch (_b1) {}
+                try { invalidateHseSheetCaches('Employees'); } catch (_i1) {}
+                props.setProperty('employees_names_stable_v1', '1');
+            }
+        } catch (_preCacheErr) {}
+
+        // ✅ الكاش أولاً بعد كسر النسخة القديمة
         var cacheKey = null;
         try {
             const cache = CacheService.getScriptCache();
@@ -166,50 +181,44 @@ function getAllEmployees(filters = {}) {
             if (cached) {
                 const parsed = JSON.parse(cached);
                 if (parsed && parsed.success === true && Array.isArray(parsed.data)) {
-                    return { success: true, data: parsed.data, count: parsed.data.length, source: 'cache' };
+                    var cachedData = parsed.data;
+                    if (typeof normalizeEmployeesRowColumnDrift_ === 'function') {
+                        cachedData = cachedData.map(function(row) {
+                            return normalizeEmployeesRowColumnDrift_(row);
+                        });
+                    }
+                    return { success: true, data: cachedData, count: cachedData.length, source: 'cache' };
                 }
             }
         } catch (eCacheRead) {
             // ignore cache errors - fall back to sheet read
         }
 
-        // صيانة لمرة واحدة فقط عند غياب الكاش (لا تُنفَّذ في مسار الكاش السريع)
+        // صيانة لمرة واحدة فقط عند غياب الكاش
         try { maybeRepairEmployeesColumnDriftOnce_(); } catch (_driftRepairErr) {}
 
-        // كسر كاش قديم مرة واحدة بعد إصلاح ثبات الأسماء/الدمج
-        try {
-            const props = PropertiesService.getScriptProperties();
-            if (props.getProperty('employees_names_stable_v1') !== '1') {
-                try { _bumpEmployeesCacheVersion_(); } catch (_b) {}
-                try { invalidateHseSheetCaches('Employees'); } catch (_i) {}
-                props.setProperty('employees_names_stable_v1', '1');
-                // أعد محاولة الكاش بعد bump إن وُجد مفتاح جديد
-                try {
-                    const cache2 = CacheService.getScriptCache();
-                    const v2 = _getEmployeesCacheVersion_();
-                    cacheKey = 'hse_employees_all_v' + v2 + '_f:' + _stableStringify_(filters || {});
-                    const cached2 = cache2.get(cacheKey);
-                    if (cached2) {
-                        const parsed2 = JSON.parse(cached2);
-                        if (parsed2 && parsed2.success === true && Array.isArray(parsed2.data)) {
-                            return { success: true, data: parsed2.data, count: parsed2.data.length, source: 'cache' };
-                        }
-                    }
-                } catch (_c2) {}
-            }
-        } catch (_cacheBumpErr) {}
-
         let data = readFromSheet(sheetName, getSpreadsheetId());
+
+        // تطبيع انزلاق أعمدة على كل صف قبل أي تصفية (status=تاريخ / resignationDate=رقم)
+        if (typeof normalizeEmployeesRowColumnDrift_ === 'function') {
+            data = (data || []).map(function(row) {
+                return normalizeEmployeesRowColumnDrift_(row);
+            });
+        }
         
         // ✅ تصفية الموظفين النشطين فقط (ما لم يُطلب خلاف ذلك)
-        // ملاحظة: ندعم قيم حالة مختلفة (عربي/إنجليزي/Boolean/رقمي)
+        // مهم: أي status غير inactive الصريح يُعرض (تواريخ منزلقة كانت تخفي الجميع)
         if (filters.includeInactive !== true) {
             data = data.filter(e => {
                 if (!e) return false;
                 const raw = String(e.status === undefined || e.status === null ? '' : e.status).trim().toLowerCase();
+                if (raw === 'inactive' || raw === 'غير نشط' || raw === 'false' || raw === '0') {
+                    return false;
+                }
                 if (raw === '' || raw === 'active' || raw === 'نشط' || raw === 'true' || raw === '1') return true;
                 if (e.status === true || e.status === 1) return true;
-                return false;
+                // status منزلق (تاريخ/رقم) → اعتبره نشطاً
+                return true;
             });
         }
         
