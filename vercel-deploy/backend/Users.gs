@@ -649,8 +649,8 @@ function normalizeSheetScalarField_(val) {
     return String(val).trim();
 }
 
-var USERS_AUTH_CACHE_KEY_ = 'users_auth_map_v2';
-var USERS_AUTH_EMAIL_PREFIX_ = 'user_auth_email_v1:';
+var USERS_AUTH_CACHE_KEY_ = 'users_auth_map_v3';
+var USERS_AUTH_EMAIL_PREFIX_ = 'user_auth_email_v2:';
 var AUTH_QUIET_CACHE_KEY_ = 'auth_quiet_until_ms';
 
 // أعمدة المصادقة فقط — بدون photo/loginHistory (كانت تضخّم القراءة والكاش)
@@ -1249,6 +1249,22 @@ function loginUser(email, password) {
             var secretCandidates = (typeof resolveMfaSecretCandidates_ === 'function')
                 ? resolveMfaSecretCandidates_(secretEncLogin)
                 : [];
+            // كاش قديم قد يحمل mfaEnabled بلا سر — أعد القراءة قبل التعطيل التلقائي
+            if (!secretEncLogin || !secretCandidates.length) {
+                try {
+                    if (typeof invalidateUsersAuthCache_ === 'function') invalidateUsersAuthCache_(e);
+                    var freshSecretUser = (typeof getAuthUserRowByEmail_ === 'function')
+                        ? getAuthUserRowByEmail_(e, {})
+                        : null;
+                    if (freshSecretUser) {
+                        user = freshSecretUser;
+                        secretEncLogin = String(user.mfaSecretEnc || '').trim();
+                        secretCandidates = (typeof resolveMfaSecretCandidates_ === 'function')
+                            ? resolveMfaSecretCandidates_(secretEncLogin)
+                            : [];
+                    }
+                } catch (_refMfa) { /* ignore */ }
+            }
             // سر تالف/فارغ بعد كلمة مرور صحيحة = حظر دائم بدون ذنب المستخدم.
             // عطّل MFA تلقائياً وأكمل الدخول ثم يُعاد التفعيل من الملف الشخصي.
             if (!secretEncLogin || !secretCandidates.length) {
@@ -1632,6 +1648,15 @@ function _fastWriteUserMfaFields_(userId, fields) {
         if (typeof markUsersUpdated_ === 'function') {
             markUsersUpdated_();
         }
+        try {
+            var rowEmail = '';
+            if (emailCol !== -1) {
+                rowEmail = String(sheet.getRange(rowIndex, emailCol + 1).getValue() || '').trim().toLowerCase();
+            }
+            if (typeof invalidateUsersAuthCache_ === 'function') {
+                invalidateUsersAuthCache_(rowEmail || target);
+            }
+        } catch (_invMfa) { /* ignore */ }
         return { success: true };
     } catch (error) {
         Logger.log('_fastWriteUserMfaFields_ error: ' + error.toString());
@@ -1666,6 +1691,7 @@ function confirmMfaEnrollment(code, actorUserData) {
         });
         if (upd && upd.success) {
             clearMfaEnrollmentPending_(email);
+            if (typeof invalidateUsersAuthCache_ === 'function') invalidateUsersAuthCache_(email);
             return { success: true, message: 'تم تفعيل المصادقة الثنائية بنجاح', mfaEnabled: true, mfaEnrolledAt: now };
         }
         return upd || { success: false, message: 'تعذر حفظ إعدادات MFA' };
