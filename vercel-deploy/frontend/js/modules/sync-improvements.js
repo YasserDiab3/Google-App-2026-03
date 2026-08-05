@@ -12,10 +12,50 @@
 (function() {
     'use strict';
     
+    const HEAVY_SHEET_TIMEOUTS = {
+        ClinicVisits: 90000,
+        ClinicContractorVisits: 90000,
+        PTW: 90000,
+        PTWRegistry: 60000,
+        Training: 60000,
+        Employees: 90000,
+        UserActivityLog: 45000,
+        DailyObservations: 60000,
+        Incidents: 45000,
+        Violations: 45000,
+        ActionTrackingRegister: 45000,
+        PeriodicInspectionRecords: 45000,
+        BehaviorMonitoring: 45000
+    };
+    const DEFAULT_SHEET_TIMEOUT = 25000;
+    const DEFERRED_GLOBAL_SHEETS = ['UserActivityLog'];
+    const MODULE_OWNED_HEAVY_SHEETS = ['ClinicVisits', 'ClinicContractorVisits'];
+
     const SyncImprovements = {
         /** حالة إخفاء النافذة (التحميل يستمر في الخلفية) */
         _progressHidden: false,
         _totalSheets: 0,
+        _progressWatchdog: null,
+        _completedSheets: 0,
+
+        _sheetTimeout(sheetName) {
+            return HEAVY_SHEET_TIMEOUTS[sheetName] || DEFAULT_SHEET_TIMEOUT;
+        },
+
+        _startProgressWatchdog(maxMs) {
+            this._clearProgressWatchdog();
+            this._progressWatchdog = setTimeout(() => {
+                Utils.safeWarn('⏱️ إيقاف مؤشر المزامنة بعد تجاوز المدة القصوى');
+                this.removeProgressIndicator();
+            }, maxMs || 180000);
+        },
+
+        _clearProgressWatchdog() {
+            if (this._progressWatchdog) {
+                clearTimeout(this._progressWatchdog);
+                this._progressWatchdog = null;
+            }
+        },
 
         /**
          * إنشاء مؤشر التقدم
@@ -128,10 +168,15 @@
             this._updateFloatingProgress(0, this._totalSheets || 1);
         },
 
-        _updateFloatingProgress(completed, total) {
+        _updateFloatingProgress(completed, total, currentSheet) {
             const percent = total ? Math.round((completed / total) * 100) : 0;
             const percentEl = document.getElementById('sync-floating-percent');
             if (percentEl) percentEl.textContent = percent + '%';
+            const showBtn = document.getElementById('sync-floating-show-btn');
+            if (showBtn) {
+                const sheetHint = currentSheet ? ` — ${currentSheet}` : '';
+                showBtn.title = `جاري التحميل ${percent}%${sheetHint} - اضغط لإظهار التفاصيل`;
+            }
         },
 
         _removeFloatingShowButton() {
@@ -144,13 +189,16 @@
         /**
          * تحديث مؤشر التقدم
          */
-        updateProgress(completed, total) {
-            const percent = Math.round((completed / total) * 100);
+        updateProgress(completed, total, currentSheet) {
+            const percent = total ? Math.round((completed / total) * 100) : 0;
             const progressBar = document.getElementById('sync-progress-bar');
             const progressText = document.getElementById('sync-progress-text');
             if (progressBar) progressBar.style.width = `${percent}%`;
-            if (progressText) progressText.textContent = `${completed} من ${total} (${percent}%)`;
-            if (this._progressHidden) this._updateFloatingProgress(completed, total);
+            if (progressText) {
+                const sheetHint = currentSheet ? ` — ${currentSheet}` : '';
+                progressText.textContent = `${completed} من ${total} (${percent}%)${sheetHint}`;
+            }
+            if (this._progressHidden) this._updateFloatingProgress(completed, total, currentSheet);
         },
         
         /**
@@ -158,6 +206,7 @@
          */
         removeProgressIndicator() {
             this._progressHidden = false;
+            this._clearProgressWatchdog();
             this._removeFloatingShowButton();
             const progressIndicator = document.getElementById('sync-progress-indicator');
             if (progressIndicator && progressIndicator.parentNode) {
@@ -168,12 +217,18 @@
         /**
          * معالجة دفعة من الأوراق
          */
-        async processBatch(batch, readFromSheetsFunc, sheetMapping, shouldLog) {
+        async processBatch(batch, readFromSheetsFunc, sheetMapping, shouldLog, onSheetDone) {
             const results = await Promise.allSettled(
                 batch.map(sheetName =>
-                    readFromSheetsFunc(sheetName)
-                        .then(data => ({ sheetName, data, success: true }))
-                        .catch(error => ({ sheetName, error, success: false }))
+                    readFromSheetsFunc(sheetName, this._sheetTimeout(sheetName))
+                        .then(data => {
+                            if (typeof onSheetDone === 'function') onSheetDone(sheetName);
+                            return { sheetName, data, success: true };
+                        })
+                        .catch(error => {
+                            if (typeof onSheetDone === 'function') onSheetDone(sheetName);
+                            return { sheetName, error, success: false };
+                        })
                 )
             );
             
@@ -287,8 +342,9 @@
                         notifyOnSuccess = !silent,
                         notifyOnError = !silent,
                         includeUsersSheet = true,
-                        // ✅ دعم تحديد أوراق معينة (للاستخدام في تحديثات الموديولات بدون مزامنة كاملة)
-                        sheets: requestedSheets = null
+                        sheets: requestedSheets = null,
+                        incremental = false,
+                        forceRefresh = false
                     } = options;
                     const suppressProgressOverlay = !!(
                         typeof AppState !== 'undefined' &&
@@ -299,6 +355,13 @@
                     const effectiveShowLoader = showLoader && !suppressProgressOverlay;
                     const effectiveNotifyOnSuccess = notifyOnSuccess && !suppressProgressOverlay;
                     const effectiveNotifyOnError = notifyOnError && !suppressProgressOverlay;
+
+                    if (GoogleIntegration._syncInProgress && GoogleIntegration._syncInProgress.global) {
+                        if (!silent && typeof Notification !== 'undefined') {
+                            Notification.info('جاري المزامنة بالفعل، يرجى الانتظار...');
+                        }
+                        return false;
+                    }
                     
                     if (!AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
                         if (!silent) {
@@ -307,6 +370,8 @@
                         }
                         return false;
                     }
+
+                    GoogleIntegration._syncInProgress.global = true;
                     
                     try {
                         const shouldLog = AppState.debugMode && !silent;
@@ -464,6 +529,32 @@
                         if (typeof GoogleIntegration._filterSheetsForCurrentUser === 'function') {
                             sheets = GoogleIntegration._filterSheetsForCurrentUser(sheets);
                         }
+
+                        if (!requestedSheets) {
+                            sheets = sheets.filter((sheet) => !DEFERRED_GLOBAL_SHEETS.includes(sheet));
+                            if (incremental || !forceRefresh) {
+                                sheets = sheets.filter((sheet) => !MODULE_OWNED_HEAVY_SHEETS.includes(sheet));
+                            }
+                        }
+
+                        if (incremental && !requestedSheets && typeof GoogleIntegration.getIncompleteSheets === 'function') {
+                            const incompleteSheets = GoogleIntegration.getIncompleteSheets(sheetMapping, sheets);
+                            if (Array.isArray(incompleteSheets) && incompleteSheets.length === 0) {
+                                if (effectiveShowLoader && typeof Loading !== 'undefined') {
+                                    Loading.hide();
+                                }
+                                if (shouldLog) {
+                                    Utils.safeLog('✅ جميع البيانات محدثة — تخطي المزامنة الكاملة');
+                                }
+                                return true;
+                            }
+                            if (Array.isArray(incompleteSheets) && incompleteSheets.length > 0) {
+                                sheets = incompleteSheets;
+                                if (shouldLog) {
+                                    Utils.safeLog(`✅ تحميل تدريجي: ${sheets.length} ورقة غير مكتملة`);
+                                }
+                            }
+                        }
                         
                         if (sheets.length === 0) {
                             if (effectiveShowLoader && typeof Loading !== 'undefined') {
@@ -478,21 +569,22 @@
                         // ========================================
                         // البدء في المعالجة المحسّنة
                         // ========================================
-                        const BATCH_SIZE = 5;
+                        const BATCH_SIZE = 2;
                         let syncedCount = 0;
                         const failedSheets = [];
+                        let completedSheets = 0;
                         
                         // عرض مؤشر التقدم
                         if (effectiveShowLoader) {
                             SyncImprovements.createProgressIndicator(sheets.length);
-                            // بدء التقدم من 0%
                             SyncImprovements.updateProgress(0, sheets.length);
+                            SyncImprovements._startProgressWatchdog(180000);
                         } else if (useFloatingProgressOnly) {
-                            // وضع ما بعد تسجيل الدخول: شريط سفلي فقط بدون نافذة منبثقة
                             SyncImprovements._progressHidden = true;
                             SyncImprovements._totalSheets = sheets.length;
                             SyncImprovements._createFloatingBottomBar();
                             SyncImprovements.updateProgress(0, sheets.length);
+                            SyncImprovements._startProgressWatchdog(180000);
                         }
                         
                         // معالجة الأوراق على دفعات
@@ -502,36 +594,33 @@
                             const totalBatches = Math.ceil(sheets.length / BATCH_SIZE);
                             
                             if (shouldLog) {
-                                Utils.safeLog(`🔄 معالجة الدفعة ${batchNumber} من ${totalBatches} (${batch.length} أوراق)`);
+                                Utils.safeLog(`🔄 معالجة الدفعة ${batchNumber} من ${totalBatches} (${batch.join(', ')})`);
                             }
                             
-                            // معالجة الدفعة
                             const { syncedInBatch, failedInBatch } = await SyncImprovements.processBatch(
                                 batch,
                                 GoogleIntegration.readFromSheets.bind(GoogleIntegration),
                                 sheetMapping,
-                                shouldLog
+                                shouldLog,
+                                (sheetName) => {
+                                    completedSheets += 1;
+                                    if (effectiveShowLoader || useFloatingProgressOnly) {
+                                        SyncImprovements.updateProgress(completedSheets, sheets.length, sheetName);
+                                    }
+                                }
                             );
                             
                             syncedCount += syncedInBatch;
                             failedSheets.push(...failedInBatch);
                             
-                            // تحديث مؤشر التقدم بعد معالجة الدفعة
-                            const completedSheets = Math.min(i + batch.length, sheets.length);
-                            if (effectiveShowLoader || useFloatingProgressOnly) {
-                                SyncImprovements.updateProgress(completedSheets, sheets.length);
-                            }
-                            
-                            // حفظ البيانات بعد كل دفعة
                             const dm = (typeof window !== 'undefined' && window.DataManager) || 
                                        (typeof DataManager !== 'undefined' && DataManager);
                             if (dm && typeof dm.save === 'function') {
                                 dm.save();
                             }
                             
-                            // إضافة تأخير بسيط بين الدفعات
                             if (i + BATCH_SIZE < sheets.length) {
-                                await new Promise(resolve => setTimeout(resolve, 500));
+                                await new Promise(resolve => setTimeout(resolve, 200));
                             }
                         }
                         
@@ -641,6 +730,10 @@
                             Notification.error('خطأ في المزامنة مع Google Sheets: ' + error.message);
                         }
                         return false;
+                    } finally {
+                        if (GoogleIntegration._syncInProgress) {
+                            GoogleIntegration._syncInProgress.global = false;
+                        }
                     }
                 };
                 

@@ -3261,7 +3261,7 @@ const GoogleIntegration = {
 
     /**
      * تحديد الأوراق غير المكتملة (التي لم يتم تحميلها أو فشل تحميلها)
-     * @returns {Array|null} قائمة بالأوراق غير المكتملة أو null لتحميل الكل
+     * @returns {Array|null} قائمة غير مكتملة، [] إذا اكتمل الكل، أو null لتحميل الكل
      */
     getIncompleteSheets(sheetMapping, allSheets) {
         try {
@@ -3326,7 +3326,7 @@ const GoogleIntegration = {
                 }
             });
             
-            return incompleteSheets.length > 0 ? incompleteSheets : null;
+            return incompleteSheets;
         } catch (error) {
             Utils.safeWarn('⚠️ خطأ في تحديد الأوراق غير المكتملة:', error);
             return null; // في حالة الخطأ، نعيد جميع الأوراق

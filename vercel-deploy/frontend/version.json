@@ -1,15 +1,15 @@
 {
-  "version": "1.0.855",
+  "version": "1.0.856",
   "highlights": {
     "ar": [
-      "إصلاح شامل لوقت 03:00:00 في كل حقول التاريخ+الوقت (*At / timestamp).",
-      "الخلفية تحفظ وتعيد الوقت كاملاً بدل قطعه إلى تاريخ فقط.",
-      "العرض لا يحوّل تاريخ-فقط إلى ساعة وهمية؛ المخالفات تعرض الوقت الفعلي."
+      "إصلاح مؤشر المزامنة العالق عند 40% بعد الدخول.",
+      "المزامنة التلقائية صامتة وتدريجية دون نافذة تقدم طويلة.",
+      "تحديث النسبة لكل شيت مع مهل أطول للشيتات الثقيلة."
     ],
     "en": [
-      "System-wide fix for fake 03:00:00 on *At / timestamp fields.",
-      "Backend keeps full date+time on read/write instead of date-only.",
-      "UI no longer invents a clock for date-only values; violations show real time."
+      "Fix sync indicator stuck at 40% after login.",
+      "Automatic sync stays silent and incremental without a long overlay.",
+      "Progress updates per sheet with longer timeouts for heavy sheets."
     ]
   }
 }

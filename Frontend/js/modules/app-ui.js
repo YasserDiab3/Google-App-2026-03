@@ -3071,12 +3071,12 @@ window.UI = {
 
         const syncOptions = {
             silent: true,
-            showLoader: true,
+            showLoader: false,
             notifyOnSuccess: false,
             notifyOnError: false,
             includeUsersSheet: true,
-            incremental: false,
-            forceRefresh: true,
+            incremental: true,
+            forceRefresh: false,
             ...options
         };
 
