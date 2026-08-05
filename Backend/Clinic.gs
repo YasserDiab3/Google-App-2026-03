@@ -3599,17 +3599,34 @@ function upsertClinicStaffAttendanceOnLogin_(payload) {
         record.sessionId = sessionId || record.sessionId || '';
         record.updatedAt = now;
         if (!record.createdAt) record.createdAt = now;
-        if (consolidated.merged) {
-            var replaced = false;
+        if (consolidated.hadDuplicates) {
+            var replacedDup = false;
             for (var i = 0; i < all.length; i++) {
                 if (all[i] && String(all[i].id) === String(record.id)) {
                     all[i] = record;
-                    replaced = true;
+                    replacedDup = true;
                     break;
                 }
             }
-            if (!replaced) all.push(record);
+            if (!replacedDup) all.push(record);
             return saveToSheet(sheetName, all, getSpreadsheetId());
+        }
+        if (consolidated.merged) {
+            var rowUpdate = updateSingleRowInSheet(sheetName, record.id, {
+                checkIn: record.checkIn,
+                checkOut: record.checkOut || '',
+                workDuration: record.workDuration,
+                status: record.status || 'present',
+                sessionId: record.sessionId || '',
+                staffId: record.staffId,
+                userId: record.userId,
+                userName: record.userName,
+                userEmail: record.userEmail,
+                staffRole: record.staffRole,
+                date: record.date,
+                updatedAt: now
+            }, getSpreadsheetId());
+            return rowUpdate;
         }
         return appendToSheet(sheetName, record);
     } catch (error) {
@@ -3656,7 +3673,12 @@ function upsertClinicStaffAttendanceOnLogout_(payload) {
             openRecord.status = openRecord.workDuration ? 'present' : 'partial';
             openRecord.updatedAt = now;
             all[openIndex] = openRecord;
-            return saveToSheet(sheetName, all, getSpreadsheetId());
+            return updateSingleRowInSheet(sheetName, openRecord.id, {
+                checkOut: now,
+                workDuration: openRecord.workDuration,
+                status: openRecord.status,
+                updatedAt: now
+            }, getSpreadsheetId());
         }
 
         var consolidated = _clinicStaffConsolidateAttendanceForUserDay_(all, staff, userId, email, today);
@@ -3667,14 +3689,12 @@ function upsertClinicStaffAttendanceOnLogout_(payload) {
         consolidated.merged.workDuration = _clinicStaffCalcDurationHours_(consolidated.merged.checkIn, now);
         consolidated.merged.status = consolidated.merged.workDuration ? 'present' : 'partial';
         consolidated.merged.updatedAt = now;
-        all = consolidated.all;
-        for (var j = 0; j < all.length; j++) {
-            if (all[j] && String(all[j].id) === String(consolidated.merged.id)) {
-                all[j] = consolidated.merged;
-                break;
-            }
-        }
-        return saveToSheet(sheetName, all, getSpreadsheetId());
+        return updateSingleRowInSheet(sheetName, consolidated.merged.id, {
+            checkOut: now,
+            workDuration: consolidated.merged.workDuration,
+            status: consolidated.merged.status,
+            updatedAt: now
+        }, getSpreadsheetId());
     } catch (error) {
         Logger.log('Error in upsertClinicStaffAttendanceOnLogout_: ' + error.toString());
         return { success: false, message: 'خطأ في تسجيل حضور الخروج: ' + error.toString() };

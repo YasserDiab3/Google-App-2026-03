@@ -367,22 +367,55 @@ window.Auth = {
         }
     },
 
-    _recordClinicStaffAttendance(kind) {
+    _recordClinicStaffAttendance(kind, options = {}) {
         try {
-            const user = AppState.currentUser;
-            if (!user || typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') return;
-            if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && !Utils.hasCloudBackendSync()) return;
+            const user = options.user || AppState.currentUser;
+            if (!user || typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
+                return options.wait ? Promise.resolve() : undefined;
+            }
+            if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && !Utils.hasCloudBackendSync()) {
+                return options.wait ? Promise.resolve() : undefined;
+            }
+            let sessionToken = options.sessionToken;
+            if (sessionToken == null) {
+                try { sessionToken = sessionStorage.getItem('hse_server_session_token') || ''; } catch (_e) { sessionToken = ''; }
+            }
+            let sessionId = '';
+            try {
+                sessionId = user.sessionId || sessionStorage.getItem('hse_session_id') || '';
+            } catch (_s) {
+                sessionId = user.sessionId || '';
+            }
             const actionName = kind === 'logout' ? 'recordClinicStaffLogout' : 'recordClinicStaffLogin';
-            GoogleIntegration.sendRequest({
+            const req = GoogleIntegration.sendRequest({
                 action: actionName,
                 data: {
                     userId: user.id || '',
                     email: user.email || '',
                     userName: user.name || '',
-                    sessionId: user.sessionId || sessionStorage.getItem('hse_session_id') || ''
+                    sessionId,
+                    __timeoutMs: kind === 'logout' ? 20000 : 45000,
+                    __highPriority: true,
+                    __allowStructuredFailure: true,
+                    __sessionToken: sessionToken || '',
+                    __actorUserData: {
+                        id: user.id != null ? String(user.id) : '',
+                        email: String(user.email || '').trim(),
+                        name: String(user.name || '').trim(),
+                        role: String(user.role || '').trim()
+                    }
                 }
-            }).catch(() => { });
-        } catch (_e) { /* ignore */ }
+            });
+            const tracked = (req && typeof req.catch === 'function')
+                ? req.catch((err) => {
+                    Utils.safeWarn?.('⚠️ تسجيل حضور العيادة فشل:', actionName, err?.message || err);
+                })
+                : Promise.resolve();
+            if (options.wait) return tracked;
+            return tracked;
+        } catch (_e) {
+            return options.wait ? Promise.resolve() : undefined;
+        }
     },
 
     _isSessionExpiredForRestore(sessionUser) {
@@ -1494,8 +1527,9 @@ window.Auth = {
                 description: `تسجيل خروج المستخدم ${userName}`
             }).catch(() => { }); // لا ننتظر حتى لا نبطئ عملية تسجيل الخروج
         }
-        this._recordClinicStaffAttendance('logout');
+        const attendanceP = this._recordClinicStaffAttendance('logout', { wait: true });
 
+        const continueAfterAttendance = () => {
         // إبطال جلسة الخادم (أفضل جهد — لا يعيق الخروج)
         try {
             const st = sessionStorage.getItem('hse_server_session_token');
@@ -1597,6 +1631,14 @@ window.Auth = {
             UI.toggleSidebar(false);
             UI.updateUserProfile();
             UI.showLoginScreen();
+        }
+        };
+
+        const waitMs = new Promise((resolve) => setTimeout(resolve, 12000));
+        if (attendanceP && typeof attendanceP.then === 'function') {
+            Promise.race([attendanceP, waitMs]).then(continueAfterAttendance).catch(continueAfterAttendance);
+        } else {
+            continueAfterAttendance();
         }
     },
 
@@ -1786,6 +1828,7 @@ window.Auth = {
                         sessionStorage.setItem('hse_current_session', JSON.stringify(safeUserData));
                         this._touchSessionActivity();
                         this.startPresenceHeartbeat();
+                        this._recordClinicStaffAttendance('login');
                         Utils.safeLog('✅ تم استعادة الجلسة من sessionStorage - المستخدم مسجل دخول');
                         return true;
                     }
@@ -1957,6 +2000,7 @@ window.Auth = {
                         sessionStorage.setItem('hse_current_session', JSON.stringify(safeUserData));
                         this._touchSessionActivity();
                         this.startPresenceHeartbeat();
+                        this._recordClinicStaffAttendance('login');
                         Utils.safeLog('✅ تم استعادة الجلسة من localStorage - المستخدم مسجل دخول');
                         return true;
                     }

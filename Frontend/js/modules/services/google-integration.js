@@ -443,6 +443,14 @@ const GoogleIntegration = {
         return typeof action === 'string' && this._authRpcActions.includes(action);
     },
 
+    _isClinicAttendanceRpcAction(action) {
+        return action === 'recordClinicStaffLogin' || action === 'recordClinicStaffLogout';
+    },
+
+    _shouldBypassRequestQueue(action) {
+        return this._isAuthRpcAction(action) || this._isClinicAttendanceRpcAction(action);
+    },
+
     // Circuit Breaker
     _circuitBreaker: {
         isOpen: false,
@@ -813,13 +821,15 @@ const GoogleIntegration = {
 
             // أولوية عالية: مصادقة + علم __highPriority صريح (زيارات العيادة تمرّر العلم سياقياً فقط)
             const isAuthRpc = this._isAuthRpcAction(action);
+            const bypassQueue = this._shouldBypassRequestQueue(action);
             const isHighPriority = !!(
                 isAuthRpc
+                || bypassQueue
                 || (data && typeof data === 'object' && data.__highPriority === true)
             );
 
-            // MFA/login: نفّذ فوراً خارج سقف عمال الطابور — لا تنتظر clinic/training (90ث)
-            if (isAuthRpc) {
+            // MFA/login/حضور العيادة: نفّذ فوراً خارج سقف عمال الطابور — لا تنتظر clinic/training (90ث)
+            if (bypassQueue) {
                 this._activeRequests.set(requestKey, request);
                 (async () => {
                     try {
@@ -913,6 +923,16 @@ const GoogleIntegration = {
             if (cleanData && typeof cleanData === 'object' && '__silent' in cleanData) {
                 delete cleanData.__silent;
             }
+            let snapshotActor = null;
+            let snapshotSessionToken = '';
+            if (cleanData && typeof cleanData === 'object' && cleanData.__actorUserData) {
+                snapshotActor = cleanData.__actorUserData;
+                delete cleanData.__actorUserData;
+            }
+            if (cleanData && typeof cleanData === 'object' && '__sessionToken' in cleanData) {
+                snapshotSessionToken = String(cleanData.__sessionToken || '');
+                delete cleanData.__sessionToken;
+            }
 
             const payload = {
                 action,
@@ -923,9 +943,11 @@ const GoogleIntegration = {
             };
 
             try {
-                const st = sessionStorage.getItem('hse_server_session_token');
+                const st = sessionStorage.getItem('hse_server_session_token') || snapshotSessionToken;
                 if (st) payload.sessionToken = st;
-            } catch (_stErr) { /* ignore */ }
+            } catch (_stErr) {
+                if (snapshotSessionToken) payload.sessionToken = snapshotSessionToken;
+            }
 
             // هوية المُنفِّذ للخادم: Code.gs يتطلب postData.userData لعمليات strictAdminActions
             // (deleteUser، resetUserPassword، initializeSheets، إصلاح رؤوس الجداول) وإلا يُرفض الطلب.
@@ -949,6 +971,13 @@ const GoogleIntegration = {
                     envelope.permissions = cu.permissions;
                 }
                 payload.userData = envelope;
+            } else if (snapshotActor && (snapshotActor.email || snapshotActor.id)) {
+                payload.userData = {
+                    email: String(snapshotActor.email || '').trim(),
+                    id: snapshotActor.id != null ? String(snapshotActor.id).trim() : '',
+                    name: String(snapshotActor.name || '').trim(),
+                    role: String(snapshotActor.role || '').trim()
+                };
             }
 
             // التحقق من هل هو spreadsheetId
@@ -1627,8 +1656,8 @@ const GoogleIntegration = {
      * التحقق من هل هو sendToAppsScript
      */
     async sendToAppsScript(action, data, retryCount = 0) {
-        // المصادقة لا تُحجب بـ Circuit Breaker (فشل مزامنة سابقة كان يمنع فتح TOTP)
-        if (!this._isAuthRpcAction(action)) {
+        // المصادقة وحضور العيادة لا تُحجب بـ Circuit Breaker
+        if (!this._shouldBypassRequestQueue(action)) {
             try {
                 this._checkCircuitBreaker();
             } catch (error) {
