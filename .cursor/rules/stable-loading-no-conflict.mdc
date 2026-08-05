@@ -12,6 +12,14 @@ alwaysApply: true
 
 عند **أي تحديث أو إضافة** في الواجهة أو الخلفية: **لا تُعدّل** مسارات التحميل المثبتة إلا إذا كان الإصلاح مطلوباً صراحةً. الميزات الجديدة تُبنى **بجانب** النظام الحالي، لا **بداخله** بطريقة تكسره.
 
+## 0. عقد التحميل المعتمد
+
+- كل موديول ثقيل **يملك** بياناته. العرض من المحلي فوراً، والشبكة تحديث خلفي للتبويب الظاهر فقط.
+- المساعد المشترك: `Frontend/js/modules/services/stable-loader.js` (`StableLoader`).
+- المزامنة العامة **لا** تسحب أوراق مملوكة: `ClinicVisits`, `Training`, `Employees`, `PTW`, `DailyObservations`…
+- بعد الدخول: لا مؤشر تقدم عالمي، ولا `forceRefresh` شامل.
+- طابور GAS: 3 عمال افتراضياً، و2 أثناء جلب مملوك للموديول.
+
 ## 1. مسارات محمية — لا تلمسها بدون ضرورة
 
 في مديول العيادة (ونفس المبدأ في المديولات الثقيلة الأخرى):
@@ -23,6 +31,8 @@ alwaysApply: true
 | `shouldFetchClinicVisitsFromBackend()` + `_visitsBackendFetchOk` | منع إعادة جلب غير ضرورية |
 | `mergeClinicVisitsWithLocalOnly()` | عدم فقدان زيارات محلية |
 | `renderVisitsTab()` → عرض فوري ثم جلب بالخلفية | UX مستقر |
+| `Training.loadTrainingDataAsync()` / `loadTrainingList()` | برامج التدريب |
+| `Employees.loadEmployeesFromBackend()` / `loadEmployeesList()` | قائمة الموظفين |
 
 **ممنوع** دمج ميزة جديدة داخل هذه الدوال إذا كان يمكن فصلها.
 

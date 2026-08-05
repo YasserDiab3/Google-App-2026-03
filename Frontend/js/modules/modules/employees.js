@@ -3594,6 +3594,7 @@ const Employees = {
 
         // تعيين flag لمنع التحميلات المتزامنة
         this.cache.isUpdating = true;
+        if (typeof StableLoader !== 'undefined') StableLoader.beginOwnedFetch('employees');
 
         try {
             // التحقق من تفعيل Google Integration
@@ -3734,6 +3735,7 @@ const Employees = {
             return false;
         } finally {
             this.cache.isUpdating = false;
+            if (typeof StableLoader !== 'undefined') StableLoader.endOwnedFetch('employees');
         }
     },
 

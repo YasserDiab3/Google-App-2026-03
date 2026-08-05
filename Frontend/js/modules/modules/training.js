@@ -503,6 +503,11 @@ const Training = {
             this._hydrateTab('programs');
 
             // البيانات من Backend في الخلفية: تحديث الكاش/الواجهة عبر persistAndRefreshUi.
+            if (typeof StableLoader !== 'undefined') {
+                StableLoader.log('training', 'programs', 'paint-local', {
+                    count: (AppState.appData.training || []).length
+                });
+            }
             this.loadTrainingDataAsync().catch(error => {
                 Utils.safeWarn('⚠️ تعذر تحميل بعض بيانات التدريب:', error);
             });
@@ -634,13 +639,25 @@ const Training = {
     },
 
     async loadTrainingDataAsync() {
+        if (typeof StableLoader !== 'undefined' && typeof StableLoader.runExclusive === 'function') {
+            return StableLoader.runExclusive('training:data', () => this._runLoadTrainingDataAsyncWrapped_());
+        }
         if (this._trainingDataLoadPromise) {
             return this._trainingDataLoadPromise;
         }
-        this._trainingDataLoadPromise = this._runLoadTrainingDataAsync().finally(() => {
+        this._trainingDataLoadPromise = this._runLoadTrainingDataAsyncWrapped_().finally(() => {
             this._trainingDataLoadPromise = null;
         });
         return this._trainingDataLoadPromise;
+    },
+
+    async _runLoadTrainingDataAsyncWrapped_() {
+        if (typeof StableLoader !== 'undefined') StableLoader.beginOwnedFetch('training');
+        try {
+            return await this._runLoadTrainingDataAsync();
+        } finally {
+            if (typeof StableLoader !== 'undefined') StableLoader.endOwnedFetch('training');
+        }
     },
 
     async _runLoadTrainingDataAsync() {

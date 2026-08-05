@@ -8089,8 +8089,14 @@ const Clinic = {
             const shouldLoadData = this.shouldFetchClinicVisitsFromBackend({ forceRefresh: forceReload });
 
             this.renderVisitsTabContent(panel);
+            if (typeof StableLoader !== 'undefined') {
+                StableLoader.log('clinic', 'visits', 'paint-local', {
+                    count: (AppState.appData.clinicVisits || []).length
+                });
+            }
 
             if (shouldLoadData && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                if (typeof StableLoader !== 'undefined') StableLoader.beginOwnedFetch('clinic');
                 this.loadVisitsDataFromBackend()
                     .then(() => {
                         const p = document.querySelector('.clinic-tab-panel[data-tab-panel="visits"]');
@@ -8106,6 +8112,9 @@ const Clinic = {
                         if (AppState.debugMode) {
                             Utils.safeWarn('⚠️ تعذر تحميل بيانات سجل التردد من الخادم:', error && error.message);
                         }
+                    })
+                    .finally(() => {
+                        if (typeof StableLoader !== 'undefined') StableLoader.endOwnedFetch('clinic');
                     });
             }
         } catch (error) {

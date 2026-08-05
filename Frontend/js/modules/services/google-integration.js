@@ -434,7 +434,7 @@ const GoogleIntegration = {
     _requestQueue: [],
     _isProcessingQueue: false,
     _queueWorkers: 0,
-    _maxQueueWorkers: 4,
+    _maxQueueWorkers: 3,
     _lastRequestTime: null,
     _minQueueDelayMs: 40,
 

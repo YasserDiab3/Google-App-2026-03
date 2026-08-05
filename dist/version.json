@@ -1,15 +1,15 @@
 {
-  "version": "1.0.860",
+  "version": "1.0.863",
   "highlights": {
     "ar": [
-      "تسريع ظهور برامج التدريب بدون انتظار الحزمة الكاملة.",
-      "قائمة الموظفين تظهر من المحلي فوراً ثم تتحدث في الخلفية.",
-      "إيقاف سحب التدريب والموظفين من المزامنة العامة الثقيلة."
+      "نظام تحميل مستقر: عرض فوري من المحلي ثم تحديث خلفي.",
+      "التدريب والموظفون والعيادة لا يتزاحمون مع المزامنة العامة.",
+      "تخفيض طابور الطلبات أثناء فتح الموديولات الثقيلة."
     ],
     "en": [
-      "Show training programs faster without waiting for the full bundle.",
-      "Employee list appears from local data first, then refreshes in background.",
-      "Stop pulling Training and Employees in the heavy global sync."
+      "Stable loading: paint from local data first, then refresh in background.",
+      "Training, employees, and clinic no longer compete with global sync.",
+      "Lower request-queue pressure while heavy modules are open."
     ]
   }
 }

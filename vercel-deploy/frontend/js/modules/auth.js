@@ -2391,7 +2391,7 @@ window.Auth = {
 
             const processModule = async (moduleName) => {
                 try {
-                    if (moduleName === 'training') {
+                    if (moduleName === 'training' || moduleName === 'clinic') {
                         return;
                     }
                     const sheets = moduleSheetsMap[moduleName] || [];
