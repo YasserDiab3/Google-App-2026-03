@@ -604,21 +604,20 @@ const Training = {
         if (this._currentActiveTab === 'contractors') {
             this._showContractorLocalDataIfAny();
         }
-
-        if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
-            this._contractorTrainingsFetchOk = true;
-            return;
-        }
-        if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
-            this._contractorTrainingsFetchOk = true;
-            return;
-        }
-
-        const fallbackTimeoutMs = 12000;
-        const timeoutMessage = 'انتهت مهلة الاتصال بالخادم\n\nتحقق من الاتصال وإعدادات Google Apps Script.';
-        const contractorGuardOk = () => (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000;
+        if (typeof StableLoader !== 'undefined') StableLoader.beginOwnedFetch('training-contractors');
 
         try {
+            if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
+                return;
+            }
+            if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
+                return;
+            }
+
+            const fallbackTimeoutMs = 12000;
+            const timeoutMessage = 'انتهت مهلة الاتصال بالخادم\n\nتحقق من الاتصال وإعدادات Google Apps Script.';
+            const contractorGuardOk = () => (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000;
+
             const result = await Utils.promiseWithTimeout(
                 GoogleIntegration.sendRequest({
                     action: 'getAllContractorTrainings',
@@ -638,6 +637,7 @@ const Training = {
             }
         } finally {
             this._contractorTrainingsFetchOk = true;
+            if (typeof StableLoader !== 'undefined') StableLoader.endOwnedFetch('training-contractors');
         }
     },
 
@@ -726,8 +726,12 @@ const Training = {
                 this.loadTrainingList();
             } else if (visible === 'contractors') {
                 this.refreshContractorTrainingList();
+                this._syncSelectOptions('contractor-month-filter', this.getMonthOptions());
+                try { this.refreshContractorAnalytics(document.getElementById('contractor-month-filter')?.value || ''); } catch (_e) {}
             } else if (visible === 'attendance') {
                 this.loadAttendanceRegistry();
+                this._syncSelectOptions('attendance-month-filter', this.getAttendanceMonthOptions());
+                try { this.refreshAttendanceAnalytics(document.getElementById('attendance-month-filter')?.value || ''); } catch (_e) {}
             } else if (visible === 'legalTraining') {
                 this.loadLegalTrainingList();
             } else if (visible === 'analysis') {
@@ -774,15 +778,19 @@ const Training = {
             if (active === 'attendance') {
                 const attendanceData = await runAction('getAllTrainingAttendance', 'سجل الحضور');
                 if (attendanceData && attendanceGuardOk()) AppState.appData.trainingAttendance = attendanceData;
-                if (this._trainingTabFetchOk.programs !== true) {
-                    const trainingData = await runAction('getAllTrainings', 'برامج التدريب');
-                    if (trainingData && trainingGuardOk()) {
-                        AppState.appData.training = trainingData;
-                        this._trainingTabFetchOk.programs = true;
-                        this._trainingBackendFetchOk = true;
-                    }
-                }
                 persistAndRefreshUi(active);
+                if (this._trainingTabFetchOk.programs !== true) {
+                    void runAction('getAllTrainings', 'برامج التدريب').then((trainingData) => {
+                        if (trainingData && trainingGuardOk()) {
+                            AppState.appData.training = trainingData;
+                            this._trainingTabFetchOk.programs = true;
+                            this._trainingBackendFetchOk = true;
+                            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                                window.DataManager.save();
+                            }
+                        }
+                    }).catch(() => {});
+                }
                 return;
             }
             if (active === 'legalTraining') {
@@ -1216,12 +1224,7 @@ const Training = {
         const computed = this.computeContractorAnalytics(model, state);
         const drillLabel = state.drillKey ? String(state.drillKey) : '';
 
-        const optionList = (items, selected) => {
-            const selKey = String(selected ?? '').replace(/\s+/g, ' ').trim();
-            return [`<option value="">الكل</option>`]
-                .concat(items.map(v => `<option value="${safe(v)}" ${selKey === String(v) ? 'selected' : ''}>${safe(v)}</option>`))
-                .join('');
-        };
+        const optionList = (items, selected) => this._analyticsSelectOptions(items, selected);
 
         const renderPivotTable = (rows, mode) => {
             if (!rows.length) {
@@ -1308,8 +1311,8 @@ const Training = {
                 <div class="contractor-analytics-slicers">
                     <div class="contractor-analytics-slicers-header">
                         <h4 class="contractor-analytics-slicers-title">
-                            <i class="fas fa-filter"></i>
-                            فلاتر التحليل
+                            <i class="fas fa-sliders-h"></i>
+                            تصفية سريعة
                         </h4>
                     </div>
                     <div class="contractor-analytics-slicers-grid">
@@ -2079,105 +2082,179 @@ const Training = {
         const fmt = (n, d = 0) => (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
         const computed = this.computeAttendanceAnalytics(model, state);
         const drillLabel = state.drillKey ? String(state.drillKey) : '';
-        const optionList = (items, selected) => {
-            const sel = String(selected ?? '').trim();
-            return ['<option value="">الكل</option>'].concat(items.map(v => `<option value="${safe(v)}" ${sel === String(v) ? 'selected' : ''}>${safe(v)}</option>`)).join('');
-        };
+        const optionList = (items, selected) => this._analyticsSelectOptions(items, selected);
+        const tabActiveClass = (tabName) => state.view === tabName ? 'active' : '';
         const renderPivotTable = (rows, mode) => {
             if (!rows.length) {
-                return `<div style="padding:40px 20px;text-align:center;background:linear-gradient(180deg,#f0fdfa 0%,#ccfbf1 100%);border-radius:12px;border:2px dashed #99f6e4;"><i class="fas fa-inbox" style="font-size:2.5rem;color:#5eead4;"></i><p style="color:#0f766e;margin:8px 0 0;">لا توجد بيانات مطابقة للفلاتر</p></div>`;
+                return `<div class="contractor-analytics-empty"><i class="fas fa-inbox"></i><p>لا توجد بيانات مطابقة للفلاتر الحالية</p></div>`;
             }
             return `
-                <div class="attendance-pivot-container" style="overflow:auto;border-radius:12px;border:1px solid #99f6e4;max-height:400px;">
-                    <table class="table-auto w-full" style="min-width:560px;">
-                        <thead><tr style="background:linear-gradient(135deg,#0d9488 0%,#059669 100%);">
-                            <th style="padding:14px;font-size:12px;text-align:right;color:white;">${mode === 'topic' ? 'الموضوع' : 'الموظف'}</th>
-                            <th style="padding:14px;font-size:12px;text-align:center;color:white;">السجلات</th>
-                            <th style="padding:14px;font-size:12px;text-align:center;color:white;">الساعات</th>
-                        </tr></thead>
+                <div class="contractor-analytics-pivot-wrap">
+                    <table class="contractor-analytics-pivot-table w-full">
+                        <thead>
+                            <tr>
+                                <th><i class="fas ${mode === 'topic' ? 'fa-book' : 'fa-user'} ml-2"></i>${mode === 'topic' ? 'الموضوع' : 'الموظف'}</th>
+                                <th><i class="fas fa-clipboard-list ml-1"></i>السجلات</th>
+                                <th><i class="fas fa-clock ml-1"></i>الساعات</th>
+                            </tr>
+                        </thead>
                         <tbody>
-                            ${rows.map((r, i) => `
-                                <tr data-analytics-drill="${safe(r.label)}" data-analytics-mode="${mode}" style="background:${i % 2 ? '#f0fdfa' : '#fff'};cursor:pointer;" class="hover:bg-teal-50">
-                                    <td style="padding:12px;font-size:12px;color:#0f766e;font-weight:600;">${safe(r.label)}</td>
-                                    <td style="padding:12px;text-align:center;"><span style="background:#ccfbf1;color:#0f766e;padding:4px 10px;border-radius:20px;font-weight:600;">${fmt(r.count)}</span></td>
-                                    <td style="padding:12px;text-align:center;"><span style="background:#fef3c7;color:#92400e;padding:4px 10px;border-radius:20px;font-weight:600;">${fmt(r.hours, 2)}</span></td>
+                            ${rows.map((r) => `
+                                <tr data-analytics-drill="${safe(r.label)}" data-analytics-mode="${mode}">
+                                    <td>
+                                        <span class="label-cell">
+                                            <span class="dot"></span>
+                                            ${safe(r.label)}
+                                        </span>
+                                    </td>
+                                    <td><span class="badge badge-blue">${fmt(r.count)}</span></td>
+                                    <td><span class="badge badge-amber">${fmt(r.hours, 2)}</span></td>
                                 </tr>
                             `).join('')}
                         </tbody>
                     </table>
                 </div>
-                <p style="font-size:0.75rem;color:#0f766e;margin-top:8px;text-align:center;">اضغط على أي صف للتعمق</p>
+                <p class="contractor-analytics-pivot-footnote">
+                    <i class="fas fa-mouse-pointer ml-1"></i>اضغط على أي صف لعرض التفاصيل
+                </p>
             `;
         };
         const renderDetails = () => {
             const rows = computed.details.slice(0, 300);
-            if (!rows.length) return `<div style="padding:40px;text-align:center;background:#f0fdfa;border-radius:12px;border:2px dashed #99f6e4;"><p style="color:#0f766e;">لا توجد تفاصيل</p></div>`;
+            if (!rows.length) return `<div class="contractor-analytics-empty"><i class="fas fa-folder-open"></i><p>لا توجد تفاصيل للعرض</p></div>`;
             return `
-                <div style="overflow:auto;border-radius:12px;border:1px solid #99f6e4;max-height:450px;">
-                    <table class="table-auto w-full" style="min-width:900px;">
-                        <thead><tr style="background:linear-gradient(135deg,#0d9488 0%,#059669 100%);">
-                            <th style="padding:10px;font-size:11px;color:white;text-align:center;">التاريخ</th>
-                            <th style="padding:10px;font-size:11px;color:white;text-align:right;">الموضوع</th>
-                            <th style="padding:10px;font-size:11px;color:white;text-align:right;">الموظف</th>
-                            <th style="padding:10px;font-size:11px;color:white;text-align:center;">نوع التدريب</th>
-                            <th style="padding:10px;font-size:11px;color:white;text-align:right;">الإدارة</th>
-                            <th style="padding:10px;font-size:11px;color:white;text-align:center;">الساعات</th>
-                        </tr></thead>
+                <div class="contractor-analytics-details-wrap">
+                    <table class="contractor-analytics-details-table w-full">
+                        <thead>
+                            <tr>
+                                <th><i class="fas fa-calendar ml-1"></i>التاريخ</th>
+                                <th><i class="fas fa-book ml-1"></i>الموضوع</th>
+                                <th><i class="fas fa-user ml-1"></i>الموظف</th>
+                                <th><i class="fas fa-tag ml-1"></i>نوع التدريب</th>
+                                <th><i class="fas fa-sitemap ml-1"></i>الإدارة</th>
+                                <th><i class="fas fa-clock ml-1"></i>الساعات</th>
+                            </tr>
+                        </thead>
                         <tbody>
-                            ${rows.map((r, i) => `
-                                <tr style="background:${i % 2 ? '#f0fdfa' : '#fff'}">
-                                    <td style="padding:10px;font-size:11px;">${(r.raw?.date || r.raw?.attendanceDate) ? safe(Utils.formatDate(r.raw.date || r.raw.attendanceDate)) : '-'}</td>
-                                    <td style="padding:10px;font-size:11px;">${safe(r.topic)}</td>
-                                    <td style="padding:10px;font-size:11px;">${safe(r.employee)}</td>
-                                    <td style="padding:10px;font-size:11px;">${safe(r.trainingType)}</td>
-                                    <td style="padding:10px;font-size:11px;">${safe(r.department)}</td>
-                                    <td style="padding:10px;font-size:11px;text-align:center;">${fmt(r.hours, 2)}</td>
+                            ${rows.map((r) => `
+                                <tr>
+                                    <td><span class="date-badge">${(r.raw?.date || r.raw?.attendanceDate) ? safe(Utils.formatDate(r.raw.date || r.raw.attendanceDate)) : '-'}</span></td>
+                                    <td title="${safe(r.topic)}" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${safe(r.topic)}</td>
+                                    <td><span class="trainer-name">${safe(r.employee)}</span></td>
+                                    <td>${safe(r.trainingType)}</td>
+                                    <td>${safe(r.department)}</td>
+                                    <td><span class="hour-badge">${fmt(r.hours, 2)}</span></td>
                                 </tr>
                             `).join('')}
                         </tbody>
                     </table>
                 </div>
-                <p style="font-size:0.75rem;color:#0f766e;margin-top:8px;">أول 300 سجل</p>
+                <div class="contractor-analytics-details-footer">
+                    <span class="info"><i class="fas fa-info-circle ml-1"></i>يتم عرض أول 300 سجل فقط لتحسين الأداء</span>
+                    <span class="count"><i class="fas fa-table ml-1"></i>إجمالي: ${rows.length} سجل</span>
+                </div>
             `;
         };
         return `
-            <div class="grid grid-cols-1 gap-4">
-                <div style="background:linear-gradient(135deg,#f0fdfa 0%,#ccfbf1 100%);border-radius:16px;padding:22px;border:1px solid #99f6e4;">
-                    <h4 style="margin:0 0 16px;font-size:0.95rem;font-weight:700;color:#0f766e;"><i class="fas fa-filter" style="color:#0d9488;"></i> فلاتر التحليل</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                        <div><label style="font-size:0.75rem;font-weight:600;color:#134e4a;">الموظف</label><select id="attendance-analytics-employee" class="form-input" style="border:2px solid #99f6e4;border-radius:10px;padding:10px;width:100%;">${optionList(model.dimensions.employees, state.employee)}</select></div>
-                        <div><label style="font-size:0.75rem;font-weight:600;color:#134e4a;">الموضوع</label><select id="attendance-analytics-topic" class="form-input" style="border:2px solid #99f6e4;border-radius:10px;padding:10px;width:100%;">${optionList(model.dimensions.topics, state.topic)}</select></div>
-                        <div><label style="font-size:0.75rem;font-weight:600;color:#134e4a;">الإدارة</label><select id="attendance-analytics-department" class="form-input" style="border:2px solid #99f6e4;border-radius:10px;padding:10px;width:100%;">${optionList(model.dimensions.departments, state.department)}</select></div>
-                        <div><label style="font-size:0.75rem;font-weight:600;color:#134e4a;">المصنع</label><select id="attendance-analytics-factory" class="form-input" style="border:2px solid #99f6e4;border-radius:10px;padding:10px;width:100%;">${optionList(model.dimensions.factories, state.factory)}</select></div>
-                        <div><label style="font-size:0.75rem;font-weight:600;color:#134e4a;">نوع التدريب</label><select id="attendance-analytics-trainingType" class="form-input" style="border:2px solid #99f6e4;border-radius:10px;padding:10px;width:100%;">${optionList(model.dimensions.trainingTypes, state.trainingType)}</select></div>
-                        <div><label style="font-size:0.75rem;font-weight:600;color:#134e4a;">المحاضر</label><select id="attendance-analytics-trainer" class="form-input" style="border:2px solid #99f6e4;border-radius:10px;padding:10px;width:100%;">${optionList(model.dimensions.trainers, state.trainer)}</select></div>
+            <div class="contractor-analytics-section tx-analytics-section grid grid-cols-1 gap-4">
+                <div class="contractor-analytics-slicers">
+                    <div class="contractor-analytics-slicers-header">
+                        <h4 class="contractor-analytics-slicers-title">
+                            <i class="fas fa-sliders-h"></i>
+                            تصفية سريعة
+                        </h4>
+                        <button type="button" id="attendance-analytics-reset-btn" class="contractor-analytics-reset-btn">
+                            <i class="fas fa-redo-alt"></i>إعادة تعيين
+                        </button>
                     </div>
-                    <div><label style="font-size:0.75rem;font-weight:600;color:#134e4a;">بحث سريع</label><input id="attendance-analytics-search" placeholder="ابحث..." value="${safe(state.search)}" class="form-input" style="border:2px solid #99f6e4;border-radius:10px;padding:10px;width:100%;"></div>
-                    <div style="margin-top:12px;"><button type="button" id="attendance-analytics-reset-btn" style="background:white;border:1.5px solid #99f6e4;padding:8px 16px;border-radius:10px;font-weight:600;color:#0f766e;cursor:pointer;"><i class="fas fa-redo-alt"></i> إعادة تعيين</button></div>
-                </div>
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
-                    <div style="padding:14px;border-radius:10px;background:linear-gradient(135deg,#0d9488,#059669);color:white;"><div style="font-size:11px;">السجلات</div><div style="font-size:22px;font-weight:800;">${fmt(computed.totals.records)}</div></div>
-                    <div style="padding:14px;border-radius:10px;background:linear-gradient(135deg,#059669,#047857);color:white;"><div style="font-size:11px;">الساعات</div><div style="font-size:22px;font-weight:800;">${fmt(computed.totals.hours, 2)}</div></div>
-                    <div style="padding:14px;border-radius:10px;background:linear-gradient(135deg,#0f766e,#0d5c4a);color:white;"><div style="font-size:11px;">الموظفين</div><div style="font-size:22px;font-weight:800;">${fmt(computed.totals.employees)}</div></div>
-                    <div style="padding:14px;border-radius:10px;background:linear-gradient(135deg,#14b8a6,#0d9488);color:white;"><div style="font-size:11px;">الموضوعات</div><div style="font-size:22px;font-weight:800;">${fmt(computed.totals.topics)}</div></div>
-                </div>
-                <div style="background:white;border-radius:14px;padding:16px;border:1px solid #e5e7eb;">
-                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between;">
-                        <div style="display:flex;gap:8px;">
-                            <button type="button" id="attendance-analytics-tab-employee" style="padding:10px 18px;border-radius:10px;font-size:0.8rem;font-weight:600;border:2px solid ${state.view === 'employee' ? '#0d9488' : '#e5e7eb'};background:${state.view === 'employee' ? 'linear-gradient(135deg,#0d9488,#059669)' : 'white'};color:${state.view === 'employee' ? 'white' : '#6b7280'};cursor:pointer;"><i class="fas fa-user"></i> حسب الموظف</button>
-                            <button type="button" id="attendance-analytics-tab-topic" style="padding:10px 18px;border-radius:10px;font-size:0.8rem;font-weight:600;border:2px solid ${state.view === 'topic' ? '#0d9488' : '#e5e7eb'};background:${state.view === 'topic' ? 'linear-gradient(135deg,#0d9488,#059669)' : 'white'};color:${state.view === 'topic' ? 'white' : '#6b7280'};cursor:pointer;"><i class="fas fa-book"></i> حسب الموضوع</button>
-                            <button type="button" id="attendance-analytics-tab-details" style="padding:10px 18px;border-radius:10px;font-size:0.8rem;font-weight:600;border:2px solid ${state.view === 'details' ? '#0d9488' : '#e5e7eb'};background:${state.view === 'details' ? 'linear-gradient(135deg,#0d9488,#059669)' : 'white'};color:${state.view === 'details' ? 'white' : '#6b7280'};cursor:pointer;"><i class="fas fa-list-alt"></i> التفاصيل</button>
+                    <div class="contractor-analytics-slicers-grid tx-analytics-slicers-wide">
+                        <div class="filter-group">
+                            <label><i class="fas fa-user"></i><span>الموظف</span></label>
+                            <select id="attendance-analytics-employee">${optionList(model.dimensions.employees, state.employee)}</select>
                         </div>
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <label style="font-size:0.7rem;font-weight:600;color:#6b7280;">فرز:</label>
-                            <select id="attendance-analytics-sortby" style="border:1px solid #e5e7eb;border-radius:6px;padding:6px 10px;font-size:0.75rem;"><option value="hours" ${state.sortBy === 'hours' ? 'selected' : ''}>الساعات</option><option value="count" ${state.sortBy === 'count' ? 'selected' : ''}>عدد السجلات</option></select>
-                            <select id="attendance-analytics-sortdir" style="border:1px solid #e5e7eb;border-radius:6px;padding:6px 10px;font-size:0.75rem;"><option value="desc" ${state.sortDir === 'desc' ? 'selected' : ''}>تنازلي</option><option value="asc" ${state.sortDir === 'asc' ? 'selected' : ''}>تصاعدي</option></select>
-                            ${drillLabel ? `<button type="button" id="attendance-analytics-clear-drill" style="padding:8px 14px;border-radius:8px;font-size:0.75rem;font-weight:600;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;cursor:pointer;"><i class="fas fa-times-circle"></i> إلغاء التعمق: ${safe(drillLabel)}</button>` : ''}
+                        <div class="filter-group">
+                            <label><i class="fas fa-book"></i><span>الموضوع</span></label>
+                            <select id="attendance-analytics-topic">${optionList(model.dimensions.topics, state.topic)}</select>
+                        </div>
+                        <div class="filter-group">
+                            <label><i class="fas fa-sitemap"></i><span>الإدارة</span></label>
+                            <select id="attendance-analytics-department">${optionList(model.dimensions.departments, state.department)}</select>
+                        </div>
+                        <div class="filter-group">
+                            <label><i class="fas fa-industry"></i><span>المصنع</span></label>
+                            <select id="attendance-analytics-factory">${optionList(model.dimensions.factories, state.factory)}</select>
+                        </div>
+                        <div class="filter-group">
+                            <label><i class="fas fa-tag"></i><span>نوع التدريب</span></label>
+                            <select id="attendance-analytics-trainingType">${optionList(model.dimensions.trainingTypes, state.trainingType)}</select>
+                        </div>
+                        <div class="filter-group">
+                            <label><i class="fas fa-chalkboard-teacher"></i><span>المحاضر</span></label>
+                            <select id="attendance-analytics-trainer">${optionList(model.dimensions.trainers, state.trainer)}</select>
+                        </div>
+                        <div class="filter-group search-full">
+                            <label><i class="fas fa-search"></i><span>بحث سريع</span></label>
+                            <input id="attendance-analytics-search" placeholder="ابحث عن موظف، موضوع، إدارة..." value="${safe(state.search)}">
+                        </div>
+                    </div>
+                    <p class="tx-analytics-hint">القوائم تعرض أهم 250 قيمة. استخدم البحث السريع للوصول لأي سجل.</p>
+                </div>
+
+                <div class="contractor-analytics-kpi-grid tx-analytics-kpi-4">
+                    <div class="contractor-analytics-kpi-card kpi-green">
+                        <div class="kpi-label"><i class="fas fa-clipboard-list"></i>السجلات</div>
+                        <div class="kpi-value">${fmt(computed.totals.records)}</div>
+                    </div>
+                    <div class="contractor-analytics-kpi-card kpi-amber">
+                        <div class="kpi-label"><i class="fas fa-clock"></i>الساعات</div>
+                        <div class="kpi-value">${fmt(computed.totals.hours, 2)}</div>
+                    </div>
+                    <div class="contractor-analytics-kpi-card kpi-blue">
+                        <div class="kpi-label"><i class="fas fa-users"></i>الموظفين</div>
+                        <div class="kpi-value">${fmt(computed.totals.employees)}</div>
+                    </div>
+                    <div class="contractor-analytics-kpi-card kpi-indigo">
+                        <div class="kpi-label"><i class="fas fa-book"></i>الموضوعات</div>
+                        <div class="kpi-value">${fmt(computed.totals.topics)}</div>
+                    </div>
+                </div>
+
+                <div class="contractor-analytics-tabs-bar">
+                    <div class="tabs-row">
+                        <div class="tabs-group">
+                            <button type="button" id="attendance-analytics-tab-employee" class="contractor-analytics-tab ${tabActiveClass('employee')}">
+                                <i class="fas fa-user"></i>حسب الموظف
+                            </button>
+                            <button type="button" id="attendance-analytics-tab-topic" class="contractor-analytics-tab ${tabActiveClass('topic')}">
+                                <i class="fas fa-book"></i>حسب الموضوع
+                            </button>
+                            <button type="button" id="attendance-analytics-tab-details" class="contractor-analytics-tab ${tabActiveClass('details')}">
+                                <i class="fas fa-list-alt"></i>التفاصيل
+                            </button>
+                        </div>
+                        <div class="contractor-analytics-sort-group">
+                            <div class="contractor-analytics-sort-box">
+                                <label><i class="fas fa-sort-amount-down"></i>فرز:</label>
+                                <select id="attendance-analytics-sortby">
+                                    <option value="hours" ${state.sortBy === 'hours' ? 'selected' : ''}>الساعات</option>
+                                    <option value="count" ${state.sortBy === 'count' ? 'selected' : ''}>عدد السجلات</option>
+                                </select>
+                                <select id="attendance-analytics-sortdir">
+                                    <option value="desc" ${state.sortDir === 'desc' ? 'selected' : ''}>تنازلي</option>
+                                    <option value="asc" ${state.sortDir === 'asc' ? 'selected' : ''}>تصاعدي</option>
+                                </select>
+                            </div>
+                            ${drillLabel ? `<button type="button" id="attendance-analytics-clear-drill" class="contractor-analytics-clear-drill"><i class="fas fa-times-circle"></i>إلغاء التعمق: ${safe(drillLabel)}</button>` : ''}
                         </div>
                     </div>
                 </div>
-                <div style="background:white;border-radius:14px;padding:20px;border:1px solid #e5e7eb;min-height:300px;">
-                    ${state.view === 'topic' ? renderPivotTable(computed.topTopics, 'topic') : state.view === 'details' ? renderDetails() : renderPivotTable(computed.topEmployees, 'employee')}
+
+                <div class="contractor-analytics-content">
+                    ${state.view === 'topic'
+                        ? renderPivotTable(computed.topTopics, 'topic')
+                        : state.view === 'details'
+                            ? renderDetails()
+                            : renderPivotTable(computed.topEmployees, 'employee')}
                 </div>
             </div>
         `;
@@ -2206,7 +2283,23 @@ const Training = {
         wire('attendance-analytics-sortby', (e) => { state.sortBy = e.target.value || 'hours'; refresh(); });
         wire('attendance-analytics-sortdir', (e) => { state.sortDir = e.target.value || 'desc'; refresh(); });
         const search = document.getElementById('attendance-analytics-search');
-        if (search) search.addEventListener('input', (e) => { state.search = e.target.value || ''; refresh(); });
+        if (search) {
+            search.addEventListener('input', (e) => {
+                state.search = e.target.value || '';
+                const selStart = e.target.selectionStart;
+                const selEnd = e.target.selectionEnd;
+                clearTimeout(this._attendanceAnalyticsSearchTimer);
+                this._attendanceAnalyticsSearchTimer = setTimeout(() => {
+                    refresh();
+                    requestAnimationFrame(() => {
+                        const next = document.getElementById('attendance-analytics-search');
+                        if (!next) return;
+                        next.focus();
+                        try { next.setSelectionRange(selStart, selEnd); } catch (_e) { /* ignore */ }
+                    });
+                }, 220);
+            });
+        }
         const tabEmployee = document.getElementById('attendance-analytics-tab-employee');
         if (tabEmployee) tabEmployee.addEventListener('click', () => { state.view = 'employee'; state.drillKey = ''; refresh(); });
         const tabTopic = document.getElementById('attendance-analytics-tab-topic');
@@ -2552,6 +2645,269 @@ const Training = {
         }).join('');
     },
 
+    _syncSelectOptions(selectId, optionsHtml) {
+        const sel = document.getElementById(selectId);
+        if (!sel) return;
+        const current = sel.value;
+        sel.innerHTML = `<option value="">جميع الأشهر</option>${optionsHtml || ''}`;
+        if (current && Array.from(sel.options).some((o) => o.value === current)) sel.value = current;
+    },
+
+    _analyticsSelectOptions(items, selected, max = 250) {
+        const safe = (v) => Utils.escapeHTML(String(v ?? ''));
+        const sel = String(selected ?? '').replace(/\s+/g, ' ').trim();
+        const list = Array.isArray(items) ? items.slice() : [];
+        const limited = list.length > max ? list.slice(0, max) : list;
+        if (sel && !limited.includes(sel)) {
+            const found = list.find((v) => String(v) === sel);
+            if (found != null) limited.unshift(found);
+        }
+        return [`<option value="">الكل</option>`]
+            .concat(limited.map((v) => `<option value="${safe(v)}" ${sel === String(v) ? 'selected' : ''}>${safe(v)}</option>`))
+            .join('');
+    },
+
+    _analyticsPlaceholder(message) {
+        return `
+            <div class="tx-analytics-placeholder">
+                <i class="fas fa-chart-pie"></i>
+                <p>${Utils.escapeHTML(message || 'جاري تجهيز التحليل…')}</p>
+            </div>
+        `;
+    },
+
+    _scheduleDeferredAnalytics(tabName) {
+        const run = () => {
+            if (this._currentActiveTab !== tabName) return;
+            if (tabName === 'contractors') {
+                this.updateContractorStatsWithFilter(document.getElementById('contractor-month-filter')?.value || '');
+            } else if (tabName === 'attendance') {
+                this.refreshAttendanceAnalytics(document.getElementById('attendance-month-filter')?.value || '');
+            }
+        };
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(() => setTimeout(run, 40));
+        } else {
+            setTimeout(run, 40);
+        }
+    },
+
+    buildContractorsTabMarkup() {
+        const contractorStats = this.getContractorTrainingStats();
+        return `
+                <div class="content-card mb-4">
+                    <div class="card-body">
+                        <div class="flex items-center gap-4 flex-wrap">
+                            <label class="text-sm font-medium text-gray-700">تصفية حسب الشهر:</label>
+                            <select id="contractor-month-filter" class="form-input" style="max-width: 200px;">
+                                <option value="">جميع الأشهر</option>
+                                ${this.getMonthOptions()}
+                            </select>
+                            <button id="reset-contractor-filter" class="btn-secondary">
+                                <i class="fas fa-redo ml-2"></i>إعادة تعيين
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                    <div class="content-card h-full">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                                <i class="fas fa-book text-xl"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-xs text-gray-500">الموضوعات التدريبية</p>
+                                <p class="text-xl font-bold text-gray-900" id="contractor-topics-count">${contractorStats.uniqueTopics}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="content-card h-full">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-green-100 text-green-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                                <i class="fas fa-building text-xl"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-xs text-gray-500">المقاولين/الشركات</p>
+                                <p class="text-xl font-bold text-gray-900" id="contractor-companies-count">${contractorStats.uniqueContractors}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="content-card h-full">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                                <i class="fas fa-users text-xl"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-xs text-gray-500">إجمالي المتدربين</p>
+                                <p class="text-xl font-bold text-gray-900" id="contractor-trainees-count">${contractorStats.totalTrainees}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="content-card h-full">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                                <i class="fas fa-chalkboard-teacher text-xl"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-xs text-gray-500">القائمون بالتدريب</p>
+                                <p class="text-xl font-bold text-gray-900" id="contractor-trainers-count">${contractorStats.uniqueTrainers}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="content-card h-full">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                                <i class="fas fa-calendar-alt text-xl"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-xs text-gray-500">التدريبات (الشهر الحالي)</p>
+                                <p class="text-xl font-bold text-gray-900" id="contractor-monthly-count">${contractorStats.currentMonthCount}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-card tx-analytics-card mb-4">
+                    <div class="card-header">
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <h3 class="card-title"><i class="fas fa-chart-pie ml-2"></i>تحليل تفاعلي لتدريبات المقاولين</h3>
+                            <button id="contractor-analytics-reset-btn" class="btn-secondary btn-sm">
+                                <i class="fas fa-redo ml-2"></i>إعادة تعيين التحليل
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body" style="padding: 12px;">
+                        <div id="contractor-analytics-dashboard">
+                            ${this._analyticsPlaceholder('جاري تجهيز تحليل المقاولين…')}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-card">
+                    <div class="card-header">
+                        <div class="flex items-center justify-between flex-wrap gap-3">
+                            <h2 class="card-title"><i class="fas fa-list ml-2"></i>سجل تدريبات المقاولين والشركات الخارجية</h2>
+                            <div class="flex items-center gap-3 flex-wrap">
+                                <button id="export-contractor-training-pdf-btn" class="btn-secondary">
+                                    <i class="fas fa-file-pdf ml-2" style="font-size: 14px;"></i>تقرير PDF
+                                </button>
+                                <button id="export-contractor-training-excel-btn" class="btn-success">
+                                    <i class="fas fa-file-excel ml-2" style="font-size: 14px;"></i>تصدير Excel
+                                </button>
+                                <input type="text" id="contractor-training-search" class="form-input" style="max-width: 260px;" placeholder="بحث سريع (مقاول، موضوع، موقع)">
+                                <button id="add-contractor-training-btn" class="btn-primary">
+                                    <i class="fas fa-plus ml-2"></i>
+                                    تسجيل تدريب للمقاولين
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body" id="contractor-training-container">
+                        <div class="contractor-training-loading text-center py-8 text-gray-500">جاري تحميل السجل…</div>
+                    </div>
+                </div>
+            `;
+    },
+
+    buildAttendanceTabMarkup() {
+        let siteOptions = '';
+        try {
+            siteOptions = (this.getSiteOptions() || []).map((site) => `
+                                <option value="${Utils.escapeHTML(site.id)}">${Utils.escapeHTML(site.name)}</option>
+                            `).join('');
+        } catch (_e) {
+            siteOptions = '';
+        }
+        return `
+            <div class="content-card mb-4">
+                <div class="card-body">
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <label class="text-sm font-medium text-gray-700">تصفية حسب الشهر:</label>
+                        <select id="attendance-month-filter" class="form-input" style="max-width: 200px;">
+                            <option value="">جميع الأشهر</option>
+                            ${this.getAttendanceMonthOptions()}
+                        </select>
+                        <button id="reset-attendance-filter" class="btn-secondary"><i class="fas fa-redo ml-2"></i>إعادة تعيين</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card tx-analytics-card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-chart-pie ml-2"></i>تحليل تفاعلي لتدريبات الموظفين</h3>
+                </div>
+                <div class="card-body" style="padding: 12px;">
+                    <div id="attendance-analytics-dashboard">
+                        ${this._analyticsPlaceholder('جاري تجهيز تحليل الموظفين…')}
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <h2 class="card-title"><i class="fas fa-clipboard-check ml-2"></i>سجل التدريب للموظفين</h2>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button id="attendance-registry-add-record" class="btn-primary">
+                                <i class="fas fa-plus ml-2"></i>
+                                إضافة سجل
+                            </button>
+                            <button id="attendance-registry-import-excel" class="btn-secondary">
+                                <i class="fas fa-file-import ml-2"></i>
+                                استيراد Excel
+                            </button>
+                            <button id="attendance-registry-export-excel" class="btn-secondary">
+                                <i class="fas fa-file-excel ml-2"></i>
+                                تصدير Excel
+                            </button>
+                            <button id="attendance-registry-export-pdf" class="btn-primary">
+                                <i class="fas fa-file-pdf ml-2"></i>
+                                تصدير PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4 flex items-center gap-4 flex-wrap">
+                        <input type="text" id="attendance-registry-search" class="form-input" style="max-width: 300px;" placeholder="البحث...">
+                        <select id="attendance-registry-filter-factory" class="form-input" style="max-width: 200px;">
+                            <option value="">جميع المصانع</option>
+                            ${siteOptions}
+                        </select>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table" id="attendance-registry-table">
+                            <thead>
+                                <tr>
+                                    <th>م</th>
+                                    <th>التاريخ</th>
+                                    <th>نوع التدريب</th>
+                                    <th>المصنع</th>
+                                    <th>الكود</th>
+                                    <th>الاسم</th>
+                                    <th>الوظيفة</th>
+                                    <th>الإدارة</th>
+                                    <th>موضوع المحاضرة</th>
+                                    <th>اسم المحاضر</th>
+                                    <th>وقت البدء</th>
+                                    <th>وقت الانتهاء</th>
+                                    <th>إجمالي ساعات التدريب</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendance-registry-table-body">
+                                <tr>
+                                    <td colspan="14" class="text-center text-gray-500 py-4">جاري التحميل...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
     /** محتوى تبويب «برامج التدريب» — متزامن لتجنب تأخير await عند أول عرض للموديول */
     buildProgramsTabMarkup() {
         const stats = this.getStats();
@@ -2663,128 +3019,9 @@ const Training = {
         if (tabName === 'programs') {
             return this.buildProgramsTabMarkup();
         } else if (tabName === 'contractors') {
-            const contractorStats = this.getContractorTrainingStats();
-            const analyticsModel = this.getContractorTrainingAnalyticsModel('');
-            const analyticsState = this.getContractorAnalyticsState();
-            return `
-                <!-- فلتر الشهر -->
-                <div class="content-card mb-4">
-                    <div class="card-body">
-                        <div class="flex items-center gap-4">
-                            <label class="text-sm font-medium text-gray-700">تصفية حسب الشهر:</label>
-                            <select id="contractor-month-filter" class="form-input" style="max-width: 200px;">
-                                <option value="">جميع الأشهر</option>
-                                ${this.getMonthOptions()}
-                            </select>
-                            <button id="reset-contractor-filter" class="btn-secondary">
-                                <i class="fas fa-redo ml-2"></i>إعادة تعيين
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- الكروت الإحصائية -->
-                <div class="grid grid-cols-5 gap-4 mb-6">
-                    <div class="content-card h-full">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-sm flex-shrink-0">
-                                <i class="fas fa-book text-xl"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <p class="text-xs text-gray-500">الموضوعات التدريبية</p>
-                                <p class="text-xl font-bold text-gray-900" id="contractor-topics-count">${contractorStats.uniqueTopics}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="content-card h-full">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-xl bg-green-100 text-green-600 flex items-center justify-center shadow-sm flex-shrink-0">
-                                <i class="fas fa-building text-xl"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <p class="text-xs text-gray-500">المقاولين/الشركات</p>
-                                <p class="text-xl font-bold text-gray-900" id="contractor-companies-count">${contractorStats.uniqueContractors}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="content-card h-full">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shadow-sm flex-shrink-0">
-                                <i class="fas fa-users text-xl"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <p class="text-xs text-gray-500">إجمالي المتدربين</p>
-                                <p class="text-xl font-bold text-gray-900" id="contractor-trainees-count">${contractorStats.totalTrainees}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="content-card h-full">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-sm flex-shrink-0">
-                                <i class="fas fa-chalkboard-teacher text-xl"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <p class="text-xs text-gray-500">القائمون بالتدريب</p>
-                                <p class="text-xl font-bold text-gray-900" id="contractor-trainers-count">${contractorStats.uniqueTrainers}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="content-card h-full">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shadow-sm flex-shrink-0">
-                                <i class="fas fa-calendar-alt text-xl"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <p class="text-xs text-gray-500">التدريبات (الشهر الحالي)</p>
-                                <p class="text-xl font-bold text-gray-900" id="contractor-monthly-count">${contractorStats.currentMonthCount}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- تحليل تفاعلي (Power BI-like) -->
-                <div class="content-card mb-4">
-                    <div class="card-header">
-                        <div class="flex items-center justify-between">
-                            <h3 class="card-title"><i class="fas fa-layer-group ml-2"></i>تحليل تفاعلي لتدريبات المقاولين (Slicers + Pivot + Drill-down)</h3>
-                            <button id="contractor-analytics-reset-btn" class="btn-secondary btn-sm">
-                                <i class="fas fa-redo ml-2"></i>إعادة تعيين التحليل
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body" style="padding: 12px;">
-                        <div id="contractor-analytics-dashboard">
-                            ${this.renderContractorAnalyticsDashboard(analyticsModel, analyticsState)}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="content-card">
-                    <div class="card-header">
-                        <div class="flex items-center justify-between">
-                            <h2 class="card-title"><i class="fas fa-list ml-2"></i>سجل تدريبات المقاولين والشركات الخارجية</h2>
-                            <div class="flex items-center gap-3">
-                                <button id="export-contractor-training-pdf-btn" class="btn-secondary">
-                                    <i class="fas fa-file-pdf ml-2" style="font-size: 14px;"></i>تقرير PDF
-                                </button>
-                                <button id="export-contractor-training-excel-btn" class="btn-success">
-                                    <i class="fas fa-file-excel ml-2" style="font-size: 14px;"></i>تصدير Excel
-                                </button>
-                                <input type="text" id="contractor-training-search" class="form-input" style="max-width: 260px;" placeholder="بحث سريع (مقاول، موضوع، موقع)">
-                                <button id="add-contractor-training-btn" class="btn-primary">
-                                    <i class="fas fa-plus ml-2"></i>
-                                    تسجيل تدريب للمقاولين
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body" id="contractor-training-container">
-                        <div class="contractor-training-loading text-center py-8 text-gray-500">جاري تحميل السجل…</div>
-                    </div>
-                </div>
-            `;
+            return this.buildContractorsTabMarkup();
         } else if (tabName === 'attendance') {
-            return await this.renderAttendanceRegistry();
+            return this.buildAttendanceTabMarkup();
         } else if (tabName === 'legalTraining') {
             return this.renderLegalTrainingTab();
         } else if (tabName === 'analysis') {
@@ -2841,6 +3078,7 @@ const Training = {
             this.loadTrainingList();
         } else if (tabName === 'contractors') {
             void this.refreshContractorTrainingList().catch(() => {});
+            this._scheduleDeferredAnalytics('contractors');
         } else if (tabName === 'attendance') {
             this.loadAttendanceRegistry();
             const attendanceMonthFilter = document.getElementById('attendance-month-filter');
@@ -2858,7 +3096,7 @@ const Training = {
                 });
                 resetAttendanceFilter.dataset.bound = '1';
             }
-            this.bindAttendanceAnalyticsEvents((document.getElementById('attendance-month-filter') || {}).value || '');
+            this._scheduleDeferredAnalytics('attendance');
         } else if (tabName === 'legalTraining') {
             this.loadLegalTrainingList();
         } else if (tabName === 'analysis') {
@@ -3065,11 +3303,6 @@ const Training = {
             this.resetContractorAnalyticsState();
             this.refreshContractorAnalytics(document.getElementById('contractor-month-filter')?.value || '');
         });
-
-        // تهيئة التحليل التفاعلي للمقاولين عند توفر الحاوية فقط (يتجنب عمل ثقيل عندما تبويب المقاولين غير مرسوم).
-        if (document.getElementById('contractor-analytics-dashboard')) {
-            this.refreshContractorAnalytics(document.getElementById('contractor-month-filter')?.value || '');
-        }
     },
 
     updateContractorStatsWithFilter(monthFilter) {
@@ -12009,101 +12242,10 @@ const Training = {
     },
     
     async renderAttendanceRegistry() {
-        const attendanceAnalyticsModel = this.getAttendanceAnalyticsModel('');
-        const attendanceAnalyticsState = this.getAttendanceAnalyticsState();
-        return `
-            <!-- فلتر الشهر لتحليل سجل التدريب -->
-            <div class="content-card mb-4">
-                <div class="card-body">
-                    <div class="flex items-center gap-4">
-                        <label class="text-sm font-medium text-gray-700">تصفية حسب الشهر (للتحليل التفاعلي):</label>
-                        <select id="attendance-month-filter" class="form-input" style="max-width: 200px;">
-                            <option value="">جميع الأشهر</option>
-                            ${this.getAttendanceMonthOptions()}
-                        </select>
-                        <button id="reset-attendance-filter" class="btn-secondary"><i class="fas fa-redo ml-2"></i>إعادة تعيين</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- تحليل تفاعلي لسجل التدريب للموظفين (Slicers + Pivot + Drill-down) -->
-            <div class="content-card mb-4">
-                <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-layer-group ml-2"></i>تحليل تفاعلي لسجل التدريب للموظفين (Slicers + Pivot + Drill-down)</h3>
-                </div>
-                <div class="card-body" style="padding: 12px;">
-                    <div id="attendance-analytics-dashboard">
-                        ${this.renderAttendanceAnalyticsDashboard(attendanceAnalyticsModel, attendanceAnalyticsState)}
-                    </div>
-                </div>
-            </div>
-
-            <div class="content-card">
-                <div class="card-header">
-                    <div class="flex items-center justify-between">
-                        <h2 class="card-title"><i class="fas fa-clipboard-check ml-2"></i>سجل التدريب للموظفين</h2>
-                        <div class="flex items-center gap-2">
-                            <button id="attendance-registry-add-record" class="btn-primary">
-                                <i class="fas fa-plus ml-2"></i>
-                                إضافة سجل
-                            </button>
-                            <button id="attendance-registry-import-excel" class="btn-secondary">
-                                <i class="fas fa-file-import ml-2"></i>
-                                استيراد Excel
-                            </button>
-                            <button id="attendance-registry-export-excel" class="btn-secondary">
-                                <i class="fas fa-file-excel ml-2"></i>
-                                تصدير Excel
-                            </button>
-                            <button id="attendance-registry-export-pdf" class="btn-primary">
-                                <i class="fas fa-file-pdf ml-2"></i>
-                                تصدير PDF
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="mb-4 flex items-center gap-4">
-                        <input type="text" id="attendance-registry-search" class="form-input" style="max-width: 300px;" placeholder="البحث...">
-                        <select id="attendance-registry-filter-factory" class="form-input" style="max-width: 200px;">
-                            <option value="">جميع المصانع</option>
-                            ${this.getSiteOptions().map(site => `
-                                <option value="${Utils.escapeHTML(site.id)}">${Utils.escapeHTML(site.name)}</option>
-                            `).join('')}
-                        </select>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="data-table" id="attendance-registry-table">
-                            <thead>
-                                <tr>
-                                    <th>م</th>
-                                    <th>التاريخ</th>
-                                    <th>نوع التدريب</th>
-                                    <th>المصنع</th>
-                                    <th>الكود</th>
-                                    <th>الاسم</th>
-                                    <th>الوظيفة</th>
-                                    <th>الإدارة</th>
-                                    <th>موضوع المحاضرة</th>
-                                    <th>اسم المحاضر</th>
-                                    <th>وقت البدء</th>
-                                    <th>وقت الانتهاء</th>
-                                    <th>إجمالي ساعات التدريب</th>
-                                    <th>الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody id="attendance-registry-table-body">
-                                <tr>
-                                    <td colspan="14" class="text-center text-gray-500 py-4">جاري التحميل...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        `;
+        return this.buildAttendanceTabMarkup();
     },
-    
+
+
     /**
      * تحميل سجل التدريب للموظفين
      */
@@ -12120,12 +12262,20 @@ const Training = {
                     <td colspan="14" class="text-center text-gray-500 py-6">لا توجد سجلات تدريب حتى الآن</td>
                 </tr>
             `;
+            this.setupAttendanceRegistryListeners();
             return;
         }
         
         // تطبيق الفلاتر
         const searchTerm = (document.getElementById('attendance-registry-search')?.value || '').toLowerCase();
         const filterFactory = document.getElementById('attendance-registry-filter-factory')?.value || '';
+        const filterKey = `${searchTerm}|${filterFactory}`;
+        if (this._attendanceRegistryFilterKey !== filterKey) {
+            this._attendanceRegistryFilterKey = filterKey;
+            this._attendanceRegistryShown = 80;
+        }
+        this._attendanceRegistryPageSize = this._attendanceRegistryPageSize || 80;
+        if (!this._attendanceRegistryShown) this._attendanceRegistryShown = this._attendanceRegistryPageSize;
         
         const filtered = registry.filter(record => {
             const matchesSearch = !searchTerm || 
@@ -12138,8 +12288,10 @@ const Training = {
             
             return matchesSearch && matchesFactory;
         });
+        const shown = Math.min(this._attendanceRegistryShown, filtered.length);
+        const visibleRows = filtered.slice(0, shown);
         
-        container.innerHTML = filtered.map((record, index) => {
+        container.innerHTML = visibleRows.map((record, index) => {
             const date = record.date ? Utils.formatDate(record.date) : '-';
             let startTime = this.cleanTime(record.startTime) || '-';
             let endTime = this.cleanTime(record.endTime) || '-';
@@ -12185,7 +12337,15 @@ const Training = {
                     </td>
                 </tr>
             `;
-        }).join('');
+        }).join('') + (shown < filtered.length ? `
+                <tr>
+                    <td colspan="14" class="text-center py-4">
+                        <button type="button" id="attendance-registry-show-more" class="btn-secondary">
+                            عرض المزيد (${shown} من ${filtered.length})
+                        </button>
+                    </td>
+                </tr>
+            ` : '');
         
         // إعداد المستمعين
         this.setupAttendanceRegistryListeners();
@@ -12229,6 +12389,14 @@ const Training = {
         const exportPdfBtn = document.getElementById('attendance-registry-export-pdf');
         if (exportPdfBtn) {
             exportPdfBtn.onclick = () => this.exportAttendanceRegistryToPDF();
+        }
+
+        const moreBtn = document.getElementById('attendance-registry-show-more');
+        if (moreBtn) {
+            moreBtn.onclick = () => {
+                this._attendanceRegistryShown = (this._attendanceRegistryShown || 80) + 80;
+                this.loadAttendanceRegistry();
+            };
         }
     },
     

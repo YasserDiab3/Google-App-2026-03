@@ -1,15 +1,15 @@
 {
-  "version": "1.0.867",
+  "version": "1.0.869",
   "highlights": {
     "ar": [
-      "فتح العيادة يعرض سجل التردد المحلي فوراً دون انتظار المزامنة الكاملة.",
-      "الأدوية والإجازات والإصابات تُحدَّث في الخلفية بعد أول ظهور.",
-      "تحسين استقرار التحميل للموديولات الثقيلة."
+      "تبويبا المقاولين والموظفين في التدريب يظهران فوراً ثم يُحمَّل السجل والتحليل.",
+      "تحليل تفاعلي موحّد وأسهل للموظفين والمقاولين (تصفية + ملخص + تفاصيل).",
+      "سجل الموظفين يعرض تدريجياً لتحسين السلاسة."
     ],
     "en": [
-      "Clinic opens with local visits immediately, without waiting for full sync.",
-      "Medications, sick leave, and injuries refresh in the background after first paint.",
-      "More stable loading for heavy modules."
+      "Contractor and employee training tabs paint immediately, then load the registry and analytics.",
+      "Unified interactive analysis for employees and contractors (filters + summary + details).",
+      "Employee attendance registry loads progressively for smoother browsing."
     ]
   }
 }
