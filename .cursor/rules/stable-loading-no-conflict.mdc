@@ -16,13 +16,14 @@ alwaysApply: true
 
 - كل موديول ثقيل **يملك** بياناته. العرض من المحلي فوراً، والشبكة تحديث خلفي للتبويب الظاهر فقط.
 - المساعد المشترك: `Frontend/js/modules/services/stable-loader.js` (`StableLoader`).
-- المزامنة العامة **لا** تسحب أوراق مملوكة: `ClinicVisits`, `Training`, `Employees`, `PTW`, `DailyObservations`…
-- بعد الدخول: لا مؤشر تقدم عالمي، ولا `forceRefresh` شامل.
-- طابور GAS: 3 عمال افتراضياً، و2 أثناء جلب مملوك للموديول.
+- المزامنة العامة **لا** تسحب أوراق مملوكة: `ClinicVisits`, `ClinicContractorVisits`, `Training`, `Employees`, `ExternalWorkforceMonthly`, `PTW`, `PTWRegistry`, `DailyObservations`.
+- بعد الدخول: لا مؤشر تقدم عالمي، ولا `forceRefresh` شامل. المزامنة الصامتة: `incremental:true` + `showLoader:false`.
+- طابور GAS: 3 عمال افتراضياً، و2 أثناء جلب مملوك للموديول (`beginOwnedFetch` / `endOwnedFetch`).
+- Watchdog: إن بقي `heavyDepth > 0` أكثر من 45 ثانية يُعاد العمال إلى 3.
+- قياس أول رسم: `StableLoader.markPaint(module, tab, { count })` ثم `getMetrics()`.
+- Auth preload **لا** يحمّل مسبقاً: `training`, `clinic`, `ptw`, `daily-observations`.
 
 ## 1. مسارات محمية — لا تلمسها بدون ضرورة
-
-في مديول العيادة (ونفس المبدأ في المديولات الثقيلة الأخرى):
 
 | المسار | الدور |
 |--------|--------|
@@ -31,10 +32,18 @@ alwaysApply: true
 | `shouldFetchClinicVisitsFromBackend()` + `_visitsBackendFetchOk` | منع إعادة جلب غير ضرورية |
 | `mergeClinicVisitsWithLocalOnly()` | عدم فقدان زيارات محلية |
 | `renderVisitsTab()` → عرض فوري ثم جلب بالخلفية | UX مستقر |
-| `Training.loadTrainingDataAsync()` / `loadTrainingList()` | برامج التدريب |
+| `Training.loadTrainingDataAsync()` / `_fetchTrainingTabFromBackend()` | برامج/حضور/قانوني — تبويب ظاهر فقط |
 | `Employees.loadEmployeesFromBackend()` / `loadEmployeesList()` | قائمة الموظفين |
+| `PTW._startPtwBackendSync()` / `_mountPermitsListContent()` | تصاريح: محلي ثم `batchReadSheets` |
+| `DailyObservations.ensureDailyObservationsDataLoaded()` | ملاحظات: محلي ثم ورقة واحدة |
 
 **ممنوع** دمج ميزة جديدة داخل هذه الدوال إذا كان يمكن فصلها.
+
+## 1b. قواعد PTW الإضافية
+
+- **ممنوع** استدعاء `syncRegistryWithPermits()` تلقائياً عند فتح الموديول أو بعد `_startPtwBackendSync`.
+- **ممنوع** إرسال معرفات `_TMP_` إلى الخادم.
+- الجلب المملوك: `batchReadSheets(['PTW','PTWRegistry'])` فقط، ثم دمج محلي.
 
 ## 2. قواعد إضافة ميزة جديدة (تحميل منفصل)
 
@@ -54,6 +63,7 @@ alwaysApply: true
    ```
 6. **مهلة كافية** للطلبات الثقيلة (سجل التردد: ~120000ms) — لا `Promise.race` قصير يقطع الجلب.
 7. استخدم `Promise.allSettled` للمزامنة المجمّعة؛ لا تفشل كل المزامنة بسبب طلب واحد.
+8. تبويبات التدريب الثانوية (`attendance`, `legalTraining`, `contractors`) تُجلب **عند الفتح فقط** — لا `runAction` ناري بعد برامج التدريب.
 
 ## 3. الخلفية (GAS)
 
@@ -66,6 +76,8 @@ alwaysApply: true
 - [ ] هل يوجد طلب API جديد يتنافس مع جلب سجل التردد في نفس اللحظة؟
 - [ ] هل الميزة الجديدة معزولة في `AppState` ودالة تحميل خاصة؟
 - [ ] هل طُبّق نفس التعديل في `vercel-deploy/` (انظر قاعدة المزامنة)؟
+- [ ] هل أضفت `StableLoader.beginOwnedFetch` / `endOwnedFetch` لأي جلب ثقيل جديد؟
+- [ ] PTW: هل تجنبت `syncRegistryWithPermits` التلقائي و`_TMP_`؟
 
 ## 5. أمثلة
 

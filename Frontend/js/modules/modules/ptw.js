@@ -3044,14 +3044,16 @@ const PTW = {
             return;
         }
 
-        this._ptwBackendLoadPromise = (async () => {
+        const runSync = async () => {
+            if (typeof StableLoader !== 'undefined') StableLoader.beginOwnedFetch('ptw');
             try {
                 // ✅ طلب دفعة واحدة عالي الكفاءة يجمع بين التصاريح وسجل التصاريح
                 const result = await GoogleIntegration.sendRequest({
                     action: 'batchReadSheets',
                     data: {
                         sheetNames: ['PTW', 'PTWRegistry'],
-                        spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId
+                        spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId,
+                        __timeoutMs: 25000
                     }
                 });
 
@@ -3113,8 +3115,12 @@ const PTW = {
                 }
                 this._ptwBackendLoadPromise = null;
                 this._backendSyncStarted = false;
+                if (typeof StableLoader !== 'undefined') StableLoader.endOwnedFetch('ptw');
             }
-        })();
+        };
+        this._ptwBackendLoadPromise = (typeof StableLoader !== 'undefined' && typeof StableLoader.runExclusive === 'function')
+            ? StableLoader.runExclusive('ptw:backend', runSync)
+            : runSync();
 
         return this._ptwBackendLoadPromise;
     },
@@ -3619,6 +3625,12 @@ const PTW = {
             // ✅ عرض فوري متزامن (0ms) — بدون requestAnimationFrame لضمان ظهور البيانات فوراً
             this._mountPermitsListContent(t);
             this._mountRegistryShell();
+            if (typeof StableLoader !== 'undefined') {
+                StableLoader.markPaint('ptw', initialTab, {
+                    permits: (AppState.appData.ptw || []).length,
+                    registry: Array.isArray(this.registryData) ? this.registryData.length : 0
+                });
+            }
             if (initialTab !== 'permits') {
                 this.switchTab(initialTab);
             }

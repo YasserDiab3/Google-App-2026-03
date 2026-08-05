@@ -157,6 +157,11 @@ const Employees = {
                             const showInactive = document.getElementById('show-inactive-employees')?.checked || false;
                             this.loadEmployeesList(showInactive);
                             this.renderStatsCards();
+                            if (typeof StableLoader !== 'undefined') {
+                                StableLoader.markPaint('employees', 'employees-list', {
+                                    count: (AppState.appData.employees || []).length
+                                });
+                            }
                         }
                         await this.ensureEmployeesLoaded(false);
                         if (this.activeTab === 'employees-list' && document.getElementById('employees-table-container')) {

@@ -1,15 +1,15 @@
 {
-  "version": "1.0.863",
+  "version": "1.0.865",
   "highlights": {
     "ar": [
-      "نظام تحميل مستقر: عرض فوري من المحلي ثم تحديث خلفي.",
-      "التدريب والموظفون والعيادة لا يتزاحمون مع المزامنة العامة.",
-      "تخفيض طابور الطلبات أثناء فتح الموديولات الثقيلة."
+      "تصاريح العمل والملاحظات: عرض محلي فوري ثم جلب مملوك.",
+      "تبويبات التدريب الثانوية تُحمَّل عند الفتح فقط.",
+      "حماية الطابور بـ watchdog وقياس أول ظهور للواجهة."
     ],
     "en": [
-      "Stable loading: paint from local data first, then refresh in background.",
-      "Training, employees, and clinic no longer compete with global sync.",
-      "Lower request-queue pressure while heavy modules are open."
+      "PTW and daily observations: local-first paint then owned fetch.",
+      "Secondary training tabs load only when opened.",
+      "Queue watchdog plus first-paint timing for heavy modules."
     ]
   }
 }

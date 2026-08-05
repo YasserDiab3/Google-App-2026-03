@@ -1641,39 +1641,48 @@ const DailyObservations = {
         if (this._dailyObsLoadPromise && !force) {
             return this._dailyObsLoadPromise;
         }
-        this._dailyObsLoadPromise = (async () => {
-            if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.readFromSheets) return;
+        const run = async () => {
+            if (typeof StableLoader !== 'undefined') StableLoader.beginOwnedFetch('daily-observations');
+            try {
+                if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.readFromSheets) return;
 
-            const isEnabled = AppState?.googleConfig?.appsScript?.enabled && AppState?.googleConfig?.appsScript?.scriptUrl;
-            if (!isEnabled) {
-                this._dailyObsBackendFetchOk = true;
-                return;
-            }
-
-            const ctx = typeof this.buildObservationsRequestContext === 'function' ? this.buildObservationsRequestContext() : null;
-            const data = await GoogleIntegration.readFromSheets('DailyObservations', {
-                timeout: 15000,
-                observationsRequestContext: ctx
-            }).catch(() => null);
-            if (Array.isArray(data)) {
-                const oldData = AppState.appData.dailyObservations || [];
-                const viewAll = typeof this.canViewAllObservationsWorkflow === 'function' && this.canViewAllObservationsWorkflow();
-                if (!viewAll) {
-                    AppState.appData.dailyObservations = data;
-                } else if (data.length === 0 && oldData.length > 0) {
-                    Utils?.safeLog?.('⚠️ DailyObservations: البيانات الجديدة فارغة - الاحتفاظ بالمحلي');
-                } else {
-                    AppState.appData.dailyObservations = data;
+                const isEnabled = AppState?.googleConfig?.appsScript?.enabled && AppState?.googleConfig?.appsScript?.scriptUrl;
+                if (!isEnabled) {
+                    this._dailyObsBackendFetchOk = true;
+                    return;
                 }
-            }
 
-            try { localStorage.setItem('daily_observations_last_sync', String(Date.now())); } catch (e) {}
+                const ctx = typeof this.buildObservationsRequestContext === 'function' ? this.buildObservationsRequestContext() : null;
+                const data = await GoogleIntegration.readFromSheets('DailyObservations', {
+                    timeout: 15000,
+                    observationsRequestContext: ctx
+                }).catch(() => null);
+                if (Array.isArray(data)) {
+                    const oldData = AppState.appData.dailyObservations || [];
+                    const viewAll = typeof this.canViewAllObservationsWorkflow === 'function' && this.canViewAllObservationsWorkflow();
+                    if (!viewAll) {
+                        AppState.appData.dailyObservations = data;
+                    } else if (data.length === 0 && oldData.length > 0) {
+                        Utils?.safeLog?.('⚠️ DailyObservations: البيانات الجديدة فارغة - الاحتفاظ بالمحلي');
+                    } else {
+                        AppState.appData.dailyObservations = data;
+                    }
+                }
 
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                try { window.DataManager.save(); } catch (e) {}
+                try { localStorage.setItem('daily_observations_last_sync', String(Date.now())); } catch (e) {}
+
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    try { window.DataManager.save(); } catch (e) {}
+                }
+                this._dailyObsBackendFetchOk = true;
+            } finally {
+                if (typeof StableLoader !== 'undefined') StableLoader.endOwnedFetch('daily-observations');
             }
-            this._dailyObsBackendFetchOk = true;
-        })().finally(() => {
+        };
+        this._dailyObsLoadPromise = ((typeof StableLoader !== 'undefined' && typeof StableLoader.runExclusive === 'function')
+            ? StableLoader.runExclusive('daily-obs:data', run)
+            : run()
+        ).finally(() => {
             this._dailyObsLoadPromise = null;
         });
         return this._dailyObsLoadPromise;
@@ -1829,9 +1838,16 @@ const DailyObservations = {
         const isAdmin = this.isCurrentUserAdmin();
         // ✅ تبويب المؤشرات التنفيذية (Executive Dashboard) — admin فقط، قراءة فقط، معزول
         const canExec = isAdmin && this.hasTabAccess('executive-dashboard');
+        const obsLazyPlaceholder = `
+                <div class="content-card"><div class="card-body"><div class="empty-state">
+                    <i class="fas fa-spinner fa-spin text-gray-300 text-3xl mb-3"></i>
+                    <p class="text-gray-500">${Utils.escapeHTML(this._t('module.dailyobs.loading.tab', 'سيُحمَّل هذا التبويب عند فتحه'))}</p>
+                </div></div></div>`;
         let execContent = '';
-        if (canExec) {
+        if (canExec && firstTab === 'executive-dashboard') {
             try { execContent = this.renderExecutiveDashboard(); } catch (e) { execContent = ''; }
+        } else if (canExec) {
+            execContent = obsLazyPlaceholder;
         }
 
         try {
@@ -1897,14 +1913,24 @@ const DailyObservations = {
                     <button onclick="DailyObservations.load()" class="btn-primary mt-4"><i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t('module.dailyobs.error.retry', 'إعادة المحاولة'))}</button>
                 </div></div></div>`;
 
-            const [listResult, analysisResult, top10Result] = await Promise.all([
-                withTimeout(this.renderList(), listErrorHtml),
-                isAdmin ? withTimeout(this.renderDataAnalysis(), analysisErrorHtml) : Promise.resolve(''),
-                withTimeout(this.renderTop10Observations(), top10ErrorHtml)
-            ]);
-            let listContent = listResult || listErrorHtml;
-            let analysisContent = isAdmin ? (analysisResult || analysisErrorHtml) : '';
-            let top10Content = top10Result || top10ErrorHtml;
+            let listContent = '';
+            let analysisContent = '';
+            let top10Content = '';
+            if (firstTab === 'observations-registry' || canRegistry) {
+                listContent = (await withTimeout(this.renderList(), listErrorHtml)) || listErrorHtml;
+            }
+            if (firstTab === 'top-10-observations') {
+                top10Content = (await withTimeout(this.renderTop10Observations(), top10ErrorHtml)) || top10ErrorHtml;
+            } else if (canTop10) {
+                top10Content = obsLazyPlaceholder;
+            }
+            if (firstTab === 'data-analysis') {
+                analysisContent = isAdmin
+                    ? ((await withTimeout(this.renderDataAnalysis(), analysisErrorHtml)) || analysisErrorHtml)
+                    : '';
+            } else if (canAnalysis) {
+                analysisContent = obsLazyPlaceholder;
+            }
 
             section.innerHTML = `
                 <div class="section-header">
@@ -1989,17 +2015,17 @@ const DailyObservations = {
                     </div>
                     ` : ''}
                     ${canTop10 ? `
-                    <div id="tab-top-10-observations" class="tab-content ${this.state.activeTab === 'top-10-observations' ? 'active' : ''}" style="${this.state.activeTab === 'top-10-observations' ? '' : 'display: none;'}">
+                    <div id="tab-top-10-observations" class="tab-content ${this.state.activeTab === 'top-10-observations' ? 'active' : ''}" style="${this.state.activeTab === 'top-10-observations' ? '' : 'display: none;'}" ${firstTab === 'top-10-observations' ? '' : 'data-obs-lazy="1"'}>
                         ${top10Content}
                     </div>
                     ` : ''}
                     ${canAnalysis ? `
-                    <div id="tab-data-analysis" class="tab-content ${this.state.activeTab === 'data-analysis' ? 'active' : ''}" style="${this.state.activeTab === 'data-analysis' ? '' : 'display: none;'}">
+                    <div id="tab-data-analysis" class="tab-content ${this.state.activeTab === 'data-analysis' ? 'active' : ''}" style="${this.state.activeTab === 'data-analysis' ? '' : 'display: none;'}" ${firstTab === 'data-analysis' ? '' : 'data-obs-lazy="1"'}>
                         ${analysisContent}
                     </div>
                     ` : ''}
                     ${canExec ? `
-                    <div id="tab-executive-dashboard" class="tab-content ${this.state.activeTab === 'executive-dashboard' ? 'active' : ''}" style="${this.state.activeTab === 'executive-dashboard' ? '' : 'display: none;'}">
+                    <div id="tab-executive-dashboard" class="tab-content ${this.state.activeTab === 'executive-dashboard' ? 'active' : ''}" style="${this.state.activeTab === 'executive-dashboard' ? '' : 'display: none;'}" ${firstTab === 'executive-dashboard' ? '' : 'data-obs-lazy="1"'}>
                         ${execContent}
                     </div>
                     ` : ''}
@@ -2007,6 +2033,11 @@ const DailyObservations = {
             `;
             
             this.applyModuleI18n(section);
+            if (typeof StableLoader !== 'undefined') {
+                StableLoader.markPaint('daily-observations', firstTab, {
+                    count: (AppState.appData.dailyObservations || []).length
+                });
+            }
             this.setupEventListeners();
             
             // تهيئة الفلتر الحالي
@@ -3093,17 +3124,42 @@ const DailyObservations = {
                                 }
                                 return;
                             }
-                            this.loadDataAnalysis();
+                            if (tabContent.getAttribute('data-obs-lazy') === '1') {
+                                tabContent.removeAttribute('data-obs-lazy');
+                                void this.renderDataAnalysis().then((html) => {
+                                    tabContent.innerHTML = html || '';
+                                    this.applyModuleI18n(tabContent);
+                                    return this.loadDataAnalysis();
+                                }).catch(() => this.loadDataAnalysis());
+                            } else {
+                                this.loadDataAnalysis();
+                            }
                         }
                         
                         // تحميل أعلى 10 مخاطر عند فتح التبويب
                         if (tabName === 'top-10-observations') {
-                            this.loadTop10Observations();
+                            if (tabContent.getAttribute('data-obs-lazy') === '1') {
+                                tabContent.removeAttribute('data-obs-lazy');
+                                void this.renderTop10Observations().then((html) => {
+                                    tabContent.innerHTML = html || '';
+                                    this.applyModuleI18n(tabContent);
+                                    return this.loadTop10Observations();
+                                }).catch(() => this.loadTop10Observations());
+                            } else {
+                                this.loadTop10Observations();
+                            }
                         }
 
                         // ✅ تحميل لوحة المؤشرات التنفيذية عند فتح التبويب (معزول بـ try/catch)
                         if (tabName === 'executive-dashboard') {
                             try {
+                                if (tabContent.getAttribute('data-obs-lazy') === '1') {
+                                    tabContent.removeAttribute('data-obs-lazy');
+                                    try {
+                                        tabContent.innerHTML = this.renderExecutiveDashboard() || '';
+                                        this.applyModuleI18n(tabContent);
+                                    } catch (_renderErr) { /* continue */ }
+                                }
                                 this.loadExecutiveDashboard();
                             } catch (e) {
                                 Utils?.safeWarn?.('⚠️ لوحة المؤشرات التنفيذية:', e?.message || e);

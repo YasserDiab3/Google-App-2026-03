@@ -7,11 +7,19 @@
 
     const DEFAULT_WORKERS = 3;
     const HEAVY_WORKERS = 2;
+    const OWNED_FETCH_WATCHDOG_MS = 45000;
     const inflight = Object.create(null);
+    const metrics = [];
     let heavyDepth = 0;
+    let watchdogTimer = null;
 
     function hasGi() {
         return typeof GoogleIntegration !== 'undefined';
+    }
+
+    function pushMetric(entry) {
+        metrics.push(entry);
+        if (metrics.length > 40) metrics.shift();
     }
 
     const StableLoader = {
@@ -26,18 +34,42 @@
             return incoming;
         },
 
+        markPaint(moduleName, tab, extra) {
+            const entry = {
+                t: Date.now(),
+                module: moduleName,
+                tab: tab || '',
+                phase: 'paint-local',
+                extra: extra || {}
+            };
+            pushMetric(entry);
+            this.log(moduleName, tab || 'ui', 'paint-local', extra || {});
+        },
+
         beginOwnedFetch(moduleName) {
             heavyDepth += 1;
             if (hasGi()) {
                 GoogleIntegration._maxQueueWorkers = HEAVY_WORKERS;
             }
+            if (watchdogTimer) clearTimeout(watchdogTimer);
+            watchdogTimer = setTimeout(() => {
+                if (heavyDepth > 0) {
+                    this.log(moduleName, 'queue', 'watchdog-release', { depth: heavyDepth });
+                    heavyDepth = 0;
+                    if (hasGi()) GoogleIntegration._maxQueueWorkers = DEFAULT_WORKERS;
+                }
+            }, OWNED_FETCH_WATCHDOG_MS);
             this.log(moduleName, 'queue', 'begin', { workers: HEAVY_WORKERS, depth: heavyDepth });
         },
 
         endOwnedFetch(moduleName) {
             heavyDepth = Math.max(0, heavyDepth - 1);
-            if (hasGi() && heavyDepth === 0) {
-                GoogleIntegration._maxQueueWorkers = DEFAULT_WORKERS;
+            if (heavyDepth === 0) {
+                if (watchdogTimer) {
+                    clearTimeout(watchdogTimer);
+                    watchdogTimer = null;
+                }
+                if (hasGi()) GoogleIntegration._maxQueueWorkers = DEFAULT_WORKERS;
             }
             this.log(moduleName, 'queue', 'end', { workers: heavyDepth === 0 ? DEFAULT_WORKERS : HEAVY_WORKERS, depth: heavyDepth });
         },
@@ -49,11 +81,29 @@
                 try {
                     return await task();
                 } finally {
-                    this.log(key, 'fetch', 'done', { ms: Date.now() - started });
+                    const ms = Date.now() - started;
+                    pushMetric({ t: Date.now(), module: key, phase: 'fetch-done', ms });
+                    this.log(key, 'fetch', 'done', { ms });
                     delete inflight[key];
                 }
             })();
             return inflight[key];
+        },
+
+        async withUiTimeout(promise, timeoutMs, label) {
+            let timer = null;
+            const timeoutPromise = new Promise((_, reject) => {
+                timer = setTimeout(() => reject(new Error(label || 'STABLE_LOADER_TIMEOUT')), timeoutMs);
+            });
+            try {
+                return await Promise.race([promise, timeoutPromise]);
+            } finally {
+                if (timer) clearTimeout(timer);
+            }
+        },
+
+        getMetrics() {
+            return metrics.slice();
         },
 
         log(moduleName, tab, phase, extra) {

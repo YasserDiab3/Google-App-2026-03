@@ -19,8 +19,10 @@ const Training = {
     trainingAnalysisCharts: null,
     /** يمنع طلبات متوازية متعددة لنفس تحميل بيانات التدريب */
     _trainingDataLoadPromise: null,
-    /** true بعد أول محاولة جلب كاملة من الخادم (أو وضع بدون خادم) حتى لا يبقى تبويب الحضور بانتظار بيانات جزئية فقط */
+    /** true بعد أول محاولة جلب برامج التدريب من الخادم (أو وضع بدون خادم) */
     _trainingBackendFetchOk: false,
+    /** جلب كل تبويب على حدة — لا طلبات ثانوية عند فتح البرامج */
+    _trainingTabFetchOk: { programs: false, attendance: false, legalTraining: false },
     /** true بعد جلب تدريبات المقاولين من الخادم (أو وضع بدون خادم) */
     _contractorTrainingsFetchOk: false,
     _contractorTrainingsLoadPromise: null,
@@ -504,7 +506,7 @@ const Training = {
 
             // البيانات من Backend في الخلفية: تحديث الكاش/الواجهة عبر persistAndRefreshUi.
             if (typeof StableLoader !== 'undefined') {
-                StableLoader.log('training', 'programs', 'paint-local', {
+                StableLoader.markPaint('training', 'programs', {
                     count: (AppState.appData.training || []).length
                 });
             }
@@ -549,6 +551,7 @@ const Training = {
         }
 
         this._trainingBackendFetchOk = false;
+        this._trainingTabFetchOk = { programs: false, attendance: false, legalTraining: false };
         this._contractorTrainingsFetchOk = false;
         
         await this.load();
@@ -639,28 +642,38 @@ const Training = {
     },
 
     async loadTrainingDataAsync() {
+        return this._fetchTrainingTabFromBackend(this._currentActiveTab || 'programs');
+    },
+
+    async _fetchTrainingTabFromBackend(tabName) {
+        const tab = tabName || this._currentActiveTab || 'programs';
+        if (tab !== 'programs' && this._trainingTabFetchOk[tab] === true) {
+            return;
+        }
+        const exclusiveKey = 'training:' + tab;
+        const run = () => this._runLoadTrainingDataAsyncWrapped_(tab);
         if (typeof StableLoader !== 'undefined' && typeof StableLoader.runExclusive === 'function') {
-            return StableLoader.runExclusive('training:data', () => this._runLoadTrainingDataAsyncWrapped_());
+            return StableLoader.runExclusive(exclusiveKey, run);
         }
         if (this._trainingDataLoadPromise) {
             return this._trainingDataLoadPromise;
         }
-        this._trainingDataLoadPromise = this._runLoadTrainingDataAsyncWrapped_().finally(() => {
+        this._trainingDataLoadPromise = run().finally(() => {
             this._trainingDataLoadPromise = null;
         });
         return this._trainingDataLoadPromise;
     },
 
-    async _runLoadTrainingDataAsyncWrapped_() {
+    async _runLoadTrainingDataAsyncWrapped_(forcedTab) {
         if (typeof StableLoader !== 'undefined') StableLoader.beginOwnedFetch('training');
         try {
-            return await this._runLoadTrainingDataAsync();
+            return await this._runLoadTrainingDataAsync(forcedTab);
         } finally {
             if (typeof StableLoader !== 'undefined') StableLoader.endOwnedFetch('training');
         }
     },
 
-    async _runLoadTrainingDataAsync() {
+    async _runLoadTrainingDataAsync(forcedTab) {
         // ✅ تحسين: استخدام البيانات المحلية أولاً فوراً
         const hasLocalData = AppState.appData?.training?.length > 0 || 
                             AppState.appData?.trainingSessions?.length > 0 ||
@@ -682,6 +695,7 @@ const Training = {
                 Utils.safeLog('⚠️ Google Apps Script غير مفعل - استخدام البيانات المحلية فقط');
             }
             this._trainingBackendFetchOk = true;
+            this._trainingTabFetchOk = { programs: true, attendance: true, legalTraining: true };
             this._contractorTrainingsFetchOk = true;
             return;
         }
@@ -690,6 +704,7 @@ const Training = {
         if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
             Utils.safeWarn('⚠️ GoogleIntegration غير متاح - استخدام البيانات المحلية');
             this._trainingBackendFetchOk = true;
+            this._trainingTabFetchOk = { programs: true, attendance: true, legalTraining: true };
             this._contractorTrainingsFetchOk = true;
             return;
         }
@@ -698,30 +713,32 @@ const Training = {
         const fallbackTimeoutMs = 20000;
         const timeoutMessage = 'انتهت مهلة الاتصال بالخادم\n\nتحقق من الاتصال وإعدادات Google Apps Script.';
 
-        const persistAndRefreshUi = () => {
+        const persistAndRefreshUi = (fetchedTab) => {
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                 window.DataManager.save();
             }
             try { localStorage.setItem('training_last_sync', String(Date.now())); } catch (e) {}
 
-            // البيانات تغيّرت: علّم جميع التبويبات بأنها تحتاج إعادة بناء عند زيارتها.
             this._markAllTabsDirty();
 
-            // حدّث التبويب النشط فقط لتفادي إعادة الرسم المكلفة لتبويبات غير ظاهرة.
-            const active = this._currentActiveTab || 'programs';
-            if (active === 'programs') {
+            const visible = this._currentActiveTab || 'programs';
+            if (visible === 'programs') {
                 this.loadTrainingList();
-            } else if (active === 'contractors') {
+            } else if (visible === 'contractors') {
                 this.refreshContractorTrainingList();
-            } else if (active === 'attendance') {
+            } else if (visible === 'attendance') {
                 this.loadAttendanceRegistry();
-            } else if (active === 'legalTraining') {
+            } else if (visible === 'legalTraining') {
                 this.loadLegalTrainingList();
-            } else if (active === 'analysis') {
+            } else if (visible === 'analysis') {
                 this.refreshAnalysisTabContent();
             }
 
-            this._trainingBackendFetchOk = true;
+            const doneTab = fetchedTab || visible;
+            if (doneTab === 'programs') this._trainingBackendFetchOk = true;
+            if (this._trainingTabFetchOk && Object.prototype.hasOwnProperty.call(this._trainingTabFetchOk, doneTab)) {
+                this._trainingTabFetchOk[doneTab] = true;
+            }
         };
 
         try {
@@ -742,70 +759,53 @@ const Training = {
                 return (result && result.success && Array.isArray(result.data)) ? result.data : null;
             };
 
-            // أولوية التحميل حسب التبويب النشط لتقليل التأخير المرئي.
-            const active = this._currentActiveTab || 'programs';
-            // ✅ helpers: حراس الحفظ المحلي (60 ثانية) لمنع استبدال السجلات الجديدة بنتيجة جلب قديمة
+            const active = forcedTab || this._currentActiveTab || 'programs';
             const trainingGuardOk = () => (Date.now() - (this._trainingLocalSaveTime || 0)) > 60000;
             const attendanceGuardOk = () => (Date.now() - (this._trainingAttendanceLocalSaveTime || 0)) > 60000;
             const legalGuardOk = () => (Date.now() - (this._legalTrainingsLocalSaveTime || 0)) > 60000;
             const legalAttendeesGuardOk = () => (Date.now() - (this._legalAttendeesLocalSaveTime || 0)) > 60000;
             const legalRegisterGuardOk = () => (Date.now() - (this._legalRegisterLocalSaveTime || 0)) > 60000;
 
-            const startContractorFetchParallel = () => {
-                if (this._contractorTrainingsFetchOk) return null;
-                return this.loadContractorTrainingsPriority().catch(() => {});
-            };
-
-            // جلب المقاولين بالتوازي مع بقية البيانات (ما لم يكن التبويب النشط مقاولين — يُنتظر هناك)
-            const contractorParallel = active !== 'contractors' ? startContractorFetchParallel() : null;
-
             if (active === 'contractors') {
                 await this.loadContractorTrainingsPriority();
-                persistAndRefreshUi();
-                runAction('getAllTrainings', 'برامج التدريب').then((data) => { if (data && trainingGuardOk()) { AppState.appData.training = data; this._markAllTabsDirty(); } });
-                runAction('getAllTrainingAttendance', 'سجل الحضور').then((data) => { if (data && attendanceGuardOk()) { AppState.appData.trainingAttendance = data; this._markAllTabsDirty(); } });
-                runAction('getAllTrainingSessions', 'جلسات التدريب').then((data) => { if (data) { AppState.appData.trainingSessions = data; this._markAllTabsDirty(); } });
-                runAction('getAllTrainingCertificates', 'الشهادات').then((data) => { if (data) { AppState.appData.trainingCertificates = data; this._markAllTabsDirty(); } });
-                runAction('getAllLegalTrainings', 'التدريبات القانونية').then((data) => { if (data && legalGuardOk()) { AppState.appData.legalTrainings = data; this._markAllTabsDirty(); } });
-                runAction('getAllLegalTrainingAttendees', 'حضور التدريبات القانونية').then((data) => { if (data && legalAttendeesGuardOk()) { AppState.appData.legalTrainingAttendees = data; this._markAllTabsDirty(); } });
-                runAction('getAllLegalRegisters', 'سجل التشريعات').then((data) => { if (data && legalRegisterGuardOk()) { AppState.appData.legalRegister = data; this._markAllTabsDirty(); } });
+                persistAndRefreshUi(active);
                 return;
             }
             if (active === 'attendance') {
                 const attendanceData = await runAction('getAllTrainingAttendance', 'سجل الحضور');
                 if (attendanceData && attendanceGuardOk()) AppState.appData.trainingAttendance = attendanceData;
-                const trainingData = await runAction('getAllTrainings', 'برامج التدريب');
-                if (trainingData && trainingGuardOk()) AppState.appData.training = trainingData;
-                persistAndRefreshUi();
-                runAction('getAllTrainingSessions', 'جلسات التدريب').then((data) => { if (data) { AppState.appData.trainingSessions = data; this._markAllTabsDirty(); } });
-                runAction('getAllTrainingCertificates', 'الشهادات').then((data) => { if (data) { AppState.appData.trainingCertificates = data; this._markAllTabsDirty(); } });
-                runAction('getAllLegalTrainings', 'التدريبات القانونية').then((data) => { if (data && legalGuardOk()) { AppState.appData.legalTrainings = data; this._markAllTabsDirty(); } });
-                runAction('getAllLegalTrainingAttendees', 'حضور التدريبات القانونية').then((data) => { if (data && legalAttendeesGuardOk()) { AppState.appData.legalTrainingAttendees = data; this._markAllTabsDirty(); } });
-                runAction('getAllLegalRegisters', 'سجل التشريعات').then((data) => { if (data && legalRegisterGuardOk()) { AppState.appData.legalRegister = data; this._markAllTabsDirty(); } });
+                if (this._trainingTabFetchOk.programs !== true) {
+                    const trainingData = await runAction('getAllTrainings', 'برامج التدريب');
+                    if (trainingData && trainingGuardOk()) {
+                        AppState.appData.training = trainingData;
+                        this._trainingTabFetchOk.programs = true;
+                        this._trainingBackendFetchOk = true;
+                    }
+                }
+                persistAndRefreshUi(active);
+                return;
+            }
+            if (active === 'legalTraining') {
+                const legalData = await runAction('getAllLegalTrainings', 'التدريبات القانونية');
+                if (legalData && legalGuardOk()) AppState.appData.legalTrainings = legalData;
+                const attendeesData = await runAction('getAllLegalTrainingAttendees', 'حضور التدريبات القانونية');
+                if (attendeesData && legalAttendeesGuardOk()) AppState.appData.legalTrainingAttendees = attendeesData;
+                const registerData = await runAction('getAllLegalRegisters', 'سجل التشريعات');
+                if (registerData && legalRegisterGuardOk()) AppState.appData.legalRegister = registerData;
+                persistAndRefreshUi(active);
                 return;
             }
 
-            // باقي الحالات (programs/analysis): برامج التدريب أولاً — المقاولون يُجلبون بالتوازي عبر contractorParallel
             const trainingData = await runAction('getAllTrainings', 'برامج التدريب');
             if (trainingData && trainingGuardOk()) {
                 AppState.appData.training = trainingData;
                 Utils.safeLog(`✅ تم تحميل ${trainingData.length} برنامج تدريبي`);
             }
-            persistAndRefreshUi();
-            if (contractorParallel) {
-                contractorParallel.catch(() => {
-                    if (!this._contractorTrainingsFetchOk) this._contractorTrainingsFetchOk = true;
-                });
-            }
-            runAction('getAllTrainingSessions', 'جلسات التدريب').then((data) => { if (data) { AppState.appData.trainingSessions = data; this._markAllTabsDirty(); } });
-            runAction('getAllTrainingCertificates', 'الشهادات').then((data) => { if (data) { AppState.appData.trainingCertificates = data; this._markAllTabsDirty(); } });
-            runAction('getAllTrainingAttendance', 'سجل الحضور').then((data) => { if (data && attendanceGuardOk()) { AppState.appData.trainingAttendance = data; this._markAllTabsDirty(); } });
-            runAction('getAllLegalTrainings', 'التدريبات القانونية').then((data) => { if (data && legalGuardOk()) { AppState.appData.legalTrainings = data; this._markAllTabsDirty(); } });
-            runAction('getAllLegalTrainingAttendees', 'حضور التدريبات القانونية').then((data) => { if (data && legalAttendeesGuardOk()) { AppState.appData.legalTrainingAttendees = data; this._markAllTabsDirty(); } });
-            runAction('getAllLegalRegisters', 'سجل التشريعات').then((data) => { if (data && legalRegisterGuardOk()) { AppState.appData.legalRegister = data; this._markAllTabsDirty(); } });
+            persistAndRefreshUi(active);
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل بيانات التدريب:', error);
             this._trainingBackendFetchOk = true;
+            this._trainingTabFetchOk = { programs: true, attendance: true, legalTraining: true };
             this._contractorTrainingsFetchOk = true;
         }
     },
@@ -2822,12 +2822,14 @@ const Training = {
 
         this._hydrateTab(tabName);
 
-        // البيانات من الخادم في الخلفية: لا توقف الواجهة
+        // البيانات من الخادم في الخلفية: لا توقف الواجهة — تبويب ظاهر فقط
         if (tabName === 'contractors') {
             this._showContractorLocalDataIfAny();
             void this.loadContractorTrainingsPriority().catch(() => {});
-        } else if (this._trainingBackendFetchOk !== true && tabName === 'attendance') {
-            void this.loadTrainingDataAsync().catch(() => {});
+        } else if (tabName === 'attendance' || tabName === 'legalTraining') {
+            void this._fetchTrainingTabFromBackend(tabName).catch(() => {});
+        } else if (tabName === 'analysis' && this._trainingTabFetchOk?.programs !== true) {
+            void this._fetchTrainingTabFromBackend('programs').catch(() => {});
         }
 
         this.setupEventListeners();

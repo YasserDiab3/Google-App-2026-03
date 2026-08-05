@@ -8090,7 +8090,7 @@ const Clinic = {
 
             this.renderVisitsTabContent(panel);
             if (typeof StableLoader !== 'undefined') {
-                StableLoader.log('clinic', 'visits', 'paint-local', {
+                StableLoader.markPaint('clinic', 'visits', {
                     count: (AppState.appData.clinicVisits || []).length
                 });
             }
