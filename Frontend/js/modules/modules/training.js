@@ -727,11 +727,9 @@ const Training = {
             } else if (visible === 'contractors') {
                 this.refreshContractorTrainingList();
                 this._syncSelectOptions('contractor-month-filter', this.getMonthOptions());
-                try { this.refreshContractorAnalytics(document.getElementById('contractor-month-filter')?.value || ''); } catch (_e) {}
+                try { this.updateContractorStatsWithFilter(document.getElementById('contractor-month-filter')?.value || ''); } catch (_e) {}
             } else if (visible === 'attendance') {
                 this.loadAttendanceRegistry();
-                this._syncSelectOptions('attendance-month-filter', this.getAttendanceMonthOptions());
-                try { this.refreshAttendanceAnalytics(document.getElementById('attendance-month-filter')?.value || ''); } catch (_e) {}
             } else if (visible === 'legalTraining') {
                 this.loadLegalTrainingList();
             } else if (visible === 'analysis') {
@@ -2695,91 +2693,51 @@ const Training = {
     buildContractorsTabMarkup() {
         const contractorStats = this.getContractorTrainingStats();
         return `
-                <div class="content-card mb-4">
-                    <div class="card-body">
-                        <div class="flex items-center gap-4 flex-wrap">
-                            <label class="text-sm font-medium text-gray-700">تصفية حسب الشهر:</label>
-                            <select id="contractor-month-filter" class="form-input" style="max-width: 200px;">
-                                <option value="">جميع الأشهر</option>
-                                ${this.getMonthOptions()}
-                            </select>
-                            <button id="reset-contractor-filter" class="btn-secondary">
-                                <i class="fas fa-redo ml-2"></i>إعادة تعيين
-                            </button>
-                        </div>
-                    </div>
+                <div class="tx-kpi-toolbar">
+                    <label class="text-sm font-medium text-gray-700">تصفية حسب الشهر:</label>
+                    <select id="contractor-month-filter" class="form-input" style="max-width: 200px;">
+                        <option value="">جميع الأشهر</option>
+                        ${this.getMonthOptions()}
+                    </select>
+                    <button id="reset-contractor-filter" class="btn-secondary btn-sm">
+                        <i class="fas fa-redo ml-2"></i>إعادة تعيين
+                    </button>
                 </div>
 
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                    <div class="content-card h-full">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-sm flex-shrink-0">
-                                <i class="fas fa-book text-xl"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <p class="text-xs text-gray-500">الموضوعات التدريبية</p>
-                                <p class="text-xl font-bold text-gray-900" id="contractor-topics-count">${contractorStats.uniqueTopics}</p>
-                            </div>
+                <div class="tx-kpi-strip">
+                    <div class="tx-kpi-chip">
+                        <div class="tx-kpi-icon bg-blue-100 text-blue-600"><i class="fas fa-book"></i></div>
+                        <div class="min-w-0">
+                            <p class="tx-kpi-label">الموضوعات التدريبية</p>
+                            <p class="tx-kpi-value" id="contractor-topics-count">${contractorStats.uniqueTopics}</p>
                         </div>
                     </div>
-                    <div class="content-card h-full">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-xl bg-green-100 text-green-600 flex items-center justify-center shadow-sm flex-shrink-0">
-                                <i class="fas fa-building text-xl"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <p class="text-xs text-gray-500">المقاولين/الشركات</p>
-                                <p class="text-xl font-bold text-gray-900" id="contractor-companies-count">${contractorStats.uniqueContractors}</p>
-                            </div>
+                    <div class="tx-kpi-chip">
+                        <div class="tx-kpi-icon bg-green-100 text-green-600"><i class="fas fa-building"></i></div>
+                        <div class="min-w-0">
+                            <p class="tx-kpi-label">المقاولين/الشركات</p>
+                            <p class="tx-kpi-value" id="contractor-companies-count">${contractorStats.uniqueContractors}</p>
                         </div>
                     </div>
-                    <div class="content-card h-full">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shadow-sm flex-shrink-0">
-                                <i class="fas fa-users text-xl"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <p class="text-xs text-gray-500">إجمالي المتدربين</p>
-                                <p class="text-xl font-bold text-gray-900" id="contractor-trainees-count">${contractorStats.totalTrainees}</p>
-                            </div>
+                    <div class="tx-kpi-chip">
+                        <div class="tx-kpi-icon bg-purple-100 text-purple-600"><i class="fas fa-users"></i></div>
+                        <div class="min-w-0">
+                            <p class="tx-kpi-label">إجمالي المتدربين</p>
+                            <p class="tx-kpi-value" id="contractor-trainees-count">${contractorStats.totalTrainees}</p>
                         </div>
                     </div>
-                    <div class="content-card h-full">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-sm flex-shrink-0">
-                                <i class="fas fa-chalkboard-teacher text-xl"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <p class="text-xs text-gray-500">القائمون بالتدريب</p>
-                                <p class="text-xl font-bold text-gray-900" id="contractor-trainers-count">${contractorStats.uniqueTrainers}</p>
-                            </div>
+                    <div class="tx-kpi-chip">
+                        <div class="tx-kpi-icon bg-amber-100 text-amber-600"><i class="fas fa-chalkboard-teacher"></i></div>
+                        <div class="min-w-0">
+                            <p class="tx-kpi-label">القائمون بالتدريب</p>
+                            <p class="tx-kpi-value" id="contractor-trainers-count">${contractorStats.uniqueTrainers}</p>
                         </div>
                     </div>
-                    <div class="content-card h-full">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shadow-sm flex-shrink-0">
-                                <i class="fas fa-calendar-alt text-xl"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <p class="text-xs text-gray-500">التدريبات (الشهر الحالي)</p>
-                                <p class="text-xl font-bold text-gray-900" id="contractor-monthly-count">${contractorStats.currentMonthCount}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="content-card tx-analytics-card mb-4">
-                    <div class="card-header">
-                        <div class="flex items-center justify-between flex-wrap gap-2">
-                            <h3 class="card-title"><i class="fas fa-chart-pie ml-2"></i>تحليل تفاعلي لتدريبات المقاولين</h3>
-                            <button id="contractor-analytics-reset-btn" class="btn-secondary btn-sm">
-                                <i class="fas fa-redo ml-2"></i>إعادة تعيين التحليل
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body" style="padding: 12px;">
-                        <div id="contractor-analytics-dashboard">
-                            ${this._analyticsPlaceholder('جاري تجهيز تحليل المقاولين…')}
+                    <div class="tx-kpi-chip">
+                        <div class="tx-kpi-icon bg-red-100 text-red-600"><i class="fas fa-calendar-alt"></i></div>
+                        <div class="min-w-0">
+                            <p class="tx-kpi-label">تدريبات الشهر الحالي</p>
+                            <p class="tx-kpi-value" id="contractor-monthly-count">${contractorStats.currentMonthCount}</p>
                         </div>
                     </div>
                 </div>
@@ -2820,30 +2778,6 @@ const Training = {
             siteOptions = '';
         }
         return `
-            <div class="content-card mb-4">
-                <div class="card-body">
-                    <div class="flex items-center gap-4 flex-wrap">
-                        <label class="text-sm font-medium text-gray-700">تصفية حسب الشهر:</label>
-                        <select id="attendance-month-filter" class="form-input" style="max-width: 200px;">
-                            <option value="">جميع الأشهر</option>
-                            ${this.getAttendanceMonthOptions()}
-                        </select>
-                        <button id="reset-attendance-filter" class="btn-secondary"><i class="fas fa-redo ml-2"></i>إعادة تعيين</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="content-card tx-analytics-card mb-4">
-                <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-chart-pie ml-2"></i>تحليل تفاعلي لتدريبات الموظفين</h3>
-                </div>
-                <div class="card-body" style="padding: 12px;">
-                    <div id="attendance-analytics-dashboard">
-                        ${this._analyticsPlaceholder('جاري تجهيز تحليل الموظفين…')}
-                    </div>
-                </div>
-            </div>
-
             <div class="content-card">
                 <div class="card-header">
                     <div class="flex items-center justify-between flex-wrap gap-2">
@@ -3078,25 +3012,9 @@ const Training = {
             this.loadTrainingList();
         } else if (tabName === 'contractors') {
             void this.refreshContractorTrainingList().catch(() => {});
-            this._scheduleDeferredAnalytics('contractors');
+            this.updateContractorStatsWithFilter(document.getElementById('contractor-month-filter')?.value || '');
         } else if (tabName === 'attendance') {
             this.loadAttendanceRegistry();
-            const attendanceMonthFilter = document.getElementById('attendance-month-filter');
-            const resetAttendanceFilter = document.getElementById('reset-attendance-filter');
-            if (attendanceMonthFilter && !attendanceMonthFilter.dataset.bound) {
-                attendanceMonthFilter.addEventListener('change', () => {
-                    this.refreshAttendanceAnalytics(attendanceMonthFilter.value || '');
-                });
-                attendanceMonthFilter.dataset.bound = '1';
-            }
-            if (resetAttendanceFilter && !resetAttendanceFilter.dataset.bound) {
-                resetAttendanceFilter.addEventListener('click', () => {
-                    if (attendanceMonthFilter) attendanceMonthFilter.value = '';
-                    this.refreshAttendanceAnalytics('');
-                });
-                resetAttendanceFilter.dataset.bound = '1';
-            }
-            this._scheduleDeferredAnalytics('attendance');
         } else if (tabName === 'legalTraining') {
             this.loadLegalTrainingList();
         } else if (tabName === 'analysis') {
@@ -3298,11 +3216,6 @@ const Training = {
                 this.updateContractorStatsWithFilter('');
             }
         });
-
-        bindOnce(document.getElementById('contractor-analytics-reset-btn'), 'click', () => {
-            this.resetContractorAnalyticsState();
-            this.refreshContractorAnalytics(document.getElementById('contractor-month-filter')?.value || '');
-        });
     },
 
     updateContractorStatsWithFilter(monthFilter) {
@@ -3323,9 +3236,6 @@ const Training = {
         
         const monthlyCount = document.getElementById('contractor-monthly-count');
         if (monthlyCount) monthlyCount.textContent = stats.currentMonthCount;
-
-        // تحديث التحليل التفاعلي
-        this.refreshContractorAnalytics(monthFilter);
     },
 
     /**

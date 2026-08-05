@@ -1,15 +1,15 @@
 {
-  "version": "1.0.871",
+  "version": "1.0.873",
   "highlights": {
     "ar": [
-      "إصلاح زر إعادة التحميل: لا يظهر فشل وهمي إذا كانت المزامنة جارية.",
-      "انتظار المزامنة الحالية ثم تحديث العرض بدل تكرار الإشعارات.",
-      "تصفير قفل المزامنة العالق واستبعاد الأوراق الثقيلة من المزامنة العامة."
+      "كروت تدريبات المقاولين أصبحت صغيرة وفي صف واحد.",
+      "إزالة التحليل التفاعلي من تبويبي المقاولين والموظفين لصالح تبويب التحليل.",
+      "واجهة أوضح وأسرع لسجل التدريبات."
     ],
     "en": [
-      "Reload button no longer reports a fake failure when sync is already running.",
-      "Waits for the current sync, then refreshes the visible section.",
-      "Clears a stuck sync lock and keeps heavy sheets on module-owned loading."
+      "Contractor training KPI cards are compact and aligned in one row.",
+      "Interactive analysis removed from contractor and employee tabs; use the Analysis tab.",
+      "Clearer and faster training registry layout."
     ]
   }
 }
