@@ -3030,7 +3030,7 @@ const Clinic = {
     _renderTabByKey(tabKey) {
         // لا نستخدم await هنا لتجنّب حجب التنقل، الدوال async تتعامل مع نفسها
         if (tabKey === 'visits') {
-            this.scheduleVisitsTabRender(false, 0);
+            this.renderVisitsTab(false);
             return;
         }
         if (tabKey === 'medications') return this.renderMedicationsTab();
@@ -3049,8 +3049,11 @@ const Clinic = {
 
     renderActiveTabContent() {
         const active = this.state.activeTab || 'medications';
-        // ✅ بدل استدعاء render*Tab مباشرة (ثقيل)، نفعل اللوحة سريعاً ثم نُجدول الرندر
         this._activateTabPanels(active);
+        if (active === 'visits') {
+            this.renderVisitsTab(false);
+            return;
+        }
         this.scheduleClinicTabRender(active, { delayMs: 0 });
     },
 
@@ -14640,60 +14643,63 @@ const Clinic = {
             // التحقق من التحميل الأول
             const isFirstLoad = !this.state.initialized;
 
+            if (isFirstLoad && this.state.activeTab === 'medications' && this.hasTabAccess('visits')) {
+                this.state.activeTab = 'visits';
+            }
+
             // عرض الواجهة فوراً بالبيانات المتوفرة (إن وجدت)
             // هذا يضمن عدم وجود واجهة فارغة حتى لو فشل تحميل البيانات
             this.renderUI();
 
-            // ✅ مسئولو العيادة: جلب clinicStaff مبكراً لإظهار تبويب الحضور (لا يُحمّل في syncDataFromServer)
-            if (this._userNeedsClinicStaffForAttendance() && !this.isActiveClinicStaffMember()) {
-                void this._ensureClinicStaffLoadedForAttendance()
-                    .then((ok) => { if (ok) this._refreshAttendanceTabNavAfterStaffLoad(); })
-                    .catch(() => { });
-            }
+            const runSecondaryClinicLoads = () => {
+                if (this._userNeedsClinicStaffForAttendance() && !this.isActiveClinicStaffMember()) {
+                    void this._ensureClinicStaffLoadedForAttendance()
+                        .then((ok) => { if (ok) this._refreshAttendanceTabNavAfterStaffLoad(); })
+                        .catch(() => { });
+                }
 
-            // ✅ المدير: جلب الحضور والإجازات والأرصدة بالخلفية
-            if (this.isCurrentUserAdmin()) {
-                void this.prefetchClinicAttendanceForAdminIfNeeded(false).catch(() => { });
-            }
+                if (this.isCurrentUserAdmin()) {
+                    void this.prefetchClinicAttendanceForAdminIfNeeded(false).catch(() => { });
+                }
 
-            // ✅ تحسين سرعة التحميل: عدم انتظار syncDataFromServer في الخلفية
-            // التحميل ينتهي فوراً بعد عرض الواجهة؛ جلب البيانات يتم في الخلفية ثم تحديث الواجهة
-            const shouldLoadData = isFirstLoad || !hasLocalData || cacheAge >= CACHE_DURATION;
-            
-            if (shouldLoadData) {
-                Utils.safeLog('🔄 تحميل بيانات العيادة من قاعدة البيانات (في الخلفية)...');
-                Utils.promiseWithTimeout(
-                    this.syncDataFromServer(),
-                    130000,
-                    'انتهت مهلة تحميل البيانات'
-                ).then(() => {
-                    localStorage.setItem('clinic_last_sync', Date.now().toString());
-                    this.ensureData();
-                    this.renderUI();
-                    if (this.state && this.state.activeTab === 'visits') {
-                        // تشغيل الرسم الثقيل في frame مستقل لتقليل تحذيرات setTimeout الطويلة
-                        this.scheduleVisitsTabRender(false, 0);
-                    }
-                    if (this.state?.activeTab === 'attendance' && this.canAccessAttendanceTab()) {
-                        this.scheduleAttendanceTabRender(0);
-                    }
-                    if (typeof Utils !== 'undefined' && Utils.safeLog && AppState.appData) {
-                        const visitsCount = (AppState.appData.clinicVisits || []).length;
-                        const medsCount = (AppState.appData.clinicMedications || AppState.appData.medications || []).length;
-                        Utils.safeLog(`✅ تم تحميل مديول العيادة بنجاح: ${visitsCount} زيارة، ${medsCount} دواء`);
-                    }
-                }).catch((error) => {
-                    if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                        Utils.safeWarn('⚠️ تعذر تحميل بعض البيانات:', error && error.message);
-                    }
-                }).finally(() => {
+                const shouldLoadData = isFirstLoad || !hasLocalData || cacheAge >= CACHE_DURATION;
+
+                if (shouldLoadData) {
+                    Utils.safeLog('🔄 تحميل بيانات العيادة من قاعدة البيانات (في الخلفية)...');
+                    Utils.promiseWithTimeout(
+                        this.syncDataFromServer(),
+                        130000,
+                        'انتهت مهلة تحميل البيانات'
+                    ).then(() => {
+                        localStorage.setItem('clinic_last_sync', Date.now().toString());
+                        this.ensureData();
+                        if (this.state && this.state.activeTab === 'visits') {
+                            this.scheduleVisitsTabRender(false, 0);
+                        } else {
+                            this.renderUI();
+                            if (this.state?.activeTab === 'attendance' && this.canAccessAttendanceTab()) {
+                                this.scheduleAttendanceTabRender(0);
+                            }
+                        }
+                        if (typeof Utils !== 'undefined' && Utils.safeLog && AppState.appData) {
+                            const visitsCount = (AppState.appData.clinicVisits || []).length;
+                            const medsCount = (AppState.appData.clinicMedications || AppState.appData.medications || []).length;
+                            Utils.safeLog(`✅ تم تحميل مديول العيادة بنجاح: ${visitsCount} زيارة، ${medsCount} دواء`);
+                        }
+                    }).catch((error) => {
+                        if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                            Utils.safeWarn('⚠️ تعذر تحميل بعض البيانات:', error && error.message);
+                        }
+                    }).finally(() => {
+                        this.state.initialized = true;
+                    });
+                } else {
+                    Utils.safeLog('✅ عرض الواجهة بالبيانات المحفوظة محلياً - تحديث في الخلفية');
+                    this.syncDataInBackground();
                     this.state.initialized = true;
-                });
-            } else {
-                Utils.safeLog('✅ عرض الواجهة بالبيانات المحفوظة محلياً - تحديث في الخلفية');
-                this.syncDataInBackground();
-                this.state.initialized = true;
-            }
+                }
+            };
+            setTimeout(runSecondaryClinicLoads, 80);
 
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل مديول العيادة:', error);
@@ -17684,12 +17690,12 @@ const Clinic = {
                 ` : ''}
             </div>
         `;
-        this.applyModuleI18n(section);
 
         // ربط الأحداث
         this.renderTabNavigation();
         this.renderActiveTabContent();
         this.bindTabEvents(); // إضافة ربط أحداث الأزرار
+        try { this.applyModuleI18n(section); } catch (_e) { /* ignore */ }
 
         // ربط زر التحديث
         const refreshBtn = document.getElementById('clinic-refresh-btn');

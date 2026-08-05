@@ -1,15 +1,15 @@
 {
-  "version": "1.0.865",
+  "version": "1.0.867",
   "highlights": {
     "ar": [
-      "تصاريح العمل والملاحظات: عرض محلي فوري ثم جلب مملوك.",
-      "تبويبات التدريب الثانوية تُحمَّل عند الفتح فقط.",
-      "حماية الطابور بـ watchdog وقياس أول ظهور للواجهة."
+      "فتح العيادة يعرض سجل التردد المحلي فوراً دون انتظار المزامنة الكاملة.",
+      "الأدوية والإجازات والإصابات تُحدَّث في الخلفية بعد أول ظهور.",
+      "تحسين استقرار التحميل للموديولات الثقيلة."
     ],
     "en": [
-      "PTW and daily observations: local-first paint then owned fetch.",
-      "Secondary training tabs load only when opened.",
-      "Queue watchdog plus first-paint timing for heavy modules."
+      "Clinic opens with local visits immediately, without waiting for full sync.",
+      "Medications, sick leave, and injuries refresh in the background after first paint.",
+      "More stable loading for heavy modules."
     ]
   }
 }
