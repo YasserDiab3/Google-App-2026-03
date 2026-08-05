@@ -90,25 +90,18 @@ function updateEmployee(employeeId, updateData) {
         if (!employeeId) {
             return { success: false, message: 'معرف الموظف غير محدد' };
         }
-        
+        if (!updateData || typeof updateData !== 'object') {
+            return { success: false, message: 'بيانات التحديث غير موجودة' };
+        }
+
         const sheetName = 'Employees';
         const spreadsheetId = getSpreadsheetId();
-        const data = readFromSheet(sheetName, spreadsheetId);
-        const employeeIndex = data.findIndex(e => e.id === employeeId);
-        
-        if (employeeIndex === -1) {
-            return { success: false, message: 'الموظف غير موجود' };
+        if (!spreadsheetId || String(spreadsheetId).trim() === '') {
+            return { success: false, message: 'معرف Google Sheets غير محدد' };
         }
-        
+
         updateData.updatedAt = new Date();
-        for (var key in updateData) {
-            if (updateData.hasOwnProperty(key)) {
-                data[employeeIndex][key] = updateData[key];
-            }
-        }
-        
-        const result = saveToSheet(sheetName, data, spreadsheetId);
-        // كسر كاش الموظفين بعد التحديث
+        const result = updateSingleRowInSheet(sheetName, employeeId, updateData, spreadsheetId);
         if (result && result.success) {
             _bumpEmployeesCacheVersion_();
         }

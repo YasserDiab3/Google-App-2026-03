@@ -5862,6 +5862,87 @@ const Employees = {
         }
     },
 
+    _toCloudEmployeeRow_(e) {
+        const row = e && typeof e === 'object' ? e : {};
+        return {
+            id: row.id,
+            name: row.name,
+            employeeNumber: row.employeeNumber,
+            sapId: row.sapId,
+            hireDate: row.hireDate,
+            job: row.job || row.position || '',
+            position: row.position || row.job || '',
+            department: row.department || '',
+            branch: row.branch || '',
+            location: row.location || '',
+            gender: row.gender || '',
+            nationalId: row.nationalId || '',
+            birthDate: row.birthDate || '',
+            email: row.email || '',
+            phone: row.phone || '',
+            insuranceNumber: row.insuranceNumber || '',
+            photo: row.photo || '',
+            status: row.status || 'active',
+            resignationDate: row.resignationDate || '',
+            createdAt: row.createdAt || new Date().toISOString(),
+            updatedAt: row.updatedAt || new Date().toISOString()
+        };
+    },
+
+    async syncEmployeeRecordToCloud_(employee, options = {}) {
+        if (!employee) return;
+        if (typeof GoogleIntegration === 'undefined') return;
+        if (typeof GoogleIntegration._isBackendRpcConfigured === 'function'
+            && !GoogleIntegration._isBackendRpcConfigured()) {
+            Notification?.warning?.('حُفظ محلياً — الخادم غير مفعّل للمزامنة');
+            return;
+        }
+
+        const row = this._toCloudEmployeeRow_(employee);
+        const isEdit = !!options.isEdit;
+        const previousId = options.previousId || row.id;
+        try {
+            const result = await GoogleIntegration.sendRequest({
+                action: isEdit ? 'updateEmployee' : 'addEmployee',
+                data: isEdit
+                    ? {
+                        employeeId: previousId,
+                        id: previousId,
+                        updateData: row,
+                        __timeoutMs: 60000,
+                        __highPriority: true,
+                        __allowStructuredFailure: true
+                    }
+                    : {
+                        ...row,
+                        __timeoutMs: 60000,
+                        __highPriority: true,
+                        __allowStructuredFailure: true
+                    }
+            });
+            if (result && result.success) {
+                Utils.safeLog?.('✅ تمت مزامنة الموظف مع السحابة');
+                return;
+            }
+            if (isEdit && result && /غير موجود/.test(String(result.message || ''))) {
+                const added = await GoogleIntegration.sendRequest({
+                    action: 'addEmployee',
+                    data: {
+                        ...row,
+                        __timeoutMs: 60000,
+                        __highPriority: true,
+                        __allowStructuredFailure: true
+                    }
+                });
+                if (added && added.success) return;
+            }
+            Notification?.warning?.(result?.message || 'حُفظ محلياً — تعذّرت مزامنة السحابة. أعد المحاولة لاحقاً.');
+        } catch (err) {
+            Notification?.warning?.('حُفظ محلياً — تعذّرت مزامنة السحابة. أعد المحاولة لاحقاً.');
+            Utils.safeWarn?.('⚠️ مزامنة موظف:', err?.message || err);
+        }
+    },
+
     async handleSubmit(e) {
         e.preventDefault();
 
@@ -5918,6 +5999,10 @@ const Employees = {
         if (!nameEl || !employeeNumberEl || !sapIdEl || !departmentEl || !positionEl || 
             !branchEl || !locationEl || !genderEl || !emailEl || !phoneEl) {
             Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
             return;
         }
 
@@ -5991,12 +6076,13 @@ const Employees = {
         }
 
         Loading.show();
+        const previousEditId = this.currentEditId;
+        const isCloudEdit = !!previousEditId;
         try {
-            if (this.currentEditId) {
-                const index = AppState.appData.employees.findIndex(e => e.id === this.currentEditId);
+            if (isCloudEdit) {
+                const index = AppState.appData.employees.findIndex(e => e.id === previousEditId);
                 if (index !== -1) {
                     AppState.appData.employees[index] = formData;
-                    // إذا تغيّر id (بسبب تغيير رقم الموظف) نحدّث currentEditId
                     this.currentEditId = proposedId;
                 }
                 Notification.success('تم تحديث الموظف بنجاح');
@@ -6005,32 +6091,29 @@ const Employees = {
                 Notification.success('تم إضافة الموظف بنجاح');
             }
 
-            // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-            // حفظ تلقائي في Google Sheets
-            await GoogleIntegration.autoSave('Employees', AppState.appData.employees);
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            } else {
+                Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+            }
 
-            // تحديث Cache
             this.cache.data = AppState.appData.employees;
             this.cache.lastLoad = Date.now();
             this.cache.lastUpdate = Date.now();
 
             Loading.hide();
-            
-            // استعادة الزر بعد النجاح
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
             }
-            
-            // تحديث الكروت الإحصائية
+
             this.renderStatsCards();
-            
-            this.showList();
+            await this.showList();
+
+            void this.syncEmployeeRecordToCloud_(formData, {
+                isEdit: isCloudEdit,
+                previousId: previousEditId
+            });
         } catch (error) {
             Loading.hide();
             Notification.error('حدث خطأ: ' + error.message);

@@ -1,15 +1,15 @@
 {
-  "version": "1.0.877",
+  "version": "1.0.879",
   "highlights": {
     "ar": [
-      "تسريع فتح المصادقة الثنائية (TOTP) دون انتظار طابور المزامنة.",
-      "إصلاح أخطاء التسجيل الناتجة عن ازدحام الخادم أو Circuit Breaker.",
-      "نافذة أوضح مع إعادة المحاولة ورمز QR احتياطي."
+      "إضافة الموظف تُحفظ فوراً دون تعليق النموذج على «جاري الحفظ».",
+      "مزامنة صف واحد مع السحابة في الخلفية بدل رفع ورقة الموظفين كاملة.",
+      "تسريع تعديل الموظف على الخادم عبر تحديث صف واحد."
     ],
     "en": [
-      "Faster TOTP setup — MFA no longer waits behind sync queue.",
-      "Fix enrollment errors caused by server congestion or circuit breaker.",
-      "Clearer MFA modal with retry and QR fallback."
+      "Adding an employee saves immediately — the form no longer hangs on Saving.",
+      "Cloud sync writes one employee row in the background instead of the full sheet.",
+      "Faster employee updates on the server via single-row write."
     ]
   }
 }
