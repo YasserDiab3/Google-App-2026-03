@@ -448,7 +448,9 @@ const GoogleIntegration = {
     },
 
     _shouldBypassRequestQueue(action) {
-        return this._isAuthRpcAction(action) || this._isClinicAttendanceRpcAction(action);
+        return this._isAuthRpcAction(action)
+            || this._isClinicAttendanceRpcAction(action)
+            || action === 'warmup';
     },
 
     // Circuit Breaker

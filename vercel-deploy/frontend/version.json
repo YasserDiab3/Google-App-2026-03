@@ -1,15 +1,15 @@
 {
-  "version": "1.0.881",
+  "version": "1.0.883",
   "highlights": {
     "ar": [
-      "إصلاح تسجيل حضور العيادة عند الدخول والخروج.",
-      "حفظ أوقات الدخول/الخروج دون ضياع بسبب مسح الجلسة أو ازدحام الطابور.",
-      "تسريع كتابة سجل الحضور عبر تحديث صف واحد."
+      "تسريع تأكيد رمز المصادقة الثنائية بعد إدخاله.",
+      "إبقاء الخادم دافئاً أثناء شاشة الرمز لتقليل إعادة المحاولة.",
+      "منع تخطي خطوة OTP بسبب كاش دخول قديم بعد التفعيل."
     ],
     "en": [
-      "Fix clinic staff attendance recording on login and logout.",
-      "Check-in/out times no longer lost when the session is cleared or the queue is busy.",
-      "Faster attendance writes via single-row updates."
+      "Faster TOTP verification after entering the code.",
+      "Keep the backend warm on the MFA screen to reduce retries.",
+      "Stop skipping the OTP step due to a stale login cache after enrollment."
     ]
   }
 }

@@ -717,9 +717,32 @@ Yasser.diab@icapp.com.eg`;
 })();
 
 var __pendingMfaLogin = null;
+var __mfaWarmKeepalive = null;
+
+function stopMfaWarmKeepalive() {
+    if (__mfaWarmKeepalive) {
+        clearInterval(__mfaWarmKeepalive);
+        __mfaWarmKeepalive = null;
+    }
+}
+
+function pingMfaWarmup() {
+    try {
+        if (window.Auth && typeof window.Auth.ensureWarmBackend === 'function') {
+            window.Auth.ensureWarmBackend({ maxWaitMs: 0, force: true });
+        }
+    } catch (_e) { /* ignore */ }
+}
+
+function startMfaWarmKeepalive() {
+    stopMfaWarmKeepalive();
+    pingMfaWarmup();
+    __mfaWarmKeepalive = setInterval(pingMfaWarmup, 18000);
+}
 
 function showLoginMfaStep(pending) {
     __pendingMfaLogin = pending || null;
+    startMfaWarmKeepalive();
     const mfaStep = document.getElementById('login-mfa-step');
     const submitBtn = document.getElementById('login-submit-btn');
     const helpBtn = document.getElementById('help-btn');
@@ -753,11 +776,18 @@ function showLoginMfaStep(pending) {
     const mfaInput = document.getElementById('mfa-code');
     if (mfaInput) {
         mfaInput.value = '';
+        if (!mfaInput.dataset.warmBound) {
+            mfaInput.dataset.warmBound = '1';
+            mfaInput.addEventListener('input', function () {
+                if (String(mfaInput.value || '').replace(/\s/g, '').length === 1) pingMfaWarmup();
+            });
+        }
         setTimeout(function () { try { mfaInput.focus(); } catch (e) { /* ignore */ } }, 80);
     }
 }
 
 function hideLoginMfaStep() {
+    stopMfaWarmKeepalive();
     __pendingMfaLogin = null;
     try {
         if (window.Auth && typeof window.Auth.clearMfaChallengePending === 'function') {

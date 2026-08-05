@@ -1413,7 +1413,7 @@ function verifyMfaLogin(challengeToken, email, code) {
                     freshUser = getAuthUserRowByEmail_(e, slimMeta2);
                 } catch (_slim2) { freshUser = null; }
                 if (!freshUser) {
-                    freshUser = getUserRecordFromUsersSheetByEmail_(e, { bypassCache: true });
+                    freshUser = getUserRecordFromUsersSheetByEmail_(e, { bypassCache: true, bypassFullScan: true });
                 }
                 if (freshUser && isMfaEnabledForUser_(freshUser)) {
                     var freshEnc = String(freshUser.mfaSecretEnc || '').trim();

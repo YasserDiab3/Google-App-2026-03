@@ -59,8 +59,8 @@ window.Auth = {
     /** آخر تسخين ناجح/مكتمل لـ GAS — لتجنّب warmup مزدوج قبل login */
     _lastWarmupAt: 0,
     _warmupInFlight: null,
-    /** اعتبار التسخين طازجاً لهذه المدة (تجنّب cold-start دون انتظار إضافي) */
-    WARMUP_FRESH_MS: 2 * 60 * 1000,
+    /** GAS يبرد خلال عشرات الثواني — دقيقتان كانت تتخطى التسخين قبل verifyMfaLogin */
+    WARMUP_FRESH_MS: 25 * 1000,
 
     /**
      * تسخين خفيف لـ Apps Script قبل/أثناء شاشة الدخول.
@@ -937,9 +937,9 @@ window.Auth = {
 
         this._authInFlight = true;
         try {
-            // تسخين قصير إن برد السكربت أثناء إدخال MFA — لا يتجاوز ~0.8ث
+            // إجبار تسخين حقيقي قبل التحقق — كاش «دافئ» بعد login كان يتخطى ping فيبرد GAS
             if (typeof this.ensureWarmBackend === 'function') {
-                await this.ensureWarmBackend({ maxWaitMs: 800 });
+                await this.ensureWarmBackend({ maxWaitMs: 10000, force: true });
             }
             return await this._verifyMfaAndCompleteLoginInner(email, otp, token, remember);
         } finally {
