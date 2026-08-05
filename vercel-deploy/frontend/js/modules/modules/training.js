@@ -632,7 +632,7 @@ const Training = {
 
             const data = (result && result.success && Array.isArray(result.data)) ? result.data : null;
             if (data && contractorGuardOk()) {
-                AppState.appData.contractorTrainings = data;
+                AppState.appData.contractorTrainings = this._dedupeRegistryRecords(data);
                 this._onContractorTrainingsUpdated();
             }
         } finally {
@@ -775,7 +775,7 @@ const Training = {
             }
             if (active === 'attendance') {
                 const attendanceData = await runAction('getAllTrainingAttendance', 'سجل الحضور');
-                if (attendanceData && attendanceGuardOk()) AppState.appData.trainingAttendance = attendanceData;
+                if (attendanceData && attendanceGuardOk()) AppState.appData.trainingAttendance = this._dedupeRegistryRecords(attendanceData);
                 persistAndRefreshUi(active);
                 if (this._trainingTabFetchOk.programs !== true) {
                     void runAction('getAllTrainings', 'برامج التدريب').then((trainingData) => {
@@ -2753,7 +2753,6 @@ const Training = {
                                 <button id="export-contractor-training-excel-btn" class="btn-success">
                                     <i class="fas fa-file-excel ml-2" style="font-size: 14px;"></i>تصدير Excel
                                 </button>
-                                <input type="text" id="contractor-training-search" class="form-input" style="max-width: 260px;" placeholder="بحث سريع (مقاول، موضوع، موقع)">
                                 <button id="add-contractor-training-btn" class="btn-primary">
                                     <i class="fas fa-plus ml-2"></i>
                                     تسجيل تدريب للمقاولين
@@ -2761,8 +2760,41 @@ const Training = {
                             </div>
                         </div>
                     </div>
-                    <div class="card-body" id="contractor-training-container">
-                        <div class="contractor-training-loading text-center py-8 text-gray-500">جاري تحميل السجل…</div>
+                    <div class="card-body">
+                        <div class="tx-reg-filters" id="contractor-registry-filters">
+                            <div class="tx-reg-filter">
+                                <label>المقاول / الشركة</label>
+                                <input id="contractor-filter-contractor" class="form-input" list="contractor-filter-contractor-list" placeholder="ابحث أو اختر مقاول...">
+                                <datalist id="contractor-filter-contractor-list"></datalist>
+                            </div>
+                            <div class="tx-reg-filter">
+                                <label>الموضوع</label>
+                                <input id="contractor-filter-topic" class="form-input" list="contractor-filter-topic-list" placeholder="ابحث أو اختر موضوع...">
+                                <datalist id="contractor-filter-topic-list"></datalist>
+                            </div>
+                            <div class="tx-reg-filter">
+                                <label>القائم بالتدريب</label>
+                                <input id="contractor-filter-trainer" class="form-input" list="contractor-filter-trainer-list" placeholder="ابحث أو اختر مدرب...">
+                                <datalist id="contractor-filter-trainer-list"></datalist>
+                            </div>
+                            <div class="tx-reg-filter">
+                                <label>الموقع</label>
+                                <input id="contractor-filter-location" class="form-input" list="contractor-filter-location-list" placeholder="ابحث أو اختر موقع...">
+                                <datalist id="contractor-filter-location-list"></datalist>
+                            </div>
+                            <div class="tx-reg-filter tx-reg-filter-search">
+                                <label>بحث حر</label>
+                                <input type="text" id="contractor-training-search" class="form-input" placeholder="بحث في كل أعمدة السجل...">
+                            </div>
+                            <div class="tx-reg-filter tx-reg-filter-actions">
+                                <label>&nbsp;</label>
+                                <button type="button" id="contractor-filter-reset" class="btn-secondary">مسح الفلاتر</button>
+                            </div>
+                        </div>
+                        <p class="tx-reg-count" id="contractor-registry-count"></p>
+                        <div id="contractor-training-container">
+                            <div class="contractor-training-loading text-center py-8 text-gray-500">جاري تحميل السجل…</div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -2803,13 +2835,46 @@ const Training = {
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="mb-4 flex items-center gap-4 flex-wrap">
-                        <input type="text" id="attendance-registry-search" class="form-input" style="max-width: 300px;" placeholder="البحث...">
-                        <select id="attendance-registry-filter-factory" class="form-input" style="max-width: 200px;">
-                            <option value="">جميع المصانع</option>
-                            ${siteOptions}
-                        </select>
+                    <div class="tx-reg-filters" id="attendance-registry-filters">
+                        <div class="tx-reg-filter">
+                            <label>الموظف</label>
+                            <input id="attendance-filter-employee" class="form-input" list="attendance-filter-employee-list" placeholder="ابحث أو اختر موظف...">
+                            <datalist id="attendance-filter-employee-list"></datalist>
+                        </div>
+                        <div class="tx-reg-filter">
+                            <label>الموضوع</label>
+                            <input id="attendance-filter-topic" class="form-input" list="attendance-filter-topic-list" placeholder="ابحث أو اختر موضوع...">
+                            <datalist id="attendance-filter-topic-list"></datalist>
+                        </div>
+                        <div class="tx-reg-filter">
+                            <label>الإدارة</label>
+                            <input id="attendance-filter-department" class="form-input" list="attendance-filter-department-list" placeholder="ابحث أو اختر إدارة...">
+                            <datalist id="attendance-filter-department-list"></datalist>
+                        </div>
+                        <div class="tx-reg-filter">
+                            <label>المصنع</label>
+                            <input id="attendance-filter-factory" class="form-input" list="attendance-filter-factory-list" placeholder="ابحث أو اختر مصنع...">
+                            <datalist id="attendance-filter-factory-list"></datalist>
+                            <select id="attendance-registry-filter-factory" class="form-input" style="display:none;">
+                                <option value="">جميع المصانع</option>
+                                ${siteOptions}
+                            </select>
+                        </div>
+                        <div class="tx-reg-filter">
+                            <label>المحاضر</label>
+                            <input id="attendance-filter-trainer" class="form-input" list="attendance-filter-trainer-list" placeholder="ابحث أو اختر محاضر...">
+                            <datalist id="attendance-filter-trainer-list"></datalist>
+                        </div>
+                        <div class="tx-reg-filter tx-reg-filter-search">
+                            <label>بحث حر</label>
+                            <input type="text" id="attendance-registry-search" class="form-input" placeholder="بحث في الاسم، الكود، الموضوع...">
+                        </div>
+                        <div class="tx-reg-filter tx-reg-filter-actions">
+                            <label>&nbsp;</label>
+                            <button type="button" id="attendance-filter-reset" class="btn-secondary">مسح الفلاتر</button>
+                        </div>
                     </div>
+                    <p class="tx-reg-count" id="attendance-registry-count"></p>
                     <div class="table-responsive">
                         <table class="data-table" id="attendance-registry-table">
                             <thead>
@@ -3204,7 +3269,18 @@ const Training = {
         bindOnce(document.getElementById('add-contractor-training-header-btn'), 'click', () => this.openContractorTrainingForm());
         bindOnce(document.getElementById('add-contractor-training-btn'), 'click', () => this.openContractorTrainingForm());
 
-        bindOnce(document.getElementById('contractor-training-search'), 'input', (e) => this.filterContractorTraining(e.target.value));
+        bindOnce(document.getElementById('contractor-training-search'), 'input', () => this._debounceRegistryFilter(() => this.filterContractorTraining()));
+        bindOnce(document.getElementById('contractor-filter-contractor'), 'input', () => this._debounceRegistryFilter(() => this.filterContractorTraining()));
+        bindOnce(document.getElementById('contractor-filter-topic'), 'input', () => this._debounceRegistryFilter(() => this.filterContractorTraining()));
+        bindOnce(document.getElementById('contractor-filter-trainer'), 'input', () => this._debounceRegistryFilter(() => this.filterContractorTraining()));
+        bindOnce(document.getElementById('contractor-filter-location'), 'input', () => this._debounceRegistryFilter(() => this.filterContractorTraining()));
+        bindOnce(document.getElementById('contractor-filter-reset'), 'click', () => {
+            ['contractor-training-search', 'contractor-filter-contractor', 'contractor-filter-topic', 'contractor-filter-trainer', 'contractor-filter-location'].forEach((id) => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            this.filterContractorTraining();
+        });
         bindOnce(document.getElementById('export-contractor-training-excel-btn'), 'click', () => this.exportContractorTrainingExcel());
         bindOnce(document.getElementById('export-contractor-training-pdf-btn'), 'click', () => this.showContractorTrainingReportDialog());
 
@@ -3987,9 +4063,89 @@ const Training = {
         return fallback;
     },
 
+    _uniqSortedLabels(values) {
+        return Array.from(new Set((values || []).map((v) => String(v || '').replace(/\s+/g, ' ').trim()).filter(Boolean)))
+            .sort((a, b) => a.localeCompare(b, 'ar', { sensitivity: 'base' }));
+    },
+
+    _preferRegistryRecord(a, b) {
+        const isTmp = (item) => /tmp/i.test(String(item?.id || ''));
+        if (isTmp(a) && !isTmp(b)) return b;
+        if (isTmp(b) && !isTmp(a)) return a;
+        const filled = (item) => Object.keys(item || {}).filter((k) => item[k] != null && String(item[k]).trim() !== '').length;
+        return filled(b) > filled(a) ? b : a;
+    },
+
+    _registryContentKey(item) {
+        const date = String(item?.date || item?.attendanceDate || '').slice(0, 10);
+        const who = String(item?.contractorId || item?.contractorName || item?.employeeCode || item?.employeeName || '')
+            .replace(/\s+/g, ' ').trim().toLowerCase();
+        const topic = String(item?.topic || item?.subject || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        const extra = String(item?.startTime || item?.trainer || item?.trainerName || '')
+            .replace(/\s+/g, ' ').trim().toLowerCase();
+        return `${date}|${who}|${topic}|${extra}`;
+    },
+
+    _dedupeRegistryRecords(list) {
+        const items = (Array.isArray(list) ? list : []).filter((item) => item && typeof item === 'object');
+        const byId = new Map();
+        const noId = [];
+        items.forEach((item) => {
+            const id = String(item.id || '').trim();
+            if (!id) {
+                noId.push(item);
+                return;
+            }
+            const prev = byId.get(id);
+            byId.set(id, prev ? this._preferRegistryRecord(prev, item) : item);
+        });
+
+        const byContent = new Map();
+        const push = (item) => {
+            const contentKey = this._registryContentKey(item);
+            const id = String(item.id || '').trim();
+            const key = (!contentKey || contentKey === '|||') ? (`id:${id || Math.random()}`) : contentKey;
+            const prev = byContent.get(key);
+            byContent.set(key, prev ? this._preferRegistryRecord(prev, item) : item);
+        };
+        byId.forEach((item) => push(item));
+        noId.forEach((item) => push(item));
+        return Array.from(byContent.values());
+    },
+
+    _fillDatalist(datalistId, values) {
+        const el = document.getElementById(datalistId);
+        if (!el) return;
+        el.innerHTML = this._uniqSortedLabels(values).slice(0, 400).map((v) => `<option value="${Utils.escapeHTML(v)}"></option>`).join('');
+    },
+
+    _debounceRegistryFilter(fn, ms = 160) {
+        clearTimeout(this._registryFilterTimer);
+        this._registryFilterTimer = setTimeout(fn, ms);
+    },
+
+    _fillContractorRegistryFilters(records) {
+        this._fillDatalist('contractor-filter-contractor-list', records.map((r) => r.contractorName || r.contractor || ''));
+        this._fillDatalist('contractor-filter-topic-list', records.map((r) => r.topic || r.subject || ''));
+        this._fillDatalist('contractor-filter-trainer-list', records.map((r) => r.trainer || r.conductedBy || ''));
+        this._fillDatalist('contractor-filter-location-list', records.map((r) => r.location || ''));
+    },
+
+    _fillAttendanceRegistryFilters(records) {
+        this._fillDatalist('attendance-filter-employee-list', records.flatMap((r) => [r.employeeName || r.employee || '', r.employeeCode || '']));
+        this._fillDatalist('attendance-filter-topic-list', records.map((r) => r.topic || ''));
+        this._fillDatalist('attendance-filter-department-list', records.map((r) => r.department || ''));
+        this._fillDatalist('attendance-filter-factory-list', records.map((r) => r.factoryName || r.factory || ''));
+        this._fillDatalist('attendance-filter-trainer-list', records.map((r) => r.trainer || r.trainerName || r.conductedBy || ''));
+    },
+
     async renderContractorTrainingSection() {
         this.ensureData();
-        const records = AppState.appData.contractorTrainings || [];
+        const records = this._dedupeRegistryRecords(AppState.appData.contractorTrainings || []);
+        if (Array.isArray(AppState.appData.contractorTrainings) && records.length !== AppState.appData.contractorTrainings.length) {
+            AppState.appData.contractorTrainings = records;
+            try { window.DataManager?.save?.(); } catch (_e) {}
+        }
         const contractorOptions = this.getContractorOptions();
         // ✅ إصلاح: بناء contractorMap بتحويل المفتاح إلى string لضمان التطابق
         const contractorMap = new Map(contractorOptions.map(contractor => [String(contractor?.id ?? '').trim(), contractor.name || '']));
@@ -4042,7 +4198,7 @@ const Training = {
                     ].join(' ').toLowerCase();
 
                     return `
-                        <tr data-training-id="${Utils.escapeHTML(entry.id || '')}" data-search="${Utils.escapeHTML(searchTokens)}">
+                        <tr data-training-id="${Utils.escapeHTML(entry.id || '')}" data-search="${Utils.escapeHTML(searchTokens)}" data-contractor="${Utils.escapeHTML(String(contractorName).toLowerCase())}" data-topic="${Utils.escapeHTML(String(entry.topic || entry.subject || '').toLowerCase())}" data-trainer="${Utils.escapeHTML(String(entry.trainer || entry.conductedBy || '').toLowerCase())}" data-location="${Utils.escapeHTML(String(entry.location || '').toLowerCase())}">
                             <td>${sessionDate}</td>
                             <td>${topic}</td>
                             <td>${trainer}</td>
@@ -4126,21 +4282,35 @@ const Training = {
     async refreshContractorTrainingList() {
         const container = document.getElementById('contractor-training-container');
         if (!container) return;
+        const records = this._dedupeRegistryRecords(AppState.appData.contractorTrainings || []);
         container.innerHTML = await this.renderContractorTrainingSection();
-        this.filterContractorTraining(document.getElementById('contractor-training-search')?.value || '');
+        this._fillContractorRegistryFilters(records);
+        this.filterContractorTraining();
     },
 
-    filterContractorTraining(searchTerm = '') {
-        const normalized = searchTerm.trim().toLowerCase();
+    filterContractorTraining() {
+        const searchTerm = (document.getElementById('contractor-training-search')?.value || '').trim().toLowerCase();
+        const contractor = (document.getElementById('contractor-filter-contractor')?.value || '').trim().toLowerCase();
+        const topic = (document.getElementById('contractor-filter-topic')?.value || '').trim().toLowerCase();
+        const trainer = (document.getElementById('contractor-filter-trainer')?.value || '').trim().toLowerCase();
+        const location = (document.getElementById('contractor-filter-location')?.value || '').trim().toLowerCase();
         const rows = document.querySelectorAll('#contractor-training-container tbody tr[data-training-id]');
-        rows.forEach(row => {
-            if (!normalized) {
-                row.style.display = '';
-                return;
-            }
+        let visible = 0;
+        rows.forEach((row) => {
             const haystack = row.getAttribute('data-search') || '';
-            row.style.display = haystack.includes(normalized) ? '' : 'none';
+            const okSearch = !searchTerm || haystack.includes(searchTerm);
+            const okContractor = !contractor || (row.getAttribute('data-contractor') || '').includes(contractor);
+            const okTopic = !topic || (row.getAttribute('data-topic') || '').includes(topic);
+            const okTrainer = !trainer || (row.getAttribute('data-trainer') || '').includes(trainer);
+            const okLocation = !location || (row.getAttribute('data-location') || '').includes(location);
+            const show = okSearch && okContractor && okTopic && okTrainer && okLocation;
+            row.style.display = show ? '' : 'none';
+            if (show) visible += 1;
         });
+        const countEl = document.getElementById('contractor-registry-count');
+        if (countEl) {
+            countEl.textContent = rows.length ? `عرض ${visible} من ${rows.length}` : '';
+        }
     },
 
     getContractorOptions() {
@@ -12164,7 +12334,12 @@ const Training = {
         const container = document.getElementById('attendance-registry-table-body');
         if (!container) return;
 
-        const registry = AppState.appData.trainingAttendance || [];
+        const registry = this._dedupeRegistryRecords(AppState.appData.trainingAttendance || []);
+        if (Array.isArray(AppState.appData.trainingAttendance) && registry.length !== AppState.appData.trainingAttendance.length) {
+            AppState.appData.trainingAttendance = registry;
+            try { window.DataManager?.save?.(); } catch (_e) {}
+        }
+        this._fillAttendanceRegistryFilters(registry);
         
         if (registry.length === 0) {
             container.innerHTML = `
@@ -12178,8 +12353,12 @@ const Training = {
         
         // تطبيق الفلاتر
         const searchTerm = (document.getElementById('attendance-registry-search')?.value || '').toLowerCase();
-        const filterFactory = document.getElementById('attendance-registry-filter-factory')?.value || '';
-        const filterKey = `${searchTerm}|${filterFactory}`;
+        const filterEmployee = (document.getElementById('attendance-filter-employee')?.value || '').trim().toLowerCase();
+        const filterTopic = (document.getElementById('attendance-filter-topic')?.value || '').trim().toLowerCase();
+        const filterDepartment = (document.getElementById('attendance-filter-department')?.value || '').trim().toLowerCase();
+        const filterFactory = (document.getElementById('attendance-filter-factory')?.value || document.getElementById('attendance-registry-filter-factory')?.value || '').trim().toLowerCase();
+        const filterTrainer = (document.getElementById('attendance-filter-trainer')?.value || '').trim().toLowerCase();
+        const filterKey = [searchTerm, filterEmployee, filterTopic, filterDepartment, filterFactory, filterTrainer].join('|');
         if (this._attendanceRegistryFilterKey !== filterKey) {
             this._attendanceRegistryFilterKey = filterKey;
             this._attendanceRegistryShown = 80;
@@ -12188,15 +12367,20 @@ const Training = {
         if (!this._attendanceRegistryShown) this._attendanceRegistryShown = this._attendanceRegistryPageSize;
         
         const filtered = registry.filter(record => {
-            const matchesSearch = !searchTerm || 
-                (record.employeeName || '').toLowerCase().includes(searchTerm) ||
-                (record.employeeCode || '').toLowerCase().includes(searchTerm) ||
-                (record.topic || '').toLowerCase().includes(searchTerm) ||
-                (record.trainer || '').toLowerCase().includes(searchTerm);
-            
-            const matchesFactory = !filterFactory || record.factory === filterFactory || record.factoryName === filterFactory;
-            
-            return matchesSearch && matchesFactory;
+            const employee = String(record.employeeName || record.employee || '').toLowerCase();
+            const code = String(record.employeeCode || '').toLowerCase();
+            const topic = String(record.topic || '').toLowerCase();
+            const trainer = String(record.trainer || record.trainerName || record.conductedBy || '').toLowerCase();
+            const department = String(record.department || '').toLowerCase();
+            const factory = String(record.factoryName || record.factory || '').toLowerCase();
+            const position = String(record.position || '').toLowerCase();
+            const matchesSearch = !searchTerm || employee.includes(searchTerm) || code.includes(searchTerm) || topic.includes(searchTerm) || trainer.includes(searchTerm) || department.includes(searchTerm) || factory.includes(searchTerm) || position.includes(searchTerm);
+            const matchesEmployee = !filterEmployee || employee.includes(filterEmployee) || code.includes(filterEmployee);
+            const matchesTopic = !filterTopic || topic.includes(filterTopic);
+            const matchesDepartment = !filterDepartment || department.includes(filterDepartment);
+            const matchesFactory = !filterFactory || factory.includes(filterFactory) || String(record.factory || '').toLowerCase() === filterFactory;
+            const matchesTrainer = !filterTrainer || trainer.includes(filterTrainer);
+            return matchesSearch && matchesEmployee && matchesTopic && matchesDepartment && matchesFactory && matchesTrainer;
         });
         const shown = Math.min(this._attendanceRegistryShown, filtered.length);
         const visibleRows = filtered.slice(0, shown);
@@ -12256,6 +12440,11 @@ const Training = {
                     </td>
                 </tr>
             ` : '');
+
+        const countEl = document.getElementById('attendance-registry-count');
+        if (countEl) {
+            countEl.textContent = registry.length ? `عرض ${visibleRows.length} من ${filtered.length}` + (filtered.length !== registry.length ? ` (المصفّى من ${registry.length})` : '') : '';
+        }
         
         // إعداد المستمعين
         this.setupAttendanceRegistryListeners();
@@ -12268,13 +12457,27 @@ const Training = {
         // البحث
         const searchInput = document.getElementById('attendance-registry-search');
         if (searchInput) {
-            searchInput.oninput = () => this.loadAttendanceRegistry();
+            searchInput.oninput = () => this._debounceRegistryFilter(() => this.loadAttendanceRegistry());
         }
+        ['attendance-filter-employee', 'attendance-filter-topic', 'attendance-filter-department', 'attendance-filter-factory', 'attendance-filter-trainer'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.oninput = () => this._debounceRegistryFilter(() => this.loadAttendanceRegistry());
+        });
         
         // فلتر المصنع
         const filterFactory = document.getElementById('attendance-registry-filter-factory');
         if (filterFactory) {
             filterFactory.onchange = () => this.loadAttendanceRegistry();
+        }
+        const resetFilters = document.getElementById('attendance-filter-reset');
+        if (resetFilters) {
+            resetFilters.onclick = () => {
+                ['attendance-registry-search', 'attendance-filter-employee', 'attendance-filter-topic', 'attendance-filter-department', 'attendance-filter-factory', 'attendance-filter-trainer', 'attendance-registry-filter-factory'].forEach((id) => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = '';
+                });
+                this.loadAttendanceRegistry();
+            };
         }
         
         // إضافة سجل جديد

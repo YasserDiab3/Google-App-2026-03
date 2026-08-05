@@ -1,15 +1,15 @@
 {
-  "version": "1.0.873",
+  "version": "1.0.875",
   "highlights": {
     "ar": [
-      "كروت تدريبات المقاولين أصبحت صغيرة وفي صف واحد.",
-      "إزالة التحليل التفاعلي من تبويبي المقاولين والموظفين لصالح تبويب التحليل.",
-      "واجهة أوضح وأسرع لسجل التدريبات."
+      "فلاتر ديناميكية مع بحث داخل سجل تدريب المقاولين والموظفين.",
+      "منع ظهور السجلات المكررة بعد المزامنة أو إعادة التحميل.",
+      "مسح الفلاتر وعدّاد النتائج لتسهيل التصفح."
     ],
     "en": [
-      "Contractor training KPI cards are compact and aligned in one row.",
-      "Interactive analysis removed from contractor and employee tabs; use the Analysis tab.",
-      "Clearer and faster training registry layout."
+      "Dynamic searchable filters for contractor and employee training registries.",
+      "Duplicate training records are merged after sync or reload.",
+      "Clear-filters action and result counts for easier browsing."
     ]
   }
 }
