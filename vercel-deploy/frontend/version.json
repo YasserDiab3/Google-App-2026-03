@@ -1,15 +1,15 @@
 {
-  "version": "1.0.851",
+  "version": "1.0.853",
   "highlights": {
     "ar": [
-      "تسريع تحميل الموظفين: مسار lite + كاش مجزأ (بدلاً من كاش كامل يفشل فوق 100KB).",
-      "القائمة تجلب أعمدة الجدول فقط بدون صور ثقيلة.",
-      "عرض أولي سريع ثم المزيد — بدون تعليق شريط التحميل."
+      "إصلاح وقت مراقبة الأخطاء: كان يظهر 03:00:00 بسبب قطع الوقت إلى تاريخ فقط.",
+      "حفظ وعرض createdAt بتاريخ+ساعة صحيحة.",
+      "السجلات الجديدة تظهر الوقت الفعلي بدل منتصف الليل UTC."
     ],
     "en": [
-      "Faster employees load: lite path + chunked cache (full cache failed over 100KB).",
-      "List fetch uses table columns only, no heavy photos.",
-      "Quick first page then Load more — no stuck loading bar."
+      "Fixed error-monitor time stuck at 03:00:00 (date-only UTC midnight).",
+      "createdAt is stored and shown with real date+time.",
+      "New logs display actual local time instead of fake 03:00."
     ]
   }
 }

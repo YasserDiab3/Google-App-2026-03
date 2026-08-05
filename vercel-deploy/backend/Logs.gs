@@ -619,7 +619,7 @@ function addClientErrorLogToSheet(logData, actorUserData) {
         if (msg.length > 2000) msg = msg.substring(0, 2000);
 
         var actor = actorUserData || {};
-        var nowIso = new Date().toISOString();
+        var nowIso = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'Asia/Riyadh', "yyyy-MM-dd'T'HH:mm:ss");
         var entry = {
             id: logData.id || ('CERR_' + Utilities.getUuid().replace(/-/g, '').substring(0, 16)),
             level: String(logData.level || 'error').toLowerCase(),
@@ -667,6 +667,16 @@ function getAllClientErrorLogs(filters) {
         filters = filters || {};
         var data = readFromSheet('ClientErrorLog', getSpreadsheetId()) || [];
         if (!Array.isArray(data)) data = [];
+        data = data.map(function (r) {
+            if (!r || typeof r !== 'object') return r;
+            ['createdAt', 'updatedAt'].forEach(function (k) {
+                if (r[k] == null || r[k] === '') return;
+                if (typeof normalizeSheetDateTimeText_ === 'function') {
+                    r[k] = normalizeSheetDateTimeText_(r[k]);
+                }
+            });
+            return r;
+        });
 
         if (filters.level) {
             var lv = String(filters.level).toLowerCase();

@@ -1413,7 +1413,12 @@ function shouldPreserveSheetDateTimeAsText_(sheetName, header) {
 
     const textDateTimeFieldsBySheet = {
         'PTW': ['startDate', 'endDate', 'closureTime'],
-        'PTWRegistry': ['openDate', 'timeFrom', 'timeTo', 'closureDate']
+        'PTWRegistry': ['openDate', 'timeFrom', 'timeTo', 'closureDate'],
+        // سجلات النظام: لا تقطع الوقت إلى تاريخ فقط (كان يظهر 03:00:00 بتوقيت +3)
+        'ClientErrorLog': ['createdAt', 'updatedAt'],
+        'UserActivityLog': ['createdAt', 'updatedAt', 'timestamp'],
+        'AuditLog': ['createdAt', 'updatedAt', 'timestamp'],
+        'SecurityAuditLog': ['createdAt', 'updatedAt', 'timestamp']
     };
 
     return Array.isArray(textDateTimeFieldsBySheet[sheet]) && textDateTimeFieldsBySheet[sheet].includes(h);

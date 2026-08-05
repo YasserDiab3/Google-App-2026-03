@@ -33,9 +33,17 @@ const ClientErrorsAdmin = {
     _fmtTime(iso) {
         try {
             if (!iso) return '—';
-            const d = new Date(iso);
-            if (isNaN(d.getTime())) return String(iso);
-            return d.toLocaleString('ar-EG', { hour12: false });
+            const raw = String(iso).trim();
+            // تاريخ فقط (بعد قطع الوقت في القراءة) — لا تفسّره كمنتصف ليل UTC فيظهر 03:00:00
+            if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+            const localish = raw.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::(\d{2}))?/);
+            if (localish && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw)) {
+                return `${localish[1]} ${localish[2]}${localish[3] ? ':' + localish[3] : ''}`;
+            }
+            const d = new Date(raw);
+            if (isNaN(d.getTime())) return raw;
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
         } catch (_e) {
             return String(iso || '—');
         }
