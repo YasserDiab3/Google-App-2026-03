@@ -677,20 +677,9 @@ const Training = {
             return;
         }
 
-        // طابور GoogleIntegration ينفّذ طلبات متتالية: 5 طلبات كانت تُراكم ~60–80 ثانية.
-        // 1) تفضيل getTrainingModuleBundle (طلب شبكة واحد من الخادم).
-        // 2) إصلاح تصنيف «ثقيل» لـ getAll* في google-integration + __timeoutMs للطلبات الاحتياطية.
-        const bundleTimeoutMs = 25000;
-        const fallbackTimeoutMs = 12000;
+        // برامج التدريب أولاً — لا ننتظر getTrainingModuleBundle (7 جداول) قبل ظهور القائمة.
+        const fallbackTimeoutMs = 20000;
         const timeoutMessage = 'انتهت مهلة الاتصال بالخادم\n\nتحقق من الاتصال وإعدادات Google Apps Script.';
-
-        // حفظ/قراءة حالة عدم دعم getTrainingModuleBundle بين جلسات المتصفح
-        const bundleUnsupportedKey = 'training_bundle_action_unsupported';
-        try {
-            if (localStorage.getItem(bundleUnsupportedKey) === '1') {
-                this._bundleActionUnsupported = true;
-            }
-        } catch (e) { /* ignore */ }
 
         const persistAndRefreshUi = () => {
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
@@ -719,65 +708,6 @@ const Training = {
         };
 
         try {
-            let bundleRaw = null;
-            if (!this._bundleActionUnsupported) {
-                bundleRaw = await Utils.promiseWithTimeout(
-                    GoogleIntegration.sendRequest({
-                        action: 'getTrainingModuleBundle',
-                        data: { filters: {}, __timeoutMs: bundleTimeoutMs }
-                    }),
-                    bundleTimeoutMs + 1500,
-                    timeoutMessage
-                ).catch((err) => {
-                    const msg = String(err?.message || err || '');
-                    if (
-                        msg.includes('getTrainingModuleBundle') &&
-                        (msg.includes('غير معترف') || msg.toLowerCase().includes('not recognized'))
-                    ) {
-                        this._bundleActionUnsupported = true;
-                        try { localStorage.setItem(bundleUnsupportedKey, '1'); } catch (e) { /* ignore */ }
-                        Utils.safeWarn('⚠️ إجراء getTrainingModuleBundle غير متاح في نسخة الخادم الحالية، سيتم استخدام الجلب المنفصل مباشرة.');
-                    } else {
-                        Utils.safeWarn('⚠️ تحميل مجمّع التدريب تعذّر، سيتم الطلبات المنفصلة:', err);
-                    }
-                    return null;
-                });
-            }
-
-            const bundle = bundleRaw && bundleRaw.success === true && bundleRaw.data && typeof bundleRaw.data === 'object'
-                ? bundleRaw.data
-                : null;
-
-            if (bundle) {
-                // ✅ حارس: لا نستبدل برامج التدريب المحلية الحديثة بنتيجة جلب قديمة (نافذة 60 ثانية)
-                if (Array.isArray(bundle.training) && (Date.now() - (this._trainingLocalSaveTime || 0)) > 60000) {
-                    AppState.appData.training = bundle.training;
-                    Utils.safeLog(`✅ تم تحميل ${bundle.training.length} برنامج تدريبي (مجمّع)`);
-                }
-                if (Array.isArray(bundle.trainingSessions)) AppState.appData.trainingSessions = bundle.trainingSessions;
-                if (Array.isArray(bundle.trainingCertificates)) AppState.appData.trainingCertificates = bundle.trainingCertificates;
-                // ✅ حارس: لا نستبدل سجل الحضور المحلي الحديث بنتيجة جلب قديمة (نافذة 60 ثانية)
-                if (Array.isArray(bundle.trainingAttendance) && (Date.now() - (this._trainingAttendanceLocalSaveTime || 0)) > 60000) {
-                    AppState.appData.trainingAttendance = bundle.trainingAttendance;
-                }
-                // حارس: لا نستبدل بيانات المقاولين المحلية الحديثة بنتيجة جلب قديمة (نافذة 60 ثانية)
-                if (Array.isArray(bundle.contractorTrainings) && (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000) {
-                    AppState.appData.contractorTrainings = bundle.contractorTrainings;
-                }
-                if (Array.isArray(bundle.legalTrainings) && (Date.now() - (this._legalTrainingsLocalSaveTime || 0)) > 60000) {
-                    AppState.appData.legalTrainings = bundle.legalTrainings;
-                }
-                if (Array.isArray(bundle.legalRegister) && (Date.now() - (this._legalRegisterLocalSaveTime || 0)) > 60000) {
-                    AppState.appData.legalRegister = bundle.legalRegister;
-                }
-                if (Array.isArray(bundle.legalTrainingAttendees) && (Date.now() - (this._legalAttendeesLocalSaveTime || 0)) > 60000) {
-                    AppState.appData.legalTrainingAttendees = bundle.legalTrainingAttendees;
-                }
-                this._contractorTrainingsFetchOk = true;
-                persistAndRefreshUi();
-                return;
-            }
-
             const requestWithTimeout = (promise) => Utils.promiseWithTimeout(promise, fallbackTimeoutMs, timeoutMessage);
             const dataOpts = { filters: {}, __timeoutMs: fallbackTimeoutMs };
             const runAction = async (action, warnLabel) => {

@@ -649,6 +649,7 @@ const Employees = {
                         // عرض فوري من المحلي إن وُجد — لا تُعلّق الواجهة على جلب الخادم
                         if (hasLocal) {
                             await this.loadEmployeesList();
+                            void this.updateEmployeesInBackground();
                         } else if (tableHost) {
                             tableHost.innerHTML = `
                                 <div class="empty-state" style="padding:28px;">
@@ -659,28 +660,27 @@ const Employees = {
                                     </div>
                                     <p class="text-gray-600">${this.t('module.employees.loadingList', 'جاري تحميل قائمة الموظفين...')}</p>
                                 </div>`;
-                        }
-                        try {
-                            await this._ensureEmployeesLoadedWithTimeout_(false, hasLocal ? 45000 : 90000);
-                            if (!(AppState.appData.employees || []).length) {
-                                await this._ensureEmployeesLoadedWithTimeout_(true, 60000);
+                            try {
+                                await this._ensureEmployeesLoadedWithTimeout_(false, 25000);
+                            } catch (loadErr) {
+                                Utils.safeWarn('⚠️ انتهاء/فشل جلب الموظفين:', loadErr);
                             }
-                        } catch (loadErr) {
-                            Utils.safeWarn('⚠️ انتهاء/فشل جلب الموظفين:', loadErr);
-                        }
-                        if (document.getElementById('employees-table-container')) {
-                            await this.loadEmployeesList();
+                            if (document.getElementById('employees-table-container')) {
+                                await this.loadEmployeesList();
+                            }
                         }
                     } else if (this.canViewEmployeesRegistryTab()) {
                         const hasLocal = Array.isArray(AppState.appData.employees) && AppState.appData.employees.length > 0;
                         if (hasLocal) {
                             await this.loadEmployeesList();
-                        }
-                        try {
-                            await this._ensureEmployeesLoadedWithTimeout_(false, hasLocal ? 45000 : 90000);
-                        } catch (_e) { /* ignore */ }
-                        if (document.getElementById('employees-table-container')) {
-                            await this.loadEmployeesList();
+                            void this.updateEmployeesInBackground();
+                        } else {
+                            try {
+                                await this._ensureEmployeesLoadedWithTimeout_(false, 25000);
+                            } catch (_e) { /* ignore */ }
+                            if (document.getElementById('employees-table-container')) {
+                                await this.loadEmployeesList();
+                            }
                         }
                     } else if (this.canViewEmployeesAnalysisTab()) {
                         await this.loadEmployeesAnalysis();
@@ -3625,7 +3625,7 @@ const Employees = {
             try {
                 const employeesFetchData = {
                     filters: { includeInactive: true, lite: true },
-                    __timeoutMs: 90000,
+                    __timeoutMs: forceReload ? 45000 : 25000,
                     ...(forceReload ? { skipCache: true, forceRefresh: true } : {})
                 };
                 if (forceReload && typeof GoogleIntegration._invalidateSmartCacheForRead_ === 'function') {
@@ -3660,6 +3660,17 @@ const Employees = {
                     return true;
                 }
 
+                if ((AppState.appData.employees || []).length > 0) {
+                    this.cache.data = AppState.appData.employees;
+                    this.cache.lastLoad = Date.now();
+                    this.cache.lastUpdate = Date.now();
+                    return true;
+                }
+
+                if (!forceReload) {
+                    return false;
+                }
+
                 if (AppState.debugMode) {
                     Utils.safeWarn('⚠️ getAllEmployees فشل، جاري المحاولة بـ readFromSheet...');
                 }
@@ -3667,10 +3678,11 @@ const Employees = {
                 const sheetFetchData = {
                     sheetName: 'Employees',
                     spreadsheetId: AppState.googleConfig.sheets.spreadsheetId,
-                    __timeoutMs: 120000,
-                    ...(forceReload ? { skipCache: true, forceRefresh: true } : {})
+                    __timeoutMs: 25000,
+                    skipCache: true,
+                    forceRefresh: true
                 };
-                if (forceReload && typeof GoogleIntegration._invalidateSmartCacheForRead_ === 'function') {
+                if (typeof GoogleIntegration._invalidateSmartCacheForRead_ === 'function') {
                     GoogleIntegration._invalidateSmartCacheForRead_('readFromSheet', sheetFetchData);
                 }
                 const sheetResult = await GoogleIntegration.sendRequest({
@@ -3749,7 +3761,7 @@ const Employees = {
 
             const employeesFetchData = {
                 filters: { includeInactive: true, lite: true },
-                __timeoutMs: 90000
+                __timeoutMs: 25000
             };
             const result = await GoogleIntegration.sendRequest({
                 action: 'getAllEmployees',

@@ -29,7 +29,7 @@
     };
     const DEFAULT_SHEET_TIMEOUT = 25000;
     const DEFERRED_GLOBAL_SHEETS = ['UserActivityLog'];
-    const MODULE_OWNED_HEAVY_SHEETS = ['ClinicVisits', 'ClinicContractorVisits'];
+    const MODULE_OWNED_HEAVY_SHEETS = ['ClinicVisits', 'ClinicContractorVisits', 'Training', 'Employees', 'ExternalWorkforceMonthly'];
 
     const SyncImprovements = {
         /** حالة إخفاء النافذة (التحميل يستمر في الخلفية) */

@@ -1,15 +1,15 @@
 {
-  "version": "1.0.858",
+  "version": "1.0.860",
   "highlights": {
     "ar": [
-      "تبسيط مديول العيادة وتقليل مسارات التحميل المساعدة.",
-      "استعادة سجل التشريعات القانونية داخل مديول التدريب.",
-      "تحديث قواعد الرفع والنشر في المشروع."
+      "تسريع ظهور برامج التدريب بدون انتظار الحزمة الكاملة.",
+      "قائمة الموظفين تظهر من المحلي فوراً ثم تتحدث في الخلفية.",
+      "إيقاف سحب التدريب والموظفين من المزامنة العامة الثقيلة."
     ],
     "en": [
-      "Simplify the clinic module and reduce helper load paths.",
-      "Restore the legal register inside the training module.",
-      "Update project push and publish rules."
+      "Show training programs faster without waiting for the full bundle.",
+      "Employee list appears from local data first, then refreshes in background.",
+      "Stop pulling Training and Employees in the heavy global sync."
     ]
   }
 }
