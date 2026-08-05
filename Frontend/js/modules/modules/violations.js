@@ -777,7 +777,11 @@ const Violations = {
                 'rejected': '<span style="background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:700;">مرفوض</span>'
             }[r.status] || `<span style="background:#e5e7eb;color:#374151;padding:3px 10px;border-radius:12px;font-size:0.75rem;">${r.status}</span>`;
 
-            const dateStr = r.createdAt ? new Date(r.createdAt).toLocaleString('ar-EG-u-nu-latn', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+            const dateStr = r.createdAt
+                ? (typeof Utils.formatDateTime === 'function'
+                    ? Utils.formatDateTime(r.createdAt)
+                    : String(r.createdAt))
+                : '—';
             const approvers = Array.isArray(r.approvers) ? r.approvers : [];
             const currentIdx = parseInt(r.currentApproverIndex, 10) || 0;
 
@@ -6134,6 +6138,10 @@ const Violations = {
         const esc = (value, fallback = '—') => Utils.escapeHTML(String(value == null || value === '' ? fallback : value));
         const formatDateTime = (value) => {
             if (!value) return '—';
+            if (typeof Utils.formatDateTime === 'function') {
+                const formatted = Utils.formatDateTime(value);
+                return formatted && formatted !== '-' ? formatted : '—';
+            }
             const date = new Date(value);
             if (Number.isNaN(date.getTime())) return String(value);
             return date.toLocaleString('ar-EG-u-nu-latn', {

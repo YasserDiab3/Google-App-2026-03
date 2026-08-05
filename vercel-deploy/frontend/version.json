@@ -1,15 +1,15 @@
 {
-  "version": "1.0.853",
+  "version": "1.0.855",
   "highlights": {
     "ar": [
-      "إصلاح وقت مراقبة الأخطاء: كان يظهر 03:00:00 بسبب قطع الوقت إلى تاريخ فقط.",
-      "حفظ وعرض createdAt بتاريخ+ساعة صحيحة.",
-      "السجلات الجديدة تظهر الوقت الفعلي بدل منتصف الليل UTC."
+      "إصلاح شامل لوقت 03:00:00 في كل حقول التاريخ+الوقت (*At / timestamp).",
+      "الخلفية تحفظ وتعيد الوقت كاملاً بدل قطعه إلى تاريخ فقط.",
+      "العرض لا يحوّل تاريخ-فقط إلى ساعة وهمية؛ المخالفات تعرض الوقت الفعلي."
     ],
     "en": [
-      "Fixed error-monitor time stuck at 03:00:00 (date-only UTC midnight).",
-      "createdAt is stored and shown with real date+time.",
-      "New logs display actual local time instead of fake 03:00."
+      "System-wide fix for fake 03:00:00 on *At / timestamp fields.",
+      "Backend keeps full date+time on read/write instead of date-only.",
+      "UI no longer invents a clock for date-only values; violations show real time."
     ]
   }
 }

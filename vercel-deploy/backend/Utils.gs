@@ -1406,19 +1406,28 @@ function isDateLikeField_(header) {
     return /(?:Date|At)$/i.test(h);
 }
 
+function isTimestampLikeField_(header) {
+    const h = String(header || '').trim();
+    if (!h) return false;
+    if (/^timestamp$/i.test(h)) return true;
+    if (/DateTime$/i.test(h)) return true;
+    if (/(?:At)$/i.test(h)) return true;
+    if (h === 'lastLogin' || h === 'lastPresenceAt') return true;
+    return false;
+}
+
 function shouldPreserveSheetDateTimeAsText_(sheetName, header) {
     const sheet = String(sheetName || '').trim();
     const h = String(header || '').trim();
-    if (!sheet || !h) return false;
+    if (!h) return false;
+
+    // قاعدة عامة: *At / timestamp / *DateTime تُحفظ كنص تاريخ+ساعة
+    // يمنع قطع الوقت إلى yyyy-MM-dd ثم ظهور 03:00:00 بتوقيت +3
+    if (isTimestampLikeField_(h)) return true;
 
     const textDateTimeFieldsBySheet = {
         'PTW': ['startDate', 'endDate', 'closureTime'],
-        'PTWRegistry': ['openDate', 'timeFrom', 'timeTo', 'closureDate'],
-        // سجلات النظام: لا تقطع الوقت إلى تاريخ فقط (كان يظهر 03:00:00 بتوقيت +3)
-        'ClientErrorLog': ['createdAt', 'updatedAt'],
-        'UserActivityLog': ['createdAt', 'updatedAt', 'timestamp'],
-        'AuditLog': ['createdAt', 'updatedAt', 'timestamp'],
-        'SecurityAuditLog': ['createdAt', 'updatedAt', 'timestamp']
+        'PTWRegistry': ['openDate', 'timeFrom', 'timeTo', 'closureDate']
     };
 
     return Array.isArray(textDateTimeFieldsBySheet[sheet]) && textDateTimeFieldsBySheet[sheet].includes(h);

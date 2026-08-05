@@ -4342,7 +4342,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.853',
+    appVersion: '1.0.855',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -5781,10 +5781,9 @@ const Utils = {
                 else if (dateStr.includes('T') && (dateStr.includes('Z') || dateStr.includes('+') || dateStr.match(/-\d{2}:\d{2}$/))) {
                     d = new Date(dateStr);
                 }
-                // إذا كانت بصيغة yyyy-MM-dd فقط (10 أحرف)، نضيف وقت افتراضي
+                // تاريخ فقط — لا تخترع ساعة (كان new Date('yyyy-MM-dd') يظهر 03:00 بتوقيت +3)
                 else if (dateStr.length === 10 && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                    // نستخدم 00:00:00 كوقت افتراضي للبيانات القديمة
-                    d = new Date(dateStr + 'T00:00:00');
+                    return this.formatDate(dateStr, useLocale);
                 }
                 // محاولة تحويل أي صيغة أخرى
                 else {
