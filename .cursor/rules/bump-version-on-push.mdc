@@ -9,29 +9,27 @@ alwaysApply: true
 
 ## متى تشغّل bump-version.js
 
-- أي ملف تحت Frontend/ أو vercel-deploy/frontend/ (js, html, css, json…)
-- لا تشغّله إذا التغيير Backend/GAS فقط
+- أي ملف تحت `Frontend/` أو `vercel-deploy/frontend/` (js, html, css, json…)
+- **لا** تشغّله إذا التغيير **Backend/GAS فقط** (`Backend/` أو `vercel-deploy/backend/`)
 
 ## قبل commit + push
 
-1. من جذر المستروع: node bump-version.js
-2. تأكد تحديث 8 مواضع (version.json, app-utils.js, service-worker.js, index.html) في Frontend و vercel-deploy/frontend
-3. حدّث highlights.ar و highlights.en لتطابق تغييرات هذا الرفع (انظر version-highlights-match-changes.mdc)
-4. git add يشمل ملفات الإصدار مع التعديلات
-5. commit ثم git push origin main
+1. من جذر المستروع: `node bump-version.js`
+2. تأكد تحديث 8 مواضع (4 في `Frontend/` + 4 في `vercel-deploy/frontend/`):
+   - `version.json`
+   - `js/modules/app-utils.js` → `appVersion`
+   - `service-worker.js` → `CACHE_VERSION`
+   - `index.html` → `__SW_REGISTER_QUERY`
+3. `git add` يشمل ملفات الإصدار **مع** التعديلات
+4. commit ثم `git push origin main`
 
 ## pre-push hook
 
-- مثبت عبر: node scripts/install-git-hooks.mjs
+- مُثبَّت عبر: `node scripts/install-git-hooks.mjs`
 - يرفض push واجهة بدون تحديث ملفات الإصدار
-- تخطي نادر: SKIP_VERSION_CHECK=1 git push
+- تخطّي نادر: `SKIP_VERSION_CHECK=1 git push` أو `git push --no-verify`
 
 ## استثناءات
 
-- الإصدار محدّث يدوياً بالفعل → لا تكرر bump-version.js
-- push backend فقط → لا bump
-
-## نبذة إشعار التحديث (إلزامي)
-
-بعد bump وقبل commit: حدّث highlights في كلا نسختي version.json لتطابق تغييرات هذا الرفع فقط.
-لا تترك نبذة إصدار قديم — قاعدة version-highlights-match-changes.mdc.
+- الإصدار مُحدَّث يدوياً بالفعل → لا تكرّر `bump-version.js`
+- push backend فقط → لا bump ولا فحص واجهة

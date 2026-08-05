@@ -21,7 +21,6 @@ const Clinic = {
 
     _clinicVisitsLoadPromise: null,
     _visitsBackendFetchOk: false,
-    _supplyRequestActionTimeoutMs: 60000,
 
     /**
      * ✅ تحويل المعرف (ID أو Email) إلى اسم المستخدم الكامل
@@ -158,19 +157,6 @@ const Clinic = {
                 'empty.noResults': 'لا توجد نتائج مطابقة لبحثك.',
                 'empty.noEmployeeVisits': 'لا توجد زيارات موظفين مسجلة.',
                 'empty.noContractorVisits': 'لا توجد زيارات مقاولين مسجلة.',
-
-                // Skeletons / loading
-                'skeleton.loading': 'جاري التحميل...',
-                'skeleton.openingVisits': 'جاري فتح سجل التردد...',
-                'skeleton.openingAttendance': 'جاري فتح الحضور...',
-                'skeleton.openingMedications': 'جاري فتح الأدوية...',
-                'skeleton.openingSickLeave': 'جاري فتح الإجازات المرضية...',
-                'skeleton.openingDispensed': 'جاري فتح سجل الأدوية المنصرفة...',
-                'skeleton.openingInjuries': 'جاري فتح الإصابات...',
-                'skeleton.openingSupply': 'جاري فتح إرسال طلب احتياجات...',
-                'skeleton.openingApprovals': 'جاري فتح طلبات الموافقة...',
-                'skeleton.preparing': 'جاري التحضير...',
-                'skeleton.loadingData': 'جاري تحميل البيانات...',
                 
                 // Time
                 'time.lessThanMinute': 'أقل من دقيقة',
@@ -229,19 +215,6 @@ const Clinic = {
                 'empty.noResults': 'No results match your search.',
                 'empty.noEmployeeVisits': 'No employee visits recorded.',
                 'empty.noContractorVisits': 'No contractor visits recorded.',
-
-                // Skeletons / loading
-                'skeleton.loading': 'Loading...',
-                'skeleton.openingVisits': 'Opening attendance log...',
-                'skeleton.openingAttendance': 'Opening attendance...',
-                'skeleton.openingMedications': 'Opening medications...',
-                'skeleton.openingSickLeave': 'Opening sick leave...',
-                'skeleton.openingDispensed': 'Opening dispensed medications log...',
-                'skeleton.openingInjuries': 'Opening injuries...',
-                'skeleton.openingSupply': 'Opening supply request...',
-                'skeleton.openingApprovals': 'Opening approval requests...',
-                'skeleton.preparing': 'Preparing...',
-                'skeleton.loadingData': 'Loading data...',
                 
                 // Time
                 'time.lessThanMinute': 'Less than a minute',
@@ -252,7 +225,7 @@ const Clinic = {
         };
 
         return {
-            t: (key, fallback) => translations[lang]?.[key] || (fallback != null ? String(fallback) : key),
+            t: (key) => translations[lang]?.[key] || key,
             isRTL,
             lang
         };
@@ -1111,7 +1084,7 @@ const Clinic = {
         this.ensureData();
         switch (dataset) {
             case 'visits':
-                return this.getActualClinicVisits_(AppState.appData.clinicVisits);
+                return Array.isArray(AppState.appData.clinicVisits) ? AppState.appData.clinicVisits : [];
             case 'medications':
                 return (Array.isArray(AppState.appData.clinicMedications) ? AppState.appData.clinicMedications : []).map(m => this.normalizeMedicationRecord(m));
             case 'sickLeave':
@@ -1127,52 +1100,6 @@ const Clinic = {
         }
     },
 
-    /** استبعاد سجلات الاختبار المعروفة من العرض والتحليل دون حذف بيانات من المصدر. */
-    isTestClinicVisit_(visit) {
-        if (!visit || typeof visit !== 'object') return false;
-        const value = (key) => String(visit[key] || '').trim().toLowerCase();
-        const factory = value('factoryName') || value('factory');
-        return value('id').startsWith('test-') ||
-            value('employeeCode') === 'test001' ||
-            value('email') === 'test@example.com' ||
-            value('userId') === 'test-user-id' ||
-            factory === 'مصنع اختبار';
-    },
-
-    getActualClinicVisits_(visits) {
-        const base = Array.isArray(visits) ? visits : (Array.isArray(AppState?.appData?.clinicVisits) ? AppState.appData.clinicVisits : []);
-        const contractorVisits = Array.isArray(AppState?.appData?.clinicContractorVisits) ? AppState.appData.clinicContractorVisits : [];
-        const extraContractorVisits = Array.isArray(AppState?.appData?.contractorVisits) ? AppState.appData.contractorVisits : [];
-
-        const existingIds = new Set();
-        const merged = [];
-
-        [...base, ...contractorVisits, ...extraContractorVisits].forEach(v => {
-            if (!v || typeof v !== 'object') return;
-            const vid = String(v.id || '').trim();
-            if (vid) {
-                if (existingIds.has(vid)) return;
-                existingIds.add(vid);
-            }
-            merged.push(v);
-        });
-
-        return merged.filter(visit => !this.isTestClinicVisit_(visit));
-    },
-
-    isContractorVisit_(visit) {
-        if (!visit || typeof visit !== 'object') return false;
-        const type = String(visit.personType || '').toLowerCase().trim();
-        if (type === 'contractor' || type === 'external' || type === 'مقاول' || type === 'خارجي' || type.includes('مقاول') || type.includes('خارج')) {
-            return true;
-        }
-        return !!(visit.contractorName || visit.contractorWorkerName || visit.externalName || visit.contractorCompany || visit.contractorPosition || visit.isContractor);
-    },
-
-    isEmployeeVisit_(visit) {
-        return !this.isContractorVisit_(visit);
-    },
-
     /** دمج زيارات العيادة لأغراض التحليل (بدون تكرار id) */
     getClinicVisitsForAnalysis_() {
         const clinicVisits = Array.isArray(AppState.appData.clinicVisits) ? AppState.appData.clinicVisits : [];
@@ -1181,7 +1108,7 @@ const Clinic = {
         const allVisitIds = new Set();
         const visits = [];
         [...clinicVisits, ...employeeVisits, ...contractorVisits].forEach(v => {
-            if (!v || this.isTestClinicVisit_(v)) return;
+            if (!v) return;
             const vid = String(v.id || '').trim();
             if (vid && allVisitIds.has(vid)) return;
             if (vid) allVisitIds.add(vid);
@@ -2249,7 +2176,6 @@ const Clinic = {
                 </div>
                 <div class="modal-footer form-actions-centered" style="background: #f8fafc;">
                     <button type="button" class="btn-secondary modal-close-btn">إغلاق</button>
-                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('clinic.injury') : ''}
                     <button type="button" class="btn-primary modal-edit-btn">
                         <i class="fas fa-edit ml-2"></i>تعديل
                     </button>
@@ -2258,9 +2184,6 @@ const Clinic = {
         `;
 
         document.body.appendChild(modal);
-        if (typeof EmailDispatch !== 'undefined') {
-            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'clinic.injury', record: record, recordId: record.id || '' });
-        }
         const closeModal = () => modal.remove();
 
         modal.querySelectorAll('.modal-close, .modal-close-btn').forEach((btn) => btn.addEventListener('click', closeModal));
@@ -2395,7 +2318,6 @@ const Clinic = {
         const name = record.name || record.medicationName || '';
         const type = record.type || record.medicationType || record.category || '';
         const purchaseDate = record.purchaseDate || record.buyDate || record.createdAt || new Date().toISOString();
-        const productionDate = record.productionDate || '';
         const expiryDate = record.expiryDate || record.endDate || '';
         const quantityAdded = record.quantityAdded !== undefined && record.quantityAdded !== null
             ? toNumber(record.quantityAdded, 0)
@@ -2427,7 +2349,6 @@ const Clinic = {
             type,
             usage,
             purchaseDate,
-            productionDate,
             expiryDate,
             quantityAdded: toNumber(quantityAdded, 0),
             remainingQuantity: toNumber(remainingQuantity, 0),
@@ -2812,24 +2733,16 @@ const Clinic = {
 
     getFilteredSickLeaves() {
         const filters = this.state.filters.sickLeave || {};
-        const searchTerm = this.normalizeArabicText(filters.search || '');
+        const searchTerm = (filters.search || '').toLowerCase();
         const departmentFilter = filters.department || '';
         const fromDate = filters.dateFrom ? new Date(filters.dateFrom) : null;
         const toDate = filters.dateTo ? new Date(filters.dateTo) : null;
 
         return this.getSickLeaves().filter((item) => {
-            const searchableText = this.normalizeArabicText([
-                item.employeeName,
-                item.personName,
-                item.employeeCode,
-                item.employeeNumber,
-                item.employeeDepartment,
-                item.employeePosition,
-                item.position,
-                item.treatingDoctor,
-                item.reason
-            ].filter(Boolean).join(' '));
-            const matchesSearch = !searchTerm || searchableText.includes(searchTerm);
+            const matchesSearch = !searchTerm
+                || (item.employeeName && item.employeeName.toLowerCase().includes(searchTerm))
+                || (item.personName && item.personName.toLowerCase().includes(searchTerm))
+                || (item.employeeDepartment && item.employeeDepartment.toLowerCase().includes(searchTerm));
 
             if (!matchesSearch) return false;
 
@@ -2899,8 +2812,9 @@ const Clinic = {
                 return false;
             }
 
-            if (activePersonTab === 'employees' && !this.isEmployeeVisit_(item)) return false;
-            if (activePersonTab === 'contractors' && !this.isContractorVisit_(item)) return false;
+            const pType = String(item.personType || 'employee').toLowerCase();
+            if (activePersonTab === 'employees' && pType !== 'employee') return false;
+            if (activePersonTab === 'contractors' && pType === 'employee') return false;
 
             const injuryDate = item.injuryDate ? new Date(item.injuryDate) : null;
             if (fromDate && (!injuryDate || injuryDate < fromDate)) {
@@ -3025,7 +2939,7 @@ const Clinic = {
             const current = (panel.innerHTML || '').trim();
             // إذا كان هناك محتوى بالفعل لا نمسحه لتجنب وميض
             if (current) return;
-            const safeLabel = Utils.escapeHTML(label || this.getTranslations().t('skeleton.loading', 'جاري التحميل...'));
+            const safeLabel = Utils.escapeHTML(label || 'جاري التحميل...');
             panel.innerHTML = `
                 <div class="content-card" style="margin:14px;">
                     <div class="card-body" style="display:flex;align-items:center;justify-content:center;min-height:210px;gap:12px;">
@@ -3065,18 +2979,17 @@ const Clinic = {
             }
 
             const panel = document.querySelector(`.clinic-tab-panel[data-tab-panel="${tabKey}"]`);
-            const { t } = this.getTranslations();
             const labelMap = {
-                visits: t('skeleton.openingVisits', 'جاري فتح سجل التردد...'),
-                attendance: t('skeleton.openingAttendance', 'جاري فتح الحضور...'),
-                medications: t('skeleton.openingMedications', 'جاري فتح الأدوية...'),
-                sickLeave: t('skeleton.openingSickLeave', 'جاري فتح الإجازات المرضية...'),
-                'dispensed-medications': t('skeleton.openingDispensed', 'جاري فتح سجل الأدوية المنصرفة...'),
-                injuries: t('skeleton.openingInjuries', 'جاري فتح الإصابات...'),
-                'supply-request': t('skeleton.openingSupply', 'جاري فتح إرسال طلب احتياجات...'),
-                approvals: t('skeleton.openingApprovals', 'جاري فتح طلبات الموافقة...')
+                visits: 'جاري فتح سجل التردد...',
+                attendance: 'جاري فتح الحضور...',
+                medications: 'جاري فتح الأدوية...',
+                sickLeave: 'جاري فتح الإجازات المرضية...',
+                'dispensed-medications': 'جاري فتح سجل الأدوية المنصرفة...',
+                injuries: 'جاري فتح الإصابات...',
+                'supply-request': 'جاري فتح إرسال طلب احتياجات...',
+                approvals: 'جاري فتح طلبات الموافقة...'
             };
-            this._renderTabSkeleton(panel, labelMap[tabKey] || t('skeleton.loading', 'جاري التحميل...'));
+            this._renderTabSkeleton(panel, labelMap[tabKey] || 'جاري التحميل...');
 
             const run = () => {
                 // تجاهل إذا تغيّر التبويب/تم جدولة أحدث
@@ -3177,37 +3090,21 @@ const Clinic = {
             const dispensed = Math.max(0, quantityAdded - remainingQuantity);
             const usage = item.usage || item.notes || '—';
 
-            // ✅ إظهار أزرار الإجراءات
-            let approveBtn = '';
-            let rejectBtn = '';
-            
-            if (isAdmin && (status === 'قيد الاعتماد' || item.pendingUpdate)) {
-                approveBtn = `
-                    <button type="button" class="btn-icon btn-icon-success" data-action="approve-medication" data-id="${Utils.escapeHTML(item.id || '')}" title="اعتماد">
-                        <i class="fas fa-check"></i>
-                    </button>
-                `;
-                rejectBtn = `
-                    <button type="button" class="btn-icon btn-icon-danger" data-action="reject-medication" data-id="${Utils.escapeHTML(item.id || '')}" title="رفض">
-                        <i class="fas fa-times"></i>
-                    </button>
-                `;
-            }
-
-            const actionButtons = `
-                ${approveBtn}
-                ${rejectBtn}
-                <button type="button" class="btn-icon btn-icon-primary" data-action="view-medication" data-id="${Utils.escapeHTML(item.id || '')}" title="عرض">
+            // ✅ إظهار أزرار التعديل والحذف فقط لمدير النظام
+            const actionButtons = isAdmin ? `
+                <button type="button" class="btn-icon btn-icon-primary" data-action="view-medication" data-id="${Utils.escapeHTML(item.id || '')}">
                     <i class="fas fa-eye"></i>
                 </button>
-                <button type="button" class="btn-icon btn-icon-warning" data-action="edit-medication" data-id="${Utils.escapeHTML(item.id || '')}" title="تعديل">
+                <button type="button" class="btn-icon btn-icon-warning" data-action="edit-medication" data-id="${Utils.escapeHTML(item.id || '')}">
                     <i class="fas fa-edit"></i>
                 </button>
-                ${isAdmin ? `
-                <button type="button" class="btn-icon btn-icon-danger" data-action="delete-medication" data-id="${Utils.escapeHTML(item.id || '')}" title="حذف">
+                <button type="button" class="btn-icon btn-icon-danger" data-action="delete-medication" data-id="${Utils.escapeHTML(item.id || '')}">
                     <i class="fas fa-trash"></i>
                 </button>
-                ` : ''}
+            ` : `
+                <button type="button" class="btn-icon btn-icon-primary" data-action="view-medication" data-id="${Utils.escapeHTML(item.id || '')}">
+                    <i class="fas fa-eye"></i>
+                </button>
             `;
 
             return `
@@ -3219,7 +3116,6 @@ const Clinic = {
                     <td>${expiry}</td>
                     <td>
                         <span class="badge ${this.getMedicationBadgeClass(status)}">${Utils.escapeHTML(status)}</span>
-                        ${item.pendingUpdate ? '<br><span class="badge badge-warning" style="margin-top: 4px; font-size: 0.7rem;">تعديل قيد الاعتماد</span>' : ''}
                     </td>
                     <td>${days}</td>
                     <td class="text-center font-semibold">${quantityAdded}</td>
@@ -3278,9 +3174,11 @@ const Clinic = {
                     <button type="button" class="btn-success" id="medications-export-excel-btn">
                         <i class="fas fa-file-excel ml-2"></i>تصدير Excel
                     </button>
+                    ${isAdmin ? `
                     <button type="button" class="btn-primary" id="medications-add-btn">
                         <i class="fas fa-plus ml-2"></i>إضافة جديد
                     </button>
+                    ` : ''}
                 </div>
             </div>
 
@@ -3426,13 +3324,6 @@ const Clinic = {
             exportExcelBtn.addEventListener('click', () => this.exportMedicationsToExcel());
         }
 
-        panel.querySelectorAll('[data-action="approve-medication"]').forEach((btn) => {
-            btn.addEventListener('click', () => this.approveMedicationRequest(btn.getAttribute('data-id')));
-        });
-        panel.querySelectorAll('[data-action="reject-medication"]').forEach((btn) => {
-            btn.addEventListener('click', () => this.rejectMedicationRequest(btn.getAttribute('data-id')));
-        });
-        
         panel.querySelectorAll('[data-action="view-medication"]').forEach((btn) => {
             btn.addEventListener('click', () => this.viewMedication(btn.getAttribute('data-id')));
         });
@@ -3442,102 +3333,6 @@ const Clinic = {
         panel.querySelectorAll('[data-action="delete-medication"]').forEach((btn) => {
             btn.addEventListener('click', () => this.deleteMedication(btn.getAttribute('data-id')));
         });
-    },
-
-    async approveMedicationRequest(id) {
-        const record = this.getMedications().find((item) => item.id === id);
-        if (!record) return;
-
-        const confirmed = confirm(`هل أنت متأكد من اعتماد التعديلات للدواء "${Utils.escapeHTML(record.name)}"؟`);
-        if (!confirmed) return;
-
-        Loading.show();
-        try {
-            let updatedRecord = { ...record };
-            
-            if (record.pendingUpdate) {
-                // Apply pending updates
-                Object.assign(updatedRecord, record.pendingUpdate);
-                delete updatedRecord.pendingUpdate;
-                
-                // Recalculate status
-                const statusInfo = this.calculateMedicationStatus(updatedRecord);
-                updatedRecord.status = statusInfo.status;
-                updatedRecord.daysRemaining = statusInfo.daysRemaining;
-                updatedRecord.updatedAt = new Date().toISOString();
-                updatedRecord.updatedBy = this.getCurrentUserSummary();
-            } else if (record.status === 'قيد الاعتماد') {
-                const statusInfo = this.calculateMedicationStatus(updatedRecord);
-                updatedRecord.status = statusInfo.status;
-            }
-
-            updatedRecord = this.normalizeMedicationRecord(updatedRecord);
-
-            const index = AppState.appData.medications.findIndex(m => m.id === id);
-            if (index !== -1) AppState.appData.medications[index] = updatedRecord;
-            
-            this.ensureData();
-            this.renderMedicationsTab();
-
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
-
-            await GoogleIntegration.sendRequest({
-                action: 'updateMedication',
-                data: { medicationId: id, updateData: updatedRecord }
-            });
-
-            Loading.hide();
-            Notification.success('تم الاعتماد بنجاح');
-        } catch (error) {
-            Loading.hide();
-            Notification.error('حدث خطأ أثناء الاعتماد: ' + error.message);
-        }
-    },
-
-    async rejectMedicationRequest(id) {
-        const record = this.getMedications().find((item) => item.id === id);
-        if (!record) return;
-
-        const confirmed = confirm(`هل أنت متأكد من رفض التعديلات للدواء "${Utils.escapeHTML(record.name)}"؟
-
-لن يتم تطبيق التغييرات المقترحة.`);
-        if (!confirmed) return;
-
-        Loading.show();
-        try {
-            if (record.status === 'قيد الاعتماد') {
-                // Delete if it was a new medication request
-                AppState.appData.medications = AppState.appData.medications.filter(m => m.id !== id);
-                
-                await GoogleIntegration.sendRequest({
-                    action: 'deleteMedication',
-                    data: { medicationId: id }
-                });
-            } else if (record.pendingUpdate) {
-                // Revert to original by deleting pendingUpdate
-                let updatedRecord = { ...record };
-                delete updatedRecord.pendingUpdate;
-                
-                const index = AppState.appData.medications.findIndex(m => m.id === id);
-                if (index !== -1) AppState.appData.medications[index] = updatedRecord;
-
-                await GoogleIntegration.sendRequest({
-                    action: 'updateMedication',
-                    data: { medicationId: id, updateData: updatedRecord }
-                });
-            }
-
-            this.ensureData();
-            this.renderMedicationsTab();
-
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
-
-            Loading.hide();
-            Notification.success('تم رفض الطلب بنجاح');
-        } catch (error) {
-            Loading.hide();
-            Notification.error('حدث خطأ أثناء الرفض: ' + error.message);
-        }
     },
 
     viewMedication(id) {
@@ -4637,10 +4432,7 @@ const Clinic = {
     },
 
     /** القائمة الافتراضية لأنواع الزيارة (قابلة للتعديل من مدير النظام عبر إعدادات العيادة) */
-    DEFAULT_VISIT_TYPES: ['طوارئ', 'اصابة عمل', 'مرض', 'صرف الأدوية', 'فحص دوري', 'متابعة', 'فحص ماقبل التعيين', 'تحليل مخدارت'],
-
-    /** الوظائف الافتراضية للمقاولين - قابلة للإدارة مركزيًا بواسطة مدير النظام */
-    DEFAULT_CONTRACTOR_JOB_TITLES: ['مهندس', 'مشرف', 'عامل', 'عاملة', 'فني', 'لحام', 'براد'],
+    DEFAULT_VISIT_TYPES: ['طوارئ', 'اصابة عمل', 'مرض', 'فحص دوري', 'متابعة', 'فحص ماقبل التعيين', 'تحليل مخدارت'],
 
     /**
      * الحصول على قائمة أنواع الزيارة (من إعدادات المدير أو الافتراضية)
@@ -4663,158 +4455,10 @@ const Clinic = {
         if ((!Array.isArray(custom) || custom.length === 0) && AppState.appData?.clinicVisitTypes) {
             custom = AppState.appData.clinicVisitTypes;
         }
-        const list = Array.isArray(custom) && custom.length > 0
-            ? custom.map((v) => (typeof v === 'string' ? v.trim() : String(v))).filter(Boolean)
-            : (this.DEFAULT_VISIT_TYPES || []).slice();
-        if (!list.some((value) => this.normalizeArabicText(value) === this.normalizeArabicText('صرف الأدوية'))) {
-            list.push('صرف الأدوية');
+        if (Array.isArray(custom) && custom.length > 0) {
+            return custom.map((v) => (typeof v === 'string' ? v.trim() : String(v))).filter(Boolean);
         }
-        return list;
-    },
-
-    getContractorJobTitleOptions() {
-        let custom = AppState.companySettings?.clinicContractorJobTitles;
-        if (typeof custom === 'string') {
-            const raw = custom.trim();
-            if (raw) {
-                try { custom = JSON.parse(raw); }
-                catch (_error) { custom = raw.split(/\n|,/).map((item) => item.trim()).filter(Boolean); }
-            } else {
-                custom = [];
-            }
-        }
-        if ((!Array.isArray(custom) || custom.length === 0) && Array.isArray(AppState.appData?.clinicContractorJobTitles)) {
-            custom = AppState.appData.clinicContractorJobTitles;
-        }
-        const source = Array.isArray(custom) && custom.length > 0 ? custom : this.DEFAULT_CONTRACTOR_JOB_TITLES;
-        const seen = new Set();
-        return (source || []).map((value) => String(value || '').trim()).filter((value) => {
-            const key = this.normalizeArabicText(value);
-            if (!key || seen.has(key)) return false;
-            seen.add(key);
-            return true;
-        });
-    },
-
-    isMedicationDispenseVisitType_(value) {
-        return this.normalizeArabicText(value) === this.normalizeArabicText('صرف الأدوية');
-    },
-
-    getVisitReasonSuggestions_(context = {}) {
-        const normalizePersonType = (value) => {
-            const raw = String(value || '').trim().toLowerCase();
-            if (raw === 'employee' || raw.includes('موظ')) return 'employee';
-            if (raw === 'contractor' || raw === 'external' || raw.includes('مقاول') || raw.includes('خارج')) return 'contractor';
-            return raw;
-        };
-        const sources = (Array.isArray(AppState.appData?.clinicVisits) ? AppState.appData.clinicVisits : []).concat(
-            Array.isArray(AppState.appData?.clinicContractorVisits) ? AppState.appData.clinicContractorVisits : []
-        );
-        const seenIds = new Set();
-        const records = sources.filter((record) => {
-            if (!record) return false;
-            const id = String(record.id || '').trim();
-            if (!id) return true;
-            if (seenIds.has(id)) return false;
-            seenIds.add(id);
-            return true;
-        });
-        const targetPersonType = normalizePersonType(context.personType);
-        const targetVisitType = this.normalizeArabicText(context.visitType);
-        const targetEmployeeCode = String(context.employeeCode || '').trim().toLowerCase();
-        const targetContractor = this.normalizeArabicText(context.contractorName);
-        const targetWorker = this.normalizeArabicText(context.contractorWorkerName);
-        const currentRecordId = String(context.currentRecordId || '').trim();
-        const groups = new Map();
-
-        records.forEach((record) => {
-            if (currentRecordId && String(record.id || '').trim() === currentRecordId) return;
-            const reason = String(record.reason || record.visitReason || record.reasonForVisit || '').trim();
-            const key = this.normalizeArabicText(reason);
-            if (!key || key === '-' || key === this.normalizeArabicText('غير محدد')) return;
-
-            const recordPersonType = normalizePersonType(record.personType || (record.contractorName || record.externalName ? 'contractor' : 'employee'));
-            const recordVisitType = this.normalizeArabicText(record.visitType || record.type);
-            const recordEmployeeCode = String(record.employeeCode || record.employeeNumber || '').trim().toLowerCase();
-            const recordContractor = this.normalizeArabicText(record.contractorName || record.externalName || (recordPersonType === 'contractor' ? record.employeeName : ''));
-            const recordWorker = this.normalizeArabicText(record.contractorWorkerName);
-            const dateValue = record.visitDate || record.createdAt || record.updatedAt;
-            const timestamp = dateValue ? new Date(dateValue).getTime() : 0;
-            const ageDays = timestamp > 0 ? Math.max(0, (Date.now() - timestamp) / 86400000) : 3650;
-            let score = 1 + Math.max(0, 3 - (ageDays / 180));
-
-            if (targetPersonType && recordPersonType === targetPersonType) score += 5;
-            if (targetVisitType && recordVisitType === targetVisitType) score += 4;
-            if (targetPersonType && targetVisitType && recordPersonType === targetPersonType && recordVisitType === targetVisitType) score += 3;
-            if (targetEmployeeCode && recordEmployeeCode === targetEmployeeCode) score += 9;
-            if (targetContractor && recordContractor === targetContractor) score += 6;
-            if (targetWorker && recordWorker === targetWorker) score += 8;
-
-            const existing = groups.get(key) || { reason, count: 0, score: 0, latestAt: 0 };
-            existing.count += 1;
-            existing.score += score;
-            existing.latestAt = Math.max(existing.latestAt, timestamp || 0);
-            if (timestamp >= existing.latestAt) existing.reason = reason;
-            groups.set(key, existing);
-        });
-
-        return Array.from(groups.values())
-            .sort((a, b) => b.score - a.score || b.count - a.count || b.latestAt - a.latestAt || a.reason.localeCompare(b.reason, 'ar'))
-            .slice(0, 30);
-    },
-
-    refreshVisitReasonSuggestions_(currentRecordId = '') {
-        const input = document.getElementById('visit-reason');
-        const datalist = document.getElementById('visit-reason-datalist');
-        const panel = document.getElementById('visit-reason-suggestion-panel');
-        const chips = document.getElementById('visit-reason-suggestions');
-        const hint = document.getElementById('visit-reason-suggestion-hint');
-        if (!input || !datalist || !panel || !chips) return;
-
-        const contractorSelect = document.getElementById('visit-contractor-name-select');
-        const suggestions = this.getVisitReasonSuggestions_({
-            personType: document.getElementById('visit-person-type')?.value || '',
-            visitType: document.getElementById('visit-type')?.value || '',
-            employeeCode: document.getElementById('visit-employee-code')?.value || '',
-            contractorName: contractorSelect?.value || document.getElementById('visit-employee-name')?.value || '',
-            contractorWorkerName: document.getElementById('visit-contractor-worker')?.value || '',
-            currentRecordId
-        });
-
-        datalist.innerHTML = suggestions.map((item) => {
-            const usage = item.count > 1 ? `استخدم ${item.count} مرات` : 'سبب سابق';
-            return `<option value="${Utils.escapeHTML(item.reason)}" label="${Utils.escapeHTML(usage)}"></option>`;
-        }).join('');
-
-        const quickSuggestions = suggestions.slice(0, 6);
-        panel.style.display = quickSuggestions.length ? 'block' : 'none';
-        chips.innerHTML = quickSuggestions.map((item, index) => `
-            <button type="button" class="visit-reason-chip" data-reason="${Utils.escapeHTML(item.reason)}"
-                style="display:inline-flex;align-items:center;gap:6px;border:1px solid ${index === 0 ? '#0ea5e9' : '#bae6fd'};background:${index === 0 ? '#e0f2fe' : '#fff'};color:#0c4a6e;border-radius:999px;padding:7px 11px;font-size:.78rem;font-weight:700;cursor:pointer;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;">
-                <i class="fas fa-history" aria-hidden="true" style="font-size:.68rem;color:#0284c7;"></i>
-                <span>${Utils.escapeHTML(item.reason)}</span>
-                ${item.count > 1 ? `<small style="background:#0c4a6e;color:#fff;border-radius:999px;min-width:20px;padding:1px 5px;font-size:.64rem;">${item.count}</small>` : ''}
-            </button>
-        `).join('');
-        if (hint) hint.textContent = suggestions.length
-            ? `تم ترتيب ${suggestions.length} سبباً سابقاً حسب نوع الشخص والزيارة والتكرار.`
-            : 'اكتب السبب مرة واحدة وسيظهر ضمن المقترحات في الزيارات القادمة.';
-
-        chips.querySelectorAll('.visit-reason-chip').forEach((button) => {
-            button.addEventListener('click', () => {
-                input.value = button.dataset.reason || '';
-                input.dispatchEvent(new Event('input', { bubbles: true }));
-                input.focus();
-            });
-            button.addEventListener('mouseenter', () => {
-                button.style.transform = 'translateY(-1px)';
-                button.style.boxShadow = '0 6px 16px rgba(14, 165, 233, .16)';
-            });
-            button.addEventListener('mouseleave', () => {
-                button.style.transform = '';
-                button.style.boxShadow = '';
-            });
-        });
+        return (this.DEFAULT_VISIT_TYPES || []).slice();
     },
 
     normalizeArabicText(text) {
@@ -5028,125 +4672,6 @@ const Clinic = {
         modal.querySelectorAll('.modal-close, .modal-close-btn').forEach(btn => {
             btn.addEventListener('click', () => modal.remove());
         });
-    },
-
-    refreshContractorJobTitlesDatalist_() {
-        const datalist = document.getElementById('visit-contractor-position-datalist');
-        const input = document.getElementById('visit-contractor-position');
-        if (!datalist || !input) return;
-        const options = this.getContractorJobTitleOptions();
-        datalist.innerHTML = options.map((title) => `<option value="${Utils.escapeHTML(title)}"></option>`).join('');
-        try {
-            input.dataset.allowedValues = JSON.stringify(options.map((value) => this.normalizeArabicText(value)));
-        } catch (_error) { /* ignore */ }
-    },
-
-    showContractorJobTitlesSettingsModal() {
-        if (!this.isCurrentUserAdmin()) {
-            Notification?.error?.('هذا القسم متاح لمدير النظام فقط');
-            return;
-        }
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        const toItems = (list) => list.map((text, index) => ({
-            id: `cjt-${Date.now()}-${index}`,
-            text: String(text || '').trim()
-        }));
-        let items = toItems(this.getContractorJobTitleOptions());
-
-        modal.innerHTML = `
-            <div class="modal-content" style="max-width:560px;border-radius:16px;overflow:hidden;">
-                <div class="modal-header" style="background:linear-gradient(125deg,#173d6c,#0f766e);color:#fff;">
-                    <h2 class="modal-title" style="color:#fff;"><i class="fas fa-briefcase ml-2"></i>إدارة وظائف المقاولين</h2>
-                    <button type="button" class="modal-close" style="color:#fff;"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="modal-body" style="padding:20px;background:#f8fafc;">
-                    <div style="padding:12px 14px;margin-bottom:14px;border:1px solid #bae6fd;border-radius:10px;background:#f0f9ff;color:#0c4a6e;font-size:.82rem;">
-                        تظهر هذه الوظائف في حقل الوظيفة عند اختيار «مقاول». يمكن الإضافة والتعديل والحذف ثم حفظها لجميع المستخدمين.
-                    </div>
-                    <div id="clinic-contractor-job-titles-list"></div>
-                    <button type="button" id="clinic-contractor-job-title-add" class="btn-secondary mt-2"><i class="fas fa-plus ml-2"></i>إضافة وظيفة</button>
-                    <div class="flex flex-wrap gap-2 justify-end mt-4 pt-4 border-t">
-                        <button type="button" class="btn-secondary modal-close-btn">إلغاء</button>
-                        <button type="button" id="clinic-contractor-job-title-reset" class="btn-secondary">استعادة الافتراضي</button>
-                        <button type="button" id="clinic-contractor-job-title-save" class="btn-primary"><i class="fas fa-save ml-2"></i>حفظ وتعميم</button>
-                    </div>
-                </div>
-            </div>`;
-        document.body.appendChild(modal);
-
-        const render = () => {
-            const container = modal.querySelector('#clinic-contractor-job-titles-list');
-            if (!container) return;
-            container.innerHTML = items.map((item) => `
-                <div class="flex items-center gap-2 mb-2" data-id="${item.id}">
-                    <span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:40px;border-radius:9px;background:#e0f2fe;color:#0369a1;"><i class="fas fa-user-tag"></i></span>
-                    <input type="text" class="form-input flex-1 contractor-job-title-edit" data-id="${item.id}" value="${Utils.escapeHTML(item.text)}" placeholder="اسم الوظيفة">
-                    <button type="button" class="btn-icon btn-icon-danger remove-contractor-job-title" data-id="${item.id}" title="حذف الوظيفة"><i class="fas fa-trash"></i></button>
-                </div>`).join('');
-            container.querySelectorAll('.contractor-job-title-edit').forEach((input) => {
-                input.addEventListener('input', () => {
-                    const item = items.find((entry) => entry.id === input.dataset.id);
-                    if (item) item.text = input.value.trim();
-                });
-            });
-            container.querySelectorAll('.remove-contractor-job-title').forEach((button) => {
-                button.addEventListener('click', () => {
-                    items = items.filter((entry) => entry.id !== button.dataset.id);
-                    render();
-                });
-            });
-        };
-
-        render();
-        modal.querySelector('#clinic-contractor-job-title-add')?.addEventListener('click', () => {
-            items.push({ id: `cjt-${Date.now()}-${items.length}`, text: '' });
-            render();
-        });
-        modal.querySelector('#clinic-contractor-job-title-reset')?.addEventListener('click', () => {
-            items = toItems(this.DEFAULT_CONTRACTOR_JOB_TITLES || []);
-            render();
-        });
-        modal.querySelector('#clinic-contractor-job-title-save')?.addEventListener('click', async (event) => {
-            const saveButton = event.currentTarget;
-            const list = [];
-            const seen = new Set();
-            items.forEach((item) => {
-                const text = String(item.text || '').trim();
-                const key = this.normalizeArabicText(text);
-                if (text && key && !seen.has(key)) {
-                    seen.add(key);
-                    list.push(text);
-                }
-            });
-            if (!list.length) {
-                Notification?.warning?.('أضف وظيفة واحدة على الأقل أو استعد القائمة الافتراضية');
-                return;
-            }
-            const originalHtml = saveButton.innerHTML;
-            saveButton.disabled = true;
-            saveButton.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i>جاري الحفظ...';
-            try {
-                if (!AppState.appData) AppState.appData = {};
-                if (!AppState.companySettings || typeof AppState.companySettings !== 'object') AppState.companySettings = {};
-                AppState.appData.clinicContractorJobTitles = list;
-                AppState.companySettings.clinicContractorJobTitles = list;
-                const result = await GoogleIntegration.sendRequest({
-                    action: 'saveCompanySettings',
-                    data: { ...AppState.companySettings, clinicContractorJobTitles: list, userData: AppState.currentUser || {} }
-                });
-                if (!result || result.success !== true) throw new Error(result?.message || 'تعذر حفظ وظائف المقاولين');
-                if (typeof DataManager !== 'undefined' && DataManager.save) DataManager.save();
-                this.refreshContractorJobTitlesDatalist_();
-                Notification?.success?.('تم حفظ وظائف المقاولين وتعميمها على المستخدمين');
-                modal.remove();
-            } catch (error) {
-                Notification?.error?.(error?.message || 'تعذر حفظ وظائف المقاولين');
-                saveButton.disabled = false;
-                saveButton.innerHTML = originalHtml;
-            }
-        });
-        modal.querySelectorAll('.modal-close, .modal-close-btn').forEach((button) => button.addEventListener('click', () => modal.remove()));
     },
 
     /** القائمة الافتراضية لأنواع الإصابات (قابلة للتعديل من مدير النظام) */
@@ -5744,50 +5269,30 @@ const Clinic = {
         if (!panel) return;
 
         const filters = this.state.filters.sickLeave || {};
-        const allLeaves = this.getSickLeaves();
         const leaves = this.getFilteredSickLeaves();
         const departments = this.getClinicDepartments();
-        const activeFilterCount = ['search', 'department', 'dateFrom', 'dateTo']
-            .filter((key) => String(filters[key] || '').trim()).length;
-        const totalDays = leaves.reduce((sum, item) => {
-            const days = item.daysCount ?? this.calculateSickLeaveDays(item.startDate, item.endDate);
-            return sum + (parseInt(days, 10) || 0);
-        }, 0);
-        const averageDays = leaves.length ? (totalDays / leaves.length).toFixed(1) : '0';
-        const filteredDepartments = new Set(leaves.map((item) => item.employeeDepartment).filter(Boolean)).size;
 
-        const rows = leaves.map((item, index) => {
+        const rows = leaves.map((item) => {
             const name = item.employeeName || item.personName || '';
             const department = item.employeeDepartment || '—';
             const start = this.formatDate(item.startDate);
             const end = this.formatDate(item.endDate);
             const days = item.daysCount ?? this.calculateSickLeaveDays(item.startDate, item.endDate);
             const doctor = item.treatingDoctor || '—';
-            const employeeCode = item.employeeCode || item.employeeNumber || '';
-            const initial = String(name || '؟').trim().charAt(0) || '؟';
             return `
                 <tr>
-                    <td class="sl-serial-cell"><span>${index + 1}</span></td>
-                    <td>
-                        <div class="sl-person-cell">
-                            <span class="sl-person-avatar">${Utils.escapeHTML(initial)}</span>
-                            <span class="sl-person-copy">
-                                <strong>${Utils.escapeHTML(name || 'غير محدد')}</strong>
-                                ${employeeCode ? `<small><i class="fas fa-id-badge"></i>${Utils.escapeHTML(employeeCode)}</small>` : ''}
-                            </span>
-                        </div>
-                    </td>
-                    <td><span class="sl-department-chip"><i class="fas fa-building"></i>${Utils.escapeHTML(department)}</span></td>
-                    <td><span class="sl-date-cell"><i class="far fa-calendar-alt"></i>${start}</span></td>
-                    <td><span class="sl-date-cell"><i class="far fa-calendar-check"></i>${end}</span></td>
-                    <td class="text-center"><span class="sl-days-badge"><strong>${days}</strong><small>يوم</small></span></td>
-                    <td><span class="sl-doctor-cell"><i class="fas fa-user-md"></i>${Utils.escapeHTML(doctor)}</span></td>
-                    <td class="text-center sl-actions-cell">
-                        <div class="sl-row-actions">
-                            <button type="button" class="btn-icon btn-icon-primary" data-action="view-sick-leave" data-id="${Utils.escapeHTML(item.id || '')}" title="عرض تفاصيل الإجازة" aria-label="عرض تفاصيل الإجازة">
+                    <td>${Utils.escapeHTML(name)}</td>
+                    <td>${Utils.escapeHTML(department)}</td>
+                    <td>${start}</td>
+                    <td>${end}</td>
+                    <td>${days}</td>
+                    <td>${Utils.escapeHTML(doctor)}</td>
+                    <td class="text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button type="button" class="btn-icon btn-icon-primary" data-action="view-sick-leave" data-id="${Utils.escapeHTML(item.id || '')}">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button type="button" class="btn-icon btn-icon-warning" data-action="edit-sick-leave" data-id="${Utils.escapeHTML(item.id || '')}" title="تعديل الإجازة" aria-label="تعديل الإجازة">
+                            <button type="button" class="btn-icon btn-icon-warning" data-action="edit-sick-leave" data-id="${Utils.escapeHTML(item.id || '')}">
                                 <i class="fas fa-edit"></i>
                             </button>
                         </div>
@@ -5798,18 +5303,17 @@ const Clinic = {
 
         const tableHtml = leaves.length
             ? `
-                <div class="sl-table-scroll clinic-table-wrapper">
-                    <table class="sl-table">
+                <div class="table-wrapper clinic-table-wrapper" style="overflow-x: auto; overflow-y: auto; max-height: 70vh;">
+                    <table class="data-table">
                         <thead>
                             <tr>
-                                <th class="text-center"><span class="sl-th"><i class="fas fa-hashtag"></i>م</span></th>
-                                <th><span class="sl-th"><i class="fas fa-user-injured"></i>الموظف</span></th>
-                                <th><span class="sl-th"><i class="fas fa-sitemap"></i>القسم / الإدارة</span></th>
-                                <th><span class="sl-th"><i class="fas fa-calendar-plus"></i>بداية الإجازة</span></th>
-                                <th><span class="sl-th"><i class="fas fa-calendar-check"></i>نهاية الإجازة</span></th>
-                                <th class="text-center"><span class="sl-th"><i class="fas fa-hourglass-half"></i>المدة</span></th>
-                                <th><span class="sl-th"><i class="fas fa-user-md"></i>الطبيب المعالج</span></th>
-                                <th class="text-center"><span class="sl-th"><i class="fas fa-cogs"></i>الإجراءات</span></th>
+                                <th>اسم الموظف</th>
+                                <th>القسم / الإدارة</th>
+                                <th>تاريخ البداية</th>
+                                <th>تاريخ النهاية</th>
+                                <th>عدد الأيام</th>
+                                <th>الطبيب المعالج</th>
+                                <th class="text-center">الإجراءات</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -5818,70 +5322,37 @@ const Clinic = {
                     </table>
                 </div>
             `
-            : `
-                <div class="sl-empty-state">
-                    <span class="sl-empty-icon"><i class="fas fa-file-medical-alt"></i></span>
-                    <h3>${activeFilterCount ? 'لا توجد نتائج مطابقة' : 'لا توجد إجازات مرضية مسجلة'}</h3>
-                    <p>${activeFilterCount ? 'جرّب تعديل كلمات البحث أو مسح أحد الفلاتر.' : 'ستظهر سجلات الإجازات المرضية هنا بعد إضافتها.'}</p>
-                    ${activeFilterCount ? '<button type="button" id="sick-leave-empty-reset" class="sl-reset-inline"><i class="fas fa-undo-alt"></i>مسح الفلاتر</button>' : ''}
-                </div>`;
+            : this.renderEmptyState('لا توجد إجازات مرضية مسجلة.');
 
         panel.innerHTML = `
-            <style>
-                #clinic-sick-leave-root{--sl-navy:#12365f;--sl-navy-deep:#0b2848;--sl-teal:#0f8b83;--sl-orange:#f59e0b;--sl-ink:#183047;--sl-muted:#64748b;--sl-line:#dbe7ef;--sl-pale:#f3f8fb;font-family:inherit;color:var(--sl-ink)}
-                #clinic-sick-leave-root *{box-sizing:border-box}
-                .sl-hero{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:19px 22px;margin-bottom:14px;border-radius:16px;background:linear-gradient(128deg,var(--sl-navy-deep),var(--sl-navy) 62%,#176b73);color:#fff;box-shadow:0 9px 26px rgba(11,40,72,.19)}
-                .sl-hero:after{content:"";position:absolute;width:210px;height:210px;left:-70px;top:-115px;border:28px solid rgba(255,255,255,.06);border-radius:50%;pointer-events:none}
-                .sl-hero-title{position:relative;z-index:1;display:flex;align-items:center;gap:13px}
-                .sl-hero-icon{width:48px;height:48px;border:1px solid rgba(255,255,255,.24);border-radius:14px;background:rgba(255,255,255,.13);display:grid;place-items:center;font-size:21px;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
-                .sl-hero h2{margin:0;font-size:1.12rem;font-weight:850;letter-spacing:.01em}.sl-hero p{margin:4px 0 0;font-size:.76rem;color:#d7eaf3}
-                .sl-hero-actions{position:relative;z-index:1;display:flex;align-items:center;gap:7px;flex-wrap:wrap}.sl-action-btn{border:1px solid rgba(255,255,255,.26);border-radius:9px;padding:8px 12px;font-size:.76rem;font-weight:750;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:transform .18s ease,background .18s ease,box-shadow .18s ease}.sl-action-btn:hover{transform:translateY(-1px)}
-                .sl-action-ghost{background:rgba(255,255,255,.11);color:#fff}.sl-action-ghost:hover{background:rgba(255,255,255,.2)}.sl-action-add{background:#fff;color:var(--sl-navy-deep);border-color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.13)}
-                .sl-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}.sl-kpi{display:flex;align-items:center;gap:11px;padding:12px 14px;background:#fff;border:1px solid var(--sl-line);border-radius:12px;box-shadow:0 3px 12px rgba(15,46,72,.045)}.sl-kpi-icon{width:38px;height:38px;border-radius:10px;display:grid;place-items:center}.sl-kpi:nth-child(1) .sl-kpi-icon{background:#e0f2fe;color:#0369a1}.sl-kpi:nth-child(2) .sl-kpi-icon{background:#ccfbf1;color:#0f766e}.sl-kpi:nth-child(3) .sl-kpi-icon{background:#fff7ed;color:#c2410c}.sl-kpi:nth-child(4) .sl-kpi-icon{background:#f1f5f9;color:#475569}.sl-kpi small{display:block;color:var(--sl-muted);font-size:.68rem;font-weight:650}.sl-kpi strong{display:block;margin-top:2px;color:var(--sl-ink);font-size:1.05rem;font-weight:850}
-                .sl-filter-shell{padding:14px 16px;margin-bottom:14px;border:1px solid #b9dbe2;border-radius:14px;background:linear-gradient(180deg,#f8fcfd,#f1f8fa)}.sl-filter-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}.sl-filter-title{display:flex;align-items:center;gap:8px;font-size:.82rem;font-weight:800;color:var(--sl-navy)}.sl-filter-count{padding:2px 8px;border-radius:999px;background:#d9f4f1;color:#0f766e;font-size:.66rem}.sl-clear-btn{border:1px solid #cbdce3;border-radius:8px;background:#fff;color:#536b7c;padding:6px 10px;font-size:.72rem;font-weight:700;cursor:pointer}.sl-clear-btn:disabled{opacity:.42;cursor:not-allowed}.sl-filter-grid{display:grid;grid-template-columns:minmax(220px,1.6fr) repeat(3,minmax(150px,1fr));gap:10px}.sl-field label{display:block;margin-bottom:5px;color:#536b7c;font-size:.68rem;font-weight:750}.sl-field label i{width:17px;color:var(--sl-teal)}.sl-input-wrap{position:relative}.sl-input-wrap>i{position:absolute;right:11px;top:50%;transform:translateY(-50%);color:#7b93a4;font-size:.76rem;pointer-events:none}.sl-filter-control{width:100%;min-height:39px;padding:8px 11px;border:1.5px solid #c9dce4;border-radius:9px;background:#fff;color:var(--sl-ink);font:inherit;font-size:.78rem;outline:none;transition:border-color .18s,box-shadow .18s}.sl-input-wrap .sl-filter-control{padding-right:34px}.sl-filter-control:focus{border-color:var(--sl-teal);box-shadow:0 0 0 3px rgba(15,139,131,.11)}
-                .sl-table-card{overflow:hidden;border:1px solid var(--sl-line);border-radius:14px;background:#fff;box-shadow:0 5px 20px rgba(15,46,72,.06)}.sl-table-caption{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 15px;border-bottom:1px solid var(--sl-line);background:#fff}.sl-table-caption strong{font-size:.84rem;color:var(--sl-navy)}.sl-table-caption span{font-size:.7rem;color:var(--sl-muted)}.sl-result-pill{padding:4px 9px;border:1px solid #bce4df;border-radius:999px;background:#effcf9!important;color:#0f766e!important;font-weight:750}.sl-table-scroll{overflow:auto;max-height:68vh}.sl-table{width:100%;min-width:1040px;border-collapse:separate;border-spacing:0}.sl-table thead{position:sticky;top:0;z-index:4}.sl-table th{padding:12px 11px;background:linear-gradient(180deg,#163f6c,#11355e);color:#fff;border-left:1px solid rgba(255,255,255,.1);font-size:.72rem;font-weight:780;white-space:nowrap;text-align:right}.sl-table th:first-child{width:54px}.sl-table th:last-child{width:108px}.sl-th{display:inline-flex;align-items:center;gap:6px}.sl-th i{color:#6ee7dc;font-size:.71rem}.sl-table td{padding:11px;border-bottom:1px solid #e8eff4;color:#344b5f;font-size:.78rem;vertical-align:middle}.sl-table tbody tr:nth-child(even){background:#f8fbfd}.sl-table tbody tr:hover{background:#eef8f8}.sl-table tbody tr:last-child td{border-bottom:0}.sl-serial-cell{text-align:center}.sl-serial-cell span{display:inline-grid;place-items:center;width:27px;height:27px;border-radius:8px;background:#e8f1f7;color:var(--sl-navy);font-weight:850}.sl-person-cell{display:flex;align-items:center;gap:9px}.sl-person-avatar{flex:0 0 auto;width:34px;height:34px;border-radius:10px;background:linear-gradient(145deg,#d7edf4,#c7eee9);color:var(--sl-navy);display:grid;place-items:center;font-size:.85rem;font-weight:900}.sl-person-copy strong{display:block;color:#183047;font-size:.8rem}.sl-person-copy small{display:flex;align-items:center;gap:4px;margin-top:3px;color:#7890a1;font-size:.65rem}.sl-department-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:7px;background:#edf5f8;color:#34546a;font-weight:650}.sl-department-chip i{color:#0f8b83}.sl-date-cell,.sl-doctor-cell{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}.sl-date-cell i{color:#7895a8}.sl-doctor-cell i{color:#0f8b83}.sl-days-badge{display:inline-flex;align-items:baseline;justify-content:center;gap:3px;min-width:58px;padding:5px 8px;border:1px solid #fed7aa;border-radius:999px;background:#fff7ed;color:#9a3412}.sl-days-badge strong{font-size:.84rem}.sl-days-badge small{font-size:.62rem}.sl-row-actions{display:flex;align-items:center;justify-content:center;gap:6px}.sl-actions-cell .btn-icon{width:32px;height:32px;border-radius:8px;box-shadow:none}.sl-empty-state{text-align:center;padding:54px 20px;color:var(--sl-muted)}.sl-empty-icon{display:grid;place-items:center;width:62px;height:62px;margin:0 auto 12px;border-radius:18px;background:#eaf4f8;color:var(--sl-teal);font-size:25px}.sl-empty-state h3{margin:0 0 5px;color:var(--sl-navy);font-size:.98rem}.sl-empty-state p{margin:0;font-size:.76rem}.sl-reset-inline{margin-top:14px;padding:7px 12px;border:1px solid #b9dbe2;border-radius:8px;background:#fff;color:var(--sl-teal);font-weight:750;cursor:pointer}
-                @media(max-width:980px){.sl-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.sl-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-                @media(max-width:620px){.sl-hero{padding:16px}.sl-hero-actions{width:100%}.sl-action-btn{flex:1;justify-content:center}.sl-kpis,.sl-filter-grid{grid-template-columns:1fr}.sl-kpi{padding:10px 12px}.sl-filter-shell{padding:12px}.sl-table-caption{align-items:flex-start;flex-direction:column}}
-                @media(prefers-reduced-motion:reduce){.sl-action-btn,.sl-filter-control{transition:none}}
-            </style>
-            <div id="clinic-sick-leave-root">
-                <section class="sl-hero" aria-labelledby="sick-leave-title">
-                    <div class="sl-hero-title">
-                        <span class="sl-hero-icon"><i class="fas fa-notes-medical"></i></span>
-                        <div>
-                            <h2 id="sick-leave-title">سجل الإجازات المرضية</h2>
-                            <p>متابعة دقيقة للفترات المرضية والجهات والأطباء المعالجين</p>
-                        </div>
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div class="flex flex-wrap items-center gap-2">
+                    <div class="relative">
+                        <input type="text" id="sick-leave-search" class="form-input pr-10" placeholder="بحث بالاسم أو القسم" value="${Utils.escapeHTML(filters.search || '')}">
+                        <i class="fas fa-search absolute top-3 right-3 text-gray-400"></i>
                     </div>
-                    <div class="sl-hero-actions">
-                        <button type="button" class="sl-action-btn sl-action-ghost" id="sick-leave-export-pdf-btn"><i class="fas fa-file-pdf"></i>PDF</button>
-                        <button type="button" class="sl-action-btn sl-action-ghost" id="sick-leave-export-excel-btn"><i class="fas fa-file-excel"></i>Excel</button>
-                        <button type="button" class="sl-action-btn sl-action-add" id="sick-leave-add-btn"><i class="fas fa-plus"></i>إضافة إجازة</button>
-                    </div>
-                </section>
-                <section class="sl-kpis" aria-label="ملخص الإجازات المرضية">
-                    <div class="sl-kpi"><span class="sl-kpi-icon"><i class="fas fa-file-medical"></i></span><div><small>السجلات المعروضة</small><strong>${leaves.length}</strong></div></div>
-                    <div class="sl-kpi"><span class="sl-kpi-icon"><i class="fas fa-calendar-day"></i></span><div><small>إجمالي أيام الإجازات</small><strong>${totalDays}</strong></div></div>
-                    <div class="sl-kpi"><span class="sl-kpi-icon"><i class="fas fa-chart-line"></i></span><div><small>متوسط مدة الإجازة</small><strong>${averageDays} يوم</strong></div></div>
-                    <div class="sl-kpi"><span class="sl-kpi-icon"><i class="fas fa-building"></i></span><div><small>الإدارات الظاهرة</small><strong>${filteredDepartments}</strong></div></div>
-                </section>
-                <section class="sl-filter-shell" aria-label="فلاتر الإجازات المرضية">
-                    <div class="sl-filter-head">
-                        <div class="sl-filter-title"><i class="fas fa-sliders-h"></i>فلترة السجل <span class="sl-filter-count">${leaves.length} من ${allLeaves.length}</span></div>
-                        <button type="button" id="sick-leave-reset-filters" class="sl-clear-btn" ${activeFilterCount ? '' : 'disabled'}><i class="fas fa-undo-alt ml-1"></i>مسح الفلاتر${activeFilterCount ? ` (${activeFilterCount})` : ''}</button>
-                    </div>
-                    <div class="sl-filter-grid">
-                        <div class="sl-field"><label for="sick-leave-search"><i class="fas fa-search"></i>بحث شامل</label><div class="sl-input-wrap"><i class="fas fa-search"></i><input type="search" id="sick-leave-search" class="sl-filter-control" placeholder="الاسم، الكود، الإدارة، الطبيب أو السبب..." value="${Utils.escapeHTML(filters.search || '')}" autocomplete="off"></div></div>
-                        <div class="sl-field"><label for="sick-leave-department"><i class="fas fa-sitemap"></i>القسم / الإدارة</label><select id="sick-leave-department" class="sl-filter-control"><option value="">جميع الإدارات</option>${departments.map((department) => `<option value="${Utils.escapeHTML(department)}" ${filters.department === department ? 'selected' : ''}>${Utils.escapeHTML(department)}</option>`).join('')}</select></div>
-                        <div class="sl-field"><label for="sick-leave-date-from"><i class="fas fa-calendar-plus"></i>من تاريخ</label><input type="date" id="sick-leave-date-from" class="sl-filter-control" value="${filters.dateFrom || ''}"></div>
-                        <div class="sl-field"><label for="sick-leave-date-to"><i class="fas fa-calendar-check"></i>إلى تاريخ</label><input type="date" id="sick-leave-date-to" class="sl-filter-control" value="${filters.dateTo || ''}"></div>
-                    </div>
-                </section>
-                <section class="sl-table-card">
-                    <div class="sl-table-caption"><div><strong>بيانات الإجازات المرضية</strong><span> — مرتبة حسب السجلات المتاحة</span></div><span class="sl-result-pill">${leaves.length} سجل</span></div>
-                    ${tableHtml}
-                </section>
+                    <select id="sick-leave-department" class="form-input">
+                        <option value="">جميع الإدارات</option>
+                        ${departments.map((department) => `
+                            <option value="${Utils.escapeHTML(department)}" ${filters.department === department ? 'selected' : ''}>${Utils.escapeHTML(department)}</option>
+                        `).join('')}
+                    </select>
+                    <input type="date" id="sick-leave-date-from" class="form-input" value="${filters.dateFrom || ''}" title="من تاريخ">
+                    <input type="date" id="sick-leave-date-to" class="form-input" value="${filters.dateTo || ''}" title="إلى تاريخ">
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" class="btn-secondary" id="sick-leave-export-pdf-btn">
+                        <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
+                    </button>
+                    <button type="button" class="btn-success" id="sick-leave-export-excel-btn">
+                        <i class="fas fa-file-excel ml-2"></i>تصدير Excel
+                    </button>
+                    <button type="button" class="btn-primary" id="sick-leave-add-btn">
+                        <i class="fas fa-plus ml-2"></i>إضافة جديد
+                    </button>
+                </div>
             </div>
+            ${tableHtml}
         `;
         this.applyModuleI18n(panel);
 
@@ -5904,29 +5375,11 @@ const Clinic = {
         const addBtn = panel.querySelector('#sick-leave-add-btn');
         const exportPdfBtn = panel.querySelector('#sick-leave-export-pdf-btn');
         const exportExcelBtn = panel.querySelector('#sick-leave-export-excel-btn');
-        const resetFiltersBtn = panel.querySelector('#sick-leave-reset-filters');
-        const emptyResetBtn = panel.querySelector('#sick-leave-empty-reset');
-
-        const resetFilters = () => {
-            this.state.filters.sickLeave = { search: '', department: '', dateFrom: '', dateTo: '' };
-            this.renderSickLeaveTab();
-        };
 
         if (searchInput) {
             searchInput.addEventListener('input', (event) => {
-                const value = event.target.value;
-                clearTimeout(this._sickLeaveSearchTimer);
-                this._sickLeaveSearchTimer = setTimeout(() => {
-                    this.state.filters.sickLeave.search = value.trim();
-                    this.renderSickLeaveTab();
-                    requestAnimationFrame(() => {
-                        const nextSearchInput = panel.querySelector('#sick-leave-search');
-                        if (!nextSearchInput) return;
-                        nextSearchInput.focus({ preventScroll: true });
-                        const caret = nextSearchInput.value.length;
-                        nextSearchInput.setSelectionRange?.(caret, caret);
-                    });
-                }, 180);
+                this.state.filters.sickLeave.search = event.target.value.trim();
+                this.renderSickLeaveTab();
             });
         }
 
@@ -5954,8 +5407,6 @@ const Clinic = {
         addBtn?.addEventListener('click', () => this.showSickLeaveForm());
         exportPdfBtn?.addEventListener('click', () => this.exportSickLeaveToPDF());
         exportExcelBtn?.addEventListener('click', () => this.exportSickLeaveToExcel());
-        resetFiltersBtn?.addEventListener('click', resetFilters);
-        emptyResetBtn?.addEventListener('click', resetFilters);
 
         panel.querySelectorAll('[data-action="view-sick-leave"]').forEach((btn) => {
             btn.addEventListener('click', () => this.viewSickLeaveRecord(btn.getAttribute('data-id')));
@@ -6039,7 +5490,6 @@ const Clinic = {
                 </div>
                 <div class="modal-footer form-actions-centered">
                     <button type="button" class="btn-secondary modal-close-btn">إغلاق</button>
-                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('clinic.sickLeave') : ''}
                     <button type="button" class="btn-secondary modal-print-btn">
                         <i class="fas fa-print ml-2"></i>طباعة
                     </button>
@@ -6051,9 +5501,6 @@ const Clinic = {
         `;
 
         document.body.appendChild(modal);
-        if (typeof EmailDispatch !== 'undefined') {
-            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'clinic.sickLeave', record: record, recordId: record.id || '' });
-        }
         const closeModal = () => modal.remove();
 
         modal.querySelectorAll('.modal-close, .modal-close-btn').forEach((btn) => btn.addEventListener('click', closeModal));
@@ -7227,16 +6674,16 @@ const Clinic = {
                         ${['30','90','180','365','0'].map((v,i) => {
                             const labels=['30 يوم','3 أشهر','6 أشهر','سنة','الكل'];
                             const active=(this._clinicPeriod||'0')===v;
-                            return `<button type="button" class="clinic-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#134e4a':'#fff'};">${labels[i]}</button>`;
+                            return `<button class="clinic-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#134e4a':'#fff'};">${labels[i]}</button>`;
                         }).join('')}
                     </div>
-                    <button type="button" id="clinic-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
+                    <button id="clinic-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
                         <i class="fas fa-sliders-h"></i><span>فلاتر</span><span id="clinic-filter-badge" style="display:none;background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-right:2px;">●</span>
                     </button>
-                    <button type="button" id="clinic-export-pdf-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.25);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(0,0,0,0.4)'" onmouseout="this.style.background='rgba(0,0,0,0.25)'">
+                    <button id="clinic-export-pdf-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.25);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(0,0,0,0.4)'" onmouseout="this.style.background='rgba(0,0,0,0.25)'">
                         <i class="fas fa-file-pdf"></i><span>PDF</span>
                     </button>
-                    <button type="button" id="clinic-analytics-refresh" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" title="تحديث">
+                    <button id="clinic-analytics-refresh" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" title="تحديث">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                 </div>
@@ -7250,13 +6697,12 @@ const Clinic = {
                         <span style="font-weight:700;font-size:0.9rem;color:#134e4a;">الفلاتر التفاعلية</span>
                         <span id="clinic-filter-count" style="background:#ccfbf1;color:#0f766e;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
                     </div>
-                    <button type="button" id="clinic-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #99f6e4;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;" onmouseover="this.style.background='#f0fdfa';this.style.color='#0d9488'" onmouseout="this.style.background='#fff';this.style.color='#64748b'">
+                    <button id="clinic-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #99f6e4;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;" onmouseover="this.style.background='#f0fdfa';this.style.color='#0d9488'" onmouseout="this.style.background='#fff';this.style.color='#64748b'">
                         <i class="fas fa-times ml-1"></i>مسح الكل
                     </button>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
                     ${[
-                        {id:'clinic-af-factory', icon:'fas fa-industry',       color:'#ec4899', label:'المصنع'},
                         {id:'clinic-af-ptype',  icon:'fas fa-id-badge',       color:'#6366f1', label:'نوع الشخص'},
                         {id:'clinic-af-dept',   icon:'fas fa-building',        color:'#0d9488', label:'الإدارة'},
                         {id:'clinic-af-loc',    icon:'fas fa-map-marker-alt',  color:'#f59e0b', label:'الموقع'},
@@ -7279,57 +6725,31 @@ const Clinic = {
                 <div style="text-align:center;padding:16px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
             </div>
 
-            <!-- ══ Row 1: الزيارات حسب النوع + الإجازات المرضية ══ -->
+            <!-- ══ Row 1: الزيارات حسب النوع + الاتجاه الشهري ══ -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-user-circle" style="color:#3b82f6;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">الزيارات حسب نوع الشخص</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:240px;">
+                    <div style="padding:12px;position:relative;height:220px;">
                         <canvas id="clinic-chart-ptype"></canvas>
                         <div id="clinic-chart-ptype-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-notes-medical" style="color:#f97316;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">الإجازات المرضية حسب الحالة</span>
+                        <i class="fas fa-chart-area" style="color:#8b5cf6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">الاتجاه الزمني للزيارات (آخر 12 شهر)</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:240px;">
-                        <canvas id="clinic-chart-sl-status"></canvas>
-                        <div id="clinic-chart-sl-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    <div style="padding:12px;position:relative;height:220px;">
+                        <canvas id="clinic-chart-trend"></canvas>
+                        <div id="clinic-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
             </div>
 
-            <!-- ══ الاتجاه الزمني ══ -->
-            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
-                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                    <i class="fas fa-chart-area" style="color:#8b5cf6;"></i>
-                    <span style="font-weight:700;font-size:0.88rem;">الاتجاه الزمني للزيارات (آخر 12 شهر)</span>
-                </div>
-                <div style="padding:12px;position:relative;height:260px;">
-                    <canvas id="clinic-chart-trend"></canvas>
-                    <div id="clinic-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
-                </div>
-            </div>
-
-            <!-- ══ Row: تحليل المصانع الرئيسية ══ -->
-            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
-                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-industry" style="color:#0284c7;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">توزيع ونسب الزيارات حسب المصانع الرئيسية</span>
-                    </div>
-                    <span style="font-size:0.72rem;color:#64748b;">انقر على أي مصنع لتصفية لوحة التحكم تلقائياً</span>
-                </div>
-                <div id="clinic-factories-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;padding:16px;background:#f8fafc;">
-                    <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">جارٍ التحميل…</div>
-                </div>
-            </div>
-
-            <!-- ══ Row 4: سبب الزيارة + الإصابات حسب النوع ══ -->
+            <!-- ══ Row 2: سبب الزيارة + الإدارة ══ -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
@@ -7343,62 +6763,76 @@ const Clinic = {
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-building" style="color:#6366f1;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">حسب الإدارة (أعلى 8)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="clinic-chart-dept"></canvas>
+                        <div id="clinic-chart-dept-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ Row 3: الموقع + الإجازات المرضية ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-map-marker-alt" style="color:#f59e0b;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">حسب الموقع (أعلى 8)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="clinic-chart-loc"></canvas>
+                        <div id="clinic-chart-loc-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-notes-medical" style="color:#f97316;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">الإجازات المرضية حسب الحالة</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="clinic-chart-sl-status"></canvas>
+                        <div id="clinic-chart-sl-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ Row 4: الإصابات حسب النوع + الأدوية حسب الحالة ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-user-injured" style="color:#ef4444;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">الإصابات حسب النوع</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:280px;">
+                    <div style="padding:12px;position:relative;height:260px;">
                         <canvas id="clinic-chart-inj-type"></canvas>
                         <div id="clinic-chart-inj-type-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد إصابات</div>
                     </div>
                 </div>
-            </div>
-
-            <!-- ══ Row 5: الموقع + الإدارات ══ -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
-                <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-map-marker-alt" style="color:#3b82f6;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">المواقع الأكثر تردداً (أعلى 10)</span>
-                    </div>
-                    <div id="clinic-locs-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
-                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
-                    </div>
-                </div>
-                <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-building" style="color:#6366f1;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">تفاصيل توزيع الزيارات حسب الإدارات</span>
-                    </div>
-                    <div id="clinic-depts-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
-                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ══ الأدوية + المقاولين ══ -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-pills" style="color:#10b981;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">الأدوية حسب الحالة</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:300px;">
+                    <div style="padding:12px;position:relative;height:260px;">
                         <canvas id="clinic-chart-med-status"></canvas>
                         <div id="clinic-chart-med-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات أدوية</div>
                     </div>
                 </div>
-                <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <i class="fas fa-hard-hat" style="color:#0891b2;"></i>
-                            <span style="font-weight:700;font-size:0.88rem;">أكثر المقاولين تردداً على العيادة (أعلى 8)</span>
-                        </div>
-                        <span id="clinic-chart-contractor-count" style="background:#ecfeff;color:#0e7490;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
+            </div>
+
+            <!-- ══ أكثر المقاولين تردداً على العيادة (أعلى 8) ══ -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-hard-hat" style="color:#0891b2;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">أكثر المقاولين تردداً على العيادة (أعلى 8)</span>
                     </div>
-                    <div style="padding:12px;position:relative;height:300px;">
-                        <canvas id="clinic-chart-contractor"></canvas>
-                        <div id="clinic-chart-contractor-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات مقاولين</div>
-                    </div>
+                    <span id="clinic-chart-contractor-count" style="background:#ecfeff;color:#0e7490;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
+                </div>
+                <div style="padding:12px;position:relative;height:300px;">
+                    <canvas id="clinic-chart-contractor"></canvas>
+                    <div id="clinic-chart-contractor-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات مقاولين</div>
                 </div>
             </div>
 
@@ -7566,7 +7000,7 @@ const Clinic = {
         // ── 1. جمع البيانات ──
         try { this.ensureData(); } catch(e) {}
         const period   = parseInt(this._clinicPeriod || '0', 10);
-        const allVisits = this.getActualClinicVisits_(AppState.appData?.clinicVisits);
+        const allVisits = AppState.appData?.clinicVisits       || [];
         const allMeds   = AppState.appData?.clinicMedications  || [];
         const allSL     = AppState.appData?.sickLeave          || [];
         const allInj    = AppState.appData?.injuries           || [];
@@ -7677,124 +7111,12 @@ const Clinic = {
         const reasonMap = this._cGroupBy(filteredVisits, v=>v.reason||v.diagnosis||'غير محدد', 10);
         this._cHBar('clinic-chart-reason', reasonMap.labels, reasonMap.data, 'rgba(13,148,136,0.75)');
 
-        // ── القوائم التفاعلية بدلاً من الرسوم البيانية ──
-        // 1. الموقع (List)
-        const locMap = this._cGroupBy(filteredVisits, v=>v.employeeLocation||v.workArea||'غير محدد', 10);
-        const locsListEl = document.getElementById('clinic-locs-list');
-        if (locsListEl) {
-            if (total === 0 || locMap.labels.length === 0) {
-                locsListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
-            } else {
-                locsListEl.innerHTML = locMap.labels.map((loc, i) => {
-                    const count = locMap.data[i];
-                    const pct = Math.round((count / total) * 100);
-                    return `
-                        <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;cursor:pointer;transition:background 0.2s;padding-left:4px;padding-right:4px;" 
-                             onmouseover="this.style.background='#f0fdfa'" 
-                             onmouseout="this.style.background='transparent'"
-                             onclick="const el = document.getElementById('clinic-af-loc'); if(el){el.value='${Utils.escapeHTML(loc)}'; el.dispatchEvent(new Event('change'));}">
-                            <div style="display:flex;justify-content:space-between;align-items:center;">
-                                <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
-                                    <span style="background:#e0f2fe;color:#0369a1;font-size:0.68rem;padding:2px 8px;border-radius:6px;font-weight:700;white-space:nowrap;flex-shrink:0;">موقع</span>
-                                    <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${Utils.escapeHTML(loc)}">${Utils.escapeHTML(loc)}</span>
-                                </div>
-                                <span style="font-size:0.75rem;font-weight:700;color:#0369a1;flex-shrink:0;margin-right:8px;">${count} زيارة (${pct}%)</span>
-                            </div>
-                            <div style="width:100%;height:6px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
-                                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #38bdf8 0%, #0284c7 100%);border-radius:9999px;"></div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
-        }
-
-        // 2. الإدارة (List)
-        const deptMap = this._cGroupBy(filteredVisits, v=>v.employeeDepartment||v.department||'غير محدد', 10);
-        const deptsListEl = document.getElementById('clinic-depts-list');
-        if (deptsListEl) {
-            if (total === 0 || deptMap.labels.length === 0) {
-                deptsListEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
-            } else {
-                deptsListEl.innerHTML = deptMap.labels.map((dept, i) => {
-                    const count = deptMap.data[i];
-                    const pct = Math.round((count / total) * 100);
-                    return `
-                        <div style="cursor:pointer;padding:4px;border-radius:6px;transition:background 0.2s;" 
-                             onmouseover="this.style.background='#eff6ff'" 
-                             onmouseout="this.style.background='transparent'"
-                             onclick="const el = document.getElementById('clinic-af-dept'); if(el){el.value='${Utils.escapeHTML(dept)}'; el.dispatchEvent(new Event('change'));}">
-                            <div style="display:flex;justify-content:space-between;font-size:0.8rem;font-weight:700;color:#374151;margin-bottom:4px;">
-                                <span>${Utils.escapeHTML(dept)}</span>
-                                <span style="color:#2563eb;">${count} زيارة (${pct}%)</span>
-                            </div>
-                            <div style="width:100%;height:8px;background:#e5e7eb;border-radius:9999px;overflow:hidden;">
-                                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);border-radius:9999px;transition:width 0.5s ease-in-out;"></div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
-        }
-
-        // 3. كروت المصانع الرئيسية (Factory Cards)
-        const factoriesCardsEl = document.getElementById('clinic-factories-cards');
-        if (factoriesCardsEl) {
-            if (total === 0) {
-                factoriesCardsEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">لا توجد بيانات</div>`;
-            } else {
-                // استخراج جميع المصانع المميزة من قائمة الزيارات (الكل) قبل الفلترة
-                const factoriesSet = new Set(visits.map(v => String(v.factoryName || v.factory || '').trim()).filter(f => f && f !== 'غير محدد'));
-                const officialSites = Array.from(factoriesSet).sort();
-                if (officialSites.length === 0) {
-                    factoriesCardsEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">لا توجد مصانع</div>`;
-                } else {
-                    factoriesCardsEl.innerHTML = officialSites.map((siteName, index) => {
-                        const siteVisits = filteredVisits.filter(v => (v.factoryName || v.factory || '').trim() === siteName);
-                        const siteTotal = siteVisits.length;
-                        // Calculate percentage against the total filtered visits (if any)
-                        const sitePct = total > 0 ? Math.round((siteTotal / total) * 100) : 0;
-                        
-                        const colors = [
-                            { primary: '#0284c7', light: '#e0f2fe', progress: 'linear-gradient(90deg, #38bdf8 0%, #0284c7 100%)' },
-                            { primary: '#059669', light: '#ecfdf5', progress: 'linear-gradient(90deg, #34d399 0%, #059669 100%)' },
-                            { primary: '#7c3aed', light: '#f5f3ff', progress: 'linear-gradient(90deg, #a78bfa 0%, #7c3aed 100%)' },
-                            { primary: '#ea580c', light: '#fff7ed', progress: 'linear-gradient(90deg, #fb923c 0%, #ea580c 100%)' },
-                            { primary: '#db2777', light: '#fdf2f8', progress: 'linear-gradient(90deg, #f472b6 0%, #db2777 100%)' }
-                        ];
-                        const theme = colors[index % colors.length];
-                        
-                        return `
-                            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);transition:all .2s;cursor:pointer;" 
-                                 onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.08)';this.style.borderColor='${theme.primary}'" 
-                                 onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)';this.style.borderColor='#e2e8f0'"
-                                 onclick="const el = document.getElementById('clinic-af-factory'); if(el){el.value='${Utils.escapeHTML(siteName)}'; el.dispatchEvent(new Event('change'));}">
-                                
-                                <div style="display:flex;justify-content:space-between;align-items:center;">
-                                    <div style="display:flex;align-items:center;gap:8px;">
-                                        <div style="width:36px;height:36px;background:${theme.light};border-radius:8px;display:flex;align-items:center;justify-content:center;color:${theme.primary};">
-                                            <i class="fas fa-industry" style="font-size:16px;"></i>
-                                        </div>
-                                        <span style="font-size:0.9rem;font-weight:800;color:#1e293b;">${Utils.escapeHTML(siteName)}</span>
-                                    </div>
-                                    <span style="font-size:1.15rem;font-weight:900;color:${theme.primary};">${sitePct}%</span>
-                                </div>
-                                
-                                <div style="width:100%;height:8px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
-                                    <div style="width:${sitePct}%;height:100%;background:${theme.progress};border-radius:9999px;"></div>
-                                </div>
-                                
-                                <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;color:#64748b;margin-top:2px;">
-                                    <span>إجمالي الزيارات: <strong style="color:#334155;">${siteTotal}</strong></span>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                }
-            }
-        }
+        // الإدارة (HBar)
+        const deptMap = this._cGroupBy(filteredVisits, v=>v.employeeDepartment||v.department||'غير محدد', 8);
+        this._cHBar('clinic-chart-dept', deptMap.labels, deptMap.data, 'rgba(99,102,241,0.75)');
 
         // ✅ أكثر المقاولين تردداً (HBar) — فقط زيارات المقاولين/الخارجي
+        // نأخذ الزيارات التي لها contractorName/externalName (من ClinicContractorVisits)
         const contractorVisits = filteredVisits.filter(v => {
             const cName = String(v.contractorName || '').trim();
             const eName = String(v.externalName || '').trim();
@@ -7813,6 +7135,10 @@ const Clinic = {
                 : '';
         }
         this._cHBar('clinic-chart-contractor', contractorMap.labels, contractorMap.data, 'rgba(8,145,178,0.75)');
+
+        // الموقع (HBar)
+        const locMap = this._cGroupBy(filteredVisits, v=>v.employeeLocation||v.workArea||'غير محدد', 8);
+        this._cHBar('clinic-chart-loc', locMap.labels, locMap.data, 'rgba(245,158,11,0.75)');
 
         // الإجازات المرضية حسب الحالة (Doughnut)
         const slStatusMap = this._cGroupBy(sl, l=>l.status||'قيد المعالجة');
@@ -7981,16 +7307,14 @@ const Clinic = {
     // ── تصفية الزيارات بالفلاتر التفاعلية ──
     _clinicApplyFilters(visits) {
         const get = id => { const el=document.getElementById(id); return el?el.value.trim():''; };
-        const fFactory= get('clinic-af-factory');
         const fPtype  = get('clinic-af-ptype');
         const fDept   = get('clinic-af-dept');
         const fLoc    = get('clinic-af-loc');
         const fReason = get('clinic-af-reason');
-        const hasAny  = [fFactory,fPtype,fDept,fLoc,fReason].some(v=>v!=='');
+        const hasAny  = [fPtype,fDept,fLoc,fReason].some(v=>v!=='');
         const badge   = document.getElementById('clinic-filter-badge');
         if (badge) badge.style.display = hasAny ? 'inline' : 'none';
         return visits.filter(v => {
-            if (fFactory && String(v.factoryName||v.factory||'').trim() !== fFactory) return false;
             if (fPtype) {
                 const lbl = String(v.personType||'').toLowerCase()==='contractor'?'contractor':'employee';
                 if (lbl !== fPtype) return false;
@@ -8013,7 +7337,6 @@ const Clinic = {
         // نوع الشخص ثابت
         const ptEl = document.getElementById('clinic-af-ptype');
         if (ptEl) { const cur=ptEl.value; ptEl.innerHTML=`<option value="">الكل</option><option value="employee"${cur==='employee'?' selected':''}>موظف</option><option value="contractor"${cur==='contractor'?' selected':''}>مقاول</option>`; }
-        fill('clinic-af-factory', unique(v=>String(v.factoryName||v.factory||'').trim()));
         fill('clinic-af-dept',   unique(v=>String(v.employeeDepartment||v.department||'').trim()));
         fill('clinic-af-loc',    unique(v=>String(v.employeeLocation||v.workArea||'').trim()));
         fill('clinic-af-reason', unique(v=>String(v.reason||v.diagnosis||'').trim()));
@@ -8157,7 +7480,7 @@ const Clinic = {
         const resetBtn = document.getElementById('clinic-filter-reset-btn');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
-                ['clinic-af-factory','clinic-af-ptype','clinic-af-dept','clinic-af-loc','clinic-af-reason'].forEach(id=>{
+                ['clinic-af-ptype','clinic-af-dept','clinic-af-loc','clinic-af-reason'].forEach(id=>{
                     const el=document.getElementById(id); if(el) el.value='';
                 });
                 this.updateClinicAnalyticsDashboard();
@@ -8165,7 +7488,7 @@ const Clinic = {
         }
 
         // قوائم الفلاتر
-        ['clinic-af-factory','clinic-af-ptype','clinic-af-dept','clinic-af-loc','clinic-af-reason'].forEach(id => {
+        ['clinic-af-ptype','clinic-af-dept','clinic-af-loc','clinic-af-reason'].forEach(id => {
             const el=document.getElementById(id);
             if(el) el.addEventListener('change',()=>this.updateClinicAnalyticsDashboard());
         });
@@ -8768,16 +8091,6 @@ const Clinic = {
             this.renderVisitsTabContent(panel);
 
             if (shouldLoadData && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                const localCount = Array.isArray(AppState.appData?.clinicVisits)
-                    ? AppState.appData.clinicVisits.length
-                    : 0;
-                if (localCount === 0 && !panel.querySelector('.clinic-visits-sync-banner')) {
-                    const banner = document.createElement('div');
-                    banner.className = 'clinic-visits-sync-banner';
-                    banner.setAttribute('role', 'status');
-                    banner.innerHTML = '<i class="fas fa-sync fa-spin" aria-hidden="true"></i><span>جاري مزامنة سجل التردد من الخادم…</span>';
-                    panel.insertBefore(banner, panel.firstChild);
-                }
                 this.loadVisitsDataFromBackend()
                     .then(() => {
                         const p = document.querySelector('.clinic-tab-panel[data-tab-panel="visits"]');
@@ -8823,28 +8136,11 @@ const Clinic = {
         const server = Array.isArray(serverVisits) ? serverVisits : [];
         const local = Array.isArray(previousLocal) ? previousLocal : [];
         const seen = new Set();
-        // PERF: فهارس O(1) بدل server.some لكل سجل محلي (كان O(n×m) ويجمّد مع آلاف الزيارات)
-        const empCodeByDate = new Set();
-        const empNameByDate = new Set();
-        const contractorByDate = new Set();
 
         // سجل المعرفات من الخادم
         server.forEach((v) => {
             if (v && v.id != null && String(v.id).trim() !== '') {
                 seen.add(String(v.id));
-            }
-            if (!v) return;
-            const vd = String(v.visitDate || '');
-            const pType = v.personType || (this.isContractorVisit_(v) ? 'contractor' : 'employee');
-            if (pType === 'employee') {
-                const code = String(v.employeeCode || v.employeeNumber || '').trim();
-                if (code) empCodeByDate.add(code + '|' + vd);
-                const name = Clinic.normalizeArabicText(v.employeeName);
-                if (name) empNameByDate.add(name + '|' + vd);
-            } else {
-                const cName = Clinic.normalizeArabicText(v.contractorName || v.externalName);
-                const wName = Clinic.normalizeArabicText(v.contractorWorkerName);
-                contractorByDate.add(cName + '|' + wName + '|' + vd);
             }
         });
 
@@ -8855,22 +8151,29 @@ const Clinic = {
 
             // ✅ إذا لم يكن السجل المحلي موجوداً في الخادم، نحتفظ به (سجل لم يتم مزامنته بعد أو كاش قديم)
             if (!seen.has(id)) {
-                const vd = String(v.visitDate || '');
-                const pType = v.personType || (this.isContractorVisit_(v) ? 'contractor' : 'employee');
-                let isDuplicate = false;
-                if (pType === 'employee') {
-                    const vCode = String(v.employeeCode || v.employeeNumber || '').trim();
-                    if (vCode && empCodeByDate.has(vCode + '|' + vd)) {
-                        isDuplicate = true;
-                    } else {
+                // محاولة البحث عن بديل (نفس الشخص والوقت) لتجنب التكرار إذا تغير الـ ID
+                const isDuplicate = server.some(sv => {
+                    if (sv.personType !== v.personType) return false;
+                    if (sv.visitDate !== v.visitDate) return false;
+                    
+                    if (sv.personType === 'employee') {
+                        const svCode = String(sv.employeeCode || sv.employeeNumber || '').trim();
+                        const vCode = String(v.employeeCode || v.employeeNumber || '').trim();
+                        if (svCode && vCode && svCode === vCode) return true;
+                        
+                        const svName = Clinic.normalizeArabicText(sv.employeeName);
                         const vName = Clinic.normalizeArabicText(v.employeeName);
-                        if (vName && empNameByDate.has(vName + '|' + vd)) isDuplicate = true;
+                        return !!svName && svName === vName;
+                    } else {
+                        // contractor or external
+                        const svCName = Clinic.normalizeArabicText(sv.contractorName || sv.externalName);
+                        const vCName = Clinic.normalizeArabicText(v.contractorName || v.externalName);
+                        const svWName = Clinic.normalizeArabicText(sv.contractorWorkerName);
+                        const vWName = Clinic.normalizeArabicText(v.contractorWorkerName);
+                        
+                        return svCName === vCName && svWName === vWName;
                     }
-                } else {
-                    const vCName = Clinic.normalizeArabicText(v.contractorName || v.externalName);
-                    const vWName = Clinic.normalizeArabicText(v.contractorWorkerName);
-                    if (contractorByDate.has(vCName + '|' + vWName + '|' + vd)) isDuplicate = true;
-                }
+                });
 
                 if (!isDuplicate) {
                     // ✅ المشكلة: السجلات التي تُحذف من الخادم تبقى هنا للأبد بسبب الدمج!
@@ -8881,8 +8184,8 @@ const Clinic = {
                     if (!isNaN(recordTime) && (now - recordTime) < (2 * 60 * 60 * 1000)) { // ساعتين
                         seen.add(id);
                         extras.push(v);
-                    } else if (isNaN(recordTime) && (v._pendingSync || v._localOnly || v._offlineCreated)) {
-                        // بلا تاريخ: احتفظ فقط إن وُجدت علامة مزامنة معلّقة — لا سجلات شبح للأبد
+                    } else if (isNaN(recordTime)) {
+                        // إذا لم يكن هناك تاريخ، نحتفظ به لتجنب فقدان البيانات
                         seen.add(id);
                         extras.push(v);
                     }
@@ -8966,75 +8269,13 @@ const Clinic = {
     },
 
     /**
-     * TTL أقصر للمزامنة الحية — مستقل عن shouldFetch (فتح/prefetch + _visitsBackendFetchOk).
-     * يمنع تخطي realtime طوال الجلسة بعد أول جلب ناجح.
-     */
-    shouldRefreshClinicVisitsForRealtime() {
-        if (this._clinicVisitsLoadPromise) return false;
-        if (typeof AppState === 'undefined' || !AppState?.appData) return true;
-        const visits = AppState.appData.clinicVisits;
-        if (!Array.isArray(visits) || visits.length === 0) return true;
-        const lastSync = parseInt(localStorage.getItem('clinic_last_sync') || '0', 10);
-        const REALTIME_TTL_MS = 3 * 60 * 1000;
-        if (!lastSync || isNaN(lastSync)) return true;
-        return (Date.now() - lastSync) >= REALTIME_TTL_MS;
-    },
-
-    /** أولوية عالية لـ getAllClinicVisits فقط عندما المستخدم على العيادة/اللوحة */
-    isClinicVisitsHighPriorityContext() {
-        try {
-            const section = (typeof AppState !== 'undefined' && AppState.currentSection)
-                ? String(AppState.currentSection)
-                : '';
-            return section === 'clinic' || section === 'dashboard';
-        } catch (_e) {
-            return false;
-        }
-    },
-
-    /**
-     * PERF-01: فلاتر جلب سجل التردد — نافذة زمنية + حد أقصى للأحدث
-     * لا يغيّر مسار الدمج/الكاش؛ يقلّل حجم الاستجابة فقط.
-     */
-    getClinicVisitsFetchFilters() {
-        const months = 18;
-        const d = new Date();
-        d.setMonth(d.getMonth() - months);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        return {
-            startDate: `${yyyy}-${mm}-${dd}`,
-            limit: 8000
-        };
-    },
-
-    /**
      * ✅ دالة منفصلة لتحميل بيانات الزيارات من Backend
-     * @param {{ forceRefresh?: boolean }} [opts] — forceRefresh: انتظر الطلب الجاري ثم ابدأ جلباً جديداً (بدون تصفير الـ promise منتصف الطريق)
      */
-    async loadVisitsDataFromBackend(opts = {}) {
-        const forceRefresh = !!(opts && opts.forceRefresh === true);
-
-        // ✅ منع التكرار: انضم للطلب الجاري؛ عند force انتظر اكتماله ثم ابدأ جديداً
-        if (this._clinicVisitsLoadPromise) {
-            if (!forceRefresh) {
-                return this._clinicVisitsLoadPromise;
-            }
-            try {
-                await this._clinicVisitsLoadPromise;
-            } catch (_e) { /* تجاهل — سيُعاد الجلب */ }
-        }
-
-        // بعد الانتظار: إن بدأ طلب آخر انضم إليه بدل طلب متوازٍ
+    async loadVisitsDataFromBackend() {
+        // ✅ منع التكرار: نفس الطلب لا يبدأ أكثر من مرة
         if (this._clinicVisitsLoadPromise) {
             return this._clinicVisitsLoadPromise;
         }
-
-        if (forceRefresh) {
-            this._visitsBackendFetchOk = false;
-        }
-
         const previousLocalVisits = Array.isArray(AppState.appData.clinicVisits)
             ? AppState.appData.clinicVisits.slice()
             : [];
@@ -9048,54 +8289,25 @@ const Clinic = {
             const result = await Utils.promiseWithTimeout(
                 GoogleIntegration.sendRequest({
                     action: 'getAllClinicVisits',
-                    data: {
-                        filters: this.getClinicVisitsFetchFilters(),
-                        __timeoutMs: 120000,
-                        __highPriority: this.isClinicVisitsHighPriorityContext()
-                    }
+                    data: { __timeoutMs: 120000 }
                 }),
                 120000,
                 'انتهت مهلة تحميل بيانات سجل التردد'
             );
 
             if (result && result.success && Array.isArray(result.data)) {
-                // حماية إنتاج: لا تستبدل محلياً غير فارغ بمصفوفة فارغة من الخادم ولا تختم الكاش
-                if (result.data.length === 0 && previousLocalVisits.length > 0) {
-                    Utils.safeWarn(
-                        `⚠️ تجاهل سجل تردد فارغ من الخادم — الإبقاء على ${previousLocalVisits.length} زيارة محلية (لا يُحدَّث clinic_last_sync)`
-                    );
-                    return;
-                }
-
                 // ✅ تطبيع البيانات للتأكد من وجود جميع الحقول المطلوبة
-                // PERF: فهرس مستخدمين O(1) + yield كل 200 سجل — يمنع تجميد الشاشة بعد رجوع getAllClinicVisits
-                const _clinicUsers = AppState.appData.users || [];
-                const _usersByEmail = new Map();
-                const _usersById = new Map();
-                for (let _ui = 0; _ui < _clinicUsers.length; _ui++) {
-                    const u = _clinicUsers[_ui];
-                    if (!u) continue;
-                    const em = (u.email || '').toString().toLowerCase().trim();
-                    const uid = (u.id || '').toString().trim();
-                    if (em) _usersByEmail.set(em, u);
-                    if (uid) _usersById.set(uid, u);
-                }
-                const normalizedVisits = new Array(result.data.length);
-                for (let _vi = 0; _vi < result.data.length; _vi++) {
-                    let visit = result.data[_vi];
-                    if (!visit || typeof visit !== 'object') {
-                        normalizedVisits[_vi] = visit;
-                        if ((_vi + 1) % 200 === 0) {
-                            await new Promise((r) => setTimeout(r, 0));
-                        }
-                        continue;
-                    }
+                const normalizedVisits = result.data.map(visit => {
+                    if (!visit || typeof visit !== 'object') return visit;
                     
-                    // ✅ تحديد شخصية الزيارة بشكل دقيق وتلقائي
-                    if (this.isContractorVisit_(visit)) {
-                        visit.personType = 'contractor';
-                    } else if (!visit.personType) {
-                        visit.personType = 'employee';
+                    // التأكد من وجود personType
+                    if (!visit.personType) {
+                        // محاولة تحديد النوع من الحقول المتوفرة
+                        if (visit.contractorName || visit.contractorWorkerName || visit.externalName) {
+                            visit.personType = 'contractor';
+                        } else {
+                            visit.personType = 'employee';
+                        }
                     }
                     
                     // ✅ التأكد من وجود medications كـ array (التحقق الشامل)
@@ -9248,9 +8460,13 @@ const Clinic = {
                                 const userIdFromVisit = (visit.userId || '').toString().trim();
                                 
                                 if (emailFromVisit || userIdFromVisit) {
-                                    const dbUser = (emailFromVisit && _usersByEmail.get(emailFromVisit.toLowerCase().trim()))
-                                        || (userIdFromVisit && _usersById.get(userIdFromVisit))
-                                        || null;
+                                    const users = AppState.appData.users || [];
+                                    const dbUser = users.find(u => {
+                                        const userEmail = (u.email || '').toString().toLowerCase().trim();
+                                        const userId = (u.id || '').toString().trim();
+                                        return (emailFromVisit && userEmail === emailFromVisit.toLowerCase().trim()) || 
+                                               (userIdFromVisit && userId === userIdFromVisit);
+                                    });
                                     
                                     if (dbUser) {
                                         const dbUserName = (dbUser.name || dbUser.displayName || '').toString().trim();
@@ -9300,11 +8516,8 @@ const Clinic = {
                         }
                     }
                     
-                    normalizedVisits[_vi] = visit;
-                    if ((_vi + 1) % 200 === 0) {
-                        await new Promise((r) => setTimeout(r, 0));
-                    }
-                }
+                    return visit;
+                });
                 
                 AppState.appData.clinicVisits = this.mergeClinicVisitsWithLocalOnly(
                     normalizedVisits,
@@ -9317,15 +8530,8 @@ const Clinic = {
                     v && v.personType === 'contractor'
                 );
 
-                // ✅ إعادة تطبيع خفيفة بعد التحميل — idle لتجنّب تجميد UI بعد normalize الضخم
-                const runEnsure = () => {
-                    try { this.ensureData(); } catch (_eEns) { /* ignore */ }
-                };
-                if (typeof requestIdleCallback === 'function') {
-                    requestIdleCallback(runEnsure, { timeout: 2500 });
-                } else {
-                    setTimeout(runEnsure, 0);
-                }
+                // ✅ إعادة تطبيع البيانات بعد التحميل
+                this.ensureData();
                 
                 // حفظ البيانات محلياً فوراً
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
@@ -9336,27 +8542,29 @@ const Clinic = {
                 localStorage.setItem('clinic_last_sync', Date.now().toString());
                 this._visitsBackendFetchOk = true;
                 
-                // إحصاءات ثقيلة — debug فقط (لا تُبطئ المسار الإنتاجي بعد كل جلب)
+                // ✅ إحصاءات البيانات المحملة (للتأكد من عدم فقدان البيانات)
+                const visitsWithMeds = AppState.appData.clinicVisits.filter(v => {
+                    const meds = this.normalizeVisitMedications(v.medications);
+                    if (meds && meds.length > 0) return true;
+                    if (v.medicationsDispensed) {
+                        const medsFromText = this.normalizeVisitMedications(v.medicationsDispensed);
+                        return medsFromText && medsFromText.length > 0;
+                    }
+                    return false;
+                });
+                
+                const mergedVisits = AppState.appData.clinicVisits;
+                const totalMedsCount = mergedVisits.reduce((sum, v) => {
+                    const meds = this.normalizeVisitMedications(v.medications);
+                    if (meds && meds.length > 0) return sum + meds.length;
+                    if (v.medicationsDispensed) {
+                        const medsFromText = this.normalizeVisitMedications(v.medicationsDispensed);
+                        if (medsFromText && medsFromText.length > 0) return sum + medsFromText.length;
+                    }
+                    return sum;
+                }, 0);
+                
                 if (AppState.debugMode) {
-                    const mergedVisits = AppState.appData.clinicVisits;
-                    const visitsWithMeds = mergedVisits.filter(v => {
-                        const meds = this.normalizeVisitMedications(v.medications);
-                        if (meds && meds.length > 0) return true;
-                        if (v.medicationsDispensed) {
-                            const medsFromText = this.normalizeVisitMedications(v.medicationsDispensed);
-                            return medsFromText && medsFromText.length > 0;
-                        }
-                        return false;
-                    });
-                    const totalMedsCount = mergedVisits.reduce((sum, v) => {
-                        const meds = this.normalizeVisitMedications(v.medications);
-                        if (meds && meds.length > 0) return sum + meds.length;
-                        if (v.medicationsDispensed) {
-                            const medsFromText = this.normalizeVisitMedications(v.medicationsDispensed);
-                            if (medsFromText && medsFromText.length > 0) return sum + medsFromText.length;
-                        }
-                        return sum;
-                    }, 0);
                     Utils.safeLog(`✅ تم تحميل ${normalizedVisits.length} زيارة من الخادم؛ بعد الدمج مع المحلي: ${mergedVisits.length}`);
                     Utils.safeLog(`   - ${mergedVisits.filter(v => v.personType === 'employee' || !v.personType).length} موظف`);
                     Utils.safeLog(`   - ${mergedVisits.filter(v => v.personType === 'contractor').length} مقاول`);
@@ -9389,10 +8597,11 @@ const Clinic = {
             Utils.safeLog('🔄 [CLINIC] تحديث البيانات من الخادم بعد الحفظ...');
         }
 
-        // إجبار تحديث جديد بدون تصفير الـ promise الجاري (يمنع طلبين متوازيين وسباق الكتابة)
+        // إجبار تحديث جديد: إلغاء أي طلب جلب موجود (قد يحمل بيانات قديمة) وعلامة الجلسة
+        this._clinicVisitsLoadPromise = null;
         this._visitsBackendFetchOk = false;
 
-        this.loadVisitsDataFromBackend({ forceRefresh: true })
+        this.loadVisitsDataFromBackend()
             .then(() => {
                 // ✅ تحديث الإحصائيات والأرقام فوراً بعد المزامنة
                 try {
@@ -9445,7 +8654,7 @@ const Clinic = {
             // التحقق من وجود AppState
             if (typeof AppState === 'undefined' || !AppState.appData) {
                 Utils.safeWarn('⚠️ AppState غير متوفر في renderVisitsTabContent');
-                panel.innerHTML = '<div class="empty-state"><p class="text-gray-500">' + this.getTranslations().t('skeleton.loadingData', 'جاري تحميل البيانات...') + '</p></div>';
+                panel.innerHTML = '<div class="empty-state"><p class="text-gray-500">جاري تحميل البيانات...</p></div>';
                 return;
             }
 
@@ -9476,25 +8685,29 @@ const Clinic = {
             this.ensureData();
             
             // ✅ فرز الزيارات ليكون الأحدث في الأعلى دائماً والاقدم بالأسفل بشكل تنازلي دقيق
-            const allVisits = this.getActualClinicVisits_(AppState.appData.clinicVisits).slice();
+            const allVisits = (AppState.appData.clinicVisits || []).slice();
             allVisits.sort((a, b) => {
                 const dateA = new Date(a.visitDate || a.createdAt || 0).getTime();
                 const dateB = new Date(b.visitDate || b.createdAt || 0).getTime();
                 return dateB - dateA;
             });
 
-            // تمريرة واحدة لفصل الموظفين/المقاولين (للشارات + القائمة)
-            const employeeVisits = [];
-            const contractorVisits = [];
-            allVisits.forEach((v) => {
-                if (this.isEmployeeVisit_(v)) employeeVisits.push(v);
-                else if (this.isContractorVisit_(v)) contractorVisits.push(v);
+            // ✅ فلترة الزيارات حسب النوع مع التأكد من وجود personType
+            const employeeVisits = allVisits.filter(v => {
+                if (!v || typeof v !== 'object') return false;
+                const type = String(v.personType || '').toLowerCase().trim();
+                return type === 'employee' || type === '' || (!type && !v.contractorName && !v.externalName);
             });
+            const contractorVisits = allVisits.filter(v => {
+                if (!v || typeof v !== 'object') return false;
+                const type = String(v.personType || '').toLowerCase().trim();
+                return type === 'contractor' || type === 'external' || (v.contractorName || v.externalName);
+            });
+
             const baseVisits = activeVisitType === 'employees' ? employeeVisits : contractorVisits;
             
             // تطبيق الفلاتر والبحث (قبل تحديث الفلاتر لأن updateVisitFilterOptions يحتاج DOM)
-            const hasActiveFilters = !!(searchTerm || filterFactory || filterPosition || filterWorkplace);
-            const visits = !hasActiveFilters ? baseVisits : baseVisits.filter((visit) => {
+            const visits = baseVisits.filter((visit) => {
                 // فلترة المصنع
                 if (filterFactory) {
                     try {
@@ -10575,13 +9788,13 @@ const Clinic = {
                         return;
                     }
                     this.state.activeVisitType = visitType;
-                    this.scheduleVisitsTabRender(false, 0);
+                    this.scheduleVisitsTabRender(false, 30);
                 } catch (error) {
                     Utils.safeError('❌ خطأ في تبديل التبويب:', error);
                     // محاولة إعادة عرض التبويب الحالي في حالة الخطأ
                     if (this.state && this.state.activeVisitType) {
                         try {
-                            this.scheduleVisitsTabRender(false, 0);
+                            this.scheduleVisitsTabRender(false, 30);
                         } catch (retryError) {
                             Utils.safeError('❌ فشل إعادة عرض التبويب:', retryError);
                         }
@@ -10803,7 +10016,6 @@ const Clinic = {
                     <button class="btn-secondary" style="background: #6b7280; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times ml-2"></i>إغلاق
                     </button>
-                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('clinic.visit') : ''}
                     <button class="btn-success" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 15px 0 rgba(17, 153, 142, 0.4);" onclick="Clinic.exportVisitToPDF(${JSON.stringify(visit).replace(/"/g, '&quot;')});">
                         <i class="fas fa-file-pdf ml-2"></i>طباعة
                     </button>
@@ -10820,9 +10032,6 @@ const Clinic = {
             </div>
         `;
         document.body.appendChild(modal);
-        if (typeof EmailDispatch !== 'undefined') {
-            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'clinic.visit', record: visit, recordId: visit.id || '' });
-        }
 
         modal.addEventListener('click', (event) => {
             if (event.target === modal) {
@@ -11634,40 +10843,12 @@ const Clinic = {
         if (contractorPositionInput) {
             if (personType === 'contractor' || personType === 'external') {
                 contractorPositionInput.required = true;
-                if (personType === 'contractor') {
-                    contractorPositionInput.setAttribute('list', 'visit-contractor-position-datalist');
-                    contractorPositionInput.placeholder = 'اختر أو ابحث عن الوظيفة';
-                    this.refreshContractorJobTitlesDatalist_();
-                } else {
-                    contractorPositionInput.removeAttribute('list');
-                    contractorPositionInput.placeholder = 'أدخل الوظيفة يدوياً للعمالة الخارجية';
-                }
+                contractorPositionInput.placeholder = 'أدخل الوظيفة يدوياً';
             } else {
                 contractorPositionInput.required = false;
                 contractorPositionInput.value = '';
                 contractorPositionInput.placeholder = '';
             }
-        }
-        const contractorPositionHint = document.getElementById('visit-contractor-position-hint');
-        if (contractorPositionHint) {
-            contractorPositionHint.textContent = personType === 'contractor'
-                ? 'اختر وظيفة معتمدة من القائمة'
-                : 'يسمح بالإدخال اليدوي للعمالة الخارجية';
-        }
-        if (contractorPositionInput && !contractorPositionInput.dataset.jobValidationBound) {
-            contractorPositionInput.dataset.jobValidationBound = '1';
-            contractorPositionInput.addEventListener('blur', () => {
-                if (document.getElementById('visit-person-type')?.value !== 'contractor') return;
-                const value = contractorPositionInput.value.trim();
-                if (!value) return;
-                const allowed = this.getContractorJobTitleOptions().some((title) =>
-                    this.normalizeArabicText(title) === this.normalizeArabicText(value)
-                );
-                if (!allowed) {
-                    contractorPositionInput.value = '';
-                    Notification?.warning?.('يرجى اختيار وظيفة المقاول من القائمة المعتمدة');
-                }
-            });
         }
 
         if (workAreaInput) {
@@ -11759,7 +10940,6 @@ const Clinic = {
     async showSickLeaveForm(record = null) {
         this.ensureData();
         const isEdit = !!record;
-        if (record) record = this.normalizeMedicationRecord(record);
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
 
@@ -11995,46 +11175,28 @@ const Clinic = {
             const createdAt = record?.createdAt || new Date().toISOString();
             const createdBy = record?.createdBy || this.getCurrentUserSummary();
             const currentUser = this.getCurrentUserSummary();
-            const isAdmin = this.isCurrentUserAdmin();
 
-            let payload;
-            let pendingNotification = false;
-
-            if (isEdit) {
-                // If not admin, put changes in pendingUpdate
-                if (!isAdmin) {
-                    payload = { ...record }; // Keep original
-                    payload.pendingUpdate = {
-                        name, type, usage, purchaseDate: purchaseISO, productionDate: productionISO, expiryDate: expiryISO,
-                        quantityAdded, remainingQuantity, location, notes,
-                        requestedBy: currentUser, requestedAt: new Date().toISOString()
-                    };
-                    pendingNotification = true;
-                } else {
-                    payload = this.normalizeMedicationRecord({
-                        id: record?.id || Utils.generateId('MED'),
-                        name, type, usage, purchaseDate: purchaseISO, productionDate: productionISO, expiryDate: expiryISO,
-                        quantityAdded, remainingQuantity, location, notes,
-                        createdAt, createdBy, createdById: createdBy?.id || AppState.currentUser?.id || '',
-                        updatedAt: new Date().toISOString(), updatedBy: currentUser,
-                        status: statusInfoLatest.status, daysRemaining: statusInfoLatest.daysRemaining
-                    });
-                    delete payload.pendingUpdate; // Clear any pending updates
-                }
-            } else {
-                // New medication
-                const newStatus = isAdmin ? statusInfoLatest.status : 'قيد الاعتماد';
-                if (!isAdmin) pendingNotification = true;
-                
-                payload = this.normalizeMedicationRecord({
-                    id: Utils.generateId('MED'),
-                    name, type, usage, purchaseDate: purchaseISO, productionDate: productionISO, expiryDate: expiryISO,
-                    quantityAdded, remainingQuantity, location, notes,
-                    createdAt, createdBy, createdById: createdBy?.id || AppState.currentUser?.id || '',
-                    updatedAt: new Date().toISOString(), updatedBy: currentUser,
-                    status: newStatus, daysRemaining: statusInfoLatest.daysRemaining
-                });
-            }
+            const payload = this.normalizeSickLeaveRecord({
+                id: record?.id || Utils.generateId('SICK_LEAVE'),
+                personType: currentType,
+                employeeName: isEmployee ? nameInput.value.trim() : null,
+                employeeCode: isEmployee ? (codeInput?.value.trim() || '') : null,
+                employeeNumber: isEmployee ? (codeInput?.value.trim() || '') : null,
+                employeePosition: isEmployee ? (positionInput?.value.trim() || '') : null,
+                employeeDepartment: isEmployee ? (departmentInput?.value.trim() || '') : null,
+                personName: !isEmployee ? nameInput.value.trim() : null,
+                startDate: startISO,
+                endDate: endISO,
+                daysCount,
+                reason: form.querySelector('#sick-leave-reason').value.trim(),
+                medicalNotes: form.querySelector('#sick-leave-notes').value.trim(),
+                treatingDoctor: form.querySelector('#sick-leave-doctor').value.trim(),
+                createdAt,
+                createdBy,
+                createdById: createdBy?.id || AppState.currentUser?.id || '',
+                updatedAt: new Date().toISOString(),
+                updatedBy: currentUser
+            });
 
             Loading.show();
             try {
@@ -12736,19 +11898,11 @@ const Clinic = {
                                 <datalist id="visit-employee-location-datalist"></datalist>
                             </div>
                             <div id="visit-contractor-position-container" style="display: ${visitData?.personType === 'contractor' || visitData?.personType === 'external' ? 'block' : 'none'};">
-                                <div class="flex items-center justify-between gap-2 mb-2">
-                                    <label for="visit-contractor-position" class="block text-sm font-semibold text-gray-700">الوظيفة *</label>
-                                    ${this.isCurrentUserAdmin() ? `<button type="button" onclick="Clinic.showContractorJobTitlesSettingsModal()" class="btn-icon btn-icon-primary" title="إدارة وظائف المقاولين" aria-label="إدارة وظائف المقاولين" style="width:30px;height:30px;border-radius:8px;"><i class="fas fa-cog"></i></button>` : ''}
-                                </div>
-                                <input type="text" id="visit-contractor-position" class="form-input" list="visit-contractor-position-datalist"
+                                <label for="visit-contractor-position" class="block text-sm font-semibold text-gray-700 mb-2">الوظيفة *</label>
+                                <input type="text" id="visit-contractor-position" class="form-input"
                                     value="${visitData?.contractorPosition || visitData?.employeePosition || ''}" 
-                                    placeholder="اختر أو ابحث عن الوظيفة"
-                                    autocomplete="off"
+                                    placeholder="أدخل الوظيفة يدوياً"
                                     ${visitData?.personType === 'contractor' || visitData?.personType === 'external' ? 'required' : ''}>
-                                <datalist id="visit-contractor-position-datalist">
-                                    ${this.getContractorJobTitleOptions().map((title) => `<option value="${Utils.escapeHTML(title)}"></option>`).join('')}
-                                </datalist>
-                                <span id="visit-contractor-position-hint" style="display:block;margin-top:5px;color:#64748b;font-size:.72rem;">اختر وظيفة معتمدة من القائمة</span>
                             </div>
                             <div id="visit-contractor-factory-container" style="display: ${visitData?.personType === 'contractor' || visitData?.personType === 'external' ? 'block' : 'none'};">
                                 <label for="visit-contractor-factory" class="block text-sm font-semibold text-gray-700 mb-2">المصنع</label>
@@ -12797,19 +11951,8 @@ const Clinic = {
                             </div>
                             <div class="col-span-2">
                                 <label for="visit-reason" class="block text-sm font-semibold mb-2" style="color: #4facfe; display: flex; align-items: center; gap: 5px;"><i class="fas fa-question-circle"></i> سبب الزيارة *</label>
-                                <input type="text" id="visit-reason" required class="form-input" list="visit-reason-datalist"
-                                    style="border: 2px solid #4facfe; border-radius: 8px;"
-                                    value="${visitData?.reason || ''}" placeholder="اكتب للبحث في الأسباب السابقة أو أدخل سبباً جديداً"
-                                    autocomplete="off" autocorrect="off" spellcheck="false">
-                                <datalist id="visit-reason-datalist"></datalist>
-                                <div id="visit-reason-suggestion-panel" style="display:none;margin-top:10px;padding:11px 12px;border:1px solid #bae6fd;border-radius:12px;background:linear-gradient(135deg,#f0f9ff 0%,#ecfeff 100%);box-shadow:0 8px 22px rgba(14,165,233,.08);">
-                                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">
-                                        <span style="display:flex;align-items:center;gap:6px;color:#075985;font-size:.76rem;font-weight:800;"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i> مقترحات ذكية من السجل السابق</span>
-                                        <span style="color:#64748b;font-size:.68rem;">اضغط للاختيار السريع</span>
-                                    </div>
-                                    <div id="visit-reason-suggestions" style="display:flex;flex-wrap:wrap;gap:7px;"></div>
-                                </div>
-                                <small id="visit-reason-suggestion-hint" style="display:block;margin-top:6px;color:#64748b;font-size:.71rem;line-height:1.5;">تظهر الأسباب السابقة المناسبة تلقائياً مع بقاء الإدخال اليدوي متاحاً.</small>
+                                <input type="text" id="visit-reason" required class="form-input" style="border: 2px solid #4facfe; border-radius: 8px;"
+                                    value="${visitData?.reason || ''}" placeholder="سبب الزيارة">
                             </div>
                             <div class="col-span-2">
                                 <label class="block text-sm font-semibold mb-2" style="color: #4facfe; display: flex; align-items: center; gap: 5px;"><i class="fas fa-diagnoses"></i> التشخيص</label>
@@ -12820,17 +11963,11 @@ const Clinic = {
                                 <label class="block text-sm font-semibold mb-2" style="color: #4facfe; display: flex; align-items: center; gap: 5px;"><i class="fas fa-pills"></i> العلاج</label>
                                 <textarea id="visit-treatment" class="form-input" rows="3" style="border: 2px solid #4facfe; border-radius: 8px;"
                                     placeholder="العلاج الموصوف">${visitData?.treatment || ''}</textarea>
-                                <div id="visit-treatment-medication-mode" style="display:none;padding:12px;border:1px solid #7dd3fc;border-radius:10px;background:rgba(255,255,255,.76);">
-                                    <label for="visit-treatment-medication-select" style="display:flex;align-items:center;gap:6px;margin-bottom:7px;color:#075985;font-size:.78rem;font-weight:800;"><i class="fas fa-prescription-bottle-alt"></i>اختر الدواء من المخزون الفعلي</label>
-                                    <input id="visit-treatment-medication-select" class="form-input" list="visit-treatment-medications-datalist" placeholder="اكتب اسم الدواء للبحث" autocomplete="off" style="border:2px solid #0891b2;border-radius:9px;">
-                                    <datalist id="visit-treatment-medications-datalist"></datalist>
-                                    <p id="visit-treatment-medication-hint" style="margin:7px 0 0;color:#475569;font-size:.72rem;">بعد الاختيار حدد الكمية في قسم صرف الأدوية ثم اضغط «إضافة».</p>
-                                </div>
                             </div>
                         </div>
                         
                         <!-- قسم الأدوية -->
-                        <div id="visit-medications-section" class="grid grid-cols-1 gap-4" style="background: linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%); padding: 20px; border-radius: 10px;">
+                        <div class="grid grid-cols-1 gap-4" style="background: linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%); padding: 20px; border-radius: 10px;">
                             <div class="col-span-2">
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">صرف الأدوية</label>
                                 <div id="visit-medications-container" class="space-y-2">
@@ -13003,68 +12140,16 @@ const Clinic = {
                 Clinic.setupClinicWorkplaceDatalist('visit-contractor-factory', 'visit-work-area', 'visit-work-area-datalist');
             }
 
-            const refreshVisitReasonSuggestions = () => Clinic.refreshVisitReasonSuggestions_(visitData?.id || '');
-            let visitReasonRefreshTimer = null;
-            const scheduleVisitReasonRefresh = () => {
-                clearTimeout(visitReasonRefreshTimer);
-                visitReasonRefreshTimer = setTimeout(refreshVisitReasonSuggestions, 180);
-            };
-            ['visit-person-type', 'visit-type', 'visit-contractor-name-select'].forEach((id) => {
-                document.getElementById(id)?.addEventListener('change', refreshVisitReasonSuggestions);
-            });
-            ['visit-employee-code', 'visit-contractor-worker'].forEach((id) => {
-                const element = document.getElementById(id);
-                element?.addEventListener('input', scheduleVisitReasonRefresh);
-                element?.addEventListener('blur', refreshVisitReasonSuggestions);
-            });
-            refreshVisitReasonSuggestions();
-
             // تحميل قائمة الأدوية المتاحة
             const medicationSelect = document.getElementById('visit-medication-select');
             const medicationsList = document.getElementById('visit-medications-list');
             const addMedicationBtn = document.getElementById('visit-add-medication-btn');
             const medicationQuantityInput = document.getElementById('visit-medication-quantity');
             const medicationDatalist = document.getElementById('visit-medications-datalist');
-            const visitTypeSelect = document.getElementById('visit-type');
-            const treatmentTextarea = document.getElementById('visit-treatment');
-            const treatmentMedicationMode = document.getElementById('visit-treatment-medication-mode');
-            const treatmentMedicationSelect = document.getElementById('visit-treatment-medication-select');
-            const treatmentMedicationDatalist = document.getElementById('visit-treatment-medications-datalist');
 
             let selectedMedications = visitData?.medications && Array.isArray(visitData.medications)
                 ? [...visitData.medications]
                 : [];
-
-            const getAvailableMedicationChoices = () => this.getMedications().filter((medication) => {
-                const remaining = parseInt(medication.remainingQuantity ?? medication.quantity ?? 0, 10) || 0;
-                return remaining > 0;
-            });
-
-            const loadTreatmentMedications = () => {
-                if (!treatmentMedicationSelect || !treatmentMedicationDatalist) return;
-                const map = {};
-                treatmentMedicationDatalist.innerHTML = getAvailableMedicationChoices().map((medication) => {
-                    const remaining = parseInt(medication.remainingQuantity ?? medication.quantity ?? 0, 10) || 0;
-                    const name = String(medication.name || medication.medicationName || '').trim();
-                    if (!name) return '';
-                    const label = `${name} (متوفر: ${remaining})`;
-                    map[this.normalizeArabicText(name)] = { id: medication.id || '', name, label };
-                    return `<option value="${Utils.escapeHTML(label)}"></option>`;
-                }).join('');
-                treatmentMedicationSelect.dataset.medicationMap = JSON.stringify(map);
-            };
-
-            const syncTreatmentMedicationMode = () => {
-                const isDispense = this.isMedicationDispenseVisitType_(visitTypeSelect?.value || '');
-                if (treatmentTextarea) treatmentTextarea.style.display = isDispense ? 'none' : 'block';
-                if (treatmentMedicationMode) treatmentMedicationMode.style.display = isDispense ? 'block' : 'none';
-                if (isDispense) {
-                    loadTreatmentMedications();
-                    if (treatmentMedicationSelect && selectedMedications.length > 0) {
-                        treatmentMedicationSelect.value = selectedMedications.map((item) => item.medicationName).filter(Boolean).join('، ');
-                    }
-                }
-            };
 
             const loadMedicationsIntoSelect = () => {
                 if (!medicationSelect || !medicationDatalist) return;
@@ -13077,9 +12162,8 @@ const Clinic = {
                 const map = {};
                 medicationDatalist.innerHTML = medications.map(m => {
                     const remaining = m.remainingQuantity ?? m.quantity ?? 0;
-                    const medicationName = String(m.name || m.medicationName || '').trim();
-                    const label = `${medicationName} (متوفر: ${remaining})`;
-                    const key = medicationName.toLowerCase().trim();
+                    const label = `${m.name || ''} (متوفر: ${remaining})`;
+                    const key = String(m.name || '').toLowerCase().trim();
                     if (key) map[key] = m.id;
                     return `<option value="${Utils.escapeHTML(label)}"></option>`;
                 }).join('');
@@ -13091,9 +12175,6 @@ const Clinic = {
                 if (!medicationsList) return;
                 if (selectedMedications.length === 0) {
                     medicationsList.innerHTML = '';
-                    if (this.isMedicationDispenseVisitType_(visitTypeSelect?.value || '') && treatmentTextarea) {
-                        treatmentTextarea.value = '';
-                    }
                     return;
                 }
                 medicationsList.innerHTML = selectedMedications.map((med, idx) => {
@@ -13110,11 +12191,6 @@ const Clinic = {
                         </div>
                     `;
                 }).join('');
-
-                if (this.isMedicationDispenseVisitType_(visitTypeSelect?.value || '') && treatmentTextarea) {
-                    treatmentTextarea.value = selectedMedications.map((item) => item.medicationName).filter(Boolean).join('، ');
-                    if (treatmentMedicationSelect) treatmentMedicationSelect.value = treatmentTextarea.value;
-                }
 
                 // ربط أحداث الحذف
                 medicationsList.querySelectorAll('[data-remove-med]').forEach(btn => {
@@ -13160,7 +12236,7 @@ const Clinic = {
 
                     selectedMedications.push({
                         medicationId: medicationId,
-                        medicationName: medication.name || medication.medicationName || '',
+                        medicationName: medication.name || '',
                         quantity: quantity
                     });
 
@@ -13198,36 +12274,8 @@ const Clinic = {
                 });
             }
 
-            visitTypeSelect?.addEventListener('change', syncTreatmentMedicationMode);
-            treatmentMedicationSelect?.addEventListener('input', () => {
-                const raw = String(treatmentMedicationSelect.value || '').trim();
-                const nameOnly = raw.replace(/\s*\(.*\)\s*$/, '').trim();
-                let map = {};
-                try { map = JSON.parse(treatmentMedicationSelect.dataset.medicationMap || '{}'); } catch (_error) { map = {}; }
-                const choice = map[this.normalizeArabicText(nameOnly)];
-                if (!choice) {
-                    treatmentMedicationSelect.dataset.selectedId = '';
-                    return;
-                }
-                treatmentMedicationSelect.dataset.selectedId = choice.id;
-                if (treatmentTextarea) treatmentTextarea.value = choice.name;
-                if (medicationSelect) {
-                    medicationSelect.value = choice.label;
-                    medicationSelect.dataset.selectedId = choice.id;
-                }
-                medicationQuantityInput?.focus();
-            });
-            treatmentMedicationSelect?.addEventListener('blur', () => {
-                const raw = String(treatmentMedicationSelect.value || '').trim();
-                if (!raw || treatmentMedicationSelect.dataset.selectedId) return;
-                const selectedNames = selectedMedications.map((item) => item.medicationName).filter(Boolean).join('، ');
-                treatmentMedicationSelect.value = selectedNames;
-                Notification?.warning?.('يرجى اختيار الدواء من قائمة المخزون الفعلي');
-            });
-
             loadMedicationsIntoSelect();
             renderMedicationsList();
-            syncTreatmentMedicationMode();
         }, 300);
 
         const form = modal.querySelector('#visit-form');
@@ -13276,20 +12324,6 @@ const Clinic = {
             const contractorPositionValue = personType === 'contractor'
                 ? document.getElementById('visit-contractor-position')?.value.trim() || ''
                 : null;
-
-            if (rawPersonType === 'contractor' && contractorPositionValue) {
-                const validContractorJob = this.getContractorJobTitleOptions().some((title) =>
-                    this.normalizeArabicText(title) === this.normalizeArabicText(contractorPositionValue)
-                );
-                if (!validContractorJob) {
-                    this.showVisitFormAlert('الوظيفة يجب اختيارها من قائمة وظائف المقاولين المعتمدة');
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = originalText;
-                    }
-                    return;
-                }
-            }
 
             // الحصول على اسم المقاول من select أو input حسب النوع
             let personName = '';
@@ -13745,25 +12779,17 @@ const Clinic = {
 
     async showMedicationForm(record = null) {
         this.ensureData();
-        if (record) {
-            record = this.normalizeMedicationRecord(record);
-        }
         const isEdit = !!record;
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
 
         const safeValue = (value = '') => Utils.escapeHTML(value || '');
         const purchaseDateValue = record?.purchaseDate ? new Date(record.purchaseDate).toISOString().slice(0, 10) : '';
-        const productionDateValue = record?.productionDate ? new Date(record.productionDate).toISOString().slice(0, 10) : '';
         const expiryDateValue = record?.expiryDate ? new Date(record.expiryDate).toISOString().slice(0, 10) : '';
         const statusInfo = this.calculateMedicationStatus(record || {});
-        
-        const qAdded = record?.quantityAdded ?? record?.quantity ?? 0;
-        const qRemaining = record?.remainingQuantity ?? record?.quantity ?? 0;
-        const qDispensed = Math.max(0, qAdded - qRemaining);
 
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-content" style="max-width: 780px;">
                 <div class="modal-header modal-header-centered">
                     <h2 class="modal-title">${isEdit ? 'تعديل بيانات الدواء' : 'تسجيل دواء جديد'}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
@@ -13779,37 +12805,15 @@ const Clinic = {
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">نوع الدواء *</label>
-                                <input type="text" id="med-type" list="med-type-list" required class="form-input" placeholder="اختر أو اكتب..." value="${safeValue(record?.type || record?.medicationType)}">
-                                <datalist id="med-type-list">
-                                    <option value="أقراص"></option>
-                                    <option value="شراب"></option>
-                                    <option value="كبسولات"></option>
-                                    <option value="حقن"></option>
-                                    <option value="مرهم"></option>
-                                    <option value="قطرة"></option>
-                                    <option value="بخاخ"></option>
-                                </datalist>
+                                <input type="text" id="med-type" required class="form-input" placeholder="حبوب، شراب، حقن..." value="${safeValue(record?.type || record?.medicationType)}">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">الاستخدام</label>
-                                <input type="text" id="med-usage" list="med-usage-list" class="form-input" placeholder="اختر أو اكتب..." value="${safeValue(record?.usage || record?.notes || '')}">
-                                <datalist id="med-usage-list">
-                                    <option value="مسكن"></option>
-                                    <option value="مطهر معوي"></option>
-                                    <option value="غيار للجروح"></option>
-                                    <option value="مضاد حيوي"></option>
-                                    <option value="مضاد للحساسية"></option>
-                                    <option value="فيتامين"></option>
-                                    <option value="خافض حرارة"></option>
-                                </datalist>
+                                <input type="text" id="med-usage" class="form-input" placeholder="الاستخدام الطبي للدواء" value="${safeValue(record?.usage || record?.notes || '')}">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الشراء *</label>
                                 <input type="date" id="med-purchase" required class="form-input" value="${purchaseDateValue}">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الانتاج *</label>
-                                <input type="date" id="med-production" required class="form-input" value="${productionDateValue}">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ انتهاء الصلاحية</label>
@@ -13817,38 +12821,28 @@ const Clinic = {
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">الكمية المضافة *</label>
-                                <input type="number" id="med-quantity" required class="form-input" min="0" placeholder="إجمالي الكمية المضافة" value="${qAdded}">
-                            </div>
+                                <input type="number" id="med-quantity" required class="form-input" min="0" placeholder="الكمية المضافة" value="${record?.quantityAdded ?? record?.quantity ?? 0}">
+                        </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">الكمية - الرصيد *</label>
-                                <input type="number" id="med-remaining" required class="form-input bg-gray-50 font-bold" min="0" placeholder="الرصيد المتاح" value="${qRemaining}">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">الكمية المنصرفة</label>
-                                <input type="number" id="med-dispensed" readonly class="form-input bg-gray-100 text-blue-700 font-bold cursor-not-allowed" value="${qDispensed}">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">الكمية المتبقية *</label>
+                                <input type="number" id="med-remaining" required class="form-input" min="0" placeholder="الكمية المتاحة" value="${record?.remainingQuantity ?? record?.quantity ?? 0}">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">موقع التخزين</label>
-                                <input type="text" id="med-location" class="form-input" placeholder="مثال: الغرفة 1 - الرف ب" value="${safeValue(record?.location)}">
+                                <input type="text" id="med-location" class="form-input" placeholder="مثال: غرفة الأدوية" value="${safeValue(record?.location)}">
                             </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">ملاحظات إضافية</label>
-                            <textarea id="med-notes" class="form-input" rows="2" placeholder="أدخل أي ملاحظات أو تعليمات خاصة">${safeValue(record?.notes)}</textarea>
-                        </div>
-                        <div class="flex flex-col bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
-                            <span class="text-sm font-semibold text-gray-700 mb-2">حالة الصنف من التعديل والاضافة واي حركة علي الدواء</span>
-                            <div class="flex items-center gap-3">
+                            <div class="flex flex-col justify-center bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+                                <span class="text-sm font-semibold text-gray-700 mb-1">الحالة الحالية</span>
                                 <span id="med-status-badge" class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${this.getMedicationStatusClasses(statusInfo.status)}">
                                     <i class="fas fa-info-circle"></i>
                                     ${statusInfo.status || 'ساري'}
                                 </span>
-                                <span id="med-status-hint" class="text-xs text-gray-500">${this.getMedicationStatusHint(statusInfo)}</span>
+                                <span id="med-status-hint" class="text-xs text-gray-500 mt-2">${this.getMedicationStatusHint(statusInfo)}</span>
                             </div>
-                            ${isEdit ? `<div class="text-xs text-gray-500 mt-2">
-                                تم التسجيل: ${Utils.escapeHTML(record?.createdBy?.name || 'النظام')} ${record?.createdAt ? `(${this.formatDate(record.createdAt, true)})` : ''}
-                                ${record?.updatedBy ? `<br>آخر تعديل: ${Utils.escapeHTML(record.updatedBy.name)} ${record.updatedAt ? `(${this.formatDate(record.updatedAt, true)})` : ''}` : ''}
-                            </div>` : ''}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">ملاحظات إضافية</label>
+                            <textarea id="med-notes" class="form-input" rows="3" placeholder="أدخل أي ملاحظات أو تعليمات خاصة">${safeValue(record?.notes)}</textarea>
                         </div>
                         <div class="flex items-center justify-end gap-3 pt-4 border-t form-actions-centered">
                             <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
@@ -13868,33 +12862,15 @@ const Clinic = {
         const expiryInput = form.querySelector('#med-expiry');
         const statusBadge = form.querySelector('#med-status-badge');
         const statusHint = form.querySelector('#med-status-hint');
-        const qtyAddedInput = form.querySelector('#med-quantity');
-        const qtyRemainingInput = form.querySelector('#med-remaining');
-        const qtyDispensedInput = form.querySelector('#med-dispensed');
 
-        // تحديث حالة الصلاحية ديناميكيا
         const updateStatusPreview = () => {
             const info = this.calculateMedicationStatus({ expiryDate: expiryInput.value ? new Date(expiryInput.value).toISOString() : null });
             statusBadge.className = `inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${this.getMedicationStatusClasses(info.status)}`;
             statusBadge.innerHTML = `<i class="fas fa-info-circle"></i>${info.status}`;
             statusHint.textContent = this.getMedicationStatusHint(info);
         };
+
         expiryInput?.addEventListener('change', updateStatusPreview);
-
-        // حساب الرصيد والمنصرف ديناميكياً
-        // الرصيد = الكمية المضافة - المنصرف
-        // المنصرف = الكمية المضافة - الرصيد
-        qtyAddedInput.addEventListener('input', () => {
-            const added = parseInt(qtyAddedInput.value) || 0;
-            const dispensed = parseInt(qtyDispensedInput.value) || 0;
-            qtyRemainingInput.value = Math.max(0, added - dispensed);
-        });
-
-        qtyRemainingInput.addEventListener('input', () => {
-            const added = parseInt(qtyAddedInput.value) || 0;
-            const remaining = parseInt(qtyRemainingInput.value) || 0;
-            qtyDispensedInput.value = Math.max(0, added - remaining);
-        });
 
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -13903,7 +12879,6 @@ const Clinic = {
             const type = form.querySelector('#med-type').value.trim();
             const usage = form.querySelector('#med-usage')?.value.trim() || '';
             const purchaseDate = form.querySelector('#med-purchase').value;
-            const productionDate = form.querySelector('#med-production').value;
             const expiry = form.querySelector('#med-expiry').value;
             const quantityAdded = parseInt(form.querySelector('#med-quantity').value, 10) || 0;
             const remainingQuantity = parseInt(form.querySelector('#med-remaining').value, 10) || 0;
@@ -13913,7 +12888,6 @@ const Clinic = {
             const createdBy = record?.createdBy || this.getCurrentUserSummary();
 
             const purchaseISO = purchaseDate ? new Date(purchaseDate).toISOString() : new Date().toISOString();
-            const productionISO = productionDate ? new Date(productionDate).toISOString() : new Date().toISOString();
             const expiryISO = expiry ? new Date(expiry).toISOString() : '';
             const statusInfoLatest = this.calculateMedicationStatus({ expiryDate: expiryISO });
             const currentUser = this.getCurrentUserSummary();
@@ -13924,7 +12898,6 @@ const Clinic = {
                 type,
                 usage: usage,
                 purchaseDate: purchaseISO,
-                productionDate: productionISO,
                 expiryDate: expiryISO,
                 quantityAdded,
                 remainingQuantity,
@@ -14004,24 +12977,6 @@ const Clinic = {
                             });
                         }
 
-                        
-                        // إرسال إشعار للمدير إذا كان هناك طلب قيد الاعتماد
-                        if (pendingNotification && typeof GoogleIntegration !== 'undefined') {
-                            await GoogleIntegration.sendRequest({
-                                action: 'addNotification',
-                                data: {
-                                    id: Utils.generateId('NOTIF'),
-                                    title: isEdit ? 'طلب تعديل دواء' : 'طلب إضافة دواء جديد',
-                                    message: `قام ${currentUser.name} بإرسال طلب ${isEdit ? 'تعديل' : 'إضافة'} للدواء: ${payload.name}`,
-                                    type: 'alert',
-                                    targetRoles: ['admin', 'manager'],
-                                    createdAt: new Date().toISOString(),
-                                    readBy: [],
-                                    link: '#clinic-medications'
-                                }
-                            });
-                        }
-
                         // إطلاق حدث لإشعار نظام المزامنة اللحظية
                         document.dispatchEvent(new CustomEvent('data-saved', {
                             detail: {
@@ -14047,8 +13002,8 @@ const Clinic = {
                 if (ok) modal.remove();
             }
         });
-
     },
+
     async viewVisit(id) {
         this.ensureData();
         const visit = AppState.appData.clinicVisits.find(v => v.id === id);
@@ -14275,7 +13230,6 @@ const Clinic = {
                     <button class="btn-secondary" style="background: #6b7280; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times ml-2"></i>إغلاق
                     </button>
-                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('clinic.visit') : ''}
                     <button class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 15px 0 rgba(102, 126, 234, 0.4);" onclick="Clinic.showVisitForm(${JSON.stringify(visit).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();">
                         <i class="fas fa-edit ml-2"></i>تعديل
                     </button>
@@ -14295,9 +13249,6 @@ const Clinic = {
             </div>
         `;
         document.body.appendChild(modal);
-        if (typeof EmailDispatch !== 'undefined') {
-            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'clinic.visit', record: visit, recordId: visit.id || '' });
-        }
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 const ok = confirm('تنبيه: سيتم إغلاق النافذة.\nقد تفقد أي بيانات غير محفوظة.\n\nهل تريد الإغلاق؟');
@@ -14433,8 +13384,8 @@ const Clinic = {
         const allVisits = (AppState.appData.clinicVisits || []).slice().reverse();
 
         // فلترة الزيارات حسب النوع
-        const employeeVisits = allVisits.filter(v => this.isEmployeeVisit_(v));
-        const contractorVisits = allVisits.filter(v => this.isContractorVisit_(v));
+        const employeeVisits = allVisits.filter(v => v.personType === 'employee' || !v.personType);
+        const contractorVisits = allVisits.filter(v => v.personType === 'contractor');
 
         const visits = activeVisitType === 'employees' ? employeeVisits : contractorVisits;
         if (visits.length === 0) {
@@ -14525,8 +13476,8 @@ const Clinic = {
         const isContractorsTab = activeVisitType === 'contractors';
 
         const allVisits = (AppState.appData.clinicVisits || []).slice().reverse();
-        const employeeVisits = allVisits.filter(v => this.isEmployeeVisit_(v));
-        const contractorVisits = allVisits.filter(v => this.isContractorVisit_(v));
+        const employeeVisits = allVisits.filter(v => v.personType === 'employee' || !v.personType);
+        const contractorVisits = allVisits.filter(v => v.personType === 'contractor');
         const visits = activeVisitType === 'employees' ? employeeVisits : contractorVisits;
 
         if (visits.length === 0) {
@@ -14766,20 +13717,6 @@ const Clinic = {
     /**
      * عرض tab طلبات الموافقة (للمدير فقط)
      */
-    getClinicWorkflowStyles_() {
-        return `<style>
-            .clinic-workflow-root{--cw-navy:#0b2d4f;--cw-blue:#174d78;--cw-teal:#0f8b83;--cw-gold:#f59e0b;--cw-ink:#183047;--cw-muted:#64748b;--cw-line:#d9e6ee;--cw-pale:#f4f9fb;color:var(--cw-ink);font-family:inherit}.clinic-workflow-root *{box-sizing:border-box}
-            .cw-hero{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:19px 22px;margin-bottom:14px;border-radius:16px;background:linear-gradient(128deg,var(--cw-navy),var(--cw-blue) 62%,#17726e);color:#fff;box-shadow:0 9px 26px rgba(11,45,79,.19)}.cw-hero:after{content:"";position:absolute;width:210px;height:210px;left:-75px;top:-120px;border:28px solid rgba(255,255,255,.06);border-radius:50%;pointer-events:none}.cw-hero-copy{position:relative;z-index:1;display:flex;align-items:center;gap:13px}.cw-hero-icon{width:48px;height:48px;border:1px solid rgba(255,255,255,.24);border-radius:14px;background:rgba(255,255,255,.13);display:grid;place-items:center;font-size:21px}.cw-hero h2{margin:0;font-size:1.12rem;font-weight:850}.cw-hero p{margin:4px 0 0;color:#d9ebf3;font-size:.75rem}.cw-hero-meta{position:relative;z-index:1;display:flex;align-items:center;gap:7px;flex-wrap:wrap}.cw-hero-pill{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid rgba(255,255,255,.22);border-radius:9px;background:rgba(255,255,255,.11);color:#fff;font:inherit;font-size:.72rem;font-weight:750}.cw-hero-primary{cursor:pointer;background:#fff;color:var(--cw-navy);border-color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.13)}
-            .cw-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}.cw-kpi{display:flex;align-items:center;gap:11px;padding:12px 14px;border:1px solid var(--cw-line);border-radius:12px;background:#fff;box-shadow:0 3px 12px rgba(15,46,72,.045)}.cw-kpi-icon{width:39px;height:39px;border-radius:10px;display:grid;place-items:center}.cw-kpi:nth-child(1) .cw-kpi-icon{background:#fff7ed;color:#c2410c}.cw-kpi:nth-child(2) .cw-kpi-icon{background:#ecfdf5;color:#047857}.cw-kpi:nth-child(3) .cw-kpi-icon{background:#fef2f2;color:#b91c1c}.cw-kpi:nth-child(4) .cw-kpi-icon{background:#eff6ff;color:#1d4ed8}.cw-kpi small{display:block;color:var(--cw-muted);font-size:.67rem;font-weight:650}.cw-kpi strong{display:block;margin-top:2px;font-size:1.05rem;font-weight:850;color:var(--cw-ink)}
-            .cw-filter{padding:14px 16px;margin-bottom:14px;border:1px solid #b9dbe2;border-radius:14px;background:linear-gradient(180deg,#f9fcfd,#f1f8fa)}.cw-filter-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}.cw-filter-title{display:flex;align-items:center;gap:7px;color:var(--cw-navy);font-size:.81rem;font-weight:820}.cw-count-pill{padding:3px 8px;border-radius:999px;background:#d9f4f1;color:#0f766e;font-size:.66rem}.cw-filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.cw-field label{display:block;margin-bottom:5px;color:#536b7c;font-size:.68rem;font-weight:750}.cw-field label i{width:17px;color:var(--cw-teal)}.cw-control{width:100%;min-height:39px;padding:8px 11px;border:1.5px solid #c8dce4;border-radius:9px;background:#fff;color:var(--cw-ink);font:inherit;font-size:.78rem;outline:none;transition:border-color .18s,box-shadow .18s}.cw-control:focus{border-color:var(--cw-teal);box-shadow:0 0 0 3px rgba(15,139,131,.11)}.cw-input-wrap{position:relative}.cw-input-wrap>i{position:absolute;right:11px;top:50%;transform:translateY(-50%);color:#7890a1;font-size:.75rem;pointer-events:none}.cw-input-wrap .cw-control{padding-right:34px}.cw-reset{padding:6px 10px;border:1px solid #c8dce4;border-radius:8px;background:#fff;color:#536b7c;font-size:.71rem;font-weight:750;cursor:pointer}.cw-reset:disabled{opacity:.42;cursor:not-allowed}
-            .cw-table-card{overflow:hidden;border:1px solid var(--cw-line);border-radius:14px;background:#fff;box-shadow:0 5px 20px rgba(15,46,72,.06)}.cw-table-caption{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 15px;border-bottom:1px solid var(--cw-line)}.cw-table-caption strong{color:var(--cw-navy);font-size:.84rem}.cw-table-caption span{color:var(--cw-muted);font-size:.69rem}.cw-table-scroll{overflow:auto;max-height:68vh}.cw-table{width:100%;min-width:1020px;border-collapse:separate;border-spacing:0}.cw-table thead{position:sticky;top:0;z-index:4}.cw-table th{padding:12px 10px;background:linear-gradient(180deg,#17466f,#103758);color:#fff;border-left:1px solid rgba(255,255,255,.1);font-size:.71rem;font-weight:780;white-space:nowrap;text-align:right}.cw-table th i{margin-left:5px;color:#6ee7dc}.cw-table td{padding:11px 10px;border-bottom:1px solid #e8eff4;color:#344b5f;font-size:.77rem;vertical-align:middle}.cw-table tbody tr:nth-child(even){background:#f8fbfd}.cw-table tbody tr:hover{background:#eef8f8}.cw-table tbody tr:last-child td{border-bottom:0}.cw-serial{display:inline-grid;place-items:center;width:27px;height:27px;border-radius:8px;background:#e8f1f7;color:var(--cw-navy);font-weight:850}.cw-main-cell{display:flex;align-items:center;gap:9px}.cw-cell-icon{flex:0 0 auto;width:34px;height:34px;border-radius:10px;background:#e7f5f3;color:var(--cw-teal);display:grid;place-items:center}.cw-main-cell strong{display:block;color:var(--cw-ink);font-size:.79rem}.cw-main-cell small{display:block;margin-top:3px;color:#7a91a1;font-size:.65rem}.cw-actions{display:flex;align-items:center;justify-content:center;gap:6px}.cw-actions .btn-icon{width:32px;height:32px;border-radius:8px;box-shadow:none}.cw-empty{text-align:center;padding:52px 20px;color:var(--cw-muted)}.cw-empty i{display:grid;place-items:center;width:60px;height:60px;margin:0 auto 11px;border-radius:17px;background:#eaf4f8;color:var(--cw-teal);font-size:24px}.cw-empty h3{margin:0 0 4px;color:var(--cw-navy);font-size:.95rem}.cw-empty p{margin:0;font-size:.75rem}
-            .cw-form-card{overflow:hidden;margin-bottom:14px;border:1px solid var(--cw-line);border-radius:15px;background:#fff;box-shadow:0 5px 20px rgba(15,46,72,.06)}.cw-form-head{display:flex;align-items:center;gap:10px;padding:14px 17px;border-bottom:1px solid var(--cw-line);background:linear-gradient(180deg,#fbfdfe,#f4f9fb)}.cw-form-head span{width:36px;height:36px;border-radius:10px;background:#dff4f1;color:var(--cw-teal);display:grid;place-items:center}.cw-form-head h3{margin:0;color:var(--cw-navy);font-size:.9rem}.cw-form-head p{margin:2px 0 0;color:var(--cw-muted);font-size:.67rem}.cw-form-body{padding:17px}.cw-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.cw-field-full{grid-column:1/-1}.cw-field-title{display:flex;align-items:center;gap:6px;margin-bottom:6px;color:#40596c;font-size:.72rem;font-weight:780}.cw-field-title i{color:var(--cw-teal)}.cw-form-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:15px;padding-top:14px;border-top:1px solid #e8eff4}.cw-submit,.cw-secondary{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 15px;border-radius:9px;font-size:.77rem;font-weight:780;cursor:pointer}.cw-submit{border:1px solid var(--cw-navy);background:var(--cw-navy);color:#fff;box-shadow:0 4px 12px rgba(11,45,79,.18)}.cw-secondary{border:1px solid #cbdce3;background:#fff;color:#536b7c}
-            @media(max-width:980px){.cw-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.cw-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-            @media(max-width:620px){.cw-hero{padding:16px}.cw-hero-meta{width:100%}.cw-hero-pill{flex:1;justify-content:center}.cw-kpis,.cw-filter-grid,.cw-form-grid{grid-template-columns:1fr}.cw-field-full{grid-column:auto}.cw-filter,.cw-form-body{padding:12px}.cw-table-caption{align-items:flex-start;flex-direction:column}.cw-form-actions{flex-direction:column}.cw-submit,.cw-secondary{width:100%}}
-            @media(prefers-reduced-motion:reduce){.cw-control{transition:none}}
-        </style>`;
-    },
-
     async ensureApprovalsDataLoaded({ force = false } = {}) {
         if (this._approvalsLoadPromise && !force) return this._approvalsLoadPromise;
         this._approvalsLoadPromise = (async () => {
@@ -14871,7 +13808,7 @@ const Clinic = {
         }
 
         // ✅ عرض فوري بالبيانات المحلية إن وجدت، ثم تحديث من backend عند الحاجة
-        panel.innerHTML = '<div class="text-center py-8"><div style="width: 300px; margin: 0 auto 16px;"><div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;"><div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div></div></div><p class="mt-2">' + this.getTranslations().t('skeleton.preparing', 'جاري التحضير...') + '</p></div>';
+        panel.innerHTML = '<div class="text-center py-8"><div style="width: 300px; margin: 0 auto 16px;"><div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;"><div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div></div></div><p class="mt-2">جاري التحضير...</p></div>';
 
         try {
             const lastSync = (() => { try { return localStorage.getItem('clinic_approvals_last_sync'); } catch (e) { return null; } })();
@@ -14944,40 +13881,71 @@ const Clinic = {
             }
 
             panel.innerHTML = `
-                ${this.getClinicWorkflowStyles_()}
-                <div class="clinic-workflow-root" id="clinic-approvals-root">
-                    <section class="cw-hero" aria-labelledby="approvals-title">
-                        <div class="cw-hero-copy"><span class="cw-hero-icon"><i class="fas fa-clipboard-check"></i></span><div><h2 id="approvals-title">مركز طلبات الموافقة</h2><p>مراجعة واعتماد طلبات العيادة من شاشة تشغيل موحدة</p></div></div>
-                        <div class="cw-hero-meta"><span class="cw-hero-pill"><i class="fas fa-hourglass-half"></i>${pendingRequests.length} بانتظار القرار</span><button type="button" id="approvals-refresh-btn" class="cw-hero-pill" style="cursor:pointer;color:#fff;"><i class="fas fa-sync-alt"></i>تحديث البيانات</button></div>
-                    </section>
-                    <section class="cw-kpis" aria-label="ملخص طلبات الموافقة">
-                        <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-clock"></i></span><div><small>طلبات معلقة</small><strong>${pendingRequests.length}</strong></div></div>
-                        <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-check"></i></span><div><small>موافق عليها</small><strong>${approvedRequests.length}</strong></div></div>
-                        <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-times"></i></span><div><small>طلبات مرفوضة</small><strong>${rejectedRequests.length}</strong></div></div>
-                        <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-layer-group"></i></span><div><small>إجمالي الطلبات</small><strong>${allRequests.length}</strong></div></div>
-                    </section>
-                    <section class="cw-filter" aria-label="فلاتر طلبات الموافقة">
-                        <div class="cw-filter-head"><div class="cw-filter-title"><i class="fas fa-sliders-h"></i>فلترة الطلبات <span id="approvals-filter-count" class="cw-count-pill">${pendingRequests.length} من ${allRequests.length}</span></div><button type="button" id="approvals-reset-filters" class="cw-reset"><i class="fas fa-undo-alt ml-1"></i>إعادة الضبط</button></div>
-                        <div class="cw-filter-grid">
-                            <div class="cw-field"><label for="approvals-search-filter"><i class="fas fa-search"></i>بحث شامل</label><div class="cw-input-wrap"><i class="fas fa-search"></i><input type="search" id="approvals-search-filter" class="cw-control" placeholder="العنصر أو مقدم الطلب..." autocomplete="off"></div></div>
-                            <div class="cw-field"><label for="approvals-status-filter"><i class="fas fa-tasks"></i>الحالة</label><select id="approvals-status-filter" class="cw-control"><option value="all">جميع الحالات</option><option value="pending" selected>طلبات معلقة</option><option value="approved">موافق عليها</option><option value="rejected">مرفوضة</option></select></div>
-                            <div class="cw-field"><label for="approvals-type-filter"><i class="fas fa-tags"></i>نوع الطلب</label><select id="approvals-type-filter" class="cw-control"><option value="all">جميع الأنواع</option><option value="deletion">حذف الأدوية</option><option value="supply">طلبات الاحتياج</option><option value="visit">حذف الزيارات</option><option value="timeoff">إجازة / إذن / إضافي</option></select></div>
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-check-circle ml-2"></i>
+                            طلبات الموافقة
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <!-- إحصائيات -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div class="text-center p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                                <i class="fas fa-clock text-3xl text-yellow-600 mb-2"></i>
+                                <p class="text-sm text-gray-600">طلبات معلقة</p>
+                                <p class="text-2xl font-bold">${pendingRequests.length}</p>
+                            </div>
+                            <div class="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                                <i class="fas fa-check text-3xl text-green-600 mb-2"></i>
+                                <p class="text-sm text-gray-600">موافق عليها</p>
+                                <p class="text-2xl font-bold">${approvedRequests.length}</p>
+                            </div>
+                            <div class="text-center p-4 bg-red-50 rounded-lg border border-red-200">
+                                <i class="fas fa-times text-3xl text-red-600 mb-2"></i>
+                                <p class="text-sm text-gray-600">مرفوضة</p>
+                                <p class="text-2xl font-bold">${rejectedRequests.length}</p>
+                            </div>
                         </div>
-                    </section>
-                    <section class="cw-table-card"><div class="cw-table-caption"><div><strong>قائمة الطلبات</strong><span> — اتخذ القرار أو اعرض التفاصيل</span></div><span id="approvals-result-pill" class="cw-count-pill">${pendingRequests.length} طلب</span></div><div id="approvals-table-container">${this.renderApprovalsTable(pendingRequests)}</div></section>
-                </div>`;
+
+                        <!-- فلاتر -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">تصفية حسب الحالة:</label>
+                                <select id="approvals-status-filter" class="form-input">
+                                    <option value="all">جميع الطلبات</option>
+                                    <option value="pending" selected>طلبات معلقة</option>
+                                    <option value="approved">موافق عليها</option>
+                                    <option value="rejected">مرفوضة</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">تصفية حسب النوع:</label>
+                                <select id="approvals-type-filter" class="form-input">
+                                    <option value="all">جميع الأنواع</option>
+                                    <option value="deletion">طلبات حذف الأدوية</option>
+                                    <option value="supply">طلبات الاحتياج</option>
+                                    <option value="visit">طلبات حذف الزيارات</option>
+                                    <option value="timeoff">طلبات إجازة / إذن / إضافي</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- جدول الطلبات -->
+                        <div id="approvals-table-container">
+                            ${this.renderApprovalsTable(pendingRequests)}
+                        </div>
+                    </div>
+                </div>
+            `;
 
             // ربط الأحداث
             const statusFilter = document.getElementById('approvals-status-filter');
             const typeFilter = document.getElementById('approvals-type-filter');
-            const searchFilter = document.getElementById('approvals-search-filter');
-            const resetFilters = document.getElementById('approvals-reset-filters');
-            const refreshBtn = document.getElementById('approvals-refresh-btn');
 
             const updateTable = () => {
                 const status = statusFilter?.value || 'all';
                 const type = typeFilter?.value || 'all';
-                const search = this.normalizeArabicText(searchFilter?.value || '');
 
                 let filteredRequests = allRequests;
 
@@ -14987,29 +13955,12 @@ const Clinic = {
                 if (type !== 'all') {
                     filteredRequests = filteredRequests.filter(r => this._approvalRequestMatchesTypeFilter(r, type));
                 }
-                if (search) {
-                    filteredRequests = filteredRequests.filter((request) => this.normalizeArabicText([
-                        request.itemName,
-                        request.requestedBy?.name,
-                        request.requestedByName,
-                        request.userName,
-                        request.userEmail,
-                        request.medicationData?.name,
-                        request.visitData?.employeeName,
-                        request.visitData?.contractorName,
-                        request.reason
-                    ].filter(Boolean).join(' ')).includes(search));
-                }
 
                 const approvalsTableContainer = document.getElementById('approvals-table-container');
                 if (approvalsTableContainer) {
                     approvalsTableContainer.innerHTML = this.renderApprovalsTable(filteredRequests);
-                    this.bindApprovalsEvents(approvalsTableContainer);
+                    this.bindApprovalsEvents();
                 }
-                const count = document.getElementById('approvals-filter-count');
-                const result = document.getElementById('approvals-result-pill');
-                if (count) count.textContent = `${filteredRequests.length} من ${allRequests.length}`;
-                if (result) result.textContent = `${filteredRequests.length} طلب`;
             };
 
             if (statusFilter) {
@@ -15018,21 +13969,8 @@ const Clinic = {
             if (typeFilter) {
                 typeFilter.addEventListener('change', updateTable);
             }
-            searchFilter?.addEventListener('input', updateTable);
-            resetFilters?.addEventListener('click', () => {
-                if (searchFilter) searchFilter.value = '';
-                if (statusFilter) statusFilter.value = 'pending';
-                if (typeFilter) typeFilter.value = 'all';
-                updateTable();
-            });
-            refreshBtn?.addEventListener('click', async () => {
-                refreshBtn.disabled = true;
-                refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>جاري التحديث';
-                try { await this.ensureApprovalsDataLoaded({ force: true }); }
-                finally { this.renderApprovalsTab(); }
-            });
 
-            this.bindApprovalsEvents(panel);
+            this.bindApprovalsEvents();
 
             // إضافة مستمعي التمرير للجدول
             setTimeout(() => {
@@ -15050,10 +13988,10 @@ const Clinic = {
 
     renderApprovalsTable(requests) {
         if (!requests || requests.length === 0) {
-            return '<div class="cw-empty"><i class="fas fa-inbox"></i><h3>لا توجد طلبات مطابقة</h3><p>غيّر الفلاتر أو حدّث البيانات لعرض الطلبات.</p></div>';
+            return '<div class="text-center py-8 text-gray-500">لا توجد طلبات</div>';
         }
 
-        const rows = requests.map((request, index) => {
+        const rows = requests.map(request => {
             const approvalKind = request.approvalKind || request.requestType || 'deletion';
             const isDeletion = approvalKind === 'deletion';
             const isSupply = approvalKind === 'supply';
@@ -15068,7 +14006,7 @@ const Clinic = {
                 const medication = request.medicationData || {};
                 itemName = medication.name || '-';
                 itemType = medication.type || '-';
-                itemDetails = `الدواء: ${itemName}`;
+                itemDetails = `الدواء: ${Utils.escapeHTML(itemName)}`;
             } else if (isSupply) {
                 itemName = request.itemName || '-';
                 const typeLabel = {
@@ -15078,10 +14016,7 @@ const Clinic = {
                     'other': 'أخرى'
                 }[request.type] || request.type || '-';
                 itemType = typeLabel;
-                itemDetails = `${typeLabel}: ${itemName} (${request.quantity || ''} ${request.unit || ''})`;
-                if (request.type === 'medication' && request.currentBalanceAtRequest !== null && request.currentBalanceAtRequest !== undefined) {
-                    itemDetails += ` • الرصيد وقت الطلب: ${request.currentBalanceAtRequest} ${request.unit || 'وحدة'}`;
-                }
+                itemDetails = `${typeLabel}: ${Utils.escapeHTML(itemName)} (${request.quantity || ''} ${Utils.escapeHTML(request.unit || '')})`;
             } else if (isVisitDeletion) {
                 const visitData = request.visitData || {};
                 const personName = visitData.employeeName || visitData.contractorWorkerName || visitData.contractorName || visitData.externalName || '-';
@@ -15090,11 +14025,11 @@ const Clinic = {
                     : (visitData.personType === 'contractor' ? 'مقاول' : 'عمالة خارجية');
                 itemName = personName;
                 itemType = typeLabel;
-                itemDetails = `زيارة: ${personName} (${typeLabel})`;
+                itemDetails = `زيارة: ${Utils.escapeHTML(personName)} (${Utils.escapeHTML(typeLabel)})`;
             } else if (isTimeOff) {
                 itemName = request.userName || request.userEmail || '-';
                 itemType = this.getTimeOffRequestTypeLabel(request.requestType);
-                itemDetails = `${itemType}: ${this.formatTimeOffRequestDetails(request)}`;
+                itemDetails = `${Utils.escapeHTML(itemType)}: ${Utils.escapeHTML(this.formatTimeOffRequestDetails(request))}`;
             }
 
             const requestedBy = isTimeOff
@@ -15112,24 +14047,23 @@ const Clinic = {
 
             return `
                 <tr>
-                    <td class="text-center"><span class="cw-serial">${index + 1}</span></td>
                     <td>${requestTypeBadge}</td>
-                    <td><div class="cw-main-cell"><span class="cw-cell-icon"><i class="${isSupply ? 'fas fa-box-open' : isTimeOff ? 'fas fa-user-clock' : isVisitDeletion ? 'fas fa-user-minus' : 'fas fa-pills'}"></i></span><div><strong>${Utils.escapeHTML(itemName)}</strong><small>${Utils.escapeHTML(itemDetails)}</small></div></div></td>
+                    <td>${Utils.escapeHTML(itemName)}</td>
                     <td>${Utils.escapeHTML(itemType)}</td>
                     <td>${Utils.escapeHTML(requestedBy.name || '-')}</td>
                     <td>${this.formatDate(request.createdAt || request.requestDate, true)}</td>
                     <td>${statusBadge}</td>
-                    <td class="text-center">
-                        <div class="cw-actions">
+                    <td>
+                        <div class="flex gap-2 justify-center">
                             ${isPending ? `
-                                <button type="button" class="btn-icon btn-icon-success" data-action="approve-request" data-id="${Utils.escapeHTML(request.id || '')}" data-type="${Utils.escapeHTML(approvalKind)}" title="موافقة" aria-label="موافقة">
+                                <button class="btn-icon btn-icon-success" data-action="approve-request" data-id="${request.id}" data-type="${approvalKind}" title="موافقة">
                                     <i class="fas fa-check"></i>
                                 </button>
-                                <button type="button" class="btn-icon btn-icon-danger" data-action="reject-request" data-id="${Utils.escapeHTML(request.id || '')}" data-type="${Utils.escapeHTML(approvalKind)}" title="رفض" aria-label="رفض">
+                                <button class="btn-icon btn-icon-danger" data-action="reject-request" data-id="${request.id}" data-type="${approvalKind}" title="رفض">
                                     <i class="fas fa-times"></i>
                                 </button>
                             ` : ''}
-                            <button type="button" class="btn-icon btn-icon-primary" data-action="view-request" data-id="${Utils.escapeHTML(request.id || '')}" data-type="${Utils.escapeHTML(approvalKind)}" title="عرض التفاصيل" aria-label="عرض التفاصيل">
+                            <button class="btn-icon btn-icon-primary" data-action="view-request" data-id="${request.id}" data-type="${approvalKind}" title="عرض التفاصيل">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
@@ -15139,18 +14073,17 @@ const Clinic = {
         }).join('');
 
         return `
-            <div class="cw-table-scroll clinic-table-wrapper">
-                <table class="cw-table">
+            <div class="table-responsive clinic-table-wrapper" style="overflow-x: auto; overflow-y: auto; max-height: 70vh;">
+                <table class="data-table">
                     <thead>
                         <tr>
-                            <th class="text-center"><i class="fas fa-hashtag"></i>م</th>
-                            <th><i class="fas fa-tag"></i>نوع الطلب</th>
-                            <th><i class="fas fa-file-medical-alt"></i>بيانات الطلب</th>
-                            <th><i class="fas fa-layer-group"></i>التصنيف</th>
-                            <th><i class="fas fa-user"></i>مقدم الطلب</th>
-                            <th><i class="fas fa-calendar-alt"></i>تاريخ الطلب</th>
-                            <th><i class="fas fa-tasks"></i>الحالة</th>
-                            <th class="text-center"><i class="fas fa-cogs"></i>الإجراءات</th>
+                            <th>نوع الطلب</th>
+                            <th>اسم العنصر</th>
+                            <th>النوع</th>
+                            <th>مقدم الطلب</th>
+                            <th>تاريخ الطلب</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -15174,8 +14107,8 @@ const Clinic = {
         }
     },
 
-    bindApprovalsEvents(root = document) {
-        root.querySelectorAll('[data-action="approve-request"]').forEach(btn => {
+    bindApprovalsEvents() {
+        document.querySelectorAll('[data-action="approve-request"]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const requestId = btn.getAttribute('data-id');
                 const requestType = btn.getAttribute('data-type') || 'deletion';
@@ -15183,7 +14116,7 @@ const Clinic = {
             });
         });
 
-        root.querySelectorAll('[data-action="reject-request"]').forEach(btn => {
+        document.querySelectorAll('[data-action="reject-request"]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const requestId = btn.getAttribute('data-id');
                 const requestType = btn.getAttribute('data-type') || 'deletion';
@@ -15191,7 +14124,7 @@ const Clinic = {
             });
         });
 
-        root.querySelectorAll('[data-action="view-request"]').forEach(btn => {
+        document.querySelectorAll('[data-action="view-request"]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const requestId = btn.getAttribute('data-id');
                 const requestType = btn.getAttribute('data-type') || 'deletion';
@@ -15239,8 +14172,7 @@ const Clinic = {
                     action: 'approveSupplyRequest',
                     data: {
                         requestId: requestId,
-                        approverData: approverData,
-                        __timeoutMs: this._supplyRequestActionTimeoutMs
+                        approverData: approverData
                     }
                 });
             } else if (isVisitDeletion) {
@@ -15260,17 +14192,6 @@ const Clinic = {
 
             if (result && result.success) {
                 Loading.hide();
-                if (isSupply && Array.isArray(AppState.appData.clinicSupplyRequests)) {
-                    const localRequest = AppState.appData.clinicSupplyRequests.find(item => String(item.id) === String(requestId));
-                    if (localRequest) {
-                        Object.assign(localRequest, {
-                            status: 'approved',
-                            approvedBy: approverData,
-                            approvedById: approverData.id || approverData.email || '',
-                            approvedAt: new Date().toISOString()
-                        });
-                    }
-                }
                 const successMessage = isDeletion
                     ? 'تمت الموافقة على الطلب وحذف الدواء بنجاح'
                     : isSupply
@@ -15295,10 +14216,6 @@ const Clinic = {
                     } catch (_e) { /* ignore */ }
                 }
 
-                if ((isSupply || isTimeOff) && typeof UI !== 'undefined' && typeof UI.updateNotificationsBadge === 'function') {
-                    UI.updateNotificationsBadge();
-                }
-
                 // تحديث تبويبة طلبات الموافقة فقط بدون إعادة تحميل كامل
                 setTimeout(() => {
                     this.renderApprovalsTab();
@@ -15313,20 +14230,13 @@ const Clinic = {
                                 action: 'getAllMedications',
                                 data: {}
                             });
-                            if (medicationsResult && medicationsResult.success && Array.isArray(medicationsResult.data)) {
-                                const oldMeds = Array.isArray(AppState.appData.clinicMedications) && AppState.appData.clinicMedications.length
-                                    ? AppState.appData.clinicMedications
-                                    : (Array.isArray(AppState.appData.medications) ? AppState.appData.medications : []);
-                                if (medicationsResult.data.length === 0 && oldMeds.length > 0) {
-                                    Utils.safeWarn('⚠️ تجاهل قائمة أدوية فارغة بعد الموافقة — الإبقاء على المحلي');
-                                } else {
-                                    AppState.appData.medications = medicationsResult.data;
-                                    AppState.appData.clinicMedications = medicationsResult.data;
-                                    AppState.appData.clinicInventory = medicationsResult.data;
+                            if (medicationsResult && medicationsResult.success) {
+                                AppState.appData.medications = medicationsResult.data;
+                                AppState.appData.clinicMedications = medicationsResult.data;
+                                AppState.appData.clinicInventory = medicationsResult.data;
 
-                                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                                        window.DataManager.save();
-                                    }
+                                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                                    window.DataManager.save();
                                 }
                             }
                         } catch (syncError) {
@@ -15373,7 +14283,6 @@ const Clinic = {
                     data: {
                         requestId: requestId,
                         rejectorData: rejectorData,
-                        __timeoutMs: this._supplyRequestActionTimeoutMs,
                         reason: reason || 'لم يتم تحديد سبب'
                     }
                 });
@@ -15398,18 +14307,6 @@ const Clinic = {
 
             if (result && result.success) {
                 Loading.hide();
-                if (requestType === 'supply' && Array.isArray(AppState.appData.clinicSupplyRequests)) {
-                    const localRequest = AppState.appData.clinicSupplyRequests.find(item => String(item.id) === String(requestId));
-                    if (localRequest) {
-                        Object.assign(localRequest, {
-                            status: 'rejected',
-                            rejectedBy: rejectorData,
-                            rejectedById: rejectorData.id || rejectorData.email || '',
-                            rejectedAt: new Date().toISOString(),
-                            rejectionReason: reason || ''
-                        });
-                    }
-                }
                 Notification.success('تم رفض الطلب بنجاح');
 
                 if (requestType === 'timeoff') {
@@ -15422,10 +14319,6 @@ const Clinic = {
                             AppState.appData.clinicStaffTimeOffRequests = refresh.data;
                         }
                     } catch (_e) { /* ignore */ }
-                }
-
-                if ((requestType === 'supply' || requestType === 'timeoff') && typeof UI !== 'undefined' && typeof UI.updateNotificationsBadge === 'function') {
-                    UI.updateNotificationsBadge();
                 }
 
                 // تحديث تبويبة طلبات الموافقة فقط
@@ -15560,10 +14453,6 @@ const Clinic = {
                             <div><strong>اسم العنصر:</strong> ${Utils.escapeHTML(request.itemName || '-')}</div>
                             <div><strong>الكمية:</strong> ${request.quantity || '-'} ${Utils.escapeHTML(request.unit || '')}</div>
                             <div><strong>الأولوية:</strong> ${Utils.escapeHTML(priorityLabel)}</div>
-                            ${request.type === 'medication' && request.currentBalanceAtRequest !== null && request.currentBalanceAtRequest !== undefined ? `
-                                <div style="padding:7px 9px;border-radius:8px;background:#f0fdfa;color:#134e4a;"><strong>الرصيد وقت الطلب:</strong> ${request.currentBalanceAtRequest} ${Utils.escapeHTML(request.unit || 'وحدة')}</div>
-                            ` : ''}
-                            ${request.type === 'medication' && request.medicationExpiryDate ? `<div><strong>الصلاحية:</strong> ${this.formatDate(request.medicationExpiryDate)}</div>` : ''}
                             ${request.notes ? `
                                 <div class="col-span-2"><strong>ملاحظات:</strong> ${Utils.escapeHTML(request.notes)}</div>
                             ` : ''}
@@ -15572,82 +14461,50 @@ const Clinic = {
                 `;
             }
 
-            const requestTypeLabel = isDeletion
-                ? 'طلب حذف دواء'
-                : isVisitDeletion
-                    ? 'طلب حذف زيارة'
-                    : isTimeOff
-                        ? `طلب ${this.getTimeOffRequestTypeLabel(request.requestType)}`
-                        : 'طلب احتياجات طبية';
-            const statusKey = String(request.status || 'pending').toLowerCase();
-            const statusLabel = {
-                pending: 'قيد المراجعة',
-                approved: 'تمت الموافقة',
-                rejected: 'مرفوض',
-                fulfilled: 'تم التنفيذ'
-            }[statusKey] || request.status || 'قيد المراجعة';
-            const requestReference = request.id || request.requestId || '-';
-
             const modal = document.createElement('div');
             modal.className = 'modal-overlay';
             modal.innerHTML = `
-                <style>
-                    .clinic-approval-detail{--cad-navy:#0b2d4f;--cad-teal:#0f8b83;--cad-ink:#20384a;--cad-muted:#6b7f8e;--cad-line:#dce8ed;--cad-soft:#f4f8fa;width:min(880px,94vw);max-width:880px;max-height:92vh;overflow:hidden;border:1px solid rgba(15,139,131,.2);border-radius:22px;background:#fff;box-shadow:0 28px 80px rgba(8,34,57,.28);font-family:"Tajawal","Noto Kufi Arabic",sans-serif}
-                    .clinic-approval-detail .cad-header{position:relative;padding:24px 26px 22px;color:#fff;background:linear-gradient(128deg,#0b2d4f 0%,#124c68 62%,#0f8b83 100%);overflow:hidden}
-                    .clinic-approval-detail .cad-header:after{content:"";position:absolute;inset:auto -42px -72px auto;width:190px;height:190px;border:26px solid rgba(255,255,255,.07);border-radius:50%}
-                    .clinic-approval-detail .cad-head-main{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
-                    .clinic-approval-detail .cad-title-wrap{display:flex;align-items:center;gap:14px;min-width:0}
-                    .clinic-approval-detail .cad-title-icon{flex:0 0 48px;width:48px;height:48px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.24);border-radius:14px;background:rgba(255,255,255,.12);font-size:21px}
-                    .clinic-approval-detail .cad-eyebrow{margin:0 0 4px;color:#9de7df;font-size:.69rem;font-weight:800;letter-spacing:.04em}
-                    .clinic-approval-detail .cad-title{margin:0;color:#fff;font-size:clamp(1.05rem,2vw,1.35rem);font-weight:850;line-height:1.35}
-                    .clinic-approval-detail .cad-subtitle{margin:5px 0 0;color:rgba(255,255,255,.72);font-size:.72rem}
-                    .clinic-approval-detail .cad-close{position:relative;z-index:2;flex:0 0 38px;width:38px;height:38px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.24);border-radius:11px;background:rgba(255,255,255,.1);color:#fff;cursor:pointer;transition:.18s ease}
-                    .clinic-approval-detail .cad-close:hover{background:#fff;color:var(--cad-navy);transform:rotate(6deg)}
-                    .clinic-approval-detail .cad-meta{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
-                    .clinic-approval-detail .cad-chip{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:rgba(255,255,255,.1);color:#fff;font-size:.69rem;font-weight:750}
-                    .clinic-approval-detail .cad-status--pending{background:#fff4cf;color:#7a4a00;border-color:#ffe29a}.clinic-approval-detail .cad-status--approved{background:#dff8eb;color:#14643b;border-color:#bcebd2}.clinic-approval-detail .cad-status--rejected{background:#ffe5e5;color:#9b2323;border-color:#ffc7c7}.clinic-approval-detail .cad-status--fulfilled{background:#dff5fa;color:#0a6073;border-color:#b8e4ed}
-                    .clinic-approval-detail .cad-body{max-height:calc(92vh - 196px);padding:20px 22px;overflow:auto;background:linear-gradient(180deg,#f7fafb 0%,#fff 100%)}
-                    .clinic-approval-detail .cad-card{margin-bottom:14px;padding:17px;border:1px solid var(--cad-line);border-radius:15px;background:#fff;box-shadow:0 5px 18px rgba(11,45,79,.055)}
-                    .clinic-approval-detail .cad-card-title,.clinic-approval-detail .cad-item h3{display:flex;align-items:center;gap:8px;margin:0 0 13px;color:var(--cad-navy);font-size:.86rem;font-weight:850}
-                    .clinic-approval-detail .cad-card-title i{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:#e1f4f1;color:var(--cad-teal);font-size:.75rem}
-                    .clinic-approval-detail .cad-item>div{margin-bottom:14px;padding:17px;border:1px solid var(--cad-line);border-radius:15px;background:#fff;box-shadow:0 5px 18px rgba(11,45,79,.055)}
-                    .clinic-approval-detail .cad-item h3:before{content:"\\f46d";font-family:"Font Awesome 6 Free","Font Awesome 5 Free";font-weight:900;width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:#e1f4f1;color:var(--cad-teal);font-size:.75rem}
-                    .clinic-approval-detail .cad-item .grid,.clinic-approval-detail .cad-data-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-                    .clinic-approval-detail .cad-item .grid>div,.clinic-approval-detail .cad-data{min-width:0;padding:11px 12px;border:1px solid #e6eef2;border-radius:11px;background:var(--cad-soft);color:var(--cad-ink);font-size:.78rem;line-height:1.65;overflow-wrap:anywhere}
-                    .clinic-approval-detail .cad-item strong,.clinic-approval-detail .cad-data strong{display:block;margin-bottom:3px;color:var(--cad-muted);font-size:.66rem;font-weight:800}
-                    .clinic-approval-detail .cad-item .col-span-2,.clinic-approval-detail .cad-data--wide{grid-column:1/-1}
-                    .clinic-approval-detail .cad-item .btn-secondary{display:inline-flex;align-items:center;gap:6px;margin-top:4px;border-color:#b9d8d5;color:var(--cad-teal);font-weight:800}
-                    .clinic-approval-detail .cad-decision{border-inline-start:4px solid var(--cad-teal)}
-                    .clinic-approval-detail .cad-decision--rejected{border-inline-start-color:#cf3f3f}
-                    .clinic-approval-detail .cad-pending{display:flex;align-items:center;gap:10px;padding:12px;border-radius:11px;background:#fff8df;color:#76520b;font-size:.75rem}
-                    .clinic-approval-detail .cad-pending i{font-size:1rem}
-                    .clinic-approval-detail .cad-footer{display:flex;justify-content:center;padding:13px 20px;border-top:1px solid var(--cad-line);background:#f8fbfc}
-                    .clinic-approval-detail .cad-footer button{min-width:130px;padding:9px 18px;border:1px solid #c9d9df;border-radius:10px;background:#fff;color:var(--cad-ink);font-weight:800;cursor:pointer;box-shadow:0 3px 10px rgba(11,45,79,.07)}
-                    [data-theme="dark"] .clinic-approval-detail{--cad-ink:#dce9ee;--cad-muted:#9fb2bd;--cad-line:#29444f;--cad-soft:#18323c;background:#112832}.clinic-approval-detail .cad-close:focus-visible,.clinic-approval-detail button:focus-visible{outline:3px solid rgba(20,184,166,.35);outline-offset:2px}
-                    [data-theme="dark"] .clinic-approval-detail .cad-body,[data-theme="dark"] .clinic-approval-detail .cad-footer{background:#10262f}[data-theme="dark"] .clinic-approval-detail .cad-card,[data-theme="dark"] .clinic-approval-detail .cad-item>div{background:#17313b}
-                    @media(max-width:640px){.clinic-approval-detail{width:96vw;max-height:95vh;border-radius:16px}.clinic-approval-detail .cad-header{padding:18px 16px}.clinic-approval-detail .cad-title-icon{width:42px;height:42px}.clinic-approval-detail .cad-body{max-height:calc(95vh - 184px);padding:13px}.clinic-approval-detail .cad-item .grid,.clinic-approval-detail .cad-data-grid{grid-template-columns:1fr}.clinic-approval-detail .cad-item .col-span-2,.clinic-approval-detail .cad-data--wide{grid-column:auto}}
-                    @media(prefers-reduced-motion:reduce){.clinic-approval-detail .cad-close{transition:none}.clinic-approval-detail .cad-close:hover{transform:none}}
-                </style>
-                <div class="modal-content clinic-approval-detail" role="dialog" aria-modal="true" aria-labelledby="clinic-approval-detail-title">
-                    <header class="cad-header">
-                        <div class="cad-head-main">
-                            <div class="cad-title-wrap">
-                                <span class="cad-title-icon"><i class="fas fa-file-medical-alt"></i></span>
-                                <div><p class="cad-eyebrow">سجل الاعتماد الطبي</p><h2 id="clinic-approval-detail-title" class="cad-title">تفاصيل طلب الموافقة</h2><p class="cad-subtitle">${Utils.escapeHTML(requestTypeLabel)} · رقم ${Utils.escapeHTML(String(requestReference))}</p></div>
-                            </div>
-                            <button class="cad-close modal-close" type="button" aria-label="إغلاق"><i class="fas fa-times"></i></button>
-                        </div>
-                        <div class="cad-meta"><span class="cad-chip cad-status--${Utils.escapeHTML(statusKey)}"><i class="fas fa-circle-check"></i>${Utils.escapeHTML(statusLabel)}</span><span class="cad-chip"><i class="far fa-calendar-alt"></i>${Utils.escapeHTML(this.formatDate(request.createdAt || request.requestDate, true))}</span></div>
-                    </header>
-                    <div class="modal-body cad-body">
-                        <div class="cad-item">${itemDetailsHTML}</div>
-                        <section class="cad-card"><h3 class="cad-card-title"><i class="fas fa-user-circle"></i>بيانات مقدم الطلب</h3><div class="cad-data-grid"><div class="cad-data"><strong>مقدم الطلب</strong>${Utils.escapeHTML(requestedBy.name || '-')}</div><div class="cad-data"><strong>البريد الإلكتروني</strong>${Utils.escapeHTML(requestedBy.email || request.userEmail || '-')}</div><div class="cad-data"><strong>تاريخ الطلب</strong>${Utils.escapeHTML(this.formatDate(request.createdAt || request.requestDate, true))}</div><div class="cad-data"><strong>مرجع الطلب</strong>${Utils.escapeHTML(String(requestReference))}</div></div></section>
-                        ${request.status === 'approved' ? `<section class="cad-card cad-decision"><h3 class="cad-card-title"><i class="fas fa-user-check"></i>قرار الموافقة</h3><div class="cad-data-grid"><div class="cad-data"><strong>تمت الموافقة بواسطة</strong>${Utils.escapeHTML(approvedBy.name || '-')}</div><div class="cad-data"><strong>تاريخ الموافقة</strong>${Utils.escapeHTML(this.formatDate(request.approvedAt, true))}</div></div></section>` : ''}
-                        ${request.status === 'rejected' ? `<section class="cad-card cad-decision cad-decision--rejected"><h3 class="cad-card-title"><i class="fas fa-user-times"></i>قرار الرفض</h3><div class="cad-data-grid"><div class="cad-data"><strong>تم الرفض بواسطة</strong>${Utils.escapeHTML(rejectedBy.name || '-')}</div><div class="cad-data"><strong>تاريخ الرفض</strong>${Utils.escapeHTML(this.formatDate(request.rejectedAt, true))}</div>${request.rejectionReason ? `<div class="cad-data cad-data--wide"><strong>سبب الرفض</strong>${Utils.escapeHTML(request.rejectionReason)}</div>` : ''}</div></section>` : ''}
-                        ${request.status !== 'approved' && request.status !== 'rejected' ? `<div class="cad-pending"><i class="fas fa-hourglass-half"></i><span>الطلب قيد المراجعة ولم يصدر قرار نهائي بعد.</span></div>` : ''}
+                <div class="modal-content" style="max-width: 700px;">
+                    <div class="modal-header modal-header-centered">
+                        <h2 class="modal-title">تفاصيل طلب الموافقة</h2>
+                        <button class="modal-close"><i class="fas fa-times"></i></button>
                     </div>
-                    <div class="modal-footer cad-footer">
-                        <button class="modal-close-btn" type="button"><i class="fas fa-times ml-2"></i>إغلاق</button>
+                    <div class="modal-body">
+                        <div class="space-y-4">
+                            ${itemDetailsHTML}
+                            <div>
+                                <h3 class="font-semibold text-lg mb-2">معلومات مقدم الطلب:</h3>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div><strong>مقدم الطلب:</strong> ${Utils.escapeHTML(requestedBy.name || '-')}</div>
+                                    <div><strong>تاريخ الطلب:</strong> ${this.formatDate(request.createdAt || request.requestDate, true)}</div>
+                                    <div><strong>الحالة:</strong> ${this.getApprovalStatusBadge(request.status)}</div>
+                                </div>
+                            </div>
+                            ${request.status === 'approved' ? `
+                                <div>
+                                    <h3 class="font-semibold text-lg mb-2">معلومات الموافقة:</h3>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div><strong>تمت الموافقة بواسطة:</strong> ${Utils.escapeHTML(approvedBy.name || '-')}</div>
+                                        <div><strong>تاريخ الموافقة:</strong> ${this.formatDate(request.approvedAt, true)}</div>
+                                    </div>
+                                </div>
+                            ` : ''}
+                            ${request.status === 'rejected' ? `
+                                <div>
+                                    <h3 class="font-semibold text-lg mb-2">معلومات الرفض:</h3>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div><strong>تم الرفض بواسطة:</strong> ${Utils.escapeHTML(rejectedBy.name || '-')}</div>
+                                        <div><strong>تاريخ الرفض:</strong> ${this.formatDate(request.rejectedAt, true)}</div>
+                                        ${request.rejectionReason ? `
+                                            <div class="col-span-2"><strong>سبب الرفض:</strong> ${Utils.escapeHTML(request.rejectionReason)}</div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <div class="modal-footer form-actions-centered">
+                        <button class="btn-secondary modal-close-btn">إغلاق</button>
                     </div>
                 </div>
             `;
@@ -15724,8 +14581,6 @@ const Clinic = {
         if (!this._languageChangeListenerAdded) {
             // الاستماع لتغيير اللغة من app-ui.js
             document.addEventListener('language-changed', () => {
-                // عند تحديث اللغة المركزي: loadSectionData يعيد Clinic.load مرة واحدة — تجنّب ازدواج الرسم
-                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
                 this.refreshOnLanguageChange();
             });
             
@@ -15795,16 +14650,15 @@ const Clinic = {
             // ✅ تحسين سرعة التحميل: عدم انتظار syncDataFromServer في الخلفية
             // التحميل ينتهي فوراً بعد عرض الواجهة؛ جلب البيانات يتم في الخلفية ثم تحديث الواجهة
             const shouldLoadData = isFirstLoad || !hasLocalData || cacheAge >= CACHE_DURATION;
-            const isLanguageRefresh = typeof AppState !== 'undefined' && AppState._languageRefresh === true;
             
-            if (shouldLoadData && !isLanguageRefresh) {
+            if (shouldLoadData) {
                 Utils.safeLog('🔄 تحميل بيانات العيادة من قاعدة البيانات (في الخلفية)...');
                 Utils.promiseWithTimeout(
                     this.syncDataFromServer(),
                     130000,
                     'انتهت مهلة تحميل البيانات'
                 ).then(() => {
-                    // clinic_last_sync يُحدَّث فقط داخل loadVisitsDataFromBackend عند نجاح جلب الزيارات
+                    localStorage.setItem('clinic_last_sync', Date.now().toString());
                     this.ensureData();
                     this.renderUI();
                     if (this.state && this.state.activeTab === 'visits') {
@@ -15826,12 +14680,6 @@ const Clinic = {
                 }).finally(() => {
                     this.state.initialized = true;
                 });
-            } else if (isLanguageRefresh) {
-                // تغيير لغة فقط: إعادة رسم الواجهة دون مزامنة شبكة
-                Utils.safeLog('🌐 تحديث واجهة العيادة بعد تغيير اللغة (بدون مزامنة شبكة)');
-                this.ensureData();
-                this.renderUI();
-                this.state.initialized = true;
             } else {
                 Utils.safeLog('✅ عرض الواجهة بالبيانات المحفوظة محلياً - تحديث في الخلفية');
                 this.syncDataInBackground();
@@ -15903,14 +14751,6 @@ const Clinic = {
             )
                 .then(result => {
                     if (result && result.success && Array.isArray(result.data)) {
-                        const oldMeds = Array.isArray(AppState.appData.clinicMedications) && AppState.appData.clinicMedications.length
-                            ? AppState.appData.clinicMedications
-                            : (Array.isArray(AppState.appData.medications) ? AppState.appData.medications : []);
-                        // لا تستبدل محلياً غير فارغ بمصفوفة فارغة من الخادم
-                        if (result.data.length === 0 && oldMeds.length > 0) {
-                            Utils.safeWarn('⚠️ تجاهل قائمة أدوية فارغة من الخادم — الإبقاء على البيانات المحلية');
-                            return;
-                        }
                         // ✅ تطبيع الأدوية فور تحميلها (الأرقام قد تأتي كـ string من Google Sheets)
                         const normalizedMeds = result.data.map(m => this.normalizeMedicationRecord(m));
                         AppState.appData.medications = normalizedMeds;
@@ -15937,11 +14777,6 @@ const Clinic = {
             )
                 .then(result => {
                     if (result && result.success && Array.isArray(result.data)) {
-                        const oldSick = Array.isArray(AppState.appData.sickLeave) ? AppState.appData.sickLeave : [];
-                        if (result.data.length === 0 && oldSick.length > 0) {
-                            Utils.safeWarn('⚠️ تجاهل إجازات مرضية فارغة من الخادم — الإبقاء على البيانات المحلية');
-                            return;
-                        }
                         AppState.appData.sickLeave = result.data;
                         Utils.safeLog(`✅ تم تحميل ${result.data.length} إجازة مرضية`);
                     }
@@ -15964,11 +14799,6 @@ const Clinic = {
             )
                 .then(result => {
                     if (result && result.success && Array.isArray(result.data)) {
-                        const oldInjuries = Array.isArray(AppState.appData.injuries) ? AppState.appData.injuries : [];
-                        if (result.data.length === 0 && oldInjuries.length > 0) {
-                            Utils.safeWarn('⚠️ تجاهل إصابات فارغة من الخادم — الإبقاء على البيانات المحلية');
-                            return;
-                        }
                         AppState.appData.injuries = result.data;
                         Utils.safeLog(`✅ تم تحميل ${result.data.length} إصابة`);
                     }
@@ -16047,7 +14877,8 @@ const Clinic = {
                 () => new Error('Background sync timeout')
             );
 
-            // clinic_last_sync يُحدَّث فقط عند نجاح loadVisitsDataFromBackend — لا بعد غلاف المزامنة
+            // حفظ وقت آخر مزامنة
+            localStorage.setItem('clinic_last_sync', Date.now().toString());
 
             // ✅ إعادة تطبيع البيانات بعد المزامنة
             this.ensureData();
@@ -16463,15 +15294,6 @@ const Clinic = {
             leaveBlock?.classList.toggle('hidden', t !== 'leave');
             permBlock?.classList.toggle('hidden', t !== 'permission');
             otBlock?.classList.toggle('hidden', t !== 'overtime');
-            ['timeoff-date-from', 'timeoff-date-to'].forEach(id => {
-                const input = panel.querySelector('#' + id); if (input) input.required = t === 'leave';
-            });
-            ['timeoff-perm-date', 'timeoff-time-from', 'timeoff-time-to'].forEach(id => {
-                const input = panel.querySelector('#' + id); if (input) input.required = t === 'permission';
-            });
-            ['timeoff-ot-date', 'timeoff-duration-hours'].forEach(id => {
-                const input = panel.querySelector('#' + id); if (input) input.required = t === 'overtime';
-            });
         };
         const syncDraft = () => this._saveTimeOffFormDraftFromDom();
         typeEl?.addEventListener('change', () => { syncTypeFields(); syncDraft(); });
@@ -16489,97 +15311,10 @@ const Clinic = {
             }, 120);
         });
         syncTypeFields();
-        form.addEventListener('submit', async (e) => {
+        form.addEventListener('submit', (e) => {
             e.preventDefault();
-            const success = await this.submitTimeOffRequest();
-            if (success && typeof panel._closeClinicTimeOffRequestModal === 'function') {
-                panel._closeClinicTimeOffRequestModal(true);
-            }
+            this.submitTimeOffRequest();
         });
-    },
-
-    showTimeOffRequestForm() {
-        document.getElementById('clinic-timeoff-request-modal')?.remove();
-        const modal = document.createElement('div');
-        modal.id = 'clinic-timeoff-request-modal';
-        modal.className = 'modal-overlay';
-        modal.setAttribute('role', 'dialog');
-        modal.setAttribute('aria-modal', 'true');
-        modal.setAttribute('aria-labelledby', 'clinic-timeoff-modal-title');
-        modal.dir = 'rtl';
-        modal.innerHTML = `
-            ${this.getClinicWorkflowStyles_()}
-            <div class="modal-content clinic-workflow-root" style="max-width:780px;border-radius:17px;overflow:hidden;box-shadow:0 24px 70px rgba(6,31,55,.3);">
-                <div class="modal-header" style="padding:17px 20px;background:linear-gradient(128deg,#0b2d4f,#174d78 66%,#17726e);color:#fff;border:0;">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <span style="width:43px;height:43px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.25);border-radius:12px;background:rgba(255,255,255,.13);"><i class="fas fa-user-clock" style="font-size:18px;"></i></span>
-                        <div>
-                            <h3 id="clinic-timeoff-modal-title" class="modal-title" style="margin:0;color:#fff;font-size:1.08rem;">إرسال طلب حضور جديد</h3>
-                            <p style="margin:3px 0 0;color:#d9ebf3;font-size:.72rem;">إجازة أو إذن أو عمل إضافي عبر مسار الموافقة</p>
-                        </div>
-                    </div>
-                    <button type="button" class="clinic-timeoff-modal-close" aria-label="إغلاق" style="width:36px;height:36px;border:1px solid rgba(255,255,255,.25);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;cursor:pointer;"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="modal-body" style="padding:18px 20px 20px;max-height:76vh;overflow-y:auto;background:#f6fafc;">
-                    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 12px;margin-bottom:14px;border:1px solid #bae6fd;border-radius:10px;background:#f0f9ff;color:#0c4a6e;font-size:.74rem;">
-                        <span><i class="fas fa-user"></i>${Utils.escapeHTML(AppState.currentUser?.name || 'مستخدم العيادة')}</span>
-                        <span><i class="fas fa-shield-check"></i>يرسل الطلب للموافقة الإدارية</span>
-                    </div>
-                    <form id="timeoff-request-form" class="cw-form">
-                        <div class="cw-form-grid">
-                            <div class="cw-field cw-field-full">
-                                <label class="cw-field-title" for="timeoff-request-type"><i class="fas fa-list-check"></i>نوع الطلب *</label>
-                                <select id="timeoff-request-type" class="cw-control" required>
-                                    <option value="">اختر نوع الطلب</option>
-                                    <option value="leave">إجازة</option>
-                                    <option value="permission">إذن</option>
-                                    <option value="overtime">عمل إضافي</option>
-                                </select>
-                            </div>
-                            <div id="timeoff-leave-dates" class="hidden cw-field-full cw-form-grid">
-                                <div class="cw-field"><label class="cw-field-title" for="timeoff-date-from"><i class="fas fa-calendar-day"></i>من تاريخ *</label><input type="date" id="timeoff-date-from" class="cw-control"></div>
-                                <div class="cw-field"><label class="cw-field-title" for="timeoff-date-to"><i class="fas fa-calendar-check"></i>إلى تاريخ *</label><input type="date" id="timeoff-date-to" class="cw-control"></div>
-                            </div>
-                            <div id="timeoff-permission-fields" class="hidden cw-field-full cw-form-grid">
-                                <div class="cw-field"><label class="cw-field-title" for="timeoff-perm-date"><i class="fas fa-calendar-day"></i>التاريخ *</label><input type="date" id="timeoff-perm-date" class="cw-control"></div>
-                                <div class="cw-field"><label class="cw-field-title" for="timeoff-time-from"><i class="fas fa-clock"></i>من وقت *</label><input type="time" id="timeoff-time-from" class="cw-control"></div>
-                                <div class="cw-field"><label class="cw-field-title" for="timeoff-time-to"><i class="fas fa-clock"></i>إلى وقت *</label><input type="time" id="timeoff-time-to" class="cw-control"></div>
-                            </div>
-                            <div id="timeoff-overtime-fields" class="hidden cw-field-full cw-form-grid">
-                                <div class="cw-field"><label class="cw-field-title" for="timeoff-ot-date"><i class="fas fa-calendar-day"></i>التاريخ *</label><input type="date" id="timeoff-ot-date" class="cw-control"></div>
-                                <div class="cw-field"><label class="cw-field-title" for="timeoff-duration-hours"><i class="fas fa-hourglass-half"></i>عدد الساعات *</label><input type="number" id="timeoff-duration-hours" class="cw-control" min="0.5" step="0.5" placeholder="مثال: 2"></div>
-                            </div>
-                            <div class="cw-field cw-field-full">
-                                <label class="cw-field-title" for="timeoff-reason"><i class="fas fa-pen-to-square"></i>سبب الطلب *</label>
-                                <textarea id="timeoff-reason" class="cw-control" rows="4" required placeholder="اكتب سبب الطلب بوضوح..."></textarea>
-                            </div>
-                        </div>
-                        <div class="cw-form-actions">
-                            <button type="button" class="cw-secondary clinic-timeoff-modal-close"><i class="fas fa-times"></i>إلغاء</button>
-                            <button type="submit" class="cw-submit"><i class="fas fa-paper-plane"></i>إرسال الطلب للموافقة</button>
-                        </div>
-                    </form>
-                </div>
-            </div>`;
-        document.body.appendChild(modal);
-        this.applyModuleI18n(modal);
-        this._applyTimeOffFormDraftToPanel(modal);
-        this._bindTimeOffFormPanelEvents(modal);
-
-        const keyHandler = (event) => { if (event.key === 'Escape') closeModal(); };
-        const closeModal = (force = false) => {
-            if (this._timeOffFormSubmitting && !force) return;
-            this._saveTimeOffFormDraftFromDom();
-            if (!force && this._isTimeOffFormDraftDirty() && !confirm('يوجد بيانات غير مرسلة. هل تريد إغلاق النموذج؟')) return;
-            document.removeEventListener('keydown', keyHandler);
-            this._timeOffFormFocused = false;
-            modal.remove();
-        };
-        modal._closeClinicTimeOffRequestModal = closeModal;
-        modal.querySelectorAll('.clinic-timeoff-modal-close').forEach(button => button.addEventListener('click', () => closeModal()));
-        modal.addEventListener('click', (event) => { if (event.target === modal) closeModal(); });
-        document.addEventListener('keydown', keyHandler);
-        setTimeout(() => modal.querySelector('#timeoff-request-type')?.focus(), 50);
     },
 
     _scheduleAttendanceDataLoadIfNeeded(force) {
@@ -16608,7 +15343,7 @@ const Clinic = {
     },
 
     _renderAttendanceTableLoadingRow(colspan, label) {
-        const safeLabel = Utils.escapeHTML(label || this.getTranslations().t('skeleton.loadingData', 'جاري تحميل البيانات...'));
+        const safeLabel = Utils.escapeHTML(label || 'جاري تحميل البيانات...');
         return `<tr><td colspan="${colspan}" class="text-center text-gray-500 py-10">
             <i class="fas fa-spinner fa-spin ml-2" style="color:#0d9488;"></i>${safeLabel}
         </td></tr>`;
@@ -16625,13 +15360,7 @@ const Clinic = {
         if (this._clinicVisitsLoadPromise) {
             try { await this._clinicVisitsLoadPromise; } catch (_e) { /* ignore */ }
         }
-        // فاصل قصير فقط إن طابور GAS مشغول — لا تأخير ثابت 800ms
-        const queueBusy = typeof GoogleIntegration !== 'undefined'
-            && ((GoogleIntegration._requestQueue?.length || 0) > 0
-                || (GoogleIntegration._queueWorkers || 0) > 0);
-        if (queueBusy) {
-            await new Promise(resolve => setTimeout(resolve, 120));
-        }
+        await new Promise(resolve => setTimeout(resolve, 800));
 
         const f = this.state.filters?.attendance || {};
         const range = this._resolveAttendanceFilterDates(f);
@@ -16688,7 +15417,7 @@ const Clinic = {
 
     canAccessAttendanceTab() {
         if (this.isCurrentUserAdmin()) return true;
-        if (typeof Permissions !== 'undefined' && Permissions.hasDetailedPermission('clinic', 'attendance')) return true;
+        if (typeof Permissions !== 'undefined' && !Permissions.hasDetailedPermission('clinic', 'attendance')) return false;
         return this.isActiveClinicStaffMember();
     },
 
@@ -16799,85 +15528,6 @@ const Clinic = {
         return (this.getClinicStaffAttendanceList() || []).find(r => String(r.id) === id) || null;
     },
 
-    getClinicShiftRules() {
-        if (Array.isArray(AppState.appData?.clinicShiftRules) && AppState.appData.clinicShiftRules.length > 0) {
-            return AppState.appData.clinicShiftRules;
-        }
-        return [
-            { id: 'shift_1', name: 'الوردية الأولى', startTime: '07:30', endTime: '15:30', isOvernight: false },
-            { id: 'shift_2', name: 'الوردية الثانية', startTime: '15:30', endTime: '22:30', isOvernight: false },
-            { id: 'shift_3', name: 'الوردية الثالثة', startTime: '22:30', endTime: '07:30', isOvernight: true }
-        ];
-    },
-
-    showClinicShiftSettingsModal() {
-        if (!this.isCurrentUserAdmin()) {
-            Notification?.error?.('هذا الإجراء متاح لمدير النظام فقط');
-            return;
-        }
-        const shifts = this.getClinicShiftRules();
-        const html = `
-            <div class="modal-overlay active" id="clinic-shift-settings-modal">
-                <div class="modal-content" style="max-width:560px;">
-                    <div class="modal-header">
-                        <h3><i class="fas fa-clock ml-2"></i>إعدادات مواعيد الورديات (العيادة)</h3>
-                        <button type="button" class="modal-close" onclick="document.getElementById('clinic-shift-settings-modal')?.remove()"><i class="fas fa-times"></i></button>
-                    </div>
-                    <div class="modal-body space-y-4">
-                        <p class="text-xs text-gray-500 mb-2">تعديل وتحديد مواعيد بداية ونهاية الورديات الرسمية. يتم اعتماد المواعيد للبصمات والوردية الثالثة الليلية (10:30 م إلى 07:30 ص).</p>
-                        ${shifts.map((s, idx) => `
-                            <div class="border rounded-lg p-3 bg-gray-50 space-y-2" data-shift-idx="${idx}">
-                                <div class="font-bold text-sm text-blue-700 flex items-center justify-between">
-                                    <span>${Utils.escapeHTML(s.name)}</span>
-                                    ${s.isOvernight ? '<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-semibold">🌙 وردية ليلية (تتجاوز منتصف الليل)</span>' : ''}
-                                </div>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="form-label text-xs">وقت البداية</label>
-                                        <input type="time" class="form-input shift-start-time" value="${Utils.escapeAttr(s.startTime)}" required>
-                                    </div>
-                                    <div>
-                                        <label class="form-label text-xs">وقت النهاية</label>
-                                        <input type="time" class="form-input shift-end-time" value="${Utils.escapeAttr(s.endTime)}" required>
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-shift-settings-modal')?.remove()">إلغاء</button>
-                        <button type="button" class="btn-primary" id="clinic-shift-settings-save"><i class="fas fa-save ml-2"></i>حفظ القواعد</button>
-                    </div>
-                </div>
-            </div>`;
-
-        document.getElementById('clinic-shift-settings-modal')?.remove();
-        document.body.insertAdjacentHTML('beforeend', html);
-        document.getElementById('clinic-shift-settings-save')?.addEventListener('click', () => {
-            const modal = document.getElementById('clinic-shift-settings-modal');
-            const items = modal.querySelectorAll('[data-shift-idx]');
-            const updated = [];
-            items.forEach((item, idx) => {
-                const s = shifts[idx];
-                const startTime = item.querySelector('.shift-start-time')?.value || s.startTime;
-                const endTime = item.querySelector('.shift-end-time')?.value || s.endTime;
-                updated.push({
-                    ...s,
-                    startTime,
-                    endTime
-                });
-            });
-            AppState.appData.clinicShiftRules = updated;
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
-            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
-                GoogleIntegration.autoSave('ClinicShiftRules', updated).catch(() => {});
-            }
-            Notification?.success?.('تم حفظ قواعد الورديات بنجاح');
-            modal.remove();
-            this.renderAttendanceTab({ force: true });
-        });
-    },
-
     showAttendancePunchModal(recordId, punchType) {
         if (!this.canAccessAttendanceTab()) {
             Notification?.error?.('غير مصرح');
@@ -16902,61 +15552,36 @@ const Clinic = {
         if (!isCheckIn && !isCheckOut) return;
 
         const dayKey = this._attendanceDayKey(record.date);
-        let adjustedDefault = isCheckIn ? `${dayKey}T07:30` : `${dayKey}T15:30`;
-
-        if (isCheckOut && record.checkIn) {
-            try {
-                const inDate = new Date(record.checkIn);
-                const hh = inDate.getHours();
-                const mm = inDate.getMinutes();
-                const timeStr = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-                const shifts = this.getClinicShiftRules();
-                const s3 = shifts.find(s => s.isOvernight || s.id === 'shift_3') || { startTime: '22:30', endTime: '07:30' };
-                const s2 = shifts.find(s => s.id === 'shift_2') || { startTime: '15:30', endTime: '22:30' };
-                const s1 = shifts.find(s => s.id === 'shift_1') || { startTime: '07:30', endTime: '15:30' };
-
-                if (timeStr >= s3.startTime || timeStr < s1.startTime) {
-                    const nextDay = new Date(inDate);
-                    nextDay.setDate(nextDay.getDate() + 1);
-                    const nextDayKey = this._attendanceDayKey(nextDay);
-                    adjustedDefault = `${nextDayKey}T${s3.endTime}`;
-                } else if (timeStr >= s2.startTime) {
-                    adjustedDefault = `${dayKey}T${s2.endTime}`;
-                } else {
-                    adjustedDefault = `${dayKey}T${s1.endTime}`;
-                }
-            } catch (_e) {
-                adjustedDefault = `${dayKey}T15:30`;
-            }
-        }
-
+        const adjustedDefault = isCheckOut
+            ? `${dayKey}T17:00`
+            : `${dayKey}T08:00`;
         const title = isCheckIn ? 'إضافة بصمة دخول مفقودة' : 'إضافة بصمة خروج مفقودة';
         const icon = isCheckIn ? 'fa-sign-in-alt' : 'fa-sign-out-alt';
 
         const html = `
             <div class="modal-overlay active" id="clinic-attendance-punch-modal">
-                <div class="modal-content" style="max-width:480px; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
-                    <div class="modal-header" style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 1.5rem; border-bottom: none;">
-                        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center;"><i class="fas ${icon} ml-3" style="font-size: 1.5rem; opacity: 0.9;"></i>${title}</h3>
-                        <button type="button" class="modal-close" style="color: white; opacity: 0.8; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'" onclick="document.getElementById('clinic-attendance-punch-modal')?.remove()"><i class="fas fa-times"></i></button>
+                <div class="modal-content" style="max-width:480px;">
+                    <div class="modal-header">
+                        <h3><i class="fas ${icon} ml-2"></i>${title}</h3>
+                        <button type="button" class="modal-close" onclick="document.getElementById('clinic-attendance-punch-modal')?.remove()"><i class="fas fa-times"></i></button>
                     </div>
-                    <div class="modal-body space-y-5" style="padding: 1.5rem; background-color: #f8fafc;">
-                        <div style="background-color: #eff6ff; border-right: 4px solid #3b82f6; padding: 1rem; border-radius: 0.5rem; color: #1e3a8a; font-size: 0.9rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                            <div style="display: flex; align-items: center;"><i class="fas fa-user-circle ml-2" style="color: #60a5fa;"></i> <strong>المسئول:</strong> <span class="mr-2">${Utils.escapeHTML(record.userName || record.userEmail || '—')}</span></div>
-                            <div style="display: flex; align-items: center;"><i class="fas fa-calendar-alt ml-2" style="color: #60a5fa;"></i> <strong>التاريخ:</strong> <span class="mr-2">${Utils.escapeHTML(dayKey || '—')}</span></div>
+                    <div class="modal-body space-y-4">
+                        <div class="text-sm text-gray-600">
+                            <div><strong>المسئول:</strong> ${Utils.escapeHTML(record.userName || record.userEmail || '—')}</div>
+                            <div><strong>التاريخ:</strong> ${Utils.escapeHTML(dayKey || '—')}</div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="far fa-clock ml-2 text-blue-500"></i> ${isCheckIn ? 'وقت الدخول' : 'وقت الخروج'} <span class="text-red-500 mr-1">*</span></label>
-                            <input type="datetime-local" id="clinic-attendance-punch-time" class="form-input" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; transition: border-color 0.2s; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);" value="${Utils.escapeAttr(adjustedDefault)}" required>
+                            <label class="form-label">${isCheckIn ? 'وقت الدخول' : 'وقت الخروج'} *</label>
+                            <input type="datetime-local" id="clinic-attendance-punch-time" class="form-input" value="${Utils.escapeAttr(adjustedDefault)}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="far fa-comment-alt ml-2 text-gray-400"></i> ملاحظة <span style="color: #94a3b8; font-weight: normal; font-size: 0.8rem; margin-right: 0.5rem;">(اختياري)</span></label>
-                            <textarea id="clinic-attendance-punch-notes" class="form-textarea" rows="2" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; resize: none; transition: border-color 0.2s; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);" placeholder="سبب إضافة البصمة يدوياً..."></textarea>
+                            <label class="form-label">ملاحظة (اختياري)</label>
+                            <textarea id="clinic-attendance-punch-notes" class="form-textarea" rows="2" placeholder="سبب إضافة البصمة يدوياً..."></textarea>
                         </div>
                     </div>
-                    <div class="modal-footer" style="padding: 1.25rem 1.5rem; background-color: #ffffff; border-top: 1px solid #e2e8f0; display: flex; gap: 1rem; justify-content: flex-end;">
-                        <button type="button" class="btn-secondary" style="padding: 0.6rem 1.2rem; border-radius: 0.5rem; font-weight: 500;" onclick="document.getElementById('clinic-attendance-punch-modal')?.remove()">إلغاء</button>
-                        <button type="button" class="btn-primary" id="clinic-attendance-punch-save" style="padding: 0.6rem 1.5rem; border-radius: 0.5rem; font-weight: 600; background: #3b82f6; border: none; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3); transition: all 0.2s;"><i class="fas fa-check ml-2"></i>حفظ البصمة</button>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-attendance-punch-modal')?.remove()">إلغاء</button>
+                        <button type="button" class="btn-primary" id="clinic-attendance-punch-save"><i class="fas fa-save ml-2"></i>حفظ</button>
                     </div>
                 </div>
             </div>`;
@@ -16969,50 +15594,30 @@ const Clinic = {
                 Notification?.warning?.('يرجى تحديد الوقت');
                 return;
             }
-
-            // ✅ حفظ فوري محلياً وإغلاق النافذة بدون إغلاق الواجهة بالتحميل
-            document.getElementById('clinic-attendance-punch-modal')?.remove();
-
-            AppState.appData.clinicStaffAttendance = AppState.appData.clinicStaffAttendance || [];
-            const idx = AppState.appData.clinicStaffAttendance.findIndex(r => String(r.id) === String(record.id));
-            if (idx > -1) {
-                const target = { ...AppState.appData.clinicStaffAttendance[idx] };
-                target[isCheckIn ? 'checkIn' : 'checkOut'] = timeVal;
-                if (notes) target.notes = target.notes ? `${target.notes} | ${notes}` : notes;
-                target.updatedAt = new Date().toISOString();
-                AppState.appData.clinicStaffAttendance[idx] = target;
-            }
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
-            }
-            this.renderAttendanceTab({ force: true });
-            Notification?.success?.('تم حفظ البصمة محلياً وجاري المزامنة…');
-
-            // ✅ المزامنة مع الخادم في الخلفية
-            (async () => {
-                try {
-                    const resp = await GoogleIntegration.sendRequest({
-                        action: 'updateClinicStaffAttendance',
-                        data: {
-                            recordId: record.id,
-                            punchType: type,
-                            [isCheckIn ? 'checkIn' : 'checkOut']: timeVal,
-                            notes
-                        }
-                    });
-                    if (resp?.success && resp.data) {
-                        const bgIdx = AppState.appData.clinicStaffAttendance.findIndex(r => String(r.id) === String(resp.data.id));
-                        if (bgIdx > -1) AppState.appData.clinicStaffAttendance[bgIdx] = resp.data;
-                        else AppState.appData.clinicStaffAttendance.push(resp.data);
-                        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
-                        this.renderAttendanceTab({ force: true });
-                    } else if (resp?.message) {
-                        Utils.safeWarn('⚠️ تنبيه أثناء مزامنة البصمة مع الخادم:', resp.message);
+            try {
+                Loading?.show?.();
+                const resp = await GoogleIntegration.sendRequest({
+                    action: 'updateClinicStaffAttendance',
+                    data: {
+                        recordId: record.id,
+                        punchType: type,
+                        [isCheckIn ? 'checkIn' : 'checkOut']: timeVal,
+                        notes
                     }
-                } catch (err) {
-                    Utils.safeWarn('⚠️ خطأ شبكة أثناء مزامنة البصمة في الخلفية:', err);
+                });
+                if (resp?.success) {
+                    Notification?.success?.(resp.message || 'تم حفظ البصمة');
+                    document.getElementById('clinic-attendance-punch-modal')?.remove();
+                    await this.loadClinicAttendanceData(true);
+                    this.renderAttendanceTab({ force: true });
+                } else {
+                    Notification?.error?.(resp?.message || 'فشل الحفظ');
                 }
-            })();
+            } catch (err) {
+                Notification?.error?.(err?.message || 'فشل الحفظ');
+            } finally {
+                Loading?.hide?.();
+            }
         });
     },
 
@@ -17028,39 +15633,37 @@ const Clinic = {
         const today = this._getTodayLocalKey();
         const html = `
             <div class="modal-overlay active" id="clinic-attendance-add-modal">
-                <div class="modal-content" style="max-width:520px; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
-                    <div class="modal-header" style="background: linear-gradient(135deg, #0f766e, #14b8a6); color: white; padding: 1.5rem; border-bottom: none;">
-                        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center;"><i class="fas fa-fingerprint ml-3" style="font-size: 1.5rem; opacity: 0.9;"></i>إضافة سجل حضور / بصمة مفقودة</h3>
-                        <button type="button" class="modal-close" style="color: white; opacity: 0.8; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'" onclick="document.getElementById('clinic-attendance-add-modal')?.remove()"><i class="fas fa-times"></i></button>
+                <div class="modal-content" style="max-width:520px;">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-fingerprint ml-2"></i>إضافة سجل حضور / بصمة مفقودة</h3>
+                        <button type="button" class="modal-close" onclick="document.getElementById('clinic-attendance-add-modal')?.remove()"><i class="fas fa-times"></i></button>
                     </div>
-                    <div class="modal-body space-y-5" style="padding: 1.5rem; background-color: #f8fafc;">
+                    <div class="modal-body space-y-4">
                         <div class="form-group">
-                            <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="fas fa-user-circle ml-2 text-teal-500"></i> المسئول <span class="text-red-500 mr-1">*</span></label>
-                            <select id="clinic-attendance-add-staff" class="form-input" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);"><option value="">— اختر المسئول —</option>${staffOptions}</select>
+                            <label class="form-label">المسئول *</label>
+                            <select id="clinic-attendance-add-staff" class="form-input"><option value="">— اختر —</option>${staffOptions}</select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="far fa-calendar-alt ml-2 text-teal-500"></i> التاريخ <span class="text-red-500 mr-1">*</span></label>
-                            <input type="date" id="clinic-attendance-add-date" class="form-input" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);" value="${Utils.escapeAttr(today)}" required>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; background: #ffffff; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e2e8f0;">
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;"><i class="fas fa-sign-in-alt ml-1 text-green-500"></i> وقت الدخول</label>
-                                <input type="datetime-local" id="clinic-attendance-add-checkin" class="form-input" style="padding: 0.5rem; font-size: 0.9rem;" value="${Utils.escapeAttr(today + 'T08:00')}">
-                            </div>
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;"><i class="fas fa-sign-out-alt ml-1 text-orange-500"></i> وقت الخروج</label>
-                                <input type="datetime-local" id="clinic-attendance-add-checkout" class="form-input" style="padding: 0.5rem; font-size: 0.9rem;" value="${Utils.escapeAttr(today + 'T17:00')}">
-                            </div>
-                            <div style="grid-column: span 2; font-size: 0.75rem; color: #64748b; text-align: center; margin-top: -0.25rem;"><i class="fas fa-info-circle ml-1"></i> يمكن ترك أحد الحقلين فارغاً لإضافة بصمة دخول أو خروج فقط.</div>
+                            <label class="form-label">التاريخ *</label>
+                            <input type="date" id="clinic-attendance-add-date" class="form-input" value="${Utils.escapeAttr(today)}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="far fa-comment-alt ml-2 text-gray-400"></i> ملاحظة</label>
-                            <textarea id="clinic-attendance-add-notes" class="form-textarea" rows="2" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; resize: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);" placeholder="سبب الإضافة اليدوية..."></textarea>
+                            <label class="form-label">وقت الدخول</label>
+                            <input type="datetime-local" id="clinic-attendance-add-checkin" class="form-input" value="${Utils.escapeAttr(today + 'T08:00')}">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">وقت الخروج</label>
+                            <input type="datetime-local" id="clinic-attendance-add-checkout" class="form-input" value="${Utils.escapeAttr(today + 'T17:00')}">
+                        </div>
+                        <p class="text-xs text-gray-500">يمكن ترك أحد الحقلين فارغاً لإضافة بصمة دخول أو خروج فقط.</p>
+                        <div class="form-group">
+                            <label class="form-label">ملاحظة</label>
+                            <textarea id="clinic-attendance-add-notes" class="form-textarea" rows="2" placeholder="سبب الإضافة اليدوية..."></textarea>
                         </div>
                     </div>
-                    <div class="modal-footer" style="padding: 1.25rem 1.5rem; background-color: #ffffff; border-top: 1px solid #e2e8f0; display: flex; gap: 1rem; justify-content: flex-end;">
-                        <button type="button" class="btn-secondary" style="padding: 0.6rem 1.2rem; border-radius: 0.5rem; font-weight: 500;" onclick="document.getElementById('clinic-attendance-add-modal')?.remove()">إلغاء</button>
-                        <button type="button" class="btn-primary" id="clinic-attendance-add-save" style="padding: 0.6rem 1.5rem; border-radius: 0.5rem; font-weight: 600; background: #0f766e; border: none; box-shadow: 0 4px 6px -1px rgba(15, 118, 110, 0.3); transition: all 0.2s;"><i class="fas fa-check ml-2"></i>حفظ السجل</button>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-attendance-add-modal')?.remove()">إلغاء</button>
+                        <button type="button" class="btn-primary" id="clinic-attendance-add-save"><i class="fas fa-save ml-2"></i>حفظ</button>
                     </div>
                 </div>
             </div>`;
@@ -17080,73 +15683,28 @@ const Clinic = {
                 Notification?.warning?.('أدخل وقت دخول أو خروج على الأقل');
                 return;
             }
-
-            // ✅ حفظ فوري محلياً وإغلاق النافذة دون تعطيل العرض
-            document.getElementById('clinic-attendance-add-modal')?.remove();
-
-            const staffObj = (this.getClinicStaffList() || []).find(s => String(s.id) === String(staffId));
-            const dayKey = this._attendanceDayKey(date);
-            AppState.appData.clinicStaffAttendance = AppState.appData.clinicStaffAttendance || [];
-            const existingIdx = AppState.appData.clinicStaffAttendance.findIndex(r =>
-                (String(r.staffId) === String(staffId) || String(r.userId) === String(staffObj?.userId)) &&
-                this._attendanceDayKey(r.date) === dayKey
-            );
-
-            const tempRecord = {
-                id: existingIdx > -1 ? AppState.appData.clinicStaffAttendance[existingIdx].id : Utils.generateId('CSA'),
-                staffId: staffId,
-                userId: staffObj?.userId || '',
-                userName: staffObj?.userName || staffObj?.userEmail || staffId,
-                userEmail: staffObj?.userEmail || '',
-                staffRole: staffObj?.staffRole || '',
-                date: dayKey,
-                checkIn: checkIn || (existingIdx > -1 ? AppState.appData.clinicStaffAttendance[existingIdx].checkIn : ''),
-                checkOut: checkOut || (existingIdx > -1 ? AppState.appData.clinicStaffAttendance[existingIdx].checkOut : ''),
-                workDuration: '',
-                status: 'present',
-                source: 'manual',
-                notes: notes || (existingIdx > -1 ? AppState.appData.clinicStaffAttendance[existingIdx].notes : ''),
-                createdAt: existingIdx > -1 ? AppState.appData.clinicStaffAttendance[existingIdx].createdAt : new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            };
-
-            if (existingIdx > -1) {
-                AppState.appData.clinicStaffAttendance[existingIdx] = tempRecord;
-            } else {
-                AppState.appData.clinicStaffAttendance.push(tempRecord);
-            }
-
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
-            }
-            this.renderAttendanceTab({ force: true });
-            Notification?.success?.('تم حفظ سجل الحضور بنجاح وجاري المزامنة في الخلفية');
-
-            // ✅ المزامنة مع الخادم في الخلفية دون تعطيل واجهة المستخدم
-            (async () => {
-                try {
-                    const data = { staffId, date, notes };
-                    if (checkIn) data.checkIn = checkIn;
-                    if (checkOut) data.checkOut = checkOut;
-                    const resp = await GoogleIntegration.sendRequest({
-                        action: 'updateClinicStaffAttendance',
-                        data
-                    });
-                    if (resp?.success && resp.data) {
-                        const bgIdx = AppState.appData.clinicStaffAttendance.findIndex(r =>
-                            String(r.id) === String(tempRecord.id) || String(r.id) === String(resp.data.id)
-                        );
-                        if (bgIdx > -1) AppState.appData.clinicStaffAttendance[bgIdx] = resp.data;
-                        else AppState.appData.clinicStaffAttendance.push(resp.data);
-                        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
-                        this.renderAttendanceTab({ force: true });
-                    } else if (resp?.message) {
-                        Utils.safeWarn('⚠️ تنبيه أثناء مزامنة سجل الحضور مع الخادم:', resp.message);
-                    }
-                } catch (bgErr) {
-                    Utils.safeWarn('⚠️ خطأ شبكة أثناء مزامنة سجل الحضور في الخلفية:', bgErr);
+            try {
+                Loading?.show?.();
+                const data = { staffId, date, notes };
+                if (checkIn) data.checkIn = checkIn;
+                if (checkOut) data.checkOut = checkOut;
+                const resp = await GoogleIntegration.sendRequest({
+                    action: 'updateClinicStaffAttendance',
+                    data
+                });
+                if (resp?.success) {
+                    Notification?.success?.(resp.message || 'تم حفظ السجل');
+                    document.getElementById('clinic-attendance-add-modal')?.remove();
+                    await this.loadClinicAttendanceData(true);
+                    this.renderAttendanceTab({ force: true });
+                } else {
+                    Notification?.error?.(resp?.message || 'فشل الحفظ');
                 }
-            })();
+            } catch (err) {
+                Notification?.error?.(err?.message || 'فشل الحفظ');
+            } finally {
+                Loading?.hide?.();
+            }
         });
     },
 
@@ -18155,12 +16713,12 @@ const Clinic = {
         if (!requestType) {
             this._timeOffFormSubmitting = false;
             Notification?.error?.('يرجى اختيار نوع الطلب');
-            return false;
+            return;
         }
         if (!reason) {
             this._timeOffFormSubmitting = false;
             Notification?.error?.('سبب الطلب مطلوب');
-            return false;
+            return;
         }
 
         Loading.show();
@@ -18200,15 +16758,12 @@ const Clinic = {
                 if (this.state) this.state.timeOffFormDraft = this._getDefaultTimeOffFormDraft();
                 this._attendanceRenderPending = false;
                 this.renderAttendanceTab({ force: true });
-                if (typeof UI !== 'undefined' && typeof UI.updateNotificationsBadge === 'function') UI.updateNotificationsBadge();
-                return true;
             } else {
                 throw new Error(result?.message || 'فشل إرسال الطلب');
             }
         } catch (error) {
             Loading.hide();
             Notification?.error?.(error?.message || 'فشل إرسال الطلب');
-            return false;
         } finally {
             this._timeOffFormSubmitting = false;
         }
@@ -18374,14 +16929,38 @@ const Clinic = {
                     ${activeFilterCount ? `<button type="button" id="clinic-attendance-reset-filters" class="btn-secondary btn-sm mt-2"><i class="fas fa-times ml-1"></i>مسح الفلاتر</button>` : ''}
                 </div>
 
-                <div id="clinic-attendance-section-timeoff" style="position:relative;overflow:hidden;padding:20px;background:linear-gradient(135deg,#0f2f46 0%,#0f766e 100%);border:1px solid rgba(20,184,166,.3);border-radius:16px;color:#fff;margin-bottom:16px;box-shadow:0 12px 30px rgba(15,47,70,.14);">
-                    <div style="position:absolute;inset-inline-end:-36px;top:-48px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.08);"></div>
-                    <div style="position:relative;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;">
-                        <div style="display:flex;align-items:center;gap:13px;min-width:240px;">
-                            <span style="width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);font-size:1.25rem;"><i class="fas fa-user-clock"></i></span>
-                            <div><h4 style="margin:0;font-size:1.02rem;font-weight:800;">طلب حضور جديد</h4><p style="margin:5px 0 0;font-size:.75rem;color:#ccfbf1;">إجازة، إذن أو عمل إضافي عبر مسار اعتماد واضح</p></div>
-                        </div>
-                        <button type="button" id="clinic-open-timeoff-request" style="display:inline-flex;align-items:center;gap:8px;padding:11px 16px;border:0;border-radius:11px;background:#fff;color:#0f766e;font-size:.82rem;font-weight:800;cursor:pointer;box-shadow:0 7px 18px rgba(0,0,0,.16);"><i class="fas fa-plus"></i>إرسال طلب</button>
+                <div class="content-card mb-4" id="clinic-attendance-section-timeoff">
+                    <div class="card-header"><h4 class="card-title"><i class="fas fa-paper-plane ml-2"></i>طلب جديد</h4></div>
+                    <div class="card-body">
+                        <form id="timeoff-request-form" class="space-y-3">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-semibold mb-1">نوع الطلب *</label>
+                                    <select id="timeoff-request-type" class="form-input" required>
+                                        <option value="">اختر النوع</option>
+                                        <option value="leave">إجازة</option>
+                                        <option value="permission">إذن</option>
+                                        <option value="overtime">إضافي</option>
+                                    </select>
+                                </div>
+                                <div id="timeoff-leave-dates" class="hidden md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div><label class="block text-sm font-semibold mb-1">من تاريخ *</label><input type="date" id="timeoff-date-from" class="form-input"></div>
+                                    <div><label class="block text-sm font-semibold mb-1">إلى تاريخ *</label><input type="date" id="timeoff-date-to" class="form-input"></div>
+                                </div>
+                                <div id="timeoff-permission-fields" class="hidden md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div><label class="block text-sm font-semibold mb-1">التاريخ *</label><input type="date" id="timeoff-perm-date" class="form-input"></div>
+                                    <div><label class="block text-sm font-semibold mb-1">من وقت *</label><input type="time" id="timeoff-time-from" class="form-input"></div>
+                                    <div><label class="block text-sm font-semibold mb-1">إلى وقت *</label><input type="time" id="timeoff-time-to" class="form-input"></div>
+                                </div>
+                                <div id="timeoff-overtime-fields" class="hidden md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div><label class="block text-sm font-semibold mb-1">التاريخ *</label><input type="date" id="timeoff-ot-date" class="form-input"></div>
+                                    <div><label class="block text-sm font-semibold mb-1">عدد الساعات</label><input type="number" id="timeoff-duration-hours" class="form-input" min="0.5" step="0.5" placeholder="مثال: 2"></div>
+                                    <div class="text-sm text-gray-500 self-end pb-2">أو حدد من/إلى وقت أدناه</div>
+                                </div>
+                            </div>
+                            <div><label class="block text-sm font-semibold mb-1">السبب *</label><textarea id="timeoff-reason" class="form-textarea" rows="2" required placeholder="اذكر سبب الطلب..."></textarea></div>
+                            <button type="submit" class="btn-primary"><i class="fas fa-paper-plane ml-2"></i>إرسال الطلب</button>
+                        </form>
                     </div>
                 </div>
 
@@ -18479,13 +17058,8 @@ const Clinic = {
         panel.querySelectorAll('.clinic-attendance-period-btn').forEach(btn => {
             btn.addEventListener('click', () => applyPeriodPreset(btn.dataset.period || 'all'));
         });
-        panel.querySelector('#clinic-attendance-shift-rules-btn')?.addEventListener('click', () => {
-            console.log('Shift rules button clicked');
-            this.showClinicShiftSettingsModal();
-        });
         panel.querySelector('#clinic-attendance-export-btn')?.addEventListener('click', () => this.exportAttendanceToExcel());
         panel.querySelector('#clinic-attendance-pdf-btn')?.addEventListener('click', () => this.exportAttendanceToPDF());
-        panel.querySelector('#clinic-open-timeoff-request')?.addEventListener('click', () => this.showTimeOffRequestForm());
         panel.querySelector('#clinic-attendance-refresh-btn')?.addEventListener('click', async () => {
             Notification?.info?.('جاري التحديث...');
             this._attendanceDataFetchedInSession = false;
@@ -18499,6 +17073,8 @@ const Clinic = {
         this.bindClinicStaffLeaveBalanceEvents(panel);
         this.bindAttendanceQuickNav(panel);
         this.initAttendanceTableScroll(panel);
+        this._applyTimeOffFormDraftToPanel(panel);
+        this._bindTimeOffFormPanelEvents(panel);
     },
 
     renderAttendanceTab(options) {
@@ -18660,7 +17236,6 @@ const Clinic = {
                         <button type="button" id="clinic-attendance-report-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;" title="تصدير تقرير"><i class="fas fa-file-export"></i><span>تقرير</span></button>
                         <button type="button" id="clinic-attendance-pdf-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;" title="PDF للفلتر الحالي"><i class="fas fa-file-pdf"></i><span>PDF</span></button>
                         <button type="button" id="clinic-attendance-export-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;" title="Excel للفلتر الحالي"><i class="fas fa-file-excel"></i><span>Excel</span></button>
-                        ${isAdmin ? `<button type="button" id="clinic-attendance-shift-rules-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;" title="مواعيد الورديات والقواعد"><i class="fas fa-clock"></i><span>مواعيد الورديات</span></button>` : ''}
                         ${isAdmin ? `<button type="button" id="clinic-attendance-add-punch-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;" title="إضافة سجل حضور أو بصمة مفقودة"><i class="fas fa-fingerprint"></i><span>بصمة مفقودة</span></button>` : ''}
                         ${isAdmin ? `<button type="button" id="clinic-attendance-add-staff-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:#fff;color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;"><i class="fas fa-user-plus"></i><span>إضافة مسئول</span></button>` : ''}
                     </div>
@@ -18889,7 +17464,6 @@ const Clinic = {
         panel.querySelector('#clinic-attendance-export-btn')?.addEventListener('click', () => this.exportAttendanceToExcel());
         panel.querySelector('#clinic-attendance-pdf-btn')?.addEventListener('click', () => this.exportAttendanceToPDF());
         panel.querySelector('#clinic-attendance-report-btn')?.addEventListener('click', () => this.showAttendanceReportModal());
-        panel.querySelector('#clinic-attendance-shift-rules-btn')?.addEventListener('click', () => this.showClinicShiftSettingsModal());
         panel.querySelector('#clinic-attendance-add-staff-btn')?.addEventListener('click', () => this.showAddClinicStaffModal());
         panel.querySelector('#clinic-attendance-add-punch-btn')?.addEventListener('click', () => this.showAddMissingAttendanceModal());
         panel.querySelector('#clinic-attendance-refresh-btn')?.addEventListener('click', async () => {
@@ -18924,32 +17498,12 @@ const Clinic = {
 
         if (this.isCurrentUserAdmin()) return true;
 
-        if (tabName === 'attendance') {
-            return this.canAccessAttendanceTab();
+        if (typeof Permissions !== 'undefined') {
+            if (!Permissions.hasDetailedPermission('clinic', tabName)) return false;
         }
 
-        if (typeof Permissions !== 'undefined') {
-            if (tabName === 'data-analysis') {
-                const permissionAliases = ['data-analysis', 'analytics', 'analysis', 'dataAnalysis', 'data_analysis'];
-                if (typeof Permissions.hasAccess === 'function' && !Permissions.hasAccess('clinic')) {
-                    return false;
-                }
-                if (permissionAliases.some((key) => Permissions.hasDetailedPermission('clinic', key))) {
-                    return true;
-                }
-
-                // توافق مع سجلات صلاحيات قديمة/مستوردة خزّنت true كنص بدل Boolean.
-                const effectivePermissions = typeof Permissions.getEffectivePermissions === 'function'
-                    ? Permissions.getEffectivePermissions(user)
-                    : null;
-                const clinicPermissions = effectivePermissions?.clinicPermissions;
-                const isGranted = (value) => value === true || value === 1 ||
-                    String(value || '').trim().toLowerCase() === 'true';
-
-                return !!clinicPermissions && typeof clinicPermissions === 'object' &&
-                    permissionAliases.some((key) => isGranted(clinicPermissions[key]));
-            }
-            if (!Permissions.hasDetailedPermission('clinic', tabName)) return false;
+        if (tabName === 'attendance') {
+            return this.canAccessAttendanceTab();
         }
 
         return true;
@@ -18967,7 +17521,7 @@ const Clinic = {
 
         const ad = AppState.appData;
         if (!ad) {
-            section.innerHTML = '<div class="content-card"><div class="card-body"><p class="text-gray-600">' + this.getTranslations().t('skeleton.loadingData', 'جاري تحميل البيانات...') + '</p></div></div>';
+            section.innerHTML = '<div class="content-card"><div class="card-body"><p class="text-gray-600">جاري تحميل البيانات...</p></div></div>';
             return;
         }
 
@@ -18997,10 +17551,6 @@ const Clinic = {
                         <button id="clinic-visit-types-settings-btn" class="btn-secondary" title="إدارة أنواع الزيارة (مدير النظام فقط)">
                             <i class="fas fa-list-ul ml-2"></i>
                             أنواع الزيارة
-                        </button>
-                        <button id="clinic-contractor-jobs-settings-btn" class="btn-secondary" title="إدارة وظائف المقاولين (مدير النظام فقط)">
-                            <i class="fas fa-briefcase ml-2"></i>
-                            وظائف المقاولين
                         </button>
                         ` : ''}
                         <button id="clinic-refresh-btn" class="btn-secondary" title="تحديث البيانات">
@@ -19111,15 +17661,13 @@ const Clinic = {
                 <div class="clinic-tab-panel ${this.state.activeTab === 'visits' ? 'active' : ''}" data-tab-panel="visits"></div>
                 <div class="clinic-tab-panel ${this.state.activeTab === 'medications' ? 'active' : ''}" data-tab-panel="medications"></div>
                 <div class="clinic-tab-panel ${this.state.activeTab === 'sickLeave' ? 'active' : ''}" data-tab-panel="sickLeave"></div>
-                ${this.hasTabAccess('dispensed-medications') ? `
+                ${isAdmin ? `
                 <div class="clinic-tab-panel ${this.state.activeTab === 'dispensed-medications' ? 'active' : ''}" data-tab-panel="dispensed-medications"></div>
                 ` : ''}
                 <div class="clinic-tab-panel ${this.state.activeTab === 'injuries' ? 'active' : ''}" data-tab-panel="injuries"></div>
                 <div class="clinic-tab-panel ${this.state.activeTab === 'supply-request' ? 'active' : ''}" data-tab-panel="supply-request"></div>
-                ${this.hasTabAccess('approvals') ? `
+                ${isAdmin ? `
                 <div class="clinic-tab-panel ${this.state.activeTab === 'approvals' ? 'active' : ''}" data-tab-panel="approvals"></div>
-                ` : ''}
-                ${this.hasTabAccess('data-analysis') ? `
                 <div class="clinic-tab-panel ${this.state.activeTab === 'data-analysis' ? 'active' : ''}" data-tab-panel="data-analysis"></div>
                 ` : ''}
                 ${this.hasTabAccess('attendance') ? `
@@ -19154,10 +17702,6 @@ const Clinic = {
         const visitTypesSettingsBtn = document.getElementById('clinic-visit-types-settings-btn');
         if (visitTypesSettingsBtn) {
             visitTypesSettingsBtn.addEventListener('click', () => this.showVisitTypesSettingsModal());
-        }
-        const contractorJobsSettingsBtn = document.getElementById('clinic-contractor-jobs-settings-btn');
-        if (contractorJobsSettingsBtn) {
-            contractorJobsSettingsBtn.addEventListener('click', () => this.showContractorJobTitlesSettingsModal());
         }
 
         // إضافة أيقونات التنقل مباشرة بعد renderUI
@@ -19203,7 +17747,7 @@ const Clinic = {
         
         if (needsReload && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
             // عرض رسالة تحميل
-            panel.innerHTML = '<div class="text-center py-8 text-gray-500"><div style="width: 300px; margin: 0 auto 16px;"><div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;"><div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div></div></div><p>' + this.getTranslations().t('skeleton.loadingData', 'جاري تحميل البيانات...') + '</p></div>';
+            panel.innerHTML = '<div class="text-center py-8 text-gray-500"><div style="width: 300px; margin: 0 auto 16px;"><div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;"><div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div></div></div><p>جاري تحميل البيانات...</p></div>';
             
             try {
                 // تحميل البيانات من Backend
@@ -19748,223 +18292,6 @@ const Clinic = {
 
     // ===== إرسال طلب احتياجات (للمستخدمين) =====
 
-    showSupplyRequestForm() {
-        const existingModal = document.getElementById('supply-request-modal');
-        if (existingModal) {
-            existingModal.querySelector('#request-type')?.focus();
-            return;
-        }
-
-        const modal = document.createElement('div');
-        modal.id = 'supply-request-modal';
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
-            ${this.getClinicWorkflowStyles_()}
-            <div class="modal-content clinic-workflow-root" role="dialog" aria-modal="true" aria-labelledby="supply-request-modal-title" style="max-width:780px;border-radius:17px;overflow:hidden;box-shadow:0 24px 70px rgba(6,31,55,.3);">
-                <div class="modal-header" style="padding:17px 20px;background:linear-gradient(128deg,#0b2d4f,#174d78 66%,#17726e);color:#fff;border:0;">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <span style="width:43px;height:43px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.25);border-radius:12px;background:rgba(255,255,255,.13);"><i class="fas fa-file-medical-alt" style="font-size:18px;"></i></span>
-                        <div><h2 id="supply-request-modal-title" class="modal-title" style="margin:0;color:#fff;font-size:1.08rem;">بيانات طلب احتياجات جديد</h2><p style="margin:3px 0 0;color:#d9ebf3;font-size:.72rem;">أدخل تفاصيل الاحتياج ليتم إرساله إلى مسار الموافقة</p></div>
-                    </div>
-                    <button type="button" class="modal-close" aria-label="إغلاق النموذج" style="width:36px;height:36px;border:1px solid rgba(255,255,255,.25);border-radius:10px;background:rgba(255,255,255,.1);color:#fff;"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="modal-body" style="padding:18px 20px 20px;max-height:76vh;overflow-y:auto;background:#f6fafc;">
-                    <div style="display:flex;align-items:flex-start;gap:9px;padding:10px 12px;margin-bottom:14px;border:1px solid #bae6fd;border-radius:10px;background:#f0f9ff;color:#0c4a6e;font-size:.74rem;"><i class="fas fa-info-circle" style="margin-top:2px;"></i><span>يرجى إدخال اسم العنصر والكمية بدقة. الحقول المميزة بعلامة * مطلوبة.</span></div>
-                    <form id="supply-request-form" novalidate>
-                        <div class="cw-form-grid">
-                            <div class="cw-field"><label class="cw-field-title" for="request-type"><i class="fas fa-tag"></i>نوع الطلب *</label><select id="request-type" class="cw-control" required><option value="">اختر نوع الطلب</option><option value="medication">أدوية</option><option value="equipment">أجهزة طبية</option><option value="supplies">مستلزمات طبية</option><option value="other">أخرى</option></select></div>
-                            <div class="cw-field"><label class="cw-field-title" for="item-name"><i class="fas fa-box-open"></i>اسم العنصر المطلوب *</label><input type="text" id="item-name" class="cw-control" placeholder="مثال: باراسيتامول 500 مجم" autocomplete="off" required><datalist id="supply-medications-datalist"></datalist><small id="supply-medication-match-hint" style="display:none;margin-top:5px;color:#64748b;font-size:.66rem;">ابحث واختر دواءً مسجلاً لعرض رصيده، أو اكتب اسم دواء جديد.</small></div>
-                            <div id="supply-stock-balance-panel" class="cw-field-full" style="display:none;overflow:hidden;border:1px solid #b8ded9;border-radius:12px;background:linear-gradient(135deg,#f0fdfa,#f8fafc);">
-                                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid #cce8e4;"><div style="display:flex;align-items:center;gap:8px;color:#134e4a;font-size:.76rem;font-weight:850;"><span style="width:30px;height:30px;display:grid;place-items:center;border-radius:8px;background:#ccfbf1;color:#0f766e;"><i class="fas fa-warehouse"></i></span><span id="supply-stock-medication-name">رصيد الدواء الحالي</span></div><span id="supply-stock-status" style="padding:4px 9px;border-radius:999px;font-size:.66rem;font-weight:800;"></span></div>
-                                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;padding:11px 12px;">
-                                    <div style="padding:8px 10px;border-radius:9px;background:#fff;border:1px solid #dcebe8;"><small style="display:block;color:#64748b;font-size:.62rem;">الرصيد المتاح</small><strong id="supply-stock-balance" style="display:block;margin-top:2px;color:#0f766e;font-size:1rem;">0</strong></div>
-                                    <div style="padding:8px 10px;border-radius:9px;background:#fff;border:1px solid #dcebe8;"><small style="display:block;color:#64748b;font-size:.62rem;">الكمية الأصلية</small><strong id="supply-stock-original" style="display:block;margin-top:2px;color:#334155;font-size:1rem;">0</strong></div>
-                                    <div style="padding:8px 10px;border-radius:9px;background:#fff;border:1px solid #dcebe8;"><small style="display:block;color:#64748b;font-size:.62rem;">تاريخ الصلاحية</small><strong id="supply-stock-expiry" style="display:block;margin-top:3px;color:#334155;font-size:.76rem;">—</strong></div>
-                                    <div style="padding:8px 10px;border-radius:9px;background:#fff;border:1px solid #dcebe8;"><small style="display:block;color:#64748b;font-size:.62rem;">استكمال الرصيد المقترح</small><div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><strong id="supply-stock-suggested" style="color:#b45309;font-size:1rem;">—</strong><button type="button" id="supply-apply-suggested-qty" style="display:none;padding:3px 7px;border:1px solid #fcd34d;border-radius:6px;background:#fffbeb;color:#92400e;font-size:.62rem;font-weight:750;cursor:pointer;">تطبيق</button></div></div>
-                                </div>
-                                <p style="margin:0;padding:0 12px 10px;color:#527067;font-size:.65rem;"><i class="fas fa-info-circle ml-1"></i>الرصيد للعرض واتخاذ القرار فقط؛ إرسال طلب التوريد لا يخصم من المخزون.</p>
-                            </div>
-                            <div class="cw-field"><label class="cw-field-title" for="quantity"><i class="fas fa-sort-numeric-up"></i>الكمية المطلوبة *</label><input type="number" id="quantity" class="cw-control" placeholder="مثال: 10" min="1" required></div>
-                            <div class="cw-field"><label class="cw-field-title" for="unit"><i class="fas fa-ruler"></i>الوحدة</label><input type="text" id="unit" class="cw-control" placeholder="مثال: علبة، عبوة، قطعة"></div>
-                            <div class="cw-field"><label class="cw-field-title" for="priority"><i class="fas fa-exclamation-triangle"></i>الأولوية</label><select id="priority" class="cw-control"><option value="normal">عادية</option><option value="high">عالية</option><option value="urgent">عاجلة</option></select></div>
-                            <div class="cw-field cw-field-full"><label class="cw-field-title" for="request-notes"><i class="fas fa-comment-medical"></i>ملاحظات / سبب الطلب</label><textarea id="request-notes" class="cw-control" rows="3" placeholder="اذكر سبب الحاجة لهذا العنصر..."></textarea></div>
-                        </div>
-                        <div class="cw-form-actions" style="margin-top:18px;"><button type="button" class="cw-secondary supply-request-cancel"><i class="fas fa-times"></i>إلغاء</button><button type="reset" class="cw-secondary"><i class="fas fa-undo-alt"></i>إعادة تعيين</button><button type="submit" class="cw-submit"><i class="fas fa-paper-plane"></i>إرسال الطلب للموافقة</button></div>
-                    </form>
-                </div>
-            </div>`;
-        document.body.appendChild(modal);
-        this.applyModuleI18n(modal);
-
-        const form = modal.querySelector('#supply-request-form');
-        const typeSelect = modal.querySelector('#request-type');
-        const itemNameInput = modal.querySelector('#item-name');
-        const unitInput = modal.querySelector('#unit');
-        const quantityInput = modal.querySelector('#quantity');
-        const medicationDatalist = modal.querySelector('#supply-medications-datalist');
-        const medicationHint = modal.querySelector('#supply-medication-match-hint');
-        const balancePanel = modal.querySelector('#supply-stock-balance-panel');
-        const medicationsByName = new Map();
-
-        this.getMedications().forEach((medication) => {
-            const name = String(medication.name || medication.medicationName || '').trim();
-            const key = this.normalizeArabicText(name);
-            if (!key) return;
-            const current = medicationsByName.get(key) || {
-                id: medication.id || '', ids: [], name, balance: 0, original: 0,
-                unit: medication.unit || medication.packageUnit || 'وحدة', expiryDates: []
-            };
-            if (medication.id && !current.ids.includes(medication.id)) current.ids.push(medication.id);
-            current.balance += Number(medication.remainingQuantity ?? medication.quantity ?? 0) || 0;
-            current.original += Number(medication.quantityAdded ?? medication.quantity ?? 0) || 0;
-            if (medication.expiryDate) current.expiryDates.push(medication.expiryDate);
-            medicationsByName.set(key, current);
-        });
-        if (medicationDatalist) {
-            medicationDatalist.innerHTML = Array.from(medicationsByName.values())
-                .sort((a, b) => a.name.localeCompare(b.name, 'ar'))
-                .map((medication) => `<option value="${Utils.escapeHTML(medication.name)}" label="الرصيد: ${medication.balance} ${Utils.escapeHTML(medication.unit)}"></option>`)
-                .join('');
-        }
-
-        const clearMedicationLink = () => {
-            if (!itemNameInput) return;
-            ['medicationId', 'medicationIds', 'currentBalance', 'quantityAdded', 'stockStatus', 'expiryDate']
-                .forEach((key) => { delete itemNameInput.dataset[key]; });
-            if (balancePanel) balancePanel.style.display = 'none';
-        };
-        const renderMedicationBalance = () => {
-            if (!itemNameInput || typeSelect?.value !== 'medication') {
-                clearMedicationLink();
-                return;
-            }
-            const medication = medicationsByName.get(this.normalizeArabicText(itemNameInput.value));
-            if (!medication) {
-                clearMedicationLink();
-                return;
-            }
-            const earliestExpiry = medication.expiryDates.slice().sort()[0] || '';
-            const expiryTimestamp = earliestExpiry ? new Date(earliestExpiry).getTime() : NaN;
-            const isExpired = Number.isFinite(expiryTimestamp) && expiryTimestamp < new Date().setHours(0, 0, 0, 0);
-            const stockStatus = isExpired ? 'expired' : (medication.balance <= 0 ? 'out' : (medication.balance <= 10 ? 'low' : 'available'));
-            const suggestedQuantity = isExpired
-                ? Math.max(1, Math.ceil(medication.original || medication.balance))
-                : (medication.original > medication.balance
-                    ? Math.ceil(medication.original - medication.balance)
-                    : (medication.balance <= 10 ? Math.max(1, Math.ceil(10 - medication.balance)) : 0));
-            itemNameInput.dataset.medicationId = medication.id || medication.ids[0] || '';
-            itemNameInput.dataset.medicationIds = JSON.stringify(medication.ids);
-            itemNameInput.dataset.currentBalance = String(medication.balance);
-            itemNameInput.dataset.quantityAdded = String(medication.original);
-            itemNameInput.dataset.stockStatus = stockStatus;
-            itemNameInput.dataset.expiryDate = earliestExpiry;
-            if (unitInput && (!unitInput.value || unitInput.dataset.autoFilled === '1')) {
-                unitInput.value = medication.unit;
-                unitInput.dataset.autoFilled = '1';
-            }
-            const nameEl = modal.querySelector('#supply-stock-medication-name');
-            const balanceEl = modal.querySelector('#supply-stock-balance');
-            const originalEl = modal.querySelector('#supply-stock-original');
-            const expiryEl = modal.querySelector('#supply-stock-expiry');
-            const statusEl = modal.querySelector('#supply-stock-status');
-            const suggestedEl = modal.querySelector('#supply-stock-suggested');
-            const applySuggestedBtn = modal.querySelector('#supply-apply-suggested-qty');
-            if (nameEl) nameEl.textContent = medication.name;
-            if (balanceEl) balanceEl.textContent = `${medication.balance} ${medication.unit}`;
-            if (originalEl) originalEl.textContent = `${medication.original} ${medication.unit}`;
-            if (expiryEl) expiryEl.textContent = earliestExpiry ? this.formatDate(earliestExpiry) : 'غير مسجل';
-            if (statusEl) {
-                const statusMap = {
-                    expired: { label: 'منتهي الصلاحية', background: '#fee2e2', color: '#991b1b' },
-                    out: { label: 'نفد المخزون', background: '#fee2e2', color: '#b91c1c' },
-                    low: { label: 'رصيد منخفض', background: '#fef3c7', color: '#92400e' },
-                    available: { label: 'متوفر', background: '#dcfce7', color: '#166534' }
-                };
-                const currentStatus = statusMap[stockStatus];
-                statusEl.textContent = currentStatus.label;
-                statusEl.style.background = currentStatus.background;
-                statusEl.style.color = currentStatus.color;
-            }
-            if (suggestedEl) suggestedEl.textContent = suggestedQuantity > 0 ? `${suggestedQuantity} ${medication.unit}` : 'لا يوجد عجز';
-            if (applySuggestedBtn) {
-                applySuggestedBtn.style.display = suggestedQuantity > 0 ? 'inline-flex' : 'none';
-                applySuggestedBtn.dataset.quantity = String(suggestedQuantity);
-            }
-            if (balancePanel) balancePanel.style.display = 'block';
-        };
-        const syncMedicationMode = ({ clearValue = false } = {}) => {
-            const isMedication = typeSelect?.value === 'medication';
-            if (clearValue && itemNameInput) itemNameInput.value = '';
-            if (itemNameInput) {
-                if (isMedication) itemNameInput.setAttribute('list', 'supply-medications-datalist');
-                else itemNameInput.removeAttribute('list');
-                itemNameInput.placeholder = isMedication ? 'ابحث باسم الدواء المسجل أو أدخل دواءً جديدًا' : 'اكتب اسم العنصر المطلوب';
-            }
-            if (medicationHint) medicationHint.style.display = isMedication ? 'block' : 'none';
-            if (!isMedication) clearMedicationLink();
-        };
-        typeSelect?.addEventListener('change', () => syncMedicationMode({ clearValue: true }));
-        itemNameInput?.addEventListener('input', renderMedicationBalance);
-        itemNameInput?.addEventListener('change', renderMedicationBalance);
-        unitInput?.addEventListener('input', () => { unitInput.dataset.autoFilled = '0'; });
-        modal.querySelector('#supply-apply-suggested-qty')?.addEventListener('click', (event) => {
-            const suggested = parseInt(event.currentTarget.dataset.quantity, 10) || 0;
-            if (quantityInput && suggested > 0) {
-                quantityInput.value = String(suggested);
-                quantityInput.dispatchEvent(new Event('input', { bubbles: true }));
-                quantityInput.focus();
-            }
-        });
-        syncMedicationMode();
-
-        let isDirty = false;
-        let isSubmitting = false;
-        const keyHandler = (event) => {
-            if (event.key === 'Escape') closeModal();
-        };
-        const closeModal = () => {
-            if (isSubmitting) return;
-            if (isDirty && !confirm('يوجد بيانات غير محفوظة في الطلب. هل تريد إغلاق النموذج؟')) return;
-            document.removeEventListener('keydown', keyHandler);
-            modal.remove();
-        };
-        form?.addEventListener('input', () => { isDirty = true; });
-        form?.addEventListener('reset', () => {
-            setTimeout(() => {
-                isDirty = false;
-                if (unitInput) unitInput.dataset.autoFilled = '0';
-                clearMedicationLink();
-                syncMedicationMode();
-            }, 0);
-        });
-        form?.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            if (!form.reportValidity()) return;
-            const submitButton = form.querySelector('button[type="submit"]');
-            const originalHtml = submitButton?.innerHTML || '';
-            isSubmitting = true;
-            if (submitButton) {
-                submitButton.disabled = true;
-                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>جاري الإرسال...';
-            }
-            const success = await this.submitSupplyRequest();
-            if (success) {
-                document.removeEventListener('keydown', keyHandler);
-                modal.remove();
-                return;
-            }
-            isSubmitting = false;
-            if (submitButton) {
-                submitButton.disabled = false;
-                submitButton.innerHTML = originalHtml;
-            }
-        });
-        modal.querySelectorAll('.modal-close, .supply-request-cancel').forEach((button) => button.addEventListener('click', closeModal));
-        modal.addEventListener('click', (event) => { if (event.target === modal) closeModal(); });
-        document.addEventListener('keydown', keyHandler);
-        setTimeout(() => modal.querySelector('#request-type')?.focus(), 50);
-    },
-
     renderSupplyRequestTab() {
         const panel = document.querySelector('.clinic-tab-panel[data-tab-panel="supply-request"]');
         if (!panel) return;
@@ -19986,96 +18313,127 @@ const Clinic = {
                 new Date(b.createdAt || b.requestDate) - new Date(a.createdAt || a.requestDate)
             ) :
             userRequests;
-        const pendingCount = allRequests.filter((request) => (request.status || 'pending') === 'pending').length;
-        const approvedCount = allRequests.filter((request) => request.status === 'approved' || request.status === 'fulfilled').length;
-        const rejectedCount = allRequests.filter((request) => request.status === 'rejected').length;
-        const urgentCount = allRequests.filter((request) => request.priority === 'urgent').length;
 
         panel.innerHTML = `
-            ${this.getClinicWorkflowStyles_()}
-            <div class="clinic-workflow-root" id="clinic-supply-request-root">
-                <section class="cw-hero" aria-labelledby="supply-request-title">
-                    <div class="cw-hero-copy"><span class="cw-hero-icon"><i class="fas fa-dolly-flatbed"></i></span><div><h2 id="supply-request-title">إرسال طلب احتياجات</h2><p>أنشئ طلبًا واضحًا وتابع حالة المراجعة والتنفيذ من مكان واحد</p></div></div>
-                    <div class="cw-hero-meta"><span class="cw-hero-pill"><i class="fas fa-list-alt"></i>${allRequests.length} ${isAdmin ? 'طلب بالنظام' : 'طلب خاص بك'}</span><span class="cw-hero-pill"><i class="fas fa-hourglass-half"></i>${pendingCount} قيد الانتظار</span><button type="button" id="supply-new-request-btn" class="cw-hero-pill cw-hero-primary"><i class="fas fa-plus"></i>طلب احتياجات جديد</button></div>
-                </section>
-                <section class="cw-kpis" aria-label="ملخص طلبات الاحتياجات">
-                    <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-clock"></i></span><div><small>قيد الانتظار</small><strong>${pendingCount}</strong></div></div>
-                    <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-check-circle"></i></span><div><small>موافق أو منفذ</small><strong>${approvedCount}</strong></div></div>
-                    <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-times-circle"></i></span><div><small>طلبات مرفوضة</small><strong>${rejectedCount}</strong></div></div>
-                    <div class="cw-kpi"><span class="cw-kpi-icon"><i class="fas fa-bolt"></i></span><div><small>طلبات عاجلة</small><strong>${urgentCount}</strong></div></div>
-                </section>
-                <section class="cw-filter" aria-label="فلاتر طلبات الاحتياجات">
-                    <div class="cw-filter-head"><div class="cw-filter-title"><i class="fas fa-sliders-h"></i>${isAdmin ? 'فلترة جميع الطلبات' : 'فلترة طلباتي'} <span id="supply-filter-count" class="cw-count-pill">${allRequests.length} طلب</span></div><button type="button" id="supply-reset-filters" class="cw-reset"><i class="fas fa-undo-alt ml-1"></i>مسح الفلاتر</button></div>
-                    <div class="cw-filter-grid">
-                        <div class="cw-field"><label for="supply-search-filter"><i class="fas fa-search"></i>بحث بالعنصر أو مقدم الطلب</label><div class="cw-input-wrap"><i class="fas fa-search"></i><input type="search" id="supply-search-filter" class="cw-control" placeholder="اكتب للبحث..." autocomplete="off"></div></div>
-                        <div class="cw-field"><label for="supply-status-filter"><i class="fas fa-tasks"></i>الحالة</label><select id="supply-status-filter" class="cw-control"><option value="all">جميع الحالات</option><option value="pending">قيد الانتظار</option><option value="approved">موافق عليه</option><option value="rejected">مرفوض</option><option value="fulfilled">تم التنفيذ</option></select></div>
-                        <div class="cw-field"><label for="supply-type-filter"><i class="fas fa-tags"></i>نوع الطلب</label><select id="supply-type-filter" class="cw-control"><option value="all">جميع الأنواع</option><option value="medication">أدوية</option><option value="equipment">أجهزة طبية</option><option value="supplies">مستلزمات طبية</option><option value="other">أخرى</option></select></div>
-                        <div class="cw-field"><label for="supply-priority-filter"><i class="fas fa-bolt"></i>الأولوية</label><select id="supply-priority-filter" class="cw-control"><option value="all">جميع الأولويات</option><option value="urgent">عاجلة</option><option value="high">عالية</option><option value="normal">عادية</option></select></div>
+            <div class="space-y-6">
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-shopping-cart ml-2"></i>
+                            إرسال طلب احتياجات
+                        </h2>
                     </div>
-                </section>
-                <section class="cw-table-card"><div class="cw-table-caption"><div><strong>${isAdmin ? 'جميع طلبات الاحتياجات' : 'سجل طلباتي'}</strong><span> — متابعة الحالة والأولوية والإجراءات</span></div><span id="supply-result-pill" class="cw-count-pill">${allRequests.length} طلب</span></div><div id="supply-requests-list-container">${this.renderSupplyRequestsList(allRequests, isAdmin)}</div></section>
+                    <div class="card-body">
+                        <form id="supply-request-form" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                        <i class="fas fa-tag ml-2"></i>
+                                        نوع الطلب *
+                                    </label>
+                                    <select id="request-type" class="form-input" required>
+                                        <option value="">اختر نوع الطلب</option>
+                                        <option value="medication">أدوية</option>
+                                        <option value="equipment">أجهزة طبية</option>
+                                        <option value="supplies">مستلزمات طبية</option>
+                                        <option value="other">أخرى</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                        <i class="fas fa-box ml-2"></i>
+                                        اسم العنصر المطلوب *
+                                    </label>
+                                    <input type="text" id="item-name" class="form-input" placeholder="مثال: باراسيتامول 500 مجم" required>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                        <i class="fas fa-sort-numeric-up ml-2"></i>
+                                        الكمية المطلوبة *
+                                    </label>
+                                    <input type="number" id="quantity" class="form-input" placeholder="مثال: 10" min="1" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                        <i class="fas fa-ruler ml-2"></i>
+                                        الوحدة
+                                    </label>
+                                    <input type="text" id="unit" class="form-input" placeholder="مثال: علبة، عبوة، قطعة">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-comment-alt ml-2"></i>
+                                    ملاحظات / سبب الطلب
+                                </label>
+                                <textarea id="request-notes" class="form-textarea" rows="3" placeholder="اذكر سبب الحاجة لهذا العنصر..."></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-exclamation-triangle ml-2"></i>
+                                    الأولوية
+                                </label>
+                                <select id="priority" class="form-input">
+                                    <option value="normal">عادية</option>
+                                    <option value="high">عالية</option>
+                                    <option value="urgent">عاجلة</option>
+                                </select>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="submit" class="btn-primary">
+                                    <i class="fas fa-paper-plane ml-2"></i>
+                                    إرسال الطلب
+                                </button>
+                                <button type="reset" class="btn-secondary">
+                                    <i class="fas fa-redo ml-2"></i>
+                                    إعادة تعيين
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-list ml-2"></i>
+                            ${isAdmin ? 'جميع طلبات الاحتياجات' : 'طلباتي'}
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        ${this.renderSupplyRequestsList(allRequests, isAdmin)}
+                    </div>
+                </div>
             </div>
         `;
         this.applyModuleI18n(panel);
 
-        panel.querySelector('#supply-new-request-btn')?.addEventListener('click', () => this.showSupplyRequestForm());
+        // ربط أحداث النموذج
+        const form = panel.querySelector('#supply-request-form');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.submitSupplyRequest();
+            });
+        }
 
-        const bindSupplyListActions = () => {
-            panel.querySelectorAll('[data-action="view-request"]').forEach(btn => {
-                btn.addEventListener('click', () => this.viewSupplyRequest(btn.getAttribute('data-id')));
+        // ربط أحداث الإجراءات
+        panel.querySelectorAll('[data-action="view-request"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const requestId = btn.getAttribute('data-id');
+                this.viewSupplyRequest(requestId);
             });
-            panel.querySelectorAll('[data-action="update-status"]').forEach(btn => {
-                btn.addEventListener('click', () => this.updateSupplyRequestStatus(
-                    btn.getAttribute('data-id'),
-                    btn.getAttribute('data-status')
-                ));
-            });
-        };
-
-        const searchFilter = panel.querySelector('#supply-search-filter');
-        const statusFilter = panel.querySelector('#supply-status-filter');
-        const typeFilter = panel.querySelector('#supply-type-filter');
-        const priorityFilter = panel.querySelector('#supply-priority-filter');
-        const resetFilters = panel.querySelector('#supply-reset-filters');
-        const listContainer = panel.querySelector('#supply-requests-list-container');
-        const updateSupplyList = () => {
-            const search = this.normalizeArabicText(searchFilter?.value || '');
-            const status = statusFilter?.value || 'all';
-            const type = typeFilter?.value || 'all';
-            const priority = priorityFilter?.value || 'all';
-            const filtered = allRequests.filter((request) => {
-                if (status !== 'all' && (request.status || 'pending') !== status) return false;
-                if (type !== 'all' && request.type !== type) return false;
-                if (priority !== 'all' && (request.priority || 'normal') !== priority) return false;
-                if (search) {
-                    const haystack = this.normalizeArabicText([
-                        request.itemName,
-                        request.requestedBy?.name,
-                        request.requestedByName,
-                        request.notes,
-                        request.unit
-                    ].filter(Boolean).join(' '));
-                    if (!haystack.includes(search)) return false;
-                }
-                return true;
-            });
-            if (listContainer) listContainer.innerHTML = this.renderSupplyRequestsList(filtered, isAdmin);
-            const count = panel.querySelector('#supply-filter-count');
-            const result = panel.querySelector('#supply-result-pill');
-            if (count) count.textContent = `${filtered.length} من ${allRequests.length}`;
-            if (result) result.textContent = `${filtered.length} طلب`;
-            bindSupplyListActions();
-        };
-        [statusFilter, typeFilter, priorityFilter].forEach((control) => control?.addEventListener('change', updateSupplyList));
-        searchFilter?.addEventListener('input', updateSupplyList);
-        resetFilters?.addEventListener('click', () => {
-            if (searchFilter) searchFilter.value = '';
-            if (statusFilter) statusFilter.value = 'all';
-            if (typeFilter) typeFilter.value = 'all';
-            if (priorityFilter) priorityFilter.value = 'all';
-            updateSupplyList();
         });
-        bindSupplyListActions();
+
+        panel.querySelectorAll('[data-action="update-status"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const requestId = btn.getAttribute('data-id');
+                const currentStatus = btn.getAttribute('data-status');
+                this.updateSupplyRequestStatus(requestId, currentStatus);
+            });
+        });
 
         // إضافة مستمعي التمرير للجدول
         setTimeout(() => {
@@ -20088,10 +18446,10 @@ const Clinic = {
 
     renderSupplyRequestsList(requests, isAdmin) {
         if (!requests || requests.length === 0) {
-            return '<div class="cw-empty"><i class="fas fa-box-open"></i><h3>لا توجد طلبات مطابقة</h3><p>ستظهر الطلبات هنا بعد إرسالها أو عند تعديل الفلاتر.</p></div>';
+            return '<p class="text-center text-gray-500 py-8">لا توجد طلبات</p>';
         }
 
-        const rows = requests.map((request, index) => {
+        const rows = requests.map(request => {
             const requestDate = this.formatDate(request.createdAt || request.requestDate, true);
             const requestedBy = request.requestedBy?.name || request.requestedByName || 'غير معروف';
             const status = request.status || 'pending';
@@ -20116,39 +18474,26 @@ const Clinic = {
                 'supplies': 'مستلزمات طبية',
                 'other': 'أخرى'
             }[request.type] || request.type || 'غير محدد';
-            const typeIcon = {
-                medication: 'fas fa-pills',
-                equipment: 'fas fa-stethoscope',
-                supplies: 'fas fa-briefcase-medical',
-                other: 'fas fa-box'
-            }[request.type] || 'fas fa-box';
-            const itemMeta = [
-                request.type === 'medication' && request.currentBalanceAtRequest !== null && request.currentBalanceAtRequest !== undefined
-                    ? `الرصيد عند الطلب: ${request.currentBalanceAtRequest} ${request.unit || 'وحدة'}`
-                    : '',
-                request.notes || ''
-            ].filter(Boolean).join(' • ') || 'لا توجد ملاحظات';
 
             return `
                 <tr>
-                    <td class="text-center"><span class="cw-serial">${index + 1}</span></td>
-                    <td>${requestDate}</td>
+                    <td>${this.formatDate(request.createdAt || request.requestDate, true)}</td>
                     <td>${Utils.escapeHTML(requestedBy)}</td>
                     <td>${Utils.escapeHTML(typeLabel)}</td>
-                    <td><div class="cw-main-cell"><span class="cw-cell-icon"><i class="${typeIcon}"></i></span><div><strong>${Utils.escapeHTML(request.itemName || 'غير محدد')}</strong><small>${Utils.escapeHTML(itemMeta)}</small></div></div></td>
+                    <td>${Utils.escapeHTML(request.itemName || '')}</td>
                     <td class="text-center">${request.quantity || ''} ${Utils.escapeHTML(request.unit || '')}</td>
                     <td class="text-center">${priorityBadge}</td>
                     <td class="text-center">${statusBadge}</td>
                     <td class="text-center">
-                        <div class="cw-actions">
-                            <button type="button" class="btn-icon btn-icon-primary" data-action="view-request" data-id="${Utils.escapeHTML(request.id || '')}" title="عرض التفاصيل" aria-label="عرض التفاصيل">
+                        <div class="flex items-center justify-center gap-2">
+                            <button type="button" class="btn-icon btn-icon-primary" data-action="view-request" data-id="${Utils.escapeHTML(request.id || '')}" title="عرض التفاصيل">
                                 <i class="fas fa-eye"></i>
                             </button>
                             ${isAdmin && status === 'pending' ? `
-                            <button type="button" class="btn-icon btn-icon-success" data-action="update-status" data-id="${Utils.escapeHTML(request.id || '')}" data-status="approved" title="موافقة" aria-label="موافقة">
+                            <button type="button" class="btn-icon btn-icon-success" data-action="update-status" data-id="${Utils.escapeHTML(request.id || '')}" data-status="approved" title="موافقة">
                                 <i class="fas fa-check"></i>
                             </button>
-                            <button type="button" class="btn-icon btn-icon-danger" data-action="update-status" data-id="${Utils.escapeHTML(request.id || '')}" data-status="rejected" title="رفض" aria-label="رفض">
+                            <button type="button" class="btn-icon btn-icon-danger" data-action="update-status" data-id="${Utils.escapeHTML(request.id || '')}" data-status="rejected" title="رفض">
                                 <i class="fas fa-times"></i>
                             </button>
                             ` : ''}
@@ -20159,19 +18504,18 @@ const Clinic = {
         }).join('');
 
         return `
-            <div class="cw-table-scroll clinic-table-wrapper">
-                <table class="cw-table">
+            <div class="table-wrapper clinic-table-wrapper" style="overflow-x: auto; overflow-y: auto; max-height: 70vh;">
+                <table class="data-table">
                     <thead>
                         <tr>
-                            <th class="text-center"><i class="fas fa-hashtag"></i>م</th>
-                            <th><i class="fas fa-calendar-alt"></i>تاريخ الطلب</th>
-                            <th><i class="fas fa-user"></i>مقدم الطلب</th>
-                            <th><i class="fas fa-tag"></i>النوع</th>
-                            <th><i class="fas fa-box-open"></i>العنصر المطلوب</th>
-                            <th class="text-center"><i class="fas fa-balance-scale"></i>الكمية</th>
-                            <th class="text-center"><i class="fas fa-bolt"></i>الأولوية</th>
-                            <th class="text-center"><i class="fas fa-tasks"></i>الحالة</th>
-                            <th class="text-center"><i class="fas fa-cogs"></i>الإجراءات</th>
+                            <th>تاريخ الطلب</th>
+                            <th>المقدم</th>
+                            <th>نوع الطلب</th>
+                            <th>اسم العنصر</th>
+                            <th class="text-center">الكمية</th>
+                            <th class="text-center">الأولوية</th>
+                            <th class="text-center">الحالة</th>
+                            <th class="text-center">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -20189,14 +18533,10 @@ const Clinic = {
         const unit = document.getElementById('unit')?.value?.trim() || 'وحدة';
         const notes = document.getElementById('request-notes')?.value?.trim();
         const priority = document.getElementById('priority')?.value || 'normal';
-        const itemNameElement = document.getElementById('item-name');
-        const linkedMedicationId = type === 'medication' ? (itemNameElement?.dataset.medicationId || '') : '';
-        const balanceValue = itemNameElement?.dataset.currentBalance;
-        const originalStockValue = itemNameElement?.dataset.quantityAdded;
 
         if (!type || !itemName || !quantity) {
             Notification?.error?.('يرجى ملء جميع الحقول المطلوبة');
-            return false;
+            return;
         }
 
         Loading.show();
@@ -20210,11 +18550,6 @@ const Clinic = {
                 notes,
                 priority,
                 status: 'pending',
-                medicationId: linkedMedicationId || null,
-                currentBalanceAtRequest: linkedMedicationId && balanceValue !== undefined ? Number(balanceValue) : null,
-                originalStockAtRequest: linkedMedicationId && originalStockValue !== undefined ? Number(originalStockValue) : null,
-                stockStatusAtRequest: linkedMedicationId ? (itemNameElement?.dataset.stockStatus || null) : null,
-                medicationExpiryDate: linkedMedicationId ? (itemNameElement?.dataset.expiryDate || null) : null,
                 requestedBy: {
                     id: AppState.currentUser?.id,
                     name: AppState.currentUser?.name,
@@ -20247,7 +18582,6 @@ const Clinic = {
 
                 // إرسال إشعار للمدير
                 this.notifyAdminAboutSupplyRequest(request);
-                if (typeof UI !== 'undefined' && typeof UI.updateNotificationsBadge === 'function') UI.updateNotificationsBadge();
 
                 // إعادة تحميل التبويب
                 this.renderSupplyRequestTab();
@@ -20261,7 +18595,6 @@ const Clinic = {
 
                 // إعادة تعيين النموذج
                 document.getElementById('supply-request-form')?.reset();
-                return true;
             } else {
                 throw new Error(result?.message || 'فشل إرسال الطلب');
             }
@@ -20269,7 +18602,6 @@ const Clinic = {
             Loading.hide();
             Utils.safeError('خطأ في إرسال طلب الاحتياج:', error);
             Notification.error('تعذر إرسال الطلب: ' + (error.message || 'حدث خطأ غير معروف'));
-            return false;
         }
     },
 
@@ -20313,18 +18645,6 @@ const Clinic = {
                             <label class="text-sm font-semibold text-gray-600">اسم العنصر</label>
                             <p class="text-gray-800">${Utils.escapeHTML(request.itemName || '')}</p>
                         </div>
-                        ${request.type === 'medication' && request.currentBalanceAtRequest !== null && request.currentBalanceAtRequest !== undefined ? `
-                        <div style="padding:9px 11px;border:1px solid #b8ded9;border-radius:9px;background:#f0fdfa;">
-                            <label class="text-sm font-semibold" style="color:#0f766e;">الرصيد عند إرسال الطلب</label>
-                            <p style="margin:3px 0 0;color:#134e4a;font-weight:800;">${request.currentBalanceAtRequest} ${Utils.escapeHTML(request.unit || 'وحدة')}</p>
-                        </div>
-                        ` : ''}
-                        ${request.type === 'medication' && request.medicationExpiryDate ? `
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">صلاحية الدواء</label>
-                            <p class="text-gray-800">${this.formatDate(request.medicationExpiryDate)}</p>
-                        </div>
-                        ` : ''}
                         <div>
                             <span class="text-sm font-semibold text-gray-600">الكمية</span>
                             <p class="text-gray-800">${request.quantity || ''} ${Utils.escapeHTML(request.unit || '')}</p>
@@ -21331,16 +19651,10 @@ const Clinic = {
         try {
             Utils.safeLog('🧹 تنظيف موارد Clinic module...');
 
-            // إغلاق مودالات مفتوحة على body عند مغادرة العيادة
-            try {
-                const keepIds = new Set(['hse-update-message-modal']);
-                document.querySelectorAll('body > .modal-overlay').forEach((el) => {
-                    if (keepIds.has(String(el.id || ''))) return;
-                    el.remove();
-                });
-                document.getElementById('clinic-section')?.querySelectorAll('.modal-overlay').forEach((el) => el.remove());
-            } catch (_modalErr) { /* ignore */ }
-
+            // تنظيف جميع الـ event listeners
+            // ملاحظة: معظم الـ listeners مرتبطة بعناصر DOM محددة
+            // سيتم تنظيفها تلقائياً عند إزالة العناصر من DOM
+            
             // تنظيف أي timers نشطة
             // (لا توجد timers دائمة في هذا الموديول حالياً، لكن يمكن إضافتها هنا لاحقاً)
 

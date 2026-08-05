@@ -1,5 +1,5 @@
 ---
-description: عند طلب "نشر" داخل ملفات GAS يتم تنفيذ نشر عبر clasp ثم redeploy للإنتاج
+description: عند طلب "نشر" داخل ملفات GAS يتم تنفيذ نشر عبر clasp
 globs:
   - "Backend/**/*.gs"
   - "Backend/appsscript.json"
@@ -15,21 +15,12 @@ alwaysApply: false
 عند طلب المستخدم كلمة **«نشر»** أو **«نشر GAS»** أثناء العمل على ملفات Google Apps Script:
 
 1. اعتبر المقصود هو نشر Google Apps Script عبر `clasp` وليس `git push`.
-2. نفّذ من مسار `Backend/`:
+2. نفّذ النشر في مسار `Backend/` بالأمر:
    - `clasp push`
-   - ثم **إلزامي** إعادة ربط Web App الإنتاجي (نفس `/exec` في الواجهة):
-     - `clasp version "وصف قصير"`
-     - `clasp deploy -i "AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ" -d "…"`
-   - أو شغّل: `node scripts/deploy-gas-prod.mjs`
-3. **ممنوع** اعتبار `clasp push` وحده نشراً للإنتاج — `/exec` مربوط بـ deployment+version وليس HEAD.
-4. تحقق smoke: POST على رابط `/exec` الإنتاجي يجب أن يرجع **JSON** وليس HTML.
-5. بعد التنفيذ، أعرض للمستخدم نتيجة النشر بوضوح (نجاح/فشل + رقم النسخة/deployment).
-6. لا تنفّذ `commit` أو `push` إلى GitHub إلا إذا طلب المستخدم صراحة كلمة **«رفع»**.
-7. إذا لم تكن المصادقة جاهزة (`clasp login`) أو كان `scriptId` غير مهيأ، بلّغ المستخدم بالخطوة المطلوبة لإكمال النشر.
-
-رابط الإنتاج الثابت في الواجهة:
-`https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec`
+3. بعد التنفيذ، أعرض للمستخدم نتيجة النشر بوضوح (نجاح/فشل + سبب الفشل إن وجد).
+4. لا تنفّذ `commit` أو `push` إلى GitHub إلا إذا طلب المستخدم صراحة كلمة **«رفع»**.
+5. إذا لم تكن المصادقة جاهزة (`clasp login`) أو كان `scriptId` غير مهيأ، بلّغ المستخدم بالخطوة المطلوبة لإكمال النشر.
 
 مثال:
 - المستخدم: «نشر»
-- التنفيذ: `clasp push` → `clasp version` → `clasp deploy -i <PROD_ID>` → smoke JSON
+- التنفيذ: `Backend/ -> clasp push`

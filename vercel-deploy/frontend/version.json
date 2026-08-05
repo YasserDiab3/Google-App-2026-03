@@ -1,15 +1,15 @@
 {
-  "version": "1.0.856",
+  "version": "1.0.858",
   "highlights": {
     "ar": [
-      "إصلاح مؤشر المزامنة العالق عند 40% بعد الدخول.",
-      "المزامنة التلقائية صامتة وتدريجية دون نافذة تقدم طويلة.",
-      "تحديث النسبة لكل شيت مع مهل أطول للشيتات الثقيلة."
+      "تبسيط مديول العيادة وتقليل مسارات التحميل المساعدة.",
+      "استعادة سجل التشريعات القانونية داخل مديول التدريب.",
+      "تحديث قواعد الرفع والنشر في المشروع."
     ],
     "en": [
-      "Fix sync indicator stuck at 40% after login.",
-      "Automatic sync stays silent and incremental without a long overlay.",
-      "Progress updates per sheet with longer timeouts for heavy sheets."
+      "Simplify the clinic module and reduce helper load paths.",
+      "Restore the legal register inside the training module.",
+      "Update project push and publish rules."
     ]
   }
 }
