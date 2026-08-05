@@ -3129,6 +3129,10 @@ window.UI = {
     _continueMainAppSetup() {
         // ضمان عدم بقاء قفل شاشة السياسات (يخفي القائمة والهيدر ويمنع التمرير)
         this.clearPostLoginOverlayLock();
+        if (this._mainAppSetupStarted) {
+            return;
+        }
+        this._mainAppSetupStarted = true;
 
         // توحيد مسار التحميل الأولي: إذا كان Auth يملك التحميل الأساسي لا نكرر الطلبات هنا.
         this._startPermissionScopedBootstrapLoad();
@@ -10258,17 +10262,34 @@ window.UI = {
             return;
         }
 
-        // ربط حدث النقر
+        if (syncBtn.dataset.bound === '1') {
+            this.updateSyncButtonStatus();
+            return;
+        }
+        syncBtn.dataset.bound = '1';
+
         syncBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
             await this.handleSyncClick();
         });
 
-        // تحديث حالة الزر
         this.updateSyncButtonStatus();
-
         Utils.safeLog('✅ تم تهيئة زر المزامنة');
+    },
+
+    async _waitForGlobalSyncIdle(maxMs = 45000) {
+        const start = Date.now();
+        while (typeof GoogleIntegration !== 'undefined' && GoogleIntegration._syncInProgress?.global) {
+            if (Date.now() - start > maxMs) return false;
+            const startedAt = Number(GoogleIntegration._syncInProgress.lastSyncStart || 0);
+            if (startedAt && (Date.now() - startedAt) > 180000) {
+                GoogleIntegration._syncInProgress.global = false;
+                return true;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+        return true;
     },
 
     /**
@@ -10278,15 +10299,12 @@ window.UI = {
         const syncBtn = document.getElementById('sync-btn');
         if (!syncBtn) return;
 
-        // منع المزامنة المتعددة
-        if (syncBtn.classList.contains('syncing')) {
-            if (typeof Notification !== 'undefined') {
-                Notification.info('جاري المزامنة بالفعل، يرجى الانتظار...');
-            }
+        if (this._syncClickInFlight || syncBtn.classList.contains('syncing')) {
             return;
         }
 
         try {
+            this._syncClickInFlight = true;
             syncBtn.classList.add('syncing');
             
             if (typeof GoogleIntegration === 'undefined') {
@@ -10295,6 +10313,16 @@ window.UI = {
 
             if (typeof GoogleIntegration.resetCircuitBreaker === 'function') {
                 GoogleIntegration.resetCircuitBreaker();
+            }
+
+            if (GoogleIntegration._syncInProgress?.global) {
+                if (typeof Notification !== 'undefined') {
+                    Notification.info('جاري إكمال المزامنة الحالية ثم التحديث...');
+                }
+                const idle = await this._waitForGlobalSyncIdle(60000);
+                if (!idle && GoogleIntegration._syncInProgress) {
+                    GoogleIntegration._syncInProgress.global = false;
+                }
             }
 
             if (typeof Notification !== 'undefined') {
@@ -10314,6 +10342,7 @@ window.UI = {
                 || (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function' && Permissions.hasAccess('users'));
             
             if (typeof GoogleIntegration.syncData === 'function') {
+                GoogleIntegration._lastSyncBusy = false;
                 syncResult = await GoogleIntegration.syncData({
                     silent: false,
                     showLoader: true,
@@ -10355,6 +10384,13 @@ window.UI = {
             }
             
             if (!syncResult && cloudSyncConfigured) {
+                if (GoogleIntegration && GoogleIntegration._lastSyncBusy) {
+                    if (typeof Notification !== 'undefined') {
+                        Notification.info('المزامنة تعمل في الخلفية. تم تحديث العرض الحالي.');
+                    }
+                    try { this.refreshCurrentSection(true); } catch (_e) {}
+                    return;
+                }
                 const detail = (GoogleIntegration && GoogleIntegration._lastSyncError)
                     ? String(GoogleIntegration._lastSyncError)
                     : '';
@@ -10388,6 +10424,7 @@ window.UI = {
                 Notification.error('فشلت المزامنة: ' + (error.message || 'خطأ غير معروف'));
             }
         } finally {
+            this._syncClickInFlight = false;
             syncBtn.classList.remove('syncing');
             this.updateSyncButtonStatus();
         }

@@ -3356,15 +3356,36 @@ const GoogleIntegration = {
             return false;
         }
 
-        // منع المزامنة المتزامنة
+        // منع المزامنة المتزامنة — إعادة التحميل تنتظر القفل أو تصفّر القفل القديم
         if (this._syncInProgress.global) {
-            if (!silent) {
-                Notification.info('جاري المزامنة بالفعل، يرجى الانتظار...');
+            const startedAt = Number(this._syncInProgress.lastSyncStart || 0);
+            const stale = !startedAt || (Date.now() - startedAt) > 180000;
+            if (stale) {
+                this._syncInProgress.global = false;
+            } else if (forceRefresh) {
+                const waitStart = Date.now();
+                while (this._syncInProgress.global && (Date.now() - waitStart) < 60000) {
+                    await new Promise((resolve) => setTimeout(resolve, 250));
+                    const age = Date.now() - Number(this._syncInProgress.lastSyncStart || Date.now());
+                    if (age > 180000) {
+                        this._syncInProgress.global = false;
+                        break;
+                    }
+                }
             }
-            return false;
+            if (this._syncInProgress.global) {
+                this._lastSyncBusy = true;
+                this._lastSyncError = '';
+                if (!silent) {
+                    Notification.info('جاري المزامنة بالفعل، يرجى الانتظار...');
+                }
+                return false;
+            }
         }
 
         this._syncInProgress.global = true;
+        this._syncInProgress.lastSyncStart = Date.now();
+        this._lastSyncBusy = false;
         this._lastSyncError = null;
         if (typeof this.resetCircuitBreaker === 'function') {
             this.resetCircuitBreaker();
@@ -3715,10 +3736,17 @@ const GoogleIntegration = {
                 if (shouldLog) {
                     Utils.safeLog('لا يوجد وراق لقراءة البيانات من Google Sheets');
                 }
+                this._syncInProgress.global = false;
+                this._currentSyncForceRefresh = false;
                 return true;
             }
 
             sheets = this._filterSheetsForCurrentUser(sheets);
+
+            if (!requestedSheets) {
+                const ownedHeavy = ['ClinicVisits', 'ClinicContractorVisits', 'Training', 'Employees', 'ExternalWorkforceMonthly', 'PTW', 'PTWRegistry', 'DailyObservations', 'UserActivityLog'];
+                sheets = sheets.filter((sheet) => !ownedHeavy.includes(sheet));
+            }
 
             if (sheets.length === 0) {
                 if (showLoader && typeof Loading !== 'undefined') {
@@ -3727,6 +3755,8 @@ const GoogleIntegration = {
                 if (shouldLog) {
                     Utils.safeLog('لا توجد أوراق مسموح قراءتها للمستخدم الحالي');
                 }
+                this._syncInProgress.global = false;
+                this._currentSyncForceRefresh = false;
                 return true;
             }
 

@@ -361,11 +361,31 @@
                     const effectiveNotifyOnError = notifyOnError && !suppressProgressOverlay;
 
                     if (GoogleIntegration._syncInProgress && GoogleIntegration._syncInProgress.global) {
-                        if (!silent && typeof Notification !== 'undefined') {
-                            Notification.info('جاري المزامنة بالفعل، يرجى الانتظار...');
+                        const startedAt = Number(GoogleIntegration._syncInProgress.lastSyncStart || 0);
+                        const stale = !startedAt || (Date.now() - startedAt) > 180000;
+                        if (stale) {
+                            GoogleIntegration._syncInProgress.global = false;
+                        } else if (forceRefresh) {
+                            const waitStart = Date.now();
+                            while (GoogleIntegration._syncInProgress.global && (Date.now() - waitStart) < 60000) {
+                                await new Promise((resolve) => setTimeout(resolve, 250));
+                                const age = Date.now() - Number(GoogleIntegration._syncInProgress.lastSyncStart || Date.now());
+                                if (age > 180000) {
+                                    GoogleIntegration._syncInProgress.global = false;
+                                    break;
+                                }
+                            }
                         }
-                        return false;
+                        if (GoogleIntegration._syncInProgress.global) {
+                            GoogleIntegration._lastSyncBusy = true;
+                            GoogleIntegration._lastSyncError = '';
+                            if (!silent && typeof Notification !== 'undefined') {
+                                Notification.info('جاري المزامنة بالفعل، يرجى الانتظار...');
+                            }
+                            return false;
+                        }
                     }
+                    GoogleIntegration._lastSyncBusy = false;
                     
                     if (!AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
                         if (!silent) {
@@ -376,6 +396,7 @@
                     }
 
                     GoogleIntegration._syncInProgress.global = true;
+                    GoogleIntegration._syncInProgress.lastSyncStart = Date.now();
                     
                     try {
                         const shouldLog = AppState.debugMode && !silent;
@@ -536,9 +557,7 @@
 
                         if (!requestedSheets) {
                             sheets = sheets.filter((sheet) => !DEFERRED_GLOBAL_SHEETS.includes(sheet));
-                            if (incremental || !forceRefresh) {
-                                sheets = sheets.filter((sheet) => !MODULE_OWNED_HEAVY_SHEETS.includes(sheet));
-                            }
+                            sheets = sheets.filter((sheet) => !MODULE_OWNED_HEAVY_SHEETS.includes(sheet));
                         }
 
                         if (incremental && !requestedSheets && typeof GoogleIntegration.getIncompleteSheets === 'function') {
@@ -737,6 +756,7 @@
                     } finally {
                         if (GoogleIntegration._syncInProgress) {
                             GoogleIntegration._syncInProgress.global = false;
+                            GoogleIntegration._syncInProgress.lastSyncEnd = Date.now();
                         }
                     }
                 };
