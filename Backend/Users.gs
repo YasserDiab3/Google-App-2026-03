@@ -810,6 +810,10 @@ function getUserRecordFromUsersSheetByEmail_(email, options) {
             Logger.log('getAuthUserRowByEmail_ fallback: ' + slimErr.toString());
         }
 
+        if (options.bypassFullScan) {
+            return null;
+        }
+
         var spreadsheetId = getSpreadsheetId();
         // Skip security filter to get passwordHash for authentication
         var users = readFromSheet('Users', spreadsheetId, true);
@@ -1515,9 +1519,17 @@ function startMfaEnrollment(actorUserData) {
         if (!email) {
             return { success: false, message: 'مطلوب تسجيل الدخول', errorCode: 'AUTH_REQUIRED' };
         }
-        var user = getUserRecordFromUsersSheetByEmail_(email);
-        if (!user) {
-            return { success: false, message: 'المستخدم غير موجود' };
+        if (typeof setAuthQuietWindow_ === 'function') {
+            setAuthQuietWindow_(90);
+        }
+        if (isMfaEnabledForUser_(actorUserData)) {
+            return { success: false, message: 'المصادقة الثنائية مفعّلة بالفعل' };
+        }
+        var user = null;
+        try {
+            user = getUserRecordFromUsersSheetByEmail_(email, { bypassFullScan: true });
+        } catch (_lookupErr) {
+            user = null;
         }
         if (isMfaEnabledForUser_(user)) {
             return { success: false, message: 'المصادقة الثنائية مفعّلة بالفعل' };

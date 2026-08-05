@@ -2707,22 +2707,51 @@ window.Auth = {
         }
     },
 
-    async startMfaEnrollment() {
+    _friendlyMfaTransportError(err) {
+        const raw = String((err && err.message) || err || '').trim();
+        const low = raw.toLowerCase();
+        if (!raw) return 'فشل الاتصال بالخادم';
+        if (
+            low.includes('abort') ||
+            low.includes('timeout') ||
+            low.includes('timed out') ||
+            low.includes('مهلة') ||
+            low.includes('فشل المزامنة') ||
+            low.includes('failed to fetch') ||
+            low.includes('network')
+        ) {
+            return 'انتهت مهلة الاتصال بالخادم. أعد المحاولة.';
+        }
+        if (low.includes('csrf')) {
+            return 'انتهت صلاحية الجلسة الأمنية. حدّث الصفحة ثم أعد المحاولة.';
+        }
+        if (low.includes('circuit breaker')) {
+            return 'الخادم مشغول مؤقتاً. أعد المحاولة بعد لحظات.';
+        }
+        return raw;
+    },
+
+    async startMfaEnrollment(options = {}) {
+        const silent = !!(options && options.silent);
         if (typeof GoogleIntegration === 'undefined' || !Utils.hasCloudBackendSync()) {
-            Notification.error('يتطلب اتصالاً بالخادم لتفعيل المصادقة الثنائية');
-            return { success: false, message: 'لا يوجد اتصال بالخادم' };
+            const msg = 'لا يوجد اتصال بالخادم';
+            if (!silent) Notification.error('يتطلب اتصالاً بالخادم لتفعيل المصادقة الثنائية');
+            return { success: false, message: msg };
         }
         try {
-            const result = await GoogleIntegration.sendRequest({ action: 'startMfaEnrollment', data: {} });
+            const result = await GoogleIntegration.sendRequest({
+                action: 'startMfaEnrollment',
+                data: { __highPriority: true, __timeoutMs: 45000, __allowStructuredFailure: true }
+            });
             if (!result || !result.success) {
                 const msg = (result && result.message) || 'تعذر بدء تسجيل المصادقة الثنائية';
-                Notification.error(msg);
-                return { success: false, message: msg };
+                if (!silent) Notification.error(msg);
+                return { success: false, message: msg, errorCode: result && result.errorCode };
             }
             return result;
         } catch (err) {
-            const msg = (err && err.message) ? String(err.message) : 'فشل الاتصال بالخادم';
-            Notification.error(msg);
+            const msg = this._friendlyMfaTransportError(err);
+            if (!silent) Notification.error(msg);
             return { success: false, message: msg };
         }
     },
@@ -2736,7 +2765,7 @@ window.Auth = {
         try {
             const result = await GoogleIntegration.sendRequest({
                 action: 'confirmMfaEnrollment',
-                data: { code: otp }
+                data: { code: otp, __highPriority: true, __timeoutMs: 45000, __allowStructuredFailure: true }
             });
             if (result && result.success) {
                 const email = AppState.currentUser?.email;
@@ -2764,7 +2793,7 @@ window.Auth = {
         try {
             const result = await GoogleIntegration.sendRequest({
                 action: 'disableMfa',
-                data: { email, password: password || '' }
+                data: { email, password: password || '', __highPriority: true, __timeoutMs: 45000, __allowStructuredFailure: true }
             });
             if (result && result.success) {
                 this._syncLocalUserMfaFlags(email, {

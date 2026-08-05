@@ -1,15 +1,15 @@
 {
-  "version": "1.0.875",
+  "version": "1.0.877",
   "highlights": {
     "ar": [
-      "فلاتر ديناميكية مع بحث داخل سجل تدريب المقاولين والموظفين.",
-      "منع ظهور السجلات المكررة بعد المزامنة أو إعادة التحميل.",
-      "مسح الفلاتر وعدّاد النتائج لتسهيل التصفح."
+      "تسريع فتح المصادقة الثنائية (TOTP) دون انتظار طابور المزامنة.",
+      "إصلاح أخطاء التسجيل الناتجة عن ازدحام الخادم أو Circuit Breaker.",
+      "نافذة أوضح مع إعادة المحاولة ورمز QR احتياطي."
     ],
     "en": [
-      "Dynamic searchable filters for contractor and employee training registries.",
-      "Duplicate training records are merged after sync or reload.",
-      "Clear-filters action and result counts for easier browsing."
+      "Faster TOTP setup — MFA no longer waits behind sync queue.",
+      "Fix enrollment errors caused by server congestion or circuit breaker.",
+      "Clearer MFA modal with retry and QR fallback."
     ]
   }
 }

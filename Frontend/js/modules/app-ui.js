@@ -5009,64 +5009,104 @@ window.UI = {
             return;
         }
 
-        const start = await Auth.startMfaEnrollment();
-        if (!start || !start.success) {
-            body.innerHTML = `<p class="text-red-600 text-sm">${esc(start?.message || 'تعذر بدء التسجيل')}</p>`;
-            return;
-        }
+        const showStartError = (message) => {
+            body.innerHTML = `
+                <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-3 text-sm text-red-700">
+                    <i class="fas fa-circle-exclamation ml-1"></i>${esc(message || 'تعذر بدء التسجيل')}
+                </div>
+                <p class="text-xs text-slate-500 mb-3">إن استمر الخطأ: حدّث الصفحة أو أعد تسجيل الدخول ثم حاول مرة أخرى.</p>
+                <div class="flex gap-2 justify-end">
+                    <button type="button" class="btn-secondary" id="mfa-enroll-close-err">إغلاق</button>
+                    <button type="button" class="btn-primary" id="mfa-enroll-retry"><i class="fas fa-rotate-right ml-1"></i>إعادة المحاولة</button>
+                </div>
+            `;
+            body.querySelector('#mfa-enroll-close-err')?.addEventListener('click', closeModal);
+            body.querySelector('#mfa-enroll-retry')?.addEventListener('click', () => {
+                body.innerHTML = `<div class="text-center text-slate-500 text-sm py-4"><i class="fas fa-spinner fa-spin ml-2"></i> جاري التحميل...</div>`;
+                beginEnrollment();
+            });
+        };
 
-        const otpauthUrl = start.otpauthUrl || '';
-        const manualSecret = start.secret || '';
-        let qrHtml = '<p class="text-amber-600 text-sm">تعذر إنشاء QR — استخدم السر يدوياً في التطبيق.</p>';
-        if (otpauthUrl && typeof window.QRCode !== 'undefined' && typeof window.QRCode.generate === 'function') {
-            try {
-                const qrSrc = window.QRCode.generate(otpauthUrl, 200);
-                qrHtml = `<img src="${esc(qrSrc)}" alt="QR MFA" class="mx-auto profile-qr-image" style="max-width:200px;">`;
-            } catch (_qrErr) { /* fallback text */ }
-        }
-
-        body.innerHTML = `
-            <p class="text-sm text-gray-600 mb-2">امسح الرمز بتطبيق Google Authenticator أو Microsoft Authenticator:</p>
-            <p class="text-xs text-amber-700 mb-3">احذف أي حساب HSE قديم من التطبيق أولاً. إن فشل المسح: أدخل السر يدوياً (بالأسفل) ثم أدخل رمزاً جديداً.</p>
-            <div class="text-center mb-3">${qrHtml}</div>
-            <p class="text-xs text-gray-500 mb-1 text-center">السر اليدوي:</p>
-            <p class="text-sm font-mono text-center mb-3 select-all" dir="ltr">${esc(manualSecret)}</p>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">أدخل الرمز من التطبيق للتأكيد:</label>
-            <input type="text" id="mfa-enroll-code" class="form-input text-center tracking-widest mb-3" inputmode="numeric" maxlength="6" placeholder="000000" dir="ltr" autocomplete="one-time-code">
-            <div class="flex gap-2 justify-end">
-                <button type="button" class="btn-secondary" id="mfa-enroll-cancel">إلغاء</button>
-                <button type="button" class="btn-primary" id="mfa-enroll-confirm"><i class="fas fa-check ml-1"></i>تفعيل</button>
-            </div>
-        `;
-        body.querySelector('#mfa-enroll-cancel')?.addEventListener('click', closeModal);
-        body.querySelector('#mfa-enroll-confirm')?.addEventListener('click', async () => {
-            const code = body.querySelector('#mfa-enroll-code')?.value?.trim() || '';
-            if (!/^\d{6}$/.test(code.replace(/\s/g, ''))) {
-                Notification.warning('أدخل 6 أرقام من التطبيق');
-                return;
-            }
-            Loading.show();
-            try {
-                if (manualSecret && typeof Auth.verifyTotpLocal === 'function') {
-                    const localOk = await Auth.verifyTotpLocal(manualSecret, code, 5);
-                    if (localOk === false) {
-                        Loading.hide();
-                        Notification.error('الرمز لا يطابق السر المعروض. احذف الحساب القديم من التطبيق وأعد المسح أو الإدخال اليدوي.');
-                        return;
+        const renderEnrollForm = (start) => {
+            const otpauthUrl = start.otpauthUrl || '';
+            const manualSecret = start.secret || '';
+            let qrHtml = '<p class="text-amber-600 text-sm">تعذر إنشاء QR — استخدم السر يدوياً في التطبيق.</p>';
+            const qrApi = (typeof window !== 'undefined' && window.QRCode && typeof window.QRCode.generate === 'function')
+                ? window.QRCode
+                : ((typeof QRCode !== 'undefined' && QRCode && typeof QRCode.generate === 'function') ? QRCode : null);
+            if (otpauthUrl && qrApi) {
+                try {
+                    const qrSrc = qrApi.generate(otpauthUrl, 200);
+                    if (qrSrc) {
+                        qrHtml = `<img src="${esc(qrSrc)}" alt="QR MFA" class="mx-auto profile-qr-image" style="max-width:200px;">`;
                     }
-                }
-                const res = await Auth.confirmMfaEnrollment(code);
-                Loading.hide();
-                if (res && res.success) {
-                    closeModal();
-                    if (AppState.currentSection === 'profile') this.renderMyProfileSection();
-                }
-            } catch (err) {
-                Loading.hide();
-                Notification.error(err?.message || 'فشل التفعيل');
+                } catch (_qrErr) { /* fallback text */ }
+            } else if (otpauthUrl) {
+                const fallback = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(otpauthUrl)}`;
+                qrHtml = `<img src="${esc(fallback)}" alt="QR MFA" class="mx-auto profile-qr-image" style="max-width:200px;">`;
             }
-        });
-        setTimeout(() => body.querySelector('#mfa-enroll-code')?.focus(), 100);
+
+            body.innerHTML = `
+                <p class="text-sm text-gray-600 mb-2">امسح الرمز بتطبيق Google Authenticator أو Microsoft Authenticator:</p>
+                <p class="text-xs text-amber-700 mb-3">احذف أي حساب HSE قديم من التطبيق أولاً. إن فشل المسح: أدخل السر يدوياً (بالأسفل) ثم أدخل رمزاً جديداً.</p>
+                <div class="text-center mb-3">${qrHtml}</div>
+                <p class="text-xs text-gray-500 mb-1 text-center">السر اليدوي:</p>
+                <p class="text-sm font-mono text-center mb-3 select-all" dir="ltr">${esc(manualSecret)}</p>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">أدخل الرمز من التطبيق للتأكيد:</label>
+                <input type="text" id="mfa-enroll-code" class="form-input text-center tracking-widest mb-3" inputmode="numeric" maxlength="6" placeholder="000000" dir="ltr" autocomplete="one-time-code">
+                <div class="flex gap-2 justify-end">
+                    <button type="button" class="btn-secondary" id="mfa-enroll-cancel">إلغاء</button>
+                    <button type="button" class="btn-primary" id="mfa-enroll-confirm"><i class="fas fa-check ml-1"></i>تفعيل</button>
+                </div>
+            `;
+            body.querySelector('#mfa-enroll-cancel')?.addEventListener('click', closeModal);
+            body.querySelector('#mfa-enroll-confirm')?.addEventListener('click', async () => {
+                const code = body.querySelector('#mfa-enroll-code')?.value?.trim() || '';
+                if (!/^\d{6}$/.test(code.replace(/\s/g, ''))) {
+                    Notification.warning('أدخل 6 أرقام من التطبيق');
+                    return;
+                }
+                Loading.show();
+                try {
+                    if (manualSecret && typeof Auth.verifyTotpLocal === 'function') {
+                        const localOk = await Auth.verifyTotpLocal(manualSecret, code, 5);
+                        if (localOk === false) {
+                            Loading.hide();
+                            Notification.error('الرمز لا يطابق السر المعروض. احذف الحساب القديم من التطبيق وأعد المسح أو الإدخال اليدوي.');
+                            return;
+                        }
+                    }
+                    const res = await Auth.confirmMfaEnrollment(code);
+                    Loading.hide();
+                    if (res && res.success) {
+                        closeModal();
+                        if (AppState.currentSection === 'profile') this.renderMyProfileSection();
+                    }
+                } catch (err) {
+                    Loading.hide();
+                    Notification.error(err?.message || 'فشل التفعيل');
+                }
+            });
+            setTimeout(() => body.querySelector('#mfa-enroll-code')?.focus(), 100);
+        };
+
+        const beginEnrollment = async () => {
+            try {
+                const start = await Auth.startMfaEnrollment({ silent: true });
+                if (!start || !start.success) {
+                    showStartError(start?.message || 'تعذر بدء التسجيل');
+                    return;
+                }
+                renderEnrollForm(start);
+            } catch (err) {
+                const msg = (typeof Auth !== 'undefined' && Auth._friendlyMfaTransportError)
+                    ? Auth._friendlyMfaTransportError(err)
+                    : (err?.message || 'تعذر بدء التسجيل');
+                showStartError(msg);
+            }
+        };
+
+        beginEnrollment();
     },
 
     /**

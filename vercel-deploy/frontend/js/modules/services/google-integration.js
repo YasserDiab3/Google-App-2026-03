@@ -437,6 +437,11 @@ const GoogleIntegration = {
     _maxQueueWorkers: 3,
     _lastRequestTime: null,
     _minQueueDelayMs: 40,
+    _authRpcActions: ['login', 'verifyMfaLogin', 'confirmMfaEnrollment', 'startMfaEnrollment', 'disableMfa', 'changePassword'],
+
+    _isAuthRpcAction(action) {
+        return typeof action === 'string' && this._authRpcActions.includes(action);
+    },
 
     // Circuit Breaker
     _circuitBreaker: {
@@ -807,12 +812,29 @@ const GoogleIntegration = {
             };
 
             // أولوية عالية: مصادقة + علم __highPriority صريح (زيارات العيادة تمرّر العلم سياقياً فقط)
+            const isAuthRpc = this._isAuthRpcAction(action);
             const isHighPriority = !!(
-                action === 'login'
-                || action === 'verifyMfaLogin'
-                || action === 'confirmMfaEnrollment'
+                isAuthRpc
                 || (data && typeof data === 'object' && data.__highPriority === true)
             );
+
+            // MFA/login: نفّذ فوراً خارج سقف عمال الطابور — لا تنتظر clinic/training (90ث)
+            if (isAuthRpc) {
+                this._activeRequests.set(requestKey, request);
+                (async () => {
+                    try {
+                        const result = await this._executeRequest(action, data, retryCount || 0);
+                        this._recordSuccess();
+                        request.pendingPromises.forEach(({ resolve: ok }) => ok(result));
+                    } catch (error) {
+                        request.pendingPromises.forEach(({ reject: fail }) => fail(error));
+                    } finally {
+                        this._activeRequests.delete(requestKey);
+                    }
+                })();
+                return;
+            }
+
             if (isHighPriority) {
                 this._requestQueue.unshift(request);
             } else {
@@ -1605,23 +1627,23 @@ const GoogleIntegration = {
      * التحقق من هل هو sendToAppsScript
      */
     async sendToAppsScript(action, data, retryCount = 0) {
-        // التحقق من هل هو Circuit Breaker
-        try {
-            this._checkCircuitBreaker();
-        } catch (error) {
-            // التحقق من هل هو Circuit Breaker
-            const localData = this.getLocalData(action, data);
-            if (localData !== null && !this._isWriteMutationAction(action)) {
-                Utils.safeLog(`⚠️ Circuit Breaker مفتوح - تم تخطي العملية: ${action}`);
-                return localData;
+        // المصادقة لا تُحجب بـ Circuit Breaker (فشل مزامنة سابقة كان يمنع فتح TOTP)
+        if (!this._isAuthRpcAction(action)) {
+            try {
+                this._checkCircuitBreaker();
+            } catch (error) {
+                const localData = this.getLocalData(action, data);
+                if (localData !== null && !this._isWriteMutationAction(action)) {
+                    Utils.safeLog(`⚠️ Circuit Breaker مفتوح - تم تخطي العملية: ${action}`);
+                    return localData;
+                }
+                if (localData !== null && this._isWriteMutationAction(action)) {
+                    Utils.safeWarn(`⚠️ Circuit Breaker: لن تُستخدم نسخة محلية قديمة لعملية كتابة (${action})`);
+                }
+                return Promise.reject(error);
             }
-            if (localData !== null && this._isWriteMutationAction(action)) {
-                Utils.safeWarn(`⚠️ Circuit Breaker: لن تُستخدم نسخة محلية قديمة لعملية كتابة (${action})`);
-            }
-            return Promise.reject(error);
         }
 
-        // التحقق من هل هو addToQueue
         return this._addToQueue(action, data, retryCount);
     },
 
