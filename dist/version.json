@@ -1,15 +1,13 @@
 {
-  "version": "1.0.885",
+  "version": "1.0.887",
   "highlights": {
     "ar": [
-      "إصلاح إلغاء تفعيل الموظف عندما يظهر «الموظف غير موجود».",
-      "مطابقة مرنة لمعرف الموظف بين الرقم والنص.",
-      "مزامنة التعطيل مع ورقة الموظفين بشكل أدق."
+      "تصدير تقرير مخالفات المقاولين بصيغة Excel بالإضافة إلى PDF.",
+      "اختيار الصيغة من نفس حوار التصدير مع فلاتر المقاول والفترة."
     ],
     "en": [
-      "Fix employee deactivation failing with “employee not found”.",
-      "Flexible employee ID matching between number and text.",
-      "More reliable deactivation sync to the Employees sheet."
+      "Export contractor violations report to Excel as well as PDF.",
+      "Choose the format in the same export dialog with contractor and period filters."
     ]
   }
 }

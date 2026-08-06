@@ -2111,7 +2111,7 @@ const Violations = {
                             </div>
                             <div class="mb-4 flex items-center justify-end">
                                 <button type="button" class="btn-primary" onclick="Violations.showContractorViolationsReportDialog()">
-                                    <i class="fas fa-file-pdf ml-2"></i>تصدير تقرير مخالفة المقاولين
+                                    <i class="fas fa-file-export ml-2"></i>تصدير تقرير مخالفة المقاولين
                                 </button>
                             </div>
                             <div id="violations-list">
@@ -2411,7 +2411,7 @@ const Violations = {
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
-                        <i class="fas fa-file-pdf ml-2"></i>
+                        <i class="fas fa-file-export ml-2"></i>
                         تصدير تقرير مخالفات المقاولين
                     </h2>
                     <button class="modal-close" title="إغلاق">
@@ -2464,6 +2464,27 @@ const Violations = {
                                     <span class="text-sm text-gray-600">إلى</span>
                                     <input type="date" id="contractor-violations-report-to-date" class="form-input flex-1" disabled>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid #E5E7EB; padding-top: 16px; margin-top: 16px;">
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">
+                            <i class="fas fa-file ml-2"></i>
+                            صيغة التصدير
+                        </label>
+                        <div class="flex flex-wrap items-center gap-4">
+                            <div class="flex items-center">
+                                <input type="radio" id="contractor-violations-format-pdf" name="contractor-violations-export-format" value="pdf" class="ml-2" checked>
+                                <label for="contractor-violations-format-pdf" class="text-sm text-gray-700 cursor-pointer">
+                                    <i class="fas fa-file-pdf text-red-600 ml-1"></i>PDF
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="radio" id="contractor-violations-format-excel" name="contractor-violations-export-format" value="excel" class="ml-2">
+                                <label for="contractor-violations-format-excel" class="text-sm text-gray-700 cursor-pointer">
+                                    <i class="fas fa-file-excel text-green-600 ml-1"></i>Excel (.xlsx)
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -2521,6 +2542,7 @@ const Violations = {
             const month = modal.querySelector('#contractor-violations-report-month')?.value || '';
             const fromDate = modal.querySelector('#contractor-violations-report-from-date')?.value || '';
             const toDate = modal.querySelector('#contractor-violations-report-to-date')?.value || '';
+            const exportFormat = modal.querySelector('input[name="contractor-violations-export-format"]:checked')?.value || 'pdf';
 
             if (dateRangeType === 'month' && !month) {
                 Notification.warning('يرجى اختيار الشهر المطلوب');
@@ -2542,12 +2564,13 @@ const Violations = {
                 dateRangeType,
                 month,
                 fromDate,
-                toDate
+                toDate,
+                exportFormat
             }, selectedContractorName, selectedContractorCode);
         });
     },
 
-    async generateContractorViolationsReport(contractorId = '', dateFilter = {}, selectedContractorName = '', selectedContractorCode = '') {
+    _collectContractorViolationsForExport_(contractorId = '', dateFilter = {}, selectedContractorName = '', selectedContractorCode = '') {
         const contractorMatcher = this._buildContractorExportMatcher(
             contractorId,
             selectedContractorName,
@@ -2580,8 +2603,95 @@ const Violations = {
             });
         }
 
+        let periodInfo = '';
+        if (dateRangeType === 'month' && month) {
+            const [y, m] = month.split('-');
+            const d = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1);
+            periodInfo = d.toLocaleDateString('ar-SA-u-nu-latn', { year: 'numeric', month: 'long' });
+        } else if (dateRangeType === 'custom' && fromDate && toDate) {
+            periodInfo = `من ${Utils.formatDate(fromDate)} إلى ${Utils.formatDate(toDate)}`;
+        }
+
+        return { violations, periodInfo, dateRangeType };
+    },
+
+    exportContractorViolationsToExcel_(violations, selectedContractorName = '', periodInfo = '') {
+        if (typeof XLSX === 'undefined') {
+            Notification.error('مكتبة Excel غير محمّلة. حدّث الصفحة وحاول مرة أخرى.');
+            return false;
+        }
+
+        const excelData = violations.map((v, index) => ({
+            '#': index + 1,
+            'اسم المقاول': v.contractorName || '',
+            'كود المقاول': v.contractorCode || '',
+            'عامل المقاول': v.contractorWorker || '',
+            'نوع المخالفة': v.violationType || '',
+            'التاريخ': v.violationDate ? Utils.formatDate(v.violationDate) : '',
+            'الشدة': v.severity || '',
+            'الإجراء المتخذ': v.actionTaken || '',
+            'الحالة': v.status || '',
+            'القيمة المالية': Number(this.getEffectiveFineAmount(v)) || 0,
+            'الموقع': v.location || v.site || '',
+            'الوصف': v.description || v.notes || '',
+            'الفترة': periodInfo || ''
+        }));
+
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+        worksheet['!cols'] = [
+            { wch: 6 },
+            { wch: 28 },
+            { wch: 14 },
+            { wch: 18 },
+            { wch: 22 },
+            { wch: 14 },
+            { wch: 12 },
+            { wch: 24 },
+            { wch: 12 },
+            { wch: 14 },
+            { wch: 18 },
+            { wch: 36 },
+            { wch: 22 }
+        ];
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'مخالفات المقاولين');
+
+        const reportTitle = selectedContractorName
+            ? `تقرير_مخالفات_المقاول_${selectedContractorName}`
+            : 'تقرير_مخالفات_المقاولين';
+        const safeName = String(reportTitle).replace(/[\\/:*?"<>|]/g, '_').slice(0, 80);
+        const fileName = `${safeName}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        XLSX.writeFile(workbook, fileName);
+        return true;
+    },
+
+    async generateContractorViolationsReport(contractorId = '', dateFilter = {}, selectedContractorName = '', selectedContractorCode = '') {
+        const exportFormat = String(dateFilter?.exportFormat || 'pdf').toLowerCase() === 'excel' ? 'excel' : 'pdf';
+        const { violations, periodInfo } = this._collectContractorViolationsForExport_(
+            contractorId,
+            dateFilter,
+            selectedContractorName,
+            selectedContractorCode
+        );
+
         if (!violations.length) {
             Notification.warning('لا توجد بيانات لمخالفات المقاولين وفق المحددات المختارة');
+            return;
+        }
+
+        if (exportFormat === 'excel') {
+            try {
+                Loading.show('جاري إنشاء ملف Excel لمخالفات المقاولين...');
+                const ok = this.exportContractorViolationsToExcel_(violations, selectedContractorName, periodInfo);
+                Loading.hide();
+                if (ok) {
+                    Notification.success('تم تحميل تقرير مخالفات المقاولين بصيغة Excel بنجاح');
+                }
+            } catch (error) {
+                Loading.hide();
+                Utils.safeError('خطأ في تصدير Excel لمخالفات المقاولين:', error);
+                Notification.error('تعذر تصدير Excel: ' + (error.message || 'خطأ غير معروف'));
+            }
             return;
         }
 
@@ -2596,15 +2706,6 @@ const Violations = {
             const resolutionRate = violations.length > 0 ? Math.round((resolvedCount / violations.length) * 100) : 0;
             const uniqueContractors = new Set(violations.map(v => String(v.contractorName || '').trim()).filter(Boolean)).size;
             const totalFineAmount = violations.reduce((sum, v) => sum + (Number(this.getEffectiveFineAmount(v)) || 0), 0);
-
-            let periodInfo = '';
-            if (dateRangeType === 'month' && month) {
-                const [y, m] = month.split('-');
-                const d = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1);
-                periodInfo = d.toLocaleDateString('ar-SA-u-nu-latn', { year: 'numeric', month: 'long' });
-            } else if (dateRangeType === 'custom' && fromDate && toDate) {
-                periodInfo = `من ${Utils.formatDate(fromDate)} إلى ${Utils.formatDate(toDate)}`;
-            }
 
             const arCell = this._AR_PDF_TEXT_STYLE_;
             const rowsHtml = violations.map((v, index) => `
