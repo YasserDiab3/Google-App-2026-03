@@ -44,6 +44,41 @@ const Employees = {
         return s;
     },
 
+    /** تطبيع مفتاح بحث موظف — يمنع فشل === بين رقم الشيت ونص الزر */
+    _normalizeEmployeeLookupKey_(value) {
+        let s = String(value == null ? '' : value).trim();
+        if (!s) return '';
+        if (/^\d+(\.0+)?$/.test(s)) s = String(parseInt(s, 10));
+        return s.toLowerCase();
+    },
+
+    _employeeMatchesLookupId_(employee, lookupId) {
+        if (!employee) return false;
+        const want = this._normalizeEmployeeLookupKey_(lookupId);
+        if (!want) return false;
+        const keys = [employee.id, employee.employeeNumber, employee.sapId];
+        for (let i = 0; i < keys.length; i++) {
+            const k = this._normalizeEmployeeLookupKey_(keys[i]);
+            if (k && k === want) return true;
+        }
+        return false;
+    },
+
+    _findEmployeeById_(id) {
+        const list = AppState.appData.employees || [];
+        return list.find((e) => this._employeeMatchesLookupId_(e, id)) || null;
+    },
+
+    _findEmployeeIndexById_(id) {
+        const list = AppState.appData.employees || [];
+        return list.findIndex((e) => this._employeeMatchesLookupId_(e, id));
+    },
+
+    _employeeActionId_(employee) {
+        const raw = (employee && (employee.id || employee.employeeNumber || employee.sapId)) || '';
+        return String(raw).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    },
+
     /** اسم موظف من الحقول الشائعة */
     _employeeDisplayName_(e) {
         if (!e || typeof e !== 'object') return '';
@@ -3889,7 +3924,7 @@ const Employees = {
         const imgTagSrc = photoDisp.canonical ? photoDisp.displaySrc : '';
         const photoProxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(photoDisp) : '';
         const displayName = this._employeeDisplayName_(employee) || employee.name || '';
-        const safeId = String(employee.id || '').replace(/'/g, "\\'");
+        const safeId = this._employeeActionId_(employee);
 
         tr.innerHTML = `
             <td style="word-wrap: break-word;">
@@ -5962,7 +5997,7 @@ const Employees = {
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري الحفظ...';
         }
 
-        const employeeData = this.currentEditId ? AppState.appData.employees.find(e => e.id === this.currentEditId) : null;
+        const employeeData = this.currentEditId ? this._findEmployeeById_(this.currentEditId) : null;
 
         let photoBase64 = employeeData?.photo || '';
         const photoInput = document.getElementById('employee-photo-input');
@@ -6080,7 +6115,7 @@ const Employees = {
         const isCloudEdit = !!previousEditId;
         try {
             if (isCloudEdit) {
-                const index = AppState.appData.employees.findIndex(e => e.id === previousEditId);
+                const index = this._findEmployeeIndexById_(previousEditId);
                 if (index !== -1) {
                     AppState.appData.employees[index] = formData;
                     this.currentEditId = proposedId;
@@ -6170,12 +6205,12 @@ const Employees = {
             return;
         }
 
-        const employee = AppState.appData.employees.find(e => e.id === id);
+        const employee = this._findEmployeeById_(id);
         if (employee) await this.showForm(employee);
     },
 
     async printEmployee(id) {
-        const employee = AppState.appData.employees.find(e => e.id === id);
+        const employee = this._findEmployeeById_(id);
         if (!employee) {
             Notification.error('الموظف غير موجود');
             return;
@@ -6505,7 +6540,7 @@ const Employees = {
     },
 
     async viewEmployee(id) {
-        const employee = AppState.appData.employees.find(e => e.id === id);
+        const employee = this._findEmployeeById_(id);
         if (!employee) return;
 
         const birthDate = this.formatDateSafe(employee.birthDate);
@@ -6634,7 +6669,7 @@ const Employees = {
             return;
         }
 
-        const employee = AppState.appData.employees.find(e => e.id === id);
+        const employee = this._findEmployeeById_(id);
         if (!employee) {
             Notification.error('الموظف غير موجود');
             return;
@@ -6645,7 +6680,7 @@ const Employees = {
         Loading.show();
         try {
             // ✅ تحديث حالة الموظف بدلاً من الحذف
-            const employeeIndex = AppState.appData.employees.findIndex(e => e.id === id);
+            const employeeIndex = this._findEmployeeIndexById_(id);
             if (employeeIndex !== -1) {
                 AppState.appData.employees[employeeIndex].status = 'inactive';
                 AppState.appData.employees[employeeIndex].resignationDate = this.normalizeDateOnly(new Date());
@@ -6688,8 +6723,9 @@ const Employees = {
             
             // ✅ تنفيذ المزامنة مع Backend في الخلفية لتجنب عدم استجابة النظام
             // نستخدم sendToAppsScript فقط (بدون autoSave) لتحديث صف واحد بدلاً من رفع كل السجلات
+            const syncId = employee.id || employee.employeeNumber || employee.sapId || id;
             if (AppState.googleConfig?.appsScript?.enabled) {
-                GoogleIntegration.sendToAppsScript('deactivateEmployee', { employeeId: id })
+                GoogleIntegration.sendToAppsScript('deactivateEmployee', { employeeId: syncId })
                     .then(res => {
                         if (!res || !res.success) {
                             Utils.safeWarn('⚠️ فشل إلغاء تفعيل الموظف من Google Sheets:', res?.message);

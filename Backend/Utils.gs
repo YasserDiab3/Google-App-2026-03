@@ -3546,7 +3546,22 @@ function updateSingleRowInSheet(sheetName, recordId, updateData, spreadsheetId =
         // قراءة جميع البيانات للعثور على السجل
         // ✅ skipSecurityFilter=true: يمنع استبدال passwordHash بـ '***' ثم إعادة كتابته
         const allData = readFromSheet(sheetName, spreadsheetId, true);
-        const recordIndex = allData.findIndex(r => r && r.id === recordId);
+        const wantId = String(recordId == null ? '' : recordId).trim();
+        const wantNorm = wantId && /^\d+(\.0+)?$/.test(wantId) ? String(parseInt(wantId, 10)) : wantId;
+        const recordIndex = allData.findIndex(function (r) {
+            if (!r) return false;
+            var candidates = [r.id];
+            if (sheetName === 'Employees') {
+                candidates.push(r.employeeNumber, r.sapId);
+            }
+            for (var i = 0; i < candidates.length; i++) {
+                var raw = String(candidates[i] == null ? '' : candidates[i]).trim();
+                if (!raw) continue;
+                var norm = /^\d+(\.0+)?$/.test(raw) ? String(parseInt(raw, 10)) : raw;
+                if (raw === wantId || norm === wantNorm) return true;
+            }
+            return false;
+        });
         
         if (recordIndex === -1) {
             return { success: false, message: 'السجل غير موجود في الورقة.' };

@@ -124,12 +124,20 @@ function getEmployee(employeeId) {
         const sheetName = 'Employees';
         const data = readFromSheet(sheetName, getSpreadsheetId());
         
-        // البحث بالـ ID أو employeeNumber أو sapId
-        const employee = data.find(e => 
-            e.id === employeeId || 
-            e.employeeNumber === employeeId || 
-            e.sapId === employeeId
-        );
+        // البحث بالـ ID أو employeeNumber أو sapId (نص/رقم)
+        const wantId = String(employeeId == null ? '' : employeeId).trim();
+        const wantNorm = wantId && /^\d+(\.0+)?$/.test(wantId) ? String(parseInt(wantId, 10)) : wantId;
+        const employee = data.find(function (e) {
+            if (!e) return false;
+            var keys = [e.id, e.employeeNumber, e.sapId];
+            for (var i = 0; i < keys.length; i++) {
+                var raw = String(keys[i] == null ? '' : keys[i]).trim();
+                if (!raw) continue;
+                var norm = /^\d+(\.0+)?$/.test(raw) ? String(parseInt(raw, 10)) : raw;
+                if (raw === wantId || norm === wantNorm) return true;
+            }
+            return false;
+        });
         
         if (!employee) {
             return { success: false, message: 'الموظف غير موجود' };

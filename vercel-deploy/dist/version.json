@@ -1,15 +1,15 @@
 {
-  "version": "1.0.883",
+  "version": "1.0.885",
   "highlights": {
     "ar": [
-      "تسريع تأكيد رمز المصادقة الثنائية بعد إدخاله.",
-      "إبقاء الخادم دافئاً أثناء شاشة الرمز لتقليل إعادة المحاولة.",
-      "منع تخطي خطوة OTP بسبب كاش دخول قديم بعد التفعيل."
+      "إصلاح إلغاء تفعيل الموظف عندما يظهر «الموظف غير موجود».",
+      "مطابقة مرنة لمعرف الموظف بين الرقم والنص.",
+      "مزامنة التعطيل مع ورقة الموظفين بشكل أدق."
     ],
     "en": [
-      "Faster TOTP verification after entering the code.",
-      "Keep the backend warm on the MFA screen to reduce retries.",
-      "Stop skipping the OTP step due to a stale login cache after enrollment."
+      "Fix employee deactivation failing with “employee not found”.",
+      "Flexible employee ID matching between number and text.",
+      "More reliable deactivation sync to the Employees sheet."
     ]
   }
 }
