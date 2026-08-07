@@ -4355,7 +4355,7 @@ const PeriodicInspections = {
                         </select>
                     </div>
                     <div class="dsc-field">
-                        <label><i class="fas fa-user-hard-hat" style="color:#6366f1;"></i>${t('module.periodic.dsc.table.inspector','القائم بالمرور')}</label>
+                        <label><i class="fas fa-user-hard-hat" style="color:#2563eb;"></i>${t('module.periodic.dsc.table.inspector','القائم بالمرور')}</label>
                         <select id="dsc-filter-inspector">
                             <option value="">${t('module.periodic.all','الكل')}</option>
                             ${filterOptions.inspectors.map(name => `<option value="${Utils.escapeHTML(name)}" ${String(f.inspectorName || '') === String(name) ? 'selected' : ''}>${Utils.escapeHTML(name)}</option>`).join('')}
@@ -4418,7 +4418,7 @@ const PeriodicInspections = {
                 const serial = this.getDailySafetyCheckListSerialNumber(r);
                 const shiftLabel = this._formatDailyShiftLabel(r.shift || '-');
                 const shiftCode = ({ 'الأولى': '1', 'الثانية': '2', 'الثالثة': '3' })[r.shift] || '?';
-                const shiftColor = shiftCode === '1' ? '#16a34a' : shiftCode === '2' ? '#ea580c' : shiftCode === '3' ? '#7c3aed' : '#64748b';
+                const shiftColor = shiftCode === '1' ? '#16a34a' : shiftCode === '2' ? '#ea580c' : shiftCode === '3' ? '#1e40af' : '#64748b';
                 return `
                 <tr class="dsc-data-row" data-record-id="${Utils.escapeHTML(r.id)}" style="transition: background-color 0.15s ease;">
                     <td>
@@ -4466,12 +4466,12 @@ const PeriodicInspections = {
                 .dsc-table-shell .dsc-table-scroll table { width: 100%; border-collapse: separate; border-spacing: 0; }
                 .dsc-table-shell .dsc-table-scroll thead th {
                     position: sticky; top: 0; z-index: 5;
-                    background: linear-gradient(180deg, #dc2626 0%, #b91c1c 100%);
+                    background: linear-gradient(90deg, #0b2a55 0%, #1e40af 100%);
                     color: #fff; padding: 0.85rem 0.75rem; font-weight: 700; font-size: 0.85rem;
                     text-align: right; box-shadow: 0 2px 4px rgba(0,0,0,0.08);
                 }
                 .dsc-table-shell .dsc-data-row td { padding: 0.65rem 0.75rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-                .dsc-table-shell .dsc-data-row:hover { background-color: #f8fafc; }
+                .dsc-table-shell .dsc-data-row:hover { background-color: #f2f7ff; }
                 .dsc-table-shell .dsc-date-divider td { position: sticky; top: 40px; z-index: 3; }
                 /* أزرار القفز السريع */
                 .dsc-quick-jump-btn:hover { background: #1e40af !important; color: #fff !important; border-color: #1e40af !important; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(30,64,175,0.25); }
@@ -6414,7 +6414,7 @@ const PeriodicInspections = {
                     { k: 'القائم بالمرور', v: record.inspectorName || '-' },
                     { k: 'الوردية', v: shiftLabel }
                 ],
-                summary: { total: answered, compliant, nonCompliant, reading },
+                summary: { total: answered, compliant, nonCompliant, reading, complianceRate: answered > 0 ? Math.round((compliant / answered) * 100) : null },
                 items,
                 notes: record.notes || ''
             })
@@ -6435,6 +6435,48 @@ const PeriodicInspections = {
             html,
             fields
         };
+    },
+
+    /**
+     * ⚡ إرسال تلقائي فوري بعد تسجيل مرور يومي جديد — يحترم إعدادات البريد
+     * (daily-safety-checklist: autoSend + autoEvents.contains('create')).
+     */
+    async autoSendDailySafetyChecklistEmail(record) {
+        try {
+            if (!record || typeof EmailDispatch === 'undefined' || typeof GoogleIntegration === 'undefined') return;
+            const settings = await EmailDispatch.loadSettings();
+            const mod = settings && settings.modules && settings.modules['daily-safety-checklist'];
+            if (!mod || !mod.enabled || !mod.autoSend) return;
+            const events = Array.isArray(mod.autoEvents) ? mod.autoEvents : [];
+            if (!events.includes('create')) return;
+            const payload = this.buildDailySafetyChecklistEmailPayload(record);
+            const recipients = []
+                .concat(Array.isArray(mod.recipients) ? mod.recipients : [])
+                .concat(Array.isArray(settings.defaultRecipients) ? settings.defaultRecipients : [])
+                .filter(Boolean);
+            if (!recipients.length) return;
+            const result = await GoogleIntegration.sendRequest({
+                action: 'sendDirectEmail',
+                data: {
+                    moduleKey: 'daily-safety-checklist',
+                    recordId: String(record.id || ''),
+                    to: recipients,
+                    title: payload.title,
+                    subject: payload.subject,
+                    htmlBody: payload.html,
+                    fields: payload.fields
+                }
+            }).catch((e) => ({ success: false, message: (e && e.message) || String(e) }));
+            if (result && result.success) {
+                if (typeof Notification !== 'undefined') {
+                    Notification.success(`📧 تم إرسال تقرير المرور اليومي تلقائياً إلى ${result.sent || recipients.length} مستلم`);
+                }
+            } else if (typeof Notification !== 'undefined') {
+                Notification.warning(`⚠ لم يُرسل البريد التلقائي: ${(result && result.message) || 'غير متاح'}`);
+            }
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ فشل الإرسال التلقائي للمرور اليومي:', e);
+        }
     },
 
     /**
@@ -6724,10 +6766,12 @@ const PeriodicInspections = {
                 }
                 list[idx] = { ...oldRecord, ...payload, reportNumber: updatedReportNumber, updatedAt: now };
             }
-        } else {
+} else {
             const id = 'DSC-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
             const reportNumber = this.getNextDailySafetyCheckListReportNumber(payload, list);
             list.push({ id, reportNumber, ...payload, createdAt: now, updatedAt: now });
+            // ⚡ إرسال تلقائي فوري بعد التسجيل الجديد (حسب إعدادات البريد: autoSend + autoEvents create)
+            this.autoSendDailySafetyChecklistEmail(list[list.length - 1]).catch(() => {});
         }
         if (typeof DataManager !== 'undefined' && DataManager.save) DataManager.save();
         // إغلاق النموذج فوراً ثم تحديث الجدول والمزامنة في الخلفية

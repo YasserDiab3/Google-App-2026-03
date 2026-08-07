@@ -1,4 +1,4 @@
-const EmailTemplates={escapeHtml(e){return String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")},_shell(e,o={}){const t=Object.assign({headerBg:"linear-gradient(135deg,#0b2a55 0%,#1e40af 55%,#2563eb 100%)"},o),i=String(e||"").trim();return`
+const EmailTemplates={escapeHtml(e){return String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")},_shell(e,l={}){const t=Object.assign({headerBg:"linear-gradient(135deg,#0b2a55 0%,#1e40af 55%,#2563eb 100%)"},l),o=String(e||"").trim();return`
 <!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
@@ -21,45 +21,50 @@ const EmailTemplates={escapeHtml(e){return String(e??"").replace(/&/g,"&amp;").r
 </head>
 <body>
     <div class="wrapper">
-        ${i}
+        ${o}
     </div>
 </body>
-</html>`},buildDailySafetyChecklist(e={}){const o=(e.meta||[]).map(d=>`
+</html>`},buildDailySafetyChecklist(e={}){const l=(e.meta||[]).map(d=>`
             <tr>
-                <td style="padding:7px 10px;border:1px solid #e5e7eb;background:#f8fafc;font-weight:700;font-size:12px;width:38%;color:#334155;">${this.escapeHtml(d.k)}</td>
-                <td style="padding:7px 10px;border:1px solid #e5e7eb;font-size:12px;color:#0f172a;">${this.escapeHtml(d.v)}</td>
-            </tr>`).join(""),t=e.summary||{},i=`
-            <table style="border-collapse:collapse;width:100%;margin:14px 0 0;">
+                <td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f1f5f9;font-weight:700;font-size:12px;width:36%;color:#334155;">${this.escapeHtml(d.k)}</td>
+                <td style="padding:8px 12px;border:1px solid #e5e7eb;font-size:12px;color:#0f172a;font-weight:600;">${this.escapeHtml(d.v)}</td>
+            </tr>`).join(""),t=e.summary||{},o=t.total||0,a=t.complianceRate!=null?Number(t.complianceRate):o>0?Math.round((t.compliant||0)/o*100):null,p=a==null?"#94a3b8":a>=85?"#16a34a":a>=60?"#d97706":"#dc2626",r=(d,i,s,c,n,u)=>`
+            <td style="padding:10px 8px;border:1px solid ${c};background:${s};text-align:center;border-radius:10px;width:20%;vertical-align:middle;">
+                <div style="font-size:19px;font-weight:800;color:${n};${u?"direction:ltr;":""}">${i}</div>
+                <div style="font-size:10.5px;color:${n};font-weight:700;margin-top:2px;">${d}</div>
+            </td>`,b=`
+            <table style="border-collapse:collapse;width:100%;margin:16px 0 0;" role="presentation">
                 <tr>
-                    <td style="padding:9px;border:1px solid #dcfce7;background:#f0fdf4;text-align:center;border-radius:10px;">
-                        <div style="font-size:18px;font-weight:800;color:#15803d;">${t.compliant||0}</div>
-                        <div style="font-size:10px;color:#166534;font-weight:700;">\u0645\u0637\u0627\u0628\u0642</div>
-                    </td>
-                    <td style="width:8px;"></td>
-                    <td style="padding:9px;border:1px solid #fecaca;background:#fef2f2;text-align:center;border-radius:10px;">
-                        <div style="font-size:18px;font-weight:800;color:#b91c1c;">${t.nonCompliant||0}</div>
-                        <div style="font-size:10px;color:#991b1b;font-weight:700;">\u063A\u064A\u0631 \u0645\u0637\u0627\u0628\u0642</div>
-                    </td>
-                    <td style="width:8px;"></td>
-                    <td style="padding:9px;border:1px solid #bfdbfe;background:#eff6ff;text-align:center;border-radius:10px;">
-                        <div style="font-size:18px;font-weight:800;color:#1d4ed8;">${t.total||0}</div>
-                        <div style="font-size:10px;color:#1e40af;font-weight:700;">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0628\u0646\u0648\u062F</div>
-                    </td>
-                    ${t.reading!=null?`
-                    <td style="width:8px;"></td>
-                    <td style="padding:9px;border:1px solid #c7d2fe;background:#eef2ff;text-align:center;border-radius:10px;">
-                        <div style="font-size:18px;font-weight:800;color:#4338ca;" dir="ltr">${this.escapeHtml(t.reading)}</div>
-                        <div style="font-size:10px;color:#3730a3;font-weight:700;">\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0636\u063A\u0637</div>
-                    </td>`:""}
+                    ${r("\u0645\u0637\u0627\u0628\u0642",t.compliant||0,"#f0fdf4","#bbf7d0","#15803d")}
+                    <td style="width:6px;"></td>
+                    ${r("\u063A\u064A\u0631 \u0645\u0637\u0627\u0628\u0642",t.nonCompliant||0,"#fef2f2","#fecaca","#b91c1c")}
+                    <td style="width:6px;"></td>
+                    ${r("\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0628\u0646\u0648\u062F",o,"#eff6ff","#bfdbfe","#1e40af")}
+                    ${t.reading!=null&&t.reading!==""?`
+                    <td style="width:6px;"></td>
+                    ${r("\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0636\u063A\u0637",this.escapeHtml(t.reading),"#f0f9ff","#bae6fd","#0369a1",!0)}`:""}
+                    <td style="width:6px;"></td>
+                    ${r("\u0646\u0633\u0628\u0629 \u0627\u0644\u0627\u0644\u062A\u0632\u0627\u0645",a==null?"\u2014":a+"%","#fffbeb","#fde68a",p)}
                 </tr>
-            </table>`,r=(e.items||[]).map((d,s)=>{const n=String(d.status||"").trim()==="\u0645\u0637\u0627\u0628\u0642",p=d.reading!=null&&d.status==null?`<span style="background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;font-weight:700;">\u0642\u0631\u0627\u0621\u0629: ${this.escapeHtml(d.reading)}</span>`:n?'<span style="color:#15803d;">\u2714 \u0645\u0637\u0627\u0628\u0642</span>':'<span style="color:#b91c1c;">\u2718 \u063A\u064A\u0631 \u0645\u0637\u0627\u0628\u0642</span>';return`
+            </table>
+            ${a!=null?`
+            <div style="margin-top:12px;">
+                <div style="background:#e8eef6;border-radius:99px;height:8px;overflow:hidden;">
+                    <div style="width:${Math.max(4,a)}%;height:8px;border-radius:99px;background:${p};"></div>
+                </div>
+                <div style="font-size:10px;color:#64748b;margin-top:4px;">\u0646\u0633\u0628\u0629 \u0627\u0644\u0627\u0644\u062A\u0632\u0627\u0645 \u0628\u0627\u0644\u0628\u0646\u0648\u062F \u0627\u0644\u0645\u0641\u062D\u0648\u0635\u0629 \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0631\u0648\u0631</div>
+            </div>`:""}`,f=(e.items||[]).map((d,i)=>{const s=String(d.status||"").trim()==="\u0645\u0637\u0627\u0628\u0642",n=d.reading!=null&&d.status==null?`<span style="display:inline-block;padding:3px 10px;border-radius:99px;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;font-size:11px;font-weight:700;" dir="ltr">\u26A1 ${this.escapeHtml(d.reading)}</span>`:s?'<span style="display:inline-block;padding:3px 10px;border-radius:99px;background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;font-size:11px;font-weight:700;">\u2714 \u0645\u0637\u0627\u0628\u0642</span>':'<span style="display:inline-block;padding:3px 10px;border-radius:99px;background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;font-size:11px;font-weight:700;">\u2718 \u063A\u064A\u0631 \u0645\u0637\u0627\u0628\u0642</span>';return`
             <tr>
-                <td style="padding:8px 10px;border:1px solid #e5e7eb;text-align:center;color:#64748b;font-size:11px;width:34px;">${s+1}</td>
-                <td style="padding:8px 10px;border:1px solid #e5e7eb;font-size:11.5px;line-height:1.7;color:#1e293b;">${this.escapeHtml(d.label)}</td>
-                <td style="padding:8px 10px;border:1px solid #e5e7eb;text-align:center;font-size:11.5px;white-space:nowrap;">${p}</td>
-            </tr>`}).join(""),a=(e.notes||"").trim()?`<div style="margin-top:16px;padding:12px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;font-size:12px;color:#92400e;line-height:1.8;">
-                    <strong>\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0645\u0631\u0648\u0631:</strong><br>${this.escapeHtml(e.notes).replace(/\n/g,"<br>")}
-                </div>`:"",l=`
+                <td style="padding:9px 10px;border:1px solid #e5e7eb;text-align:center;color:#64748b;font-size:11px;width:36px;${i%2?"background:#fafcff;":""}">${i+1}</td>
+                <td style="padding:9px 12px;border:1px solid #e5e7eb;font-size:12px;line-height:1.8;color:#1e293b;${i%2?"background:#fafcff;":""}">${this.escapeHtml(d.label)}</td>
+                <td style="padding:9px 10px;border:1px solid #e5e7eb;text-align:center;font-size:11.5px;white-space:nowrap;${i%2?"background:#fafcff;":""}">${n}</td>
+            </tr>`}).join(""),g=(t.nonCompliant||0)>0,x=(e.notes||"").trim()?`<div style="margin-top:16px;padding:12px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;font-size:12px;color:#92400e;line-height:1.8;">
+                    <strong>\u{1F4DD} \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0645\u0631\u0648\u0631:</strong><br>${this.escapeHtml(e.notes).replace(/\n/g,"<br>")}
+                </div>`:"",h=g?`
+            <div style="margin-top:16px;padding:12px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;font-size:12px;line-height:1.8;">
+                <strong style="color:#b91c1c;">\u26A0 \u062A\u0646\u0628\u064A\u0647:</strong>
+                <span style="color:#7f1d1d;">\u064A\u062D\u062A\u0648\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0631\u0648\u0631 \u0639\u0644\u0649 <strong>${t.nonCompliant}</strong> \u0628\u0646\u062F \u063A\u064A\u0631 \u0645\u0637\u0627\u0628\u0642 \u2014 \u064A\u0644\u0632\u0645 \u0645\u062A\u0627\u0628\u0639\u0629 \u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D.</span>
+            </div>`:"",m=`
             <div class="header">
                 <p class="eyebrow">\u0645\u0646\u0638\u0648\u0645\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u2014 HSE</p>
                 <h1>${this.escapeHtml(e.title||"\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u064A\u0648\u0645\u064A \u0644\u0644\u0633\u0644\u0627\u0645\u0629")}</h1>
@@ -67,22 +72,27 @@ const EmailTemplates={escapeHtml(e){return String(e??"").replace(/&/g,"&amp;").r
                 ${e.badge?`<span class="badge">${this.escapeHtml(e.badge)}</span>`:""}
             </div>
             <div class="body">
-                <table style="border-collapse:collapse;width:100%;">${o}</table>
-                ${t.total!=null?i:""}
-                ${r?`
-                    <h3 style="margin:20px 0 10px;font-size:14px;color:#0f2a55;border-bottom:2px solid #e0e7ff;padding-bottom:8px;">\u0628\u0646\u0648\u062F \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u064A\u0648\u0645\u064A\u0629</h3>
+                <table style="border-collapse:collapse;width:100%;">${l}</table>
+                ${t.total!=null?b:""}
+                ${f?`
+                    <h3 style="margin:22px 0 10px;font-size:14px;color:#0f2a55;border-bottom:2px solid #bfdbfe;padding-bottom:8px;">
+                        \u0628\u0646\u0648\u062F \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u064A\u0648\u0645\u064A\u0629
+                        <span style="display:inline-block;margin-inline-start:8px;background:#2563eb;color:#fff;border-radius:99px;padding:1px 9px;font-size:10px;font-weight:700;vertical-align:middle;">${(e.items||[]).length} \u0628\u0646\u062F</span>
+                    </h3>
                     <table style="border-collapse:collapse;width:100%;">
                         <thead>
-                            <tr style="background:linear-gradient(135deg,#0b2a55,#1e40af);">
-                                <th style="padding:8px;border:1px solid #0f2a55;color:#fff;font-size:11px;">#</th>
-                                <th style="padding:8px;border:1px solid #0f2a55;color:#fff;font-size:11px;">\u0628\u0646\u062F \u0627\u0644\u0645\u0631\u0648\u0631</th>
-                                <th style="padding:8px;border:1px solid #0f2a55;color:#fff;font-size:11px;">\u0627\u0644\u062D\u0627\u0644\u0629</th>
+                            <tr style="background:linear-gradient(90deg,#0b2a55,#1e40af);">
+                                <th style="padding:9px;border:1px solid #0f2a55;color:#fff;font-size:11px;">#</th>
+                                <th style="padding:9px;border:1px solid #0f2a55;color:#fff;font-size:11px;">\u0628\u0646\u062F \u0627\u0644\u0645\u0631\u0648\u0631</th>
+                                <th style="padding:9px;border:1px solid #0f2a55;color:#fff;font-size:11px;">\u0627\u0644\u062D\u0627\u0644\u0629</th>
                             </tr>
                         </thead>
-                        <tbody>${r}</tbody>
+                        <tbody>${f}</tbody>
                     </table>`:""}
-                ${a}
+                ${x}
+                ${h}
             </div>
             <div class="foot">
-                <strong>${this.escapeHtml(e.badge||"")}</strong> \u2014 \u062A\u0645 \u0625\u0646\u0634\u0627\u0624\u0647 \u062A\u0644\u0642\u0627\u0626\u064A\u064B\u0627 \u0645\u0646 \u0646\u0638\u0627\u0645 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629${e.footerExtra?" \xB7 "+this.escapeHtml(e.footerExtra):""}
-            </div>`;return this._shell(l,{title:e.title||"\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u064A\u0648\u0645\u064A"})}};
+                <div><strong>${this.escapeHtml(e.badge||"")}</strong> \u2014 \u062A\u0645 \u0625\u0646\u0634\u0627\u0624\u0647 \u062A\u0644\u0642\u0627\u0626\u064A\u064B\u0627 \u0645\u0646 \u0646\u0638\u0627\u0645 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629${e.footerExtra?" \xB7 "+this.escapeHtml(e.footerExtra):""}</div>
+                <div style="margin-top:5px;">\u0648\u0642\u062A \u0627\u0644\u0625\u0631\u0633\u0627\u0644: ${this.escapeHtml(new Date().toLocaleString("ar-EG"))} \u2014 \u0628\u0631\u064A\u062F \u062A\u0644\u0642\u0627\u0626\u064A \u0644\u0627 \u064A\u0644\u0632\u0645 \u0627\u0644\u0631\u062F \u0639\u0644\u064A\u0647</div>
+            </div>`;return this._shell(m,{title:e.title||"\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u064A\u0648\u0645\u064A"})}};
