@@ -6120,8 +6120,8 @@ const themes = {
                         {id:'ppe-af-status',   icon:'fas fa-flag',         color:'#0891b2', label:'الحالة'},
                         {id:'ppe-af-type',     icon:'fas fa-hard-hat',     color:'#2563EB', label:'نوع المعدة'},
                         {id:'ppe-af-dept',     icon:'fas fa-building',     color:'#f59e0b', label:'الإدارة'},
-                        {id:'ppe-af-category', icon:'fas fa-tags',         color:'#6366f1', label:'الفئة'},
-                        {id:'ppe-af-supplier', icon:'fas fa-truck',        color:'#8b5cf6', label:'المورد'},
+                        {id:'ppe-af-category', icon:'fas fa-tags',         color:'#1d4ed8', label:'الفئة'},
+                        {id:'ppe-af-supplier', icon:'fas fa-truck',        color:'#0ea5e9', label:'المورد'},
                         {id:'ppe-af-factory',  icon:'fas fa-industry',     color:'#3B82F6', label:'المصنع'},
                         {id:'ppe-af-location', icon:'fas fa-map-marker-alt', color:'#3b82f6', label:'الموقع'},
                     ].map(f=>`
@@ -6170,7 +6170,7 @@ const themes = {
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-chart-area" style="color:#8b5cf6;"></i>
+                        <i class="fas fa-chart-area" style="color:#3b82f6;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">الاتجاه الزمني للاستلامات (آخر 12 شهر)</span>
                     </div>
                     <div style="padding:12px;position:relative;height:260px;">
@@ -6206,7 +6206,7 @@ const themes = {
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-truck" style="color:#8b5cf6;"></i>
+                        <i class="fas fa-truck" style="color:#0ea5e9;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">المخزون حسب المورد (أعلى 8)</span>
                     </div>
                     <div id="ppe-suppliers-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
@@ -6228,7 +6228,7 @@ const themes = {
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-tags" style="color:#6366f1;"></i>
+                        <i class="fas fa-tags" style="color:#1d4ed8;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">المخزون حسب الفئة</span>
                     </div>
                     <div style="padding:12px;position:relative;height:260px;">
@@ -6413,11 +6413,11 @@ const themes = {
                 { label:'الكميات المُستلَمة',  value:totalQty.toFixed(0),icon:'fas fa-cubes',           color:'#1D4ED8', bg:'#EFF6FF', border:'#BFDBFE' },
                 { label:'مكتملة الاستلام',  value:receivedCount,        icon:'fas fa-circle-check',    color:'#047857', bg:'#ecfdf5', border:'#a7f3d0' },
                 { label:'قيد التسليم',      value:pendingCount,         icon:'fas fa-hourglass-half',  color:'#b45309', bg:'#fffbeb', border:'#fde68a' },
-                { label:'أصناف المخزون',    value:stockItemsCount,      icon:'fas fa-boxes',           color:'#6366f1', bg:'#eef2ff', border:'#c7d2fe' },
+                { label:'أصناف المخزون',    value:stockItemsCount,      icon:'fas fa-boxes',           color:'#2563EB', bg:'#eff6ff', border:'#bfdbfe' },
                 { label:'منخفض المخزون',    value:lowStockCount,        icon:'fas fa-triangle-exclamation', color:'#dc2626', bg:'#fef2f2', border:'#fecaca' },
-                { label:'الموظفون',         value:uniqueEmployees,      icon:'fas fa-users',           color:'#7c3aed', bg:'#f5f3ff', border:'#ddd6fe' },
+                { label:'الموظفون',         value:uniqueEmployees,      icon:'fas fa-users',           color:'#1D4ED8', bg:'#DBEAFE', border:'#BFDBFE' },
                 { label:'هذا الشهر',        value:thisMonth,            icon:'fas fa-calendar-day',    color:'#db2777', bg:'#fdf2f8', border:'#fbcfe8' },
-                { label:'متوسط شهري',       value:avgPerMonth,          icon:'fas fa-calendar-check',  color:'#1E3A8A', bg:'#eef2ff', border:'#c7d2fe' },
+                { label:'متوسط شهري',       value:avgPerMonth,          icon:'fas fa-calendar-check',  color:'#1E3A8A', bg:'#DBEAFE', border:'#BFDBFE' },
             ];
             kpiEl.innerHTML = kpis.map(k => `
                 <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
@@ -6454,7 +6454,7 @@ const themes = {
 
         // الفئة (Doughnut)
         const categoryMap = this._ppeGroupBy(filteredStock, item => String(item.category || 'بدون فئة').trim(), 8);
-        const categoryPalette = ['rgba(99,102,241,0.85)','rgba(37, 99, 235, 0.85)','rgba(245,158,11,0.85)','rgba(244,63,94,0.85)','rgba(139,92,246,0.85)','rgba(8,145,178,0.85)','rgba(5,150,105,0.85)','rgba(217,119,6,0.85)'];
+        const categoryPalette = ['rgba(59,130,246,0.85)','rgba(37, 99, 235, 0.85)','rgba(245,158,11,0.85)','rgba(244,63,94,0.85)','rgba(14,165,233,0.85)','rgba(8,145,178,0.85)','rgba(5,150,105,0.85)','rgba(217,119,6,0.85)'];
         this._ppeDoughnut('ppe-chart-category', categoryMap.labels, categoryMap.data, categoryMap.labels.map((_,i)=>categoryPalette[i % categoryPalette.length]));
 
         // المقارنة السنوية
@@ -6665,9 +6665,9 @@ const themes = {
         const colors = [
             { primary: '#2563EB', light: '#eff6ff', progress: 'linear-gradient(90deg, #93c5fd 0%, #2563EB 100%)' },
             { primary: '#1D4ED8', light: '#EFF6FF', progress: 'linear-gradient(90deg, #93C5FD 0%, #1D4ED8 100%)' },
-            { primary: '#1E3A8A', light: '#eef2ff', progress: 'linear-gradient(90deg, #93c5fd 0%, #1E3A8A 100%)' },
+            { primary: '#1E3A8A', light: '#DBEAFE', progress: 'linear-gradient(90deg, #93c5fd 0%, #1E3A8A 100%)' },
             { primary: '#f59e0b', light: '#fffbeb', progress: 'linear-gradient(90deg, #fcd34d 0%, #f59e0b 100%)' },
-            { primary: '#6366f1', light: '#eef2ff', progress: 'linear-gradient(90deg, #a5b4fc 0%, #6366f1 100%)' },
+            { primary: '#0284c7', light: '#e0f2fe', progress: 'linear-gradient(90deg, #7dd3fc 0%, #0284c7 100%)' },
         ];
         el.innerHTML = factoryG.labels.map((label, index) => {
             const count = factoryG.data[index];
@@ -6763,7 +6763,7 @@ const themes = {
         if (suppliersEl) {
             const supplierG = this._ppeGroupBy(filteredStock, item => String(item.supplier || 'غير محدد').trim(), 8);
             const stockTotal = filteredStock.length;
-            suppliersEl.innerHTML = buildListItems(supplierG, stockTotal, '#8b5cf6', '#c4b5fd', '#8b5cf6', 'ppe-af-supplier');
+            suppliersEl.innerHTML = buildListItems(supplierG, stockTotal, '#0ea5e9', '#bae6fd', '#0ea5e9', 'ppe-af-supplier');
         }
 
         // الموقع الفرعي (أعلى 10)
