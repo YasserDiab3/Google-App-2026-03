@@ -883,7 +883,7 @@ const Training = {
 
     getContractorTrainingStats(monthFilter = '') {
         this.ensureData();
-        const contractorTrainings = AppState.appData.contractorTrainings || [];
+        const contractorTrainings = this._dedupeRegistryRecords(AppState.appData.contractorTrainings || []);
         const contractorOptions = this.getContractorOptions();
         // ✅ إصلاح: بناء contractorMap بتحويل المفتاح إلى string لضمان التطابق
         // ملاحظة مهمة: استخدام ?? بدل || لتفادي فقدان قيم مثل 0
