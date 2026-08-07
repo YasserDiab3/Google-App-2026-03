@@ -787,3 +787,121 @@ function resetDailySafetyCheckListAndResync() {
     return { success: false, message: 'حدث خطأ: ' + error.toString() };
   }
 }
+
+/**
+ * إعادة بناء كامل لجدول DailySafetyCheckList من الفورم دفعة واحدة.
+ * أسرع بكثير من المزامنة الصفية (processFormDataFromSheet) — يقرأ كل الفورم
+ * مرة واحدة، يحوّل كل الصفوف في الذاكرة، يكتب الورقة دفعة واحدة.
+ * يصلح عندما تكون الورقة فارغة/ممسوحة أو بعد تغيير بنية البيانات.
+ * لا يعتمد على مؤشر LAST_PROCESSED_ROW — يعيد بناء كل شيء من الصفر.
+ *
+ * @returns {{success:boolean, message:string, importedCount?:number, skippedEmpty?:number}}
+ */
+function rebuildDailySafetyCheckListFromForm() {
+  try {
+    var fSheet = getDailySafetyFormResponsesSheet();
+    if (!fSheet) {
+      return { success: false, message: 'ورقة إجابات الفورم غير موجودة' };
+    }
+
+    var lastRow = fSheet.getLastRow();
+    if (lastRow < 2) {
+      return { success: false, message: 'لا توجد إرسالات' };
+    }
+
+    var numCols = fSheet.getLastColumn();
+    var headers = fSheet.getRange(1, 1, 1, numCols).getValues()[0];
+    var block = fSheet.getRange(2, 1, lastRow - 1, numCols).getValues();
+
+    var allRecords = [];
+    var seenKeys = {};
+    var skippedEmpty = 0;
+
+    for (var idx = 0; idx < block.length; idx++) {
+      var rowData = block[idx];
+      if (countNonEmptyFormCells(rowData) < 2) {
+        skippedEmpty++;
+        continue;
+      }
+      var recs = mapFormRowToDailySafetyCheckListRecords(rowData, headers);
+      if (!recs || recs.length === 0) continue;
+      for (var r = 0; r < recs.length; r++) {
+        var rec = recs[r];
+        var date = formatDateOnly(rec.date || '');
+        var site = String(rec.siteName || rec.siteId || '').trim();
+        var inspector = String(rec.inspectorName || '').trim();
+        var shift = String(rec.shift || '').trim();
+        var ts = String(rec.formSubmittedAt || '').trim();
+        var key = date + '|' + site + '|' + inspector + '|' + shift + '|' + ts;
+        if (seenKeys[key]) {
+          continue;
+        }
+        seenKeys[key] = true;
+        allRecords.push(rec);
+      }
+    }
+
+    if (allRecords.length === 0) {
+      return { success: false, message: 'لا توجد سجلات قابلة للتحويل في الفورم' };
+    }
+
+    // توليد معرّفات تسلسلية فريدة محلياً (DSC_0001, DSC_0002, ...) — بلا قراءة الورقة في كل مرة
+    var nextNum = 1;
+    for (var k = 0; k < allRecords.length; k++) {
+      var padded = String(nextNum).padStart(4, '0');
+      allRecords[k].id = 'DSC_' + padded;
+      if (!allRecords[k].siteId && allRecords[k].siteName) {
+        allRecords[k].siteId = allRecords[k].siteName;
+      }
+      if (!allRecords[k].createdAt) allRecords[k].createdAt = new Date();
+      if (!allRecords[k].updatedAt) allRecords[k].updatedAt = new Date();
+      nextNum++;
+    }
+
+    var sheetName = 'DailySafetyCheckList';
+    var spreadsheet = SpreadsheetApp.openById(APP_SPREADSHEET_ID);
+    var sheet = spreadsheet.getSheetByName(sheetName);
+    if (!sheet) {
+      return { success: false, message: 'ورقة ' + sheetName + ' غير موجودة' };
+    }
+
+    var headersList = getDefaultHeaders(sheetName);
+
+    var rows = [headersList.slice()];
+    for (var m = 0; m < allRecords.length; m++) {
+      var recRow = [];
+      for (var h = 0; h < headersList.length; h++) {
+        var v = allRecords[m][headersList[h]];
+        recRow.push(v === undefined || v === null ? '' : v);
+      }
+      rows.push(recRow);
+    }
+
+    if (sheet.getLastRow() > 1) {
+      sheet.deleteRows(2, sheet.getLastRow() - 1);
+    }
+
+    var BATCH = 100;
+    for (var startRow = 0; startRow < rows.length; startRow += BATCH) {
+      var endRow = Math.min(startRow + BATCH, rows.length);
+      var chunk = rows.slice(startRow, endRow);
+      sheet.getRange(startRow + 1, 1, chunk.length, headersList.length).setValues(chunk);
+    }
+
+    try {
+      invalidateHseSheetCaches(sheetName);
+    } catch (e) {}
+
+    PropertiesService.getScriptProperties().setProperty(LAST_PROCESSED_ROW_KEY, String(lastRow));
+
+    return {
+      success: true,
+      message: 'تمت إعادة بناء ' + allRecords.length + ' سجل بنجاح',
+      importedCount: allRecords.length,
+      skippedEmpty: skippedEmpty
+    };
+  } catch (error) {
+    Logger.log('rebuildDailySafetyCheckListFromForm: ' + error.toString());
+    return { success: false, message: 'حدث خطأ: ' + error.toString() };
+  }
+}
