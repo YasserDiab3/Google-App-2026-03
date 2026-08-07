@@ -15567,9 +15567,33 @@ const Clinic = {
         if (!isCheckIn && !isCheckOut) return;
 
         const dayKey = this._attendanceDayKey(record.date);
-        const adjustedDefault = isCheckOut
-            ? `${dayKey}T17:00`
-            : `${dayKey}T08:00`;
+        let adjustedDefault = isCheckIn ? `${dayKey}T07:30` : `${dayKey}T15:30`;
+
+        if (isCheckOut && record.checkIn) {
+            try {
+                const inDate = new Date(record.checkIn);
+                const hh = inDate.getHours();
+                const mm = inDate.getMinutes();
+                const timeStr = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+                const shifts = this.getClinicShiftRules();
+                const s3 = shifts.find(s => s.isOvernight || s.id === 'shift_3') || { startTime: '22:30', endTime: '07:30' };
+                const s2 = shifts.find(s => s.id === 'shift_2') || { startTime: '15:30', endTime: '22:30' };
+                const s1 = shifts.find(s => s.id === 'shift_1') || { startTime: '07:30', endTime: '15:30' };
+
+                if (timeStr >= s3.startTime || timeStr < s1.startTime) {
+                    const nextDay = new Date(inDate);
+                    nextDay.setDate(nextDay.getDate() + 1);
+                    const nextDayKey = this._attendanceDayKey(nextDay);
+                    adjustedDefault = `${nextDayKey}T${s3.endTime}`;
+                } else if (timeStr >= s2.startTime) {
+                    adjustedDefault = `${dayKey}T${s2.endTime}`;
+                } else {
+                    adjustedDefault = `${dayKey}T${s1.endTime}`;
+                }
+            } catch (_e) {
+                adjustedDefault = `${dayKey}T15:30`;
+            }
+        }
         const title = isCheckIn ? 'إضافة بصمة دخول مفقودة' : 'إضافة بصمة خروج مفقودة';
         const icon = isCheckIn ? 'fa-sign-in-alt' : 'fa-sign-out-alt';
 
@@ -15636,6 +15660,102 @@ const Clinic = {
         });
     },
 
+    getClinicShiftRules() {
+        if (Array.isArray(AppState.appData?.clinicShiftRules) && AppState.appData.clinicShiftRules.length > 0) {
+            return AppState.appData.clinicShiftRules;
+        }
+        return [
+            { id: 'shift_1', name: 'الوردية الأولى', startTime: '07:30', endTime: '15:30', isOvernight: false },
+            { id: 'shift_2', name: 'الوردية الثانية', startTime: '15:30', endTime: '22:30', isOvernight: false },
+            { id: 'shift_3', name: 'الوردية الثالثة', startTime: '22:30', endTime: '07:30', isOvernight: true }
+        ];
+    },
+
+    showClinicShiftSettingsModal() {
+        if (!this.isCurrentUserAdmin()) {
+            Notification?.error?.('هذا الإجراء متاح لمدير النظام فقط');
+            return;
+        }
+        const shifts = this.getClinicShiftRules();
+        const html = `
+            <div class="modal-overlay active" id="clinic-shift-settings-modal">
+                <div class="modal-content" style="max-width:560px;">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-clock ml-2"></i>إعدادات مواعيد الورديات (العيادة)</h3>
+                        <button type="button" class="modal-close" onclick="document.getElementById('clinic-shift-settings-modal')?.remove()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="modal-body space-y-4">
+                        <p class="text-xs text-gray-500 mb-2">تعديل مواعيد بداية ونهاية الورديات الرسمية. الوردية الثالثة ليلية (تتجاوز منتصف الليل).</p>
+                        ${shifts.map((s, idx) => `
+                            <div class="border rounded-lg p-3 bg-gray-50 space-y-2" data-shift-idx="${idx}">
+                                <div class="font-bold text-sm text-blue-700 flex items-center justify-between">
+                                    <span>${Utils.escapeHTML(s.name)}</span>
+                                    ${s.isOvernight ? '<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-semibold">وردية ليلية</span>' : ''}
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="form-label text-xs">وقت البداية</label>
+                                        <input type="time" class="form-input shift-start-time" value="${Utils.escapeAttr(s.startTime)}" required>
+                                    </div>
+                                    <div>
+                                        <label class="form-label text-xs">وقت النهاية</label>
+                                        <input type="time" class="form-input shift-end-time" value="${Utils.escapeAttr(s.endTime)}" required>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-shift-settings-modal')?.remove()">إلغاء</button>
+                        <button type="button" class="btn-primary" id="clinic-shift-settings-save"><i class="fas fa-save ml-2"></i>حفظ القواعد</button>
+                    </div>
+                </div>
+            </div>`;
+        document.getElementById('clinic-shift-settings-modal')?.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+        document.getElementById('clinic-shift-settings-save')?.addEventListener('click', () => {
+            const modal = document.getElementById('clinic-shift-settings-modal');
+            const items = modal.querySelectorAll('[data-shift-idx]');
+            const updated = [];
+            items.forEach((item, idx) => {
+                const s = shifts[idx];
+                const startTime = item.querySelector('.shift-start-time')?.value || s.startTime;
+                const endTime = item.querySelector('.shift-end-time')?.value || s.endTime;
+                updated.push({ ...s, startTime, endTime });
+            });
+            AppState.appData.clinicShiftRules = updated;
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
+                GoogleIntegration.autoSave('ClinicShiftRules', updated).catch(() => {});
+            }
+            Notification?.success?.('تم حفظ قواعد الورديات بنجاح');
+            modal.remove();
+            this.renderAttendanceTab({ force: true });
+        });
+    },
+
+    _applyShiftPresetToMissingPunchForm(shiftId) {
+        const modal = document.getElementById('clinic-attendance-add-modal');
+        if (!modal) return;
+        const dateEl = modal.querySelector('#clinic-attendance-add-date');
+        const inEl = modal.querySelector('#clinic-attendance-add-checkin');
+        const outEl = modal.querySelector('#clinic-attendance-add-checkout');
+        const dayKey = this._attendanceDayKey(dateEl?.value || this._getTodayLocalKey());
+        if (!shiftId) return;
+        const shift = (this.getClinicShiftRules() || []).find(s => String(s.id) === String(shiftId));
+        if (!shift) return;
+        if (inEl) inEl.value = `${dayKey}T${shift.startTime || '07:30'}`;
+        let outDay = dayKey;
+        if (shift.isOvernight) {
+            try {
+                const d = new Date(`${dayKey}T12:00:00`);
+                d.setDate(d.getDate() + 1);
+                outDay = this._attendanceDayKey(d);
+            } catch (_e) { outDay = dayKey; }
+        }
+        if (outEl) outEl.value = `${outDay}T${shift.endTime || '15:30'}`;
+    },
+
     showAddMissingAttendanceModal() {
         if (!this.isCurrentUserAdmin()) {
             Notification?.error?.('هذا الإجراء متاح لمدير النظام فقط');
@@ -15645,45 +15765,73 @@ const Clinic = {
             .filter(s => String(s.isActive || 'true').toLowerCase() !== 'false')
             .map(s => `<option value="${Utils.escapeAttr(s.id)}">${Utils.escapeHTML(s.userName || s.userEmail || s.id)}</option>`)
             .join('');
+        const shifts = this.getClinicShiftRules();
+        const shiftOptions = shifts.map(s =>
+            `<option value="${Utils.escapeAttr(s.id)}">${Utils.escapeHTML(s.name)} (${Utils.escapeHTML(s.startTime)}–${Utils.escapeHTML(s.endTime)}${s.isOvernight ? ' · ليلي' : ''})</option>`
+        ).join('');
         const today = this._getTodayLocalKey();
+        const defaultShift = shifts.find(s => s.id === 'shift_1') || shifts[0];
+        const defaultIn = `${today}T${defaultShift?.startTime || '07:30'}`;
+        const defaultOut = `${today}T${defaultShift?.endTime || '15:30'}`;
         const html = `
             <div class="modal-overlay active" id="clinic-attendance-add-modal">
-                <div class="modal-content" style="max-width:520px;">
-                    <div class="modal-header">
-                        <h3><i class="fas fa-fingerprint ml-2"></i>إضافة سجل حضور / بصمة مفقودة</h3>
-                        <button type="button" class="modal-close" onclick="document.getElementById('clinic-attendance-add-modal')?.remove()"><i class="fas fa-times"></i></button>
+                <div class="modal-content" style="max-width:560px; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #0f766e, #14b8a6); color: white; padding: 1.5rem; border-bottom: none;">
+                        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center;"><i class="fas fa-fingerprint ml-3" style="font-size: 1.5rem; opacity: 0.9;"></i>إضافة سجل حضور / بصمة مفقودة</h3>
+                        <button type="button" class="modal-close" style="color: white; opacity: 0.8; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'" onclick="document.getElementById('clinic-attendance-add-modal')?.remove()"><i class="fas fa-times"></i></button>
                     </div>
-                    <div class="modal-body space-y-4">
+                    <div class="modal-body space-y-5" style="padding: 1.5rem; background-color: #f8fafc;">
                         <div class="form-group">
-                            <label class="form-label">المسئول *</label>
-                            <select id="clinic-attendance-add-staff" class="form-input"><option value="">— اختر —</option>${staffOptions}</select>
+                            <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="fas fa-user-circle ml-2 text-teal-500"></i> المسئول <span class="text-red-500 mr-1">*</span></label>
+                            <select id="clinic-attendance-add-staff" class="form-input" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);"><option value="">— اختر المسئول —</option>${staffOptions}</select>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="far fa-calendar-alt ml-2 text-teal-500"></i> التاريخ <span class="text-red-500 mr-1">*</span></label>
+                                <input type="date" id="clinic-attendance-add-date" class="form-input" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem;" value="${Utils.escapeAttr(today)}" required>
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="fas fa-clock ml-2 text-amber-500"></i> الوردية</label>
+                                <select id="clinic-attendance-add-shift" class="form-input" style="border: 1px solid #f59e0b; border-radius: 0.5rem; padding: 0.75rem; background:#fffbeb;">
+                                    <option value="">— يدوي بدون وردية —</option>
+                                    ${shiftOptions}
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; background: #ffffff; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e2e8f0;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;"><i class="fas fa-sign-in-alt ml-1 text-green-500"></i> وقت الدخول</label>
+                                <input type="datetime-local" id="clinic-attendance-add-checkin" class="form-input" style="padding: 0.5rem; font-size: 0.9rem;" value="${Utils.escapeAttr(defaultIn)}">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;"><i class="fas fa-sign-out-alt ml-1 text-orange-500"></i> وقت الخروج</label>
+                                <input type="datetime-local" id="clinic-attendance-add-checkout" class="form-input" style="padding: 0.5rem; font-size: 0.9rem;" value="${Utils.escapeAttr(defaultOut)}">
+                            </div>
+                            <div style="grid-column: span 2; font-size: 0.75rem; color: #64748b; text-align: center; margin-top: -0.25rem;"><i class="fas fa-info-circle ml-1"></i> اختر وردية لتعبئة الأوقات تلقائياً، أو اترك حقلاً فارغاً لبصمة دخول/خروج فقط. عدّل مواعيد الورديات من زر «الورديات».</div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">التاريخ *</label>
-                            <input type="date" id="clinic-attendance-add-date" class="form-input" value="${Utils.escapeAttr(today)}" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">وقت الدخول</label>
-                            <input type="datetime-local" id="clinic-attendance-add-checkin" class="form-input" value="${Utils.escapeAttr(today + 'T08:00')}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">وقت الخروج</label>
-                            <input type="datetime-local" id="clinic-attendance-add-checkout" class="form-input" value="${Utils.escapeAttr(today + 'T17:00')}">
-                        </div>
-                        <p class="text-xs text-gray-500">يمكن ترك أحد الحقلين فارغاً لإضافة بصمة دخول أو خروج فقط.</p>
-                        <div class="form-group">
-                            <label class="form-label">ملاحظة</label>
-                            <textarea id="clinic-attendance-add-notes" class="form-textarea" rows="2" placeholder="سبب الإضافة اليدوية..."></textarea>
+                            <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="far fa-comment-alt ml-2 text-gray-400"></i> ملاحظة</label>
+                            <textarea id="clinic-attendance-add-notes" class="form-textarea" rows="2" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; resize: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);" placeholder="سبب الإضافة اليدوية..."></textarea>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-attendance-add-modal')?.remove()">إلغاء</button>
-                        <button type="button" class="btn-primary" id="clinic-attendance-add-save"><i class="fas fa-save ml-2"></i>حفظ</button>
+                    <div class="modal-footer" style="padding: 1.25rem 1.5rem; background-color: #ffffff; border-top: 1px solid #e2e8f0; display: flex; gap: 1rem; justify-content: flex-end;">
+                        <button type="button" class="btn-secondary" style="padding: 0.6rem 1.2rem; border-radius: 0.5rem; font-weight: 500;" onclick="document.getElementById('clinic-attendance-add-modal')?.remove()">إلغاء</button>
+                        <button type="button" class="btn-primary" id="clinic-attendance-add-save" style="padding: 0.6rem 1.5rem; border-radius: 0.5rem; font-weight: 600; background: #0f766e; border: none; box-shadow: 0 4px 6px -1px rgba(15, 118, 110, 0.3); transition: all 0.2s;"><i class="fas fa-check ml-2"></i>حفظ السجل</button>
                     </div>
                 </div>
             </div>`;
         document.getElementById('clinic-attendance-add-modal')?.remove();
         document.body.insertAdjacentHTML('beforeend', html);
+        const shiftEl = document.getElementById('clinic-attendance-add-shift');
+        const dateEl = document.getElementById('clinic-attendance-add-date');
+        if (defaultShift?.id && shiftEl) {
+            shiftEl.value = defaultShift.id;
+            this._applyShiftPresetToMissingPunchForm(defaultShift.id);
+        }
+        shiftEl?.addEventListener('change', () => this._applyShiftPresetToMissingPunchForm(shiftEl.value));
+        dateEl?.addEventListener('change', () => {
+            if (shiftEl?.value) this._applyShiftPresetToMissingPunchForm(shiftEl.value);
+        });
         document.getElementById('clinic-attendance-add-save')?.addEventListener('click', async () => {
             const staffId = document.getElementById('clinic-attendance-add-staff')?.value || '';
             const date = document.getElementById('clinic-attendance-add-date')?.value || '';
@@ -15722,7 +15870,6 @@ const Clinic = {
             }
         });
     },
-
     _attendanceDayKey(dateVal) {
         if (!dateVal) return '';
         try {
@@ -17227,15 +17374,24 @@ const Clinic = {
                 </div>
 
                 <!-- شريط الأدوات -->
-                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px;padding:14px 18px;background:linear-gradient(135deg,#134e4a 0%,#0d9488 100%);border-radius:14px;color:#fff;box-shadow:0 4px 18px rgba(13,148,136,0.28);">
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <div style="width:42px;height:42px;background:rgba(255,255,255,0.16);border-radius:11px;display:flex;align-items:center;justify-content:center;">
-                            <i class="fas fa-clipboard-user" style="font-size:18px;"></i>
+                <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;padding:14px 18px;background:linear-gradient(135deg,#134e4a 0%,#0d9488 100%);border-radius:14px;color:#fff;box-shadow:0 4px 18px rgba(13,148,136,0.28);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div style="width:42px;height:42px;background:rgba(255,255,255,0.16);border-radius:11px;display:flex;align-items:center;justify-content:center;">
+                                <i class="fas fa-clipboard-user" style="font-size:18px;"></i>
+                            </div>
+                            <div>
+                                <h3 style="margin:0;font-size:1rem;font-weight:700;">سجل حضور مسئولي العيادة</h3>
+                                <p style="margin:0;font-size:0.72rem;opacity:0.88;">تسجيل تلقائي عند الدخول والخروج • ${dataLoading && rows.length === 0 ? 'جاري تحميل البيانات...' : `${allAttendance.length} سجل إجمالي`}</p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 style="margin:0;font-size:1rem;font-weight:700;">سجل حضور مسئولي العيادة</h3>
-                            <p style="margin:0;font-size:0.72rem;opacity:0.88;">تسجيل تلقائي عند الدخول والخروج • ${dataLoading && rows.length === 0 ? 'جاري تحميل البيانات...' : `${allAttendance.length} سجل إجمالي`}</p>
-                        </div>
+                        ${isAdmin ? `
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 8px;background:rgba(0,0,0,0.18);border-radius:10px;border:1px solid rgba(255,255,255,0.2);">
+                            <span style="font-size:0.68rem;font-weight:700;opacity:0.85;margin-inline:4px;">إدارة:</span>
+                            <button type="button" id="clinic-attendance-shift-rules-btn" style="padding:7px 12px;border-radius:8px;border:none;cursor:pointer;background:#fbbf24;color:#78350f;font-size:0.76rem;font-weight:800;display:flex;align-items:center;gap:5px;" title="مواعيد الورديات والقواعد"><i class="fas fa-clock"></i><span>الورديات</span></button>
+                            <button type="button" id="clinic-attendance-add-punch-btn" style="padding:7px 12px;border-radius:8px;border:none;cursor:pointer;background:#fff;color:#134e4a;font-size:0.76rem;font-weight:800;display:flex;align-items:center;gap:5px;" title="إضافة سجل حضور أو بصمة مفقودة"><i class="fas fa-fingerprint"></i><span>بصمة مفقودة</span></button>
+                            <button type="button" id="clinic-attendance-add-staff-btn" style="padding:7px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;"><i class="fas fa-user-plus"></i><span>إضافة مسئول</span></button>
+                        </div>` : ''}
                     </div>
                     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                         <span style="font-size:0.72rem;opacity:0.9;">الفترة:</span>
@@ -17251,8 +17407,6 @@ const Clinic = {
                         <button type="button" id="clinic-attendance-report-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;" title="تصدير تقرير"><i class="fas fa-file-export"></i><span>تقرير</span></button>
                         <button type="button" id="clinic-attendance-pdf-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;" title="PDF للفلتر الحالي"><i class="fas fa-file-pdf"></i><span>PDF</span></button>
                         <button type="button" id="clinic-attendance-export-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;" title="Excel للفلتر الحالي"><i class="fas fa-file-excel"></i><span>Excel</span></button>
-                        ${isAdmin ? `<button type="button" id="clinic-attendance-add-punch-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;" title="إضافة سجل حضور أو بصمة مفقودة"><i class="fas fa-fingerprint"></i><span>بصمة مفقودة</span></button>` : ''}
-                        ${isAdmin ? `<button type="button" id="clinic-attendance-add-staff-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:#fff;color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;"><i class="fas fa-user-plus"></i><span>إضافة مسئول</span></button>` : ''}
                     </div>
                 </div>
 
@@ -17481,6 +17635,7 @@ const Clinic = {
         panel.querySelector('#clinic-attendance-report-btn')?.addEventListener('click', () => this.showAttendanceReportModal());
         panel.querySelector('#clinic-attendance-add-staff-btn')?.addEventListener('click', () => this.showAddClinicStaffModal());
         panel.querySelector('#clinic-attendance-add-punch-btn')?.addEventListener('click', () => this.showAddMissingAttendanceModal());
+        panel.querySelector('#clinic-attendance-shift-rules-btn')?.addEventListener('click', () => this.showClinicShiftSettingsModal());
         panel.querySelector('#clinic-attendance-refresh-btn')?.addEventListener('click', async () => {
             Notification?.info?.('جاري تحديث سجل الحضور...');
             this._attendanceDataFetchedInSession = false;

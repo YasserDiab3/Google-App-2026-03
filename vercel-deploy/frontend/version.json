@@ -1,13 +1,15 @@
 {
-  "version": "1.0.887",
+  "version": "1.0.889",
   "highlights": {
     "ar": [
-      "تصدير تقرير مخالفات المقاولين بصيغة Excel بالإضافة إلى PDF.",
-      "اختيار الصيغة من نفس حوار التصدير مع فلاتر المقاول والفترة."
+      "استعادة نظام الورديات في حضور العيادة مع زر إدارة واضح.",
+      "نموذج البصمة المفقودة يدعم اختيار الوردية وتعبئة الأوقات تلقائياً.",
+      "دعم الوردية الليلية عند إضافة بصمة دخول/خروج يدوية."
     ],
     "en": [
-      "Export contractor violations report to Excel as well as PDF.",
-      "Choose the format in the same export dialog with contractor and period filters."
+      "Restored clinic attendance shift system with a clear admin button.",
+      "Missing-fingerprint form supports shift selection and auto time fill.",
+      "Overnight shift support for manual check-in/out punches."
     ]
   }
 }
