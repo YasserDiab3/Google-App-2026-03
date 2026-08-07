@@ -146,6 +146,9 @@ function getFactoriesForFormRow(rowData, headers) {
  */
 function processFormDataFromSheet() {
   try {
+    // إصلاح ذاتي: لو المشغّل الزمني ضاع (redeploy جديد) نعيد تثبيته قبل المعالجة
+    try { ensureDailySafetySyncTrigger_(); } catch (e) {}
+
     var sheet = getDailySafetyFormResponsesSheet();
     if (!sheet) {
       return { success: false, message: 'ورقة إجابات الفورم غير موجودة' };
@@ -525,5 +528,78 @@ function setupDailySafetyFormTrigger() {
   } catch (error) {
     Logger.log('setupDailySafetyFormTrigger: ' + error.toString());
     return { success: false, message: error.toString() };
+  }
+}
+
+/**
+ * إصلاح ذاتي: يتأكد من وجود مشغّل المزامنة الزمني، ويُثبّته لو ضاع
+ * (بعد redeploy/nشر جديد قد تُفقد المشغّلات). يُستدعى من sync والـ trigger نفسه.
+ * @returns {boolean}
+ */
+function ensureDailySafetySyncTrigger_() {
+  try {
+    var triggers = ScriptApp.getProjectTriggers();
+    for (var i = 0; i < triggers.length; i++) {
+      if (triggers[i].getHandlerFunction() === 'checkForNewDailySafetyFormSubmissions') {
+        return true;
+      }
+    }
+    ScriptApp.newTrigger('checkForNewDailySafetyFormSubmissions')
+      .timeBased()
+      .everyMinutes(1)
+      .create();
+    Logger.log('DSC Form: أعيد تثبيت المشغّل الزمني (كان مفقوداً)');
+    return true;
+  } catch (error) {
+    Logger.log('ensureDailySafetySyncTrigger_: ' + error.toString());
+    return false;
+  }
+}
+
+/**
+ * تشخيص حالة المزامنة — يشغّله المدير من المحرر أو من Console.
+ * يعرض مؤشر آخر صف، آخر صف بالورقة، وجود المشغّل، وعينة تواريخ الورقتين.
+ */
+function dscDebugSyncStatus() {
+  try {
+    var out = {};
+    try {
+      out.lastProcessedRow = parseInt(PropertiesService.getScriptProperties().getProperty(LAST_PROCESSED_ROW_KEY) || '0', 10);
+    } catch (e) { out.lastProcessedRow = 'ERR: ' + e.toString(); }
+
+    try {
+      var fSheet = getDailySafetyFormResponsesSheet();
+      out.formSheetName = fSheet ? fSheet.getName() : '';
+      out.formLastRow = fSheet ? fSheet.getLastRow() : -1;
+      var tsCol = [];
+      if (fSheet) {
+        var lastIdx = Math.max(2, out.formLastRow - 3);
+        tsCol = fSheet.getRange(lastIdx, 1, out.formLastRow - lastIdx + 1, 1).getValues();
+        out.formLastTimestamps = tsCol.map(function(r){ return String(r[0]); });
+      }
+    } catch (e) { out.formPart = 'ERR: ' + e.toString(); }
+
+try {
+      var fl = typeof readFromSheet === 'function'
+        ? readFromSheet('DailySafetyCheckList', APP_SPREADSHEET_ID)
+        : [];
+      out.appArrayCount = Array.isArray(fl) ? fl.length : -1;
+      out.appLastDate = '';
+      if (Array.isArray(fl) && fl.length) {
+        var lastRec = fl[fl.length - 1];
+        out.appLastDate = String(lastRec.date || '');
+        out.appLastSite = String(lastRec.siteName || lastRec.siteId || '');
+      }
+    } catch (e) { out.appPart = 'ERR: ' + e.toString(); }
+
+    try {
+      var trigs = ScriptApp.getProjectTriggers();
+      out.triggerCount = trigs.length;
+      out.hasSyncTrigger = trigs.some(function(t){ return t.getHandlerFunction() === 'checkForNewDailySafetyFormSubmissions'; });
+    } catch (e) { out.triggerPart = 'ERR: ' + e.toString(); }
+
+    return out;
+  } catch (error) {
+    return { success: false, message: 'dscDebugSyncStatus: ' + error.toString() };
   }
 }

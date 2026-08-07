@@ -6541,6 +6541,11 @@ var ActionHandlers = {
                 return;
             }
 
+            // إصلاح ذاتي للمشغّل الزمني إن ضاع بعد redeploy
+            try {
+                if (typeof ensureDailySafetySyncTrigger_ === 'function') ensureDailySafetySyncTrigger_();
+            } catch (e) {}
+
             result = processFormDataFromSheet();
             return;
         })();
