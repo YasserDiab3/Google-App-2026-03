@@ -849,6 +849,20 @@ const PeriodicInspections = {
                 [data-theme="dark"] #periodic-inspections-section .pinsp-record__meta { background: #122338; border-top-color: #1f3a55; }
                 [data-theme="dark"] #periodic-inspections-section .pinsp-record__notes { background: #3a2f12; border-color: #6b5c1e; color: #fcd34d; }
 
+                /* ✅ الهوية — صفوف الجداول بتظليل النتيجة */
+                #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .pinsp-row td:first-child { box-shadow: inset 4px 0 0 transparent; }
+                #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .pinsp-row.accent-green td:first-child { box-shadow: inset 4px 0 0 #16a34a; }
+                #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .pinsp-row.accent-red td:first-child { box-shadow: inset 4px 0 0 #dc2626; }
+                #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .pinsp-row.accent-amber td:first-child { box-shadow: inset 4px 0 0 #d97706; }
+                #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .pinsp-row.accent-blue td:first-child { box-shadow: inset 4px 0 0 #2563eb; }
+                #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .pinsp-row.accent-gray td:first-child { box-shadow: inset 4px 0 0 #94a3b8; }
+                #periodic-inspections-section .pinsp-row-icon {
+                    display: inline-flex; align-items: center; justify-content: center;
+                    width: 26px; height: 26px; border-radius: 8px; font-size: .72rem; flex: 0 0 auto;
+                }
+                #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .pinsp-equipment-row td:first-child { box-shadow: inset 4px 0 0 transparent; }
+                #periodic-inspections-section .periodic-workspace .pinsp-equip-marker { display: none; }
+
                 [data-theme="dark"] #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .content-card { background: #15283f !important; }
                 [data-theme="dark"] #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .card-header { background: #16293f; border-bottom-color: #243b55; }
                 [data-theme="dark"] #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .data-table tbody tr:hover td { background: #1c3350 !important; }
@@ -1293,75 +1307,23 @@ const PeriodicInspections = {
             const filteredStats = this.calculateStatistics(filteredInspections);
 
         return `
-            <!-- إحصائيات الفحوصات -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div class="content-card bg-gradient-to-br from-green-50 to-green-100 border border-green-200">
-                    <div class="card-body">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-medium text-green-700 mb-1">مطابق</p>
-                                <p class="text-3xl font-bold text-green-800">${stats.compliant}</p>
-                                <p class="text-xs text-green-600 mt-1">${stats.total > 0 ? Math.round((stats.compliant / stats.total) * 100) : 0}%</p>
-                            </div>
-                            <div class="bg-green-500 rounded-full p-3">
-                                <i class="fas fa-check-circle text-white text-2xl"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="content-card bg-gradient-to-br from-red-50 to-red-100 border border-red-200">
-                    <div class="card-body">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-medium text-red-700 mb-1">غير مطابق</p>
-                                <p class="text-3xl font-bold text-red-800">${stats.nonCompliant}</p>
-                                <p class="text-xs text-red-600 mt-1">${stats.total > 0 ? Math.round((stats.nonCompliant / stats.total) * 100) : 0}%</p>
-                            </div>
-                            <div class="bg-red-500 rounded-full p-3">
-                                <i class="fas fa-times-circle text-white text-2xl"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="content-card bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200">
-                    <div class="card-body">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-medium text-orange-700 mb-1">مطابق جزئياً</p>
-                                <p class="text-3xl font-bold text-orange-800">${stats.partialCompliant}</p>
-                                <p class="text-xs text-orange-600 mt-1">${stats.total > 0 ? Math.round((stats.partialCompliant / stats.total) * 100) : 0}%</p>
-                            </div>
-                            <div class="bg-orange-500 rounded-full p-3">
-                                <i class="fas fa-exclamation-circle text-white text-2xl"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="content-card bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200">
-                    <div class="card-body">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-medium text-blue-700 mb-1">إجمالي الفحوصات</p>
-                                <p class="text-3xl font-bold text-blue-800">${stats.total}</p>
-                                <p class="text-xs text-blue-600 mt-1">${filteredStats.total !== stats.total ? `تم التصفية: ${filteredStats.total}` : 'الكل'}</p>
-                            </div>
-                            <div class="bg-blue-500 rounded-full p-3">
-                                <i class="fas fa-clipboard-list text-white text-2xl"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- إحصائيات الفحوصات — كروت هوية -->
+            ${this._renderPinspStats(stats, {
+                totalIcon: 'fas fa-clipboard-list',
+                totalLabel: 'إجمالي الفحوصات',
+                totalSub: filteredStats.total !== stats.total ? `مُصفّى: ${filteredStats.total}` : 'الكل'
+            })}
 
             <div class="content-card">
                 <div class="card-header">
-                    <div class="flex items-center justify-between">
+                    <div class="flex items-center justify-between flex-wrap gap-2">
                         <h3 class="card-title">
                             <i class="fas fa-list ml-2"></i>
                             قائمة الفحوصات الدورية
                             ${filteredStats.total !== stats.total ? `<span class="text-sm font-normal text-gray-500 mr-2">(${filteredStats.total} من ${stats.total})</span>` : ''}
                         </h3>
-                        <div class="flex gap-2">
+                        <div class="flex gap-2 flex-wrap">
+                            <span class="badge badge-info">${filteredInspections.length} فحص معروض</span>
                             ${this.isCurrentUserAdmin() ? `
                                 <button id="manage-templates-btn" class="btn-secondary" title="إدارة قوالب الفحص (مدير النظام فقط)">
                                     <i class="fas fa-cog ml-2"></i>
@@ -1401,12 +1363,15 @@ const PeriodicInspections = {
                                         const categoryDisplay = template ? template.name : (inspection.category || '');
                                         const resultBadgeClass = this.getResultBadgeClass(inspection.result);
                                         const resultIcon = this.getResultIcon(inspection.result);
+                                        const accent = this._getResultAccent(inspection.result);
                                         return `
-                                        <tr class="hover:bg-gray-50 transition-colors">
+                                        <tr class="hover:bg-gray-50 transition-colors pinsp-row accent-${accent}">
                                             <td class="font-mono font-semibold text-blue-600">${Utils.escapeHTML(inspection.inspectionNumber || inspection.id || '')}</td>
                                             <td>
-                                                ${template ? `<i class="fas ${template.icon} ml-1 text-blue-500"></i>` : '<i class="fas fa-clipboard-list ml-1 text-gray-400"></i>'}
-                                                <span class="font-medium">${Utils.escapeHTML(categoryDisplay)}</span>
+                                                <span class="inline-flex items-center gap-2">
+                                                    <span class="pinsp-tag" style="background:${this._getResultHex('blue')}14;color:${this._getResultHex('blue')};"><i class="${template ? template.icon : 'fas fa-clipboard-list'}"></i></span>
+                                                    <span class="font-medium">${Utils.escapeHTML(categoryDisplay)}</span>
+                                                </span>
                                             </td>
                                             <td>
                                                 <div class="flex items-center gap-2">
@@ -1530,6 +1495,29 @@ const PeriodicInspections = {
     _getResultHex(accent) {
         const map = { green: '#16a34a', red: '#dc2626', amber: '#d97706', blue: '#2563eb', gray: '#64748b' };
         return map[accent] || map.gray;
+    },
+
+    // ✅ كروت الإحصائيات المشتركة (هوية المديول) — للقائمة والسجل
+    _renderPinspStats(stats, opts = {}) {
+        const total = (stats && stats.total) || 0;
+        const pct = n => (total > 0 ? Math.round((n / total) * 100) : 0);
+        const card = (icon, iconCls, label, value, pctVal, bar, sub) => `
+            <div class="pinsp-stat">
+                <div class="pinsp-stat__icon pinsp-stat__icon--${iconCls}"><i class="${icon}"></i></div>
+                <div class="pinsp-stat__body">
+                    <p class="pinsp-stat__label">${label}</p>
+                    <p class="pinsp-stat__value">${value}</p>
+                    <div class="pinsp-stat__bar"><span style="width:${Math.min(Math.max(pctVal, 0), 100)}%; background:${bar};"></span></div>
+                </div>
+                <span class="pinsp-stat__pct">${sub || (pctVal + '%')}</span>
+            </div>`;
+        return `
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                ${card(opts.totalIcon || 'fas fa-file-alt', 'blue', opts.totalLabel || 'إجمالي السجلات', total, 100, '#2563eb', opts.totalSub || 'الكل')}
+                ${card('fas fa-check-circle', 'green', 'مطابق', (stats && stats.compliant) || 0, pct(stats && stats.compliant), '#22c55e')}
+                ${card('fas fa-times-circle', 'red', 'غير مطابق', (stats && stats.nonCompliant) || 0, pct(stats && stats.nonCompliant), '#ef4444')}
+                ${card('fas fa-exclamation-circle', 'amber', 'مطابق جزئياً', (stats && stats.partialCompliant) || 0, pct(stats && stats.partialCompliant), '#f59e0b')}
+            </div>`;
     },
 
     getComplianceRateColor(rate) {
@@ -6917,8 +6905,6 @@ const PeriodicInspections = {
 
             // حساب الإحصائيات
             const stats = this.calculateStatistics(inspections);
-            const total = stats.total || 0;
-            const pct = n => (total > 0 ? Math.round((n / total) * 100) : 0);
 
             // ✅ ملخص مصغّر لكل شهر (مطابق / جزئي / غير مطابق / قيد المراجعة)
             const monthSummary = records => {
@@ -6932,18 +6918,6 @@ const PeriodicInspections = {
                 });
                 return { ok, bad, part, pend };
             };
-
-            // ✅ كرت إحصائي بهوية المديول
-            const statCard = (icon, iconCls, label, value, pctVal, bar) => `
-                <div class="pinsp-stat">
-                    <div class="pinsp-stat__icon pinsp-stat__icon--${iconCls}"><i class="${icon}"></i></div>
-                    <div class="pinsp-stat__body">
-                        <p class="pinsp-stat__label">${label}</p>
-                        <p class="pinsp-stat__value">${value}</p>
-                        <div class="pinsp-stat__bar"><span style="width:${Math.min(Math.max(pctVal, 0), 100)}%; background:${bar};"></span></div>
-                    </div>
-                    <span class="pinsp-stat__pct">${pctVal}%</span>
-                </div>`;
 
             // ✅ كرت سجل فحص كامل
             const recordCard = inspection => {
@@ -6996,12 +6970,7 @@ const PeriodicInspections = {
 
             return `
                 <!-- ✅ إحصائيات السجل — كروت هوية -->
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    ${statCard('fas fa-file-alt', 'blue', 'إجمالي السجلات', stats.total, 100, '#2563eb')}
-                    ${statCard('fas fa-check-circle', 'green', 'مطابق', stats.compliant, pct(stats.compliant), '#22c55e')}
-                    ${statCard('fas fa-times-circle', 'red', 'غير مطابق', stats.nonCompliant, pct(stats.nonCompliant), '#ef4444')}
-                    ${statCard('fas fa-exclamation-circle', 'amber', 'مطابق جزئياً', stats.partialCompliant, pct(stats.partialCompliant), '#f59e0b')}
-                </div>
+                ${this._renderPinspStats(stats)}
 
                 <!-- ✅ سجل الفحوصات الدورية — كروت احترافية -->
                 <div class="content-card">

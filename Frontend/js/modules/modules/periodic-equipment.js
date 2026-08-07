@@ -88,6 +88,14 @@ const PeriodicEquipment = {
         return `<span class="badge ${opt.cls}">${Utils.escapeHTML(opt.label)}</span>`;
     },
 
+    getStatusAccent(status) {
+        const key = String(status || '').trim();
+        if (key === 'صالح') return 'green';
+        if (key === 'يحتاج صيانة') return 'amber';
+        if (key === 'خارج الخدمة') return 'red';
+        return 'gray';
+    },
+
     async renderTab() {
         this.ensureData();
         return await this.renderDatabaseTab();
@@ -121,18 +129,42 @@ const PeriodicEquipment = {
                     </button>
                 </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div class="content-card text-center">
-                    <p class="text-sm text-gray-500">${this._t('module.periodic.equipment.total', 'إجمالي المعدات')}</p>
-                    <p class="text-2xl font-bold text-blue-600" id="pe-stat-total">${stats.total}</p>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <div class="pinsp-stat">
+                    <div class="pinsp-stat__icon pinsp-stat__icon--blue"><i class="fas fa-database"></i></div>
+                    <div class="pinsp-stat__body">
+                        <p class="pinsp-stat__label">${this._t('module.periodic.equipment.total', 'إجمالي المعدات')}</p>
+                        <p class="pinsp-stat__value" id="pe-stat-total">${stats.total}</p>
+                        <div class="pinsp-stat__bar"><span style="width:100%; background:#2563eb;"></span></div>
+                    </div>
+                    <span class="pinsp-stat__pct">${stats.total ? '100%' : '0%'}</span>
                 </div>
-                <div class="content-card text-center">
-                    <p class="text-sm text-gray-500">${this._t('module.periodic.equipment.valid', 'صالح')}</p>
-                    <p class="text-2xl font-bold text-green-600" id="pe-stat-valid">${stats.valid}</p>
+                <div class="pinsp-stat">
+                    <div class="pinsp-stat__icon pinsp-stat__icon--green"><i class="fas fa-check-circle"></i></div>
+                    <div class="pinsp-stat__body">
+                        <p class="pinsp-stat__label">${this._t('module.periodic.equipment.valid', 'صالح')}</p>
+                        <p class="pinsp-stat__value" id="pe-stat-valid">${stats.valid}</p>
+                        <div class="pinsp-stat__bar"><span style="width:${stats.total ? Math.round(stats.valid / stats.total * 100) : 0}%; background:#22c55e;"></span></div>
+                    </div>
+                    <span class="pinsp-stat__pct">${stats.total ? Math.round(stats.valid / stats.total * 100) : 0}%</span>
                 </div>
-                <div class="content-card text-center">
-                    <p class="text-sm text-gray-500">${this._t('module.periodic.equipment.needsAttention', 'بحاجة متابعة')}</p>
-                    <p class="text-2xl font-bold text-yellow-600" id="pe-stat-attention">${stats.needsAttention}</p>
+                <div class="pinsp-stat">
+                    <div class="pinsp-stat__icon pinsp-stat__icon--amber"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="pinsp-stat__body">
+                        <p class="pinsp-stat__label">${this._t('module.periodic.equipment.needsAttention', 'بحاجة متابعة')}</p>
+                        <p class="pinsp-stat__value" id="pe-stat-attention">${stats.needsAttention}</p>
+                        <div class="pinsp-stat__bar"><span style="width:${stats.total ? Math.round(stats.needsAttention / stats.total * 100) : 0}%; background:#f59e0b;"></span></div>
+                    </div>
+                    <span class="pinsp-stat__pct">${stats.total ? Math.round(stats.needsAttention / stats.total * 100) : 0}%</span>
+                </div>
+                <div class="pinsp-stat">
+                    <div class="pinsp-stat__icon pinsp-stat__icon--red"><i class="fas fa-ban"></i></div>
+                    <div class="pinsp-stat__body">
+                        <p class="pinsp-stat__label">${this._t('module.periodic.equipment.outOfService', 'خارج الخدمة')}</p>
+                        <p class="pinsp-stat__value" id="pe-stat-out">${stats.outOfService}</p>
+                        <div class="pinsp-stat__bar"><span style="width:${stats.total ? Math.round(stats.outOfService / stats.total * 100) : 0}%; background:#ef4444;"></span></div>
+                    </div>
+                    <span class="pinsp-stat__pct">${stats.total ? Math.round(stats.outOfService / stats.total * 100) : 0}%</span>
                 </div>
             </div>
             <div class="content-card mb-4">
@@ -168,7 +200,10 @@ const PeriodicEquipment = {
             </div>
             <div class="content-card">
                 <div class="card-header">
-                    <h2 class="card-title"><i class="fas fa-list ml-2"></i>${this._t('module.periodic.equipment.registry', 'سجل المعدات')}</h2>
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <h2 class="card-title"><i class="fas fa-list ml-2"></i>${this._t('module.periodic.equipment.registry', 'سجل المعدات')}</h2>
+                        <span class="badge badge-info">${assets.length} معدة</span>
+                    </div>
                 </div>
                 <div class="card-body" id="pe-assets-table-wrap">
                     ${this.renderAssetsTable(assets)}
@@ -182,7 +217,8 @@ const PeriodicEquipment = {
         return {
             total: assets.length,
             valid: assets.filter(a => a.status === 'صالح').length,
-            needsAttention: assets.filter(a => a.status === 'يحتاج صيانة' || a.status === 'خارج الخدمة').length
+            needsAttention: assets.filter(a => a.status === 'يحتاج صيانة' || a.status === 'خارج الخدمة').length,
+            outOfService: assets.filter(a => a.status === 'خارج الخدمة').length
         };
     },
 
@@ -224,8 +260,8 @@ const PeriodicEquipment = {
                     </thead>
                     <tbody>
                         ${assets.map(a => `
-                            <tr>
-                                <td><span class="font-mono font-semibold">${Utils.escapeHTML(a.assetNumber || a.id)}</span></td>
+                            <tr class="pinsp-row pinsp-equipment-row accent-${this.getStatusAccent(a.status)}">
+                                <td><span class="font-mono font-semibold text-blue-600">${Utils.escapeHTML(a.assetNumber || a.id)}</span></td>
                                 <td>${Utils.escapeHTML(a.typeName || '-')}</td>
                                 <td>${Utils.escapeHTML(this.getAssetSiteLabel(a))}</td>
                                 <td class="text-sm text-gray-600">${Utils.escapeHTML(this.getAssetSubLocationLabel(a))}</td>
