@@ -2761,34 +2761,41 @@ const Training = {
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="tx-reg-filters" id="contractor-registry-filters">
-                            <div class="tx-reg-filter">
-                                <label>المقاول / الشركة</label>
+                        <div class="tx-reg-filters training-registry-filters" id="contractor-registry-filters" aria-label="فلاتر سجل تدريبات المقاولين">
+                            <div class="tx-reg-filter training-registry-filter training-registry-search">
+                                <label for="contractor-training-search"><i class="fas fa-search"></i>بحث</label>
+                                <input type="search" id="contractor-training-search" class="form-input" placeholder="موضوع، مدرب، شركة، موقع...">
+                            </div>
+                            <div class="tx-reg-filter training-registry-filter">
+                                <label for="contractor-filter-contractor"><i class="fas fa-building"></i>المقاول / الشركة</label>
                                 <input id="contractor-filter-contractor" class="form-input" list="contractor-filter-contractor-list" placeholder="ابحث أو اختر مقاول...">
                                 <datalist id="contractor-filter-contractor-list"></datalist>
                             </div>
-                            <div class="tx-reg-filter">
-                                <label>الموضوع</label>
+                            <div class="tx-reg-filter training-registry-filter">
+                                <label for="contractor-filter-topic"><i class="fas fa-book-open"></i>الموضوع</label>
                                 <input id="contractor-filter-topic" class="form-input" list="contractor-filter-topic-list" placeholder="ابحث أو اختر موضوع...">
                                 <datalist id="contractor-filter-topic-list"></datalist>
                             </div>
-                            <div class="tx-reg-filter">
-                                <label>القائم بالتدريب</label>
+                            <div class="tx-reg-filter training-registry-filter">
+                                <label for="contractor-filter-trainer"><i class="fas fa-chalkboard-teacher"></i>القائم بالتدريب</label>
                                 <input id="contractor-filter-trainer" class="form-input" list="contractor-filter-trainer-list" placeholder="ابحث أو اختر مدرب...">
                                 <datalist id="contractor-filter-trainer-list"></datalist>
                             </div>
-                            <div class="tx-reg-filter">
-                                <label>الموقع</label>
+                            <div class="tx-reg-filter training-registry-filter">
+                                <label for="contractor-filter-location"><i class="fas fa-map-marker-alt"></i>الموقع</label>
                                 <input id="contractor-filter-location" class="form-input" list="contractor-filter-location-list" placeholder="ابحث أو اختر موقع...">
                                 <datalist id="contractor-filter-location-list"></datalist>
                             </div>
-                            <div class="tx-reg-filter tx-reg-filter-search">
-                                <label>بحث حر</label>
-                                <input type="text" id="contractor-training-search" class="form-input" placeholder="بحث في كل أعمدة السجل...">
+                            <div class="tx-reg-filter training-registry-filter">
+                                <label for="contractor-filter-date-from"><i class="fas fa-calendar-alt"></i>من تاريخ التدريب</label>
+                                <input type="date" id="contractor-filter-date-from" class="form-input">
                             </div>
-                            <div class="tx-reg-filter tx-reg-filter-actions">
-                                <label>&nbsp;</label>
-                                <button type="button" id="contractor-filter-reset" class="btn-secondary">مسح الفلاتر</button>
+                            <div class="tx-reg-filter training-registry-filter">
+                                <label for="contractor-filter-date-to"><i class="fas fa-calendar-check"></i>إلى تاريخ التدريب</label>
+                                <input type="date" id="contractor-filter-date-to" class="form-input">
+                            </div>
+                            <div class="tx-reg-filter tx-reg-filter-actions training-registry-filter training-registry-actions">
+                                <button type="button" id="contractor-filter-reset" class="training-filter-reset-btn"><i class="fas fa-rotate-left"></i>إعادة تعيين الفلاتر</button>
                             </div>
                         </div>
                         <p class="tx-reg-count" id="contractor-registry-count"></p>
@@ -2835,24 +2842,28 @@ const Training = {
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="tx-reg-filters" id="attendance-registry-filters">
-                        <div class="tx-reg-filter">
-                            <label>الموظف</label>
+                    <div class="tx-reg-filters training-registry-filters" id="attendance-registry-filters" aria-label="فلاتر سجل تدريب الموظفين">
+                        <div class="tx-reg-filter training-registry-filter training-registry-search">
+                            <label for="attendance-registry-search"><i class="fas fa-search"></i>بحث</label>
+                            <input type="search" id="attendance-registry-search" class="form-input" placeholder="اسم، كود، موضوع، محاضر...">
+                        </div>
+                        <div class="tx-reg-filter training-registry-filter">
+                            <label for="attendance-filter-employee"><i class="fas fa-user"></i>الموظف</label>
                             <input id="attendance-filter-employee" class="form-input" list="attendance-filter-employee-list" placeholder="ابحث أو اختر موظف...">
                             <datalist id="attendance-filter-employee-list"></datalist>
                         </div>
-                        <div class="tx-reg-filter">
-                            <label>الموضوع</label>
+                        <div class="tx-reg-filter training-registry-filter">
+                            <label for="attendance-filter-topic"><i class="fas fa-book-open"></i>الموضوع</label>
                             <input id="attendance-filter-topic" class="form-input" list="attendance-filter-topic-list" placeholder="ابحث أو اختر موضوع...">
                             <datalist id="attendance-filter-topic-list"></datalist>
                         </div>
-                        <div class="tx-reg-filter">
-                            <label>الإدارة</label>
+                        <div class="tx-reg-filter training-registry-filter">
+                            <label for="attendance-filter-department"><i class="fas fa-sitemap"></i>الإدارة</label>
                             <input id="attendance-filter-department" class="form-input" list="attendance-filter-department-list" placeholder="ابحث أو اختر إدارة...">
                             <datalist id="attendance-filter-department-list"></datalist>
                         </div>
-                        <div class="tx-reg-filter">
-                            <label>المصنع</label>
+                        <div class="tx-reg-filter training-registry-filter">
+                            <label for="attendance-filter-factory"><i class="fas fa-industry"></i>المصنع</label>
                             <input id="attendance-filter-factory" class="form-input" list="attendance-filter-factory-list" placeholder="ابحث أو اختر مصنع...">
                             <datalist id="attendance-filter-factory-list"></datalist>
                             <select id="attendance-registry-filter-factory" class="form-input" style="display:none;">
@@ -2860,18 +2871,21 @@ const Training = {
                                 ${siteOptions}
                             </select>
                         </div>
-                        <div class="tx-reg-filter">
-                            <label>المحاضر</label>
+                        <div class="tx-reg-filter training-registry-filter">
+                            <label for="attendance-filter-trainer"><i class="fas fa-chalkboard-teacher"></i>المحاضر</label>
                             <input id="attendance-filter-trainer" class="form-input" list="attendance-filter-trainer-list" placeholder="ابحث أو اختر محاضر...">
                             <datalist id="attendance-filter-trainer-list"></datalist>
                         </div>
-                        <div class="tx-reg-filter tx-reg-filter-search">
-                            <label>بحث حر</label>
-                            <input type="text" id="attendance-registry-search" class="form-input" placeholder="بحث في الاسم، الكود، الموضوع...">
+                        <div class="tx-reg-filter training-registry-filter">
+                            <label for="attendance-filter-date-from"><i class="fas fa-calendar-alt"></i>من تاريخ التدريب</label>
+                            <input type="date" id="attendance-filter-date-from" class="form-input">
                         </div>
-                        <div class="tx-reg-filter tx-reg-filter-actions">
-                            <label>&nbsp;</label>
-                            <button type="button" id="attendance-filter-reset" class="btn-secondary">مسح الفلاتر</button>
+                        <div class="tx-reg-filter training-registry-filter">
+                            <label for="attendance-filter-date-to"><i class="fas fa-calendar-check"></i>إلى تاريخ التدريب</label>
+                            <input type="date" id="attendance-filter-date-to" class="form-input">
+                        </div>
+                        <div class="tx-reg-filter tx-reg-filter-actions training-registry-filter training-registry-actions">
+                            <button type="button" id="attendance-filter-reset" class="training-filter-reset-btn"><i class="fas fa-rotate-left"></i>إعادة تعيين الفلاتر</button>
                         </div>
                     </div>
                     <p class="tx-reg-count" id="attendance-registry-count"></p>
@@ -3274,8 +3288,10 @@ const Training = {
         bindOnce(document.getElementById('contractor-filter-topic'), 'input', () => this._debounceRegistryFilter(() => this.filterContractorTraining()));
         bindOnce(document.getElementById('contractor-filter-trainer'), 'input', () => this._debounceRegistryFilter(() => this.filterContractorTraining()));
         bindOnce(document.getElementById('contractor-filter-location'), 'input', () => this._debounceRegistryFilter(() => this.filterContractorTraining()));
+        bindOnce(document.getElementById('contractor-filter-date-from'), 'change', () => this.filterContractorTraining());
+        bindOnce(document.getElementById('contractor-filter-date-to'), 'change', () => this.filterContractorTraining());
         bindOnce(document.getElementById('contractor-filter-reset'), 'click', () => {
-            ['contractor-training-search', 'contractor-filter-contractor', 'contractor-filter-topic', 'contractor-filter-trainer', 'contractor-filter-location'].forEach((id) => {
+            ['contractor-training-search', 'contractor-filter-contractor', 'contractor-filter-topic', 'contractor-filter-trainer', 'contractor-filter-location', 'contractor-filter-date-from', 'contractor-filter-date-to'].forEach((id) => {
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
@@ -4124,6 +4140,19 @@ const Training = {
         this._registryFilterTimer = setTimeout(fn, ms);
     },
 
+    _trainingDateKey(value) {
+        if (!value) return '';
+        const raw = String(value).trim();
+        const isoMatch = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (isoMatch) return isoMatch[1];
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    },
+
     _fillContractorRegistryFilters(records) {
         this._fillDatalist('contractor-filter-contractor-list', records.map((r) => r.contractorName || r.contractor || ''));
         this._fillDatalist('contractor-filter-topic-list', records.map((r) => r.topic || r.subject || ''));
@@ -4172,7 +4201,8 @@ const Training = {
                     const contractorName = hasStoredName
                         ? storedContractorName
                         : (contractorMap.get(normalizedContractorId) || storedContractorName || '—');
-                    const sessionDate = entry.date ? Utils.formatDate(entry.date) : '—';
+                    const sessionDateKey = this._trainingDateKey(entry.date || entry.trainingDate || entry.createdAt);
+                    const sessionDate = sessionDateKey ? Utils.formatDate(sessionDateKey) : '—';
                     const trainer = Utils.escapeHTML(entry.trainer || entry.conductedBy || '—');
                     const topic = Utils.escapeHTML(entry.topic || entry.subject || '—');
                     const location = Utils.escapeHTML(entry.location || '—');
@@ -4198,7 +4228,7 @@ const Training = {
                     ].join(' ').toLowerCase();
 
                     return `
-                        <tr data-training-id="${Utils.escapeHTML(entry.id || '')}" data-search="${Utils.escapeHTML(searchTokens)}" data-contractor="${Utils.escapeHTML(String(contractorName).toLowerCase())}" data-topic="${Utils.escapeHTML(String(entry.topic || entry.subject || '').toLowerCase())}" data-trainer="${Utils.escapeHTML(String(entry.trainer || entry.conductedBy || '').toLowerCase())}" data-location="${Utils.escapeHTML(String(entry.location || '').toLowerCase())}">
+                        <tr data-training-id="${Utils.escapeHTML(entry.id || '')}" data-date="${Utils.escapeHTML(sessionDateKey)}" data-search="${Utils.escapeHTML(searchTokens)}" data-contractor="${Utils.escapeHTML(String(contractorName).toLowerCase())}" data-topic="${Utils.escapeHTML(String(entry.topic || entry.subject || '').toLowerCase())}" data-trainer="${Utils.escapeHTML(String(entry.trainer || entry.conductedBy || '').toLowerCase())}" data-location="${Utils.escapeHTML(String(entry.location || '').toLowerCase())}">
                             <td>${sessionDate}</td>
                             <td>${topic}</td>
                             <td>${trainer}</td>
@@ -4294,6 +4324,8 @@ const Training = {
         const topic = (document.getElementById('contractor-filter-topic')?.value || '').trim().toLowerCase();
         const trainer = (document.getElementById('contractor-filter-trainer')?.value || '').trim().toLowerCase();
         const location = (document.getElementById('contractor-filter-location')?.value || '').trim().toLowerCase();
+        const dateFrom = document.getElementById('contractor-filter-date-from')?.value || '';
+        const dateTo = document.getElementById('contractor-filter-date-to')?.value || '';
         const rows = document.querySelectorAll('#contractor-training-container tbody tr[data-training-id]');
         let visible = 0;
         rows.forEach((row) => {
@@ -4303,7 +4335,10 @@ const Training = {
             const okTopic = !topic || (row.getAttribute('data-topic') || '').includes(topic);
             const okTrainer = !trainer || (row.getAttribute('data-trainer') || '').includes(trainer);
             const okLocation = !location || (row.getAttribute('data-location') || '').includes(location);
-            const show = okSearch && okContractor && okTopic && okTrainer && okLocation;
+            const rowDate = row.getAttribute('data-date') || '';
+            const okDateFrom = !dateFrom || (!!rowDate && rowDate >= dateFrom);
+            const okDateTo = !dateTo || (!!rowDate && rowDate <= dateTo);
+            const show = okSearch && okContractor && okTopic && okTrainer && okLocation && okDateFrom && okDateTo;
             row.style.display = show ? '' : 'none';
             if (show) visible += 1;
         });
@@ -12358,7 +12393,9 @@ const Training = {
         const filterDepartment = (document.getElementById('attendance-filter-department')?.value || '').trim().toLowerCase();
         const filterFactory = (document.getElementById('attendance-filter-factory')?.value || document.getElementById('attendance-registry-filter-factory')?.value || '').trim().toLowerCase();
         const filterTrainer = (document.getElementById('attendance-filter-trainer')?.value || '').trim().toLowerCase();
-        const filterKey = [searchTerm, filterEmployee, filterTopic, filterDepartment, filterFactory, filterTrainer].join('|');
+        const filterDateFrom = document.getElementById('attendance-filter-date-from')?.value || '';
+        const filterDateTo = document.getElementById('attendance-filter-date-to')?.value || '';
+        const filterKey = [searchTerm, filterEmployee, filterTopic, filterDepartment, filterFactory, filterTrainer, filterDateFrom, filterDateTo].join('|');
         if (this._attendanceRegistryFilterKey !== filterKey) {
             this._attendanceRegistryFilterKey = filterKey;
             this._attendanceRegistryShown = 80;
@@ -12380,7 +12417,10 @@ const Training = {
             const matchesDepartment = !filterDepartment || department.includes(filterDepartment);
             const matchesFactory = !filterFactory || factory.includes(filterFactory) || String(record.factory || '').toLowerCase() === filterFactory;
             const matchesTrainer = !filterTrainer || trainer.includes(filterTrainer);
-            return matchesSearch && matchesEmployee && matchesTopic && matchesDepartment && matchesFactory && matchesTrainer;
+            const recordDate = this._trainingDateKey(record.date || record.trainingDate || record.createdAt);
+            const matchesDateFrom = !filterDateFrom || (!!recordDate && recordDate >= filterDateFrom);
+            const matchesDateTo = !filterDateTo || (!!recordDate && recordDate <= filterDateTo);
+            return matchesSearch && matchesEmployee && matchesTopic && matchesDepartment && matchesFactory && matchesTrainer && matchesDateFrom && matchesDateTo;
         });
         const shown = Math.min(this._attendanceRegistryShown, filtered.length);
         const visibleRows = filtered.slice(0, shown);
@@ -12463,6 +12503,10 @@ const Training = {
             const el = document.getElementById(id);
             if (el) el.oninput = () => this._debounceRegistryFilter(() => this.loadAttendanceRegistry());
         });
+        ['attendance-filter-date-from', 'attendance-filter-date-to'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.onchange = () => this.loadAttendanceRegistry();
+        });
         
         // فلتر المصنع
         const filterFactory = document.getElementById('attendance-registry-filter-factory');
@@ -12472,7 +12516,7 @@ const Training = {
         const resetFilters = document.getElementById('attendance-filter-reset');
         if (resetFilters) {
             resetFilters.onclick = () => {
-                ['attendance-registry-search', 'attendance-filter-employee', 'attendance-filter-topic', 'attendance-filter-department', 'attendance-filter-factory', 'attendance-filter-trainer', 'attendance-registry-filter-factory'].forEach((id) => {
+                ['attendance-registry-search', 'attendance-filter-employee', 'attendance-filter-topic', 'attendance-filter-department', 'attendance-filter-factory', 'attendance-filter-trainer', 'attendance-filter-date-from', 'attendance-filter-date-to', 'attendance-registry-filter-factory'].forEach((id) => {
                     const el = document.getElementById(id);
                     if (el) el.value = '';
                 });

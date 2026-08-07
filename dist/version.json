@@ -1,13 +1,15 @@
 {
-  "version": "1.0.887",
+  "version": "1.0.890",
   "highlights": {
     "ar": [
-      "تصدير تقرير مخالفات المقاولين بصيغة Excel بالإضافة إلى PDF.",
-      "اختيار الصيغة من نفس حوار التصدير مع فلاتر المقاول والفترة."
+      "تحسين فلاتر سجل تدريب الموظفين والمقاولين بتصميم موحد وسريع.",
+      "إضافة البحث حسب الموظف أو الشركة والموضوع والمدرب والموقع.",
+      "إضافة نطاق تاريخ وزر لإعادة تعيين جميع فلاتر التدريب."
     ],
     "en": [
-      "Export contractor violations report to Excel as well as PDF.",
-      "Choose the format in the same export dialog with contractor and period filters."
+      "Improved employee and contractor training registry filters with a consistent responsive design.",
+      "Added filtering by employee or company, topic, trainer, and location.",
+      "Added date-range filtering and one-click reset for all training filters."
     ]
   }
 }

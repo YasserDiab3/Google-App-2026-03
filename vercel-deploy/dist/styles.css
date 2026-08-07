@@ -17922,13 +17922,87 @@ body[data-theme="dark"] .profile-info-list>div,
     color: #64748b;
     font-weight: 600;
 }
+
+/* فلاتر سجلات التدريب — نفس لغة فلاتر مهمات الوقاية */
+.training-registry-filters {
+    grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+    gap: 12px;
+    align-items: end;
+    padding: 16px 20px;
+    margin-bottom: 14px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-color: #e2e8f0;
+}
+.training-registry-filter {
+    min-width: 0;
+}
+.training-registry-filter label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 20px;
+    margin-bottom: 6px;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+}
+.training-registry-filter label i {
+    color: #0d9488;
+    font-size: 11px;
+}
+.training-registry-filter .form-input {
+    width: 100%;
+    min-height: 42px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #fff;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.training-registry-filter .form-input:focus {
+    border-color: #0d9488;
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+    outline: none;
+}
+.training-filter-reset-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    min-height: 42px;
+    padding: 9px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #e9eff6;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+.training-filter-reset-btn:hover {
+    background: #dce6f1;
+    border-color: #94a3b8;
+    transform: translateY(-1px);
+}
+.training-filter-reset-btn:focus-visible {
+    outline: 3px solid rgba(13, 148, 136, 0.22);
+    outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+    .training-registry-filter .form-input,
+    .training-filter-reset-btn { transition: none; }
+    .training-filter-reset-btn:hover { transform: none; }
+}
 @media (max-width: 900px) {
     .tx-reg-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .tx-reg-filter-search { grid-column: span 2; }
+    .training-registry-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 640px) {
     .tx-reg-filters { grid-template-columns: 1fr; }
     .tx-reg-filter-search { grid-column: auto; }
+    .training-registry-filters { grid-template-columns: 1fr; padding: 14px; }
 }
 
 .tx-kpi-toolbar {
