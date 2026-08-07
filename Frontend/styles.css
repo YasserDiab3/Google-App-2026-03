@@ -6865,7 +6865,7 @@ body.app-active {
     justify-content: space-between;
     gap: 1rem;
     padding: 1.35rem 1.5rem;
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #6366f1 100%);
+    background: linear-gradient(135deg, #1e40af 0%, #2563eb 55%, #3b82f6 100%);
     color: #fff;
     direction: rtl;
     text-align: right;
@@ -6942,8 +6942,8 @@ body.app-active {
     width: 40px;
     height: 40px;
     border-radius: 12px;
-    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-    color: #4338ca;
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #1d4ed8;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -6952,8 +6952,8 @@ body.app-active {
 }
 
 .bhm-section-icon--violet {
-    background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
-    color: #6d28d9;
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #1d4ed8;
 }
 
 .bhm-section-icon--teal {
@@ -7043,8 +7043,8 @@ body.app-active {
 
 .bhm-input:focus,
 .bhm-textarea:focus {
-    border-color: #6366f1 !important;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
     outline: none;
 }
 
@@ -7055,8 +7055,8 @@ body.app-active {
 
 .bhm-negative-panel {
     border-radius: 16px;
-    border: 1px solid rgba(124, 58, 237, 0.35);
-    background: linear-gradient(135deg, rgba(245, 243, 255, 0.95) 0%, rgba(250, 245, 255, 0.98) 100%);
+    border: 1px solid rgba(220, 38, 38, 0.28);
+    background: linear-gradient(135deg, rgba(254, 242, 242, 0.95) 0%, rgba(254, 245, 245, 0.98) 100%);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
     overflow: hidden;
 }
@@ -7066,7 +7066,7 @@ body.app-active {
     align-items: flex-start;
     gap: 0.75rem;
     padding: 0.95rem 1.1rem;
-    border-bottom: 1px dashed rgba(124, 58, 237, 0.25);
+    border-bottom: 1px dashed rgba(220, 38, 38, 0.2);
     direction: rtl;
     text-align: right;
 }
@@ -7075,7 +7075,7 @@ body.app-active {
     width: 42px;
     height: 42px;
     border-radius: 12px;
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
     color: #fff;
     display: flex;
     align-items: center;
@@ -7087,13 +7087,12 @@ body.app-active {
     margin: 0;
     font-size: 1rem;
     font-weight: 800;
-    color: #4c1d95;
+color: #991b1b;
 }
 
 .bhm-negative-sub {
     margin: 0.25rem 0 0;
-    font-size: 0.78rem;
-    color: #6b21a8;
+    color: #b91c1c;
     opacity: 0.9;
 }
 
@@ -7182,7 +7181,7 @@ body.app-active {
     border-radius: 12px !important;
     padding: 0.55rem 1.25rem !important;
     font-weight: 700 !important;
-    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
 }
 
 .bhm-btn-cancel {
@@ -7208,7 +7207,7 @@ body.app-active {
     border-radius: 16px;
     overflow: hidden;
     box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
-    border: 1px solid rgba(139, 92, 246, 0.2);
+    border: 1px solid rgba(37, 99, 235, 0.22);
 }
 
 .bhm-detail-hero {
@@ -7217,7 +7216,7 @@ body.app-active {
     justify-content: space-between;
     gap: 1rem;
     padding: 1.25rem 1.5rem;
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.14), rgba(59, 130, 246, 0.08));
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(59, 130, 246, 0.08));
     border-bottom: 1px solid var(--border-color, #e5e7eb);
 }
 
@@ -7233,7 +7232,7 @@ body.app-active {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #6d28d9;
+    color: #1d4ed8;
 }
 
 .bhm-detail-title {
@@ -7271,7 +7270,7 @@ body.app-active {
 
 .bhm-detail-close:hover {
     background: #fff;
-    color: #7c3aed;
+    color: #2563eb;
 }
 
 .bhm-detail-body {
