@@ -491,6 +491,41 @@ function saveDailySafetyCheckListFromForm(recordData, options) {
 }
 
 /**
+ * توليد رقم تقرير يومي بصيغة DD-SH-NO (مطابقة للواجهة الأمامية):
+ * DD = يوم الشهر (رقمان)، SH = كود الوردية (1/2/3)، NO = ترتيب السجل لنفس اليوم والوردية.
+ *
+ * @param {string} dateStr - التاريخ بصيغة YYYY-MM-DD
+ * @param {string} shift - الوردية (الأولى/الثانية/الثالثة)
+ * @param {Array} existingRecords - السجلات الموجودة لحساب أعلى ترتيب
+ * @returns {string} رقم التقرير
+ */
+function generateDailySafetyCheckListReportNumber(dateStr, shift, existingRecords) {
+  var day = '';
+  var ds = String(dateStr || '').slice(0, 10);
+  if (ds.length >= 10) {
+    day = String(parseInt(ds.slice(8, 10), 10) || 0).padStart(2, '0');
+  }
+  var shiftMap = { 'الأولى': '1', 'الثانية': '2', 'الثالثة': '3' };
+  var sh = shiftMap[shift] || '0';
+  var maxNo = 0;
+  var list = Array.isArray(existingRecords) ? existingRecords : [];
+  for (var i = 0; i < list.length; i++) {
+    var r = list[i];
+    if (!r) continue;
+    var rDate = String(r.date || '').slice(0, 10);
+    var rDay = rDate.length >= 10 ? String(parseInt(rDate.slice(8, 10), 10) || 0).padStart(2, '0') : '';
+    var rSh = shiftMap[r.shift] || '0';
+    if (rDay !== day || rSh !== sh) continue;
+    var rn = String(r.reportNumber || '').trim();
+    var m = rn.match(/^\d{2}-\d-(\d+)$/);
+    var no = m ? parseInt(m[1], 10) : 0;
+    if (isNaN(no)) no = 0;
+    if (no > maxNo) maxNo = no;
+  }
+  return day + '-' + sh + '-' + (maxNo + 1);
+}
+
+/**
  * حفظ السجل في ورقة DailySafetyCheckList في جدول التطبيق
  */
 function saveDailySafetyCheckListToAppSheet(recordData) {
@@ -513,6 +548,20 @@ function saveDailySafetyCheckListToAppSheet(recordData) {
     }
     if (!recordData.updatedAt) {
       recordData.updatedAt = new Date();
+    }
+
+    // رقم تقرير تلقائي DD-SH-NO إن لم يُحدّد (منتظر للفورم/الإدخال اليدوي)
+    if (!recordData.reportNumber || String(recordData.reportNumber).trim() === '') {
+      try {
+        var existingList = (typeof readFromSheet === 'function')
+          ? readFromSheet(sheetName, APP_SPREADSHEET_ID)
+          : [];
+        recordData.reportNumber = generateDailySafetyCheckListReportNumber(
+          recordData.date, recordData.shift, existingList);
+      } catch (e) {
+        Logger.log('generate reportNumber fallback: ' + e.toString());
+        recordData.reportNumber = '';
+      }
     }
 
     return typeof appendToSheet === 'function'
@@ -847,6 +896,8 @@ function rebuildDailySafetyCheckListFromForm() {
 
     // توليد معرّفات تسلسلية فريدة محلياً (DSC_0001, DSC_0002, ...) — بلا قراءة الورقة في كل مرة
     var nextNum = 1;
+    var shiftMap = { 'الأولى': '1', 'الثانية': '2', 'الثالثة': '3' };
+    var shiftCounters = {}; // key = DD-SH → ترتيب السجل لنفس اليوم والوردية
     for (var k = 0; k < allRecords.length; k++) {
       var padded = String(nextNum).padStart(4, '0');
       allRecords[k].id = 'DSC_' + padded;
@@ -855,6 +906,16 @@ function rebuildDailySafetyCheckListFromForm() {
       }
       if (!allRecords[k].createdAt) allRecords[k].createdAt = new Date();
       if (!allRecords[k].updatedAt) allRecords[k].updatedAt = new Date();
+
+      // رقم تقرير DD-SH-NO (مطابق لصيغة الواجهة)
+      var dateStr = String(allRecords[k].date || '').slice(0, 10);
+      var day = dateStr.length >= 10 ? String(parseInt(dateStr.slice(8, 10), 10) || 0).padStart(2, '0') : '00';
+      var sh = shiftMap[allRecords[k].shift] || '0';
+      var ck = day + '-' + sh;
+      if (!shiftCounters[ck]) shiftCounters[ck] = 0;
+      shiftCounters[ck]++;
+      allRecords[k].reportNumber = ck + '-' + shiftCounters[ck];
+
       nextNum++;
     }
 
