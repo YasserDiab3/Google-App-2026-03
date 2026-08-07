@@ -774,6 +774,81 @@ const PeriodicInspections = {
                     #periodic-inspections-section .periodic-id-hero__meta { width: 100%; }
                     #periodic-inspections-section .periodic-id-hero__meta span { flex: 1; justify-content: center; }
                 }
+                /* ✅ الهوية — سجل الفحوصات الدورية (كروت احترافية) */
+                #periodic-inspections-section .pinsp-stat {
+                    position: relative; overflow: hidden; border-radius: 16px; border: 1px solid var(--p-line);
+                    background: linear-gradient(160deg, #ffffff, #f4f8ff); box-shadow: 0 8px 22px rgba(15,47,90,.07);
+                    display: flex; align-items: center; gap: 12px; padding: 16px; transition: transform .18s ease, box-shadow .18s ease;
+                }
+                #periodic-inspections-section .pinsp-stat:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(15,47,90,.12); }
+                #periodic-inspections-section .pinsp-stat__icon { flex: 0 0 auto; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 13px; color: #fff; font-size: 1.15rem; }
+                #periodic-inspections-section .pinsp-stat__icon--blue { background: linear-gradient(135deg,#1e40af,#3b82f6); }
+                #periodic-inspections-section .pinsp-stat__icon--green { background: linear-gradient(135deg,#15803d,#22c55e); }
+                #periodic-inspections-section .pinsp-stat__icon--red { background: linear-gradient(135deg,#b91c1c,#ef4444); }
+                #periodic-inspections-section .pinsp-stat__icon--amber { background: linear-gradient(135deg,#b45309,#f59e0b); }
+                #periodic-inspections-section .pinsp-stat__body { flex: 1; min-width: 0; }
+                #periodic-inspections-section .pinsp-stat__label { font-size: .74rem; font-weight: 700; color: #64748b; margin: 0 0 2px; }
+                #periodic-inspections-section .pinsp-stat__value { font-size: 1.7rem; font-weight: 900; line-height: 1.15; margin: 0; }
+                #periodic-inspections-section .pinsp-stat__bar { height: 5px; margin-top: 7px; border-radius: 99px; background: #e5edf7; overflow: hidden; }
+                #periodic-inspections-section .pinsp-stat__bar span { display: block; height: 100%; border-radius: 99px; }
+                #periodic-inspections-section .pinsp-stat__pct { font-size: .7rem; font-weight: 700; color: #94a3b8; }
+                #periodic-inspections-section .pinsp-month { margin-bottom: 26px; }
+                #periodic-inspections-section .pinsp-month__head {
+                    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+                    padding: 10px 14px; margin-bottom: 12px; border-radius: 14px;
+                    background: linear-gradient(90deg, #eef4ff, #f8fbff); border: 1px solid #dbe7fb;
+                }
+                #periodic-inspections-section .pinsp-month__icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 11px; background: linear-gradient(135deg,#1e40af,#2563eb); color: #fff; font-size: 1rem; box-shadow: 0 6px 14px rgba(30,64,175,.28); }
+                #periodic-inspections-section .pinsp-month__title { margin: 0; font-size: 1.02rem; font-weight: 800; color: #172033; }
+                #periodic-inspections-section .pinsp-month__count { display: inline-block; margin-top: 3px; font-size: .7rem; font-weight: 700; color: #475569; }
+                #periodic-inspections-section .pinsp-month__count i { margin-inline-end: 4px; color: #2563eb; }
+                #periodic-inspections-section .pinsp-month__chips { display: flex; gap: 6px; margin-inline-start: auto; flex-wrap: wrap; }
+                #periodic-inspections-section .pinsp-month__chips span { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 99px; font-size: .68rem; font-weight: 800; }
+                #periodic-inspections-section .pinsp-month__chips .m-green { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+                #periodic-inspections-section .pinsp-month__chips .p-red { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+                #periodic-inspections-section .pinsp-month__chips .p-amber { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+                #periodic-inspections-section .pinsp-month__chips .p-blue { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+                #periodic-inspections-section .pinsp-record { list-style: none; margin: 0 0 12px; padding: 0; }
+                #periodic-inspections-section article.pinsp-record__card {
+                    position: relative; overflow: hidden; border-radius: 14px; border: 1px solid #e2eaf6; background: #fff;
+                    box-shadow: 0 4px 14px rgba(15,47,90,.05); transition: transform .18s ease, box-shadow .18s ease;
+                }
+                #periodic-inspections-section article.pinsp-record__card:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(15,47,90,.12); }
+                #periodic-inspections-section article.pinsp-record__card::before { content: ""; position: absolute; inset-inline-start: 0; top: 0; bottom: 0; width: 4px; }
+                #periodic-inspections-section article.pinsp-record__card.accent-green::before { background: #16a34a; }
+                #periodic-inspections-section article.pinsp-record__card.accent-red::before { background: #dc2626; }
+                #periodic-inspections-section article.pinsp-record__card.accent-amber::before { background: #d97706; }
+                #periodic-inspections-section article.pinsp-record__card.accent-blue::before { background: #2563eb; }
+                #periodic-inspections-section article.pinsp-record__card.accent-gray::before { background: #94a3b8; }
+                #periodic-inspections-section .pinsp-record__top { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px 8px; }
+                #periodic-inspections-section .pinsp-record__icon { flex: 0 0 auto; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 11px; font-size: .95rem; }
+                #periodic-inspections-section .pinsp-record__title { flex: 1; min-width: 0; }
+                #periodic-inspections-section .pinsp-record__title h5 { margin: 0; font-size: .98rem; font-weight: 800; color: #172033; }
+                #periodic-inspections-section .pinsp-record__sub { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 5px; font-size: .72rem; color: #64748b; }
+                #periodic-inspections-section .pinsp-record__sub span { display: inline-flex; align-items: center; gap: 5px; }
+                #periodic-inspections-section .pinsp-record__num { font-family: "Courier New", monospace; font-weight: 700; color: #2563eb; }
+                #periodic-inspections-section .pinsp-record__meta {
+                    display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px 14px;
+                    padding: 10px 16px 12px 20px; border-top: 1px dashed #e6eef8; background: #fafcff;
+                }
+                #periodic-inspections-section .pinsp-record__meta span { display: flex; align-items: center; gap: 7px; font-size: .78rem; color: #334155; font-weight: 600; }
+                #periodic-inspections-section .pinsp-record__meta span i { width: 15px; text-align: center; color: #64748b; }
+                #periodic-inspections-section .pinsp-record__notes { margin: 0 16px 12px; padding: 8px 12px; border-radius: 10px; background: #fffbeb; border: 1px solid #fde68a; font-size: .76rem; color: #92400e; }
+                #periodic-inspections-section .pinsp-record__actions { position: relative; z-index: 1; padding: 0 16px 12px; }
+                @media (max-width: 640px) {
+                    #periodic-inspections-section .pinsp-record__top { flex-wrap: wrap; }
+                    #periodic-inspections-section .pinsp-record__actions { width: 100%; }
+                    #periodic-inspections-section .pinsp-month__chips { margin-inline-start: 0; }
+                }
+                [data-theme="dark"] #periodic-inspections-section .pinsp-stat { background: linear-gradient(160deg,#15283f,#1a2f4a); border-color: #243b55; }
+                [data-theme="dark"] #periodic-inspections-section .pinsp-stat__label { color: #93a7bd; }
+                [data-theme="dark"] #periodic-inspections-section .pinsp-month__head { background: #16293f; border-color: #243b55; }
+                [data-theme="dark"] #periodic-inspections-section .pinsp-month__title { color: #e6eef5; }
+                [data-theme="dark"] #periodic-inspections-section article.pinsp-record__card { background: #15283f; border-color: #243b55; }
+                [data-theme="dark"] #periodic-inspections-section .pinsp-record__title h5 { color: #e8f0f8; }
+                [data-theme="dark"] #periodic-inspections-section .pinsp-record__meta { background: #122338; border-top-color: #1f3a55; }
+                [data-theme="dark"] #periodic-inspections-section .pinsp-record__notes { background: #3a2f12; border-color: #6b5c1e; color: #fcd34d; }
+
                 [data-theme="dark"] #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .content-card { background: #15283f !important; }
                 [data-theme="dark"] #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .card-header { background: #16293f; border-bottom-color: #243b55; }
                 [data-theme="dark"] #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .data-table tbody tr:hover td { background: #1c3350 !important; }
@@ -1441,6 +1516,20 @@ const PeriodicInspections = {
             'قيد المراجعة': 'fas fa-clock'
         };
         return iconMap[result] || 'fas fa-question-circle';
+    },
+
+    _getResultAccent(result) {
+        const key = String(result || '').trim();
+        if (key === 'مطابق') return 'green';
+        if (key === 'غير مطابق') return 'red';
+        if (key === 'مطابق جزئياً') return 'amber';
+        if (key === 'قيد المراجعة') return 'blue';
+        return 'gray';
+    },
+
+    _getResultHex(accent) {
+        const map = { green: '#16a34a', red: '#dc2626', amber: '#d97706', blue: '#2563eb', gray: '#64748b' };
+        return map[accent] || map.gray;
     },
 
     getComplianceRateColor(rate) {
@@ -6828,74 +6917,102 @@ const PeriodicInspections = {
 
             // حساب الإحصائيات
             const stats = this.calculateStatistics(inspections);
+            const total = stats.total || 0;
+            const pct = n => (total > 0 ? Math.round((n / total) * 100) : 0);
+
+            // ✅ ملخص مصغّر لكل شهر (مطابق / جزئي / غير مطابق / قيد المراجعة)
+            const monthSummary = records => {
+                let ok = 0, bad = 0, part = 0, pend = 0;
+                records.forEach(r => {
+                    const res = r.result || '';
+                    if (res === 'مطابق') ok++;
+                    else if (res === 'غير مطابق') bad++;
+                    else if (res === 'مطابق جزئياً') part++;
+                    else if (res === 'قيد المراجعة') pend++;
+                });
+                return { ok, bad, part, pend };
+            };
+
+            // ✅ كرت إحصائي بهوية المديول
+            const statCard = (icon, iconCls, label, value, pctVal, bar) => `
+                <div class="pinsp-stat">
+                    <div class="pinsp-stat__icon pinsp-stat__icon--${iconCls}"><i class="${icon}"></i></div>
+                    <div class="pinsp-stat__body">
+                        <p class="pinsp-stat__label">${label}</p>
+                        <p class="pinsp-stat__value">${value}</p>
+                        <div class="pinsp-stat__bar"><span style="width:${Math.min(Math.max(pctVal, 0), 100)}%; background:${bar};"></span></div>
+                    </div>
+                    <span class="pinsp-stat__pct">${pctVal}%</span>
+                </div>`;
+
+            // ✅ كرت سجل فحص كامل
+            const recordCard = inspection => {
+                const template = inspection.templateId ? this.INSPECTION_TEMPLATES[inspection.templateId] : null;
+                const categoryDisplay = template ? template.name : (inspection.category || 'فحص دوري');
+                const icon = template ? template.icon : 'fas fa-clipboard-list';
+                const resultBadgeClass = this.getResultBadgeClass(inspection.result);
+                const resultIcon = this.getResultIcon(inspection.result);
+                const accent = this._getResultAccent(inspection.result);
+                const hex = this._getResultHex(accent);
+                const date = new Date(inspection.inspectionDate || inspection.createdAt);
+                const number = inspection.inspectionNumber || inspection.id || '-';
+                const notes = (inspection.notes || '').trim();
+                return `
+                    <article class="pinsp-record__card accent-${accent}">
+                        <div class="pinsp-record__top">
+                            <span class="pinsp-record__icon" style="background:${hex}1A;color:${hex};"><i class="${icon}"></i></span>
+                            <div class="pinsp-record__title">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h5>${Utils.escapeHTML(categoryDisplay)}</h5>
+                                    <span class="badge ${resultBadgeClass} inline-flex items-center gap-1">
+                                        <i class="${resultIcon}"></i>${Utils.escapeHTML(inspection.result || 'قيد المراجعة')}
+                                    </span>
+                                </div>
+                                <div class="pinsp-record__sub">
+                                    <span class="pinsp-record__num" dir="ltr"><i class="fas fa-hashtag"></i>${Utils.escapeHTML(String(number))}</span>
+                                    <span><i class="far fa-calendar-check"></i>${Utils.formatDate(date)}</span>
+                                </div>
+                            </div>
+                            <div class="pinsp-record__actions">
+                                <div class="flex items-center gap-2">
+                                    <button onclick="PeriodicInspections.viewInspection('${inspection.id}')" class="btn-icon btn-icon-info" title="عرض التفاصيل"><i class="fas fa-eye"></i></button>
+                                    <button onclick="PeriodicInspections.exportInspectionById('${inspection.id}')" class="btn-icon btn-icon-success" title="تحميل PDF"><i class="fas fa-file-pdf"></i></button>
+                                    <button onclick="PeriodicInspections.editInspection('${inspection.id}')" class="btn-icon btn-icon-primary" title="تعديل"><i class="fas fa-edit"></i></button>
+                                    <button onclick="PeriodicInspections.deleteInspection('${inspection.id}')" class="btn-icon btn-icon-danger" title="حذف"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="pinsp-record__meta">
+                            <span><i class="fas fa-map-marker-alt"></i>${Utils.escapeHTML(inspection.location || inspection.equipment || '-')}</span>
+                            <span><i class="fas fa-user-tie"></i>${Utils.escapeHTML(inspection.inspector || '-')}</span>
+                            <span><i class="fas fa-clock"></i><span dir="ltr">${date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span></span>
+                        </div>
+                        ${notes ? `
+                        <div class="pinsp-record__notes">
+                            <i class="fas fa-sticky-note ml-2"></i><strong>ملاحظات:</strong> ${Utils.escapeHTML(notes.length > 160 ? notes.substring(0, 160) + '…' : notes)}
+                        </div>` : ''}
+                    </article>`;
+            };
 
             return `
-                <!-- إحصائيات السجل -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <div class="content-card bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200">
-                        <div class="card-body">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-blue-700 mb-1">إجمالي السجلات</p>
-                                    <p class="text-3xl font-bold text-blue-800">${stats.total}</p>
-                                </div>
-                                <div class="bg-blue-500/90 rounded-xl px-3 py-2 shadow-sm border border-blue-400/40">
-                                    <i class="fas fa-file-alt text-white text-lg"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="content-card bg-gradient-to-br from-green-50 to-green-100 border border-green-200">
-                        <div class="card-body">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-green-700 mb-1">مطابق</p>
-                                    <p class="text-3xl font-bold text-green-800">${stats.compliant}</p>
-                                    <p class="text-xs text-green-600 mt-1">${stats.total > 0 ? Math.round((stats.compliant / stats.total) * 100) : 0}%</p>
-                                </div>
-                                <div class="bg-green-500/90 rounded-xl px-3 py-2 shadow-sm border border-green-400/40">
-                                    <i class="fas fa-check-circle text-white text-lg"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="content-card bg-gradient-to-br from-red-50 to-red-100 border border-red-200">
-                        <div class="card-body">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-red-700 mb-1">غير مطابق</p>
-                                    <p class="text-3xl font-bold text-red-800">${stats.nonCompliant}</p>
-                                    <p class="text-xs text-red-600 mt-1">${stats.total > 0 ? Math.round((stats.nonCompliant / stats.total) * 100) : 0}%</p>
-                                </div>
-                                <div class="bg-red-500/90 rounded-xl px-3 py-2 shadow-sm border border-red-400/40">
-                                    <i class="fas fa-times-circle text-white text-lg"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="content-card bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200">
-                        <div class="card-body">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-orange-700 mb-1">مطابق جزئياً</p>
-                                    <p class="text-3xl font-bold text-orange-800">${stats.partialCompliant}</p>
-                                    <p class="text-xs text-orange-600 mt-1">${stats.total > 0 ? Math.round((stats.partialCompliant / stats.total) * 100) : 0}%</p>
-                                </div>
-                                <div class="bg-orange-500/90 rounded-xl px-3 py-2 shadow-sm border border-orange-400/40">
-                                    <i class="fas fa-exclamation-circle text-white text-lg"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <!-- ✅ إحصائيات السجل — كروت هوية -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    ${statCard('fas fa-file-alt', 'blue', 'إجمالي السجلات', stats.total, 100, '#2563eb')}
+                    ${statCard('fas fa-check-circle', 'green', 'مطابق', stats.compliant, pct(stats.compliant), '#22c55e')}
+                    ${statCard('fas fa-times-circle', 'red', 'غير مطابق', stats.nonCompliant, pct(stats.nonCompliant), '#ef4444')}
+                    ${statCard('fas fa-exclamation-circle', 'amber', 'مطابق جزئياً', stats.partialCompliant, pct(stats.partialCompliant), '#f59e0b')}
                 </div>
 
-                <!-- سجل الفحوصات -->
+                <!-- ✅ سجل الفحوصات الدورية — كروت احترافية -->
                 <div class="content-card">
                     <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-history ml-2"></i>
-                            سجل الفحوصات الدورية
-                        </h3>
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <h3 class="card-title">
+                                <i class="fas fa-history ml-2"></i>
+                                سجل الفحوصات الدورية
+                            </h3>
+                            <span class="badge badge-info">${sortedInspections.length} سجل</span>
+                        </div>
                     </div>
                     <div class="card-body">
                         ${Object.keys(groupedByMonth).length === 0 ? `
@@ -6903,72 +7020,28 @@ const PeriodicInspections = {
                                 <i class="fas fa-clipboard-check text-4xl text-gray-300 mb-4"></i>
                                 <p class="text-gray-500">لا توجد سجلات فحوصات دورية</p>
                             </div>
-                        ` : Object.keys(groupedByMonth).map(month => `
-                            <div class="mb-8">
-                                <div class="flex items-center gap-3 mb-4 pb-2 border-b-2 border-blue-200">
-                                    <div class="bg-blue-500 rounded-lg p-2">
-                                        <i class="fas fa-calendar-alt text-white"></i>
+                        ` : Object.keys(groupedByMonth).map(month => {
+                            const records = groupedByMonth[month];
+                            const m = monthSummary(records);
+                            const chips = `
+                                ${m.ok ? `<span class="p-green"><i class="fas fa-check-circle"></i>${m.ok} مطابق</span>` : ''}
+                                ${m.part ? `<span class="p-amber"><i class="fas fa-exclamation-circle"></i>${m.part} جزئي</span>` : ''}
+                                ${m.bad ? `<span class="p-red"><i class="fas fa-times-circle"></i>${m.bad} غير مطابق</span>` : ''}
+                                ${m.pend ? `<span class="p-blue"><i class="fas fa-clock"></i>${m.pend} قيد المراجعة</span>` : ''}
+                            `;
+                            return `
+                            <div class="pinsp-month">
+                                <div class="pinsp-month__head">
+                                    <div class="pinsp-month__icon"><i class="fas fa-calendar-alt"></i></div>
+                                    <div>
+                                        <h4 class="pinsp-month__title">${month}</h4>
+                                        <span class="pinsp-month__count"><i class="fas fa-clipboard-list"></i>${records.length} فحص</span>
                                     </div>
-                                    <h4 class="text-lg font-bold text-gray-800">${month}</h4>
-                                    <span class="badge badge-info">${groupedByMonth[month].length} فحص</span>
+                                    ${chips ? `<div class="pinsp-month__chips">${chips}</div>` : ''}
                                 </div>
-                                <div class="space-y-3">
-                                    ${groupedByMonth[month].map(inspection => {
-                                        const template = inspection.templateId ? this.INSPECTION_TEMPLATES[inspection.templateId] : null;
-                                        const categoryDisplay = template ? template.name : (inspection.category || '');
-                                        const resultBadgeClass = this.getResultBadgeClass(inspection.result);
-                                        const resultIcon = this.getResultIcon(inspection.result);
-                                        const date = new Date(inspection.inspectionDate || inspection.createdAt);
-                                        return `
-                                        <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                                            <div class="flex items-start justify-between gap-4">
-                                                <div class="flex-1">
-                                                    <div class="flex items-center gap-3 mb-2">
-                                                        ${template ? `<i class="fas ${template.icon} text-blue-500"></i>` : ''}
-                                                        <h5 class="text-base font-bold text-gray-800">${Utils.escapeHTML(categoryDisplay)}</h5>
-                                                        <span class="badge ${resultBadgeClass} inline-flex items-center gap-1">
-                                                            <i class="${resultIcon}"></i>
-                                                            ${Utils.escapeHTML(inspection.result || '-')}
-                                                        </span>
-                                                    </div>
-                                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-gray-600">
-                                                        <div class="flex items-center gap-2">
-                                                            <i class="fas fa-map-marker-alt text-gray-400"></i>
-                                                            <span>${Utils.escapeHTML(inspection.location || inspection.equipment || '-')}</span>
-                                                        </div>
-                                                        <div class="flex items-center gap-2">
-                                                            <i class="fas fa-user text-gray-400"></i>
-                                                            <span>${Utils.escapeHTML(inspection.inspector || '-')}</span>
-                                                        </div>
-                                                        <div class="flex items-center gap-2">
-                                                            <i class="fas fa-calendar text-gray-400"></i>
-                                                            <span>${Utils.formatDate(date)}</span>
-                                                        </div>
-                                                    </div>
-                                                    ${inspection.notes ? `
-                                                        <div class="mt-3 p-2 bg-gray-50 rounded text-sm text-gray-700">
-                                                            <strong>ملاحظات:</strong> ${Utils.escapeHTML(inspection.notes.substring(0, 100))}${inspection.notes.length > 100 ? '...' : ''}
-                                                        </div>
-                                                    ` : ''}
-                                                </div>
-                                                <div class="flex items-center gap-2">
-                                                    <button onclick="PeriodicInspections.viewInspection('${inspection.id}')" class="btn-icon btn-icon-info" title="عرض التفاصيل">
-                                                        <i class="fas fa-eye"></i>
-                                                    </button>
-                                                    <button onclick="PeriodicInspections.exportInspectionById('${inspection.id}')" class="btn-icon btn-icon-success" title="تحميل PDF">
-                                                        <i class="fas fa-file-pdf"></i>
-                                                    </button>
-                                                    <button onclick="PeriodicInspections.editInspection('${inspection.id}')" class="btn-icon btn-icon-primary" title="تعديل">
-                                                        <i class="fas fa-edit"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        `;
-                                    }).join('')}
-                                </div>
-                            </div>
-                        `).join('')}
+                                ${records.map(recordCard).join('')}
+                            </div>`;
+                        }).join('')}
                     </div>
                 </div>
             `;
