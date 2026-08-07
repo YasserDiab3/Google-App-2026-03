@@ -71,14 +71,14 @@ const PPE = {
                 font-size: 12px; font-weight: 600; color: #4a5568; text-transform: uppercase;
                 letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px;
             }
-            .ppe-visits-filters-row .filter-label i { font-size: 11px; color: #0f766e; }
+            .ppe-visits-filters-row .filter-label i { font-size: 11px; color: #2563eb; }
             .ppe-visits-filters-row .filter-input {
                 width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px;
                 background: white; font-size: 14px; color: #2d3748; transition: all 0.2s ease;
                 box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             }
             .ppe-visits-filters-row .filter-input:focus {
-                outline: none; border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+                outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
             }
             .ppe-visits-filters-row .filter-reset-btn {
                 width: 100%; padding: 10px 16px; min-height: 42px; border-radius: 12px;
@@ -91,7 +91,7 @@ const PPE = {
             }
             .ppe-visits-filters-row .filter-count-badge {
                 display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 20px;
-                padding: 2px 8px; background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
+                padding: 2px 8px; background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
                 color: white; border-radius: 12px; font-size: 11px; font-weight: 700; margin-inline-start: 4px;
             }
             .ppe-receipts-kpi { margin: 0 0 1.1rem; direction: rtl; }
@@ -104,12 +104,12 @@ const PPE = {
             }
             .ppe-receipts-kpi__title i {
                 width: 1.75rem; height: 1.75rem; border-radius: 8px; display: inline-flex; align-items: center;
-                justify-content: center; background: rgba(15, 118, 110, 0.1); color: #0f766e; font-size: 0.85rem;
+                justify-content: center; background: rgba(37, 99, 235, 0.1); color: #2563eb; font-size: 0.85rem;
             }
             .ppe-receipts-kpi__sub { margin: 4px 0 0; font-size: 0.78rem; color: #64748b; line-height: 1.45; }
             .ppe-receipts-kpi__meta {
                 display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px;
-                background: #f0fdfa; border: 1px solid #99f6e4; color: #0f766e; font-size: 0.75rem; font-weight: 700;
+                background: #eff6ff; border: 1px solid #bfdbfe; color: #2563eb; font-size: 0.75rem; font-weight: 700;
             }
             .ppe-receipts-kpi__grid {
                 display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: stretch;
@@ -138,8 +138,8 @@ const PPE = {
                 display: inline-flex; align-items: center; margin-top: 8px; padding: 3px 8px; border-radius: 999px;
                 font-size: 0.68rem; font-weight: 700; background: #f8fafc; color: #475569; border: 1px solid #e2e8f0;
             }
-            .ppe-rk-card--total::before { background: #0f766e; }
-            .ppe-rk-card--total .ppe-rk-card__icon { background: #ecfdf5; color: #0f766e; }
+            .ppe-rk-card--total::before { background: #2563eb; }
+            .ppe-rk-card--total .ppe-rk-card__icon { background: #eff6ff; color: #2563eb; }
             .ppe-rk-card--received::before { background: #16a34a; }
             .ppe-rk-card--received .ppe-rk-card__icon { background: #f0fdf4; color: #16a34a; }
             .ppe-rk-card--pending::before { background: #d97706; }
@@ -153,9 +153,44 @@ const PPE = {
             @media (max-width: 640px) {
                 .ppe-receipts-kpi__grid { grid-template-columns: 1fr; }
             }
+            /* ===== بطاقة استحقاق الاستلام — هوية HSE الزرقاء ===== */
+            .ppe-elig-outer { background: #fff; border: 1px solid #dbeafe; box-shadow: 0 10px 24px rgba(37, 99, 235, 0.08); }
+            .ppe-elig--gray { border-color: #e2e8f0; box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06); }
+            .ppe-elig--green { border-color: #a7f3d0; box-shadow: 0 10px 24px rgba(4, 120, 87, 0.10); }
+            .ppe-elig--red { border-color: #fecaca; box-shadow: 0 10px 24px rgba(185, 28, 28, 0.08); }
+            .ppe-elig-head { background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%); box-shadow: inset 0 -2px 8px rgba(0, 0, 0, 0.08); }
+            .ppe-elig--gray .ppe-elig-head { background: linear-gradient(135deg, #334155 0%, #475569 100%); }
+            .ppe-elig--green .ppe-elig-head { background: linear-gradient(135deg, #047857 0%, #16a34a 100%); }
+            .ppe-elig--red .ppe-elig-head { background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%); }
+            .ppe-elig-head-icon { background: rgba(255, 255, 255, 0.18); border: 2px solid rgba(255, 255, 255, 0.35); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12); }
+            .ppe-elig-tile {
+                border: 1px solid #dbeafe; background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+                padding: 0.9rem 1rem; min-width: 0; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+                transition: transform 0.15s ease, box-shadow 0.15s ease;
+            }
+            .ppe-elig-tile:hover { transform: translateY(-1px); box-shadow: 0 8px 16px rgba(37, 99, 235, 0.12); }
+            .ppe-elig--gray .ppe-elig-tile { border-color: #e2e8f0; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); }
+            .ppe-elig--green .ppe-elig-tile { border-color: #a7f3d0; background: linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%); }
+            .ppe-elig--red .ppe-elig-tile { border-color: #fecaca; background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%); }
+            .ppe-elig-tile-icon {
+                display: inline-flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem;
+                border-radius: 0.9rem; background: #dbeafe; color: #1e40af; font-size: 0.95rem; flex-shrink: 0;
+            }
+            .ppe-elig--gray .ppe-elig-tile-icon { background: #e2e8f0; color: #334155; }
+            .ppe-elig--green .ppe-elig-tile-icon { background: #a7f3d0; color: #047857; }
+            .ppe-elig--red .ppe-elig-tile-icon { background: #fecaca; color: #b91c1c; }
+            .ppe-elig-label { font-size: 11px; font-weight: 700; letter-spacing: 0.02em; color: #3b82f6; line-height: 1.5; }
+            .ppe-elig--gray .ppe-elig-label { color: #64748b; }
+            .ppe-elig--green .ppe-elig-label { color: #047857; }
+            .ppe-elig--red .ppe-elig-label { color: #b91c1c; }
+            .ppe-elig-foot { border-top: 1px solid #dbeafe; background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%); }
+            .ppe-elig--gray .ppe-elig-foot { border-top-color: #e2e8f0; background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 70%); }
+            .ppe-elig--green .ppe-elig-foot { border-top-color: #a7f3d0; background: linear-gradient(180deg, #ecfdf5 0%, #d1fae5 70%); }
+            .ppe-elig--red .ppe-elig-foot { border-top-color: #fecaca; background: linear-gradient(180deg, #fef2f2 0%, #fee2e2 70%); }
             @media print {
                 .ppe-rk-card { box-shadow: none !important; break-inside: avoid; }
                 .ppe-rk-card:hover { transform: none; }
+                .ppe-elig-outer { box-shadow: none !important; }
             }
         `;
         document.head.appendChild(style);
@@ -634,7 +669,7 @@ const PPE = {
                                 ${item.shoeSize ? `<span class="block text-[11px] text-blue-600 font-semibold mt-0.5"><i class="fas fa-shoe-prints ml-1 text-[10px]"></i>مقاس: ${esc(item.shoeSize)}</span>` : ''}
                             </td>
                             <td>${item.quantity || 0}</td>
-                            <td><span class="text-xs font-semibold text-slate-700"><i class="fas fa-user-edit text-blue-500 ml-1 text-[11px]"></i>${esc(recordedBy)}</span></td>
+                            <td><span class="text-xs font-semibold text-gray-700"><i class="fas fa-user-edit text-blue-500 ml-1 text-[11px]"></i>${esc(recordedBy)}</span></td>
                             <td>${item.receiptDate ? Utils.formatDate(item.receiptDate) : '-'}</td>
                             <td>
                                 <span class="badge badge-${this.isStatusReceived(item.status) ? 'success' : 'warning'}">
@@ -724,7 +759,7 @@ const PPE = {
                                 ${item.shoeSize ? `<span class="block text-[11px] text-blue-600 font-semibold mt-0.5"><i class="fas fa-shoe-prints ml-1 text-[10px]"></i>مقاس: ${esc(item.shoeSize)}</span>` : ''}
                             </td>
                             <td>${item.quantity || 0}</td>
-                            <td><span class="text-xs font-semibold text-slate-700"><i class="fas fa-user-edit text-blue-500 ml-1 text-[11px]"></i>${esc(recordedBy)}</span></td>
+                            <td><span class="text-xs font-semibold text-gray-700"><i class="fas fa-user-edit text-blue-500 ml-1 text-[11px]"></i>${esc(recordedBy)}</span></td>
                             <td>${item.receiptDate ? Utils.formatDate(item.receiptDate) : '-'}</td>
                             <td>
                                 <span class="badge badge-${this.isStatusReceived(item.status) ? 'success' : 'warning'}">
@@ -1221,7 +1256,7 @@ const PPE = {
                                 <i class="fas fa-plus ml-2"></i>
                                 ${ut(t('module.ppe.btn.newReceipt', 'تسجيل استلام جديد'))}
                             </button>
-                            <button id="ppe-refresh-btn" type="button" class="btn-secondary border-2 border-green-500 text-green-600 hover:bg-green-50" title="${ut(t('module.ppe.btn.refreshTitle', 'تحديث المحتوى الحالي'))}">
+                            <button id="ppe-refresh-btn" type="button" class="btn-secondary border-2 border-blue-500 text-blue-600 hover:bg-blue-50" title="${ut(t('module.ppe.btn.refreshTitle', 'تحديث المحتوى الحالي'))}">
                                 <i class="fas fa-sync-alt ml-2"></i>
                                 ${ut(t('module.ppe.btn.refresh', 'تحديث'))}
                             </button>
@@ -1488,7 +1523,7 @@ const PPE = {
                     <i class="fas fa-plus ml-2"></i>
                     ${ut(t('module.ppe.btn.newReceipt', 'تسجيل استلام جديد'))}
                 </button>
-                <button id="ppe-refresh-btn" type="button" class="btn-secondary border-2 border-green-500 text-green-600 hover:bg-green-50" title="${ut(t('module.ppe.btn.refreshTitle', 'تحديث المحتوى الحالي'))}">
+                <button id="ppe-refresh-btn" type="button" class="btn-secondary border-2 border-blue-500 text-blue-600 hover:bg-blue-50" title="${ut(t('module.ppe.btn.refreshTitle', 'تحديث المحتوى الحالي'))}">
                     <i class="fas fa-sync-alt ml-2"></i>
                     ${ut(t('module.ppe.btn.refresh', 'تحديث'))}
                 </button>
@@ -1506,7 +1541,7 @@ const PPE = {
             `;
         } else {
             headerButtonsContainer.innerHTML = `
-                <button id="ppe-refresh-btn" type="button" class="btn-secondary border-2 border-green-500 text-green-600 hover:bg-green-50" title="${ut(t('module.ppe.btn.refreshTitle', 'تحديث المحتوى الحالي'))}">
+                <button id="ppe-refresh-btn" type="button" class="btn-secondary border-2 border-blue-500 text-blue-600 hover:bg-blue-50" title="${ut(t('module.ppe.btn.refreshTitle', 'تحديث المحتوى الحالي'))}">
                     <i class="fas fa-sync-alt ml-2"></i>
                     ${ut(t('module.ppe.btn.refresh', 'تحديث'))}
                 </button>
@@ -1850,46 +1885,46 @@ const PPE = {
         const fmt = (d) => d ? (typeof Utils !== 'undefined' && Utils.formatDate ? Utils.formatDate(d) : new Date(d).toLocaleDateString('ar')) : '-';
 
         const card = (variant, headerIconSolid, title, statValueRows, footerHtml) => {
-            const themes = {
+const themes = {
                 gray: {
-                    outer: 'ring-1 ring-slate-200/80 shadow-xl shadow-slate-900/5',
-                    headerBar: 'from-slate-700 via-slate-600 to-slate-700',
-                    headerIconBg: 'bg-white/15 text-white ring-2 ring-white/30 shadow-md',
-                    tileSurface: 'rounded-2xl border border-slate-200/75 bg-gradient-to-br from-white via-slate-50/30 to-white p-[1.1rem] sm:p-5 min-w-0 shadow-sm hover:shadow-md hover:border-slate-300/60 transition-all duration-200',
-                    iconBox: 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200/80 text-slate-700 text-[15px] shadow-inner ring-1 ring-slate-300/35',
-                    labelClass: 'text-[11px] font-bold tracking-wide text-slate-500',
-                    valueClass: 'text-[1.05rem] sm:text-lg font-extrabold text-slate-900 tracking-tight tabular-nums',
-                    footerWrap: 'bg-gradient-to-b from-slate-50 to-slate-100/80 border-t border-slate-200/90'
+                    outer: 'ppe-elig-outer ppe-elig--gray',
+                    headerBar: 'ppe-elig-head',
+                    headerIconBg: 'ppe-elig-head-icon',
+                    tileSurface: 'ppe-elig-tile',
+                    iconBox: 'ppe-elig-tile-icon',
+                    labelClass: 'ppe-elig-label',
+                    valueClass: 'text-lg font-extrabold text-gray-900 tracking-tight tabular-nums',
+                    footerWrap: 'ppe-elig-foot'
                 },
                 blue: {
-                    outer: 'ring-1 ring-sky-200/85 shadow-xl shadow-sky-900/[0.06]',
-                    headerBar: 'from-sky-700 via-sky-500 to-cyan-500',
-                    headerIconBg: 'bg-white/15 text-white ring-2 ring-white/30 shadow-md',
-                    tileSurface: 'rounded-2xl border border-sky-100/90 bg-gradient-to-br from-white via-sky-50/25 to-white p-[1.1rem] sm:p-5 min-w-0 shadow-sm hover:shadow-md hover:border-sky-200/80 transition-all duration-200',
-                    iconBox: 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-100 to-cyan-100/70 text-sky-700 text-[15px] shadow-inner ring-1 ring-sky-200/55',
-                    labelClass: 'text-[11px] font-bold tracking-wide text-sky-700/70',
-                    valueClass: 'text-[1.05rem] sm:text-lg font-extrabold text-slate-900 tracking-tight tabular-nums',
-                    footerWrap: 'bg-gradient-to-b from-sky-50/90 to-sky-100/50 border-t border-sky-100'
+                    outer: 'ppe-elig-outer ppe-elig--blue',
+                    headerBar: 'ppe-elig-head',
+                    headerIconBg: 'ppe-elig-head-icon',
+                    tileSurface: 'ppe-elig-tile',
+                    iconBox: 'ppe-elig-tile-icon',
+                    labelClass: 'ppe-elig-label',
+                    valueClass: 'text-lg font-extrabold text-gray-900 tracking-tight tabular-nums',
+                    footerWrap: 'ppe-elig-foot'
                 },
                 green: {
-                    outer: 'ring-1 ring-emerald-200/85 shadow-xl shadow-emerald-900/[0.05]',
-                    headerBar: 'from-emerald-700 via-teal-600 to-emerald-500',
-                    headerIconBg: 'bg-white/15 text-white ring-2 ring-white/30 shadow-md',
-                    tileSurface: 'rounded-2xl border border-emerald-100/90 bg-gradient-to-br from-white via-emerald-50/20 to-white p-[1.1rem] sm:p-5 min-w-0 shadow-sm hover:shadow-md hover:border-emerald-200/70 transition-all duration-200',
-                    iconBox: 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-100/80 text-emerald-700 text-[15px] shadow-inner ring-1 ring-emerald-200/55',
-                    labelClass: 'text-[11px] font-bold tracking-wide text-emerald-800/70',
-                    valueClass: 'text-[1.05rem] sm:text-lg font-extrabold text-slate-900 tracking-tight tabular-nums',
-                    footerWrap: 'bg-gradient-to-b from-emerald-50/95 to-teal-50/40 border-t border-emerald-100'
+                    outer: 'ppe-elig-outer ppe-elig--green',
+                    headerBar: 'ppe-elig-head',
+                    headerIconBg: 'ppe-elig-head-icon',
+                    tileSurface: 'ppe-elig-tile',
+                    iconBox: 'ppe-elig-tile-icon',
+                    labelClass: 'ppe-elig-label',
+                    valueClass: 'text-lg font-extrabold text-gray-900 tracking-tight tabular-nums',
+                    footerWrap: 'ppe-elig-foot'
                 },
                 red: {
-                    outer: 'ring-1 ring-rose-200/85 shadow-xl shadow-rose-900/[0.06]',
-                    headerBar: 'from-rose-700 via-rose-500 to-red-500',
-                    headerIconBg: 'bg-white/15 text-white ring-2 ring-white/30 shadow-md',
-                    tileSurface: 'rounded-2xl border border-rose-100/90 bg-gradient-to-br from-white via-rose-50/25 to-white p-[1.1rem] sm:p-5 min-w-0 shadow-sm hover:shadow-md hover:border-rose-200/75 transition-all duration-200',
-                    iconBox: 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-100 to-orange-50 text-rose-700 text-[15px] shadow-inner ring-1 ring-rose-200/55',
-                    labelClass: 'text-[11px] font-bold tracking-wide text-rose-800/75',
-                    valueClass: 'text-[1.05rem] sm:text-lg font-extrabold text-slate-900 tracking-tight tabular-nums',
-                    footerWrap: 'bg-gradient-to-b from-rose-50/95 to-rose-100/35 border-t border-rose-100'
+                    outer: 'ppe-elig-outer ppe-elig--red',
+                    headerBar: 'ppe-elig-head',
+                    headerIconBg: 'ppe-elig-head-icon',
+                    tileSurface: 'ppe-elig-tile',
+                    iconBox: 'ppe-elig-tile-icon',
+                    labelClass: 'ppe-elig-label',
+                    valueClass: 'text-lg font-extrabold text-gray-900 tracking-tight tabular-nums',
+                    footerWrap: 'ppe-elig-foot'
                 }
             };
             const t = themes[variant] || themes.gray;
@@ -1902,12 +1937,12 @@ const PPE = {
             else metricsGridCls += 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4';
 
             const statsHtml = statCount
-                ? `<div class="px-3 py-4 sm:px-6 sm:py-5 bg-gradient-to-br from-slate-50/90 via-white to-white">
+                ? `<div class="px-3 py-4 sm:px-6 sm:py-5 bg-gray-50">
                     <div class="${metricsGridCls}">
                     ${statValueRows.map((s) => {
                         const mutedValue = typeof s.value === 'string' && s.value.includes('بدون قاعدة');
                         const valueCls = mutedValue
-                            ? 'text-base sm:text-[1.0625rem] font-semibold text-slate-600 tracking-tight leading-snug'
+                            ? 'text-base sm:text-[1.0625rem] font-semibold text-gray-600 tracking-tight leading-snug'
                             : t.valueClass;
                         return `
                         <div class="${t.tileSurface}">
@@ -1938,7 +1973,7 @@ const PPE = {
                         </div>
                     </div>
                     ${statsHtml}
-                    ${footerHtml ? `<div class="${t.footerWrap} px-5 py-4 sm:px-6 text-sm sm:text-[0.9375rem] font-medium text-slate-700 leading-relaxed flex flex-wrap items-center gap-3 w-full">${footerHtml}</div>` : ''}
+                    ${footerHtml ? `<div class="${t.footerWrap} px-5 py-4 sm:px-6 text-sm sm:text-[0.9375rem] font-medium text-gray-700 leading-relaxed flex flex-wrap items-center gap-3 w-full">${footerHtml}</div>` : ''}
                 </div>
             `;
         };
@@ -1949,7 +1984,7 @@ const PPE = {
                 'fas fa-info-circle',
                 'اختر الموظف ونوع المعدة',
                 [],
-                '<span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600 text-xs"><i class="fas fa-lightbulb"></i></span><span>بعد اختيار الكود والصنف تظهر تفاصيل آخر استلام والمدة والاستحقاق.</span>'
+                '<span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600 text-xs"><i class="fas fa-lightbulb"></i></span><span>بعد اختيار الكود والصنف تظهر تفاصيل آخر استلام والمدة والاستحقاق.</span>'
             );
             infoEl.classList.remove('hidden');
             infoEl.setAttribute('data-eligible', 'pending');
@@ -1966,7 +2001,7 @@ const PPE = {
                 'fas fa-box-open',
                 'أول استلام لهذا الصنف',
                 stats,
-                '<span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-200 text-sky-800 text-xs"><i class="fas fa-check"></i></span><span>لا يوجد استلام سابق لهذا الصنف لهذا الموظف؛ يمكن تسجيل الاستلام.</span>'
+                '<span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-xs"><i class="fas fa-check"></i></span><span>لا يوجد استلام سابق لهذا الصنف لهذا الموظف؛ يمكن تسجيل الاستلام.</span>'
             );
             infoEl.setAttribute('data-eligible', '1');
             infoEl.classList.remove('hidden');
@@ -1986,8 +2021,8 @@ const PPE = {
 
         if (result.isEligible) {
             const eligibleFooter = result.hasRule
-                ? '<span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-200/95 text-emerald-900 text-xs shadow-sm"><i class="fas fa-check-double"></i></span><span class="font-semibold text-emerald-950">يمكن تسجيل استلام جديد؛ تم استيفاء المدة الدنيا المعتمدة لهذا الصنف.</span>'
-                : '<span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-700 text-xs shadow-sm"><i class="fas fa-unlock-alt"></i></span><span class="font-semibold text-slate-800">يمكن تسجيل استلام جديد؛ لم تُضف مدة دنيا لهذا الصنف في إعدادات الشركة فيُسمح دون قيد زمني لهذا النوع.</span>';
+                ? '<span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs shadow-sm"><i class="fas fa-check-double"></i></span><span class="font-semibold text-green-700">يمكن تسجيل استلام جديد؛ تم استيفاء المدة الدنيا المعتمدة لهذا الصنف.</span>'
+                : '<span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700 text-xs shadow-sm"><i class="fas fa-unlock-alt"></i></span><span class="font-semibold text-gray-800">يمكن تسجيل استلام جديد؛ لم تُضف مدة دنيا لهذا الصنف في إعدادات الشركة فيُسمح دون قيد زمني لهذا النوع.</span>';
             infoEl.innerHTML = card(
                 'green',
                 'fas fa-check-circle',
@@ -2003,7 +2038,7 @@ const PPE = {
                 'fas fa-ban',
                 'الموظف غير مستحق حالياً',
                 stats,
-                `<span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-200 text-rose-800 text-xs"><i class="fas fa-clock"></i></span><span class="font-semibold text-rose-900">المدة المتبقية حتى يصبح الاستلام مسموحاً: <strong class="text-rose-950">${remainingText}</strong>.</span>`
+                `<span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 text-xs"><i class="fas fa-clock"></i></span><span class="font-semibold text-red-600">المدة المتبقية حتى يصبح الاستلام مسموحاً: <strong class="font-extrabold">${remainingText}</strong>.</span>`
             );
             infoEl.setAttribute('data-eligible', '0');
         }
@@ -2112,7 +2147,7 @@ const PPE = {
                                         </div>
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 10px;">
-                                        <span style="background: #ccfbf1; color: #0d9488; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem;"><i class="fas fa-building"></i></span>
+                                        <span style="background: #dbeafe; color: #1e40af; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem;"><i class="fas fa-building"></i></span>
                                         <div>
                                             <div style="font-size: 0.65rem; color: #64748b; font-weight: 600; margin-bottom: 2px;">القسم</div>
                                             <div id="ppe-employee-info-department" style="font-size: 0.85rem; font-weight: 700; color: #0f172a;">${formatInfo(employeeInfo.department)}</div>
@@ -2246,7 +2281,7 @@ const PPE = {
                 if (infoPosition) infoPosition.textContent = info.position || '—';
                 if (infoBranch) {
                     if (info.branch) {
-                        infoBranch.innerHTML = `<i class="fas fa-code-branch text-slate-400 ml-1"></i>${Lb('module.ppe.label.branch', 'الفرع')}: ${Utils.escapeHTML(info.branch)}`;
+                        infoBranch.innerHTML = `<i class="fas fa-code-branch text-gray-400 ml-1"></i>${Lb('module.ppe.label.branch', 'الفرع')}: ${Utils.escapeHTML(info.branch)}`;
                         infoBranch.classList.remove('hidden');
                     } else {
                         infoBranch.innerHTML = '';
@@ -2255,7 +2290,7 @@ const PPE = {
                 }
                 if (infoLocation) {
                     if (info.location) {
-                        infoLocation.innerHTML = `<i class="fas fa-map-marker-alt text-slate-400 ml-1"></i>${Lb('module.ppe.label.location', 'الموقع')}: ${Utils.escapeHTML(info.location)}`;
+                        infoLocation.innerHTML = `<i class="fas fa-map-marker-alt text-gray-400 ml-1"></i>${Lb('module.ppe.label.location', 'الموقع')}: ${Utils.escapeHTML(info.location)}`;
                         infoLocation.classList.remove('hidden');
                     } else {
                         infoLocation.innerHTML = '';
@@ -3454,7 +3489,7 @@ const PPE = {
                         </div>
                         
                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                            <p class="text-sm text-blue-800">
+                            <p class="text-sm text-blue-700">
                                 <i class="fas fa-info-circle ml-1"></i>
                                 <strong>ملاحظة:</strong> سيتم تطبيق هذه المصفوفة على جميع الموظفين الذين لديهم هذه الوظيفة.
                             </p>
@@ -3856,7 +3891,7 @@ const PPE = {
                 <div class="modal-body">
                     <div class="mb-4">
                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                            <p class="text-sm text-blue-800">
+                            <p class="text-sm text-blue-700">
                                 <strong>مهمات الوقاية المطلوبة:</strong>
                                 ${requiredPPEHtml}
                             </p>
@@ -4451,8 +4486,8 @@ const PPE = {
                         <button type="button" id="ppe-receipts-modal-download-template" class="btn-secondary btn-sm mb-3">
                             <i class="fas fa-file-download ml-2"></i>${ut(t('module.ppe.excel.downloadTemplateBtn', 'تحميل القالب'))}
                         </button>
-                        <p class="text-sm text-blue-800 mb-2">${ut(t('module.ppe.excel.importModalColumns', 'الأعمدة المتوقعة في الصف الأول:'))}</p>
-                        <ul class="text-sm text-blue-800 list-disc mr-6 space-y-1">${colsList}</ul>
+                        <p class="text-sm text-blue-700 mb-2">${ut(t('module.ppe.excel.importModalColumns', 'الأعمدة المتوقعة في الصف الأول:'))}</p>
+                        <ul class="text-sm text-blue-700 list-disc mr-6 space-y-1">${colsList}</ul>
                     </div>
                     <div>
                         <label for="ppe-receipts-modal-file" class="block text-sm font-semibold text-gray-700 mb-2">
@@ -4570,8 +4605,8 @@ const PPE = {
                         <button type="button" id="ppe-stock-modal-download-template" class="btn-secondary btn-sm mb-3">
                             <i class="fas fa-file-download ml-2"></i>${ut(t('module.ppe.excel.downloadTemplateBtn', 'تحميل القالب'))}
                         </button>
-                        <p class="text-sm text-blue-800 mb-2">${ut(t('module.ppe.excel.importModalColumnsStock', 'أعمدة القالب (صف الرؤوس):'))}</p>
-                        <ul class="text-sm text-blue-800 list-disc mr-6 space-y-1">${colsList}</ul>
+                        <p class="text-sm text-blue-700 mb-2">${ut(t('module.ppe.excel.importModalColumnsStock', 'أعمدة القالب (صف الرؤوس):'))}</p>
+                        <ul class="text-sm text-blue-700 list-disc mr-6 space-y-1">${colsList}</ul>
                     </div>
                     <div>
                         <label for="ppe-stock-modal-file" class="block text-sm font-semibold text-gray-700 mb-2">
@@ -6037,7 +6072,7 @@ const PPE = {
         <div id="ppe-analytics-root" style="font-family:inherit;">
 
             <!-- ═══ شريط الأدوات ═══ -->
-            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding:16px 20px;background:linear-gradient(135deg,#0F766E 0%,#0E7490 50%,#1E3A8A 100%);border-radius:14px;color:#fff;box-shadow:0 8px 28px rgba(15,118,110,0.32);">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding:16px 20px;background:linear-gradient(135deg,#2563EB 0%,#1D4ED8 50%,#1E3A8A 100%);border-radius:14px;color:#fff;box-shadow:0 8px 28px rgba(37, 99, 235, 0.32);">
                 <div style="display:flex;align-items:center;gap:12px;">
                     <div style="width:44px;height:44px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;backdrop-filter: blur(8px);">
                         <i class="fas fa-hard-hat" style="font-size:20px;"></i>
@@ -6053,7 +6088,7 @@ const PPE = {
                         ${['30','90','180','365','0'].map((v,i) => {
                             const labels=['30 يوم','3 أشهر','6 أشهر','سنة','الكل'];
                             const active=(this._ppeAnalyticsPeriod||'0')===v;
-                            return `<button class="ppe-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#0F766E':'#fff'};">${labels[i]}</button>`;
+                            return `<button class="ppe-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#2563EB':'#fff'};">${labels[i]}</button>`;
                         }).join('')}
                     </div>
                     <button id="ppe-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
@@ -6069,32 +6104,32 @@ const PPE = {
             </div>
 
             <!-- ═══ لوحة الفلاتر ═══ -->
-            <div id="ppe-filter-panel" style="display:none;background:#f0fdfa;border:1.5px solid #99f6e4;border-radius:12px;padding:18px 20px;margin-bottom:16px;">
+            <div id="ppe-filter-panel" style="display:none;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:18px 20px;margin-bottom:16px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
                     <div style="display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-sliders-h" style="color:#0F766E;font-size:14px;"></i>
-                        <span style="font-weight:700;font-size:0.9rem;color:#0F766E;">الفلاتر التفاعلية</span>
-                        <span id="ppe-filter-count" style="background:#ccfbf1;color:#115E59;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
+                        <i class="fas fa-sliders-h" style="color:#2563EB;font-size:14px;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;color:#2563EB;">الفلاتر التفاعلية</span>
+                        <span id="ppe-filter-count" style="background:#dbeafe;color:#115E59;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
                     </div>
-                    <button id="ppe-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #99f6e4;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;" onmouseover="this.style.background='#f0fdfa';this.style.color='#0F766E'" onmouseout="this.style.background='#fff';this.style.color='#64748b'">
+                    <button id="ppe-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #bfdbfe;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;" onmouseover="this.style.background='#eff6ff';this.style.color='#2563EB'" onmouseout="this.style.background='#fff';this.style.color='#64748b'">
                         <i class="fas fa-times me-1"></i>مسح الكل
                     </button>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
                     ${[
                         {id:'ppe-af-status',   icon:'fas fa-flag',         color:'#0891b2', label:'الحالة'},
-                        {id:'ppe-af-type',     icon:'fas fa-hard-hat',     color:'#0F766E', label:'نوع المعدة'},
+                        {id:'ppe-af-type',     icon:'fas fa-hard-hat',     color:'#2563EB', label:'نوع المعدة'},
                         {id:'ppe-af-dept',     icon:'fas fa-building',     color:'#f59e0b', label:'الإدارة'},
                         {id:'ppe-af-category', icon:'fas fa-tags',         color:'#6366f1', label:'الفئة'},
                         {id:'ppe-af-supplier', icon:'fas fa-truck',        color:'#8b5cf6', label:'المورد'},
-                        {id:'ppe-af-factory',  icon:'fas fa-industry',     color:'#0284c7', label:'المصنع'},
+                        {id:'ppe-af-factory',  icon:'fas fa-industry',     color:'#3B82F6', label:'المصنع'},
                         {id:'ppe-af-location', icon:'fas fa-map-marker-alt', color:'#3b82f6', label:'الموقع'},
                     ].map(f=>`
                         <div>
                             <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
                                 <i class="${f.icon}" style="color:${f.color};margin-inline-end:4px;"></i>${f.label}
                             </label>
-                            <select id="${f.id}" style="width:100%;padding:7px 10px;border:1.5px solid #99f6e4;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;" onfocus="this.style.borderColor='#0F766E'" onblur="this.style.borderColor='#99f6e4'">
+                            <select id="${f.id}" style="width:100%;padding:7px 10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;" onfocus="this.style.borderColor='#2563EB'" onblur="this.style.borderColor='#bfdbfe'">
                                 <option value="">الكل</option>
                             </select>
                         </div>
@@ -6111,7 +6146,7 @@ const PPE = {
             <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
                 <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
                     <div style="display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-industry" style="color:#0284c7;"></i>
+                        <i class="fas fa-industry" style="color:#3B82F6;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">توزيع ونسب الاستلامات حسب المصانع الرئيسية</span>
                     </div>
                     <span style="font-size:0.72rem;color:#64748b;">انقر على أي مصنع لتصفية لوحة التحكم تلقائياً</span>
@@ -6149,7 +6184,7 @@ const PPE = {
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-hard-hat" style="color:#0F766E;"></i>
+                        <i class="fas fa-hard-hat" style="color:#2563EB;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">أكثر أنواع المعدات (أعلى 10)</span>
                     </div>
                     <div id="ppe-types-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
@@ -6203,7 +6238,7 @@ const PPE = {
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-chart-column" style="color:#0F766E;"></i>
+                        <i class="fas fa-chart-column" style="color:#2563EB;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">المقارنة السنوية للاستلامات (آخر 3 سنوات)</span>
                     </div>
                     <div style="padding:12px;position:relative;height:260px;">
@@ -6217,23 +6252,23 @@ const PPE = {
             <div class="content-card" style="padding:0;overflow:hidden;">
                 <div style="padding:13px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
                     <div style="display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-list-ul" style="color:#0F766E;"></i>
+                        <i class="fas fa-list-ul" style="color:#2563EB;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">أحدث الاستلامات</span>
                     </div>
-                    <span id="ppe-recent-count" style="background:#f0fdfa;color:#0F766E;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
+                    <span id="ppe-recent-count" style="background:#eff6ff;color:#2563EB;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
                 </div>
                 <div style="overflow-x:auto;">
                     <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
                         <thead>
-                            <tr style="background:#f0fdfa;">
-                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#0F766E;white-space:nowrap;">التاريخ</th>
-                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#0F766E;">اسم الموظف</th>
-                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#0F766E;">الكود</th>
-                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#0F766E;">نوع المعدة</th>
-                                <th style="padding:9px 12px;text-align:center;font-weight:700;color:#0F766E;">الكمية</th>
-                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#0F766E;">الإدارة</th>
-                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#0F766E;">المصنع</th>
-                                <th style="padding:9px 12px;text-align:center;font-weight:700;color:#0F766E;">الحالة</th>
+                            <tr style="background:#eff6ff;">
+                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#2563EB;white-space:nowrap;">التاريخ</th>
+                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#2563EB;">اسم الموظف</th>
+                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#2563EB;">الكود</th>
+                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#2563EB;">نوع المعدة</th>
+                                <th style="padding:9px 12px;text-align:center;font-weight:700;color:#2563EB;">الكمية</th>
+                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#2563EB;">الإدارة</th>
+                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#2563EB;">المصنع</th>
+                                <th style="padding:9px 12px;text-align:center;font-weight:700;color:#2563EB;">الحالة</th>
                             </tr>
                         </thead>
                         <tbody id="ppe-recent-tbody">
@@ -6374,8 +6409,8 @@ const PPE = {
         const kpiEl = document.getElementById('ppe-kpi-strip');
         if (kpiEl) {
             const kpis = [
-                { label:'إجمالي الاستلامات', value:total,             icon:'fas fa-receipt',         color:'#0F766E', bg:'#f0fdfa', border:'#99f6e4' },
-                { label:'الكميات المُستلَمة',  value:totalQty.toFixed(0),icon:'fas fa-cubes',           color:'#0E7490', bg:'#ecfeff', border:'#a5f3fc' },
+                { label:'إجمالي الاستلامات', value:total,             icon:'fas fa-receipt',         color:'#2563EB', bg:'#eff6ff', border:'#bfdbfe' },
+                { label:'الكميات المُستلَمة',  value:totalQty.toFixed(0),icon:'fas fa-cubes',           color:'#1D4ED8', bg:'#EFF6FF', border:'#BFDBFE' },
                 { label:'مكتملة الاستلام',  value:receivedCount,        icon:'fas fa-circle-check',    color:'#047857', bg:'#ecfdf5', border:'#a7f3d0' },
                 { label:'قيد التسليم',      value:pendingCount,         icon:'fas fa-hourglass-half',  color:'#b45309', bg:'#fffbeb', border:'#fde68a' },
                 { label:'أصناف المخزون',    value:stockItemsCount,      icon:'fas fa-boxes',           color:'#6366f1', bg:'#eef2ff', border:'#c7d2fe' },
@@ -6419,7 +6454,7 @@ const PPE = {
 
         // الفئة (Doughnut)
         const categoryMap = this._ppeGroupBy(filteredStock, item => String(item.category || 'بدون فئة').trim(), 8);
-        const categoryPalette = ['rgba(99,102,241,0.85)','rgba(15,118,110,0.85)','rgba(245,158,11,0.85)','rgba(244,63,94,0.85)','rgba(139,92,246,0.85)','rgba(8,145,178,0.85)','rgba(5,150,105,0.85)','rgba(217,119,6,0.85)'];
+        const categoryPalette = ['rgba(99,102,241,0.85)','rgba(37, 99, 235, 0.85)','rgba(245,158,11,0.85)','rgba(244,63,94,0.85)','rgba(139,92,246,0.85)','rgba(8,145,178,0.85)','rgba(5,150,105,0.85)','rgba(217,119,6,0.85)'];
         this._ppeDoughnut('ppe-chart-category', categoryMap.labels, categoryMap.data, categoryMap.labels.map((_,i)=>categoryPalette[i % categoryPalette.length]));
 
         // المقارنة السنوية
@@ -6456,7 +6491,7 @@ const PPE = {
                     const d = this._getPpeReceiptDate(r);
                     const dateStr = d ? d.toLocaleDateString('ar-EG', { year:'numeric', month:'short', day:'numeric' }) : '—';
                     const rowBg = i%2===0 ? '#fff' : '#fafafa';
-                    return `<tr style="border-bottom:1px solid #f8fafc;background:${rowBg};" onmouseover="this.style.background='#f0fdfa'" onmouseout="this.style.background='${rowBg}'">
+                    return `<tr style="border-bottom:1px solid #f8fafc;background:${rowBg};" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='${rowBg}'">
                         <td style="padding:9px 12px;white-space:nowrap;color:#374151;" dir="ltr">${dateStr}</td>
                         <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(r.employeeName || '—')}</td>
                         <td style="padding:9px 12px;color:#374151;font-family:monospace;" dir="ltr">${Utils.escapeHTML(r.employeeCode || '—')}</td>
@@ -6559,7 +6594,7 @@ const PPE = {
         try { if (this._ppeAnalyticsCharts[canvasId]) this._ppeAnalyticsCharts[canvasId].destroy(); } catch (e) {}
         this._ppeAnalyticsCharts[canvasId] = new Chart(canvas, {
             type: 'bar',
-            data: { labels, datasets: [{ data, backgroundColor: color || 'rgba(15,118,110,0.78)', borderRadius: 5, borderSkipped: false }] },
+            data: { labels, datasets: [{ data, backgroundColor: color || 'rgba(37, 99, 235, 0.78)', borderRadius: 5, borderSkipped: false }] },
             options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x}` } } },
                 scales: { x: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f1f5f9' } },
@@ -6583,7 +6618,7 @@ const PPE = {
         this._ppeAnalyticsCharts[canvasId] = new Chart(canvas, {
             type: 'bar',
             data: { labels: months.map(m => m.label), datasets: [
-                { label: 'الاستلامات', data: counts, backgroundColor: counts.map(c => c === maxC ? 'rgba(15,118,110,0.9)' : 'rgba(15,118,110,0.5)'), borderRadius: 5, borderSkipped: false, order: 1 },
+                { label: 'الاستلامات', data: counts, backgroundColor: counts.map(c => c === maxC ? 'rgba(37, 99, 235, 0.9)' : 'rgba(37, 99, 235, 0.5)'), borderRadius: 5, borderSkipped: false, order: 1 },
                 { label: 'الاتجاه', data: counts, type: 'line', borderColor: 'rgba(30,58,138,0.9)', backgroundColor: 'rgba(30,58,138,0.08)', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#1E3A8A', tension: 0.4, fill: true, order: 0 }
             ] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } },
@@ -6605,7 +6640,7 @@ const PPE = {
         this._ppeAnalyticsCharts[canvasId] = new Chart(canvas, {
             type: 'bar',
             data: { labels: years.map(String), datasets: [
-                { label: 'عدد الاستلامات', data: totalByYear, backgroundColor: 'rgba(15,118,110,0.78)', borderRadius: 5, borderSkipped: false, yAxisID: 'y' },
+                { label: 'عدد الاستلامات', data: totalByYear, backgroundColor: 'rgba(37, 99, 235, 0.78)', borderRadius: 5, borderSkipped: false, yAxisID: 'y' },
                 { label: 'الكميات', data: qtyByYear, backgroundColor: 'rgba(30,58,138,0.78)', borderRadius: 5, borderSkipped: false, yAxisID: 'y1' }
             ] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } },
@@ -6628,8 +6663,8 @@ const PPE = {
         }
         const factoryG = this._ppeGroupBy(filtered, r => (r._factoryDisplay || 'غير محدد').trim(), 0);
         const colors = [
-            { primary: '#0F766E', light: '#f0fdfa', progress: 'linear-gradient(90deg, #5eead4 0%, #0F766E 100%)' },
-            { primary: '#0E7490', light: '#ecfeff', progress: 'linear-gradient(90deg, #67e8f9 0%, #0E7490 100%)' },
+            { primary: '#2563EB', light: '#eff6ff', progress: 'linear-gradient(90deg, #93c5fd 0%, #2563EB 100%)' },
+            { primary: '#1D4ED8', light: '#EFF6FF', progress: 'linear-gradient(90deg, #93C5FD 0%, #1D4ED8 100%)' },
             { primary: '#1E3A8A', light: '#eef2ff', progress: 'linear-gradient(90deg, #93c5fd 0%, #1E3A8A 100%)' },
             { primary: '#f59e0b', light: '#fffbeb', progress: 'linear-gradient(90deg, #fcd34d 0%, #f59e0b 100%)' },
             { primary: '#6366f1', light: '#eef2ff', progress: 'linear-gradient(90deg, #a5b4fc 0%, #6366f1 100%)' },
@@ -6713,7 +6748,7 @@ const PPE = {
         const typesEl = document.getElementById('ppe-types-list');
         if (typesEl) {
             const typeG = this._ppeGroupBy(filtered, r => String(r.equipmentType || r.type || 'غير محدد').trim(), 10);
-            typesEl.innerHTML = buildListItems(typeG, total, '#0F766E', '#5eead4', '#0F766E', 'ppe-af-type');
+            typesEl.innerHTML = buildListItems(typeG, total, '#2563EB', '#93c5fd', '#2563EB', 'ppe-af-type');
         }
 
         // الإدارة (أعلى 10)
@@ -6753,7 +6788,7 @@ const PPE = {
                 root.querySelectorAll('.ppe-period-btn').forEach(b => {
                     const active = b === btn;
                     b.style.background = active ? '#fff' : 'rgba(255,255,255,0.15)';
-                    b.style.color = active ? '#0F766E' : '#fff';
+                    b.style.color = active ? '#2563EB' : '#fff';
                 });
                 this.updatePpeAnalyticsDashboard();
             });
@@ -6841,7 +6876,7 @@ const PPE = {
 
             const header = document.createElement('div');
             header.id = 'ppe-pdf-header-temp';
-            header.style.cssText = 'background:linear-gradient(135deg,#0F766E 0%,#0E7490 50%,#1E3A8A 100%);color:#fff;padding:18px 24px;border-radius:14px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;font-family:Arial,sans-serif;';
+            header.style.cssText = 'background:linear-gradient(135deg,#2563EB 0%,#1D4ED8 50%,#1E3A8A 100%);color:#fff;padding:18px 24px;border-radius:14px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;font-family:Arial,sans-serif;';
             header.innerHTML = `
                 <div>
                     <div style="font-size:18px;font-weight:800;margin-bottom:4px;white-space:nowrap;word-break:keep-all;">${Utils.escapeHTML(companyName)}</div>
