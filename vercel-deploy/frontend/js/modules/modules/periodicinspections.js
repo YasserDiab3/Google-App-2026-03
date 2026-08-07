@@ -344,8 +344,20 @@ const PeriodicInspections = {
     },
 
     _normalizeDateOnly(value) {
-        const raw = String(value || '').slice(0, 10);
-        return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : '';
+        if (!value) return '';
+        const raw = String(value || '');
+        // تاريخ فقط بدون وقت — يُرجع كما هو
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw.slice(0, 10))) {
+            if (raw.length <= 10) return raw.slice(0, 10);
+            // يوجد وقت بعد التاريخ — يجب المرور عبر Date لتصحيح المنطقة الزمنية
+            // (الباكند يرسل ISO UTC مثل 2026-08-06T21:00:00.000Z لتاريخ محلي 2026-08-07)
+        }
+        const dt = new Date(value);
+        if (isNaN(dt.getTime())) return '';
+        const y = dt.getFullYear();
+        const m = String(dt.getMonth() + 1).padStart(2, '0');
+        const d = String(dt.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
     },
 
     getDailySafetyFilterOptions(records) {
@@ -4185,7 +4197,7 @@ const PeriodicInspections = {
         // ✅ تجميع السجلات حسب التاريخ لإضافة رؤوس فاصلة تسهّل التنقّل
         const groupedByDate = {};
         sorted.forEach(r => {
-            const dateKey = (r.date || '').slice(0, 10) || 'unknown';
+            const dateKey = this._normalizeDateOnly(r.date || r.createdAt) || 'unknown';
             if (!groupedByDate[dateKey]) groupedByDate[dateKey] = [];
             groupedByDate[dateKey].push(r);
         });
@@ -4233,7 +4245,7 @@ const PeriodicInspections = {
         }).join('');
 
         // ✅ بناء أزرار "القفز إلى تاريخ معين" — تتيح للمستخدم الانتقال السريع لأي يوم محفوظ
-        const todayStr = new Date().toISOString().slice(0, 10);
+        const todayStr = this._normalizeDateOnly(new Date());
         const todayKey = `dsc-day-${todayStr.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
         const hasToday = dateKeys.includes(todayStr);
         const quickJumpButtons = dateKeys.slice(0, 7).map(dateKey => {
@@ -5930,7 +5942,7 @@ const PeriodicInspections = {
             return `<div class="form-group"><label class="form-label required">${idx + 1}- ${Utils.escapeHTML(qLabel)}</label><select id="dsc-${q.key}" class="form-input" required>${complianceOptions}</select></div>`;
         }).join('');
         const siteOptions = `<option value="">${t('module.periodic.dsc.select.site', 'اختر المصنع/الموقع')}</option>` + (sites.map(s => `<option value="${Utils.escapeHTML(s.id)}">${Utils.escapeHTML(s.name)}</option>`).join(''));
-        const dateVal = record && record.date ? String(record.date).slice(0, 10) : new Date().toISOString().slice(0, 10);
+        const dateVal = record && record.date ? this._normalizeDateOnly(record.date) : this._normalizeDateOnly(new Date());
         const modal = document.createElement('div');
         modal.className = 'modal-overlay dsc-modal-overlay';
         const reportNumberDisplayValue = record
@@ -6386,7 +6398,7 @@ const PeriodicInspections = {
             const idx = list.findIndex(r => r.id === editId);
             if (idx >= 0) {
                 const oldRecord = list[idx];
-                const dateChanged = (oldRecord.date || '').slice(0, 10) !== (payload.date || '').slice(0, 10);
+                const dateChanged = this._normalizeDateOnly(oldRecord.date) !== this._normalizeDateOnly(payload.date);
                 const shiftChanged = (oldRecord.shift || '') !== (payload.shift || '');
                 // ✅ FIX: عند تغيير التاريخ أو الوردية، نُعيد توليد رقم التقرير
                 // كي يبقى تنسيق DD-SH-NO متوافقاً مع البيانات الفعلية (وإلا يبقى الرقم
