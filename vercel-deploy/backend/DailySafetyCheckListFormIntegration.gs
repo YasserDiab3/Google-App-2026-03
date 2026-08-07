@@ -44,6 +44,27 @@ function formatDateOnly(dateInput) {
 }
 
 /**
+ * تطبيع الطابع الزمني لإرسال الفورم إلى نص ISO ثابت المقارنة.
+ * المدخل: Date object أو نص (مثل "8/4/2026 8:26:49").
+ * الناتج: "YYYY-MM-DD HH:mm:ss" — ثابت ومستقر للمقارنة بين السجلات.
+ */
+function normalizeFormSubmittedAt_(value) {
+  if (value === undefined || value === null) return '';
+  var s = String(value).trim();
+  if (!s) return '';
+  var d;
+  if (typeof value === 'object' && Object.prototype.toString.call(value) === '[object Date]') {
+    d = value;
+  } else {
+    d = new Date(s.replace(/\//g, '-'));
+  }
+  if (isNaN(d.getTime())) return s;
+  var p = function (n) { return ('0' + n).slice(-2); };
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+    ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+}
+
+/**
  * عد الخلايا غير الفارغة في صف إجابات الفورم
  */
 function countNonEmptyFormCells(rowData) {
@@ -361,6 +382,10 @@ function mapFormRowToDailySafetyCheckList(rowData, headers, forceFactory2) {
   if (rawShift === 'الثالية' || rawShift === 'الثالثة') rawShift = 'الثالثة';
   if (rawShift === 'مطابق' || rawShift === 'غير مطابق') rawShift = '';
 
+  var rawFormTimestamp = (rowData[COL_A] !== undefined && rowData[COL_A] !== null)
+    ? normalizeFormSubmittedAt_(rowData[COL_A])
+    : '';
+
   var out = {
     id: '',
     siteId: siteName || '',
@@ -373,6 +398,7 @@ function mapFormRowToDailySafetyCheckList(rowData, headers, forceFactory2) {
     q15Reading: '',
     q16: '', q17: '',
     notes: '',
+    formSubmittedAt: rawFormTimestamp,
     createdAt: new Date(),
     updatedAt: new Date()
   };
@@ -433,6 +459,7 @@ function dailySafetyFormRecordExists(recordData) {
   var site = String(recordData.siteName || recordData.siteId || '').trim();
   var inspector = String(recordData.inspectorName || '').trim();
   var shift = String(recordData.shift || '').trim();
+  var formTs = String(recordData.formSubmittedAt || '').trim();
 
   for (var i = 0; i < existing.length; i++) {
     var r = existing[i];
@@ -441,7 +468,12 @@ function dailySafetyFormRecordExists(recordData) {
         String(r.siteName || r.siteId || '').trim() === site &&
         String(r.inspectorName || '').trim() === inspector &&
         String(r.shift || '').trim() === shift) {
-      return true;
+      // مفتاح ثانوي: طابع زمني للإرسال من الفورم.
+      // إذا كان موجوداً في السجلين، يجب أن يتطابق حتى نعتبره تكراراً (يميّز تقارير متعددة لنفس اليوم/الموقع/المفتش/الوردية).
+      var existingTs = String(r.formSubmittedAt || '').trim();
+      if (!formTs || !existingTs || formTs === existingTs) {
+        return true;
+      }
     }
   }
   return false;
