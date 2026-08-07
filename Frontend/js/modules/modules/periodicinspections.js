@@ -674,6 +674,147 @@ const PeriodicInspections = {
         return records;
     },
 
+    _injectPeriodicIdentityStyles() {
+        try {
+            if (document.getElementById('periodic-professional-identity-styles')) return;
+            const style = document.createElement('style');
+            style.id = 'periodic-professional-identity-styles';
+            style.textContent = `
+                #periodic-inspections-section .periodic-workspace {
+                    --p-navy: #0b2a55;
+                    --p-blue: #1e40af;
+                    --p-blue2: #2563eb;
+                    --p-sky: #93c5fd;
+                    --p-line: #dce7f5;
+                }
+                /* ✅ الهوية — ترويسة المديول (Hero) */
+                #periodic-inspections-section .periodic-id-hero {
+                    position: relative; overflow: hidden;
+                    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+                    padding: 20px 24px; border-radius: 18px; color: #fff;
+                    background: linear-gradient(130deg, #0b2a55 0%, #1e40af 55%, #2563eb 100%);
+                    box-shadow: 0 14px 34px rgba(11,42,85,.25);
+                }
+                #periodic-inspections-section .periodic-id-hero::after {
+                    content: ""; position: absolute; inset-inline-end: -64px; top: -96px;
+                    width: 220px; height: 220px; border: 30px solid rgba(255,255,255,.05); border-radius: 50%; pointer-events: none;
+                }
+                #periodic-inspections-section .periodic-id-hero::before {
+                    content: ""; position: absolute; inset-inline-start: 38%; bottom: -70px;
+                    width: 150px; height: 150px; border: 20px solid rgba(255,255,255,.04); border-radius: 50%; pointer-events: none;
+                }
+                #periodic-inspections-section .periodic-id-hero__copy { position: relative; z-index: 1; display: flex; align-items: center; gap: 15px; min-width: min(100%, 340px); }
+                #periodic-inspections-section .periodic-id-hero__icon {
+                    flex: 0 0 auto; width: 54px; height: 54px; display: grid; place-items: center;
+                    border: 1px solid rgba(255,255,255,.24); border-radius: 15px; background: rgba(255,255,255,.12); font-size: 23px; color: #fde68a;
+                }
+                #periodic-inspections-section .periodic-id-hero__eyebrow { display: block; margin-bottom: 4px; color: #bfdbfe; font-size: .68rem; font-weight: 800; letter-spacing: .04em; }
+                #periodic-inspections-section .periodic-id-hero h1 { margin: 0; color: #fff; font-size: 1.3rem; font-weight: 900; line-height: 1.35; }
+                #periodic-inspections-section .periodic-id-hero p { margin: 5px 0 0; color: #dbeafe; font-size: .78rem; }
+                #periodic-inspections-section .periodic-id-hero__meta { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+                #periodic-inspections-section .periodic-id-hero__meta span {
+                    display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px;
+                    border: 1px solid rgba(255,255,255,.22); border-radius: 10px; background: rgba(255,255,255,.1);
+                    font-size: .72rem; font-weight: 750; white-space: nowrap;
+                }
+                #periodic-inspections-section .periodic-id-hero__meta span i { color: #93c5fd; }
+                #periodic-inspections-section .periodic-id-hero .btn-primary {
+                    background: linear-gradient(135deg,#fbbf24,#f59e0b); color: #7c2d12; border: none; font-weight: 800;
+                    box-shadow: 0 6px 18px rgba(0,0,0,.18);
+                }
+                /* ✅ الهوية — شريط التبويبات */
+                #periodic-inspections-section .periodic-workspace .tabs-container { margin-top: 18px; }
+                #periodic-inspections-section .periodic-workspace .tabs-nav {
+                    display: flex; gap: 8px; padding: 8px; border-radius: 16px; overflow-x: auto;
+                    border: 1px solid rgba(255,255,255,.14);
+                    background: radial-gradient(circle at 8% 0%, rgba(251,191,36,.16), transparent 30%),
+                                linear-gradient(125deg, #0b2a55 0%, #1e3a75 70%, #245a9b 100%);
+                    box-shadow: 0 12px 30px rgba(11,37,85,.22);
+                }
+                #periodic-inspections-section .periodic-workspace .tabs-nav .tab-btn {
+                    min-height: 46px; min-width: max-content; gap: 8px; padding: 9px 14px; margin: 0;
+                    border: 1px solid rgba(255,255,255,.15); border-radius: 11px;
+                    background: rgba(255,255,255,.08); color: rgba(255,255,255,.85);
+                    font-weight: 700; white-space: nowrap; transition: all .2s ease;
+                }
+                #periodic-inspections-section .periodic-workspace .tabs-nav .tab-btn::before { display: none; }
+                #periodic-inspections-section .periodic-workspace .tabs-nav .tab-btn i {
+                    display: inline-flex; align-items: center; justify-content: center;
+                    width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,.12); font-size: .78rem; color: #fde68a;
+                }
+                #periodic-inspections-section .periodic-workspace .tabs-nav .tab-btn:hover { background: rgba(255,255,255,.15); color: #fff; transform: translateY(-1px); }
+                #periodic-inspections-section .periodic-workspace .tabs-nav .tab-btn.active {
+                    border-color: #fff; background: #fff; color: var(--p-blue);
+                    box-shadow: 0 8px 22px rgba(0,0,0,.2);
+                }
+                #periodic-inspections-section .periodic-workspace .tabs-nav .tab-btn.active i { background: #eff6ff; color: var(--p-blue); }
+                /* ✅ الهوية — أسطح المحتوى (قائمة الفحوصات / سجل الفحوصات / قاعدة المعدات) */
+                #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area { animation: periodicSurfaceIn .24s ease-out; }
+                @keyframes periodicSurfaceIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+                #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .content-card {
+                    border-radius: 16px; border-color: var(--p-line) !important;
+                    box-shadow: 0 8px 24px rgba(15,47,90,.07);
+                }
+                #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .card-header {
+                    border-bottom: 1px solid #e5edf7; background: linear-gradient(180deg, #f8fbff, #fff); border-radius: 16px 16px 0 0;
+                }
+                #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .data-table thead th {
+                    background: linear-gradient(90deg, #1e40af, #2563eb); color: #fff; font-weight: 700; white-space: nowrap;
+                }
+                #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .data-table tbody tr:hover td { background: #f2f7ff !important; }
+                #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .data-table td { vertical-align: middle; }
+                #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .bg-white.border-gray-200 {
+                    border-radius: 12px; border: 1px solid #e2eaf6 !important; background: #fff !important;
+                }
+                @media (max-width: 820px) {
+                    #periodic-inspections-section .periodic-id-hero { padding: 18px; }
+                    #periodic-inspections-section .periodic-id-hero__copy { align-items: flex-start; }
+                    #periodic-inspections-section .periodic-id-hero__icon { width: 46px; height: 46px; font-size: 19px; }
+                    #periodic-inspections-section .periodic-id-hero h1 { font-size: 1.05rem; }
+                    #periodic-inspections-section .periodic-id-hero__meta { width: 100%; }
+                    #periodic-inspections-section .periodic-id-hero__meta span { flex: 1; justify-content: center; }
+                }
+                [data-theme="dark"] #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .content-card { background: #15283f !important; }
+                [data-theme="dark"] #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .card-header { background: #16293f; border-bottom-color: #243b55; }
+                [data-theme="dark"] #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .data-table tbody tr:hover td { background: #1c3350 !important; }
+                [data-theme="dark"] #periodic-inspections-section .periodic-workspace #periodic-inspections-content-area .bg-white.border-gray-200 { background: #16293f !important; border-color: #243b55 !important; }
+            `;
+            document.head.appendChild(style);
+        } catch (error) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ فشل حقن هوية الفحوصات الدورية:', error);
+        }
+    },
+
+    _renderPeriodicHero(withMeta = true, extraHtml = '') {
+        const inspCount = (AppState.appData && AppState.appData.periodicInspections) ? AppState.appData.periodicInspections.length : 0;
+        const dscCount = (AppState.appData && AppState.appData.dailySafetyCheckList) ? AppState.appData.dailySafetyCheckList.length : 0;
+        let assetCount = 0;
+        try {
+            if (typeof window !== 'undefined' && window.PeriodicEquipment && typeof window.PeriodicEquipment.getAssets === 'function') {
+                assetCount = window.PeriodicEquipment.getAssets().length;
+            }
+        } catch (e) { /* تجاهل */ }
+        const meta = withMeta ? `
+                <span><i class="fas fa-clipboard-list"></i>${inspCount} ${this._t('module.periodic.heroInspections', 'فحص دوري')}</span>
+                <span><i class="fas fa-database"></i>${assetCount} ${this._t('module.periodic.heroAssets', 'معدة مسجلة')}</span>
+                <span><i class="fas fa-tasks"></i>${dscCount} ${this._t('module.periodic.heroDsc', 'مرور يومي')}</span>` : '';
+        return `
+            <div class="periodic-id-hero">
+                <div class="periodic-id-hero__copy">
+                    <span class="periodic-id-hero__icon"><i class="fas fa-clipboard-check"></i></span>
+                    <div>
+                        <span class="periodic-id-hero__eyebrow"><i class="fas fa-shield-halved ml-1"></i>${this._t('module.periodic.heroEyebrow', 'منظومة السلامة والصحة المهنية')}</span>
+                        <h1>${this._t('module.periodic.title', 'الفحوصات الدورية')}</h1>
+                        <p>${this._t('module.periodic.subtitle', 'تسجيل ومتابعة الفحوصات الدورية للمعدات والمنشآت')}</p>
+                    </div>
+                </div>
+                <div class="periodic-id-hero__meta">
+                    ${meta}
+                    ${extraHtml}
+                </div>
+            </div>`;
+    },
+
     async load() {
         // Add language change listener
         if (!this._languageChangeListenerAdded) {
@@ -683,6 +824,8 @@ const PeriodicInspections = {
             });
             this._languageChangeListenerAdded = true;
         }
+
+        this._injectPeriodicIdentityStyles();
 
         const section = document.getElementById('periodic-inspections-section');
         if (!section) {
@@ -753,27 +896,19 @@ const PeriodicInspections = {
 
         if (!hasCachedData) {
             section.innerHTML = `
-            <div class="section-header">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h1 class="section-title">
-                            <i class="fas fa-clipboard-check ml-3"></i>
-                            ${this._t('module.periodic.title', 'الفحوصات الدورية')}
-                        </h1>
-                        <p class="section-subtitle">${this._t('module.periodic.loading', 'جاري التحميل...')}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="mt-6">
-                <div class="content-card">
-                    <div class="card-body">
-                        <div class="empty-state">
-                            <div style="width: 300px; margin: 0 auto 16px;">
-                                <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
-                                    <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
+            <div class="periodic-workspace">
+                ${this._renderPeriodicHero(false)}
+                <div class="mt-6">
+                    <div class="content-card">
+                        <div class="card-body">
+                            <div class="empty-state">
+                                <div style="width: 300px; margin: 0 auto 16px;">
+                                    <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
+                                        <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
+                                    </div>
                                 </div>
+                                <p class="text-gray-500">${this._t('module.periodic.preparingUi', 'جاري تجهيز الواجهة...')}</p>
                             </div>
-                            <p class="text-gray-500">${this._t('module.periodic.preparingUi', 'جاري تجهيز الواجهة...')}</p>
                         </div>
                     </div>
                 </div>
@@ -814,25 +949,16 @@ const PeriodicInspections = {
             }
 
             section.innerHTML = `
-            <div class="section-header">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h1 class="section-title">
-                            <i class="fas fa-clipboard-check ml-3"></i>
-                            ${this._t('module.periodic.title', 'الفحوصات الدورية')}
-                        </h1>
-                        <p class="section-subtitle">${this._t('module.periodic.subtitle', 'تسجيل ومتابعة الفحوصات الدورية للمعدات والمنشآت')}</p>
-                    </div>
-                    <div class="flex gap-2">
-                        ${this.state.currentView !== 'form' && this.state.currentView !== 'edit' ? `
-                            <button id="add-periodic-inspection-btn" class="btn-primary">
-                                <i class="fas fa-plus ml-2"></i>
-                                ${this._t('module.periodic.addNewInspection', 'إضافة فحص دوري جديد')}
-                            </button>
-                        ` : ''}
-                    </div>
-                </div>
-            </div>
+            <div class="periodic-workspace">
+                ${this._renderPeriodicHero(
+                    true,
+                    (this.state.currentView !== 'form' && this.state.currentView !== 'edit') ? `
+                        <button id="add-periodic-inspection-btn" class="btn-primary">
+                            <i class="fas fa-plus ml-2"></i>
+                            ${this._t('module.periodic.addNewInspection', 'إضافة فحص دوري جديد')}
+                        </button>
+                    ` : ''
+                )}
 
             ${this.state.currentView !== 'form' && this.state.currentView !== 'edit' ? `
             <!-- Tabs Navigation -->
@@ -865,6 +991,7 @@ const PeriodicInspections = {
             <div class="mt-6" id="periodic-inspections-content-area">
                 ${content}
             </div>
+        </div>
         `;
             try {
                 this.setupEventListeners();
@@ -894,15 +1021,9 @@ const PeriodicInspections = {
                 console.error('❌ خطأ في تحميل مديول الفحوصات الدورية:', error);
             }
             section.innerHTML = `
-                <div class="section-header">
-                    <div>
-                        <h1 class="section-title">
-                            <i class="fas fa-clipboard-check ml-3"></i>
-                            الفحوصات الدورية
-                        </h1>
-                    </div>
-                </div>
-                <div class="mt-6">
+                <div class="periodic-workspace">
+                    ${this._renderPeriodicHero(false)}
+                    <div class="mt-6">
                     <div class="content-card">
                         <div class="card-body">
                             <div class="empty-state">
@@ -915,6 +1036,7 @@ const PeriodicInspections = {
                                 </button>
                             </div>
                         </div>
+                    </div>
                     </div>
                 </div>
             `;
