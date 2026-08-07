@@ -648,47 +648,65 @@ function dscAuditDuplicates() {
   try {
     var out = { success: true };
 
-    // 1) سجلات التطبيق
+    // 1) سجلات التطبيق — قراءة خام مباشرة من الورقة (دون تمرير readFromSheet الذي يزيل التكرار)
     try {
-      var appRows = typeof readFromSheet === 'function'
-        ? readFromSheet('DailySafetyCheckList', APP_SPREADSHEET_ID)
-        : [];
-      out.appRecords = Array.isArray(appRows) ? appRows.length : 0;
-
-      // تجميع بالمفتاح الكامل (يتضمن الطابع الزمني للفورم إن وُجد)
-      var seen = {};
-      var seenNoTs = {};
-      var dupKeys = [];
-      var dupNoTsKeys = [];
-      for (var i = 0; i < appRows.length; i++) {
-        var r = appRows[i];
-        if (!r) continue;
-        var date = formatDateOnly(r.date);
-        var site = String(r.siteName || r.siteId || '').trim();
-        var inspector = String(r.inspectorName || '').trim();
-        var shift = String(r.shift || '').trim();
-        var ts = String(r.formSubmittedAt || '').trim();
-        var key = date + '|' + site + '|' + inspector + '|' + shift + '|' + ts;
-        if (ts) {
-          if (seen[key]) { dupKeys.push(key); } else { seen[key] = true; }
-        } else {
-          // سجلات قديمة بلا طابع زمني — لا يمكن التمييز إلا بـ (date+site+inspector+shift)
-          var legacyKey = date + '|' + site + '|' + inspector + '|' + shift;
-          if (seenNoTs[legacyKey]) { dupNoTsKeys.push(legacyKey); } else { seenNoTs[legacyKey] = true; }
+      var appSpreadsheet = SpreadsheetApp.openById(APP_SPREADSHEET_ID);
+      var appSheet = appSpreadsheet.getSheetByName('DailySafetyCheckList');
+      if (appSheet) {
+        var appLastRow = appSheet.getLastRow();
+        var appLastCol = appSheet.getLastColumn();
+        out.appRawRows = appLastRow > 1 ? appLastRow - 1 : 0; // بدون صف الرؤوس
+        var appHeaders = appLastRow >= 1 ? appSheet.getRange(1, 1, 1, appLastCol).getValues()[0] : [];
+        var idx = {};
+        for (var h = 0; h < appHeaders.length; h++) {
+          idx[String(appHeaders[h] || '').trim()] = h;
         }
-      }
-      out.recordsWithFormTimestamp = Object.keys(seen).length;
-      out.legacyRecordsWithoutTimestamp = Object.keys(seenNoTs).length;
-      out.exactDuplicatesWithTimestamp = dupKeys.length;
-      out.possibleDuplicatesLegacy = dupNoTsKeys.length;
-
-      if (dupKeys.length > 0) {
-        out.duplicateExamples = [];
-        var dcount = 0;
-        for (var j = 0; j < dupKeys.length && dcount < 5; j++) {
-          out.duplicateExamples.push(dupKeys[j]);
-          dcount++;
+        var appBlock = appLastRow > 1 ? appSheet.getRange(2, 1, appLastRow - 1, appLastCol).getValues() : [];
+        var seen = {};
+        var seenNoTs = {};
+        var dupKeys = [];
+        var dupNoTsKeys = [];
+        var dupIdCount = 0;
+        var dupIdExamples = [];
+        var idSeen = {};
+        var get = function (row, col) {
+          if (col === undefined || col < 0 || !row) return '';
+          var v = row[col];
+          return (v === undefined || v === null) ? '' : String(v).trim();
+        };
+        for (var i = 0; i < appBlock.length; i++) {
+          var r = appBlock[i];
+          var date = formatDateOnly(get(r, idx.date));
+          var site = get(r, idx.siteName) || get(r, idx.siteId);
+          var inspector = get(r, idx.inspectorName);
+          var shift = get(r, idx.shift);
+          var ts = get(r, idx.formSubmittedAt);
+          var id = get(r, idx.id);
+          if (id) {
+            if (idSeen[id]) { dupIdCount++; if (dupIdExamples.length < 10) dupIdExamples.push(id); }
+            else idSeen[id] = true;
+          }
+          var key = date + '|' + site + '|' + inspector + '|' + shift + '|' + ts;
+          if (ts) {
+            if (seen[key]) { dupKeys.push(key); } else { seen[key] = true; }
+          } else {
+            var legacyKey = date + '|' + site + '|' + inspector + '|' + shift;
+            if (seenNoTs[legacyKey]) { dupNoTsKeys.push(legacyKey); } else { seenNoTs[legacyKey] = true; }
+          }
         }
+        out.appRecords = appBlock.length;
+        out.uniqueRecordsWithTimestamp = Object.keys(seen).length;
+        out.legacyRecordsWithoutTimestamp = Object.keys(seenNoTs).length;
+        out.exactDuplicatesWithTimestamp = dupKeys.length;
+        out.possibleDuplicatesLegacy = dupNoTsKeys.length;
+        out.duplicateIds = dupIdCount;
+        out.duplicateIdExamples = dupIdExamples;
+        if (dupKeys.length > 0) {
+          out.duplicateExamples = [];
+          for (var j = 0; j < dupKeys.length && j < 5; j++) out.duplicateExamples.push(dupKeys[j]);
+        }
+      } else {
+        out.appPart = 'ورقة DailySafetyCheckList غير موجودة';
       }
     } catch (e) { out.appPart = 'ERR: ' + e.toString(); }
 
@@ -718,7 +736,7 @@ function dscAuditDuplicates() {
     } catch (e) { out.formPart = 'ERR: ' + e.toString(); }
 
     // 3) خلاصة
-    out.conclusion = (out.recordsWithFormTimestamp || 0) === 0
+    out.conclusion = (out.uniqueRecordsWithTimestamp || 0) === 0
       ? 'لا توجد سجلات بطابع زمني — كل السجلات قديمة (مستحيل التمييز الدقيق).'
       : (out.exactDuplicatesWithTimestamp > 0
           ? 'يوجد ' + out.exactDuplicatesWithTimestamp + ' تكراراً مؤكداً (نفس إرسال الفورم أكثر من مرة).'
@@ -729,6 +747,7 @@ function dscAuditDuplicates() {
     if (out.expectedRecords && out.appRecords) {
       out.comparison = 'الفورم ينتج ~' + out.expectedRecords + ' سجل، والتطبيق فيه ' + out.appRecords + '.';
     }
+    Logger.log('DSC AUDIT: ' + JSON.stringify(out));
     return out;
   } catch (error) {
     return { success: false, message: 'dscAuditDuplicates: ' + error.toString() };
