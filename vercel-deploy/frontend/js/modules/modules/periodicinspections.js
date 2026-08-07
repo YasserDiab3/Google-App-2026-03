@@ -6004,58 +6004,76 @@ const PeriodicInspections = {
     },
 
     /**
-     * رقم تسلسلي للتقرير: DD-SH-NO (اليوم-الوردية-الرقم)
-     * DD = يوم الشهر (رقمان)، SH = كود الوردية (1/2/3)، NO = ترتيب السجل لنفس اليوم والوردية
+     * رقم تسلسلي للتقرير: DSC-YYYY-MM-DD-SH-NN
+     * YYYY-MM-DD = التاريخ، SH = كود الوردية (1/2/3)، NN = ترتيب السجل لنفس اليوم والوردية
      */
     getDailySafetyCheckListSerialNumber(record) {
-        if (!record) return '00-0-0';
+        if (!record) return 'DSC-0000-00-00-0-00';
         if (record.reportNumber && String(record.reportNumber).trim()) return String(record.reportNumber).trim();
-        const dateStr = (record.date && String(record.date).slice(0, 10)) || '';
-        const day = dateStr.length >= 10 ? String(parseInt(dateStr.slice(8, 10), 10) || 0).padStart(2, '0') : '00';
+        const parts = this._dscExtractDateParts(record.date);
         const shiftMap = { 'الأولى': '1', 'الثانية': '2', 'الثالثة': '3' };
         const sh = shiftMap[record.shift] || '0';
+        const keyDate = `${parts.y}-${parts.m}-${parts.d}`;
         const list = this.getDailySafetyCheckListRecords();
         const sameDayShift = list.filter(r => {
-            const rDate = (r.date && String(r.date).slice(0, 10)) || '';
-            return rDate === dateStr && (shiftMap[r.shift] || '0') === sh;
+            const rParts = this._dscExtractDateParts(r.date);
+            return `${rParts.y}-${rParts.m}-${rParts.d}` === keyDate && (shiftMap[r.shift] || '0') === sh;
         }).sort((a, b) => new Date(a.createdAt || a.id) - new Date(b.createdAt || b.id));
         const idx = sameDayShift.findIndex(r => r.id === record.id);
         const no = idx >= 0 ? idx + 1 : sameDayShift.length + 1;
-        return `${day}-${sh}-${no}`;
+        return `DSC-${keyDate}-${sh}-${String(no).padStart(2, '0')}`;
     },
 
     /**
-     * توليد رقم تقرير ثابت عند الإنشاء: DD-SH-NO
-     * يعتمد على أكبر NO موجود لنفس اليوم والوردية (باستخدام reportNumber إن وُجد).
+     * استخراج أجزاء التاريخ (سنة/شهر/يوم) من قيمة date بصيغة موحّدة
+     */
+    _dscExtractDateParts(v) {
+        const s = String(v || '');
+        let y = '', m = '', d = '';
+        const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (iso) { y = iso[1]; m = iso[2]; d = iso[3]; return { y, m, d }; }
+        const dt = new Date(v);
+        if (!isNaN(dt.getTime())) {
+            y = String(dt.getFullYear());
+            m = String(dt.getMonth() + 1).padStart(2, '0');
+            d = String(dt.getDate()).padStart(2, '0');
+        }
+        return { y, m, d };
+    },
+
+    /**
+     * توليد رقم تقرير ثابت عند الإنشاء: DSC-YYYY-MM-DD-SH-NN
+     * يعتمد على أكبر NN موجود لنفس اليوم والوردية (باستخدام reportNumber إن وُجد).
      */
     getNextDailySafetyCheckListReportNumber(payload, records) {
-        const dateStr = (payload && payload.date && String(payload.date).slice(0, 10)) || '';
-        const day = dateStr.length >= 10 ? String(parseInt(dateStr.slice(8, 10), 10) || 0).padStart(2, '0') : '00';
+        const parts = this._dscExtractDateParts(payload && payload.date);
         const shiftMap = { 'الأولى': '1', 'الثانية': '2', 'الثالثة': '3' };
         const sh = shiftMap[payload && payload.shift] || '0';
+        const keyDate = `${parts.y}-${parts.m}-${parts.d}`;
         const list = Array.isArray(records) ? records : this.getDailySafetyCheckListRecords();
         let maxNo = 0;
         for (let i = 0; i < list.length; i++) {
             const r = list[i];
             if (!r) continue;
-            const rDate = (r.date && String(r.date).slice(0, 10)) || '';
+            const rParts = this._dscExtractDateParts(r.date);
+            const rKeyDate = `${rParts.y}-${rParts.m}-${rParts.d}`;
             const rSh = shiftMap[r.shift] || '0';
-            if (rDate !== dateStr || rSh !== sh) continue;
+            if (rKeyDate !== keyDate || rSh !== sh) continue;
             const rn = (r.reportNumber && String(r.reportNumber).trim()) ? String(r.reportNumber).trim() : '';
-            const m = rn.match(/^(\d{2})-(\d)-(\d+)$/);
-            if (m && m[1] === day && m[2] === sh) {
-                const n = parseInt(m[3], 10);
+            const m = rn.match(/^DSC-\d{4}-\d{2}-\d{2}-[1-3]-(\d+)$/);
+            if (m) {
+                const n = parseInt(m[1], 10);
                 if (!isNaN(n) && n > maxNo) maxNo = n;
                 continue;
             }
             const serial = this.getDailySafetyCheckListSerialNumber(r);
-            const m2 = String(serial || '').trim().match(/^(\d{2})-(\d)-(\d+)$/);
-            if (m2 && m2[1] === day && m2[2] === sh) {
-                const n = parseInt(m2[3], 10);
+            const m2 = String(serial || '').trim().match(/^DSC-\d{4}-\d{2}-\d{2}-[1-3]-(\d+)$/);
+            if (m2) {
+                const n = parseInt(m2[1], 10);
                 if (!isNaN(n) && n > maxNo) maxNo = n;
             }
         }
-        return `${day}-${sh}-${maxNo + 1}`;
+        return `DSC-${keyDate}-${sh}-${String(maxNo + 1).padStart(2, '0')}`;
     },
 
     /**

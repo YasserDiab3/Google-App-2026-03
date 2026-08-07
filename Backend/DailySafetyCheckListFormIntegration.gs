@@ -491,7 +491,7 @@ function saveDailySafetyCheckListFromForm(recordData, options) {
 }
 
 /**
- * توليد رقم تقرير يومي بصيغة DD-SH-NO (مطابقة للواجهة الأمامية):
+ * توليد رقم تقرير يومي بصيغة DSC-YYYY-MM-DD-SH-NN (فريد وقابل للفرز الزمني):
  * DD = يوم الشهر (رقمان)، SH = كود الوردية (1/2/3)، NO = ترتيب السجل لنفس اليوم والوردية.
  *
  * @param {string} dateStr - التاريخ بصيغة YYYY-MM-DD
@@ -500,29 +500,47 @@ function saveDailySafetyCheckListFromForm(recordData, options) {
  * @returns {string} رقم التقرير
  */
 function generateDailySafetyCheckListReportNumber(dateStr, shift, existingRecords) {
-  var day = '';
-  var ds = String(dateStr || '').slice(0, 10);
-  if (ds.length >= 10) {
-    day = String(parseInt(ds.slice(8, 10), 10) || 0).padStart(2, '0');
-  }
+  var parts = dscExtractDateParts(dateStr);
   var shiftMap = { 'الأولى': '1', 'الثانية': '2', 'الثالثة': '3' };
   var sh = shiftMap[shift] || '0';
   var maxNo = 0;
   var list = Array.isArray(existingRecords) ? existingRecords : [];
+  var keyDate = parts.y + '-' + parts.m + '-' + parts.d;
   for (var i = 0; i < list.length; i++) {
     var r = list[i];
     if (!r) continue;
-    var rDate = String(r.date || '').slice(0, 10);
-    var rDay = rDate.length >= 10 ? String(parseInt(rDate.slice(8, 10), 10) || 0).padStart(2, '0') : '';
+    var rParts = dscExtractDateParts(r.date);
+    var rKeyDate = rParts.y + '-' + rParts.m + '-' + rParts.d;
     var rSh = shiftMap[r.shift] || '0';
-    if (rDay !== day || rSh !== sh) continue;
+    if (rKeyDate !== keyDate || rSh !== sh) continue;
     var rn = String(r.reportNumber || '').trim();
-    var m = rn.match(/^\d{2}-\d-(\d+)$/);
+    var m = rn.match(/^DSC-\d{4}-\d{2}-\d{2}-[1-3]-(\d+)$/);
     var no = m ? parseInt(m[1], 10) : 0;
     if (isNaN(no)) no = 0;
     if (no > maxNo) maxNo = no;
   }
-  return day + '-' + sh + '-' + (maxNo + 1);
+  return 'DSC-' + keyDate + '-' + sh + '-' + String(maxNo + 1).padStart(2, '0');
+}
+
+/**
+ * استخراج أجزاء التاريخ (سنة/شهر/يوم) من قيمة date
+ * (Date object أو نص YYYY-MM-DD أو أي نص يُحلَّل) — بصيغة موحّدة للأرقام.
+ * @returns {{y:string, m:string, d:string}}
+ */
+function dscExtractDateParts(v) {
+  var y = '', m = '', d = '';
+  var s = String(v || '');
+  var iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    return { y: iso[1], m: iso[2], d: iso[3] };
+  }
+  var dt = new Date(v);
+  if (!isNaN(dt.getTime())) {
+    y = String(dt.getFullYear());
+    m = String(dt.getMonth() + 1).padStart(2, '0');
+    d = String(dt.getDate()).padStart(2, '0');
+  }
+  return { y: y, m: m, d: d };
 }
 
 /**
@@ -550,7 +568,7 @@ function saveDailySafetyCheckListToAppSheet(recordData) {
       recordData.updatedAt = new Date();
     }
 
-    // رقم تقرير تلقائي DD-SH-NO إن لم يُحدّد (منتظر للفورم/الإدخال اليدوي)
+    // رقم تقرير تلقائي DSC-YYYY-MM-DD-SH-NN إن لم يُحدّد (منتظر للفورم/الإدخال اليدوي)
     if (!recordData.reportNumber || String(recordData.reportNumber).trim() === '') {
       try {
         var existingList = (typeof readFromSheet === 'function')
@@ -818,7 +836,8 @@ function resetDailySafetyCheckListAndResync() {
 
     var lastRow = sheet.getLastRow();
     if (lastRow > 1) {
-      sheet.deleteRows(2, lastRow - 1);
+      // الكتابة مكانيًا غير ممكنة هنا لأن reset يعتمد على إعادة إلحاق — نمسح القيم فقط
+      sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
     }
 
     PropertiesService.getScriptProperties().setProperty(LAST_PROCESSED_ROW_KEY, '0');
@@ -907,14 +926,14 @@ function rebuildDailySafetyCheckListFromForm() {
       if (!allRecords[k].createdAt) allRecords[k].createdAt = new Date();
       if (!allRecords[k].updatedAt) allRecords[k].updatedAt = new Date();
 
-      // رقم تقرير DD-SH-NO (مطابق لصيغة الواجهة)
-      var dateStr = String(allRecords[k].date || '').slice(0, 10);
-      var day = dateStr.length >= 10 ? String(parseInt(dateStr.slice(8, 10), 10) || 0).padStart(2, '0') : '00';
-      var sh = shiftMap[allRecords[k].shift] || '0';
-      var ck = day + '-' + sh;
-      if (!shiftCounters[ck]) shiftCounters[ck] = 0;
-      shiftCounters[ck]++;
-      allRecords[k].reportNumber = ck + '-' + shiftCounters[ck];
+      // رقم تقرير DSC-YYYY-MM-DD-SH-NN (فريد وقابل للفرز الزمني)
+      var dp = dscExtractDateParts(allRecords[k].date);
+      var ck = dp.y + '-' + dp.m + '-' + dp.d;
+      var sh2 = shiftMap[allRecords[k].shift] || '0';
+      var ck2 = ck + '-' + sh2;
+      if (!shiftCounters[ck2]) shiftCounters[ck2] = 0;
+      shiftCounters[ck2]++;
+      allRecords[k].reportNumber = 'DSC-' + ck2 + '-' + String(shiftCounters[ck2]).padStart(2, '0');
 
       nextNum++;
     }
@@ -938,15 +957,30 @@ function rebuildDailySafetyCheckListFromForm() {
       rows.push(recRow);
     }
 
-    if (sheet.getLastRow() > 1) {
-      sheet.deleteRows(2, sheet.getLastRow() - 1);
+    // ضبط عمود reportNumber كنص حتى لا يحوّل Google Sheets الأرقام مثل "02-1-1" إلى تواريخ
+    var rnColIdx = headersList.indexOf('reportNumber') + 1; // 1-indexed (عمود B)
+    if (rnColIdx > 0) {
+      var rnColRows = Math.max(rows.length, sheet.getLastRow());
+      sheet.getRange(2, rnColIdx, rnColRows, 1).setNumberFormat('@');
     }
 
+    // الكتابة مكانيًا فوق الصفوف الحالية (بدون deleteRows للكل — الورقة فيها صفوف مجمّدة)
+    var totalExisting = sheet.getLastRow();
     var BATCH = 100;
     for (var startRow = 0; startRow < rows.length; startRow += BATCH) {
       var endRow = Math.min(startRow + BATCH, rows.length);
       var chunk = rows.slice(startRow, endRow);
       sheet.getRange(startRow + 1, 1, chunk.length, headersList.length).setValues(chunk);
+    }
+
+    // حذف الصفوف الزائدة فقط من الأسفل (إن وُجدت) — لا يُحذف كل الصفوف أبدًا
+    if (totalExisting > rows.length) {
+      var frozenRows = sheet.getFrozenRows();
+      var canDelete = totalExisting - rows.length;
+      var maxDeletable = totalExisting - frozenRows - 1;
+      if (canDelete <= maxDeletable) {
+        sheet.deleteRows(rows.length + 1, canDelete);
+      }
     }
 
     try {
@@ -964,5 +998,235 @@ function rebuildDailySafetyCheckListFromForm() {
   } catch (error) {
     Logger.log('rebuildDailySafetyCheckListFromForm: ' + error.toString());
     return { success: false, message: 'حدث خطأ: ' + error.toString() };
+  }
+}
+
+/**
+ * دالة واحدة تجمع: إعادة بناء كل سجلات DailySafetyCheckList من الفورم
+ * (مع توليد أرقام تقارير DSC-YYYY-MM-DD-SH-NN) ثم فحص عمود reportNumber فوراً.
+ * النتيجة تُسجَّل في السجل كخطّين: DSC REBUILD: ... ثم DSC DIAG: ...
+ */
+function dscRebuildAndVerify() {
+  var rebuildResult = rebuildDailySafetyCheckListFromForm();
+  Logger.log('DSC REBUILD: ' + JSON.stringify(rebuildResult));
+  var diagResult = dscDiagnoseReportNumberColumn();
+
+  // تحقق مباشر بعد الكتابة: اقرأ الورقة مرة أخرى واحسب الصيغ + اعرض عينات
+  var verify = null;
+  try {
+    var appSpreadsheet = SpreadsheetApp.openById(APP_SPREADSHEET_ID);
+    var appSheet = appSpreadsheet.getSheetByName('DailySafetyCheckList');
+    if (appSheet) {
+      var lastRow = appSheet.getLastRow();
+      var headersV = appSheet.getRange(1, 1, 1, appSheet.getLastColumn()).getValues()[0];
+      var rnIdx = headersV.indexOf('reportNumber');
+      var block = appSheet.getRange(2, 1, Math.max(lastRow - 1, 0), appSheet.getLastColumn()).getValues();
+      var newF = 0, oldF = 0, empt = 0, other = 0, samples = [];
+      for (var i = 0; i < block.length; i++) {
+        var v = block[i][rnIdx];
+        var s = (v === undefined || v === null) ? '' : String(v).trim();
+        if (!s) { empt++; continue; }
+        if (/^DSC-\d{4}-\d{2}-\d{2}-[1-3]-\d+$/.test(s)) newF++;
+        else if (/^\d{1,2}-\d{1,2}-(19|20)\d{2}$/.test(s)) oldF++;
+        else { other++; if (samples.length < 5) samples.push(s); }
+      }
+      verify = {
+        spreadsheetId: APP_SPREADSHEET_ID,
+        spreadsheetUrl: appSpreadsheet.getUrl(),
+        sheetName: appSheet.getSheetName(),
+        sheetId: appSheet.getSheetId(),
+        frozenRows: appSheet.getFrozenRows(),
+        lastRow: lastRow,
+        newFormat: newF,
+        oldDateLike: oldF,
+        empty: empt,
+        other: other,
+        otherSamples: samples
+      };
+    }
+  } catch (e) {
+    verify = { error: e.toString() };
+  }
+  Logger.log('DSC VERIFY_AFTER_WRITE: ' + JSON.stringify(verify));
+
+  return {
+    appSpreadsheetId: APP_SPREADSHEET_ID,
+    formSpreadsheetId: FORM_SHEET_ID,
+    rebuild: rebuildResult,
+    diag: diagResult,
+    verifyAfterWrite: verify
+  };
+}
+
+/**
+ * تشخيص عمود reportNumber — يقرأ الورقة مباشرة (خام) ويفحص:
+ * 1) عدد السجلات، 2) توزيع صيغ reportNumber (الجديدة DSC-YYYY-MM-DD-SH-NN / القديمة DD-MM-YYYY / فارغة)،
+ * 3) عينات أول/آخر 5 سجلات (date + shift + reportNumber + formSubmittedAt).
+ * لا يعدّل أي شيء. يشغّله المدير من المحرر.
+ */
+function dscDiagnoseReportNumberColumn() {
+  try {
+    var out = { success: true };
+    try {
+      var appSpreadsheet = SpreadsheetApp.openById(APP_SPREADSHEET_ID);
+      var appSheet = appSpreadsheet.getSheetByName('DailySafetyCheckList');
+      if (!appSheet) {
+        return { success: false, message: 'ورقة DailySafetyCheckList غير موجودة' };
+      }
+      var lastRow = appSheet.getLastRow();
+      var lastCol = appSheet.getLastColumn();
+      out.appLastRow = lastRow;
+      out.appLastCol = lastCol;
+      if (lastRow < 2) {
+        out.message = 'لا توجد سجلات';
+        Logger.log('DSC DIAG: ' + JSON.stringify(out));
+        return out;
+      }
+      var headers = appSheet.getRange(1, 1, 1, lastCol).getValues()[0];
+      var idx = {};
+      for (var h = 0; h < headers.length; h++) idx[String(headers[h] || '').trim()] = h;
+      out.headerIndexReportNumber = idx.reportNumber;
+      out.hasDateCol = idx.date !== undefined;
+      out.hasShiftCol = idx.shift !== undefined;
+      out.hasFormSubmittedAtCol = idx.formSubmittedAt !== undefined;
+
+      var block = appSheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+      var newFormat = 0, oldDateLike = 0, emptyRn = 0, otherFormat = 0;
+      var otherSamples = [];
+      var get = function (row, col) {
+        if (col === undefined || col < 0 || !row) return '';
+        var v = row[col];
+        return (v === undefined || v === null) ? '' : String(v).trim();
+      };
+      for (var i = 0; i < block.length; i++) {
+        var r = block[i];
+        var rn = get(r, idx.reportNumber);
+        if (!rn) {
+          emptyRn++;
+        } else if (/^DSC-\d{4}-\d{2}-\d{2}-[1-3]-\d+$/.test(rn)) {
+          newFormat++;
+        } else if (/^\d{1,2}-\d{1,2}-(19|20)\d{2}$/.test(rn)) {
+          oldDateLike++;
+        } else {
+          otherFormat++;
+          if (otherSamples.length < 5) otherSamples.push(rn);
+        }
+      }
+      out.reportNumber_NewFormat_DD_SH_NO = newFormat;
+      out.reportNumber_OldDateLike_DD_MM_YYYY = oldDateLike;
+      out.reportNumber_Empty = emptyRn;
+      out.reportNumber_Other = otherFormat;
+      out.reportNumber_OtherSamples = otherSamples;
+
+      out.first5 = [];
+      out.last5 = [];
+      for (var j = 0; j < block.length && j < 5; j++) {
+        out.first5.push({
+          id: get(block[j], idx.id),
+          date: get(block[j], idx.date),
+          shift: get(block[j], idx.shift),
+          reportNumber: get(block[j], idx.reportNumber),
+          formSubmittedAt: get(block[j], idx.formSubmittedAt)
+        });
+      }
+      for (var k = Math.max(0, block.length - 5); k < block.length; k++) {
+        out.last5.push({
+          id: get(block[k], idx.id),
+          date: get(block[k], idx.date),
+          shift: get(block[k], idx.shift),
+          reportNumber: get(block[k], idx.reportNumber),
+          formSubmittedAt: get(block[k], idx.formSubmittedAt)
+        });
+      }
+      out.message = 'تم الفحص: ' + (lastRow - 1) + ' سجل';
+    } catch (e) {
+      out.readPart = 'ERR: ' + e.toString();
+    }
+    Logger.log('DSC DIAG: ' + JSON.stringify(out));
+    return out;
+  } catch (error) {
+    return { success: false, message: 'dscDiagnoseReportNumberColumn: ' + error.toString() };
+  }
+}
+
+/**
+ * إصلاح جراحي لعمود reportNumber — يعيد توليد كل الأرقام بصيغة DSC-YYYY-MM-DD-SH-NN
+ * ويكتبها كـ نص (تنسيق @) حتى لا يحوّلها Google Sheets إلى تواريخ تلقائيًا.
+ * يعالج السجلات القائمة فقط (لا يلمس الفورم ولا يعيد البناء).
+ */
+function dscFixReportNumberColumn() {
+  try {
+    var spreadsheet = SpreadsheetApp.openById(APP_SPREADSHEET_ID);
+    var sheet = spreadsheet.getSheetByName('DailySafetyCheckList');
+    if (!sheet) {
+      return { success: false, message: 'ورقة DailySafetyCheckList غير موجودة' };
+    }
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+    if (lastRow < 2) {
+      return { success: false, message: 'لا توجد سجلات' };
+    }
+
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    var idx = {};
+    for (var h = 0; h < headers.length; h++) idx[String(headers[h] || '').trim()] = h;
+    var dateIdx = idx.date;
+    var shiftIdx = idx.shift;
+    var rnIdx = idx.reportNumber;
+    if (dateIdx === undefined || shiftIdx === undefined || rnIdx === undefined) {
+      return { success: false, message: 'الأعمدة المطلوبة (date/shift/reportNumber) غير موجودة' };
+    }
+
+    var block = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+    var shiftMap = { 'الأولى': '1', 'الثانية': '2', 'الثالثة': '3' };
+    var shiftCounters = {};
+    var newValues = [];
+    var regenerated = 0;
+
+    for (var i = 0; i < block.length; i++) {
+      var r = block[i];
+      var dp = dscExtractDateParts(r[dateIdx]);
+      var ck = dp.y + '-' + dp.m + '-' + dp.d;
+      var sh = shiftMap[String(r[shiftIdx] || '').trim()] || '0';
+      var ck2 = ck + '-' + sh;
+      if (!shiftCounters[ck2]) shiftCounters[ck2] = 0;
+      shiftCounters[ck2]++;
+      var newRn = 'DSC-' + ck2 + '-' + String(shiftCounters[ck2]).padStart(2, '0');
+      newValues.push([newRn]);
+      regenerated++;
+    }
+
+    // تنسيق النطاق كنص قبل الكتابة حتى لا يحوّل Sheets القيم إلى تواريخ
+    sheet.getRange(2, rnIdx + 1, newValues.length, 1).setNumberFormat('@');
+    sheet.getRange(2, rnIdx + 1, newValues.length, 1).setValues(newValues);
+
+    // فحص فوري بعد الكتابة
+    var check = sheet.getRange(2, rnIdx + 1, newValues.length, 1).getValues();
+    var newFormat = 0, oldDateLike = 0, empty = 0, other = 0, samples = [];
+    for (var j = 0; j < check.length; j++) {
+      var v = check[j][0];
+      var s = (v === undefined || v === null) ? '' : String(v).trim();
+      if (!s) { empty++; }
+      else if (/^DSC-\d{4}-\d{2}-\d{2}-[1-3]-\d+$/.test(s)) { newFormat++; }
+      else if (/^\d{1,2}-\d{1,2}-(19|20)\d{2}$/.test(s)) { oldDateLike++; }
+      else { other++; if (samples.length < 5) samples.push(s); }
+    }
+
+    var out = {
+      success: true,
+      regenerated: regenerated,
+      verifyAfterWrite: {
+        newFormat: newFormat,
+        oldDateLike: oldDateLike,
+        empty: empty,
+        other: other,
+        otherSamples: samples
+      }
+    };
+    Logger.log('DSC FIX COLUMN: ' + JSON.stringify(out));
+    return out;
+  } catch (error) {
+    Logger.log('dscFixReportNumberColumn: ' + error.toString());
+    return { success: false, message: 'dscFixReportNumberColumn: ' + error.toString() };
   }
 }
