@@ -1,15 +1,15 @@
 {
-  "version": "1.0.890",
+  "version": "1.0.891",
   "highlights": {
     "ar": [
-      "تحسين فلاتر سجل تدريب الموظفين والمقاولين بتصميم موحد وسريع.",
-      "إضافة البحث حسب الموظف أو الشركة والموضوع والمدرب والموقع.",
-      "إضافة نطاق تاريخ وزر لإعادة تعيين جميع فلاتر التدريب."
+      "توحيد فلاتر حضور العيادة مع تصميم فلاتر التدريب ومهمات الوقاية.",
+      "تحسين البحث حسب المسئول والدور والحالة والشهر ونطاق التاريخ.",
+      "إضافة زر واضح لإعادة تعيين الفلاتر ودعم أفضل للشاشات الصغيرة."
     ],
     "en": [
-      "Improved employee and contractor training registry filters with a consistent responsive design.",
-      "Added filtering by employee or company, topic, trainer, and location.",
-      "Added date-range filtering and one-click reset for all training filters."
+      "Unified clinic attendance filters with the training and PPE filter design.",
+      "Improved filtering by staff member, role, status, month, and date range.",
+      "Added a clear filter reset action and better small-screen support."
     ]
   }
 }

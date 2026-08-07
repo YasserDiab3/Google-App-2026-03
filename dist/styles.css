@@ -17923,19 +17923,26 @@ body[data-theme="dark"] .profile-info-list>div,
     font-weight: 600;
 }
 
-/* فلاتر سجلات التدريب — نفس لغة فلاتر مهمات الوقاية */
+/* فلاتر السجلات — لغة مرئية موحدة مستلهمة من فلاتر مهمات الوقاية */
+.registry-filter-grid,
 .training-registry-filters {
+    display: grid;
     grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
     gap: 12px;
     align-items: end;
+    width: 100%;
+    box-sizing: border-box;
     padding: 16px 20px;
     margin-bottom: 14px;
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    border-color: #e2e8f0;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
 }
+.registry-filter-field,
 .training-registry-filter {
     min-width: 0;
 }
+.registry-filter-field label,
 .training-registry-filter label {
     display: flex;
     align-items: center;
@@ -17946,10 +17953,12 @@ body[data-theme="dark"] .profile-info-list>div,
     font-size: 12px;
     font-weight: 700;
 }
+.registry-filter-field label i,
 .training-registry-filter label i {
     color: #0d9488;
     font-size: 11px;
 }
+.registry-filter-field .form-input,
 .training-registry-filter .form-input {
     width: 100%;
     min-height: 42px;
@@ -17958,11 +17967,13 @@ body[data-theme="dark"] .profile-info-list>div,
     background: #fff;
     transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
+.registry-filter-field .form-input:focus,
 .training-registry-filter .form-input:focus {
     border-color: #0d9488;
     box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
     outline: none;
 }
+.registry-filter-reset-btn,
 .training-filter-reset-btn {
     display: inline-flex;
     align-items: center;
@@ -17980,28 +17991,35 @@ body[data-theme="dark"] .profile-info-list>div,
     cursor: pointer;
     transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
+.registry-filter-reset-btn:hover,
 .training-filter-reset-btn:hover {
     background: #dce6f1;
     border-color: #94a3b8;
     transform: translateY(-1px);
 }
+.registry-filter-reset-btn:focus-visible,
 .training-filter-reset-btn:focus-visible {
     outline: 3px solid rgba(13, 148, 136, 0.22);
     outline-offset: 2px;
 }
 @media (prefers-reduced-motion: reduce) {
+    .registry-filter-field .form-input,
     .training-registry-filter .form-input,
+    .registry-filter-reset-btn,
     .training-filter-reset-btn { transition: none; }
+    .registry-filter-reset-btn:hover,
     .training-filter-reset-btn:hover { transform: none; }
 }
 @media (max-width: 900px) {
     .tx-reg-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .tx-reg-filter-search { grid-column: span 2; }
+    .registry-filter-grid,
     .training-registry-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 640px) {
     .tx-reg-filters { grid-template-columns: 1fr; }
     .tx-reg-filter-search { grid-column: auto; }
+    .registry-filter-grid,
     .training-registry-filters { grid-template-columns: 1fr; padding: 14px; }
 }
 

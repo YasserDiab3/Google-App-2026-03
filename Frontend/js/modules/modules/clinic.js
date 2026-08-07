@@ -17009,14 +17009,9 @@ const Clinic = {
         const staff = this.getCurrentUserStaffRecord();
         const activityList = this.getFilteredClinicStaffActivities();
         const activitiesLoading = !!this._clinicStaffActivitiesLoading;
-        const activeFilterCount = this._countActiveAttendanceFilters(filters);
         const filterPanelOpen = this.state.attendanceFilterPanelOpen !== false;
         const period = filters.period || 'all';
         const periodLabels = { today: 'اليوم', week: '7 أيام', month: '30 يوم', all: 'الكل' };
-        const afField = 'min-width:0;box-sizing:border-box;';
-        const afInput = `${afField}width:100%;padding:8px 11px;border:1.5px solid #99f6e4;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;`;
-        const afLabel = 'font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;';
-
         const tableRows = dataLoading && rows.length === 0
             ? this._renderAttendanceTableLoadingRow(5)
             : (rows.length ? rows.map(r => `
@@ -17074,21 +17069,33 @@ const Clinic = {
                     </div>
                 </div>
 
-                <div id="clinic-attendance-filter-panel" style="display:${filterPanelOpen ? 'block' : 'none'};background:#f0fdfa;border:1.5px solid #99f6e4;border-radius:12px;padding:14px;margin-bottom:14px;">
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
-                        <div><label style="${afLabel}">الشهر</label><input type="month" id="clinic-attendance-month" style="${afInput}" value="${Utils.escapeAttr(filters.month || '')}"></div>
-                        <div><label style="${afLabel}">الحالة</label>
-                            <select id="clinic-attendance-status" style="${afInput}">
+                <div id="clinic-attendance-filter-panel" style="display:${filterPanelOpen ? 'block' : 'none'};margin-bottom:14px;">
+                    <div class="registry-filter-grid" role="search" aria-label="فلاتر سجل حضوري">
+                        <div class="registry-filter-field">
+                            <label for="clinic-attendance-month"><i class="fas fa-calendar-alt"></i>الشهر</label>
+                            <input type="month" id="clinic-attendance-month" class="form-input" value="${Utils.escapeAttr(filters.month || '')}">
+                        </div>
+                        <div class="registry-filter-field">
+                            <label for="clinic-attendance-status"><i class="fas fa-circle-check"></i>الحالة</label>
+                            <select id="clinic-attendance-status" class="form-input">
                                 <option value="all">كل الحالات</option>
                                 <option value="present" ${filters.status === 'present' ? 'selected' : ''}>حاضر</option>
                                 <option value="partial" ${filters.status === 'partial' ? 'selected' : ''}>خروج جزئي</option>
                                 <option value="absent" ${filters.status === 'absent' ? 'selected' : ''}>غائب</option>
                             </select>
                         </div>
-                        <div><label style="${afLabel}">من تاريخ</label><input type="date" id="clinic-attendance-from" style="${afInput}" value="${Utils.escapeAttr(filters.dateFrom || '')}"></div>
-                        <div><label style="${afLabel}">إلى تاريخ</label><input type="date" id="clinic-attendance-to" style="${afInput}" value="${Utils.escapeAttr(filters.dateTo || '')}"></div>
+                        <div class="registry-filter-field">
+                            <label for="clinic-attendance-from"><i class="fas fa-calendar-day"></i>من تاريخ الحضور</label>
+                            <input type="date" id="clinic-attendance-from" class="form-input" value="${Utils.escapeAttr(filters.dateFrom || '')}">
+                        </div>
+                        <div class="registry-filter-field">
+                            <label for="clinic-attendance-to"><i class="fas fa-calendar-check"></i>إلى تاريخ الحضور</label>
+                            <input type="date" id="clinic-attendance-to" class="form-input" value="${Utils.escapeAttr(filters.dateTo || '')}">
+                        </div>
+                        <div class="registry-filter-field tx-reg-filter-actions">
+                            <button type="button" id="clinic-attendance-reset-filters" class="registry-filter-reset-btn"><i class="fas fa-rotate-left"></i>إعادة تعيين الفلاتر</button>
+                        </div>
                     </div>
-                    ${activeFilterCount ? `<button type="button" id="clinic-attendance-reset-filters" class="btn-secondary btn-sm mt-2"><i class="fas fa-times ml-1"></i>مسح الفلاتر</button>` : ''}
                 </div>
 
                 <div class="content-card mb-4" id="clinic-attendance-section-timeoff">
@@ -17297,11 +17304,6 @@ const Clinic = {
         const filterPanelOpen = this.state.attendanceFilterPanelOpen !== false;
         const period = filters.period || 'all';
         const periodLabels = { today: 'اليوم', week: '7 أيام', month: '30 يوم', all: 'الكل' };
-        const afField = 'min-width:0;box-sizing:border-box;';
-        const afInput = `${afField}width:100%;padding:8px 11px;border:1.5px solid #99f6e4;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;transition:border-color .2s,box-shadow .2s;`;
-        const afLabel = 'font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-        const afFocus = "this.style.borderColor='#0d9488';this.style.boxShadow='0 0 0 3px rgba(13,148,136,0.12)'";
-        const afBlur = "this.style.borderColor='#99f6e4';this.style.boxShadow='none'";
         const staffFilterOpts = staffFilterOptions.map(s =>
             `<option value="${Utils.escapeAttr(s.id)}" ${String(filters.staffId) === String(s.id) ? 'selected' : ''}>${Utils.escapeHTML(s.name)}</option>`
         ).join('');
@@ -17347,10 +17349,6 @@ const Clinic = {
         }
 
         panel.innerHTML = `
-            <style>
-                @media (max-width:900px){#clinic-attendance-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}}
-                @media (max-width:520px){#clinic-attendance-filter-grid{grid-template-columns:1fr!important;}}
-            </style>
             <div id="clinic-attendance-root" style="font-family:inherit;">
                 ${this.renderAttendanceQuickNav(adminNavSections)}
                 <!-- KPI -->
@@ -17411,58 +17409,51 @@ const Clinic = {
                 </div>
 
                 <!-- لوحة الفلاتر -->
-                <div id="clinic-attendance-filter-panel" style="display:${filterPanelOpen ? 'block' : 'none'};background:#f0fdfa;border:1.5px solid #99f6e4;border-radius:12px;padding:16px 18px;margin-bottom:14px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <i class="fas fa-sliders-h" style="color:#0d9488;font-size:14px;"></i>
-                            <span style="font-weight:700;font-size:0.88rem;color:#134e4a;">فلاتر البحث</span>
-                            ${activeFilterCount ? `<span style="background:#ccfbf1;color:#0f766e;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;">${activeFilterCount} نشط</span>` : '<span style="color:#94a3b8;font-size:0.72rem;">لا توجد فلاتر نشطة</span>'}
+                <div id="clinic-attendance-filter-panel" style="display:${filterPanelOpen ? 'block' : 'none'};margin-bottom:14px;">
+                    <div id="clinic-attendance-filter-grid" class="registry-filter-grid" role="search" aria-label="فلاتر سجل حضور العيادة">
+                        <div class="registry-filter-field">
+                            <label for="clinic-attendance-search"><i class="fas fa-search"></i>بحث</label>
+                            <input type="search" id="clinic-attendance-search" class="form-input" placeholder="اسم المسئول أو البريد..." value="${Utils.escapeAttr(filters.search || '')}" autocomplete="off">
                         </div>
-                        <button type="button" id="clinic-attendance-reset-filters" style="padding:5px 12px;border-radius:8px;border:1px solid #99f6e4;background:#fff;color:#64748b;font-size:0.74rem;cursor:pointer;font-weight:600;">
-                            <i class="fas fa-times ml-1"></i>مسح الكل
-                        </button>
-                    </div>
-                    <div id="clinic-attendance-filter-grid" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 12px;">
-                        <div style="grid-column:1/-1;${afField}">
-                            <label style="${afLabel}"><i class="fas fa-search" style="color:#0d9488;margin-left:4px;"></i>بحث بالاسم أو البريد</label>
-                            <input type="search" id="clinic-attendance-search" style="${afInput}" placeholder="اكتب للبحث..." value="${Utils.escapeAttr(filters.search || '')}" autocomplete="off" onfocus="${afFocus}" onblur="${afBlur}">
+                        <div class="registry-filter-field">
+                            <label for="clinic-attendance-month"><i class="fas fa-calendar-alt"></i>الشهر</label>
+                            <input type="month" id="clinic-attendance-month" class="form-input" value="${Utils.escapeAttr(filters.month || '')}">
                         </div>
-                        <div style="${afField}">
-                            <label style="${afLabel}"><i class="fas fa-calendar-alt" style="color:#f59e0b;margin-left:4px;"></i>الشهر</label>
-                            <input type="month" id="clinic-attendance-month" style="${afInput}" value="${Utils.escapeAttr(filters.month || '')}" onfocus="${afFocus}" onblur="${afBlur}">
-                        </div>
-                        <div style="${afField}">
-                            <label style="${afLabel}"><i class="fas fa-user" style="color:#6366f1;margin-left:4px;"></i>المسئول</label>
-                            <select id="clinic-attendance-staff" style="${afInput}cursor:pointer;" onfocus="${afFocus}" onblur="${afBlur}">
+                        <div class="registry-filter-field">
+                            <label for="clinic-attendance-staff"><i class="fas fa-user"></i>المسئول</label>
+                            <select id="clinic-attendance-staff" class="form-input">
                                 <option value="all" ${!filters.staffId || filters.staffId === 'all' ? 'selected' : ''}>كل المسئولين</option>
                                 ${staffFilterOpts}
                             </select>
                         </div>
-                        <div style="${afField}">
-                            <label style="${afLabel}"><i class="fas fa-user-tag" style="color:#8b5cf6;margin-left:4px;"></i>الدور</label>
-                            <select id="clinic-attendance-role" style="${afInput}cursor:pointer;" onfocus="${afFocus}" onblur="${afBlur}">
+                        <div class="registry-filter-field">
+                            <label for="clinic-attendance-role"><i class="fas fa-user-tag"></i>الدور</label>
+                            <select id="clinic-attendance-role" class="form-input">
                                 <option value="all" ${filters.staffRole === 'all' || !filters.staffRole ? 'selected' : ''}>كل الأدوار</option>
                                 <option value="doctor" ${filters.staffRole === 'doctor' ? 'selected' : ''}>طبيب</option>
                                 <option value="nurse" ${filters.staffRole === 'nurse' ? 'selected' : ''}>تمريض</option>
                                 <option value="clinic_officer" ${filters.staffRole === 'clinic_officer' ? 'selected' : ''}>مسئول عيادة</option>
                             </select>
                         </div>
-                        <div style="${afField}">
-                            <label style="${afLabel}"><i class="fas fa-circle-check" style="color:#059669;margin-left:4px;"></i>الحالة</label>
-                            <select id="clinic-attendance-status" style="${afInput}cursor:pointer;" onfocus="${afFocus}" onblur="${afBlur}">
+                        <div class="registry-filter-field">
+                            <label for="clinic-attendance-status"><i class="fas fa-circle-check"></i>الحالة</label>
+                            <select id="clinic-attendance-status" class="form-input">
                                 <option value="all" ${filters.status === 'all' || !filters.status ? 'selected' : ''}>كل الحالات</option>
                                 <option value="present" ${filters.status === 'present' ? 'selected' : ''}>حاضر</option>
                                 <option value="partial" ${filters.status === 'partial' ? 'selected' : ''}>خروج جزئي</option>
                                 <option value="absent" ${filters.status === 'absent' ? 'selected' : ''}>غائب</option>
                             </select>
                         </div>
-                        <div style="${afField}">
-                            <label style="${afLabel}"><i class="fas fa-calendar-day" style="color:#f59e0b;margin-left:4px;"></i>من تاريخ</label>
-                            <input type="date" id="clinic-attendance-from" style="${afInput}" value="${Utils.escapeAttr(filters.dateFrom || '')}" onfocus="${afFocus}" onblur="${afBlur}">
+                        <div class="registry-filter-field">
+                            <label for="clinic-attendance-from"><i class="fas fa-calendar-day"></i>من تاريخ الحضور</label>
+                            <input type="date" id="clinic-attendance-from" class="form-input" value="${Utils.escapeAttr(filters.dateFrom || '')}">
                         </div>
-                        <div style="${afField}">
-                            <label style="${afLabel}"><i class="fas fa-calendar-check" style="color:#3b82f6;margin-left:4px;"></i>إلى تاريخ</label>
-                            <input type="date" id="clinic-attendance-to" style="${afInput}" value="${Utils.escapeAttr(filters.dateTo || '')}" onfocus="${afFocus}" onblur="${afBlur}">
+                        <div class="registry-filter-field">
+                            <label for="clinic-attendance-to"><i class="fas fa-calendar-check"></i>إلى تاريخ الحضور</label>
+                            <input type="date" id="clinic-attendance-to" class="form-input" value="${Utils.escapeAttr(filters.dateTo || '')}">
+                        </div>
+                        <div class="registry-filter-field tx-reg-filter-actions">
+                            <button type="button" id="clinic-attendance-reset-filters" class="registry-filter-reset-btn"><i class="fas fa-rotate-left"></i>إعادة تعيين الفلاتر</button>
                         </div>
                     </div>
                     ${activeFilterCount ? `
