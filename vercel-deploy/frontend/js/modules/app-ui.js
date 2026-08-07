@@ -7484,23 +7484,51 @@ window.UI = {
                     } else {
                         const loadIssuingAuthoritiesScript = () => {
                             return new Promise((resolve) => {
+                                let settled = false;
+                                const finish = (ok) => {
+                                    if (settled) return;
+                                    settled = true;
+                                    resolve(!!ok);
+                                };
                                 try {
                                     const existing = document.getElementById('issuing-authorities-module-script');
                                     if (existing) {
-                                        existing.addEventListener('load', () => resolve(true), { once: true });
-                                        existing.addEventListener('error', () => resolve(false), { once: true });
+                                        const state = existing.dataset.loadState || '';
+                                        if (state === 'loaded') {
+                                            finish(typeof IssuingAuthorities !== 'undefined' && !!IssuingAuthorities.load);
+                                            return;
+                                        }
+                                        if (state === 'error') {
+                                            finish(false);
+                                            return;
+                                        }
+                                        existing.addEventListener('load', () => finish(true), { once: true });
+                                        existing.addEventListener('error', () => finish(false), { once: true });
+                                        setTimeout(() => {
+                                            finish(typeof IssuingAuthorities !== 'undefined' && !!IssuingAuthorities.load);
+                                        }, 15000);
                                         return;
                                     }
                                     const script = document.createElement('script');
                                     script.id = 'issuing-authorities-module-script';
                                     script.src = 'js/modules/modules/issuingauthorities.js';
                                     script.async = false;
-                                    script.onload = () => resolve(true);
-                                    script.onerror = () => resolve(false);
+                                    script.dataset.loadState = 'loading';
+                                    script.onload = () => {
+                                        script.dataset.loadState = 'loaded';
+                                        finish(true);
+                                    };
+                                    script.onerror = () => {
+                                        script.dataset.loadState = 'error';
+                                        finish(false);
+                                    };
                                     document.head.appendChild(script);
+                                    setTimeout(() => {
+                                        finish(typeof IssuingAuthorities !== 'undefined' && !!IssuingAuthorities.load);
+                                    }, 15000);
                                 } catch (e) {
                                     Utils.safeError('خطأ أثناء محاولة تحميل سكربت IssuingAuthorities:', e);
-                                    resolve(false);
+                                    finish(false);
                                 }
                             });
                         };

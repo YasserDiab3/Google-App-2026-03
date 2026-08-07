@@ -601,16 +601,17 @@ const Training = {
 
     async _runLoadContractorTrainingsOnly() {
         this.ensureData();
-        if (this._currentActiveTab === 'contractors') {
-            this._showContractorLocalDataIfAny();
-        }
         if (typeof StableLoader !== 'undefined') StableLoader.beginOwnedFetch('training-contractors');
+
+        let fetchCompleted = false;
 
         try {
             if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
+                fetchCompleted = true;
                 return;
             }
             if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
+                fetchCompleted = true;
                 return;
             }
 
@@ -621,7 +622,7 @@ const Training = {
             const result = await Utils.promiseWithTimeout(
                 GoogleIntegration.sendRequest({
                     action: 'getAllContractorTrainings',
-                    data: { filters: {}, __timeoutMs: fallbackTimeoutMs }
+                    data: { filters: {}, __timeoutMs: fallbackTimeoutMs, __highPriority: true }
                 }),
                 fallbackTimeoutMs,
                 timeoutMessage
@@ -631,12 +632,16 @@ const Training = {
             });
 
             const data = (result && result.success && Array.isArray(result.data)) ? result.data : null;
-            if (data && contractorGuardOk()) {
-                AppState.appData.contractorTrainings = this._dedupeRegistryRecords(data);
-                this._onContractorTrainingsUpdated();
+            if (data) {
+                fetchCompleted = true;
+                if (contractorGuardOk()) {
+                    AppState.appData.contractorTrainings = this._dedupeRegistryRecords(data);
+                    this._onContractorTrainingsUpdated();
+                }
             }
         } finally {
-            this._contractorTrainingsFetchOk = true;
+            // فشل/timeout يبقي إعادة المحاولة متاحة عند فتح التبويب مرة أخرى.
+            this._contractorTrainingsFetchOk = fetchCompleted;
             if (typeof StableLoader !== 'undefined') StableLoader.endOwnedFetch('training-contractors');
         }
     },
@@ -3074,7 +3079,6 @@ const Training = {
 
         // البيانات من الخادم في الخلفية: لا توقف الواجهة — تبويب ظاهر فقط
         if (tabName === 'contractors') {
-            this._showContractorLocalDataIfAny();
             void this.loadContractorTrainingsPriority().catch(() => {});
         } else if (tabName === 'attendance' || tabName === 'legalTraining') {
             void this._fetchTrainingTabFromBackend(tabName).catch(() => {});

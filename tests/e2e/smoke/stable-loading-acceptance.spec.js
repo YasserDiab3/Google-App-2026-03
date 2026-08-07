@@ -42,6 +42,36 @@ test.describe('stable loading acceptance — contract', () => {
         expect(programsTail.includes("runAction('getAllTrainingSessions'")).toBeFalsy();
     });
 
+    test('contractor training tab keeps one local paint and retryable high-priority fetch', () => {
+        const src = readFrontend('js/modules/modules/training.js');
+        const switchStart = src.indexOf('async switchTab(tabName)');
+        const switchEnd = src.indexOf('\n    _hydrateTab(tabName)', switchStart);
+        const switchBody = src.slice(switchStart, switchEnd);
+        expect(switchBody).not.toMatch(/_showContractorLocalDataIfAny\(\)/);
+
+        const fetchStart = src.indexOf('async _runLoadContractorTrainingsOnly()');
+        const fetchEnd = src.indexOf('\n    async loadTrainingDataAsync()', fetchStart);
+        const fetchBody = src.slice(fetchStart, fetchEnd);
+        expect(fetchBody).not.toMatch(/_showContractorLocalDataIfAny\(\)/);
+        expect(fetchBody).toMatch(/__highPriority:\s*true/);
+        expect(fetchBody).toMatch(/_contractorTrainingsFetchOk\s*=\s*fetchCompleted/);
+    });
+
+    test('issuing authorities list load is independent from supporting form data', () => {
+        const src = readFrontend('js/modules/modules/issuingauthorities.js');
+        const loadStart = src.indexOf('async _loadOnce()');
+        const loadEnd = src.indexOf('\n    async _fetchContractorOptions()', loadStart);
+        const loadBody = src.slice(loadStart, loadEnd);
+        expect(loadBody).toMatch(/const dataPromise\s*=\s*this\._fetchData\(\)/);
+        expect(loadBody.indexOf('this._fetchData()')).toBeLessThan(loadBody.indexOf('this._ensureFormSettingsReady()'));
+        expect(loadBody).not.toMatch(/_fetchContractorOptions\(\)/);
+        expect(loadBody).not.toMatch(/_bustIssuingAuthoritiesSheetCache\(\)/);
+
+        const uiSrc = readFrontend('js/modules/app-ui.js');
+        expect(uiSrc).toMatch(/script\.dataset\.loadState\s*=\s*'loading'/);
+        expect(uiSrc).toMatch(/state\s*===\s*'loaded'/);
+    });
+
     test('PTW never auto-calls syncRegistryWithPermits', () => {
         const src = readFrontend('js/modules/modules/ptw.js');
         const calls = [...src.matchAll(/syncRegistryWithPermits\s*\(/g)];
@@ -189,6 +219,7 @@ test.describe('stable loading acceptance — runtime local-first', () => {
                 if (action === 'getAllLegalTrainings') return { success: true, data: AppState.appData.legalTrainings.slice() };
                 if (action === 'getAllLegalTrainingAttendees') return { success: true, data: [] };
                 if (action === 'getAllLegalRegisters') return { success: true, data: [] };
+                if (action === 'getAllContractorTrainings') return { success: true, data: AppState.appData.contractorTrainings.slice() };
                 if (action === 'getAllEmployees') return { success: true, data: AppState.appData.employees.slice() };
                 if (action === 'getAllClinicVisits') return { success: true, data: AppState.appData.clinicVisits.slice() };
                 return origSend ? origSend(payload) : { success: true, data: [] };
@@ -338,6 +369,119 @@ test.describe('stable loading acceptance — runtime local-first', () => {
         await page.waitForTimeout(200);
         const actions = await page.evaluate(() => (window.__accCalls || []).map((c) => c.action));
         expect(actions).toContain('getAllTrainingAttendance');
+    });
+
+    test('contractor training tab paints cached rows once before background response', async ({ page }) => {
+        const result = await page.evaluate(async () => {
+            const section = document.getElementById('training-section');
+            section.style.display = 'block';
+            Training._contractorTrainingsFetchOk = false;
+            Training._contractorTrainingsLoadPromise = null;
+            await Training.load();
+            window.__accCalls = [];
+
+            const originalRefresh = Training.refreshContractorTrainingList;
+            let localPaints = 0;
+            Training.refreshContractorTrainingList = async function (...args) {
+                localPaints += 1;
+                return originalRefresh.apply(this, args);
+            };
+            await Training.switchTab('contractors');
+            await new Promise((resolve) => setTimeout(resolve, 120));
+            Training.refreshContractorTrainingList = originalRefresh;
+
+            const request = (window.__accCalls || []).find((call) => call.action === 'getAllContractorTrainings');
+            return {
+                localPaints,
+                highPriority: request?.data?.__highPriority === true,
+                hasCachedRow: !!document.querySelector('#contractor-training-container tr[data-training-id="C1"]')
+            };
+        });
+        expect(result.localPaints).toBe(1);
+        expect(result.highPriority).toBeTruthy();
+        expect(result.hasCachedRow).toBeTruthy();
+    });
+
+    test('contractor training retries after failed response', async ({ page }) => {
+        const result = await page.evaluate(async () => {
+            const originalSend = GoogleIntegration.sendRequest;
+            let attempts = 0;
+            const priorityFlags = [];
+            GoogleIntegration.sendRequest = async (payload) => {
+                if (payload?.action === 'getAllContractorTrainings') {
+                    attempts += 1;
+                    priorityFlags.push(payload?.data?.__highPriority === true);
+                    return { success: false, data: [] };
+                }
+                return originalSend.call(GoogleIntegration, payload);
+            };
+            Training._contractorTrainingsFetchOk = false;
+            Training._contractorTrainingsLoadPromise = null;
+            await Training.loadContractorTrainingsPriority();
+            const retryStillOpen = Training._contractorTrainingsFetchOk === false;
+            await Training.loadContractorTrainingsPriority();
+            GoogleIntegration.sendRequest = originalSend;
+            return { attempts, retryStillOpen, priorityFlags };
+        });
+        expect(result.attempts).toBe(2);
+        expect(result.retryStillOpen).toBeTruthy();
+        expect(result.priorityFlags).toEqual([true, true]);
+    });
+
+    test('issuing authorities table does not wait for form settings', async ({ page }) => {
+        const hasModule = await page.evaluate(() => !!window.IssuingAuthorities);
+        if (!hasModule) {
+            await page.addScriptTag({ url: '/js/modules/modules/issuingauthorities.js' });
+        }
+        const result = await page.evaluate(async () => {
+            const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+            const section = document.getElementById('issuing-authorities-section');
+            section.style.display = 'block';
+            IssuingAuthorities._data = [];
+            IssuingAuthorities._loadPromise = null;
+            IssuingAuthorities._activeCategory = 'employees';
+
+            let settingsReady = false;
+            Permissions.ensureFormSettingsState = async () => {
+                await delay(1500);
+                settingsReady = true;
+                return {};
+            };
+            const originalSend = GoogleIntegration.sendRequest;
+            const calls = [];
+            GoogleIntegration.sendRequest = async (payload) => {
+                calls.push(payload?.action || '');
+                if (payload?.action === 'readFromSheet' && payload?.data?.sheetName === 'PTWIssuingAuthorities') {
+                    await delay(60);
+                    return {
+                        success: true,
+                        data: [{ id: 'IA-FAST-1', name: 'Approver Fast', employeeCode: 'E-1', isActive: true }]
+                    };
+                }
+                if (payload?.action === 'getAllApprovedContractors') {
+                    await delay(1500);
+                    return { success: true, data: [] };
+                }
+                return originalSend.call(GoogleIntegration, payload);
+            };
+
+            const started = performance.now();
+            await Promise.all([IssuingAuthorities.load(), IssuingAuthorities.load()]);
+            const elapsedMs = performance.now() - started;
+            GoogleIntegration.sendRequest = originalSend;
+            return {
+                elapsedMs,
+                settingsReady,
+                readCalls: calls.filter((action) => action === 'readFromSheet').length,
+                contractorCalls: calls.filter((action) => action === 'getAllApprovedContractors').length,
+                hasRow: /Approver Fast/.test(document.getElementById('ia-table-wrapper')?.innerText || '')
+            };
+        });
+        expect(result.elapsedMs).toBeLessThan(800);
+        expect(result.settingsReady).toBeFalsy();
+        expect(result.readCalls).toBe(1);
+        expect(result.contractorCalls).toBe(0);
+        expect(result.hasRow).toBeTruthy();
     });
 
     test('employees paints local list under 800ms', async ({ page }) => {

@@ -11,6 +11,7 @@
 const IssuingAuthorities = {
     _data: [],
     _loading: false,
+    _loadPromise: null,
     _activeCategory: 'employees',
     _contractorOptions: [],
     _employeesCache: null,
@@ -930,19 +931,23 @@ const IssuingAuthorities = {
     },
 
     async load() {
+        if (this._loadPromise) return this._loadPromise;
+        this._loadPromise = this._loadOnce().finally(() => {
+            this._loadPromise = null;
+        });
+        return this._loadPromise;
+    },
+
+    async _loadOnce() {
         const section = document.getElementById('issuing-authorities-section');
         if (!section) return;
 
-        // رسم الواجهة فوراً مع مؤشر التحميل داخل الجدول — لا ننتظر جلب المقاولين
+        // بيانات القائمة تبدأ فوراً. إعدادات النموذج تُدفأ بالخلفية ولا تحجب ظهور الجدول.
         section.innerHTML = this._renderShell();
         this._injectStyles();
-        this._bustIssuingAuthoritiesSheetCache();
-        await this._ensureFormSettingsReady();
-
-        await Promise.all([
-            this._fetchContractorOptions(),
-            this._fetchData()
-        ]);
+        const dataPromise = this._fetchData();
+        void this._ensureFormSettingsReady();
+        await dataPromise;
         this._renderTable();
         this._attachEvents();
         if (typeof UI !== 'undefined' && typeof UI.addNavigationIconsAfterRender === 'function') {
@@ -2436,7 +2441,6 @@ const IssuingAuthorities = {
                 if (!section) return;
                 section.innerHTML = this._renderShell();
                 this._injectStyles();
-                this._bustIssuingAuthoritiesSheetCache();
                 await this._fetchData();
                 this._renderTable();
                 this._attachEvents();
