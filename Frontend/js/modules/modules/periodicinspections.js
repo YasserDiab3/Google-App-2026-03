@@ -963,9 +963,11 @@ const PeriodicInspections = {
             // تحميل سجل المرور اليومي للسلامة (Daily Safety Check List) من قاعدة البيانات
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.readFromSheets) {
                 try {
+                    this._dscLastAttemptAt = Date.now();
                     const dscData = await GoogleIntegration.readFromSheets('DailySafetyCheckList');
                     if (Array.isArray(dscData)) {
                         AppState.appData.dailySafetyCheckList = dscData;
+                        this._dscDataLoadedOnce = true;
                         dataUpdated = true;
                         if (dscData.length > 0 && typeof Utils !== 'undefined' && Utils.safeLog) {
                             Utils.safeLog('✅ تم تحميل سجل المرور اليومي للسلامة: ' + dscData.length + ' سجل');
@@ -3681,13 +3683,17 @@ const PeriodicInspections = {
      * - يُعيد القيمة الحالية فوراً إذا كانت محمَّلة سابقاً (ما لم يُطلب force).
      * - يمنع الطلبات المتزامنة المكررة عبر _dscDataLoadPromise.
      */
-    async ensureDailySafetyDataLoaded(force = false) {
+     async ensureDailySafetyDataLoaded(force = false, staleMs = 60000) {
         // طلب جارٍ بالفعل — أعِد نفس الوعد
         if (this._dscDataLoadPromise) return this._dscDataLoadPromise;
 
         const arr = AppState.appData.dailySafetyCheckList;
         const alreadyLoaded = Array.isArray(arr) && this._dscDataLoadedOnce === true;
-        if (alreadyLoaded && !force) return true;
+        const lastAttempt = this._dscLastAttemptAt || 0;
+        const freshEnough = (Date.now() - lastAttempt) < staleMs;
+        // البيانات محمَّلة ولم تنتهِ صلاحيتها — نعيدها فوراً.
+        // الانتهاء من المدة (TTL) يسمح بإعادة الجلب لظهور السجلات الجديدة تلقائياً.
+        if (alreadyLoaded && !force && freshEnough) return true;
 
         // الخادم غير مهيأ — نكتفي بالبيانات المحلية
         if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.readFromSheets !== 'function') {
@@ -3695,8 +3701,22 @@ const PeriodicInspections = {
             return false;
         }
 
+        this._dscLastAttemptAt = Date.now();
         this._dscDataLoadPromise = (async () => {
             try {
+                // مزامنة فورم → ورقة التطبيق قبل القراءة (أفضل جهد، تخطى لو not admin/غير متاح)
+                try {
+                    if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
+                        const user = AppState.currentUser || {};
+                        if (user.email || user.id) {
+                            await GoogleIntegration.sendRequest({
+                                action: 'syncDailySafetyFormData',
+                                data: { userData: user }
+                            }).catch(() => null);
+                        }
+                    }
+                } catch (_syncErr) { /* fغير حرج — البيانات تُقرأ من الورقة مهما كانت حالة المزامنة */ }
+
                 const dscData = await GoogleIntegration.readFromSheets('DailySafetyCheckList', 20000);
                 if (Array.isArray(dscData)) {
                     AppState.appData.dailySafetyCheckList = dscData;
@@ -6466,7 +6486,11 @@ const PeriodicInspections = {
             if (isDscTab) {
                 const dscArr = AppState.appData.dailySafetyCheckList;
                 const hasData = Array.isArray(dscArr) && dscArr.length > 0;
-                if (!this._dscDataLoadedOnce && !this._dscDataLoadPromise) {
+                const lastAttempt = this._dscLastAttemptAt || 0;
+                // إعادة الجلب عند فتح التبويب إذا انتهت صلاحية البيانات (60 ثانية) —
+                // هذا يضمن ظهور السجلات الجديدة (من أجهزة/مستخدمين/فورم آخر) تلقائياً.
+                const dataStale = (Date.now() - lastAttempt) > 60000;
+                if ((!this._dscDataLoadedOnce || dataStale) && !this._dscDataLoadPromise) {
                     needsBackgroundDscFetch = true;
                     // عرض مؤشر تحميل خفيف فقط إذا لا توجد بيانات محلية لعرضها
                     if (!hasData) {
@@ -6548,14 +6572,12 @@ const PeriodicInspections = {
             }
             if (needsBackgroundDscFetch) {
                 this.ensureDailySafetyDataLoaded().then(() => {
-                    // ✅ منع أي حلقة إعادة جلب: نعتبر المحاولة منتهية (نجحت أو فشلت)
-                    // عند الفشل تبقى البيانات الحالية معروضة، والمستخدم يستطيع التحديث يدوياً.
-                    this._dscDataLoadedOnce = true;
+                    // النجاح: ensureDailySafetyDataLoaded يُضبط _dscDataLoadedOnce=true.
+                    // عند الفشل: تبقى البيانات الحالية معروضة وتبقى إعادة المحاولة متاحة بعد انتهاء TTL.
                     if (this.state.currentTab === 'daily-safety-checklist' || this.state.currentTab === 'daily-safety-analytics') {
                         this.refreshCurrentTabContent().catch(() => {});
                     }
                 }).catch(() => {
-                    this._dscDataLoadedOnce = true;
                     if (this.state.currentTab === 'daily-safety-checklist' || this.state.currentTab === 'daily-safety-analytics') {
                         this.refreshCurrentTabContent().catch(() => {});
                     }

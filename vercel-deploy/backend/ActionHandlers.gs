@@ -6530,4 +6530,20 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'syncDailySafetyFormData': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action);
+            if (adminFail) { result = adminFail; return; }
+
+            if (typeof processFormDataFromSheet !== 'function') {
+                result = { success: false, message: 'دالة processFormDataFromSheet غير متوفرة' };
+                return;
+            }
+
+            result = processFormDataFromSheet();
+            return;
+        })();
+        return result;
+    },
 };

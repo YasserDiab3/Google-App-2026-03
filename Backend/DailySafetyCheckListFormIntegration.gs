@@ -223,8 +223,12 @@ function processFormRowsRange(sheet, startRow, endRow, updateLastProcessed) {
   var lastSuccessRow = startRow - 1;
   var numCols = sheet.getLastColumn();
 
-  for (var row = startRow; row <= endRow; row++) {
-    var rowData = sheet.getRange(row, 1, row, numCols).getValues()[0];
+  // قراءة النطاق دفعة واحدة — أسرع + يقلل استهلاك quota (بدل getRange داخل الحلقة)
+  var block = sheet.getRange(startRow, 1, endRow - startRow + 1, numCols).getValues();
+
+  for (var idx = 0; idx < block.length; idx++) {
+    var rowData = block[idx];
+    var row = startRow + idx;
 
     if (countNonEmptyFormCells(rowData) < 2) {
       lastSuccessRow = row;
@@ -233,8 +237,10 @@ function processFormRowsRange(sheet, startRow, endRow, updateLastProcessed) {
 
     var records = mapFormRowToDailySafetyCheckListRecords(rowData, headers);
     if (!records || records.length === 0) {
+      // صف غير قابل للتحويل: لا نكسر الحلقة — نسجّل ونكمل حتى لا نحجز الصفوف الأحدث.
       failedRows.push({ row: row, message: 'فشل تحويل بيانات الصف' });
-      break;
+      lastSuccessRow = row;
+      continue;
     }
 
     var rowOk = true;
@@ -257,7 +263,9 @@ function processFormRowsRange(sheet, startRow, endRow, updateLastProcessed) {
     }
 
     if (!rowOk) {
-      break;
+      // فشل حفظ (قد يكون مؤقتاً): لا نقدم المؤشر — تُعاد محاولة الصف في الدورة التالية
+      // مع الاستمرار في معالجة بقية الصفوف (لا break كُلية تعطل النقل).
+      continue;
     }
     lastSuccessRow = row;
   }
@@ -271,11 +279,14 @@ function processFormRowsRange(sheet, startRow, endRow, updateLastProcessed) {
   }
 
   var ok = failedRows.length === 0;
+  var msg = ok
+    ? ('تمت معالجة ' + processedCount + ' سجل/سجلات من الصفوف ' + startRow + '–' + lastSuccessRow)
+    : ('تمت معالجة ' + processedCount + ' سجل/سجلات ورفض ' + failedRows.length + ' صف/صفوف' +
+       ' (أولها الصف ' + failedRows[0].row + ': ' + failedRows[0].message + ').' +
+       ' لإعادة معالجتها يدوياً: reprocessDailySafetyFormRows(' + failedRows[0].row + ', ' + lastSuccessRow + ')');
   return {
     success: ok,
-    message: ok
-      ? ('تمت معالجة ' + processedCount + ' سجل/سجلات من الصفوف ' + startRow + '–' + lastSuccessRow)
-      : ('توقفت المعالجة عند الصف ' + failedRows[0].row + ': ' + failedRows[0].message),
+    message: msg,
     processedCount: processedCount,
     skippedDuplicateCount: skippedDuplicateCount,
     failedRows: failedRows,
