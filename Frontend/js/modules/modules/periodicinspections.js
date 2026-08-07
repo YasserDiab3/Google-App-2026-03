@@ -4435,6 +4435,7 @@ const PeriodicInspections = {
                     <td class="text-left">
                         <button type="button" class="btn-icon btn-icon-info ml-2" onclick="PeriodicInspections.showDailySafetyCheckListView('${Utils.escapeHTML(r.id)}')" title="${t('module.periodic.dsc.action.view', 'عرض')}"><i class="fas fa-eye"></i></button>
                         <button type="button" class="btn-icon btn-icon-success ml-2" onclick="PeriodicInspections.exportDailySafetyCheckListRecord('${Utils.escapeHTML(r.id)}')" title="${t('module.periodic.dsc.action.downloadPdf', 'تحميل PDF')}"><i class="fas fa-file-pdf"></i></button>
+                        <button type="button" class="btn-icon btn-icon-primary ml-2" onclick="PeriodicInspections.openDailySafetyChecklistEmail('${Utils.escapeHTML(r.id)}')" title="${t('module.periodic.dsc.action.email', 'إرسال بريد')}"><i class="fas fa-envelope"></i></button>
                         <button type="button" class="btn-icon btn-icon-primary" onclick="PeriodicInspections.showDailySafetyCheckListForm('${Utils.escapeHTML(r.id)}')" title="${t('module.periodic.dsc.action.edit', 'تعديل')}"><i class="fas fa-edit"></i></button>
                         <button type="button" class="btn-icon btn-icon-danger" onclick="PeriodicInspections.deleteDailySafetyCheckListRecord('${Utils.escapeHTML(r.id)}')" title="${t('module.periodic.dsc.action.delete', 'حذف')}"><i class="fas fa-trash"></i></button>
                     </td>
@@ -6345,6 +6346,7 @@ const PeriodicInspections = {
                 <div class="dsc-view-footer">
                     <button type="button" class="btn-primary" onclick="PeriodicInspections.printDailySafetyCheckListRecord('${Utils.escapeHTML(record.id)}')"><i class="fas fa-print ml-2"></i>${t('module.periodic.dsc.action.print', 'طباعة')}</button>
                     <button type="button" class="btn-primary" onclick="PeriodicInspections.exportDailySafetyCheckListRecord('${Utils.escapeHTML(record.id)}')"><i class="fas fa-file-pdf ml-2"></i>${t('module.periodic.dsc.action.downloadPdf', 'تحميل PDF')}</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('daily-safety-checklist', { btnId: 'dsc-view-email-btn' }) : ''}
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove(); PeriodicInspections.showDailySafetyCheckListForm('${Utils.escapeHTML(record.id)}');"><i class="fas fa-edit ml-2"></i>${t('module.periodic.dsc.action.edit', 'تعديل')}</button>
                     <button type="button" class="btn-secondary" style="color:#b91c1c;" onclick="if(confirm('${t('module.periodic.dsc.confirmDelete', 'هل أنت متأكد من حذف هذا السجل؟')}')) { this.closest('.modal-overlay').remove(); PeriodicInspections.deleteDailySafetyCheckListRecord('${Utils.escapeHTML(record.id)}'); }"><i class="fas fa-trash ml-2"></i>${t('module.periodic.dsc.action.delete', 'حذف')}</button>
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times ml-2"></i>${t('module.periodic.dsc.action.close', 'إغلاق')}</button>
@@ -6352,6 +6354,118 @@ const PeriodicInspections = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined' && typeof EmailDispatch.bindFooterButtons === 'function') {
+            const payload = this.buildDailySafetyChecklistEmailPayload(record);
+            EmailDispatch.bindFooterButtons(modal, {
+                moduleKey: 'daily-safety-checklist',
+                recordId: record.id,
+                title: payload.title,
+                subject: payload.subject,
+                buildFields: () => payload.fields,
+                buildHtml: () => payload.html
+            });
+        }
+    },
+
+    /**
+     * بنية بريد DSC — عناصر/ملخص/قراءة + قالب HTML (إن توفّر).
+     */
+    buildDailySafetyChecklistEmailPayload(record) {
+        const serialNo = this.getDailySafetyCheckListSerialNumber(record);
+        const items = [];
+        let compliant = 0;
+        let nonCompliant = 0;
+        let answered = 0;
+        let reading = null;
+        this.DAILY_SAFETY_CHECKLIST_QUESTIONS.forEach((q) => {
+            const recordKey = this._getDailySafetyQuestionRecordKey(q.key);
+            const val = record[recordKey] != null ? String(record[recordKey]).trim() : '';
+            const label = this._getDailySafetyQuestionLabel(q);
+            if (q.key === 'q16') {
+                reading = val || '';
+                if (val) {
+                    answered++;
+                    items.push({ status: null, reading: val, label });
+                }
+                return;
+            }
+            const kind = this._getDailySafetyStatusKind(val);
+            if (kind === 'empty') return;
+            answered++;
+            if (kind === 'nonCompliant') {
+                nonCompliant++;
+                items.push({ label, status: 'غير مطابق' });
+            } else {
+                compliant++;
+                items.push({ label, status: 'مطابق' });
+            }
+        });
+        const dateLabel = record.date ? Utils.formatDate(record.date) : '-';
+        const shiftLabel = this._formatDailyShiftLabel(record.shift || '-');
+        const html = (typeof EmailTemplates !== 'undefined' && EmailTemplates.buildDailySafetyChecklist)
+            ? EmailTemplates.buildDailySafetyChecklist({
+                title: this._t('module.periodic.dsc.titleAr', 'قائمة المرور اليومي للسلامة'),
+                subtitle: 'تقرير مرور يومي على مواقع ومرافق المنشأة',
+                badge: serialNo,
+                meta: [
+                    { k: 'رقم التقرير', v: serialNo },
+                    { k: 'الموقع', v: record.siteName || '-' },
+                    { k: 'التاريخ', v: dateLabel },
+                    { k: 'القائم بالمرور', v: record.inspectorName || '-' },
+                    { k: 'الوردية', v: shiftLabel }
+                ],
+                summary: { total: answered, compliant, nonCompliant, reading },
+                items,
+                notes: record.notes || ''
+            })
+            : '';
+        const fields = [
+            { label: 'رقم التقرير', value: serialNo },
+            { label: 'الموقع', value: record.siteName || '-' },
+            { label: 'التاريخ', value: dateLabel },
+            { label: 'القائم بالمرور', value: record.inspectorName || '-' },
+            { label: 'الوردية', value: shiftLabel },
+            { label: 'مطابق', value: String(compliant) },
+            { label: 'غير مطابق', value: String(nonCompliant) }
+        ];
+        if (reading) fields.push({ label: 'قراءة الضغط', value: reading });
+        return {
+            title: this._t('module.periodic.dsc.titleAr', 'قائمة المرور اليومي للسلامة'),
+            subject: 'مرور يومي — ' + serialNo,
+            html,
+            fields
+        };
+    },
+
+    /**
+     * زر البريد في جدول السجلات — بوابة السماح ثم فتح مودال الإرسال.
+     */
+    async openDailySafetyChecklistEmail(recordId) {
+        const record = this.getDailySafetyCheckListRecords().find((r) => r.id === recordId);
+        if (!record) {
+            if (typeof Notification !== 'undefined') Notification.error('السجل غير موجود');
+            return;
+        }
+        if (typeof EmailDispatch === 'undefined') {
+            if (typeof Notification !== 'undefined') Notification.error('خدمة البريد غير متوفرة');
+            return;
+        }
+        const allowed = await EmailDispatch.ensureCanManualSend('daily-safety-checklist');
+        if (!allowed) {
+            if (typeof Notification !== 'undefined') {
+                Notification.warning('الإرسال اليدوي غير مفعّل لهذا النوع. راجع إعدادات البريد.');
+            }
+            return;
+        }
+        const payload = this.buildDailySafetyChecklistEmailPayload(record);
+        EmailDispatch.openSendModal({
+            moduleKey: 'daily-safety-checklist',
+            recordId,
+            title: payload.title,
+            subject: payload.subject,
+            fields: payload.fields,
+            htmlBody: payload.html
+        });
     },
 
     /**

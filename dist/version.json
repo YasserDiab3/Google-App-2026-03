@@ -1,15 +1,15 @@
 {
-  "version": "1.0.900",
+  "version": "1.0.901",
   "highlights": {
     "ar": [
-      "توحيد فلاتر حضور العيادة مع تصميم فلاتر التدريب ومهمات الوقاية.",
-      "تحسين البحث حسب المسئول والدور والحالة والشهر ونطاق التاريخ.",
-      "إضافة زر واضح لإعادة تعيين الفلاتر ودعم أفضل للشاشات الصغيرة."
+      "تطبيق الهوية البصرية لنظام السلامة على موديول مهمات الوقاية: سجل الاستلامات، إدارة المخزون، وتحليل البيانات باللون الأزرق الموحّد.",
+      "إرسال قائمة المرور اليومي للسلامة مباشرة من السجل بقالب بريد احترافي يتضمن الملخص وقراءة الضغط والبنود.",
+      "دعم مرفقات PDF في الإرسال البريد مباشرة مع زر إرسال جديد في سجل المرور اليومي."
     ],
     "en": [
-      "Unified clinic attendance filters with the training and PPE filter design.",
-      "Improved filtering by staff member, role, status, month, and date range.",
-      "Added a clear filter reset action and better small-screen support."
+      "HSE brand identity applied across the PPE module: receipts log, stock management, and analytics with unified blue.",
+      "Send the daily safety checklist from the log with a professional mail template including summary, pressure reading and items.",
+      "PDF attachments support in direct email sending, plus a new send button in the safety checklist log."
     ]
   }
 }

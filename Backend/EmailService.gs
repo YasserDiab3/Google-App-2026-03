@@ -44,8 +44,31 @@ function sanitizeEmailHtmlBody_(html) {
 }
 
 /**
+ * تحويل مرفقات base64 إلى Blobs آمنة.
+ * attachments: [{ name, base64 }] — حد أقصى 5 مرفقات و 4MB إجمالي.
+ */
+function buildEmailAttachments_(attachments) {
+    var out = [];
+    if (!Array.isArray(attachments) || !attachments.length) return out;
+    var totalBytes = 0;
+    attachments.slice(0, 5).forEach(function (att) {
+        if (!att || !att.name || !att.base64) return;
+        try {
+            var clean = String(att.base64).replace(/^data:[^;]+;base64,/, '').replace(/\s+/g, '');
+            var bytes = Utilities.base64Decode(clean);
+            totalBytes += bytes.length;
+            if (totalBytes > 4 * 1024 * 1024) return;
+            out.push(Utilities.newBlob(bytes, 'application/pdf', String(att.name)));
+        } catch (e) {
+            Logger.log('buildEmailAttachments_ skip: ' + e.toString());
+        }
+    });
+    return out;
+}
+
+/**
  * إرسال مباشر من الواجهة أو الخلفية.
- * payload: { moduleKey, recordId, subject, to[], fields[], htmlBody?, title? }
+ * payload: { moduleKey, recordId, subject, to[], fields[], htmlBody?, title?, plainBody?, attachments?[] }
  */
 function sendDirectEmail(payload) {
     try {
@@ -89,16 +112,20 @@ function sendDirectEmail(payload) {
                 return (f.label || '') + ': ' + (f.value == null ? '' : f.value);
             }).join('\n') : title);
 
+        var attachmentBlobs = buildEmailAttachments_(data.attachments);
+
         var sent = 0;
         var errors = [];
         recipients.forEach(function (email) {
             try {
-                MailApp.sendEmail({
+                var mailOpts = {
                     to: email,
                     subject: subject,
                     htmlBody: html,
                     body: plain
-                });
+                };
+                if (attachmentBlobs.length) mailOpts.attachments = attachmentBlobs;
+                MailApp.sendEmail(mailOpts);
                 sent++;
             } catch (mailErr) {
                 errors.push(email + ': ' + mailErr.toString());

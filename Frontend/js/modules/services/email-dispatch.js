@@ -24,6 +24,7 @@ const EmailDispatch = {
         { key: 'ptw', labelAr: 'تصاريح العمل', group: 'ops', enabled: true, manualSend: true, autoSend: false },
         { key: 'nearmiss', labelAr: 'الحوادث الوشيكة', group: 'ops', enabled: true, manualSend: true, autoSend: false },
         { key: 'daily-observations', labelAr: 'الملاحظات اليومية', group: 'ops', enabled: true, manualSend: true, autoSend: true },
+        { key: 'daily-safety-checklist', labelAr: 'قائمة المرور اليومي للسلامة', group: 'ops', enabled: true, manualSend: true, autoSend: true, autoEvents: ['create'] },
         { key: 'daily-observations.analytics', labelAr: 'تحليل الملاحظات', group: 'reports', enabled: true, manualSend: true, autoSend: false },
         { key: 'daily-observations.executive', labelAr: 'لوحة تنفيذية للملاحظات', group: 'reports', enabled: true, manualSend: true, autoSend: false },
         { key: 'behavior-monitoring', labelAr: 'مراقبة التصرفات', group: 'ops', enabled: true, manualSend: true, autoSend: false },
@@ -220,7 +221,7 @@ const EmailDispatch = {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                this.openSendModal({
+                const payload = {
                     moduleKey: context.moduleKey,
                     recordId: context.recordId || (context.record && (context.record.id || context.record.isoCode)) || '',
                     title: context.title || this.getModuleLabel(context.moduleKey),
@@ -228,7 +229,18 @@ const EmailDispatch = {
                     fields: typeof context.buildFields === 'function'
                         ? context.buildFields(context.record)
                         : (context.fields || this.fieldsFromRecord(context.moduleKey, context.record || {}))
-                });
+                };
+                if (typeof context.buildHtml === 'function') {
+                    payload.htmlBody = context.buildHtml(context.record);
+                } else if (context.htmlBody) {
+                    payload.htmlBody = context.htmlBody;
+                }
+                if (typeof context.buildAttachments === 'function') {
+                    payload.attachments = context.buildAttachments(context.record);
+                } else if (context.attachments) {
+                    payload.attachments = context.attachments;
+                }
+                this.openSendModal(payload);
             });
         });
     },
@@ -405,6 +417,8 @@ const EmailDispatch = {
         const label = this.getModuleLabel(moduleKey);
         const title = options.title || label;
         const fields = options.fields || [];
+        const htmlBody = options.htmlBody || '';
+        const attachments = Array.isArray(options.attachments) ? options.attachments : [];
         const subjectDefault = options.subject || (title + (options.recordId ? ' — ' + options.recordId : ''));
 
         const fieldsPreview = fields.length
@@ -510,6 +524,8 @@ const EmailDispatch = {
                     title,
                     to,
                     fields,
+                    htmlBody: htmlBody || undefined,
+                    attachments: attachments.length ? attachments : undefined,
                     userData
                 });
                 if (result && result.success) {
