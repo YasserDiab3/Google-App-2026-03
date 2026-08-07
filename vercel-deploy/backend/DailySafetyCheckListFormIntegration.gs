@@ -635,3 +635,136 @@ try {
     return { success: false, message: 'dscDebugSyncStatus: ' + error.toString() };
   }
 }
+
+/**
+ * فحص التكرار — يحدد ما إذا كانت سجلات DailySafetyCheckList تحوي تكرارات حقيقية
+ * (نفس إرسال الفورم محفوظ أكثر من مرة) قبل أي قرار بالمسح.
+ *
+ * يفحص: سجلات التطبيق (بالمفتاح الكامل date+site+inspector+shift+formSubmittedAt)
+ * ومقارنتها بعدد الصفوف الفعلية في ورقة الفورم.
+ * لا يُعدّل أي بيانات.
+ */
+function dscAuditDuplicates() {
+  try {
+    var out = { success: true };
+
+    // 1) سجلات التطبيق
+    try {
+      var appRows = typeof readFromSheet === 'function'
+        ? readFromSheet('DailySafetyCheckList', APP_SPREADSHEET_ID)
+        : [];
+      out.appRecords = Array.isArray(appRows) ? appRows.length : 0;
+
+      // تجميع بالمفتاح الكامل (يتضمن الطابع الزمني للفورم إن وُجد)
+      var seen = {};
+      var seenNoTs = {};
+      var dupKeys = [];
+      var dupNoTsKeys = [];
+      for (var i = 0; i < appRows.length; i++) {
+        var r = appRows[i];
+        if (!r) continue;
+        var date = formatDateOnly(r.date);
+        var site = String(r.siteName || r.siteId || '').trim();
+        var inspector = String(r.inspectorName || '').trim();
+        var shift = String(r.shift || '').trim();
+        var ts = String(r.formSubmittedAt || '').trim();
+        var key = date + '|' + site + '|' + inspector + '|' + shift + '|' + ts;
+        if (ts) {
+          if (seen[key]) { dupKeys.push(key); } else { seen[key] = true; }
+        } else {
+          // سجلات قديمة بلا طابع زمني — لا يمكن التمييز إلا بـ (date+site+inspector+shift)
+          var legacyKey = date + '|' + site + '|' + inspector + '|' + shift;
+          if (seenNoTs[legacyKey]) { dupNoTsKeys.push(legacyKey); } else { seenNoTs[legacyKey] = true; }
+        }
+      }
+      out.recordsWithFormTimestamp = Object.keys(seen).length;
+      out.legacyRecordsWithoutTimestamp = Object.keys(seenNoTs).length;
+      out.exactDuplicatesWithTimestamp = dupKeys.length;
+      out.possibleDuplicatesLegacy = dupNoTsKeys.length;
+
+      if (dupKeys.length > 0) {
+        out.duplicateExamples = [];
+        var dcount = 0;
+        for (var j = 0; j < dupKeys.length && dcount < 5; j++) {
+          out.duplicateExamples.push(dupKeys[j]);
+          dcount++;
+        }
+      }
+    } catch (e) { out.appPart = 'ERR: ' + e.toString(); }
+
+    // 2) صفوف الفورم
+    try {
+      var fSheet = getDailySafetyFormResponsesSheet();
+      out.formSheetName = fSheet ? fSheet.getName() : '';
+      out.formLastRow = fSheet ? fSheet.getLastRow() : -1;
+      if (fSheet) {
+        var lastRow = fSheet.getLastRow();
+        var numCols = fSheet.getLastColumn();
+        if (lastRow >= 2) {
+          var headers = fSheet.getRange(1, 1, 1, numCols).getValues()[0];
+          var block = fSheet.getRange(2, 1, lastRow - 1, numCols).getValues();
+          var dataRows = 0;
+          var expectedRecords = 0;
+          for (var k = 0; k < block.length; k++) {
+            if (countNonEmptyFormCells(block[k]) < 2) continue;
+            dataRows++;
+            var factories = getFactoriesForFormRow(block[k], headers);
+            expectedRecords += factories.length;
+          }
+          out.formDataRows = dataRows;
+          out.expectedRecords = expectedRecords; // سجلات مفترضة = صف لكل مصنع
+        }
+      }
+    } catch (e) { out.formPart = 'ERR: ' + e.toString(); }
+
+    // 3) خلاصة
+    out.conclusion = (out.recordsWithFormTimestamp || 0) === 0
+      ? 'لا توجد سجلات بطابع زمني — كل السجلات قديمة (مستحيل التمييز الدقيق).'
+      : (out.exactDuplicatesWithTimestamp > 0
+          ? 'يوجد ' + out.exactDuplicatesWithTimestamp + ' تكراراً مؤكداً (نفس إرسال الفورم أكثر من مرة).'
+          : 'لا توجد تكرارات مؤكدة بين السجلات ذات الطابع الزمني.');
+    if (out.possibleDuplicatesLegacy > 0) {
+      out.conclusion += ' سجلات قديمة قد تبدو مكررة (بلا طابع زمني) لكن قد تكون تقارير مستقلة لنفس اليوم.';
+    }
+    if (out.expectedRecords && out.appRecords) {
+      out.comparison = 'الفورم ينتج ~' + out.expectedRecords + ' سجل، والتطبيق فيه ' + out.appRecords + '.';
+    }
+    return out;
+  } catch (error) {
+    return { success: false, message: 'dscAuditDuplicates: ' + error.toString() };
+  }
+}
+
+/**
+ * مسح كامل لجدول DailySafetyCheckList وإعادة المزامنة من الفورم.
+ * تحذير: إجراء لا رجعة فيه — يحذف كل السجلات ويعيد استيراد الفورم من الصفر.
+ */
+function resetDailySafetyCheckListAndResync() {
+  try {
+    var sheetName = 'DailySafetyCheckList';
+    var spreadsheet = SpreadsheetApp.openById(APP_SPREADSHEET_ID);
+    var sheet = spreadsheet.getSheetByName(sheetName);
+    if (!sheet) {
+      return { success: false, message: 'ورقة ' + sheetName + ' غير موجودة' };
+    }
+
+    var lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      sheet.deleteRows(2, lastRow - 1);
+    }
+
+    PropertiesService.getScriptProperties().setProperty(LAST_PROCESSED_ROW_KEY, '0');
+
+    var result = processFormDataFromSheet();
+    return {
+      success: result && result.success !== false,
+      message: (result && result.message) || 'اكتملت المزامنة',
+      clearedRecords: lastRow - 1,
+      processedCount: result && result.processedCount ? result.processedCount : 0,
+      result: result
+    };
+  } catch (error) {
+    Logger.log('resetDailySafetyCheckListAndResync: ' + error.toString());
+    return { success: false, message: 'حدث خطأ: ' + error.toString() };
+  }
+}
