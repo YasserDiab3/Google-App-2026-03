@@ -611,6 +611,21 @@ const BehaviorMonitoring = {
                 }
                 #behavior-monitoring-section .data-table tbody tr:hover td { background: #f2f7ff !important; }
                 #behavior-monitoring-section .data-table td { vertical-align: middle; }
+                /* ✅ الهوية — تنسيق إجراءات الجداول (زرّات أوسع ومرتبة) */
+                #behavior-monitoring-section .data-table { width: 100%; }
+                #behavior-monitoring-section .data-table th,
+                #behavior-monitoring-section .data-table td { padding: 0.65rem 0.75rem; vertical-align: middle; }
+                #behavior-monitoring-section .bhm-log-table-actions { min-width: 320px; width: 320px; white-space: nowrap; }
+                #behavior-monitoring-section .bhm-actions { display: inline-flex; align-items: center; gap: 0.45rem; flex-wrap: nowrap; }
+                #behavior-monitoring-section .bhm-actions-bar { display: inline-flex; align-items: center; gap: 0.45rem; flex-wrap: nowrap; }
+                #behavior-monitoring-section .bhm-actions-bar .bhm-action-icon,
+                #behavior-monitoring-section .bhm-action-icon {
+                    width: 2.5rem; min-width: 2.5rem; height: 2.5rem; min-height: 2.5rem; font-size: 0.95rem;
+                    border-radius: 10px; box-shadow: 0 2px 8px rgba(15,47,90,.08);
+                    transition: transform .15s ease, box-shadow .15s ease;
+                }
+                #behavior-monitoring-section .bhm-actions-bar .bhm-action-icon:hover,
+                #behavior-monitoring-section .bhm-action-icon:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(15,47,90,.16); }
             `;
             document.head.appendChild(style);
         } catch (e) {
@@ -1456,7 +1471,7 @@ const BehaviorMonitoring = {
                                 <td>${this.getBehaviorDate(b) ? this.formatBehaviorDateDisplay(b) : '—'}</td>
                                 <td><span class="badge ${this.getRatingBadgeClass(b.rating)}">${Utils.escapeHTML(b.rating || '—')}</span></td>
                                 <td class="text-center bhm-log-table-actions">
-                                    <div class="flex items-center justify-center gap-2 flex-wrap">
+                                    <div class="flex items-center justify-center gap-2 flex-wrap bhm-actions">
                                         <button type="button" onclick="BehaviorMonitoring.viewBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-primary bhm-action-icon" title="${this.t('common.view', 'عرض')}">
                                             <i class="fas fa-eye"></i>
                                         </button>
@@ -2723,15 +2738,15 @@ const BehaviorMonitoring = {
                                 <td><span class="badge ${this.getBehaviorTypeBadgeClass(b.behaviorType)}">${Utils.escapeHTML(b.behaviorType || '—')}</span></td>
                                 <td>${this.getBehaviorDate(b) ? this.formatBehaviorDateDisplay(b) : '—'}</td>
                                 <td><span class="badge ${this.getRatingBadgeClass(b.rating)}">${Utils.escapeHTML(b.rating || '—')}</span></td>
-                                <td class="text-center">
-                                    <div class="flex items-center justify-center gap-2 flex-wrap">
-                                        <button type="button" onclick="BehaviorMonitoring.viewContractorBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-primary" title="${this.t('common.view', 'عرض')}"><i class="fas fa-eye"></i></button>
-                                        <button type="button" onclick="BehaviorMonitoring.editContractorBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-warning" title="${this.t('common.edit', 'تعديل')}"><i class="fas fa-edit"></i></button>
+                                <td class="text-center bhm-log-table-actions">
+                                    <div class="flex items-center justify-center gap-2 flex-wrap bhm-actions-bar">
+                                        <button type="button" onclick="BehaviorMonitoring.viewContractorBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-primary bhm-action-icon" title="${this.t('common.view', 'عرض')}"><i class="fas fa-eye"></i></button>
+                                        <button type="button" onclick="BehaviorMonitoring.editContractorBehavior(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-warning bhm-action-icon" title="${this.t('common.edit', 'تعديل')}"><i class="fas fa-edit"></i></button>
                                         ${this.canDeleteBehavior() ? `
-                                        <button type="button" onclick="BehaviorMonitoring.deleteContractorBehaviorById(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-danger" title="${this.t('common.delete', 'حذف')}"><i class="fas fa-trash"></i></button>
+                                        <button type="button" onclick="BehaviorMonitoring.deleteContractorBehaviorById(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-danger bhm-action-icon" title="${this.t('common.delete', 'حذف')}"><i class="fas fa-trash"></i></button>
                                         ` : ''}
-                                        <button type="button" onclick="BehaviorMonitoring.exportContractorPDF(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-success" title="${this.t('common.exportPDF', 'تصدير PDF')}"><i class="fas fa-file-pdf"></i></button>
-                                        <button type="button" onclick="BehaviorMonitoring.printContractorReport(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-info" title="${this.t('common.print', 'طباعة')}"><i class="fas fa-print"></i></button>
+                                        <button type="button" onclick="BehaviorMonitoring.exportContractorPDF(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-success bhm-action-icon" title="${this.t('common.exportPDF', 'تصدير PDF')}"><i class="fas fa-file-pdf"></i></button>
+                                        <button type="button" onclick="BehaviorMonitoring.printContractorReport(${JSON.stringify(String(b.id || ''))})" class="btn-icon btn-icon-info bhm-action-icon" title="${this.t('common.print', 'طباعة')}"><i class="fas fa-print"></i></button>
                                     </div>
                                 </td>
                             </tr>

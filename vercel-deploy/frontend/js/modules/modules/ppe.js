@@ -1121,7 +1121,120 @@ const PPE = {
         }
     },
 
+    _injectPpeIdentityStyles() {
+        try {
+            if (document.getElementById('ppe-professional-identity-styles')) return;
+            const style = document.createElement('style');
+            style.id = 'ppe-professional-identity-styles';
+            style.textContent = `
+                #ppe-section .ppe-id-hero {
+                    --p-navy: #0b2a55;
+                    --p-blue: #1e40af;
+                    --p-blue2: #2563eb;
+                    --p-line: #dce7f5;
+                }
+                /* ✅ الهوية — ترويسة المديول (Hero) */
+                #ppe-section .ppe-id-hero {
+                    position: relative; overflow: hidden;
+                    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+                    padding: 20px 24px; border-radius: 18px; color: #fff;
+                    background: linear-gradient(130deg, #0b2a55 0%, #1e40af 55%, #2563eb 100%);
+                    box-shadow: 0 14px 34px rgba(11,42,85,.25);
+                }
+                #ppe-section .ppe-id-hero::after {
+                    content: ""; position: absolute; inset-inline-end: -64px; top: -96px;
+                    width: 220px; height: 220px; border: 30px solid rgba(255,255,255,.05); border-radius: 50%; pointer-events: none;
+                }
+                #ppe-section .ppe-id-hero::before {
+                    content: ""; position: absolute; inset-inline-start: 38%; bottom: -70px;
+                    width: 150px; height: 150px; border: 20px solid rgba(255,255,255,.04); border-radius: 50%; pointer-events: none;
+                }
+                #ppe-section .ppe-id-hero__copy { position: relative; z-index: 1; display: flex; align-items: center; gap: 15px; min-width: min(100%, 340px); }
+                #ppe-section .ppe-id-hero__icon {
+                    flex: 0 0 auto; width: 54px; height: 54px; display: grid; place-items: center;
+                    border: 1px solid rgba(255,255,255,.24); border-radius: 15px; background: rgba(255,255,255,.12); font-size: 23px; color: #fde68a;
+                }
+                #ppe-section .ppe-id-hero__eyebrow { display: block; margin-bottom: 4px; color: #bfdbfe; font-size: .68rem; font-weight: 800; letter-spacing: .04em; }
+                #ppe-section .ppe-id-hero h1 { margin: 0; color: #fff; font-size: 1.3rem; font-weight: 900; line-height: 1.35; }
+                #ppe-section .ppe-id-hero p { margin: 5px 0 0; color: #dbeafe; font-size: .78rem; }
+                #ppe-section .ppe-id-hero__meta { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+                #ppe-section .ppe-id-hero__meta span {
+                    display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px;
+                    border: 1px solid rgba(255,255,255,.22); border-radius: 10px; background: rgba(255,255,255,.1);
+                    font-size: .72rem; font-weight: 750; white-space: nowrap;
+                }
+                #ppe-section .ppe-id-hero__meta span i { color: #93c5fd; }
+                #ppe-section .ppe-id-hero__actions { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+                #ppe-section .ppe-id-hero__actions .btn-primary {
+                    background: linear-gradient(135deg,#fbbf24,#f59e0b); color: #7c2d12; border: none; font-weight: 800;
+                    box-shadow: 0 6px 18px rgba(0,0,0,.18);
+                }
+                #ppe-section .ppe-id-hero__actions .btn-secondary {
+                    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); color: #fff; font-weight: 700;
+                }
+                #ppe-section .ppe-id-hero__actions .btn-secondary:hover { background: rgba(255,255,255,.2); color: #fff; }
+                @media (max-width: 820px) {
+                    #ppe-section .ppe-id-hero { padding: 18px; }
+                    #ppe-section .ppe-id-hero__copy { align-items: flex-start; }
+                    #ppe-section .ppe-id-hero__icon { width: 46px; height: 46px; font-size: 19px; }
+                    #ppe-section .ppe-id-hero h1 { font-size: 1.05rem; }
+                    #ppe-section .ppe-id-hero__meta { width: 100%; }
+                    #ppe-section .ppe-id-hero__meta span { flex: 1; justify-content: center; }
+                    #ppe-section .ppe-id-hero__actions { width: 100%; }
+                    #ppe-section .ppe-id-hero__actions .btn { flex: 1; justify-content: center; }
+                }
+                /* ✅ الهوية — شريط التبويبات (نمط هوية المديولات) */
+                #ppe-section .ppe-id-tabs-wrap {
+                    display: flex; gap: 8px; padding: 8px; border-radius: 16px; overflow-x: auto; margin-bottom: 18px;
+                    border: 1px solid rgba(255,255,255,.14);
+                    background: radial-gradient(circle at 8% 0%, rgba(251,191,36,.16), transparent 30%),
+                                linear-gradient(125deg, #0b2a55 0%, #1e3a75 70%, #245a9b 100%);
+                    box-shadow: 0 12px 30px rgba(11,37,85,.22);
+                }
+                #ppe-section .ppe-id-tabs { background: transparent; border: none; padding: 0; gap: 8px; min-width: max-content; }
+                #ppe-section .ppe-tab-btn {
+                    min-height: 46px; padding: 9px 16px; margin: 0;
+                    border: 1px solid rgba(255,255,255,.15); border-bottom: 1px solid rgba(255,255,255,.15); border-radius: 11px;
+                    background: rgba(255,255,255,.08); color: rgba(255,255,255,.85);
+                    font-weight: 700; white-space: nowrap; transition: all .2s ease;
+                }
+                #ppe-section .ppe-tab-btn::before { display: none; }
+                #ppe-section .ppe-tab-btn i {
+                    display: inline-flex; align-items: center; justify-content: center;
+                    width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,.12); font-size: .78rem; color: #fde68a;
+                }
+                #ppe-section .ppe-tab-btn:hover { background: rgba(255,255,255,.15); color: #fff; transform: translateY(-1px); }
+                #ppe-section .ppe-tab-btn.active {
+                    border-color: #fff; background: #fff !important; color: var(--p-blue, #1e40af);
+                    box-shadow: 0 8px 22px rgba(0,0,0,.2);
+                }
+                #ppe-section .ppe-tab-btn.active::before { display: none; }
+                #ppe-section .ppe-tab-btn.active i { background: #eff6ff; color: var(--p-blue, #1e40af); }
+                /* ✅ الهوية — أسطح المحتوى */
+                #ppe-section #ppe-tab-content { animation: ppeSurfaceIn .24s ease-out; }
+                @keyframes ppeSurfaceIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+                #ppe-section #ppe-tab-content .content-card {
+                    border-radius: 16px; border-color: var(--p-line) !important;
+                    box-shadow: 0 8px 24px rgba(15,47,90,.07);
+                }
+                #ppe-section #ppe-tab-content .card-header {
+                    border-bottom: 1px solid #e5edf7; background: linear-gradient(180deg, #f8fbff, #fff); border-radius: 16px 16px 0 0;
+                }
+                #ppe-section .data-table thead th {
+                    background: linear-gradient(90deg, #1e40af, #2563eb); color: #fff; font-weight: 700; white-space: nowrap;
+                    border: none;
+                }
+                #ppe-section .data-table tbody tr:hover td { background: #f2f7ff !important; }
+                #ppe-section .data-table td { vertical-align: middle; }
+            `;
+            document.head.appendChild(style);
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ تعذر حقن هوية معدات الوقاية:', e);
+        }
+    },
+
     async load() {
+        this._injectPpeIdentityStyles();
         // Add language change listener
         if (!this._languageChangeListenerAdded) {
             document.addEventListener('language-changed', () => {
@@ -1237,65 +1350,65 @@ const PPE = {
             const t = (k, f) => this._t(k, f);
             const ut = (s) => Utils.escapeHTML(s);
         section.innerHTML = `
-            <div class="section-header">
-                <div class="flex items-center justify-between">
+            <div class="ppe-id-hero">
+                <div class="ppe-id-hero__copy">
+                    <div class="ppe-id-hero__icon"><i class="fas fa-hard-hat"></i></div>
                     <div>
-                        <h1 class="section-title">
-                            <i class="fas fa-hard-hat ml-3"></i>
-                            ${ut(t('module.ppe.title', 'إدارة مهمات الوقاية الشخصية'))}
-                        </h1>
-                        <p class="section-subtitle">${ut(t('module.ppe.subtitle', 'تسجيل ومتابعة استلام مهمات الوقاية الشخصية'))}</p>
+                        <span class="ppe-id-hero__eyebrow">${ut(t('module.ppe.eyebrow', 'نظام السلامة والصحة المهنية'))}</span>
+                        <h1>${ut(t('module.ppe.title', 'إدارة مهمات الوقاية الشخصية'))}</h1>
+                        <p>${ut(t('module.ppe.subtitle', 'تسجيل ومتابعة استلام مهمات الوقاية الشخصية'))}</p>
                     </div>
-                    <div class="flex gap-2">
-                        ${this.state.activeTab === 'receipts' ? `
-                            <button id="view-ppe-matrix-btn" class="btn-secondary">
-                                <i class="fas fa-table ml-2"></i>
-                                ${ut(t('module.ppe.btn.matrix', 'مصفوفة مهمات الوقاية'))}
-                            </button>
-                            <button id="add-ppe-btn" class="btn-primary">
-                                <i class="fas fa-plus ml-2"></i>
-                                ${ut(t('module.ppe.btn.newReceipt', 'تسجيل استلام جديد'))}
-                            </button>
-                            <button id="ppe-refresh-btn" type="button" class="btn-secondary border-2 border-blue-500 text-blue-600 hover:bg-blue-50" title="${ut(t('module.ppe.btn.refreshTitle', 'تحديث المحتوى الحالي'))}">
-                                <i class="fas fa-sync-alt ml-2"></i>
-                                ${ut(t('module.ppe.btn.refresh', 'تحديث'))}
-                            </button>
-                        ` : this.state.activeTab === 'stock-control' ? `
-                            <button id="add-stock-item-btn" class="btn-primary">
-                                <i class="fas fa-plus ml-2"></i>
-                                ${ut(t('module.ppe.btn.addStockItem', 'إضافة صنف جديد'))}
-                            </button>
-                            <button id="add-transaction-btn" class="btn-secondary">
-                                <i class="fas fa-exchange-alt ml-2"></i>
-                                ${ut(t('module.ppe.btn.addTransaction', 'إضافة حركة'))}
-                            </button>
-                        ` : ''}
-                    </div>
+                </div>
+                <div class="ppe-id-hero__meta">
+                    <span><i class="fas fa-receipt"></i> ${ut(t('module.ppe.tab.receipts', 'سجل الاستلامات'))}</span>
+                    <span><i class="fas fa-boxes"></i> ${ut(t('module.ppe.tab.stock', 'إدارة مخزون مهمات الوقاية'))}</span>
+                    <span><i class="fas fa-chart-pie"></i> ${ut(t('module.ppe.tab.analysis', 'التحليل'))}</span>
+                </div>
+                <div class="ppe-id-hero__actions">
+                    ${this.state.activeTab === 'receipts' ? `
+                        <button id="view-ppe-matrix-btn" class="btn-secondary">
+                            <i class="fas fa-table ml-2"></i>
+                            ${ut(t('module.ppe.btn.matrix', 'مصفوفة مهمات الوقاية'))}
+                        </button>
+                        <button id="add-ppe-btn" class="btn-primary">
+                            <i class="fas fa-plus ml-2"></i>
+                            ${ut(t('module.ppe.btn.newReceipt', 'تسجيل استلام جديد'))}
+                        </button>
+                        <button id="ppe-refresh-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.btn.refreshTitle', 'تحديث المحتوى الحالي'))}">
+                            <i class="fas fa-sync-alt ml-2"></i>
+                            ${ut(t('module.ppe.btn.refresh', 'تحديث'))}
+                        </button>
+                    ` : this.state.activeTab === 'stock-control' ? `
+                        <button id="add-stock-item-btn" class="btn-primary">
+                            <i class="fas fa-plus ml-2"></i>
+                            ${ut(t('module.ppe.btn.addStockItem', 'إضافة صنف جديد'))}
+                        </button>
+                        <button id="add-transaction-btn" class="btn-secondary">
+                            <i class="fas fa-exchange-alt ml-2"></i>
+                            ${ut(t('module.ppe.btn.addTransaction', 'إضافة حركة'))}
+                        </button>
+                    ` : ''}
                 </div>
             </div>
             <div class="mt-6">
-                <div class="content-card">
-                    <div class="card-header" style="padding: 0; border-bottom: none;">
-                        <div class="ppe-tabs-container">
-                            <button type="button" class="ppe-tab-btn ${this.state.activeTab === 'receipts' ? 'active' : ''}" data-tab="receipts">
-                                <i class="fas fa-receipt"></i>
-                                ${ut(t('module.ppe.tab.receipts', 'سجل الاستلامات'))}
-                            </button>
-                            <button type="button" class="ppe-tab-btn ${this.state.activeTab === 'stock-control' ? 'active' : ''}" data-tab="stock-control">
-                                <i class="fas fa-boxes"></i>
-                                ${ut(t('module.ppe.tab.stock', 'إدارة مخزون مهمات الوقاية'))}
-                            </button>
-                            <button type="button" class="ppe-tab-btn ${this.state.activeTab === 'analysis' ? 'active' : ''}" data-tab="analysis">
-                                <i class="fas fa-chart-pie"></i>
-                                ${ut(t('module.ppe.tab.analysis', 'التحليل'))}
-                            </button>
-                        </div>
+                <div class="ppe-id-tabs-wrap">
+                    <div class="ppe-tabs-container ppe-id-tabs">
+                        <button type="button" class="ppe-tab-btn ${this.state.activeTab === 'receipts' ? 'active' : ''}" data-tab="receipts">
+                            <i class="fas fa-receipt"></i>
+                            ${ut(t('module.ppe.tab.receipts', 'سجل الاستلامات'))}
+                        </button>
+                        <button type="button" class="ppe-tab-btn ${this.state.activeTab === 'stock-control' ? 'active' : ''}" data-tab="stock-control">
+                            <i class="fas fa-boxes"></i>
+                            ${ut(t('module.ppe.tab.stock', 'إدارة مخزون مهمات الوقاية'))}
+                        </button>
+                        <button type="button" class="ppe-tab-btn ${this.state.activeTab === 'analysis' ? 'active' : ''}" data-tab="analysis">
+                            <i class="fas fa-chart-pie"></i>
+                            ${ut(t('module.ppe.tab.analysis', 'التحليل'))}
+                        </button>
                     </div>
-                    <div class="card-body" style="padding-top: 1.5rem;">
-                        <div id="ppe-tab-content">
-                            ${tabContent}
-                        </div>
-                    </div>
+                </div>
+                <div id="ppe-tab-content">
+                    ${tabContent}
                 </div>
             </div>
         `;
@@ -1325,12 +1438,19 @@ const PPE = {
             const te = (k, f) => this._t(k, f);
             const ut = (s) => Utils.escapeHTML(s);
             section.innerHTML = `
-                <div class="section-header">
-                    <div>
-                        <h1 class="section-title">
-                            <i class="fas fa-hard-hat ml-3"></i>
-                            ${ut(te('module.ppe.title', 'إدارة مهمات الوقاية الشخصية'))}
-                        </h1>
+                <div class="ppe-id-hero">
+                    <div class="ppe-id-hero__copy">
+                        <div class="ppe-id-hero__icon"><i class="fas fa-hard-hat"></i></div>
+                        <div>
+                            <span class="ppe-id-hero__eyebrow">${ut(te('module.ppe.eyebrow', 'نظام السلامة والصحة المهنية'))}</span>
+                            <h1>${ut(te('module.ppe.title', 'إدارة مهمات الوقاية الشخصية'))}</h1>
+                        </div>
+                    </div>
+                    <div class="ppe-id-hero__actions">
+                        <button onclick="PPE.load()" class="btn-secondary">
+                            <i class="fas fa-redo ml-2"></i>
+                            ${ut(te('module.common.retry', 'إعادة المحاولة'))}
+                        </button>
                     </div>
                 </div>
                 <div class="mt-6">
@@ -1490,7 +1610,7 @@ const PPE = {
      * تحديث أزرار الهيدر حسب التبويب النشط
      */
     updateHeaderButtons() {
-        const headerButtonsContainer = document.querySelector('#ppe-section .section-header .flex.gap-2');
+        const headerButtonsContainer = document.querySelector('#ppe-section .ppe-id-hero__actions');
         if (!headerButtonsContainer) return;
 
         // تنظيف مستمعي الأحداث للأزرار القديمة قبل استبدالها
@@ -1523,7 +1643,7 @@ const PPE = {
                     <i class="fas fa-plus ml-2"></i>
                     ${ut(t('module.ppe.btn.newReceipt', 'تسجيل استلام جديد'))}
                 </button>
-                <button id="ppe-refresh-btn" type="button" class="btn-secondary border-2 border-blue-500 text-blue-600 hover:bg-blue-50" title="${ut(t('module.ppe.btn.refreshTitle', 'تحديث المحتوى الحالي'))}">
+                <button id="ppe-refresh-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.btn.refreshTitle', 'تحديث المحتوى الحالي'))}">
                     <i class="fas fa-sync-alt ml-2"></i>
                     ${ut(t('module.ppe.btn.refresh', 'تحديث'))}
                 </button>
@@ -1541,7 +1661,7 @@ const PPE = {
             `;
         } else {
             headerButtonsContainer.innerHTML = `
-                <button id="ppe-refresh-btn" type="button" class="btn-secondary border-2 border-blue-500 text-blue-600 hover:bg-blue-50" title="${ut(t('module.ppe.btn.refreshTitle', 'تحديث المحتوى الحالي'))}">
+                <button id="ppe-refresh-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.btn.refreshTitle', 'تحديث المحتوى الحالي'))}">
                     <i class="fas fa-sync-alt ml-2"></i>
                     ${ut(t('module.ppe.btn.refresh', 'تحديث'))}
                 </button>
