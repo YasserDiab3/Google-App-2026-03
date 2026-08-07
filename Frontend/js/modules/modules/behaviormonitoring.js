@@ -255,6 +255,9 @@ const BehaviorMonitoring = {
             this._languageChangeListenerAdded = true;
         }
 
+        // حقن أنماط الهوية الموحدة للتفادي المديول
+        this._injectBehaviorIdentityStyles();
+
         // التحقق من وجود التبعيات المطلوبة
         if (typeof Utils === 'undefined') {
             console.error('Utils غير متوفر!');
@@ -312,29 +315,33 @@ const BehaviorMonitoring = {
             this.state.activeTab = activeTab;
 
             section.innerHTML = `
-                <div class="section-header">
-                    <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="behavior-id-hero">
+                    <div class="behavior-id-hero__copy">
+                        <div class="behavior-id-hero__icon"><i class="fas fa-eye" aria-hidden="true"></i></div>
                         <div>
-                            <h1 class="section-title">
-                                <i class="fas fa-eye ml-3"></i>
-                                ${this.t('module.behavior.title', 'مراقبة السلوكيات')}
-                            </h1>
-                            <p class="section-subtitle">${this.t('module.behavior.subtitle', 'تسجيل ومتابعة سلوكيات الموظفين والمقاولين')}</p>
+                            <span class="behavior-id-hero__eyebrow">${this.t('module.behavior.eyebrow', 'HSE — الإدارة البيئية، الصحة والسلامة')}</span>
+                            <h1>${this.t('module.behavior.title', 'مراقبة السلوكيات')}</h1>
+                            <p>${this.t('module.behavior.subtitle', 'تسجيل ومتابعة سلوكيات الموظفين والمقاولين')}</p>
                         </div>
-                        <div class="flex items-center gap-2 flex-wrap justify-end">
-                            <button id="behavior-refresh-btn" class="btn-secondary">
-                                <i class="fas fa-sync-alt ml-2"></i>
-                                ${this.t('common.refresh', 'تحديث')}
-                            </button>
-                            <button id="behavior-add-btn" class="btn-primary">
-                                <i class="fas fa-plus ml-2"></i>
-                                ${this.t('module.behavior.addEmployee', 'تسجيل تصرف موظف')}
-                            </button>
-                            <button id="behavior-add-contractor-header-btn" type="button" class="btn-secondary">
-                                <i class="fas fa-users-cog ml-2"></i>
-                                ${this.t('module.behavior.addContractor', 'تسجيل تصرف مقاول')}
-                            </button>
-                        </div>
+                    </div>
+                    <div class="behavior-id-hero__meta">
+                        <span><i class="fas fa-user-check"></i>${this.t('module.behavior.meta.employees', 'الموظفون')}</span>
+                        <span><i class="fas fa-users-cog"></i>${this.t('module.behavior.meta.contractors', 'المقاولون')}</span>
+                        <span><i class="fas fa-arrows-rotate"></i>${this.t('module.behavior.meta.live', 'تحديث لحظي')}</span>
+                    </div>
+                    <div class="behavior-id-hero__actions">
+                        <button id="behavior-refresh-btn" class="btn-secondary">
+                            <i class="fas fa-sync-alt ml-2"></i>
+                            ${this.t('common.refresh', 'تحديث')}
+                        </button>
+                        <button id="behavior-add-btn" class="btn-primary">
+                            <i class="fas fa-plus ml-2"></i>
+                            ${this.t('module.behavior.addEmployee', 'تسجيل تصرف موظف')}
+                        </button>
+                        <button id="behavior-add-contractor-header-btn" type="button" class="btn-secondary">
+                            <i class="fas fa-users-cog ml-2"></i>
+                            ${this.t('module.behavior.addContractor', 'تسجيل تصرف مقاول')}
+                        </button>
                     </div>
                 </div>
 
@@ -390,12 +397,14 @@ const BehaviorMonitoring = {
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل مديول مراقبة السلوكيات:', error);
             section.innerHTML = `
-                <div class="section-header">
-                    <div>
-                        <h1 class="section-title">
-                            <i class="fas fa-eye ml-3"></i>
-                            مراقبة السلوكيات
-                        </h1>
+                <div class="behavior-id-hero">
+                    <div class="behavior-id-hero__copy">
+                        <div class="behavior-id-hero__icon"><i class="fas fa-eye" aria-hidden="true"></i></div>
+                        <div>
+                            <span class="behavior-id-hero__eyebrow">HSE — الإدارة البيئية، الصحة والسلامة</span>
+                            <h1>مراقبة السلوكيات</h1>
+                            <p>تسجيل ومتابعة سلوكيات الموظفين والمقاولين</p>
+                        </div>
                     </div>
                 </div>
                 <div class="mt-6">
@@ -484,6 +493,128 @@ const BehaviorMonitoring = {
             } else {
                 Notification.warning('حدث خطأ في تحميل بعض البيانات. سيتم استخدام البيانات المحلية.');
             }
+        }
+    },
+
+    _injectBehaviorIdentityStyles() {
+        try {
+            if (document.getElementById('behavior-professional-identity-styles')) return;
+            const style = document.createElement('style');
+            style.id = 'behavior-professional-identity-styles';
+            style.textContent = `
+                #behavior-monitoring-section .behavior-id-hero {
+                    --b-navy: #0b2a55;
+                    --b-blue: #1e40af;
+                    --b-blue2: #2563eb;
+                    --b-sky: #93c5fd;
+                    --b-line: #dce7f5;
+                }
+                /* ✅ الهوية — ترويسة المديول (Hero) */
+                #behavior-monitoring-section .behavior-id-hero {
+                    position: relative; overflow: hidden;
+                    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+                    padding: 20px 24px; border-radius: 18px; color: #fff;
+                    background: linear-gradient(130deg, #0b2a55 0%, #1e40af 55%, #2563eb 100%);
+                    box-shadow: 0 14px 34px rgba(11,42,85,.25);
+                }
+                #behavior-monitoring-section .behavior-id-hero::after {
+                    content: ""; position: absolute; inset-inline-end: -64px; top: -96px;
+                    width: 220px; height: 220px; border: 30px solid rgba(255,255,255,.05); border-radius: 50%; pointer-events: none;
+                }
+                #behavior-monitoring-section .behavior-id-hero::before {
+                    content: ""; position: absolute; inset-inline-start: 38%; bottom: -70px;
+                    width: 150px; height: 150px; border: 20px solid rgba(255,255,255,.04); border-radius: 50%; pointer-events: none;
+                }
+                #behavior-monitoring-section .behavior-id-hero__copy { position: relative; z-index: 1; display: flex; align-items: center; gap: 15px; min-width: min(100%, 340px); }
+                #behavior-monitoring-section .behavior-id-hero__icon {
+                    flex: 0 0 auto; width: 54px; height: 54px; display: grid; place-items: center;
+                    border: 1px solid rgba(255,255,255,.24); border-radius: 15px; background: rgba(255,255,255,.12); font-size: 23px; color: #fde68a;
+                }
+                #behavior-monitoring-section .behavior-id-hero__eyebrow { display: block; margin-bottom: 4px; color: #bfdbfe; font-size: .68rem; font-weight: 800; letter-spacing: .04em; }
+                #behavior-monitoring-section .behavior-id-hero h1 { margin: 0; color: #fff; font-size: 1.3rem; font-weight: 900; line-height: 1.35; }
+                #behavior-monitoring-section .behavior-id-hero p { margin: 5px 0 0; color: #dbeafe; font-size: .78rem; }
+                #behavior-monitoring-section .behavior-id-hero__meta { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+                #behavior-monitoring-section .behavior-id-hero__meta span {
+                    display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px;
+                    border: 1px solid rgba(255,255,255,.22); border-radius: 10px; background: rgba(255,255,255,.1);
+                    font-size: .72rem; font-weight: 750; white-space: nowrap;
+                }
+                #behavior-monitoring-section .behavior-id-hero__meta span i { color: #93c5fd; }
+                #behavior-monitoring-section .behavior-id-hero__actions { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+                #behavior-monitoring-section .behavior-id-hero__actions .btn-primary {
+                    background: linear-gradient(135deg,#fbbf24,#f59e0b); color: #7c2d12; border: none; font-weight: 800;
+                    box-shadow: 0 6px 18px rgba(0,0,0,.18);
+                }
+                #behavior-monitoring-section .behavior-id-hero__actions .btn-secondary {
+                    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); color: #fff; font-weight: 700;
+                }
+                #behavior-monitoring-section .behavior-id-hero__actions .btn-secondary:hover { background: rgba(255,255,255,.2); color: #fff; }
+                @media (max-width: 820px) {
+                    #behavior-monitoring-section .behavior-id-hero { padding: 18px; }
+                    #behavior-monitoring-section .behavior-id-hero__copy { align-items: flex-start; }
+                    #behavior-monitoring-section .behavior-id-hero__icon { width: 46px; height: 46px; font-size: 19px; }
+                    #behavior-monitoring-section .behavior-id-hero h1 { font-size: 1.05rem; }
+                    #behavior-monitoring-section .behavior-id-hero__meta { width: 100%; }
+                    #behavior-monitoring-section .behavior-id-hero__meta span { flex: 1; justify-content: center; }
+                    #behavior-monitoring-section .behavior-id-hero__actions { width: 100%; }
+                    #behavior-monitoring-section .behavior-id-hero__actions .btn { flex: 1; justify-content: center; }
+                }
+                /* ✅ الهوية — شريط التبويبات */
+                #behavior-monitoring-section .behavior-workspace { --p-navy: #0b2a55; }
+                #behavior-monitoring-section .module-tabs-wrapper { margin-top: 18px; }
+                #behavior-monitoring-section .module-tabs-container {
+                    display: flex; gap: 8px; padding: 8px; border-radius: 16px; overflow-x: auto; width: 100%;
+                    border: 1px solid rgba(255,255,255,.14);
+                    background: radial-gradient(circle at 8% 0%, rgba(251,191,36,.16), transparent 30%),
+                                linear-gradient(125deg, #0b2a55 0%, #1e3a75 70%, #245a9b 100%);
+                    box-shadow: 0 12px 30px rgba(11,37,85,.22);
+                }
+                #behavior-monitoring-section .module-tab-btn {
+                    min-height: 46px; min-width: max-content; gap: 8px; padding: 9px 14px; margin: 0;
+                    border: 1px solid rgba(255,255,255,.15); border-radius: 11px;
+                    background: rgba(255,255,255,.08); color: rgba(255,255,255,.85);
+                    font-weight: 700; white-space: nowrap; transition: all .2s ease;
+                }
+                #behavior-monitoring-section .module-tab-btn::before { display: none; }
+                #behavior-monitoring-section .module-tab-btn i {
+                    display: inline-flex; align-items: center; justify-content: center;
+                    width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,.12); font-size: .78rem; color: #fde68a;
+                }
+                #behavior-monitoring-section .module-tab-btn:hover { background: rgba(255,255,255,.15); color: #fff; transform: translateY(-1px); }
+                #behavior-monitoring-section .module-tab-btn.active {
+                    border-color: #fff; background: #fff; color: var(--p-blue, #1e40af);
+                    box-shadow: 0 8px 22px rgba(0,0,0,.2);
+                }
+                #behavior-monitoring-section .module-tab-btn.active i { background: #eff6ff; color: var(--p-blue, #1e40af); }
+                /* ✅ الهوية — أسطح المحتوى */
+                #behavior-monitoring-section #behavior-content { animation: behaviorSurfaceIn .24s ease-out; }
+                @keyframes behaviorSurfaceIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+                #behavior-monitoring-section #behavior-content .content-card,
+                #behavior-monitoring-section .behavior-workspace .content-card {
+                    border-radius: 16px; border-color: var(--b-line) !important;
+                    box-shadow: 0 8px 24px rgba(15,47,90,.07);
+                }
+                #behavior-monitoring-section #behavior-content .card-header {
+                    border-bottom: 1px solid #e5edf7; background: linear-gradient(180deg, #f8fbff, #fff); border-radius: 16px 16px 0 0;
+                }
+                #behavior-monitoring-section .behavior-overview-stats .behavior-stat {
+                    box-shadow: 0 8px 22px rgba(15,47,90,.07);
+                    transition: transform .18s ease, box-shadow .18s ease;
+                }
+                #behavior-monitoring-section .behavior-overview-stats .behavior-stat:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(15,47,90,.12); }
+                #behavior-monitoring-section .behavior-overview-stats .behavior-stat-value { line-height: 1.15; }
+                /* ✅ الهوية — الجداول */
+                #behavior-monitoring-section .data-table thead th,
+                #behavior-monitoring-section .table-header-purple thead th {
+                    background: linear-gradient(90deg, #1e40af, #2563eb); color: #fff; font-weight: 700; white-space: nowrap;
+                    border: none;
+                }
+                #behavior-monitoring-section .data-table tbody tr:hover td { background: #f2f7ff !important; }
+                #behavior-monitoring-section .data-table td { vertical-align: middle; }
+            `;
+            document.head.appendChild(style);
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ تعذر حقن هوية مراقبة السلوكيات:', e);
         }
     },
 
