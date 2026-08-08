@@ -371,39 +371,156 @@ const Training = {
             
             // عرض الواجهة أولاً لتحسين تجربة المستخدم
             section.innerHTML = `
-            <div class="section-header">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h1 class="section-title">
-                            <i class="fas fa-graduation-cap ml-3"></i>
-                            إدارة التدريبات
-                        </h1>
-                        <p class="section-subtitle">تسجيل ومتابعة برامج التدريب ومصفوفة التدريب للموظين</p>
+            <style>
+                /* ══ هوية HSE — التدريبات ══ */
+                #training-section .train-id-hero {
+                    position: relative; overflow: hidden;
+                    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+                    border-radius: 18px; padding: 22px 26px 26px;
+                    background: radial-gradient(circle at 85% -20%, rgba(251,191,36,.14), transparent 45%),
+                                linear-gradient(120deg, #0b2a55 0%, #1e40af 55%, #2563eb 100%);
+                    box-shadow: 0 12px 30px rgba(11,42,85,.28); color: #fff;
+                }
+                #training-section .train-id-hero::after {
+                    content: ''; position: absolute; inset: auto 0 -34px 0; height: 34px;
+                    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 40' preserveAspectRatio='none'%3E%3Cpath fill='%23ffffff' fill-opacity='0.10' d='M0 40 L60 10 L120 35 L180 4 L240 24 L300 8 L360 24 L420 12 L480 30 L540 16 L600 26 L660 10 L720 30 L780 14 L840 28 L900 10 L960 24 L1020 6 L1080 20 L1140 12 L1200 24 L1200 40 L0 40 Z'/%3E%3C/svg%3E");
+                    background-size: cover; background-position: bottom; pointer-events: none;
+                }
+                #training-section .train-id-hero__outer { display: flex; align-items: center; gap: 10px; position: relative; z-index: 1; }
+                #training-section .train-id-hero__icon {
+                    width: 58px; height: 58px; flex-shrink: 0;
+                    display: flex; align-items: center; justify-content: center;
+                    border-radius: 16px; background: linear-gradient(145deg, #fbbf24, #f59e0b);
+                    color: #7c2d12; font-size: 1.5rem; box-shadow: 0 8px 18px rgba(0,0,0,.25);
+                }
+                #training-section .train-id-hero__text { flex: 1; min-width: 220px; position: relative; z-index: 1; }
+                #training-section .train-id-hero__eyebrow {
+                    display: inline-flex; align-items: center; gap: 6px;
+                    font-size: .8rem; font-weight: 700; color: #fde68a;
+                    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+                    padding: 4px 12px; border-radius: 999px; margin-bottom: 8px; letter-spacing: .3px;
+                }
+                #training-section .train-id-hero__title { margin: 0; font-size: 1.5rem; font-weight: 800; color: #fff; }
+                #training-section .train-id-hero__subtitle { margin: 4px 0 0; font-size: .92rem; color: rgba(255,255,255,.75); }
+                #training-section .train-id-hero__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-inline-start: auto; position: relative; z-index: 1; }
+                #training-section .train-id-hero__actions .btn-primary {
+                    background: linear-gradient(145deg, #fbbf24, #f59e0b);
+                    color: #7c2d12; font-weight: 700; border: none; border-radius: 12px;
+                    box-shadow: 0 6px 16px rgba(245,158,11,.35);
+                }
+                #training-section .train-id-hero__actions .btn-primary:hover {
+                    background: linear-gradient(145deg, #fcd34d, #f59e0b); color: #7c2d12; transform: translateY(-1px);
+                }
+                #training-section .train-id-hero__actions .btn-secondary {
+                    background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.30);
+                    color: #fff; border-radius: 12px; backdrop-filter: blur(4px);
+                }
+                #training-section .train-id-hero__actions .btn-secondary:hover {
+                    background: rgba(255,255,255,.20); border-color: rgba(255,255,255,.45); color: #fff;
+                }
+
+                /* ══ كروت KPI (بنمط سجل الفحوصات pinsp-stat) ══ */
+                #training-section .pinsp-stat {
+                    position: relative; overflow: hidden; border-radius: 16px; border: 1px solid #dce7f5;
+                    background: linear-gradient(160deg, #ffffff, #f4f8ff); box-shadow: 0 8px 22px rgba(15,47,90,.07);
+                    display: flex; align-items: center; gap: 12px; padding: 16px; height: 100%;
+                    transition: transform .18s ease, box-shadow .18s ease;
+                }
+                #training-section .pinsp-stat:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(15,47,90,.12); }
+                #training-section .pinsp-stat__icon { flex: 0 0 auto; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 13px; color: #fff; font-size: 1.15rem; }
+                #training-section .pinsp-stat__icon--blue { background: linear-gradient(135deg,#1e40af,#3b82f6); }
+                #training-section .pinsp-stat__icon--green { background: linear-gradient(135deg,#15803d,#22c55e); }
+                #training-section .pinsp-stat__icon--red { background: linear-gradient(135deg,#b91c1c,#ef4444); }
+                #training-section .pinsp-stat__icon--amber { background: linear-gradient(135deg,#b45309,#f59e0b); }
+                #training-section .pinsp-stat__icon--indigo { background: linear-gradient(135deg,#4338ca,#6366f1); }
+                #training-section .pinsp-stat__body { flex: 1; min-width: 0; }
+                #training-section .pinsp-stat__label { font-size: .74rem; font-weight: 700; color: #64748b; margin: 0 0 2px; }
+                #training-section .pinsp-stat__value { font-size: 1.7rem; font-weight: 900; line-height: 1.15; margin: 0; }
+                #training-section .pinsp-stat__bar { height: 5px; margin-top: 7px; border-radius: 99px; background: #e5edf7; overflow: hidden; }
+                #training-section .pinsp-stat__bar span { display: block; height: 100%; border-radius: 99px; }
+                #training-section .pinsp-stat__pct { font-size: .7rem; font-weight: 700; color: #94a3b8; }
+                @media (max-width: 520px) { #training-section .pinsp-stat__pct { display: none; } }
+
+                /* ══ كروت التحليلات (برامج المقاولين / الموظفين) ══ */
+                #training-section .contractor-analytics-kpi-card,
+                #training-section .employee-analytics-kpi-card {
+                    border: 1px solid #dce7f5; border-radius: 14px;
+                    background: linear-gradient(160deg, #ffffff, #f4f8ff);
+                    box-shadow: 0 6px 18px rgba(15,47,90,.06);
+                    transition: transform .18s ease, box-shadow .18s ease;
+                }
+                #training-section .contractor-analytics-kpi-card:hover,
+                #training-section .employee-analytics-kpi-card:hover {
+                    transform: translateY(-2px); box-shadow: 0 12px 24px rgba(15,47,90,.12);
+                }
+
+                /* ══ أسطح اللوحات ══ */
+                #training-section #training-content .content-card {
+                    border: 1px solid #dce7f5; border-radius: 16px;
+                    box-shadow: 0 6px 18px rgba(15,47,90,.06); overflow: hidden;
+                }
+                #training-section #training-content .card-header {
+                    background: linear-gradient(120deg, #f1f6ff, #ffffff);
+                    border-bottom: 1px solid #dce7f5;
+                }
+                #training-section .data-table thead th {
+                    background: linear-gradient(90deg, #1e40af, #2563eb);
+                    color: #fff; border-color: #1d4ed8;
+                }
+                #training-section .data-table tbody tr:hover td { background: #f2f7ff; }
+                #training-section .form-input:focus,
+                #training-section input[type="text"]:focus,
+                #training-section select:focus,
+                #training-section textarea:focus {
+                    border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.14);
+                }
+
+                /* ═══ الداكن ═══ */
+                [data-theme="dark"] #training-section .pinsp-stat,
+                [data-theme="dark"] #training-section .contractor-analytics-kpi-card,
+                [data-theme="dark"] #training-section .employee-analytics-kpi-card {
+                    background: linear-gradient(160deg, #15283f, #1e2a45); border-color: #243b55; box-shadow: none;
+                }
+                [data-theme="dark"] #training-section .pinsp-stat__label { color: #93a7bd; }
+                [data-theme="dark"] #training-section .pinsp-stat__bar { background: #334155; }
+                [data-theme="dark"] #training-section .pinsp-stat__pct { color: #64748b; }
+                [data-theme="dark"] #training-section #training-content .card-header {
+                    background: linear-gradient(120deg, #16233f, #1e293b); border-bottom-color: #2a3b5c;
+                }
+                [data-theme="dark"] #training-section .data-table tbody tr:hover td { background: #1e293b; }
+            </style>
+            <div class="train-id-hero">
+                <div class="train-id-hero__outer">
+                    <div class="train-id-hero__icon"><i class="fas fa-graduation-cap"></i></div>
+                    <div class="train-id-hero__text">
+                        <span class="train-id-hero__eyebrow"><i class="fas fa-shield-halved fa-xs"></i> HSE · الصحة المهنية والسلامة</span>
+                        <h1 class="train-id-hero__title">إدارة التدريبات</h1>
+                        <p class="train-id-hero__subtitle">تسجيل ومتابعة برامج التدريب ومصفوفة التدريب للموظفين</p>
                     </div>
-                    <div class="flex gap-2">
-                        ${isAdmin ? `
-                        <button id="view-annual-training-plan-btn" class="btn-secondary">
-                            <i class="fas fa-calendar-check ml-2"></i>
-                            الخطة التدريبية السنوية
-                        </button>
-                        <button id="view-training-matrix-btn" class="btn-secondary">
-                            <i class="fas fa-table ml-2"></i>
-                            مصفوفة التدريب
-                        </button>
-                        ` : ''}
-                        <button id="add-training-btn" class="btn-primary">
-                            <i class="fas fa-plus ml-2"></i>
-                            نموذج حضور تدريب
-                        </button>
-                        <button id="training-refresh-btn" class="btn-secondary" title="تحديث البيانات">
-                            <i class="fas fa-sync-alt ml-2"></i>
-                            تحديث
-                        </button>
-                        <button id="add-contractor-training-header-btn" class="btn-primary">
-                            <i class="fas fa-briefcase ml-2"></i>
-                            تسجيل تدريب مقاول
-                        </button>
-                    </div>
+                </div>
+                <div class="train-id-hero__actions">
+                    ${isAdmin ? `
+                    <button id="view-annual-training-plan-btn" class="btn-secondary">
+                        <i class="fas fa-calendar-check ml-2"></i>
+                        الخطة التدريبية السنوية
+                    </button>
+                    <button id="view-training-matrix-btn" class="btn-secondary">
+                        <i class="fas fa-table ml-2"></i>
+                        مصفوفة التدريب
+                    </button>
+                    ` : ''}
+                    <button id="add-training-btn" class="btn-primary">
+                        <i class="fas fa-plus ml-2"></i>
+                        نموذج حضور تدريب
+                    </button>
+                    <button id="training-refresh-btn" class="btn-secondary" title="تحديث البيانات">
+                        <i class="fas fa-sync-alt ml-2"></i>
+                        تحديث
+                    </button>
+                    <button id="add-contractor-training-header-btn" class="btn-primary">
+                        <i class="fas fa-briefcase ml-2"></i>
+                        تسجيل تدريب مقاول
+                    </button>
                 </div>
             </div>
             <div id="training-content" class="mt-6">
@@ -414,33 +531,43 @@ const Training = {
                     .tabs-header {
                         display: flex;
                         gap: 0.5rem;
-                        border-bottom: 2px solid #e5e7eb;
-                        padding-bottom: 0;
+                        border: none;
+                        padding: 10px;
+                        flex-wrap: wrap;
+                        background: radial-gradient(circle at 90% -40%, rgba(251,191,36,.14), transparent 40%),
+                                    linear-gradient(120deg, #0b2a55, #1e3f8f 60%, #1e40af);
+                        border-radius: 16px;
+                        box-shadow: 0 8px 24px rgba(11,42,85,.18);
                     }
                     .tab-btn {
-                        padding: 0.75rem 1.5rem;
-                        background: none;
-                        border: none;
-                        border-bottom: 3px solid transparent;
-                        color: #6b7280;
-                        font-size: 0.9375rem;
-                        font-weight: 500;
+                        padding: 0.6rem 1.1rem;
+                        background: rgba(255,255,255,.08);
+                        border: 1px solid rgba(255,255,255,.16);
+                        border-bottom: 1px solid rgba(255,255,255,.16);
+                        border-radius: 12px;
+                        color: #e2eaff;
+                        font-size: 0.9rem;
+                        font-weight: 600;
                         cursor: pointer;
-                        transition: all 0.3s ease;
+                        transition: all 0.2s ease;
                         display: flex;
                         align-items: center;
                         gap: 0.5rem;
                         position: relative;
-                        margin-bottom: -2px;
+                        margin-bottom: 0;
                     }
                     .tab-btn:hover {
-                        color: #3b82f6;
-                        background-color: rgba(59, 130, 246, 0.05);
+                        color: #ffffff;
+                        background-color: rgba(255,255,255,.16);
+                        border-color: rgba(255,255,255,.32);
+                        transform: translateY(-1px);
                     }
                     .tab-btn.active {
-                        color: #3b82f6;
-                        border-bottom-color: #3b82f6;
-                        font-weight: 600;
+                        color: #7c2d12;
+                        background: linear-gradient(145deg, #fbbf24, #f59e0b);
+                        border-color: #fbbf24;
+                        font-weight: 800;
+                        box-shadow: 0 6px 14px rgba(245,158,11,.35);
                     }
                     .tab-btn i {
                         font-size: 14px;
@@ -448,10 +575,10 @@ const Training = {
                     @media (max-width: 768px) {
                         .tabs-header {
                             flex-wrap: wrap;
-                            gap: 0.25rem;
+                            gap: 0.35rem;
                         }
                         .tab-btn {
-                            padding: 0.625rem 1rem;
+                            padding: 0.55rem 0.9rem;
                             font-size: 0.875rem;
                         }
                     }
@@ -2929,51 +3056,45 @@ const Training = {
     /** محتوى تبويب «برامج التدريب» — متزامن لتجنب تأخير await عند أول عرض للموديول */
     buildProgramsTabMarkup() {
         const stats = this.getStats();
+        const _trMax = Math.max(1, stats.totalTrainings || 0, stats.upcomingTrainings || 0, stats.completedTrainings || 0, stats.totalParticipants || 0);
+        const _trPct = (n) => (n > 0 ? Math.min(100, Math.round((n / _trMax) * 100)) : 0);
         return `
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <div class="content-card h-full">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-sm">
-                                <i class="fas fa-graduation-cap text-2xl"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-500">إجمالي البرامج</p>
-                                <p id="training-programs-kpi-total" class="text-2xl font-bold text-gray-900">${stats.totalTrainings}</p>
-                            </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+                    <div class="pinsp-stat">
+                        <div class="pinsp-stat__icon pinsp-stat__icon--blue"><i class="fas fa-graduation-cap"></i></div>
+                        <div class="pinsp-stat__body">
+                            <p class="pinsp-stat__label">إجمالي البرامج</p>
+                            <p id="training-programs-kpi-total" class="pinsp-stat__value" style="color:#1d4ed8;">${stats.totalTrainings}</p>
+                            <div class="pinsp-stat__bar"><span style="width:${_trPct(stats.totalTrainings)}%; background:#2563eb;"></span></div>
                         </div>
+                        <span class="pinsp-stat__pct">${_trPct(stats.totalTrainings)}%</span>
                     </div>
-                    <div class="content-card h-full">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-sm">
-                                <i class="fas fa-calendar-alt text-2xl"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-500">برامج قادمة</p>
-                                <p id="training-programs-kpi-upcoming" class="text-2xl font-bold text-gray-900">${stats.upcomingTrainings}</p>
-                            </div>
+                    <div class="pinsp-stat">
+                        <div class="pinsp-stat__icon pinsp-stat__icon--amber"><i class="fas fa-calendar-alt"></i></div>
+                        <div class="pinsp-stat__body">
+                            <p class="pinsp-stat__label">برامج قادمة</p>
+                            <p id="training-programs-kpi-upcoming" class="pinsp-stat__value" style="color:#c2410c;">${stats.upcomingTrainings}</p>
+                            <div class="pinsp-stat__bar"><span style="width:${_trPct(stats.upcomingTrainings)}%; background:#f59e0b;"></span></div>
                         </div>
+                        <span class="pinsp-stat__pct">${_trPct(stats.upcomingTrainings)}%</span>
                     </div>
-                    <div class="content-card h-full">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-xl bg-green-100 text-green-600 flex items-center justify-center shadow-sm">
-                                <i class="fas fa-check-circle text-2xl"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-500">برامج مكتملة</p>
-                                <p id="training-programs-kpi-completed" class="text-2xl font-bold text-gray-900">${stats.completedTrainings}</p>
-                            </div>
+                    <div class="pinsp-stat">
+                        <div class="pinsp-stat__icon pinsp-stat__icon--green"><i class="fas fa-check-circle"></i></div>
+                        <div class="pinsp-stat__body">
+                            <p class="pinsp-stat__label">برامج مكتملة</p>
+                            <p id="training-programs-kpi-completed" class="pinsp-stat__value" style="color:#15803d;">${stats.completedTrainings}</p>
+                            <div class="pinsp-stat__bar"><span style="width:${_trPct(stats.completedTrainings)}%; background:#22c55e;"></span></div>
                         </div>
+                        <span class="pinsp-stat__pct">${_trPct(stats.completedTrainings)}%</span>
                     </div>
-                    <div class="content-card h-full">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shadow-sm">
-                                <i class="fas fa-users text-2xl"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-500">إجمالي المشاركين</p>
-                                <p id="training-programs-kpi-participants" class="text-2xl font-bold text-gray-900">${stats.totalParticipants}</p>
-                            </div>
+                    <div class="pinsp-stat">
+                        <div class="pinsp-stat__icon pinsp-stat__icon--indigo"><i class="fas fa-users"></i></div>
+                        <div class="pinsp-stat__body">
+                            <p class="pinsp-stat__label">إجمالي المشاركين</p>
+                            <p id="training-programs-kpi-participants" class="pinsp-stat__value" style="color:#4338ca;">${stats.totalParticipants}</p>
+                            <div class="pinsp-stat__bar"><span style="width:${_trPct(stats.totalParticipants)}%; background:#6366f1;"></span></div>
                         </div>
+                        <span class="pinsp-stat__pct">${_trPct(stats.totalParticipants)}%</span>
                     </div>
                 </div>
                 <div class="content-card">
