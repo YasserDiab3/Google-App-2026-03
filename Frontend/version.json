@@ -2,14 +2,12 @@
   "version": "1.0.911",
   "highlights": {
     "ar": [
-      "تطبيق الهوية البصرية لنظام السلامة على موديول مهمات الوقاية: سجل الاستلامات، إدارة المخزون، وتحليل البيانات باللون الأزرق الموحّد.",
-      "إرسال قائمة المرور اليومي للسلامة مباشرة من السجل بقالب بريد احترافي يتضمن الملخص وقراءة الضغط والبنود.",
-      "دعم مرفقات PDF في الإرسال البريد مباشرة مع زر إرسال جديد في سجل المرور اليومي."
+      "تطبيق الهوية البصرية لنظام السلامة على موديول المواد الكيميائية: ترويسة جديدة، إحصائيات متوافقة، وجداول موحّدة.",
+      "إضافة مادة جديدة تظل في مكانها مع واجهة أسرع للحوادث في السجل الكيميائي."
     ],
     "en": [
-      "HSE brand identity applied across the PPE module: receipts log, stock management, and analytics with unified blue.",
-      "Send the daily safety checklist from the log with a professional mail template including summary, pressure reading and items.",
-      "PDF attachments support in direct email sending, plus a new send button in the safety checklist log."
+      "HSE brand identity applied to the chemical safety module: new header, aligned stats, and unified tables.",
+      "Add-new-material action kept in place with a faster interface for the chemical register."
     ]
   }
 }
