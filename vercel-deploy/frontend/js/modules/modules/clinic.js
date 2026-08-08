@@ -911,6 +911,11 @@ const Clinic = {
         nav.querySelectorAll('.clinic-attendance-quick-nav-item').forEach(btn => {
             btn.addEventListener('click', () => {
                 const targetId = btn.dataset.target;
+                if (targetId === 'clinic-attendance-section-timeoff') {
+                    closeNav();
+                    this.showTimeOffRequestModal();
+                    return;
+                }
                 const el = targetId ? document.getElementById(targetId) : null;
                 if (el) {
                     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -14590,18 +14595,27 @@ const Clinic = {
                 }
                 #clinic-attendance-root .data-table tbody tr:hover td { background: #f2f7ff !important; }
                 #clinic-attendance-root .data-table td { vertical-align: middle; }
-                /* ✅ الهوية — نموذج طلب جديد */
-                #clinic-attendance-root #timeoff-request-form button[type="submit"] {
+                /* ✅ الهوية — نموذج طلب جديد (داخل الصفحة أو المودال) */
+                #clinic-attendance-root #timeoff-request-form button[type="submit"],
+                #clinic-timeoff-request-modal #timeoff-request-form button[type="submit"],
+                #clinic-timeoff-request-modal #clinic-timeoff-submit-btn {
                     background: linear-gradient(135deg,#fbbf24,#f59e0b) !important; color: #7c2d12; border: none;
                     font-weight: 800; box-shadow: 0 6px 18px rgba(0,0,0,.18);
                 }
                 #clinic-attendance-root #timeoff-request-form .form-input,
-                #clinic-attendance-root #timeoff-request-form .form-textarea {
+                #clinic-attendance-root #timeoff-request-form .form-textarea,
+                #clinic-timeoff-request-modal .form-input,
+                #clinic-timeoff-request-modal .form-textarea {
                     border-radius: 10px; border-color: #cbd5e1;
                 }
                 #clinic-attendance-root #timeoff-request-form .form-input:focus,
-                #clinic-attendance-root #timeoff-request-form .form-textarea:focus {
+                #clinic-attendance-root #timeoff-request-form .form-textarea:focus,
+                #clinic-timeoff-request-modal .form-input:focus,
+                #clinic-timeoff-request-modal .form-textarea:focus {
                     border-color: var(--c-blue2, #2563eb); box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+                }
+                #clinic-timeoff-request-modal .modal-body label {
+                    font-weight: 700 !important; color: #334155;
                 }
             `;
             document.head.appendChild(style);
@@ -15351,6 +15365,76 @@ const Clinic = {
         if (this._shouldDeferAttendanceRender()) return;
         this._attendanceRenderPending = false;
         this.renderAttendanceTab({ force: true });
+    },
+
+    async showTimeOffRequestModal() {
+        try {
+            const existing = document.getElementById('clinic-timeoff-request-modal');
+            if (existing) existing.remove();
+            this._saveTimeOffFormDraftFromDom();
+            const d = this.state?.timeOffFormDraft;
+            const modal = document.createElement('div');
+            modal.id = 'clinic-timeoff-request-modal';
+            modal.className = 'modal-overlay active';
+            modal.style.zIndex = '10060';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width:640px;border-radius:16px;overflow:hidden;box-shadow:0 24px 60px rgba(11,42,85,.35);border:1px solid #dce7f5;">
+                    <div class="modal-header" style="background:linear-gradient(125deg,#0b2a55 0%,#1e40af 70%,#2563eb 100%);color:#fff;padding:18px 22px;border-bottom:none;display:flex;align-items:center;justify-content:space-between;">
+                        <h3 style="margin:0;font-size:1.1rem;font-weight:800;display:flex;align-items:center;gap:10px;">
+                            <i class="fas fa-paper-plane" style="color:#fde68a;"></i> إرسال طلب جديد
+                        </h3>
+                        <button type="button" class="modal-close" style="color:#fff;opacity:.85;background:rgba(255,255,255,.12);border-radius:9px;width:34px;height:34px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.22);" title="إغلاق"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="modal-body" style="padding:22px 24px;background:#f8fafc;">
+                        <p style="margin:0 0 16px;font-size:0.78rem;color:#64748b;display:flex;align-items:center;gap:6px;">
+                            <i class="fas fa-info-circle" style="color:#2563eb;"></i> يُرسل الطلب للاعتماد من مدير النظام أو مسئول العيادة المعني.
+                        </p>
+                        <form id="timeoff-request-form" class="space-y-3">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-semibold mb-1">نوع الطلب *</label>
+                                    <select id="timeoff-request-type" class="form-input" required>
+                                        <option value="">اختر النوع</option>
+                                        <option value="leave" ${d && d.requestType === 'leave' ? 'selected' : ''}>إجازة</option>
+                                        <option value="permission" ${d && d.requestType === 'permission' ? 'selected' : ''}>إذن</option>
+                                        <option value="overtime" ${d && d.requestType === 'overtime' ? 'selected' : ''}>إضافي</option>
+                                    </select>
+                                </div>
+                                <div id="timeoff-leave-dates" class="hidden md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div><label class="block text-sm font-semibold mb-1">من تاريخ *</label><input type="date" id="timeoff-date-from" class="form-input" value="${Utils.escapeAttr(d?.dateFrom || '')}"></div>
+                                    <div><label class="block text-sm font-semibold mb-1">إلى تاريخ *</label><input type="date" id="timeoff-date-to" class="form-input" value="${Utils.escapeAttr(d?.dateTo || '')}"></div>
+                                </div>
+                                <div id="timeoff-permission-fields" class="hidden md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div><label class="block text-sm font-semibold mb-1">التاريخ *</label><input type="date" id="timeoff-perm-date" class="form-input" value="${Utils.escapeAttr(d?.permDate || '')}"></div>
+                                    <div><label class="block text-sm font-semibold mb-1">من وقت *</label><input type="time" id="timeoff-time-from" class="form-input" value="${Utils.escapeAttr(d?.timeFrom || '')}"></div>
+                                    <div><label class="block text-sm font-semibold mb-1">إلى وقت *</label><input type="time" id="timeoff-time-to" class="form-input" value="${Utils.escapeAttr(d?.timeTo || '')}"></div>
+                                </div>
+                                <div id="timeoff-overtime-fields" class="hidden md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div><label class="block text-sm font-semibold mb-1">التاريخ *</label><input type="date" id="timeoff-ot-date" class="form-input" value="${Utils.escapeAttr(d?.otDate || '')}"></div>
+                                    <div><label class="block text-sm font-semibold mb-1">عدد الساعات</label><input type="number" id="timeoff-duration-hours" class="form-input" min="0.5" step="0.5" placeholder="مثال: 2" value="${Utils.escapeAttr(d?.durationHours || '')}"></div>
+                                    <div class="text-sm text-gray-500 self-end pb-2">أو حدد من/إلى وقت أدناه</div>
+                                </div>
+                            </div>
+                            <div><label class="block text-sm font-semibold mb-1">السبب *</label><textarea id="timeoff-reason" class="form-textarea" rows="3" required placeholder="اذكر سبب الطلب...">${Utils.escapeHTML(d?.reason || '')}</textarea></div>
+                        </form>
+                    </div>
+                    <div class="modal-footer" style="padding:14px 24px;background:#fff;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-start;gap:10px;">
+                        <button type="button" class="btn-primary" id="clinic-timeoff-submit-btn" style="min-width:150px;"><i class="fas fa-paper-plane ml-2"></i>إرسال الطلب</button>
+                        <button type="button" class="btn-secondary" data-timeoff-close="1"><i class="fas fa-times ml-2"></i>إلغاء</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+            this._bindTimeOffFormPanelEvents(modal);
+            modal.querySelectorAll('[data-timeoff-close]').forEach(btn => btn.addEventListener('click', () => modal.remove()));
+            modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+            modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+            modal.querySelector('#clinic-timeoff-submit-btn').addEventListener('click', () => {
+                const form = modal.querySelector('#timeoff-request-form');
+                if (form && form.reportValidity && form.reportValidity()) form.submit();
+            });
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ خطأ في فتح نموذج طلب جديد:', e);
+        }
     },
 
     _bindTimeOffFormPanelEvents(panel) {
@@ -16974,6 +17058,7 @@ const Clinic = {
                 Loading.hide();
                 Notification?.success?.('تم إرسال الطلب بنجاح — بانتظار موافقة المدير');
                 if (this.state) this.state.timeOffFormDraft = this._getDefaultTimeOffFormDraft();
+                document.getElementById('clinic-timeoff-request-modal')?.remove();
                 this._attendanceRenderPending = false;
                 this.renderAttendanceTab({ force: true });
             } else {
@@ -17118,6 +17203,7 @@ const Clinic = {
                             const active = period === p;
                             return `<button type="button" class="clinic-attendance-period-btn" data-period="${p}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.74rem;font-weight:600;background:${active ? '#fff' : 'rgba(255,255,255,0.14)'};color:${active ? '#0b2a55' : '#fff'};">${periodLabels[p]}</button>`;
                         }).join('')}
+                        <button type="button" id="clinic-attendance-new-request-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#7c2d12;font-size:0.74rem;font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,.18);"><i class="fas fa-paper-plane"></i> طلب جديد</button>
                         <button type="button" id="clinic-attendance-toggle-filters" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.12);color:#fff;font-size:0.74rem;cursor:pointer;"><i class="fas fa-sliders-h"></i> فلاتر</button>
                         <button type="button" id="clinic-attendance-refresh-btn" style="padding:6px 10px;border-radius:8px;border:none;background:rgba(255,255,255,0.14);color:#fff;cursor:pointer;"><i class="fas fa-sync-alt${dataLoading ? ' fa-spin' : ''}"></i></button>
                         <button type="button" id="clinic-attendance-pdf-btn" style="padding:6px 10px;border-radius:8px;border:none;background:rgba(0,0,0,0.22);color:#fff;font-size:0.74rem;cursor:pointer;"><i class="fas fa-file-pdf"></i> PDF</button>
@@ -17151,41 +17237,6 @@ const Clinic = {
                         <div class="registry-filter-field tx-reg-filter-actions">
                             <button type="button" id="clinic-attendance-reset-filters" class="registry-filter-reset-btn"><i class="fas fa-rotate-left"></i>إعادة تعيين الفلاتر</button>
                         </div>
-                    </div>
-                </div>
-
-                <div class="content-card mb-4" id="clinic-attendance-section-timeoff">
-                    <div class="card-header"><h4 class="card-title"><i class="fas fa-paper-plane ml-2"></i>طلب جديد</h4></div>
-                    <div class="card-body">
-                        <form id="timeoff-request-form" class="space-y-3">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-sm font-semibold mb-1">نوع الطلب *</label>
-                                    <select id="timeoff-request-type" class="form-input" required>
-                                        <option value="">اختر النوع</option>
-                                        <option value="leave">إجازة</option>
-                                        <option value="permission">إذن</option>
-                                        <option value="overtime">إضافي</option>
-                                    </select>
-                                </div>
-                                <div id="timeoff-leave-dates" class="hidden md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <div><label class="block text-sm font-semibold mb-1">من تاريخ *</label><input type="date" id="timeoff-date-from" class="form-input"></div>
-                                    <div><label class="block text-sm font-semibold mb-1">إلى تاريخ *</label><input type="date" id="timeoff-date-to" class="form-input"></div>
-                                </div>
-                                <div id="timeoff-permission-fields" class="hidden md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <div><label class="block text-sm font-semibold mb-1">التاريخ *</label><input type="date" id="timeoff-perm-date" class="form-input"></div>
-                                    <div><label class="block text-sm font-semibold mb-1">من وقت *</label><input type="time" id="timeoff-time-from" class="form-input"></div>
-                                    <div><label class="block text-sm font-semibold mb-1">إلى وقت *</label><input type="time" id="timeoff-time-to" class="form-input"></div>
-                                </div>
-                                <div id="timeoff-overtime-fields" class="hidden md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <div><label class="block text-sm font-semibold mb-1">التاريخ *</label><input type="date" id="timeoff-ot-date" class="form-input"></div>
-                                    <div><label class="block text-sm font-semibold mb-1">عدد الساعات</label><input type="number" id="timeoff-duration-hours" class="form-input" min="0.5" step="0.5" placeholder="مثال: 2"></div>
-                                    <div class="text-sm text-gray-500 self-end pb-2">أو حدد من/إلى وقت أدناه</div>
-                                </div>
-                            </div>
-                            <div><label class="block text-sm font-semibold mb-1">السبب *</label><textarea id="timeoff-reason" class="form-textarea" rows="2" required placeholder="اذكر سبب الطلب..."></textarea></div>
-                            <button type="submit" class="btn-primary"><i class="fas fa-paper-plane ml-2"></i>إرسال الطلب</button>
-                        </form>
                     </div>
                 </div>
 
@@ -17298,8 +17349,7 @@ const Clinic = {
         this.bindClinicStaffLeaveBalanceEvents(panel);
         this.bindAttendanceQuickNav(panel);
         this.initAttendanceTableScroll(panel);
-        this._applyTimeOffFormDraftToPanel(panel);
-        this._bindTimeOffFormPanelEvents(panel);
+        panel.querySelector('#clinic-attendance-new-request-btn')?.addEventListener('click', () => this.showTimeOffRequestModal());
     },
 
     renderAttendanceTab(options) {
