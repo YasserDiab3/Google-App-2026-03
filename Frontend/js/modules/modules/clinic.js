@@ -14227,11 +14227,13 @@ const Clinic = {
                     }
                 });
             } else if (isSupply) {
+                // ⚡ مهلة أطول (45 ثانية): تحديث الطلب أصبح صفاً واحداً فقط — لكن نحتفظ بهامش أمان للتجارب والبطء
                 result = await GoogleIntegration.sendRequest({
                     action: 'approveSupplyRequest',
                     data: {
                         requestId: requestId,
-                        approverData: approverData
+                        approverData: approverData,
+                        __timeoutMs: 45000
                     }
                 });
             } else if (isVisitDeletion) {

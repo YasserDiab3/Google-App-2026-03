@@ -2855,18 +2855,66 @@ function updateSupplyRequest(requestId, updateData) {
         if (!requestId) {
             return { success: false, message: 'معرف الطلب غير محدد' };
         }
-        
+
+        // ⚡ تحسين الأداء: تحديث صف واحد فقط بدلاً من قراءة/كتابة الشيت بالكامل
         const sheetName = 'ClinicSupplyRequests';
         const spreadsheetId = getSpreadsheetId();
-        const data = readFromSheet(sheetName, spreadsheetId);
-        const requestIndex = data.findIndex(r => r.id === requestId);
-        
-        if (requestIndex === -1) {
+        const ss = SpreadsheetApp.openById(spreadsheetId);
+        const sheet = ss.getSheetByName(sheetName);
+        if (!sheet) {
+            return { success: false, message: 'ورقة ' + sheetName + ' غير موجودة' };
+        }
+
+        const lastRow = sheet.getLastRow();
+        const lastCol = sheet.getLastColumn();
+        if (lastRow < 1 || lastCol < 1) {
+            return { success: false, message: 'الورقة فارغة' };
+        }
+
+        if (lastRow < 2) {
             return { success: false, message: 'الطلب غير موجود' };
         }
-        
+        const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+        const idColIdx = headers.indexOf('id') + 1; // 1-based
+        if (!idColIdx) {
+            return { success: false, message: 'عمود id غير موجود في الورقة' };
+        }
+
+        // قراءة عمود المعرفات فقط (بدل الملف كامل)
+        const idValues = sheet.getRange(2, idColIdx, Math.max(0, lastRow - 1), 1).getValues();
+        let rowOffset = -1;
+        for (var i = 0; i < idValues.length; i++) {
+            if (String(idValues[i][0]) === String(requestId)) {
+                rowOffset = i;
+                break;
+            }
+        }
+        if (rowOffset === -1) {
+            return { success: false, message: 'الطلب غير موجود' };
+        }
+        const rowIndex = rowOffset + 2; // سطر الشيت الفعلي
+
+        // Idempotency: الموافقة/الرفض المتكرر على نفس الحالة يُرجع نجاحاً فوراً دون كتابة
+        if ((updateData.status === 'approved' || updateData.status === 'rejected' || updateData.status === 'cancelled')) {
+            const statusColIdx = headers.indexOf('status') + 1;
+            if (statusColIdx > 0) {
+                const currentStatus = sheet.getRange(rowIndex, statusColIdx).getValue();
+                if (String(currentStatus || '') === String(updateData.status)) {
+                    return { success: true, message: 'الطلب قيد الحالة المطلوبة بالفعل (تم التحديث مسبقاً)', idempotent: true };
+                }
+            }
+        }
+
+        // قراءة سطر واحد فقط ثم تطبيق التحديثات عليه
+        const existingRow = sheet.getRange(rowIndex, 1, 1, lastCol).getValues()[0];
+        const updatedRow = existingRow.slice();
+        const newObj = {};
+        for (var h = 0; h < headers.length; h++) {
+            newObj[headers[h]] = updatedRow[h];
+        }
+
         updateData.updatedAt = new Date();
-        
+
         // إذا كانت هناك بيانات updatedBy/approvedBy/rejectedBy، تحويلها إلى JSON
         if (updateData.updatedBy && typeof updateData.updatedBy === 'object') {
             updateData.updatedByJSON = JSON.stringify(updateData.updatedBy);
@@ -2877,14 +2925,18 @@ function updateSupplyRequest(requestId, updateData) {
         if (updateData.rejectedBy && typeof updateData.rejectedBy === 'object') {
             updateData.rejectedByJSON = JSON.stringify(updateData.rejectedBy);
         }
-        
+
         for (var key in updateData) {
             if (updateData.hasOwnProperty(key)) {
-                data[requestIndex][key] = updateData[key];
+                newObj[key] = updateData[key];
             }
         }
-        
-        return saveToSheet(sheetName, data, spreadsheetId);
+        for (var c = 0; c < headers.length; c++) {
+            updatedRow[c] = newObj[headers[c]];
+        }
+
+        sheet.getRange(rowIndex, 1, 1, lastCol).setValues([updatedRow]);
+        return { success: true, message: 'تم تحديث الطلب بنجاح', rowNumber: rowIndex };
     } catch (error) {
         Logger.log('Error updating supply request: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء تحديث الطلب: ' + error.toString() };
