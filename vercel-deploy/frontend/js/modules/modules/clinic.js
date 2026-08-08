@@ -608,13 +608,13 @@ const Clinic = {
                 font-size: 0.8rem;
                 font-weight: 700;
                 color: #fff;
-                background: linear-gradient(135deg, #134e4a 0%, #0d9488 100%);
-                box-shadow: 0 6px 20px rgba(13, 148, 136, 0.35);
+                background: linear-gradient(125deg, #0b2a55 0%, #1e40af 70%, #2563eb 100%);
+                box-shadow: 0 6px 20px rgba(11, 42, 85, 0.35);
                 transition: transform 0.2s, box-shadow 0.2s;
             }
             .clinic-attendance-quick-nav-toggle:hover {
                 transform: translateY(-1px);
-                box-shadow: 0 8px 24px rgba(13, 148, 136, 0.42);
+                box-shadow: 0 8px 24px rgba(11, 42, 85, 0.42);
             }
             .clinic-attendance-quick-nav-chevron {
                 transition: transform 0.25s ease;
@@ -633,7 +633,7 @@ const Clinic = {
                 background: #fff;
                 border-radius: 12px;
                 box-shadow: 0 10px 32px rgba(15, 23, 42, 0.14);
-                border: 1px solid #ccfbf1;
+                border: 1px solid #bfdbfe;
             }
             .clinic-attendance-quick-nav.open .clinic-attendance-quick-nav-panel {
                 max-height: 280px;
@@ -645,7 +645,7 @@ const Clinic = {
                 width: 8px;
             }
             .clinic-attendance-quick-nav-panel::-webkit-scrollbar-thumb {
-                background: #0d9488;
+                background: #1e40af;
                 border-radius: 6px;
             }
             .clinic-attendance-quick-nav-item {
@@ -668,12 +668,12 @@ const Clinic = {
             }
             .clinic-attendance-quick-nav-item:hover,
             .clinic-attendance-quick-nav-item:focus {
-                background: #f0fdfa;
-                color: #0f766e;
+                background: #eff6ff;
+                color: #1e40af;
                 outline: none;
             }
             .clinic-attendance-quick-nav-item i {
-                color: #0d9488;
+                color: #2563eb;
                 width: 18px;
                 text-align: center;
             }
@@ -3952,7 +3952,7 @@ const Clinic = {
 
         return `<div class="content-card mt-4" id="clinic-approved-timeoff-section">
             <div class="card-header" style="padding:12px 18px;border-bottom:1px solid #f1f5f9;">
-                <h4 style="margin:0;font-size:0.92rem;font-weight:700;color:#134e4a;"><i class="fas fa-check-circle ml-2" style="color:#059669;"></i>الإجازات والأذونات المعتمدة (${Utils.escapeHTML(month || '')})</h4>
+                <h4 style="margin:0;font-size:0.92rem;font-weight:700;color:#0b2a55;"><i class="fas fa-check-circle ml-2" style="color:#059669;"></i>الإجازات والأذونات المعتمدة (${Utils.escapeHTML(month || '')})</h4>
             </div>
             <div class="card-body" style="padding:0;">
                 ${this._clinicAttendanceScrollTable(`<table class="data-table table-header-green">
@@ -4005,7 +4005,7 @@ const Clinic = {
 
         return `<div class="content-card mt-4" id="clinic-leave-balances-section">
             <div class="card-header" style="padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center;">
-                <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#134e4a;"><i class="fas fa-wallet ml-2" style="color:#0d9488;"></i>أرصدة الإجازات والأذونات</h4>
+                <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#0b2a55;"><i class="fas fa-wallet ml-2" style="color:#2563eb;"></i>أرصدة الإجازات والأذونات</h4>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                     <label style="font-size:0.72rem;color:#64748b;font-weight:600;">الشهر</label>
                     <input type="month" id="clinic-leave-balance-month" class="form-input" style="padding:6px 10px;font-size:0.8rem;width:auto;" value="${Utils.escapeAttr(month)}">
@@ -14557,6 +14557,59 @@ const Clinic = {
         }
     },
 
+    _injectClinicAttendanceIdentityStyles() {
+        try {
+            if (document.getElementById('clinic-attendance-identity-styles')) return;
+            const style = document.createElement('style');
+            style.id = 'clinic-attendance-identity-styles';
+            style.textContent = `
+                #clinic-attendance-root {
+                    --c-navy: #0b2a55;
+                    --c-blue: #1e40af;
+                    --c-blue2: #2563eb;
+                }
+                /* ✅ الهوية — أسطح المحتوى */
+                #clinic-attendance-root .content-card {
+                    border-radius: 16px; border-color: #dce7f5 !important;
+                    box-shadow: 0 8px 24px rgba(15,47,90,.07);
+                }
+                #clinic-attendance-root .card-header {
+                    background: linear-gradient(90deg, #0b2a55, #1e40af) !important;
+                    border-bottom: none; border-radius: 16px 16px 0 0;
+                    padding: 14px 18px !important;
+                }
+                #clinic-attendance-root .card-header .card-title,
+                #clinic-attendance-root .card-header h4 { color: #ffffff !important; font-weight: 800; }
+                #clinic-attendance-root .card-header .card-title i,
+                #clinic-attendance-root .card-header h4 i { color: #fde68a; }
+                /* ✅ الهوية — الجداول (تغطية الرؤوس الخضراء القديمة) */
+                #clinic-attendance-root .data-table thead th,
+                #clinic-attendance-root .table-header-green thead th {
+                    background: linear-gradient(90deg, #1e40af, #2563eb) !important; color: #ffffff !important;
+                    font-weight: 700; white-space: nowrap; border: none !important;
+                }
+                #clinic-attendance-root .data-table tbody tr:hover td { background: #f2f7ff !important; }
+                #clinic-attendance-root .data-table td { vertical-align: middle; }
+                /* ✅ الهوية — نموذج طلب جديد */
+                #clinic-attendance-root #timeoff-request-form button[type="submit"] {
+                    background: linear-gradient(135deg,#fbbf24,#f59e0b) !important; color: #7c2d12; border: none;
+                    font-weight: 800; box-shadow: 0 6px 18px rgba(0,0,0,.18);
+                }
+                #clinic-attendance-root #timeoff-request-form .form-input,
+                #clinic-attendance-root #timeoff-request-form .form-textarea {
+                    border-radius: 10px; border-color: #cbd5e1;
+                }
+                #clinic-attendance-root #timeoff-request-form .form-input:focus,
+                #clinic-attendance-root #timeoff-request-form .form-textarea:focus {
+                    border-color: var(--c-blue2, #2563eb); box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+                }
+            `;
+            document.head.appendChild(style);
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ تعذر حقن هوية حضور العيادة:', e);
+        }
+    },
+
     async load() {
         if (typeof Utils !== 'undefined' && Utils.safeLog) {
             Utils.safeLog('🔄 تحميل مديول العيادة...');
@@ -14588,6 +14641,9 @@ const Clinic = {
 
         // حقن أنماط CSS لشريط التمرير
         this.injectTableScrollbarStyles();
+
+        // هوية تبويب الحضور — نموذج الطلبات والجداول
+        this._injectClinicAttendanceIdentityStyles();
 
         // إضافة مستمع لتغيير اللغة
         if (!this._languageChangeListenerAdded) {
@@ -15056,7 +15112,7 @@ const Clinic = {
                 </div>
                 <div class="card-body" style="padding:0;">
                     <p style="padding:10px 16px;margin:0;font-size:0.78rem;color:#64748b;border-bottom:1px solid #f1f5f9;">
-                        <i class="fas fa-info-circle ml-1" style="color:#0d9488;"></i>
+<i class="fas fa-info-circle ml-1" style="color:#2563eb;"></i>
                         يعرض ما تم تسجيله عبر النظام: تصاريح العمل، زيارات العيادة (من سجل التردد المحمّل)، التدريب، الحوادث، والملاحظات. اضغط زر التحديث لتحميل النشاط.
                     </p>
                     ${this._clinicAttendanceScrollTable(`<table class="data-table table-header-green">
@@ -15776,7 +15832,7 @@ const Clinic = {
         const html = `
             <div class="modal-overlay active" id="clinic-attendance-add-modal">
                 <div class="modal-content" style="max-width:560px; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
-                    <div class="modal-header" style="background: linear-gradient(135deg, #0f766e, #14b8a6); color: white; padding: 1.5rem; border-bottom: none;">
+                    <div class="modal-header" style="background: linear-gradient(125deg, #0b2a55, #1e40af 70%, #2563eb); color: white; padding: 1.5rem; border-bottom: none;">
                         <h3 style="margin: 0; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center;"><i class="fas fa-fingerprint ml-3" style="font-size: 1.5rem; opacity: 0.9;"></i>إضافة سجل حضور / بصمة مفقودة</h3>
                         <button type="button" class="modal-close" style="color: white; opacity: 0.8; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'" onclick="document.getElementById('clinic-attendance-add-modal')?.remove()"><i class="fas fa-times"></i></button>
                     </div>
@@ -16169,27 +16225,27 @@ const Clinic = {
         }).join('');
 
         const thead = isSelfView
-            ? `<tr style="background:linear-gradient(135deg,#134e4a,#0d9488);color:#fff;">
-                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">التاريخ</th>
-                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">وقت الدخول</th>
-                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">وقت الخروج</th>
-                <th style="padding:10px;border:1px solid #0f766e;text-align:center;">المدة (س)</th>
-                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">الحالة</th>
+            ? `<tr style="background:linear-gradient(90deg,#1e40af,#2563eb);color:#fff;">
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">التاريخ</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">وقت الدخول</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">وقت الخروج</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:center;">المدة (س)</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">الحالة</th>
             </tr>`
-            : `<tr style="background:linear-gradient(135deg,#134e4a,#0d9488);color:#fff;">
-                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">الاسم</th>
-                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">البريد</th>
-                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">الدور</th>
-                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">التاريخ</th>
-                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">وقت الدخول</th>
-                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">وقت الخروج</th>
-                <th style="padding:10px;border:1px solid #0f766e;text-align:center;">المدة (س)</th>
-                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">الحالة</th>
+            : `<tr style="background:linear-gradient(90deg,#1e40af,#2563eb);color:#fff;">
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">الاسم</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">البريد</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">الدور</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">التاريخ</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">وقت الدخول</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">وقت الخروج</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:center;">المدة (س)</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">الحالة</th>
             </tr>`;
 
         return `
             <div style="margin-bottom:18px;">
-                <div style="background:linear-gradient(135deg,#134e4a 0%,#0d9488 100%);color:#fff;padding:16px 20px;border-radius:12px;margin-bottom:14px;box-shadow:0 4px 14px rgba(13,148,136,0.25);">
+                <div style="background:linear-gradient(125deg,#0b2a55 0%,#1e40af 70%,#2563eb 100%);color:#fff;padding:16px 20px;border-radius:12px;margin-bottom:14px;box-shadow:0 6px 18px rgba(11,42,85,0.28);">
                     <div style="font-size:17px;font-weight:800;margin-bottom:6px;">تقرير حضور مسئولي العيادة</div>
                     <div style="font-size:11px;opacity:0.92;line-height:1.6;">
                         <span><strong>النطاق:</strong> ${Utils.escapeHTML(meta)}</span>
@@ -16569,7 +16625,7 @@ const Clinic = {
         const html = `
             <div class="modal-overlay active" id="clinic-attendance-report-modal">
                 <div class="modal-content" style="max-width:580px;border-radius:14px;overflow:hidden;">
-                    <div class="modal-header" style="background:linear-gradient(135deg,#134e4a,#0d9488);color:#fff;">
+                    <div class="modal-header" style="background:linear-gradient(125deg,#0b2a55,#1e40af 70%,#2563eb);color:#fff;">
                         <h3 style="margin:0;color:#fff;"><i class="fas fa-file-export ml-2"></i>تصدير تقرير الحضور</h3>
                         <button type="button" class="modal-close" style="color:#fff;" onclick="document.getElementById('clinic-attendance-report-modal')?.remove()"><i class="fas fa-times"></i></button>
                     </div>
@@ -17052,7 +17108,7 @@ const Clinic = {
                         </div>`).join('')}
                 </div>
 
-                <div style="padding:14px 18px;background:linear-gradient(135deg,#134e4a,#0d9488);border-radius:14px;color:#fff;margin-bottom:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center;">
+                <div style="padding:14px 18px;background:linear-gradient(125deg,#0b2a55 0%,#1e3a75 70%,#245a9b 100%);border-radius:14px;color:#fff;margin-bottom:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center;box-shadow:0 10px 26px rgba(11,42,85,.25);">
                     <div>
                         <h3 style="margin:0;font-size:1rem;font-weight:700;">حضوري وطلباتي</h3>
                         <p style="margin:4px 0 0;font-size:0.72rem;opacity:0.9;">${Utils.escapeHTML(staff?.userName || AppState.currentUser?.name || '')} — ${Utils.escapeHTML(this.getStaffRoleLabel(staff?.staffRole))}</p>
@@ -17060,7 +17116,7 @@ const Clinic = {
                     <div style="display:flex;gap:6px;flex-wrap:wrap;">
                         ${['today', 'week', 'month', 'all'].map(p => {
                             const active = period === p;
-                            return `<button type="button" class="clinic-attendance-period-btn" data-period="${p}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.74rem;font-weight:600;background:${active ? '#fff' : 'rgba(255,255,255,0.14)'};color:${active ? '#134e4a' : '#fff'};">${periodLabels[p]}</button>`;
+                            return `<button type="button" class="clinic-attendance-period-btn" data-period="${p}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.74rem;font-weight:600;background:${active ? '#fff' : 'rgba(255,255,255,0.14)'};color:${active ? '#0b2a55' : '#fff'};">${periodLabels[p]}</button>`;
                         }).join('')}
                         <button type="button" id="clinic-attendance-toggle-filters" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.12);color:#fff;font-size:0.74rem;cursor:pointer;"><i class="fas fa-sliders-h"></i> فلاتر</button>
                         <button type="button" id="clinic-attendance-refresh-btn" style="padding:6px 10px;border-radius:8px;border:none;background:rgba(255,255,255,0.14);color:#fff;cursor:pointer;"><i class="fas fa-sync-alt${dataLoading ? ' fa-spin' : ''}"></i></button>
@@ -17372,7 +17428,7 @@ const Clinic = {
                 </div>
 
                 <!-- شريط الأدوات -->
-                <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;padding:14px 18px;background:linear-gradient(135deg,#134e4a 0%,#0d9488 100%);border-radius:14px;color:#fff;box-shadow:0 4px 18px rgba(13,148,136,0.28);">
+                <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;padding:14px 18px;background:linear-gradient(125deg,#0b2a55 0%,#1e3a75 70%,#245a9b 100%);border-radius:14px;color:#fff;box-shadow:0 10px 28px rgba(11,42,85,.25);">
                     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
                         <div style="display:flex;align-items:center;gap:10px;">
                             <div style="width:42px;height:42px;background:rgba(255,255,255,0.16);border-radius:11px;display:flex;align-items:center;justify-content:center;">
@@ -17387,22 +17443,22 @@ const Clinic = {
                         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 8px;background:rgba(0,0,0,0.18);border-radius:10px;border:1px solid rgba(255,255,255,0.2);">
                             <span style="font-size:0.68rem;font-weight:700;opacity:0.85;margin-inline:4px;">إدارة:</span>
                             <button type="button" id="clinic-attendance-shift-rules-btn" style="padding:7px 12px;border-radius:8px;border:none;cursor:pointer;background:#fbbf24;color:#78350f;font-size:0.76rem;font-weight:800;display:flex;align-items:center;gap:5px;" title="مواعيد الورديات والقواعد"><i class="fas fa-clock"></i><span>الورديات</span></button>
-                            <button type="button" id="clinic-attendance-add-punch-btn" style="padding:7px 12px;border-radius:8px;border:none;cursor:pointer;background:#fff;color:#134e4a;font-size:0.76rem;font-weight:800;display:flex;align-items:center;gap:5px;" title="إضافة سجل حضور أو بصمة مفقودة"><i class="fas fa-fingerprint"></i><span>بصمة مفقودة</span></button>
-                            <button type="button" id="clinic-attendance-add-staff-btn" style="padding:7px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;"><i class="fas fa-user-plus"></i><span>إضافة مسئول</span></button>
+                            <button type="button" id="clinic-attendance-add-punch-btn" style="padding:7px 12px;border-radius:8px;border:none;cursor:pointer;background:#fff;color:#0b2a55;font-size:0.76rem;font-weight:800;display:flex;align-items:center;gap:5px;" title="إضافة سجل حضور أو بصمة مفقودة"><i class="fas fa-fingerprint"></i><span>بصمة مفقودة</span></button>
+                            <button type="button" id="clinic-attendance-add-staff-btn" style="padding:7px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#0b2a55;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;"><i class="fas fa-user-plus"></i><span>إضافة مسئول</span></button>
                         </div>` : ''}
                     </div>
                     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                         <span style="font-size:0.72rem;opacity:0.9;">الفترة:</span>
                         ${['today', 'week', 'month', 'all'].map(p => {
                             const active = period === p;
-                            return `<button type="button" class="clinic-attendance-period-btn" data-period="${p}" style="padding:5px 11px;border-radius:8px;border:none;cursor:pointer;font-size:0.74rem;font-weight:600;transition:all .2s;background:${active ? '#fff' : 'rgba(255,255,255,0.14)'};color:${active ? '#134e4a' : '#fff'};">${periodLabels[p]}</button>`;
+                            return `<button type="button" class="clinic-attendance-period-btn" data-period="${p}" style="padding:5px 11px;border-radius:8px;border:none;cursor:pointer;font-size:0.74rem;font-weight:600;transition:all .2s;background:${active ? '#fff' : 'rgba(255,255,255,0.14)'};color:${active ? '#0b2a55' : '#fff'};">${periodLabels[p]}</button>`;
                         }).join('')}
                         <button type="button" id="clinic-attendance-toggle-filters" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.35);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;">
                             <i class="fas fa-sliders-h"></i><span>فلاتر</span>
                             ${activeFilterCount ? `<span style="background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 6px;border-radius:10px;">${activeFilterCount}</span>` : ''}
                         </button>
                         <button type="button" id="clinic-attendance-refresh-btn" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.14);color:#fff;font-size:0.76rem;" title="تحديث من الخادم"><i class="fas fa-sync-alt${dataLoading ? ' fa-spin' : ''}"></i></button>
-                        <button type="button" id="clinic-attendance-report-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;" title="تصدير تقرير"><i class="fas fa-file-export"></i><span>تقرير</span></button>
+                        <button type="button" id="clinic-attendance-report-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#0b2a55;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;" title="تصدير تقرير"><i class="fas fa-file-export"></i><span>تقرير</span></button>
                         <button type="button" id="clinic-attendance-pdf-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;" title="PDF للفلتر الحالي"><i class="fas fa-file-pdf"></i><span>PDF</span></button>
                         <button type="button" id="clinic-attendance-export-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;" title="Excel للفلتر الحالي"><i class="fas fa-file-excel"></i><span>Excel</span></button>
                     </div>
@@ -17457,20 +17513,20 @@ const Clinic = {
                         </div>
                     </div>
                     ${activeFilterCount ? `
-                    <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #99f6e4;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+                    <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #bfdbfe;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
                         <span style="font-size:0.72rem;color:#64748b;font-weight:600;">الفلاتر المطبّقة:</span>
-                        ${filters.search ? `<span style="background:#fff;border:1px solid #99f6e4;color:#0f766e;padding:3px 8px;border-radius:999px;font-size:0.72rem;">بحث: ${Utils.escapeHTML(String(filters.search).slice(0, 24))}</span>` : ''}
-                        ${filters.staffRole && filters.staffRole !== 'all' ? `<span style="background:#fff;border:1px solid #99f6e4;color:#0f766e;padding:3px 8px;border-radius:999px;font-size:0.72rem;">${Utils.escapeHTML(this.getStaffRoleLabel(filters.staffRole))}</span>` : ''}
-                        ${filters.staffId && filters.staffId !== 'all' ? `<span style="background:#fff;border:1px solid #99f6e4;color:#0f766e;padding:3px 8px;border-radius:999px;font-size:0.72rem;">${Utils.escapeHTML((staffFilterOptions.find(s => String(s.id) === String(filters.staffId)) || {}).name || filters.staffId)}</span>` : ''}
-                        ${filters.month ? `<span style="background:#fff;border:1px solid #99f6e4;color:#0f766e;padding:3px 8px;border-radius:999px;font-size:0.72rem;">شهر ${Utils.escapeHTML(filters.month)}</span>` : ''}
-                        ${filters.status && filters.status !== 'all' ? `<span style="background:#fff;border:1px solid #99f6e4;color:#0f766e;padding:3px 8px;border-radius:999px;font-size:0.72rem;">${Utils.escapeHTML(this.getAttendanceStatusLabel(filters.status))}</span>` : ''}
-                        ${filters.dateFrom ? `<span style="background:#fff;border:1px solid #99f6e4;color:#0f766e;padding:3px 8px;border-radius:999px;font-size:0.72rem;">من ${Utils.escapeHTML(filters.dateFrom)}</span>` : ''}
-                        ${filters.dateTo ? `<span style="background:#fff;border:1px solid #99f6e4;color:#0f766e;padding:3px 8px;border-radius:999px;font-size:0.72rem;">إلى ${Utils.escapeHTML(filters.dateTo)}</span>` : ''}
+                        ${filters.search ? `<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">بحث: ${Utils.escapeHTML(String(filters.search).slice(0, 24))}</span>` : ''}
+                        ${filters.staffRole && filters.staffRole !== 'all' ? `<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">${Utils.escapeHTML(this.getStaffRoleLabel(filters.staffRole))}</span>` : ''}
+                        ${filters.staffId && filters.staffId !== 'all' ? `<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">${Utils.escapeHTML((staffFilterOptions.find(s => String(s.id) === String(filters.staffId)) || {}).name || filters.staffId)}</span>` : ''}
+                        ${filters.month ? `<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">شهر ${Utils.escapeHTML(filters.month)}</span>` : ''}
+                        ${filters.status && filters.status !== 'all' ? `<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">${Utils.escapeHTML(this.getAttendanceStatusLabel(filters.status))}</span>` : ''}
+                        ${filters.dateFrom ? `<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">من ${Utils.escapeHTML(filters.dateFrom)}</span>` : ''}
+                        ${filters.dateTo ? `<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">إلى ${Utils.escapeHTML(filters.dateTo)}</span>` : ''}
                     </div>` : ''}
                 </div>
 
                 <p style="font-size:0.78rem;color:#64748b;margin:0 0 10px;display:flex;align-items:center;gap:6px;">
-                    <i class="fas fa-info-circle" style="color:#0d9488;"></i>
+                    <i class="fas fa-info-circle" style="color:#2563eb;"></i>
                     يُسجَّل الحضور تلقائياً عند تسجيل الدخول/الخروج. يمكن إضافة بصمة دخول أو خروج مفقودة من عمود الإجراءات.
                 </p>
 
@@ -17505,7 +17561,7 @@ const Clinic = {
                 ${isAdmin ? `
                 <div class="content-card mt-4" id="clinic-attendance-section-staff">
                     <div class="card-header" style="padding:14px 18px;border-bottom:1px solid #f1f5f9;">
-                        <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#134e4a;"><i class="fas fa-users ml-2" style="color:#0d9488;"></i>قائمة مسئولي العيادة</h4>
+                        <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#0b2a55;"><i class="fas fa-users ml-2" style="color:#2563eb;"></i>قائمة مسئولي العيادة</h4>
                     </div>
                     <div class="card-body" style="padding:0;">
                         ${this._clinicAttendanceScrollTable(`<table class="data-table">
