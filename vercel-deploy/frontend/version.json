@@ -2,12 +2,12 @@
   "version": "1.0.912",
   "highlights": {
     "ar": [
-      "تطبيق الهوية البصرية لنظام السلامة على موديول المواد الكيميائية: ترويسة جديدة، إحصائيات متوافقة، وجداول موحّدة.",
-      "إضافة مادة جديدة تظل في مكانها مع واجهة أسرع للحوادث في السجل الكيميائي."
+      "هوية جديدة لنماذج المواد الكيميائية: مودال إضافة/تعديل بترويسة زرقاء وتنقل محسّن بين الأقسام.",
+      "كروت إحصائيات محسّنة بألوان متوافقة مع الهوية وتأثيرات حركية أنعم."
     ],
     "en": [
-      "HSE brand identity applied to the chemical safety module: new header, aligned stats, and unified tables.",
-      "Add-new-material action kept in place with a faster interface for the chemical register."
+      "New identity for chemical forms: add/edit modal with navy header and improved tab navigation.",
+      "Polished stat cards with brand-aligned colors and smoother motion."
     ]
   }
 }
