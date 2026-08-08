@@ -115,7 +115,7 @@ const EmailTemplates = {
                 <span style="color:#7f1d1d;">يحتوي هذا المرور على <strong>${s.nonCompliant}</strong> بند غير مطابق — يلزم متابعة إجراءات التصحيح.</span>
             </div>` : '';
         const inner = `
-            <div class="header">
+            <div class="header" style="background-color:#1e40af;background-image:linear-gradient(135deg,#0b2a55 0%,#1e40af 55%,#2563eb 100%);color:#fff;padding:26px 28px 22px;">
                 <p class="eyebrow">منظومة السلامة والصحة المهنية — HSE</p>
                 <h1>${this.escapeHtml(opts.title || 'قائمة المرور اليومي للسلامة')}</h1>
                 <p>${this.escapeHtml(opts.subtitle || 'تقرير مرور يومي على مواقع ومرافق المنشأة')}</p>
@@ -131,10 +131,10 @@ const EmailTemplates = {
                     </h3>
                     <table style="border-collapse:collapse;width:100%;">
                         <thead>
-                            <tr style="background:linear-gradient(90deg,#0b2a55,#1e40af);">
-                                <th style="padding:9px;border:1px solid #0f2a55;color:#fff;font-size:11px;">#</th>
-                                <th style="padding:9px;border:1px solid #0f2a55;color:#fff;font-size:11px;">بند المرور</th>
-                                <th style="padding:9px;border:1px solid #0f2a55;color:#fff;font-size:11px;">الحالة</th>
+                            <tr>
+                                <th bgcolor="#1e40af" style="background-color:#1e40af;padding:10px 9px;border:1px solid #0f2a55;color:#ffffff;font-size:11px;font-weight:700;text-align:center;">#</th>
+                                <th bgcolor="#1e40af" style="background-color:#1e40af;padding:10px 12px;border:1px solid #0f2a55;color:#ffffff;font-size:11px;font-weight:700;text-align:right;">بند المرور</th>
+                                <th bgcolor="#1e40af" style="background-color:#1e40af;padding:10px 9px;border:1px solid #0f2a55;color:#ffffff;font-size:11px;font-weight:700;text-align:center;">الحالة</th>
                             </tr>
                         </thead>
                         <tbody>${items}</tbody>
