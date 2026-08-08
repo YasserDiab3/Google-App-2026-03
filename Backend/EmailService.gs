@@ -14,23 +14,43 @@ function escapeHtmlEmail_(text) {
 }
 
 function buildEmailHtmlBody_(title, fields, extraHtml) {
+    var esc = function (v) { return escapeHtmlEmail_(v); };
+    var thead = '<tr>' +
+        '<th bgcolor="#1e40af" style="background-color:#1e40af;padding:11px 12px;border:1px solid #0f2a55;color:#ffffff;font-size:12px;font-weight:700;text-align:right;width:34%;white-space:nowrap;">البيان</th>' +
+        '<th bgcolor="#1e40af" style="background-color:#1e40af;padding:11px 12px;border:1px solid #0f2a55;color:#ffffff;font-size:12px;font-weight:700;text-align:right;">القيمة</th>' +
+        '</tr>';
     var rows = '';
-    (fields || []).forEach(function (f) {
+    (fields || []).forEach(function (f, i) {
         if (!f || !f.label) return;
         var val = f.value == null ? '' : String(f.value);
         if (!String(val).trim()) return;
+        var zebra = (i % 2 === 0) ? 'background:#f8fafc;' : '';
         rows += '<tr>' +
-            '<td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f8fafc;font-weight:600;width:34%;">' +
-            escapeHtmlEmail_(f.label) + '</td>' +
-            '<td style="padding:8px 12px;border:1px solid #e5e7eb;white-space:pre-wrap;">' +
-            escapeHtmlEmail_(val).replace(/\n/g, '<br>') + '</td></tr>';
+            '<td style="padding:9px 12px;border:1px solid #e2e8f0;' + zebra + 'font-weight:700;color:#334155;font-size:12px;width:34%;vertical-align:top;">' + esc(f.label) + '</td>' +
+            '<td style="padding:9px 12px;border:1px solid #e2e8f0;' + zebra + 'color:#0f172a;font-size:12px;line-height:1.75;white-space:pre-wrap;vertical-align:top;">' +
+            esc(val).replace(/\n/g, '<br>') + '</td></tr>';
     });
-    var bodyExtra = extraHtml ? String(extraHtml) : '';
-    return '<div style="font-family:Tahoma,Arial,sans-serif;direction:rtl;text-align:right;color:#111827;">' +
-        '<h2 style="color:#0f766e;margin:0 0 12px;">' + escapeHtmlEmail_(title || 'تفاصيل من نظام HSE') + '</h2>' +
-        (rows ? '<table style="border-collapse:collapse;width:100%;max-width:720px;">' + rows + '</table>' : '') +
-        (bodyExtra ? '<div style="margin-top:16px;">' + bodyExtra + '</div>' : '') +
-        '<p style="margin-top:20px;font-size:12px;color:#6b7280;">رسالة تلقائية من نظام إدارة السلامة HSE.</p></div>';
+    var bodyExtra = extraHtml ? '<div style="margin-top:18px;padding:14px 16px;background:#f8fbff;border:1px solid #dbe7f5;border-radius:10px;font-size:12px;color:#1e293b;line-height:1.8;">' + String(extraHtml) + '</div>' : '';
+    return '' +
+        '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#eef2f7;direction:rtl;font-family:Tahoma,Arial,sans-serif;">' +
+        '    <tr><td align="center" style="padding:14px 10px;">' +
+        '        <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;">' +
+        '            <tr><td style="background-color:#1e40af;background-image:linear-gradient(135deg,#0b2a55 0%,#1e40af 55%,#2563eb 100%);padding:26px 28px 22px;border-radius:14px 14px 0 0;" dir="rtl">' +
+        '                <div style="font-size:11px;letter-spacing:1px;color:#bfdbfe;font-weight:700;margin:0 0 6px;">منظومة السلامة والصحة المهنية — HSE</div>' +
+        '                <div style="font-size:20px;font-weight:800;color:#ffffff;margin:0;padding:0;line-height:1.5;">' + esc(title || 'تفاصيل من نظام HSE') + '</div>' +
+        '                <div style="font-size:12px;color:#dbeafe;margin-top:6px;">سجل رسمي من نظام إدارة السلامة والصحة المهنية</div>' +
+        '            </td></tr>' +
+        '            <tr><td style="background:#ffffff;padding:22px 24px;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;" dir="rtl">' +
+        (rows ? '<table style="border-collapse:collapse;width:100%;"><thead>' + thead + '</thead><tbody>' + rows + '</tbody></table>' : '') +
+        (bodyExtra ? bodyExtra : '') +
+        '            </td></tr>' +
+        '            <tr><td style="background-color:#0f2a45;background-image:linear-gradient(90deg,#0f2a45,#1e3a75);padding:16px 20px;border-radius:0 0 14px 14px;font-size:10.5px;color:#94a3b8;direction:rtl;text-align:right;">' +
+        '                <div style="font-weight:700;color:#cbd5e1;">منظومة السلامة والصحة المهنية — HSE</div>' +
+        '                <div style="margin-top:4px;">رسالة تلقائية أُرسلت من النظام — لا يلزم الرد عليها · ' + esc(new Date().toLocaleString('ar-EG')) + '</div>' +
+        '            </td></tr>' +
+        '        </table>' +
+        '    </td></tr>' +
+        '</table>';
 }
 
 function sanitizeEmailHtmlBody_(html) {
