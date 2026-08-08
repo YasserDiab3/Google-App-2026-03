@@ -125,10 +125,105 @@ const ChemicalSafety = {
     _chemicalDataLoadPromise: null,
     _chemicalBackendFetchOk: false,
 
+    _injectChemicalIdentityStyles() {
+        try {
+            if (document.getElementById('chemical-professional-identity-styles')) return;
+            const style = document.createElement('style');
+            style.id = 'chemical-professional-identity-styles';
+            style.textContent = `
+                #chemical-safety-section .chem-id-hero {
+                    --c-navy: #0b2a55;
+                    --c-blue: #1e40af;
+                    --c-blue2: #2563eb;
+                }
+                /* ✅ الهوية — ترويسة المديول (Hero) */
+                #chemical-safety-section .chem-id-hero {
+                    position: relative; overflow: hidden;
+                    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+                    padding: 20px 24px; border-radius: 18px; color: #fff;
+                    background: linear-gradient(130deg, #0b2a55 0%, #1e40af 55%, #2563eb 100%);
+                    box-shadow: 0 14px 34px rgba(11,42,85,.25);
+                }
+                #chemical-safety-section .chem-id-hero::after {
+                    content: ""; position: absolute; inset-inline-end: -64px; top: -96px;
+                    width: 220px; height: 220px; border: 30px solid rgba(255,255,255,.05); border-radius: 50%; pointer-events: none;
+                }
+                #chemical-safety-section .chem-id-hero::before {
+                    content: ""; position: absolute; inset-inline-start: 38%; bottom: -70px;
+                    width: 150px; height: 150px; border: 20px solid rgba(255,255,255,.04); border-radius: 50%; pointer-events: none;
+                }
+                #chemical-safety-section .chem-id-hero__copy { position: relative; z-index: 1; display: flex; align-items: center; gap: 15px; min-width: min(100%, 340px); }
+                #chemical-safety-section .chem-id-hero__icon {
+                    flex: 0 0 auto; width: 54px; height: 54px; display: grid; place-items: center;
+                    border: 1px solid rgba(255,255,255,.24); border-radius: 15px; background: rgba(255,255,255,.12); font-size: 23px; color: #fde68a;
+                }
+                #chemical-safety-section .chem-id-hero__eyebrow { display: block; margin-bottom: 4px; color: #bfdbfe; font-size: .68rem; font-weight: 800; letter-spacing: .04em; }
+                #chemical-safety-section .chem-id-hero h1 { margin: 0; color: #fff; font-size: 1.3rem; font-weight: 900; line-height: 1.35; }
+                #chemical-safety-section .chem-id-hero p { margin: 5px 0 0; color: #dbeafe; font-size: .78rem; }
+                #chemical-safety-section .chem-id-hero__meta { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+                #chemical-safety-section .chem-id-hero__meta span {
+                    display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px;
+                    border: 1px solid rgba(255,255,255,.22); border-radius: 10px; background: rgba(255,255,255,.1);
+                    font-size: .72rem; font-weight: 750; white-space: nowrap;
+                }
+                #chemical-safety-section .chem-id-hero__meta span i { color: #93c5fd; }
+                #chemical-safety-section .chem-id-hero__actions { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+                #chemical-safety-section .chem-id-hero__actions .btn-primary {
+                    background: linear-gradient(135deg,#fbbf24,#f59e0b); color: #7c2d12; border: none; font-weight: 800;
+                    box-shadow: 0 6px 18px rgba(0,0,0,.18);
+                }
+                #chemical-safety-section .chem-id-hero__actions .btn-secondary {
+                    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); color: #fff; font-weight: 700;
+                }
+                #chemical-safety-section .chem-id-hero__actions .btn-secondary:hover { background: rgba(255,255,255,.2); color: #fff; }
+                @media (max-width: 820px) {
+                    #chemical-safety-section .chem-id-hero { padding: 18px; }
+                    #chemical-safety-section .chem-id-hero__copy { align-items: flex-start; }
+                    #chemical-safety-section .chem-id-hero__icon { width: 46px; height: 46px; font-size: 19px; }
+                    #chemical-safety-section .chem-id-hero h1 { font-size: 1.05rem; }
+                    #chemical-safety-section .chem-id-hero__meta { width: 100%; }
+                    #chemical-safety-section .chem-id-hero__meta span { flex: 1; justify-content: center; }
+                    #chemical-safety-section .chem-id-hero__actions { width: 100%; }
+                    #chemical-safety-section .chem-id-hero__actions .btn { flex: 1; justify-content: center; }
+                }
+                /* ✅ الهوية — أسطح المحتوى والجداول */
+                #chemical-safety-section #chemical-content { animation: chemSurfaceIn .24s ease-out; }
+                @keyframes chemSurfaceIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+                #chemical-safety-section #chemical-content .content-card {
+                    border-radius: 16px; border-color: #dce7f5 !important;
+                    box-shadow: 0 8px 24px rgba(15,47,90,.07);
+                }
+                #chemical-safety-section .card-header {
+                    border-bottom: 1px solid #e5edf7; border-radius: 16px 16px 0 0;
+                    background: linear-gradient(90deg, #f8fbff, #fff);
+                }
+                #chemical-safety-section .card-header .card-title { color: #0b2a55; font-weight: 800; }
+                #chemical-safety-section .card-header .card-title i { color: #2563eb; }
+                #chemical-safety-section .data-table thead th {
+                    background: linear-gradient(90deg, #1e40af, #2563eb) !important; color: #ffffff !important;
+                    font-weight: 700; white-space: nowrap; border: none !important;
+                }
+                #chemical-safety-section .data-table tbody tr:hover td { background: #f2f7ff !important; }
+                #chemical-safety-section .data-table td { vertical-align: middle; }
+                /* ✅ الهوية — تحويل بطاقة MSDS من بنفسجي إلى أزرق */
+                #chemical-safety-section .content-card[class*="purple"] {
+                    background: linear-gradient(135deg, #eff6ff, #dbeafe) !important;
+                    border-inline-start-color: #2563eb !important;
+                }
+                #chemical-safety-section .content-card[class*="purple"] .bg-purple-500 { background: #2563eb !important; }
+                #chemical-safety-section .content-card[class*="purple"] .text-purple-600 { color: #2563eb !important; }
+            `;
+            document.head.appendChild(style);
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ تعذر حقن هوية المواد الكيميائية:', e);
+        }
+    },
+
     /**
      * تحميل الموديول
      */
     async load() {
+        this._injectChemicalIdentityStyles();
         // Add language change listener
         if (!this._languageChangeListenerAdded) {
             document.addEventListener('language-changed', () => {
@@ -168,15 +263,16 @@ const ChemicalSafety = {
         try {
             // Skeleton فوري قبل أي عمليات قد تكون بطيئة
             section.innerHTML = `
-                <div class="section-header">
-                    <div class="flex items-center justify-between flex-wrap gap-4">
+                <div class="chem-id-hero">
+                    <div class="chem-id-hero__copy">
+                        <div class="chem-id-hero__icon"><i class="fas fa-flask"></i></div>
                         <div>
-                            <h1 class="section-title">
-                                <i class="fas fa-flask ml-3"></i>
-                                سجل المواد الكيميائية
-                            </h1>
-                            <p class="section-subtitle">جاري التحميل...</p>
+                            <span class="chem-id-hero__eyebrow">السلامة الكيميائية — HSE</span>
+                            <h1>سجل المواد الكيميائية</h1>
+                            <p>جاري التحميل...</p>
                         </div>
+                    </div>
+                    <div class="chem-id-hero__actions">
                         <button class="btn-primary" disabled>
                             <i class="fas fa-spinner fa-spin ml-2"></i>
                             تحميل
@@ -231,15 +327,21 @@ const ChemicalSafety = {
             }
 
             section.innerHTML = `
-                <div class="section-header">
-                    <div class="flex items-center justify-between flex-wrap gap-4">
+                <div class="chem-id-hero">
+                    <div class="chem-id-hero__copy">
+                        <div class="chem-id-hero__icon"><i class="fas fa-flask"></i></div>
                         <div>
-                            <h1 class="section-title">
-                                <i class="fas fa-flask ml-3"></i>
-                                سجل المواد الكيميائية
-                            </h1>
-                            <p class="section-subtitle">إدارة سجل المواد الكيميائية والمواد الخام</p>
+                            <span class="chem-id-hero__eyebrow">السلامة الكيميائية — HSE</span>
+                            <h1>سجل المواد الكيميائية</h1>
+                            <p>إدارة سجل المواد الكيميائية والمواد الخام</p>
                         </div>
+                    </div>
+                    <div class="chem-id-hero__meta">
+                        <span><i class="fas fa-list-check"></i> السجل الكامل</span>
+                        <span><i class="fas fa-file-pdf"></i> MSDS موثق</span>
+                        <span><i class="fas fa-database"></i> تحديث من الخادم</span>
+                    </div>
+                    <div class="chem-id-hero__actions">
                         <button id="add-chemical-btn" class="btn-primary">
                             <i class="fas fa-plus ml-2"></i>
                             إضافة مادة جديدة
@@ -262,12 +364,20 @@ const ChemicalSafety = {
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل مديول المواد الكيميائية:', error);
             section.innerHTML = `
-                <div class="section-header">
-                    <div>
-                        <h1 class="section-title">
-                            <i class="fas fa-flask ml-3"></i>
-                            سجل المواد الكيميائية
-                        </h1>
+                <div class="chem-id-hero">
+                    <div class="chem-id-hero__copy">
+                        <div class="chem-id-hero__icon"><i class="fas fa-flask"></i></div>
+                        <div>
+                            <span class="chem-id-hero__eyebrow">السلامة الكيميائية — HSE</span>
+                            <h1>سجل المواد الكيميائية</h1>
+                            <p>تعذر تجهيز الواجهة</p>
+                        </div>
+                    </div>
+                    <div class="chem-id-hero__actions">
+                        <button onclick="ChemicalSafety.load()" class="btn-secondary">
+                            <i class="fas fa-redo ml-2"></i>
+                            إعادة المحاولة
+                        </button>
                     </div>
                 </div>
                 <div class="mt-6">
