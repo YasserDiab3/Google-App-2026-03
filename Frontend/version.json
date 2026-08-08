@@ -1,15 +1,15 @@
-{
+﻿{
   "version": "1.0.920",
   "highlights": {
     "ar": [
-      "تحسين احترافي للملف الشخصي: ترويسة HSE زرقاء متدرجة بشعار وأيقونة كهرمانية، وإطار الصورة الشخصية كهرماني مع تدرج أزرق لترويسة البطاقة.",
-      "كروت التفاصيل المهنية (دورات، ساعات، مخالفات، مهمات الوقاية، زيارات العيادة) كروت بارزة بألوان سيمانتيكية مع تأثير حركة، وجدول أرقام الطوارئ بترويسة زرقاء موحدة.",
-      "جميع بطاقات الملف الشخصي وبطاقة QR وحقول النماذج بهوية الأزرق الموحدة مع دعم كامل للوضع الداكن."
+      "هوية HSE كاملة لموديول التدريبات: ترويسة زرقاء متدرجة بشعار وأيقونة كهرمانية مع الحفاظ على مواقع وترتيب جميع الأزرار (الخطة السنوية، المصفوفة، نموذج حضور، تحديث، تسجيل مقاول).",
+      "كروت KPI لبرامج التدريب (الإجمالي، القادمة، المكتملة، المشاركين) بنمط كروت سجل الفحوصات pinsp-stat: أيقونات متدرجة وأرقام ملونة وأشرطة نسب مئوية.",
+      "شريط التبويبات والجداول والترويسات ولوحات التحليلات (المقاولين والموظفين) بهوية الأزرق الموحدة مع دعم الوضع الداكن."
     ],
     "en": [
-      "Professional overhaul of the personal profile page: navy gradient HSE hero with amber icon, amber avatar ring and gradient profile card shell.",
-      "Professional stats tiles (training, violations, PPE, clinic visits) now pop with semantic colors and hover lift; emergency numbers table gets the unified navy header.",
-      "All profile cards, QR card and form fields follow the unified blue identity with full dark mode support."
+      "Full HSE identity for the training module: navy gradient hero with amber icon, keeping all existing button positions and order (annual plan, matrix, attendance form, refresh, contractor registration).",
+      "Training programs KPI cards (total, upcoming, completed, participants) now exactly match the inspections pinsp-stat style with gradient icons, colored values and percentage bars.",
+      "Tabs bar, tables, headers and analytics panels (contractors and employees) get the unified blue identity with full dark mode support."
     ]
   }
 }
