@@ -83,8 +83,114 @@ FireEquipment = {
         return `EFA-${paddedNumber}`;
     },
 
+    _injectFireIdentityStyles() {
+        try {
+            if (document.getElementById('fire-professional-identity-styles')) return;
+            const style = document.createElement('style');
+            style.id = 'fire-professional-identity-styles';
+            style.textContent = `
+                #fire-equipment-section .fire-id-hero {
+                    --f-navy: #0b2a55;
+                    --f-blue: #1e40af;
+                    --f-blue2: #2563eb;
+                }
+                #fire-equipment-section .fire-id-hero {
+                    position: relative; overflow: hidden;
+                    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+                    padding: 20px 24px; border-radius: 18px; color: #fff;
+                    background: linear-gradient(130deg, #0b2a55 0%, #1e40af 55%, #2563eb 100%);
+                    box-shadow: 0 14px 34px rgba(11,42,85,.25);
+                }
+                #fire-equipment-section .fire-id-hero::after {
+                    content: ""; position: absolute; inset-inline-end: -64px; top: -96px;
+                    width: 220px; height: 220px; border: 30px solid rgba(255,255,255,.05); border-radius: 50%; pointer-events: none;
+                }
+                #fire-equipment-section .fire-id-hero::before {
+                    content: ""; position: absolute; inset-inline-start: 38%; bottom: -70px;
+                    width: 150px; height: 150px; border: 20px solid rgba(255,255,255,.04); border-radius: 50%; pointer-events: none;
+                }
+                #fire-equipment-section .fire-id-hero__copy { position: relative; z-index: 1; display: flex; align-items: center; gap: 15px; min-width: min(100%, 340px); }
+                #fire-equipment-section .fire-id-hero__icon {
+                    flex: 0 0 auto; width: 54px; height: 54px; display: grid; place-items: center;
+                    border: 1px solid rgba(255,255,255,.24); border-radius: 15px; background: rgba(255,255,255,.12); font-size: 23px; color: #fde68a;
+                }
+                #fire-equipment-section .fire-id-hero__eyebrow { display: block; margin-bottom: 4px; color: #bfdbfe; font-size: .68rem; font-weight: 800; letter-spacing: .04em; }
+                #fire-equipment-section .fire-id-hero h1 { margin: 0; color: #fff; font-size: 1.3rem; font-weight: 900; line-height: 1.35; }
+                #fire-equipment-section .fire-id-hero p { margin: 5px 0 0; color: #dbeafe; font-size: .78rem; }
+                #fire-equipment-section .fire-id-hero__meta { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+                #fire-equipment-section .fire-id-hero__meta span {
+                    display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px;
+                    border: 1px solid rgba(255,255,255,.22); border-radius: 10px; background: rgba(255,255,255,.1);
+                    font-size: .72rem; font-weight: 750; white-space: nowrap;
+                }
+                #fire-equipment-section .fire-id-hero__meta span i { color: #93c5fd; }
+                #fire-equipment-section .fire-id-hero__actions { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+                #fire-equipment-section .fire-id-hero__actions .btn-primary {
+                    background: linear-gradient(135deg,#fbbf24,#f59e0b); color: #7c2d12; border: none; font-weight: 800;
+                    box-shadow: 0 6px 18px rgba(0,0,0,.18);
+                }
+                #fire-equipment-section .fire-id-hero__actions .btn-secondary {
+                    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); color: #fff; font-weight: 700;
+                }
+                #fire-equipment-section .fire-id-hero__actions .btn-secondary:hover { background: rgba(255,255,255,.2); color: #fff; }
+                @media (max-width: 820px) {
+                    #fire-equipment-section .fire-id-hero { padding: 18px; }
+                    #fire-equipment-section .fire-id-hero__copy { align-items: flex-start; }
+                    #fire-equipment-section .fire-id-hero__icon { width: 46px; height: 46px; font-size: 19px; }
+                    #fire-equipment-section .fire-id-hero h1 { font-size: 1.05rem; }
+                    #fire-equipment-section .fire-id-hero__meta { width: 100%; }
+                    #fire-equipment-section .fire-id-hero__meta span { flex: 1; justify-content: center; }
+                    #fire-equipment-section .fire-id-hero__actions { width: 100%; }
+                    #fire-equipment-section .fire-id-hero__actions .btn { flex: 1; justify-content: center; }
+                }
+                /* ✅ الهوية — شريط التبويبات (نمط هوية المديولات) */
+                #fire-equipment-section .fire-id-tabs-wrap {
+                    display: flex; gap: 8px; padding: 8px; border-radius: 16px; overflow-x: auto; margin-bottom: 18px;
+                    border: 1px solid rgba(255,255,255,.14);
+                    background: radial-gradient(circle at 8% 0%, rgba(251,191,36,.16), transparent 30%),
+                                linear-gradient(125deg, #0b2a55 0%, #1e3a75 70%, #245a9b 100%);
+                    box-shadow: 0 12px 30px rgba(11,37,85,.22);
+                }
+                #fire-equipment-section .fire-id-tabs { border-bottom: none; flex-wrap: nowrap; gap: 8px; min-width: max-content; }
+                #fire-equipment-section .fire-tab-btn {
+                    min-height: 46px; padding: 9px 16px; margin: 0;
+                    border: 1px solid rgba(255,255,255,.15); border-radius: 11px;
+                    background: rgba(255,255,255,.08); color: rgba(255,255,255,.85);
+                    font-weight: 700; white-space: nowrap; transition: all .2s ease;
+                }
+                #fire-equipment-section .fire-tab-btn:hover { background: rgba(255,255,255,.15); color: #fff; transform: translateY(-1px); }
+                #fire-equipment-section .fire-tab-btn.active {
+                    border-color: #fff; background: #fff !important; color: var(--f-blue, #1e40af);
+                    box-shadow: 0 8px 22px rgba(0,0,0,.2);
+                }
+                #fire-equipment-section .fire-tab-btn.active i { color: var(--f-blue, #1e40af); }
+                /* ✅ الهوية — أسطح المحتوى والجداول */
+                #fire-equipment-section #fire-tab-content { animation: fireSurfaceIn .24s ease-out; }
+                @keyframes fireSurfaceIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+                #fire-equipment-section #fire-tab-content .content-card {
+                    border-radius: 16px; border-color: #dce7f5 !important;
+                    box-shadow: 0 8px 24px rgba(15,47,90,.07);
+                }
+                #fire-equipment-section #fire-tab-content .card-header {
+                    border-bottom: 1px solid #e5edf7; background: linear-gradient(180deg, #f8fbff, #fff); border-radius: 16px 16px 0 0;
+                }
+                #fire-equipment-section .data-table thead th,
+                #fire-equipment-section .table-header-red thead th {
+                    background: linear-gradient(90deg, #1e40af, #2563eb) !important; color: #fff !important;
+                    font-weight: 700; white-space: nowrap; border: none !important;
+                }
+                #fire-equipment-section .data-table tbody tr:hover td { background: #f2f7ff !important; }
+                #fire-equipment-section .data-table td { vertical-align: middle; }
+            `;
+            document.head.appendChild(style);
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ تعذر حقن هوية معدات الحريق:', e);
+        }
+    },
+
     async load() {
         try {
+        this._injectFireIdentityStyles();
         const section = document.getElementById('fire-equipment-section');
         if (!section) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
@@ -108,33 +214,35 @@ FireEquipment = {
             const loadingPlaceholder = '<div class="fire-tab-loading"><div style="width: 300px; margin: 0 auto 16px;"><div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;"><div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div></div></div><p>جاري التحميل...</p></div>';
 
             section.innerHTML = `
-                <div class="section-header">
-                    <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="fire-id-hero">
+                    <div class="fire-id-hero__copy">
+                        <div class="fire-id-hero__icon"><i class="fas fa-fire-extinguisher"></i></div>
                         <div>
-                            <h1 class="section-title">
-                                <i class="fas fa-fire-extinguisher ml-3"></i>
-                                سجل وفحص معدات الحريق
-                            </h1>
-                            <p class="section-subtitle">
-                                إدارة قاعدة بيانات كاملة لكل معدات الإطفاء مع تتبع الفحوصات وQR Code لكل جهاز
-                            </p>
+                            <span class="fire-id-hero__eyebrow">منظومة السلامة والصحة المهنية — HSE</span>
+                            <h1>سجل وفحص معدات الحريق</h1>
+                            <p>إدارة قاعدة بيانات كاملة لكل معدات الإطفاء مع تتبع الفحوصات وQR Code لكل جهاز</p>
                         </div>
-                        <div class="flex items-center gap-2 flex-wrap">
-                            ${this.canAdd() ? `
-                            <button id="add-fire-asset-btn" class="btn-secondary">
-                                <i class="fas fa-plus ml-2"></i>
-                                إضافة جهاز جديد
-                            </button>
-                            ` : ''}
-                            <button id="scan-qr-inspection-btn" class="btn-primary">
-                                <i class="fas fa-qrcode ml-2"></i>
-                                مسح QR Code للفحص الشهري
-                            </button>
-                            <button id="refresh-fire-equipment-btn" class="btn-secondary">
-                                <i class="fas fa-sync-alt ml-2"></i>
-                                تحديث
-                            </button>
-                        </div>
+                    </div>
+                    <div class="fire-id-hero__meta">
+                        <span><i class="fas fa-database"></i> قاعدة بيانات الأجهزة</span>
+                        <span><i class="fas fa-clipboard-check"></i> الفحوصات الشهرية</span>
+                        <span><i class="fas fa-qrcode"></i> QR Code لكل جهاز</span>
+                    </div>
+                    <div class="fire-id-hero__actions">
+                        ${this.canAdd() ? `
+                        <button id="add-fire-asset-btn" class="btn-secondary">
+                            <i class="fas fa-plus ml-2"></i>
+                            إضافة جهاز جديد
+                        </button>
+                        ` : ''}
+                        <button id="scan-qr-inspection-btn" class="btn-primary">
+                            <i class="fas fa-qrcode ml-2"></i>
+                            مسح QR Code للفحص الشهري
+                        </button>
+                        <button id="refresh-fire-equipment-btn" class="btn-secondary">
+                            <i class="fas fa-sync-alt ml-2"></i>
+                            تحديث
+                        </button>
                     </div>
                 </div>
                 <style>
@@ -205,8 +313,8 @@ FireEquipment = {
                         }
                     }
                 </style>
-                <div class="fire-tabs-container mt-6">
-                    <div class="fire-tabs-header">
+                <div class="fire-tabs-container fire-id-tabs-wrap mt-6">
+                    <div class="fire-tabs-header fire-id-tabs">
                         ${this.hasTabAccess('database') ? `
                         <button class="fire-tab-btn active" data-tab="database" onclick="FireEquipment.switchTab('database')">
                             <i class="fas fa-database ml-2"></i>
@@ -403,15 +511,19 @@ FireEquipment = {
 
             if (section) {
                 section.innerHTML = `
-                    <div class="section-header">
-                        <div class="flex items-center justify-between">
+                    <div class="fire-id-hero">
+                        <div class="fire-id-hero__copy">
+                            <div class="fire-id-hero__icon"><i class="fas fa-fire-extinguisher"></i></div>
                             <div>
-                                <h1 class="section-title">
-                                    <i class="fas fa-fire-extinguisher ml-3"></i>
-                                    سجل وفحص معدات الحريق
-                                </h1>
-                                <p class="section-subtitle">إدارة قاعدة بيانات كاملة لكل معدات الإطفاء</p>
+                                <span class="fire-id-hero__eyebrow">منظومة السلامة والصحة المهنية — HSE</span>
+                                <h1>سجل وفحص معدات الحريق</h1>
                             </div>
+                        </div>
+                        <div class="fire-id-hero__actions">
+                            <button onclick="FireEquipment.load()" class="btn-secondary">
+                                <i class="fas fa-redo ml-2"></i>
+                                إعادة المحاولة
+                            </button>
                         </div>
                     </div>
                     <div class="mt-6">
