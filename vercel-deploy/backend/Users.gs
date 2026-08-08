@@ -454,6 +454,11 @@ function saveUsersMergedToSheet_(spreadsheet, sheet, payloadRows) {
         if (typeof markUsersUpdated_ === 'function') {
             try { markUsersUpdated_(); } catch (e) { /* ignore */ }
         }
+        // ⚠️ إبطال كاش القراءة — بدونه تُرجع قراءات ‎hse_read_Users_v2 (TTL 120s)
+        // بيانات قديمة بلا الأكواد بعد أي حفظ → «الربط يختفي بعد إعادة التحميل»
+        if (typeof invalidateHseSheetCaches === 'function') {
+            try { invalidateHseSheetCaches('Users'); } catch (ec) { /* ignore */ }
+        }
         return { success: true, message: 'تم حفظ المستخدمين بنجاح (دمج)', count: mergedObjs.length };
     } catch (error) {
         Logger.log('saveUsersMergedToSheet_ error: ' + error.toString());
