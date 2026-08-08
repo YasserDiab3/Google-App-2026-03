@@ -17883,36 +17883,25 @@ const Clinic = {
             background: rgba(255,255,255,.20); border-color: rgba(255,255,255,.45); color: #fff;
         }
 
-        /* ═══ كروت المؤشرات السريعة (بنمط سجل الفحوصات) ═══ */
-        #clinic-section .clinic-stat {
-            position: relative; overflow: hidden; border-radius: 14px;
-            border: 1px solid #dce7f5; background: #ffffff;
-            box-shadow: 0 6px 18px rgba(15,47,90,.06);
-            padding: 13px 14px; display: flex; align-items: center; gap: 11px;
-            transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+        /* ═══ كروت المؤشرات السريعة (بنمط سجل الفحوصات pinsp-stat) ═══ */
+        #clinic-section .pinsp-stat {
+            position: relative; overflow: hidden; border-radius: 16px; border: 1px solid #dce7f5;
+            background: linear-gradient(160deg, #ffffff, #f4f8ff); box-shadow: 0 8px 22px rgba(15,47,90,.07);
+            display: flex; align-items: center; gap: 12px; padding: 16px; transition: transform .18s ease, box-shadow .18s ease;
         }
-        #clinic-section .clinic-stat:hover {
-            transform: translateY(-2px); border-color: #bfdbfe;
-            box-shadow: 0 12px 26px rgba(15,47,90,.13);
-        }
-        #clinic-section .clinic-stat__icon {
-            flex: 0 0 auto; width: 42px; height: 42px; display: grid; place-items: center;
-            border-radius: 12px; color: #fff; font-size: 1rem;
-            box-shadow: 0 6px 14px rgba(15,47,90,.18);
-        }
-        #clinic-section .clinic-stat__body { flex: 1; min-width: 0; }
-        #clinic-section .clinic-stat__label {
-            font-size: .7rem; font-weight: 700; color: #64748b; margin: 0 0 3px;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        #clinic-section .clinic-stat__value { font-size: 1.5rem; font-weight: 900; line-height: 1.1; margin: 0; }
-        #clinic-section .clinic-stat__bar { height: 5px; margin-top: 7px; border-radius: 99px; background: #e5edf7; overflow: hidden; }
-        #clinic-section .clinic-stat__bar span { display: block; height: 100%; border-radius: 99px; }
-        #clinic-section .clinic-stat__pct {
-            font-size: .64rem; font-weight: 800; color: #94a3b8;
-            white-space: nowrap; align-self: flex-end; padding-bottom: 2px;
-        }
-        @media (max-width: 520px) { #clinic-section .clinic-stat__pct { display: none; } }
+        #clinic-section .pinsp-stat:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(15,47,90,.12); }
+        #clinic-section .pinsp-stat__icon { flex: 0 0 auto; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 13px; color: #fff; font-size: 1.15rem; }
+        #clinic-section .pinsp-stat__icon--blue { background: linear-gradient(135deg,#1e40af,#3b82f6); }
+        #clinic-section .pinsp-stat__icon--green { background: linear-gradient(135deg,#15803d,#22c55e); }
+        #clinic-section .pinsp-stat__icon--red { background: linear-gradient(135deg,#b91c1c,#ef4444); }
+        #clinic-section .pinsp-stat__icon--amber { background: linear-gradient(135deg,#b45309,#f59e0b); }
+        #clinic-section .pinsp-stat__body { flex: 1; min-width: 0; }
+        #clinic-section .pinsp-stat__label { font-size: .74rem; font-weight: 700; color: #64748b; margin: 0 0 2px; }
+        #clinic-section .pinsp-stat__value { font-size: 1.7rem; font-weight: 900; line-height: 1.15; margin: 0; }
+        #clinic-section .pinsp-stat__bar { height: 5px; margin-top: 7px; border-radius: 99px; background: #e5edf7; overflow: hidden; }
+        #clinic-section .pinsp-stat__bar span { display: block; height: 100%; border-radius: 99px; }
+        #clinic-section .pinsp-stat__pct { font-size: .7rem; font-weight: 700; color: #94a3b8; }
+        @media (max-width: 520px) { #clinic-section .pinsp-stat__pct { display: none; } }
 
         /* ═══ شريط التبويبات ═══ */
         #clinic-section .clinic-tabs {
@@ -17984,12 +17973,10 @@ const Clinic = {
             border-bottom-color: #2a3b5c;
         }
         [data-theme="dark"] #clinic-section .clinic-tab-panel .data-table tbody tr:hover td { background: #1e293b; }
-        [data-theme="dark"] #clinic-section .clinic-tab-panel .clinic-stat {
-            background: #1e293b; border-color: #2a3b5c; box-shadow: 0 6px 18px rgba(0,0,0,.3);
-        }
-        [data-theme="dark"] #clinic-section .clinic-stat__label { color: #94a3b8; }
-        [data-theme="dark"] #clinic-section .clinic-stat__bar { background: #334155; }
-        [data-theme="dark"] #clinic-section .clinic-stat__pct { color: #64748b; }
+        [data-theme="dark"] #clinic-section .pinsp-stat { background: linear-gradient(160deg,#15283f,#1a2f4a); border-color: #243b55; }
+        [data-theme="dark"] #clinic-section .pinsp-stat__label { color: #93a7bd; }
+        [data-theme="dark"] #clinic-section .pinsp-stat__bar { background: #334155; }
+        [data-theme="dark"] #clinic-section .pinsp-stat__pct { color: #64748b; }
         `;
         document.head.appendChild(style);
     },
@@ -18018,23 +18005,23 @@ const Clinic = {
         const visitsCount = (ad.clinicVisits || []).length;
         const isAdmin = this.isCurrentUserAdmin();
 
-        // إحصائيات سريعة (بنمط كروت سجل الفحوصات)
+        // إحصائيات سريعة (بنمط كروت سجل الفحوصات pinsp-stat)
         const _qBase = Math.max(1, visitsCount, medicationsCount, sickLeavesCount, injuriesCount);
-        const _pctOf = (n) => (n > 0 ? Math.round((n / _qBase) * 100) : 0);
+        const _pctOf = (n) => (n > 0 ? Math.min(100, Math.round((n / _qBase) * 100)) : 0);
         const _quickStats = [
-            { label: 'سجل التردد', value: visitsCount, icon: 'fas fa-hospital', color: '#16a34a', grad: 'linear-gradient(145deg,#15803d,#4ade80)', sub: 'زيارة' },
-            { label: 'الأدوية', value: medicationsCount, icon: 'fas fa-pills', color: '#2563eb', grad: 'linear-gradient(145deg,#1d4ed8,#60a5fa)', sub: 'صنف' },
-            { label: 'الإجازات المرضية', value: sickLeavesCount, icon: 'fas fa-calendar-times', color: '#d97706', grad: 'linear-gradient(145deg,#b45309,#fbbf24)', sub: 'إجازة' },
-            { label: 'الإصابات', value: injuriesCount, icon: 'fas fa-user-injured', color: '#dc2626', grad: 'linear-gradient(145deg,#b91c1c,#f87171)', sub: 'إصابة' },
+            { label: 'سجل التردد', value: visitsCount, icon: 'fas fa-hospital', iconCls: 'blue', valueColor: '#1d4ed8', barColor: '#2563eb', pct: _pctOf(visitsCount) },
+            { label: 'الأدوية', value: medicationsCount, icon: 'fas fa-pills', iconCls: 'green', valueColor: '#15803d', barColor: '#22c55e', pct: _pctOf(medicationsCount) },
+            { label: 'الإجازات المرضية', value: sickLeavesCount, icon: 'fas fa-calendar-times', iconCls: 'amber', valueColor: '#c2410c', barColor: '#f59e0b', pct: _pctOf(sickLeavesCount) },
+            { label: 'الإصابات', value: injuriesCount, icon: 'fas fa-user-injured', iconCls: 'red', valueColor: '#b91c1c', barColor: '#ef4444', pct: _pctOf(injuriesCount) },
         ].map((k) => `
-                <div class="content-card clinic-stat">
-                    <div class="clinic-stat__icon" style="background:${k.grad}"><i class="${k.icon}"></i></div>
-                    <div class="clinic-stat__body">
-                        <p class="clinic-stat__label">${k.label}</p>
-                        <p class="clinic-stat__value" style="color:${k.color};">${k.value}</p>
-                        <div class="clinic-stat__bar"><span style="width:${_pctOf(k.value)}%;background:${k.grad}"></span></div>
+                <div class="pinsp-stat">
+                    <div class="pinsp-stat__icon pinsp-stat__icon${k.iconCls}"><i class="${k.icon}"></i></div>
+                    <div class="pinsp-stat__body">
+                        <p class="pinsp-stat__label">${k.label}</p>
+                        <p class="pinsp-stat__value" style="color:${k.valueColor};">${k.value}</p>
+                        <div class="pinsp-stat__bar"><span style="width:${k.pct}%; background:${k.barColor};"></span></div>
                     </div>
-                    <span class="clinic-stat__pct">${k.sub}</span>
+                    <span class="pinsp-stat__pct">${k.pct}%</span>
                 </div>
             `).join('');
 
