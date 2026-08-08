@@ -1,13 +1,15 @@
 {
-  "version": "1.0.915",
+  "version": "1.0.917",
   "highlights": {
     "ar": [
-      "هوية HSE على لوحة تحليل العيادة الطبية: ترويسة زرقاء متدرجة مع أيقونة كهرمانية وتبديل الفلاتر الكهرماني.",
-      "كروت المؤشرات (الزيارات، الأدوية، الإجازات، الإصابات) بنمط الفحوصات: أيقونات متدرجة وأشرطة نسب مئوية."
+      "هوية HSE كاملة لواجهة العيادة الطبية الرئيسية: ترويسة زرقاء متدرجة بشعار HSE وأيقونة كهرمانية مع أزرار زجاجية.",
+      "كروت المؤشرات السريعة (سجل التردد، الأدوية، الإجازات، الإصابات) بنمط الفحوصات الدورية: أيقونات متدرجة وأشرطة نسب مئوية.",
+      "شريط التبويبات وجميع لوحات العيادة (الجداول والترويسات والنماذج) بهوية الأزرق الموحدة."
     ],
     "en": [
-      "HSE identity on the medical clinic dashboard: navy gradient header with amber icon and amber filters button.",
-      "KPI cards (visits, medications, sick leaves, injuries) now match the inspections style with gradient icons and percentage bars."
+      "Full HSE identity for the main clinic UI: navy gradient hero with shield badge and amber icon, glass action buttons.",
+      "Quick stats cards (visits, medications, sick leaves, injuries) now match the inspections style with gradient icons and percentage bars.",
+      "Clinic tabs bar and all tab panels (tables, headers, forms) get the unified blue identity while keeping button positions."
     ]
   }
 }

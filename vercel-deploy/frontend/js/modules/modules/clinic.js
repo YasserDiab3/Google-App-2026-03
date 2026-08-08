@@ -17819,6 +17819,182 @@ const Clinic = {
     },
 
     /**
+     * حقن هوية العيادة الطبية (الترويسة + الكروت + التبويبات + الأسطح) داخل #clinic-section
+     */
+    _injectClinicIdentityStyles() {
+        if (document.getElementById('clinic-ui-identity-styles')) return;
+
+        const style = document.createElement('style');
+        style.id = 'clinic-ui-identity-styles';
+        style.textContent = `
+        /* ══ Hero ══ */
+        #clinic-section .clinic-id-hero {
+            position: relative; overflow: hidden;
+            border-radius: 18px;
+            padding: 22px 26px 26px;
+            background: radial-gradient(circle at 85% -20%, rgba(251,191,36,0.14), transparent 45%),
+                        linear-gradient(120deg, #0b2a55 0%, #1e40af 55%, #2563eb 100%);
+            color: #fff;
+            box-shadow: 0 12px 30px rgba(11,42,85,0.28);
+            display: flex; flex-wrap: wrap; align-items: center; gap: 18px;
+        }
+        #clinic-section .clinic-id-hero::after {
+            content: ''; position: absolute; inset: auto 0 -34px 0; height: 34px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 40' preserveAspectRatio='none'%3E%3Cpath fill='%23ffffff' fill-opacity='0.10' d='M0 40 L60 10 L120 35 L180 4 L240 24 L300 8 L360 24 L420 12 L480 30 L540 16 L600 26 L660 10 L720 30 L780 14 L840 28 L900 10 L960 24 L1020 6 L1080 20 L1140 12 L1200 24 L1200 40 L0 40 Z'/%3E%3C/svg%3E");
+            background-size: cover; background-position: bottom; pointer-events: none;
+        }
+        #clinic-section .clinic-id-hero__icon {
+            width: 58px; height: 58px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 16px;
+            background: linear-gradient(145deg, #fbbf24, #f59e0b);
+            color: #7c2d12; font-size: 1.55rem;
+            box-shadow: 0 8px 18px rgba(0,0,0,.25);
+        }
+        #clinic-section .clinic-id-hero__outer {
+            display: flex; align-items: center; gap: 10px; position: relative; z-index: 1;
+        }
+        #clinic-section .clinic-id-hero__text { flex: 1; min-width: 220px; position: relative; z-index: 1; }
+        #clinic-section .clinic-id-hero__eyebrow {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: .8rem; font-weight: 700; color: #fde68a;
+            background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+            padding: 4px 12px; border-radius: 999px; margin-bottom: 8px; letter-spacing: .3px;
+        }
+        #clinic-section .clinic-id-hero__title { margin: 0; font-size: 1.5rem; font-weight: 800; color: #fff; }
+        #clinic-section .clinic-id-hero__subtitle { margin: 4px 0 0; font-size: .92rem; color: rgba(255,255,255,.75); }
+        #clinic-section .clinic-id-hero__actions {
+            display: flex; flex-wrap: wrap; gap: 10px;
+            margin-inline-start: auto; position: relative; z-index: 1;
+        }
+        #clinic-section .clinic-id-hero__actions .btn-primary {
+            background: linear-gradient(145deg, #fbbf24, #f59e0b);
+            color: #7c2d12; font-weight: 700; border: none; border-radius: 12px;
+            box-shadow: 0 6px 16px rgba(245,158,11,.35);
+        }
+        #clinic-section .clinic-id-hero__actions .btn-primary:hover {
+            background: linear-gradient(145deg, #fcd34d, #f59e0b); color: #7c2d12; transform: translateY(-1px);
+        }
+        #clinic-section .clinic-id-hero__actions .btn-secondary {
+            background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.30);
+            color: #fff; border-radius: 12px; backdrop-filter: blur(4px);
+        }
+        #clinic-section .clinic-id-hero__actions .btn-secondary:hover {
+            background: rgba(255,255,255,.20); border-color: rgba(255,255,255,.45); color: #fff;
+        }
+
+        /* ═══ كروت المؤشرات السريعة (بنمط سجل الفحوصات) ═══ */
+        #clinic-section .clinic-stat {
+            position: relative; overflow: hidden; border-radius: 14px;
+            border: 1px solid #dce7f5; background: #ffffff;
+            box-shadow: 0 6px 18px rgba(15,47,90,.06);
+            padding: 13px 14px; display: flex; align-items: center; gap: 11px;
+            transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+        }
+        #clinic-section .clinic-stat:hover {
+            transform: translateY(-2px); border-color: #bfdbfe;
+            box-shadow: 0 12px 26px rgba(15,47,90,.13);
+        }
+        #clinic-section .clinic-stat__icon {
+            flex: 0 0 auto; width: 42px; height: 42px; display: grid; place-items: center;
+            border-radius: 12px; color: #fff; font-size: 1rem;
+            box-shadow: 0 6px 14px rgba(15,47,90,.18);
+        }
+        #clinic-section .clinic-stat__body { flex: 1; min-width: 0; }
+        #clinic-section .clinic-stat__label {
+            font-size: .7rem; font-weight: 700; color: #64748b; margin: 0 0 3px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        #clinic-section .clinic-stat__value { font-size: 1.5rem; font-weight: 900; line-height: 1.1; margin: 0; }
+        #clinic-section .clinic-stat__bar { height: 5px; margin-top: 7px; border-radius: 99px; background: #e5edf7; overflow: hidden; }
+        #clinic-section .clinic-stat__bar span { display: block; height: 100%; border-radius: 99px; }
+        #clinic-section .clinic-stat__pct {
+            font-size: .64rem; font-weight: 800; color: #94a3b8;
+            white-space: nowrap; align-self: flex-end; padding-bottom: 2px;
+        }
+        @media (max-width: 520px) { #clinic-section .clinic-stat__pct { display: none; } }
+
+        /* ═══ شريط التبويبات ═══ */
+        #clinic-section .clinic-tabs {
+            display: flex; flex-wrap: wrap; gap: 8px; padding: 10px;
+            margin-bottom: 1.5rem;
+            background: radial-gradient(circle at 90% -40%, rgba(251,191,36,.14), transparent 40%),
+                        linear-gradient(120deg, #0b2a55, #1e3f8f 60%, #1e40af);
+            border: 1px solid rgba(255,255,255,.12); border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(11,42,85,.18);
+        }
+        #clinic-section .clinic-tab-btn {
+            background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+            color: #e2eaff; font-weight: 600; border-radius: 12px;
+            box-shadow: none;
+        }
+        #clinic-section .clinic-tab-btn i { color: #a8c0f2; }
+        #clinic-section .clinic-tab-btn:hover {
+            background: rgba(255,255,255,.16); border-color: rgba(255,255,255,.32);
+            color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,.15); transform: translateY(-1px);
+        }
+        #clinic-section .clinic-tab-btn.active {
+            background: linear-gradient(145deg, #fbbf24, #f59e0b);
+            border-color: #fbbf24; color: #7c2d12; font-weight: 800;
+            box-shadow: 0 6px 14px rgba(245,158,11,.35);
+        }
+        #clinic-section .clinic-tab-btn.active i { color: #7c2d12; }
+        #clinic-section .clinic-tab-btn.active:hover {
+            background: linear-gradient(145deg, #fcd34d, #f59e0b); color: #7c2d12;
+        }
+        #clinic-section .clinic-tab-btn .badge { margin-inline: 0 .25rem; }
+
+        /* ═══ أسطح التبويبات ═══ */
+        #clinic-section .clinic-tab-panel .content-card {
+            border: 1px solid #dce7f5; border-radius: 16px;
+            box-shadow: 0 6px 18px rgba(15,47,90,.06); overflow: hidden;
+        }
+        #clinic-section .clinic-tab-panel .card-header {
+            background: linear-gradient(120deg, #f1f6ff, #ffffff);
+            border-bottom: 1px solid #dce7f5;
+        }
+        #clinic-section .clinic-tab-panel .data-table thead th {
+            background: linear-gradient(90deg, #1e40af, #2563eb);
+            color: #fff; border-color: #1d4ed8;
+        }
+        #clinic-section .clinic-tab-panel .data-table tbody tr:hover td { background: #f2f7ff; }
+        #clinic-section .clinic-tab-panel .form-input:focus,
+        #clinic-section .clinic-tab-panel input[type="text"]:focus,
+        #clinic-section .clinic-tab-panel select:focus,
+        #clinic-section .clinic-tab-panel textarea:focus {
+            border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.14);
+        }
+        #clinic-section .clinic-tab-panel .btn-primary {
+            background: linear-gradient(145deg, #fbbf24, #f59e0b);
+            color: #7c2d12; font-weight: 700; border: none;
+        }
+        #clinic-section .clinic-tab-panel .btn-primary:hover {
+            background: linear-gradient(145deg, #fcd34d, #f59e0b); color: #7c2d12;
+        }
+
+        /* ═══ الوضع الداكن ═══ */
+        [data-theme="dark"] #clinic-section .clinic-tab-btn {
+            background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.14); color: #cdd9f2;
+        }
+        [data-theme="dark"] #clinic-section .clinic-tab-btn:hover {
+            background: rgba(255,255,255,.15); color: #fff;
+        }
+        [data-theme="dark"] #clinic-section .clinic-tab-panel .card-header {
+            background: linear-gradient(120deg, #16233f, #1e293b);
+            border-bottom-color: #2a3b5c;
+        }
+        [data-theme="dark"] #clinic-section .clinic-tab-panel .data-table tbody tr:hover td { background: #1e293b; }
+        [data-theme="dark"] #clinic-section .clinic-tab-panel .clinic-stat {
+            background: #1e293b; border-color: #2a3b5c; box-shadow: 0 6px 18px rgba(0,0,0,.3);
+        }
+        [data-theme="dark"] #clinic-section .clinic-stat__label { color: #94a3b8; }
+        [data-theme="dark"] #clinic-section .clinic-stat__bar { background: #334155; }
+        [data-theme="dark"] #clinic-section .clinic-stat__pct { color: #64748b; }
+        `;
+        document.head.appendChild(style);
+    },
+
+    /**
      * عرض واجهة المستخدم
      */
     renderUI() {
@@ -17827,6 +18003,8 @@ const Clinic = {
             if (typeof Utils !== 'undefined' && Utils.safeError) Utils.safeError('❌ قسم clinic-section غير موجود!');
             return;
         }
+
+        this._injectClinicIdentityStyles();
 
         const ad = AppState.appData;
         if (!ad) {
@@ -17840,73 +18018,59 @@ const Clinic = {
         const visitsCount = (ad.clinicVisits || []).length;
         const isAdmin = this.isCurrentUserAdmin();
 
-        if (this.state.activeTab === 'attendance' && !this.canAccessAttendanceTab()) {
-            this.state.activeTab = this.hasTabAccess('visits') ? 'visits'
-                : (this.hasTabAccess('medications') ? 'medications' : 'visits');
-        }
+        // إحصائيات سريعة (بنمط كروت سجل الفحوصات)
+        const _qBase = Math.max(1, visitsCount, medicationsCount, sickLeavesCount, injuriesCount);
+        const _pctOf = (n) => (n > 0 ? Math.round((n / _qBase) * 100) : 0);
+        const _quickStats = [
+            { label: 'سجل التردد', value: visitsCount, icon: 'fas fa-hospital', color: '#16a34a', grad: 'linear-gradient(145deg,#15803d,#4ade80)', sub: 'زيارة' },
+            { label: 'الأدوية', value: medicationsCount, icon: 'fas fa-pills', color: '#2563eb', grad: 'linear-gradient(145deg,#1d4ed8,#60a5fa)', sub: 'صنف' },
+            { label: 'الإجازات المرضية', value: sickLeavesCount, icon: 'fas fa-calendar-times', color: '#d97706', grad: 'linear-gradient(145deg,#b45309,#fbbf24)', sub: 'إجازة' },
+            { label: 'الإصابات', value: injuriesCount, icon: 'fas fa-user-injured', color: '#dc2626', grad: 'linear-gradient(145deg,#b91c1c,#f87171)', sub: 'إصابة' },
+        ].map((k) => `
+                <div class="content-card clinic-stat">
+                    <div class="clinic-stat__icon" style="background:${k.grad}"><i class="${k.icon}"></i></div>
+                    <div class="clinic-stat__body">
+                        <p class="clinic-stat__label">${k.label}</p>
+                        <p class="clinic-stat__value" style="color:${k.color};">${k.value}</p>
+                        <div class="clinic-stat__bar"><span style="width:${_pctOf(k.value)}%;background:${k.grad}"></span></div>
+                    </div>
+                    <span class="clinic-stat__pct">${k.sub}</span>
+                </div>
+            `).join('');
 
         section.innerHTML = `
-            <div class="section-header">
-                <div class="flex items-center justify-between flex-wrap gap-3">
-                    <div>
-                        <h1 class="section-title">
-                            <i class="fas fa-clinic-medical ml-3"></i>
-                            نظام العيادة الطبية
-                        </h1>
-                        <p class="section-subtitle">إدارة سجل التردد، الأدوية، الإجازات المرضية، والإصابات</p>
+            <div class="clinic-id-hero">
+                <div class="clinic-id-hero__outer">
+                    <div class="clinic-id-hero__icon"><i class="fas fa-clinic-medical"></i></div>
+                    <div class="clinic-id-hero__text">
+                        <span class="clinic-id-hero__eyebrow"><i class="fas fa-shield-halved fa-xs"></i> HSE · الصحة المهنية والسلامة</span>
+                        <h1 class="clinic-id-hero__title">العيادة الطبية</h1>
+                        <p class="clinic-id-hero__subtitle">إدارة سجل التردد، الأدوية، الإجازات المرضية، والإصابات</p>
                     </div>
-                    <div class="flex gap-2">
-                        ${isAdmin ? `
-                        <button id="clinic-visit-types-settings-btn" class="btn-secondary" title="إدارة أنواع الزيارة (مدير النظام فقط)">
-                            <i class="fas fa-list-ul ml-2"></i>
-                            أنواع الزيارة
-                        </button>
-                        ` : ''}
-                        <button id="clinic-refresh-btn" class="btn-secondary" title="تحديث البيانات">
-                            <i class="fas fa-sync-alt ml-2"></i>
-                            تحديث
-                        </button>
-                        <button id="clinic-register-visit-btn" class="btn-primary" title="تسجيل زيارة جديدة">
-                            <i class="fas fa-plus ml-2"></i>
-                            تسجيل زيارة
-                        </button>
-                    </div>
+                </div>
+                <div class="clinic-id-hero__actions">
+                    ${isAdmin ? `
+                    <button id="clinic-visit-types-settings-btn" class="btn-secondary" title="إدارة أنواع الزيارة (مدير النظام فقط)">
+                        <i class="fas fa-list-ul ml-2"></i>
+                        أنواع الزيارة
+                    </button>
+                    ` : ''}
+                    <button id="clinic-refresh-btn" class="btn-secondary" title="تحديث البيانات">
+                        <i class="fas fa-sync-alt ml-2"></i>
+                        تحديث
+                    </button>
+                    <button id="clinic-register-visit-btn" class="btn-primary" title="تسجيل زيارة جديدة">
+                        <i class="fas fa-plus ml-2"></i>
+                        تسجيل زيارة
+                    </button>
                 </div>
             </div>
 
             <!-- إحصائيات سريعة -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-                <div class="content-card">
-                    <div class="text-center">
-                        <i class="fas fa-hospital text-4xl text-green-600 mb-2"></i>
-                        <p class="text-sm text-gray-600">سجل التردد</p>
-                        <p class="text-2xl font-bold">${visitsCount}</p>
-                    </div>
-                </div>
-                <div class="content-card">
-                    <div class="text-center">
-                        <i class="fas fa-pills text-4xl text-blue-600 mb-2"></i>
-                        <p class="text-sm text-gray-600">الأدوية</p>
-                        <p class="text-2xl font-bold">${medicationsCount}</p>
-                    </div>
-                </div>
-                <div class="content-card">
-                    <div class="text-center">
-                        <i class="fas fa-calendar-times text-4xl text-orange-600 mb-2"></i>
-                        <p class="text-sm text-gray-600">الإجازات المرضية</p>
-                        <p class="text-2xl font-bold">${sickLeavesCount}</p>
-                    </div>
-                </div>
-                <div class="content-card">
-                    <div class="text-center">
-                        <i class="fas fa-user-injured text-4xl text-red-600 mb-2"></i>
-                        <p class="text-sm text-gray-600">الإصابات</p>
-                        <p class="text-2xl font-bold">${injuriesCount}</p>
-                    </div>
-                </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-5">
+                ${_quickStats}
             </div>
-
-            <!-- Tabs Navigation -->
+        <!-- Tabs Navigation -->
             <div class="mt-6">
                 <div class="clinic-tabs">
                     ${this.hasTabAccess('visits') ? `
@@ -17984,6 +18148,11 @@ const Clinic = {
                 ` : ''}
             </div>
         `;
+
+        if (this.state.activeTab === 'attendance' && !this.canAccessAttendanceTab()) {
+            this.state.activeTab = this.hasTabAccess('visits') ? 'visits'
+                : (this.hasTabAccess('medications') ? 'medications' : 'visits');
+        }
 
         // ربط الأحداث
         this.renderTabNavigation();

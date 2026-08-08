@@ -1,11 +1,15 @@
 {
-  "version": "1.0.915",
+  "version": "1.0.917",
   "highlights": {
     "ar": [
-      "كروت إحصائيات قائمة المرور اليومي للسلامة أصبحت بنمط سجل الفحوصات: أيقونات ملونة، أرقام بارزة، وأشرطة نسبة مئوية."
+      "هوية HSE كاملة لواجهة العيادة الطبية الرئيسية: ترويسة زرقاء متدرجة بشعار HSE وأيقونة كهرمانية مع أزرار زجاجية.",
+      "كروت المؤشرات السريعة (سجل التردد، الأدوية، الإجازات، الإصابات) بنمط الفحوصات الدورية: أيقونات متدرجة وأشرطة نسب مئوية.",
+      "شريط التبويبات وجميع لوحات العيادة (الجداول والترويسات والنماذج) بهوية الأزرق الموحدة."
     ],
     "en": [
-      "Daily safety checklist KPI cards now match the inspections log style: colored icons, bold numbers, and percentage bars."
+      "Full HSE identity for the main clinic UI: navy gradient hero with shield badge and amber icon, glass action buttons.",
+      "Quick stats cards (visits, medications, sick leaves, injuries) now match the inspections style with gradient icons and percentage bars.",
+      "Clinic tabs bar and all tab panels (tables, headers, forms) get the unified blue identity while keeping button positions."
     ]
   }
 }
