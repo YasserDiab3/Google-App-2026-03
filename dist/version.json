@@ -1,13 +1,11 @@
 {
-  "version": "1.0.914",
+  "version": "1.0.915",
   "highlights": {
     "ar": [
-      "سجل المرور اليومي للسلامة أصبح بكروت احترافية: أيقونة بالوردية، رقم التقرير، الموقع، القائم بالمرور، والملاحظات.",
-      "فواصل يومية مع شارات الورديات وعدّاد السجلات، مع تنقل سريع بين الأيام."
+      "كروت إحصائيات قائمة المرور اليومي للسلامة أصبحت بنمط سجل الفحوصات: أيقونات ملونة، أرقام بارزة، وأشرطة نسبة مئوية."
     ],
     "en": [
-      "Daily safety checklist log now uses professional cards: shift icon, report number, site, inspector, and notes.",
-      "Daily dividers with shift chips and record counters, plus quick jump between days."
+      "Daily safety checklist KPI cards now match the inspections log style: colored icons, bold numbers, and percentage bars."
     ]
   }
 }

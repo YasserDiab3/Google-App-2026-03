@@ -6664,29 +6664,64 @@ const Clinic = {
 
         panel.innerHTML = `
         <div id="clinic-analytics-root" style="font-family:inherit;">
+            <style>
+                /* ✅ الهوية — كروت مؤشرات العيادة (بنمط سجل الفحوصات) */
+                #clinic-analytics-root .clinic-stat {
+                    position: relative; overflow: hidden; border-radius: 14px;
+                    border: 1px solid #dce7f5; background: #ffffff;
+                    box-shadow: 0 6px 18px rgba(15,47,90,.06);
+                    padding: 13px 14px; display: flex; align-items: center; gap: 11px;
+                    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+                }
+                #clinic-analytics-root .clinic-stat:hover {
+                    transform: translateY(-2px); border-color: #bfdbfe;
+                    box-shadow: 0 12px 26px rgba(15,47,90,.13);
+                }
+                #clinic-analytics-root .clinic-stat__icon {
+                    flex: 0 0 auto; width: 42px; height: 42px; display: grid; place-items: center;
+                    border-radius: 12px; color: #fff; font-size: 1rem;
+                    box-shadow: 0 6px 14px rgba(15,47,90,.18);
+                }
+                #clinic-analytics-root .clinic-stat__body { flex: 1; min-width: 0; }
+                #clinic-analytics-root .clinic-stat__label {
+                    font-size: .7rem; font-weight: 700; color: #64748b; margin: 0 0 3px;
+                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                }
+                #clinic-analytics-root .clinic-stat__value { font-size: 1.5rem; font-weight: 900; line-height: 1.1; margin: 0; }
+                #clinic-analytics-root .clinic-stat__bar { height: 5px; margin-top: 7px; border-radius: 99px; background: #e5edf7; overflow: hidden; }
+                #clinic-analytics-root .clinic-stat__bar span { display: block; height: 100%; border-radius: 99px; }
+                #clinic-analytics-root .clinic-stat__pct {
+                    font-size: .64rem; font-weight: 800; color: #94a3b8;
+                    white-space: nowrap; align-self: flex-end; padding-bottom: 2px;
+                }
+                @media (max-width: 520px) {
+                    #clinic-analytics-root .clinic-stat__pct { display: none; }
+                }
+            </style>
 
             <!-- ══ شريط الأدوات ══ -->
-            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding:16px 20px;background:linear-gradient(135deg,#134e4a 0%,#0d9488 100%);border-radius:14px;color:#fff;box-shadow:0 4px 20px rgba(13,148,136,0.35);">
-                <div style="display:flex;align-items:center;gap:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding:16px 20px;background:linear-gradient(135deg,#0b2a55 0%,#1e40af 60%,#2563eb 100%);border-radius:14px;color:#fff;box-shadow:0 4px 20px rgba(11,42,85,0.35);position:relative;overflow:hidden;">
+                <div style="display:flex;align-items:center;gap:12px;position:relative;z-index:1;">
                     <div style="width:44px;height:44px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;">
-                        <i class="fas fa-clinic-medical" style="font-size:20px;"></i>
+                        <i class="fas fa-clinic-medical" style="font-size:20px;color:#fde68a;"></i>
                     </div>
                     <div>
-                        <h2 style="margin:0;font-size:1.15rem;font-weight:700;">لوحة تحليل العيادة الطبية</h2>
+                        <span style="display:block;font-size:0.66rem;font-weight:800;letter-spacing:0.04em;color:#bfdbfe;">العيادة الطبية — HSE</span>
+                        <h2 style="margin:0;font-size:1.15rem;font-weight:900;">لوحة تحليل العيادة الطبية</h2>
                         <p style="margin:0;font-size:0.75rem;opacity:0.85;">تحليل شامل • زيارات • أدوية • إجازات • إصابات • تصدير PDF</p>
                     </div>
                 </div>
-                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;position:relative;z-index:1;">
                     <span style="font-size:0.72rem;opacity:0.85;margin-left:2px;">الفترة:</span>
                     <div style="display:flex;gap:3px;flex-wrap:wrap;">
                         ${['30','90','180','365','0'].map((v,i) => {
                             const labels=['30 يوم','3 أشهر','6 أشهر','سنة','الكل'];
                             const active=(this._clinicPeriod||'0')===v;
-                            return `<button class="clinic-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#134e4a':'#fff'};">${labels[i]}</button>`;
+                            return `<button class="clinic-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#0b2a55':'#fff'};">${labels[i]}</button>`;
                         }).join('')}
                     </div>
-                    <button id="clinic-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
-                        <i class="fas fa-sliders-h"></i><span>فلاتر</span><span id="clinic-filter-badge" style="display:none;background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-right:2px;">●</span>
+                    <button id="clinic-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#7c2d12;font-size:0.78rem;font-weight:800;transition:all .2s;display:flex;align-items:center;gap:5px;box-shadow:0 4px 12px rgba(0,0,0,0.18);" onmouseover="this.style.filter='brightness(1.08)'" onmouseout="this.style.filter=''">
+                        <i class="fas fa-sliders-h"></i><span>فلاتر</span><span id="clinic-filter-badge" style="display:none;background:#fff;color:#78350f;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-right:2px;">●</span>
                     </button>
                     <button id="clinic-export-pdf-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.25);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(0,0,0,0.4)'" onmouseout="this.style.background='rgba(0,0,0,0.25)'">
                         <i class="fas fa-file-pdf"></i><span>PDF</span>
@@ -6698,29 +6733,29 @@ const Clinic = {
             </div>
 
             <!-- ══ لوحة الفلاتر ══ -->
-            <div id="clinic-filter-panel" style="display:none;background:#f0fdfa;border:1.5px solid #99f6e4;border-radius:12px;padding:18px 20px;margin-bottom:16px;">
+            <div id="clinic-filter-panel" style="display:none;background:#f8faff;border:1.5px solid #bfdbfe;border-radius:12px;padding:18px 20px;margin-bottom:16px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
                     <div style="display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-sliders-h" style="color:#0d9488;font-size:14px;"></i>
-                        <span style="font-weight:700;font-size:0.9rem;color:#134e4a;">الفلاتر التفاعلية</span>
-                        <span id="clinic-filter-count" style="background:#ccfbf1;color:#0f766e;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
+                        <i class="fas fa-sliders-h" style="color:#2563eb;font-size:14px;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;color:#0b2a55;">الفلاتر التفاعلية</span>
+                        <span id="clinic-filter-count" style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
                     </div>
-                    <button id="clinic-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #99f6e4;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;" onmouseover="this.style.background='#f0fdfa';this.style.color='#0d9488'" onmouseout="this.style.background='#fff';this.style.color='#64748b'">
+                    <button id="clinic-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #bfdbfe;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;" onmouseover="this.style.background='#eff6ff';this.style.color='#2563eb'" onmouseout="this.style.background='#fff';this.style.color='#64748b'">
                         <i class="fas fa-times ml-1"></i>مسح الكل
                     </button>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
                     ${[
                         {id:'clinic-af-ptype',  icon:'fas fa-id-badge',       color:'#6366f1', label:'نوع الشخص'},
-                        {id:'clinic-af-dept',   icon:'fas fa-building',        color:'#0d9488', label:'الإدارة'},
+                        {id:'clinic-af-dept',   icon:'fas fa-building',        color:'#2563eb', label:'الإدارة'},
                         {id:'clinic-af-loc',    icon:'fas fa-map-marker-alt',  color:'#f59e0b', label:'الموقع'},
                         {id:'clinic-af-reason', icon:'fas fa-stethoscope',     color:'#3b82f6', label:'سبب الزيارة'},
                     ].map(f=>`
                         <div>
-                            <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <label style="font-size:0.72rem;font-weight:700;color:#475569;display:block;margin-bottom:5px;">
                                 <i class="${f.icon}" style="color:${f.color};margin-left:4px;"></i>${f.label}
                             </label>
-                            <select id="${f.id}" style="width:100%;padding:7px 10px;border:1.5px solid #99f6e4;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;" onfocus="this.style.borderColor='#0d9488'" onblur="this.style.borderColor='#99f6e4'">
+                            <select id="${f.id}" style="width:100%;padding:7px 10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#bfdbfe'">>
                                 <option value="">الكل</option>
                             </select>
                         </div>
@@ -6747,7 +6782,7 @@ const Clinic = {
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-chart-area" style="color:#8b5cf6;"></i>
+                        <i class="fas fa-chart-area" style="color:#6366f1;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">الاتجاه الزمني للزيارات (آخر 12 شهر)</span>
                     </div>
                     <div style="padding:12px;position:relative;height:220px;">
@@ -6761,7 +6796,7 @@ const Clinic = {
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-stethoscope" style="color:#0d9488;"></i>
+                        <i class="fas fa-stethoscope" style="color:#2563eb;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">حسب سبب الزيارة (أعلى 10)</span>
                     </div>
                     <div style="padding:12px;position:relative;height:280px;">
@@ -6861,7 +6896,7 @@ const Clinic = {
                 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
                     <div style="display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-prescription-bottle-alt" style="color:#10b981;font-size:18px;"></i>
-                        <span style="font-weight:800;font-size:1rem;color:#134e4a;">تحليل الأدوية المستخدمة والمنصرفة</span>
+                        <span style="font-weight:800;font-size:1rem;color:#0b2a55;">تحليل الأدوية المستخدمة والمنصرفة</span>
                     </div>
                     <span id="clinic-med-analysis-summary" style="font-size:0.75rem;color:#64748b;"></span>
                 </div>
@@ -6915,7 +6950,7 @@ const Clinic = {
                 <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
                     <div style="padding:13px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
                         <div style="display:flex;align-items:center;gap:8px;">
-                            <i class="fas fa-tablets" style="color:#0d9488;"></i>
+                            <i class="fas fa-tablets" style="color:#2563eb;"></i>
                             <span style="font-weight:700;font-size:0.88rem;">تفاصيل أكثر الأدوية استهلاكاً (أعلى 15)</span>
                         </div>
                         <span id="clinic-med-table-count" style="background:#ecfdf5;color:#047857;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
@@ -6956,10 +6991,10 @@ const Clinic = {
             <div class="content-card" style="padding:0;overflow:hidden;">
                 <div style="padding:13px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
                     <div style="display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-user-clock" style="color:#0d9488;"></i>
+                        <i class="fas fa-user-clock" style="color:#2563eb;"></i>
                         <span style="font-weight:700;font-size:0.88rem;">أكثر المراجعين لعيادة (أعلى 15)</span>
                     </div>
-                    <span id="clinic-top-visitors-count" style="background:#f0fdfa;color:#0f766e;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
+                    <span id="clinic-top-visitors-count" style="background:#eff6ff;color:#1e40af;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
                 </div>
                 <div style="overflow-x:auto;">
                     <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
@@ -7049,26 +7084,27 @@ const Clinic = {
 
         const kpiEl = document.getElementById('clinic-kpi-strip');
         if (kpiEl) {
+            const pctOf = (n, base) => base > 0 ? Math.round((n / base) * 100) : 0;
             const kpis = [
-                { label:'إجمالي الزيارات',     value:total,             icon:'fas fa-hospital-user',    color:'#0d9488', bg:'#f0fdfa', border:'#99f6e4' },
-                { label:'زيارات الموظفين',     value:empVisits.length,  icon:'fas fa-user-tie',         color:'#3b82f6', bg:'#eff6ff', border:'#bfdbfe' },
-                { label:'زيارات المقاولين',    value:conVisits.length,  icon:'fas fa-hard-hat',         color:'#f97316', bg:'#fff7ed', border:'#fed7aa' },
-                { label:'الإجازات المرضية',    value:sl.length,         icon:'fas fa-notes-medical',    color:'#f59e0b', bg:'#fffbeb', border:'#fde68a' },
-                { label:'الإصابات',            value:inj.length,        icon:'fas fa-user-injured',     color:'#ef4444', bg:'#fef2f2', border:'#fecaca' },
-                { label:'أدوية منتهية',        value:expiredMeds,       icon:'fas fa-pills',            color:'#dc2626', bg:'#fef2f2', border:'#fca5a5' },
-                { label:'قريبة الانتهاء',      value:expiringSoon,      icon:'fas fa-exclamation',      color:'#d97706', bg:'#fffbeb', border:'#fde68a' },
-                { label:'إجازات قيد المعالجة', value:pendingSL,         icon:'fas fa-clock',            color:'#8b5cf6', bg:'#f5f3ff', border:'#ddd6fe' },
-                { label:'متوسط شهري',          value:avgPerMonth,       icon:'fas fa-calendar-check',   color:'#6366f1', bg:'#eef2ff', border:'#c7d2fe' },
+                { label:'إجمالي الزيارات',     value:total,             icon:'fas fa-hospital-user',  color:'#1d4ed8', grad:'linear-gradient(135deg,#3b82f6,#1d4ed8)', sub:'كل البيانات',            pct:100 },
+                { label:'زيارات الموظفين',     value:empVisits.length,  icon:'fas fa-user-tie',         color:'#1e40af', grad:'linear-gradient(135deg,#2563eb,#1e40af)', sub:`${pctOf(empVisits.length,total)}% من الإجمالي`, pct:pctOf(empVisits.length,total) },
+                { label:'زيارات المقاولين',    value:conVisits.length,  icon:'fas fa-hard-hat',         color:'#ea580c', grad:'linear-gradient(135deg,#f59e0b,#ea580c)', sub:`${pctOf(conVisits.length,total)}% من الإجمالي`, pct:pctOf(conVisits.length,total) },
+                { label:'الإجازات المرضية',    value:sl.length,         icon:'fas fa-notes-medical',    color:'#d97706', grad:'linear-gradient(135deg,#fbbf24,#d97706)', sub:'طلبات مسجلة',            pct:0 },
+                { label:'الإصابات',            value:inj.length,        icon:'fas fa-user-injured',     color:'#dc2626', grad:'linear-gradient(135deg,#ef4444,#b91c1c)', sub:'سجل الإصابات',            pct:0 },
+                { label:'أدوية منتهية',        value:expiredMeds,       icon:'fas fa-pills',            color:'#dc2626', grad:'linear-gradient(135deg,#f87171,#b91c1c)', sub:'في المخزون',              pct:0 },
+                { label:'قريبة الانتهاء',      value:expiringSoon,      icon:'fas fa-exclamation',      color:'#b45309', grad:'linear-gradient(135deg,#f59e0b,#b45309)', sub:'خلال 90 يوم',              pct:0 },
+                { label:'إجازات قيد المعالجة', value:pendingSL,         icon:'fas fa-clock',            color:'#4f46e5', grad:'linear-gradient(135deg,#6366f1,#4338ca)', sub:'قيد المعالجة',             pct:0 },
+                { label:'متوسط شهري',          value:avgPerMonth,       icon:'fas fa-calendar-check',   color:'#4338ca', grad:'linear-gradient(135deg,#818cf8,#4338ca)', sub:monthCount>0 ? `${monthCount} شهر` : '—', pct:0 },
             ];
             kpiEl.innerHTML = kpis.map(k=>`
-                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
-                    <div style="width:38px;height:38px;background:${k.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i class="${k.icon}" style="color:#fff;font-size:15px;"></i>
+                <div class="clinic-stat">
+                    <div class="clinic-stat__icon" style="background:${k.grad}"><i class="${k.icon}"></i></div>
+                    <div class="clinic-stat__body">
+                        <p class="clinic-stat__label">${k.label}</p>
+                        <p class="clinic-stat__value" style="color:${k.color};">${k.value}</p>
+                        ${k.pct > 0 ? `<div class="clinic-stat__bar"><span style="width:${Math.min(k.pct,100)}%; background:${k.grad};"></span></div>` : ''}
                     </div>
-                    <div>
-                        <div style="font-size:1.3rem;font-weight:800;color:${k.color};line-height:1;">${k.value}</div>
-                        <div style="font-size:0.68rem;color:#64748b;margin-top:2px;white-space:nowrap;">${k.label}</div>
-                    </div>
+                    <span class="clinic-stat__pct">${k.sub}</span>
                 </div>`).join('');
         }
 
@@ -7080,18 +7116,24 @@ const Clinic = {
         }
         const medKpiEl = document.getElementById('clinic-med-kpi-strip');
         if (medKpiEl) {
+            const medTotalQty = Number(medAnalysis.totalDispensedQty) || 0;
+            const medPctOf = (n) => medTotalQty > 0 ? Math.round((n / medTotalQty) * 100) : 0;
             const medKpis = [
-                { label: 'إجمالي الكمية المنصرفة', value: medAnalysis.totalDispensedQty, icon: 'fas fa-prescription-bottle-alt', color: '#10b981', bg: '#ecfdf5', border: '#a7f3d0' },
-                { label: 'أدوية مختلفة', value: medAnalysis.uniqueMedicines, icon: 'fas fa-pills', color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
-                { label: 'زيارات بصرف دواء', value: medAnalysis.visitsWithMedications, icon: 'fas fa-capsules', color: '#0d9488', bg: '#f0fdfa', border: '#99f6e4' },
-                { label: 'زيارات بدون دواء', value: medAnalysis.visitsWithoutMedications, icon: 'fas fa-hospital', color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
-                { label: 'عمليات صرف', value: medAnalysis.dispenseLines, icon: 'fas fa-hand-holding-medical', color: '#0891b2', bg: '#ecfeff', border: '#a5f3fc' }
+                { label: 'الكمية المنصرفة', value: medAnalysis.totalDispensedQty,    icon: 'fas fa-prescription-bottle-alt', color: '#15803d', grad: 'linear-gradient(135deg,#22c55e,#15803d)', sub: 'إجمالي المنصرف', pct: 100 },
+                { label: 'أدوية مختلفة',    value: medAnalysis.uniqueMedicines,      icon: 'fas fa-pills',                    color: '#1e40af', grad: 'linear-gradient(135deg,#3b82f6,#1e40af)', sub: `${medPctOf(medAnalysis.uniqueMedicines)}% من المنصرف`, pct: medPctOf(medAnalysis.uniqueMedicines) },
+                { label: 'زيارات بصرف دواء', value: medAnalysis.visitsWithMedications, icon: 'fas fa-capsules',                color: '#2563eb', grad: 'linear-gradient(135deg,#2563eb,#1d4ed8)', sub: 'ضمن الفلاتر', pct: 0 },
+                { label: 'زيارات بدون دواء', value: medAnalysis.visitsWithoutMedications, icon: 'fas fa-hospital',             color: '#64748b', grad: 'linear-gradient(135deg,#94a3b8,#64748b)', sub: 'ضمن الفلاتر', pct: 0 },
+                { label: 'عمليات صرف',       value: medAnalysis.dispenseLines,        icon: 'fas fa-hand-holding-medical',    color: '#0284c7', grad: 'linear-gradient(135deg,#0ea5e9,#0369a1)', sub: `${medPctOf(medAnalysis.dispenseLines)}% من المنصرف`, pct: medPctOf(medAnalysis.dispenseLines) }
             ];
             medKpiEl.innerHTML = medKpis.map(k => `
-                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:11px 12px;text-align:center;">
-                    <i class="${k.icon}" style="color:${k.color};font-size:14px;"></i>
-                    <div style="font-size:1.15rem;font-weight:800;color:${k.color};margin-top:4px;">${Number(k.value || 0).toLocaleString('en-US')}</div>
-                    <div style="font-size:0.65rem;color:#64748b;margin-top:2px;">${k.label}</div>
+                <div class="clinic-stat clinic-stat--med">
+                    <div class="clinic-stat__icon" style="background:${k.grad}"><i class="${k.icon}"></i></div>
+                    <div class="clinic-stat__body">
+                        <p class="clinic-stat__label">${k.label}</p>
+                        <p class="clinic-stat__value" style="color:${k.color};">${Number(k.value || 0).toLocaleString('en-US')}</p>
+                        ${k.pct > 0 ? `<div class="clinic-stat__bar"><span style="width:${Math.min(k.pct,100)}%; background:${k.grad};"></span></div>` : ''}
+                    </div>
+                    <span class="clinic-stat__pct">${k.sub}</span>
                 </div>`).join('');
         }
 
@@ -7300,13 +7342,13 @@ const Clinic = {
                 ? `<tr><td colspan="5" style="padding:24px;text-align:center;color:#94a3b8;">لا توجد بيانات زيارات</td></tr>`
                 : topVisitors.map(([name,info],i) => {
                     const rowBg = i%2===0?'#fff':'#fafafa';
-                    const countColor = info.count>=5?'#dc2626':info.count>=3?'#f59e0b':'#0d9488';
-                    return `<tr style="border-bottom:1px solid #f8fafc;background:${rowBg};" onmouseover="this.style.background='#f0fdfa'" onmouseout="this.style.background='${rowBg}'">
+                    const countColor = info.count>=5?'#dc2626':info.count>=3?'#f59e0b':'#2563eb';
+                    return `<tr style="border-bottom:1px solid #f8fafc;background:${rowBg};" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='${rowBg}'">
                         <td style="padding:9px 12px;font-weight:700;color:#64748b;">${i+1}</td>
-                        <td style="padding:9px 12px;font-weight:600;color:#0f766e;">${Utils.escapeHTML(name)}</td>
+                        <td style="padding:9px 12px;font-weight:600;color:#1e40af;">${Utils.escapeHTML(name)}</td>
                         <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(info.dept)}</td>
                         <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(info.loc)}</td>
-                        <td style="padding:9px 12px;text-align:center;"><span style="background:#f0fdfa;color:${countColor};padding:3px 10px;border-radius:20px;font-weight:700;font-size:0.82rem;">${info.count} زيارة</span></td>
+                        <td style="padding:9px 12px;text-align:center;"><span style="background:#eff6ff;color:${countColor};padding:3px 10px;border-radius:20px;font-weight:700;font-size:0.82rem;">${info.count} زيارة</span></td>
                     </tr>`;
                 }).join('')
         }
