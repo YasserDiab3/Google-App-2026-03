@@ -205,7 +205,93 @@ const ChemicalSafety = {
                 }
                 #chemical-safety-section .data-table tbody tr:hover td { background: #f2f7ff !important; }
                 #chemical-safety-section .data-table td { vertical-align: middle; }
-                /* ✅ الهوية — تحويل بطاقة MSDS من بنفسجي إلى أزرق */
+                /* ✅ الهوية — كروت الإحصائيات */
+                #chemical-safety-section .chem-stat-card {
+                    --chem-blue: #2563eb;
+                    border: 1px solid #dce7f5; border-radius: 16px;
+                    background: #ffffff; box-shadow: 0 8px 24px rgba(15,47,90,.07);
+                    transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+                }
+                #chemical-safety-section .chem-stat-card:hover {
+                    transform: translateY(-3px); border-color: #bfdbfe;
+                    box-shadow: 0 16px 36px rgba(15,47,90,.16);
+                }
+                #chemical-safety-section .chem-stat-card__body { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 18px; }
+                #chemical-safety-section .chem-stat-card__label { display: flex; align-items: center; font-size: .78rem; font-weight: 750; color: #334155; margin: 0 0 6px; }
+                #chemical-safety-section .chem-stat-card__label i { color: #3b82f6; }
+                #chemical-safety-section .chem-stat-card__value { font-size: 2.1rem; font-weight: 900; line-height: 1; margin: 0 0 6px; letter-spacing: -.01em; }
+                #chemical-safety-section .chem-stat-card__sub { font-size: .72rem; color: #94a3b8; margin: 0; }
+                #chemical-safety-section .chem-stat-card__icon {
+                    flex: 0 0 auto; width: 50px; height: 50px; display: grid; place-items: center;
+                    color: #fff; font-size: 19px; border-radius: 14px;
+                    box-shadow: 0 8px 18px rgba(15,47,90,.22);
+                }
+                /* ✅ الهوية — لوحة الفلاتر */
+                #chemical-safety-section .bg-gray-50.p-4.rounded-lg.mb-6 {
+                    background: #f8faff !important; border: 1px solid #dce7f5; border-radius: 14px;
+                }
+                #chemical-safety-section .form-input:focus {
+                    border-color: #2563eb !important; box-shadow: 0 0 0 3px rgba(37,99,235,.14) !important; outline: none;
+                }
+                /* ✅ الهوية — مودال النموذج */
+                .chem-form-modal { border-radius: 18px !important; box-shadow: 0 26px 70px rgba(11,42,85,.35) !important; }
+                .chem-form-modal__header {
+                    position: relative; display: flex; align-items: center; justify-content: space-between;
+                    padding: 20px 24px; color: #fff;
+                    background: linear-gradient(90deg, #0b2a55 0%, #1e40af 60%, #2563eb 100%);
+                }
+                .chem-form-modal__header::after {
+                    content: ""; position: absolute; inset-inline-end: -40px; top: -70px;
+                    width: 170px; height: 170px; border: 24px solid rgba(255,255,255,.05); border-radius: 50%; pointer-events: none;
+                }
+                .chem-form-modal__head-copy { position: relative; z-index: 1; }
+                .chem-form-modal__eyebrow { display: block; margin-bottom: 4px; color: #bfdbfe; font-size: .66rem; font-weight: 800; letter-spacing: .04em; }
+                .chem-form-modal__header .modal-title { margin: 0; color: #fff !important; font-size: 1.25rem; font-weight: 900; text-align: start; }
+                .chem-form-modal__sub { display: block; margin-top: 4px; color: #dbeafe; font-size: .74rem; }
+                .chem-form-modal__header .modal-close {
+                    position: relative; z-index: 1; color: #fff; background: rgba(255,255,255,.14);
+                    border: 1px solid rgba(255,255,255,.25); border-radius: 10px; width: 36px; height: 36px;
+                    display: grid; place-items: center; transition: background .2s;
+                }
+                .chem-form-modal__header .modal-close:hover { background: rgba(255,255,255,.26); }
+                .chem-form-modal .modal-body { background: #f8faff; }
+                .chem-form-modal .tabs-nav {
+                    display: flex; flex-wrap: wrap; gap: 8px; padding: 12px;
+                    background: #ffffff; border: 1px solid #dce7f5; border-radius: 14px;
+                }
+                .chem-form-modal .tabs-nav .tab-btn {
+                    display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px;
+                    border: 1px solid #dbe6f2; border-radius: 10px; background: #f4f8ff; color: #334155;
+                    font-size: .8rem; font-weight: 750; cursor: pointer; transition: all .2s;
+                }
+                .chem-form-modal .tabs-nav .tab-btn:hover { border-color: #93c5fd; background: #eff6ff; color: #1e40af; transform: translateY(-1px); }
+                .chem-form-modal .tabs-nav .tab-btn.active {
+                    background: linear-gradient(135deg, #1e40af, #2563eb); border-color: #1e40af; color: #fff;
+                    box-shadow: 0 6px 16px rgba(30,64,175,.28);
+                }
+                .chem-form-modal .tabs-nav .tab-btn.active i { color: #fde68a; }
+                .chem-form-modal .modal-footer {
+                    background: #ffffff !important; border-top: 1px solid #dce7f5 !important;
+                    box-shadow: 0 -6px 20px rgba(15,47,90,.05);
+                }
+                .chem-form-modal #save-chemical-btn { background: linear-gradient(135deg,#fbbf24,#f59e0b); color: #7c2d12; }
+                .chem-form-modal #next-tab-btn { background: linear-gradient(135deg, #1e40af, #2563eb); color: #fff; }
+                .chem-form-modal #prev-tab-btn { background: #fff8e6; color: #92400e; border: 1px solid #fcd34d; }
+                /* ✅ الهوية — توحيد ألوان الحقول البنفسجية/النيلي في النموذج */
+                .chem-form-modal div[class*="purple"] { background: linear-gradient(135deg, #eff6ff, #dbeafe) !important; border-color: #93c5fd !important; }
+                .chem-form-modal .text-purple-800 { color: #1e40af !important; }
+                .chem-form-modal .text-purple-600 { color: #2563eb !important; }
+                .chem-form-modal div[class*="indigo"] { background: linear-gradient(135deg, #eff6ff, #dbeafe) !important; border-color: #93c5fd !important; }
+                .chem-form-modal .text-indigo-800 { color: #1e40af !important; }
+                .chem-form-modal .text-indigo-600 { color: #2563eb !important; }
+                .chem-form-modal .border-purple-200, .chem-form-modal .border-indigo-200, .chem-form-modal .border-blue-300, .chem-form-modal .border-blue-200 { border-color: #93c5fd !important; }
+                .chem-form-modal .tab-content { animation: chemFormTabIn .22s ease-out; }
+                @keyframes chemFormTabIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+                /* ✅ الهوية — مودال التفاصيل */
+                .chem-detail-modal { border-radius: 18px !important; box-shadow: 0 26px 70px -12px rgba(11,42,85,.4) !important; }
+                .chem-detail-modal__header .modal-close { color: #fff; background: rgba(255,255,255,.14); border-radius: 10px; width: 34px; height: 34px; display: grid; place-items: center; transition: background .2s; }
+                .chem-detail-modal__header .modal-close:hover { background: rgba(255,255,255,.26); }
+                .chem-detail-modal .modal-body { background: #f5f8fd; }
                 #chemical-safety-section .content-card[class*="purple"] {
                     background: linear-gradient(135deg, #eff6ff, #dbeafe) !important;
                     border-inline-start-color: #2563eb !important;
@@ -515,67 +601,59 @@ const ChemicalSafety = {
         const stats = this.getStatistics();
         
         return `
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <!-- إجمالي المواد -->
-                <div class="content-card bg-gradient-to-br from-blue-50 to-blue-100 border-l-4 border-blue-500 hover:shadow-lg transition-all duration-300">
-                    <div class="flex items-center justify-between">
+                <div class="content-card chem-stat-card">
+                    <div class="chem-stat-card__body">
                         <div>
-                            <p class="text-sm font-medium text-gray-600 mb-1">
-                                <i class="fas fa-flask ml-2"></i>إجمالي المواد
-                            </p>
-                            <p class="text-3xl font-bold text-blue-600">${stats.total}</p>
-                            <p class="text-xs text-gray-500 mt-1">مادة كيميائية مسجلة</p>
+                            <p class="chem-stat-card__label"><i class="fas fa-flask ml-1"></i>إجمالي المواد</p>
+                            <p class="chem-stat-card__value" style="color:var(--chem-blue,#1d4ed8);">${stats.total}</p>
+                            <p class="chem-stat-card__sub">مادة كيميائية مسجلة</p>
                         </div>
-                        <div class="bg-blue-500 rounded-full p-4">
-                            <i class="fas fa-flask text-white text-2xl"></i>
+                        <div class="chem-stat-card__icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">
+                            <i class="fas fa-flask"></i>
                         </div>
                     </div>
                 </div>
                 
                 <!-- المواد الخطرة -->
-                <div class="content-card bg-gradient-to-br from-red-50 to-red-100 border-l-4 border-red-500 hover:shadow-lg transition-all duration-300">
-                    <div class="flex items-center justify-between">
+                <div class="content-card chem-stat-card">
+                    <div class="chem-stat-card__body">
                         <div>
-                            <p class="text-sm font-medium text-gray-600 mb-1">
-                                <i class="fas fa-exclamation-triangle ml-2"></i>المواد الخطرة
-                            </p>
-                            <p class="text-3xl font-bold text-red-600">${stats.hazardous}</p>
-                            <p class="text-xs text-gray-500 mt-1">${stats.hazardousPercentage}% من الإجمالي</p>
+                            <p class="chem-stat-card__label"><i class="fas fa-exclamation-triangle ml-1"></i>المواد الخطرة</p>
+                            <p class="chem-stat-card__value" style="color:#dc2626;">${stats.hazardous}</p>
+                            <p class="chem-stat-card__sub">${stats.hazardousPercentage}% من الإجمالي</p>
                         </div>
-                        <div class="bg-red-500 rounded-full p-4">
-                            <i class="fas fa-exclamation-triangle text-white text-2xl"></i>
+                        <div class="chem-stat-card__icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c);">
+                            <i class="fas fa-exclamation-triangle"></i>
                         </div>
                     </div>
                 </div>
                 
                 <!-- المواد الآمنة -->
-                <div class="content-card bg-gradient-to-br from-green-50 to-green-100 border-l-4 border-green-500 hover:shadow-lg transition-all duration-300">
-                    <div class="flex items-center justify-between">
+                <div class="content-card chem-stat-card">
+                    <div class="chem-stat-card__body">
                         <div>
-                            <p class="text-sm font-medium text-gray-600 mb-1">
-                                <i class="fas fa-shield-alt ml-2"></i>المواد الآمنة
-                            </p>
-                            <p class="text-3xl font-bold text-green-600">${stats.safe}</p>
-                            <p class="text-xs text-gray-500 mt-1">مواد آمنة للاستخدام</p>
+                            <p class="chem-stat-card__label"><i class="fas fa-shield-alt ml-1"></i>المواد الآمنة</p>
+                            <p class="chem-stat-card__value" style="color:#16a34a;">${stats.safe}</p>
+                            <p class="chem-stat-card__sub">مواد آمنة للاستخدام</p>
                         </div>
-                        <div class="bg-green-500 rounded-full p-4">
-                            <i class="fas fa-shield-alt text-white text-2xl"></i>
+                        <div class="chem-stat-card__icon" style="background:linear-gradient(135deg,#22c55e,#15803d);">
+                            <i class="fas fa-shield-alt"></i>
                         </div>
                     </div>
                 </div>
                 
                 <!-- المواد مع MSDS -->
-                <div class="content-card bg-gradient-to-br from-purple-50 to-purple-100 border-l-4 border-purple-500 hover:shadow-lg transition-all duration-300">
-                    <div class="flex items-center justify-between">
+                <div class="content-card chem-stat-card">
+                    <div class="chem-stat-card__body">
                         <div>
-                            <p class="text-sm font-medium text-gray-600 mb-1">
-                                <i class="fas fa-file-pdf ml-2"></i>مواد مع MSDS
-                            </p>
-                            <p class="text-3xl font-bold text-purple-600">${stats.withMSDS}</p>
-                            <p class="text-xs text-gray-500 mt-1">${stats.withoutMSDS} بدون MSDS</p>
+                            <p class="chem-stat-card__label"><i class="fas fa-file-pdf ml-1"></i>مواد مع MSDS</p>
+                            <p class="chem-stat-card__value" style="color:var(--chem-blue,#2563eb);">${stats.withMSDS}</p>
+                            <p class="chem-stat-card__sub">${stats.withoutMSDS} بدون MSDS</p>
                         </div>
-                        <div class="bg-purple-500 rounded-full p-4">
-                            <i class="fas fa-file-pdf text-white text-2xl"></i>
+                        <div class="chem-stat-card__icon" style="background:linear-gradient(135deg,#2563eb,#1e40af);">
+                            <i class="fas fa-file-pdf"></i>
                         </div>
                     </div>
                 </div>
@@ -917,13 +995,17 @@ const ChemicalSafety = {
         const sdsApproval = sdsData?.approval || {};
 
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 1000px; max-height: 90vh; overflow-y: auto; overflow-x: hidden;">
-                <div class="modal-header bg-white border-b border-gray-200 flex items-center justify-center relative">
-                    <h2 class="modal-title text-gray-900 text-2xl font-extrabold text-center">
-                        <i class="fas fa-flask ml-2"></i>
-                        ${data ? 'تعديل مادة كيميائية' : 'إضافة مادة كيميائية جديدة'}
-                    </h2>
-                    <button class="modal-close absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600 hover:bg-gray-100 rounded p-2 transition-colors" onclick="this.closest('.modal-overlay').remove()">
+            <div class="modal-content chem-form-modal" style="max-width: 1000px; max-height: 90vh; overflow-y: auto; overflow-x: hidden;">
+                <div class="modal-header chem-form-modal__header">
+                    <div class="chem-form-modal__head-copy">
+                        <span class="chem-form-modal__eyebrow">السلامة الكيميائية — HSE</span>
+                        <h2 class="modal-title text-white">
+                            <i class="fas fa-flask ml-2"></i>
+                            ${data ? 'تعديل مادة كيميائية' : 'إضافة مادة كيميائية جديدة'}
+                        </h2>
+                        <span class="chem-form-modal__sub">${data ? 'تحديث بيانات سجل المواد الكيميائية' : 'تسجيل مادة جديدة في السجل الكيميائي'}</span>
+                    </div>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -2534,8 +2616,8 @@ const ChemicalSafety = {
         modal.className = 'modal-overlay';
         modal.style.zIndex = '10000';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto; overflow-x: hidden; border-radius: 15px; overflow: hidden;">
-                <div class="modal-header modal-header-centered" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px;">
+            <div class="modal-content chem-detail-modal" style="max-width: 900px; max-height: 90vh; overflow-y: auto; overflow-x: hidden; border-radius: 18px; overflow: hidden;">
+                <div class="modal-header chem-detail-modal__header" style="background: linear-gradient(90deg, #0b2a55 0%, #1e40af 60%, #2563eb 100%); color: white; padding: 20px;">
                     <h2 class="modal-title" style="color: white; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;">
                         <i class="fas fa-flask"></i>
                         <span>تفاصيل المادة الكيميائية</span>
