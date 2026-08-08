@@ -1,13 +1,13 @@
 {
-  "version": "1.0.913",
+  "version": "1.0.914",
   "highlights": {
     "ar": [
-      "هوية جديدة لنماذج المواد الكيميائية: مودال إضافة/تعديل بترويسة زرقاء وتنقل محسّن بين الأقسام.",
-      "كروت إحصائيات محسّنة بألوان متوافقة مع الهوية وتأثيرات حركية أنعم."
+      "سجل المرور اليومي للسلامة أصبح بكروت احترافية: أيقونة بالوردية، رقم التقرير، الموقع، القائم بالمرور، والملاحظات.",
+      "فواصل يومية مع شارات الورديات وعدّاد السجلات، مع تنقل سريع بين الأيام."
     ],
     "en": [
-      "New identity for chemical forms: add/edit modal with navy header and improved tab navigation.",
-      "Polished stat cards with brand-aligned colors and smoother motion."
+      "Daily safety checklist log now uses professional cards: shift icon, report number, site, inspector, and notes.",
+      "Daily dividers with shift chips and record counters, plus quick jump between days."
     ]
   }
 }
