@@ -2,10 +2,12 @@
   "version": "1.0.915",
   "highlights": {
     "ar": [
-      "كروت إحصائيات قائمة المرور اليومي للسلامة أصبحت بنمط سجل الفحوصات: أيقونات ملونة، أرقام بارزة، وأشرطة نسبة مئوية."
+      "هوية HSE على لوحة تحليل العيادة الطبية: ترويسة زرقاء متدرجة مع أيقونة كهرمانية وتبديل الفلاتر الكهرماني.",
+      "كروت المؤشرات (الزيارات، الأدوية، الإجازات، الإصابات) بنمط الفحوصات: أيقونات متدرجة وأشرطة نسب مئوية."
     ],
     "en": [
-      "Daily safety checklist KPI cards now match the inspections log style: colored icons, bold numbers, and percentage bars."
+      "HSE identity on the medical clinic dashboard: navy gradient header with amber icon and amber filters button.",
+      "KPI cards (visits, medications, sick leaves, injuries) now match the inspections style with gradient icons and percentage bars."
     ]
   }
 }
