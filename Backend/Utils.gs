@@ -2152,6 +2152,13 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
         } catch (error) {
             return { success: false, message: 'فشل إنشاء/فتح الورقة: ' + error.toString() };
         }
+
+        // 🛡️ Users: دمج الصفوف (upsert-merge) بدل الاستبدال الكامل —
+        // يمنع فقدان أعمدة مثل employeeCode عند وصول نسخة محلية قديمة/ناقصة من الفرونت
+        // (يعيد كتابة ورق Users كاملة من كاش قديم → كانت تمسح الكود المربوط)
+        if (sheetName === 'Users') {
+            return saveUsersMergedToSheet_(spreadsheet, sheet, data);
+        }
         
         // إذا كانت البيانات مصفوفة فارغة أو غير موجودة
         if (!data || (Array.isArray(data) && data.length === 0)) {

@@ -318,6 +318,137 @@ function updateUserInSheet(userId, updateData, actorUserData, options) {
 }
 
 /**
+ * 🛡️ حفظ مستخدمين بدمج صفوف (upsert-merge) بدلاً من الاستبدال الكامل.
+ * عند وصول نسخة محلية قديمة/ناقصة من الفرونت (مثل كاش قديم بدون employeeCode)،
+ * لا تُمسح الأعمدة الموجودة في الورقة — كل صف يُدمج فوق بياناته الحالية،
+ * ولا يُحذف أي مستخدم غير وارد في الحمولة.
+ */
+function saveUsersMergedToSheet_(spreadsheet, sheet, payloadRows) {
+    try {
+        const rows = Array.isArray(payloadRows) ? payloadRows : [];
+        const defaultHeaders = getDefaultHeaders('Users');
+        const unionHeaders = defaultHeaders.slice();
+        const unionSet = {};
+        defaultHeaders.forEach(function (h) { unionSet[h] = true; });
+        rows.forEach(function (row) {
+            if (!row || typeof row !== 'object') return;
+            Object.keys(row).forEach(function (k) {
+                if (!unionSet[k]) {
+                    unionSet[k] = true;
+                    unionHeaders.push(k);
+                }
+            });
+        });
+
+        ensureSheetHeaders(sheet, 'Users', rows);
+        const sheetHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+        const lastRow = sheet.getLastRow();
+        const existingObjs = [];
+        if (lastRow > 1) {
+            const existingValues = sheet.getRange(2, 1, lastRow - 1, sheetHeaders.length).getValues();
+            for (var e = 0; e < existingValues.length; e++) {
+                const obj = {};
+                for (var c = 0; c < sheetHeaders.length; c++) {
+                    obj[sheetHeaders[c]] = existingValues[e][c];
+                }
+                existingObjs.push(obj);
+            }
+        }
+
+        const toSafeValue = function (v) {
+            if (v === null || v === undefined) return '';
+            if (typeof v === 'object') {
+                try { return JSON.stringify(v); } catch (err) { return String(v); }
+            }
+            return v;
+        };
+
+        const normalizeOutgoing = function (obj) {
+            const out = {};
+            Object.keys(obj).forEach(function (k) {
+                out[k] = toSafeValue(obj[k]);
+            });
+            return out;
+        };
+
+        const mergedObjs = [];
+        const usedExisting = {};
+        rows.forEach(function (row) {
+            if (!row || typeof row !== 'object') return;
+            let existing = null;
+            const rowId = String(row.id || '').trim();
+            const rowEmail = String(row.email || '').trim().toLowerCase();
+            for (var i = 0; i < existingObjs.length; i++) {
+                if (usedExisting[i]) continue;
+                const exId = String(existingObjs[i].id || '').trim();
+                const exEmail = String(existingObjs[i].email || '').trim().toLowerCase();
+                if ((rowId && exId === rowId) || (rowEmail && exEmail === rowEmail)) {
+                    existing = existingObjs[i];
+                    usedExisting[i] = true;
+                    break;
+                }
+            }
+
+            let merged;
+            if (existing) {
+                merged = {};
+                Object.keys(existing).forEach(function (k) {
+                    merged[k] = existing[k];
+                });
+                Object.keys(row).forEach(function (k) {
+                    if (k === 'password' && String(row[k] || '').trim() === '***') return; // لا تمسح كلمة المرور
+                    merged[k] = row[k];
+                });
+                if (merged.passwordHash && merged.passwordHash === '***') {
+                    merged.passwordHash = existing.passwordHash || '';
+                }
+                merged.password = '***';
+            } else {
+                merged = {};
+                Object.keys(row).forEach(function (k) {
+                    merged[k] = row[k];
+                });
+                merged.password = '***';
+            }
+            mergedObjs.push(normalizeOutgoing(merged));
+        });
+
+        // المستخدمون الموجودون في الورقة ولم تأتِ حمولتهم: يُحفظون كما هم (لا حذف)
+        for (var j = 0; j < existingObjs.length; j++) {
+            if (!usedExisting[j]) {
+                mergedObjs.push(normalizeOutgoing(existingObjs[j]));
+            }
+        }
+
+        // إعادة كتابة الورقة بالكامل بالصفوف المدمجة (الرؤوس + البيانات)
+        const headerRow = sheetHeaders.slice();
+        const matrix = [headerRow];
+        for (var r = 0; r < mergedObjs.length; r++) {
+            const line = [];
+            for (var hc = 0; hc < sheetHeaders.length; hc++) {
+                line.push(mergedObjs[r][sheetHeaders[hc]] === undefined ? '' : mergedObjs[r][sheetHeaders[hc]]);
+            }
+            matrix.push(line);
+        }
+
+        if (sheet.getLastRow() > 0) {
+            sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn()).clear();
+        }
+        if (matrix.length > 0) {
+            sheet.getRange(1, 1, matrix.length, sheetHeaders.length).setValues(matrix);
+        }
+
+        if (typeof markUsersUpdated_ === 'function') {
+            try { markUsersUpdated_(); } catch (e) { /* ignore */ }
+        }
+        return { success: true, message: 'تم حفظ المستخدمين بنجاح (دمج)', count: mergedObjs.length };
+    } catch (error) {
+        Logger.log('saveUsersMergedToSheet_ error: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء حفظ المستخدمين: ' + error.toString() };
+    }
+}
+
+/**
  * إعادة تعيين كلمة مرور مستخدم (للمدير)
  * @param {string} userId - معرف المستخدم أو البريد الإلكتروني
  * @param {string} newPassword - كلمة المرور الجديدة (اختياري - سيتم إنشاء واحدة تلقائياً إذا لم يتم تحديدها)
