@@ -395,9 +395,22 @@ function saveUsersMergedToSheet_(spreadsheet, sheet, payloadRows) {
                 Object.keys(existing).forEach(function (k) {
                     merged[k] = existing[k];
                 });
+                const forceUnlink = row.unlinkEmployeeCode === true;
                 Object.keys(row).forEach(function (k) {
-                    if (k === 'password' && String(row[k] || '').trim() === '***') return; // لا تمسح كلمة المرور
-                    merged[k] = row[k];
+                    if (k === 'unlinkEmployeeCode') return; // مؤشر فك الربط فقط — لا يُحفظ كعمود
+                    const v = row[k];
+                    if (k === 'employeeCode') {
+                        // الحقول الفارغة في الحمولة = نسخة قديمة/ناقصة → لا تمسح الربط
+                        if (forceUnlink) { merged[k] = ''; return; }
+                        if (v === '' || v === null || v === undefined) return;
+                        merged[k] = v;
+                        return;
+                    }
+                    if (k === 'password' && String(v || '').trim() === '***') return; // لا تمسح كلمة المرور
+                    if (k === 'passwordHash' && String(v || '').trim() === '***') return;
+                    // قاعدة عامة: قيمة فارغة لا تُكتب فوق قيمة قائمة (يحمي department/role/name أيضاً)
+                    if (v === '' || v === null || v === undefined) return;
+                    merged[k] = v;
                 });
                 if (merged.passwordHash && merged.passwordHash === '***') {
                     merged.passwordHash = existing.passwordHash || '';

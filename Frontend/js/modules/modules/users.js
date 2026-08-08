@@ -2157,6 +2157,9 @@ const Users = {
             role: roleEl.value,
             department: departmentEl.value.trim(),
             employeeCode: employeeCode,
+            // 🛡️ علامة الفك الصريح: لو المستخدم كان مربوطاً والمدير مسح الكود —
+            // نعلم الخادم أن التعديل مقصود (فك الربط) وليس نسخة قديمة بلا كود
+            ...(employeeCode === '' && userData?.employeeCode ? { unlinkEmployeeCode: true } : {}),
             active: activeEl.checked,
             photo: photoBase64,
             // ✅ إصلاح: التأكد من حفظ الصلاحيات حتى لو كانت فارغة (لكن ليس undefined)
@@ -2348,6 +2351,8 @@ const Users = {
                         isOnline: isCurrentlyLoggedIn ? true : formData.isOnline
                     };
                     AppState.appData.users[index] = { ...previous, ...finalFormData };
+                    // العلامة تُرسل للخادم فقط ولا تُحفظ في الكاش المحلي
+                    delete AppState.appData.users[index].unlinkEmployeeCode;
                 }
 
                 // حفظ البيانات محلياً
