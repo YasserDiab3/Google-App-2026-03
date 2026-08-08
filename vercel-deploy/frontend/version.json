@@ -2,14 +2,14 @@
   "version": "1.0.919",
   "highlights": {
     "ar": [
-      "هوية HSE كاملة لواجهة العيادة الطبية الرئيسية: ترويسة زرقاء متدرجة بشعار HSE وأيقونة كهرمانية مع الحفاظ على مواقع الأزرار (أنواع الزيارة، تحديث، تسجيل زيارة).",
-      "كروت المؤشرات السريعة (سجل التردد، الأدوية، الإجازات، الإصابات) مطابقة تماماً لنمط كروت سجل الفحوصات الدورية pinsp-stat: أيقونات متدرجة ملونة وأشرطة نسب مئوية.",
-      "شريط التبويبات وجميع لوحات العيادة (الجداول والترويسات والنماذج) بهوية الأزرق الموحدة مع دعم الوضع الداكن."
+      "تحسين احترافي للملف الشخصي: ترويسة HSE زرقاء متدرجة بشعار وأيقونة كهرمانية، وإطار الصورة الشخصية كهرماني مع تدرج أزرق لترويسة البطاقة.",
+      "كروت التفاصيل المهنية (دورات، ساعات، مخالفات، مهمات الوقاية، زيارات العيادة) كروت بارزة بألوان سيمانتيكية مع تأثير حركة، وجدول أرقام الطوارئ بترويسة زرقاء موحدة.",
+      "جميع بطاقات الملف الشخصي وبطاقة QR وحقول النماذج بهوية الأزرق الموحدة مع دعم كامل للوضع الداكن."
     ],
     "en": [
-      "Full HSE identity for the main clinic UI: navy gradient hero with HSE shield and amber icon, keeping the original button positions (visit types, refresh, register visit).",
-      "Quick stats cards (visits, medications, sick leaves, injuries) now exactly match the periodic inspections pinsp-stat style: colored gradient icons and percentage bars.",
-      "Clinic tabs bar and all tab panels (tables, headers, forms) get the unified blue identity with dark mode support."
+      "Professional overhaul of the personal profile page: navy gradient HSE hero with amber icon, amber avatar ring and gradient profile card shell.",
+      "Professional stats tiles (training, violations, PPE, clinic visits) now pop with semantic colors and hover lift; emergency numbers table gets the unified navy header.",
+      "All profile cards, QR card and form fields follow the unified blue identity with full dark mode support."
     ]
   }
 }
