@@ -2,14 +2,12 @@
   "version": "1.0.921",
   "highlights": {
     "ar": [
-      "هوية HSE كاملة لموديول التدريبات: ترويسة زرقاء متدرجة بشعار وأيقونة كهرمانية مع الحفاظ على مواقع وترتيب جميع الأزرار (الخطة السنوية، المصفوفة، نموذج حضور، تحديث، تسجيل مقاول).",
-      "كروت KPI لبرامج التدريب (الإجمالي، القادمة، المكتملة، المشاركين) بنمط كروت سجل الفحوصات pinsp-stat: أيقونات متدرجة وأرقام ملونة وأشرطة نسب مئوية.",
-      "شريط التبويبات والجداول والترويسات ولوحات التحليلات (المقاولين والموظفين) بهوية الأزرق الموحدة مع دعم الوضع الداكن."
+      "إصلاح مهلة الموافقة على طلبات الاحتياج: تحديث الطلب أصبح على مستوى الصف الواحد فقط في الورقة بدلاً من إعادة كتابة الجدول كاملاً — سرعة أسرع بكثير.",
+      "حماية من التكرار: الموافقة/الرفض المتكرر على نفس الحالة يُرجع نجاحاً فورياً دون كتابة + مهلة أطول (45 ثانية) لطلب الموافقة."
     ],
     "en": [
-      "Full HSE identity for the training module: navy gradient hero with amber icon, keeping all existing button positions and order (annual plan, matrix, attendance form, refresh, contractor registration).",
-      "Training programs KPI cards (total, upcoming, completed, participants) now exactly match the inspections pinsp-stat style with gradient icons, colored values and percentage bars.",
-      "Tabs bar, tables, headers and analytics panels (contractors and employees) get the unified blue identity with full dark mode support."
+      "Fixed the supply request approval timeout: the request row is now updated in-place instead of rewriting the whole sheet — much faster.",
+      "Idempotent approvals: repeating the same approve/reject returns success instantly with no write, plus a longer 45s client timeout for approval calls."
     ]
   }
 }
