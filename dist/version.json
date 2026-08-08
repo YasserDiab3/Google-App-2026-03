@@ -1,15 +1,15 @@
 {
-  "version": "1.0.918",
+  "version": "1.0.919",
   "highlights": {
     "ar": [
-      "هوية HSE كاملة لواجهة العيادة الطبية الرئيسية: ترويسة زرقاء متدرجة بشعار HSE وأيقونة كهرمانية مع أزرار زجاجية.",
-      "كروت المؤشرات السريعة (سجل التردد، الأدوية، الإجازات، الإصابات) بنمط الفحوصات الدورية: أيقونات متدرجة وأشرطة نسب مئوية.",
-      "شريط التبويبات وجميع لوحات العيادة (الجداول والترويسات والنماذج) بهوية الأزرق الموحدة."
+      "هوية HSE كاملة لواجهة العيادة الطبية الرئيسية: ترويسة زرقاء متدرجة بشعار HSE وأيقونة كهرمانية مع الحفاظ على مواقع الأزرار (أنواع الزيارة، تحديث، تسجيل زيارة).",
+      "كروت المؤشرات السريعة (سجل التردد، الأدوية، الإجازات، الإصابات) مطابقة تماماً لنمط كروت سجل الفحوصات الدورية pinsp-stat: أيقونات متدرجة ملونة وأشرطة نسب مئوية.",
+      "شريط التبويبات وجميع لوحات العيادة (الجداول والترويسات والنماذج) بهوية الأزرق الموحدة مع دعم الوضع الداكن."
     ],
     "en": [
-      "Full HSE identity for the main clinic UI: navy gradient hero with shield badge and amber icon, glass action buttons.",
-      "Quick stats cards (visits, medications, sick leaves, injuries) now match the inspections style with gradient icons and percentage bars.",
-      "Clinic tabs bar and all tab panels (tables, headers, forms) get the unified blue identity while keeping button positions."
+      "Full HSE identity for the main clinic UI: navy gradient hero with HSE shield and amber icon, keeping the original button positions (visit types, refresh, register visit).",
+      "Quick stats cards (visits, medications, sick leaves, injuries) now exactly match the periodic inspections pinsp-stat style: colored gradient icons and percentage bars.",
+      "Clinic tabs bar and all tab panels (tables, headers, forms) get the unified blue identity with dark mode support."
     ]
   }
 }

@@ -5682,9 +5682,144 @@ window.UI = {
             });
     },
 
+    /**
+     * حقن هوية الملف الشخصي (الترويسة + الكروت + الجداول + الداكن) داخل #profile-section
+     */
+    _injectProfileIdentityStyles() {
+        if (document.getElementById('profile-identity-styles')) return;
+
+        const style = document.createElement('style');
+        style.id = 'profile-identity-styles';
+        style.textContent = `
+        /* ══ Hero الملف الشخصي ══ */
+        #profile-section .profile-id-hero {
+            position: relative; overflow: hidden;
+            display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+            border-radius: 18px; padding: 20px 26px 24px; margin-bottom: 16px;
+            background: radial-gradient(circle at 85% -20%, rgba(251,191,36,.14), transparent 45%),
+                        linear-gradient(120deg, #0b2a55 0%, #1e40af 55%, #2563eb 100%);
+            box-shadow: 0 12px 30px rgba(11,42,85,.28); color: #fff;
+        }
+        #profile-section .profile-id-hero::after {
+            content: ''; position: absolute; inset: auto 0 -34px 0; height: 34px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 40' preserveAspectRatio='none'%3E%3Cpath fill='%23ffffff' fill-opacity='0.10' d='M0 40 L60 10 L120 35 L180 4 L240 24 L300 8 L360 24 L420 12 L480 30 L540 16 L600 26 L660 10 L720 30 L780 14 L840 28 L900 10 L960 24 L1020 6 L1080 20 L1140 12 L1200 24 L1200 40 L0 40 Z'/%3E%3C/svg%3E");
+            background-size: cover; background-position: bottom; pointer-events: none;
+        }
+        #profile-section .profile-id-hero__icon {
+            width: 56px; height: 56px; flex-shrink: 0; position: relative; z-index: 1;
+            display: grid; place-items: center; border-radius: 15px;
+            background: linear-gradient(145deg, #fbbf24, #f59e0b);
+            color: #7c2d12; font-size: 1.5rem;
+            box-shadow: 0 8px 18px rgba(0,0,0,.25);
+        }
+        #profile-section .profile-id-hero__text { flex: 1; min-width: 200px; position: relative; z-index: 1; }
+        #profile-section .profile-id-hero__eyebrow {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: .8rem; font-weight: 700; color: #fde68a;
+            background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+            padding: 4px 12px; border-radius: 999px; margin-bottom: 8px; letter-spacing: .3px;
+        }
+        #profile-section .profile-id-hero__title { margin: 0; font-size: 1.5rem; font-weight: 800; color: #fff; }
+        #profile-section .profile-id-hero__subtitle { margin: 4px 0 0; font-size: .9rem; color: rgba(255,255,255,.72); }
+
+        /* ══ الكروت ══ */
+        #profile-section .profile-dashboard-grid { gap: 16px; }
+        #profile-section .content-card.profile-hero-card,
+        #profile-section .content-card.profile-card {
+            border: 1px solid #dce7f5; border-radius: 16px;
+            box-shadow: 0 6px 18px rgba(15,47,90,.06);
+        }
+        #profile-section .profile-linkedin-shell::before {
+            background: linear-gradient(115deg, #0b2a55 0%, #1e40af 55%, #2563eb 100%);
+        }
+        #profile-section .profile-avatar-wrap {
+            border-color: #fbbf24; box-shadow: 0 8px 22px rgba(0,0,0,.3);
+        }
+        #profile-section .profile-card .card-header {
+            background: linear-gradient(120deg, #f1f6ff, #ffffff);
+            border-bottom: 1px solid #dce7f5;
+        }
+        #profile-section .profile-card .card-title { color: #172033; }
+
+        /* ══ كروت التفاصيل المهنية ══ */
+        #profile-section .profile-kpi-grid { gap: 10px; }
+        #profile-section .profile-kpi {
+            border: 1px solid #dce7f5; border-radius: 12px;
+            background: linear-gradient(160deg, #ffffff, #f4f8ff);
+            padding: 10px 12px; box-shadow: 0 3px 10px rgba(15,47,90,.05);
+            transition: transform .18s ease, box-shadow .18s ease;
+        }
+        #profile-section .profile-kpi:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(15,47,90,.12); }
+        #profile-section .profile-kpi span { font-weight: 600; }
+        #profile-section .profile-kpi strong { font-weight: 900; }
+        #profile-section .profile-kpi:nth-child(1) strong { color: #1d4ed8; }
+        #profile-section .profile-kpi:nth-child(2) strong { color: #4338ca; }
+        #profile-section .profile-kpi:nth-child(3) strong { color: #b91c1c; }
+        #profile-section .profile-kpi:nth-child(4) strong { color: #c2410c; }
+        #profile-section .profile-kpi:nth-child(5) strong { color: #15803d; }
+        #profile-section .profile-kpi:nth-child(6) strong { color: #1e40af; }
+
+        /* ══ أزرار الهوية ══ */
+        #profile-section .profile-actions .btn-primary,
+        #profile-section .profile-admin-em-form .btn-primary,
+        #profile-section .profile-qr-actions .btn-primary {
+            background: linear-gradient(145deg, #fbbf24, #f59e0b);
+            color: #7c2d12; font-weight: 700; border: none;
+        }
+        #profile-section .profile-actions .btn-primary:hover,
+        #profile-section .profile-admin-em-form .btn-primary:hover,
+        #profile-section .profile-qr-actions .btn-primary:hover {
+            background: linear-gradient(145deg, #fcd34d, #f59e0b); color: #7c2d12;
+        }
+        #profile-section .profile-contact-icon-btn { border-radius: 11px; }
+
+        /* ══ جدول أرقام طوارئ المؤسسة ══ */
+        #profile-section .profile-admin-table thead th {
+            background: linear-gradient(90deg, #1e40af, #2563eb);
+            color: #fff; border-color: #1d4ed8;
+        }
+        #profile-section .profile-admin-table tbody tr:hover td { background: #f2f7ff; }
+        #profile-section .profile-admin-em-form .form-input:focus,
+        #profile-section .profile-qr-actions .form-input:focus {
+            border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.14);
+        }
+
+        /* ══ بطاقة QR ══ */
+        #profile-section .profile-qr-holder {
+            background: #f8fbff; border: 1.5px dashed #bfdbfe;
+            border-radius: 14px; padding: 14px;
+        }
+        #profile-section .profile-qr-image { border-radius: 12px; border: 1px solid #dce7f5; background: #fff; }
+
+        /* ══ شريحة أرقام الطوارئ ══ */
+        #profile-section .profile-chip {
+            border-radius: 10px; border-color: #ccd7f5; background: #f2f7ff;
+        }
+
+        /* ══ الوضع الداكن ══ */
+        [data-theme="dark"] #profile-section .content-card.profile-hero-card,
+        [data-theme="dark"] #profile-section .content-card.profile-card {
+            border-color: #2a3b5c; box-shadow: 0 6px 18px rgba(0,0,0,.3);
+        }
+        [data-theme="dark"] #profile-section .profile-card .card-header {
+            background: linear-gradient(120deg, #16233f, #1e293b); border-bottom-color: #2a3b5c;
+        }
+        [data-theme="dark"] #profile-section .profile-kpi {
+            background: linear-gradient(160deg, #15283f, #1e2a45); border-color: #243b55; box-shadow: none;
+        }
+        [data-theme="dark"] #profile-section .profile-admin-table tbody tr:hover td { background: #1e293b; }
+        [data-theme="dark"] #profile-section .profile-qr-holder { background: #16233f; border-color: #2a3b5c; }
+        [data-theme="dark"] #profile-section .profile-chip { background: rgba(255,255,255,.06); border-color: #2a3b5c; }
+        [data-theme="dark"] #profile-section .profile-hero-content { background: rgba(30,41,59,.85); border-color: #334155; }
+        `;
+        document.head.appendChild(style);
+    },
+
     async renderMyProfileSection() {
         const section = document.getElementById('profile-section');
         if (!section) return;
+
+        this._injectProfileIdentityStyles();
         const t = (k, f) => {
             if (window.AppI18n && typeof window.AppI18n.t === 'function') {
                 return window.AppI18n.t(k, null, f || k);
@@ -5816,8 +5951,13 @@ window.UI = {
         }).join('');
 
         section.innerHTML = `
-            <div class="section-header">
-                <h2 class="section-title"><i class="fas fa-id-card ml-2"></i><span data-i18n="nav.profile">${t('nav.profile', 'ملفي الشخصي')}</span></h2>
+            <div class="profile-id-hero">
+                <div class="profile-id-hero__icon"><i class="fas fa-id-card"></i></div>
+                <div class="profile-id-hero__text">
+                    <span class="profile-id-hero__eyebrow"><i class="fas fa-shield-halved fa-xs"></i> HSE · الصحة المهنية والسلامة</span>
+                    <h2 class="profile-id-hero__title"><span data-i18n="nav.profile">${t('nav.profile', 'ملفي الشخصي')}</span></h2>
+                    <p class="profile-id-hero__subtitle">${t('module.profile.personalInfo', 'البيانات الشخصية')} — التفاصيل المهنية وأرقام الطوارئ وبطاقة QR</p>
+                </div>
             </div>
             <div class="profile-dashboard-grid">
                 <div class="content-card profile-hero-card profile-linkedin-shell">
