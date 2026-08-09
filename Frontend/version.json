@@ -1,11 +1,11 @@
 {
-  "version": "1.0.930",
+  "version": "1.0.932",
   "highlights": {
     "ar": [
-      "إصلاح تسرب صلاحيات مؤقت: أثناء أول ثوانٍ من فتح التطبيق وقبل اكتمال مزامنة جدول المستخدمين لم تعد الموديولات الافتراضية (طلبات/ملاحظات/تقويم/طوارئ/ذكاء اصطناعي) تظهر لمستخدمين لم تُمنح لهم — القائمة تُبنى بناءً على حالة المستخدم في قاعدة البيانات فقط."
+      "تصريح العمل: مربع اختيار واضح (تشك بوكس) لكل نوع تصريح في القسم الثالث (النموذجين اليدوي والتلقائي) — تفعيل مربع النوع يفتح تفاصيله، وإلغاؤه يغلقها، والنوع المختار يُسجل تلقائياً في التصريح."
     ],
     "en": [
-      "Fixed a transient permissions leak: on app boot, before the users sheet finishes syncing, default-basic modules (requests/observations/calendar/emergency/AI assistant) shown by mistake no longer appear — the menu now renders strictly from the user's row in the database."
+      "Work permit: a clear checkbox for every permit type in section 3 (both manual and automatic forms) — checking a type enables its details, unchecking disables them, and the selected types are recorded automatically."
     ]
   }
 }

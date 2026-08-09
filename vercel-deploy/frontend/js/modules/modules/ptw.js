@@ -10549,6 +10549,29 @@ const PTW = {
                     font-weight: 600;
                     color: #333;
                 }
+                /* محدد نوع التصريح: مربع اختيار واضح (تشك بوكس) على رأس كل صف نوع */
+                .ptw-work-types-section .ptw-work-type-check {
+                    width: 20px;
+                    height: 20px;
+                    min-width: 20px;
+                    margin: 0 !important;
+                    border-radius: 6px;
+                    accent-color: #003865;
+                    cursor: pointer;
+                    flex-shrink: 0;
+                }
+                .ptw-work-types-section .ptw-work-type-row__label { cursor: pointer; }
+                .ptw-work-types-section .ptw-work-type-row.is-type-checked {
+                    box-shadow: inset 0 0 0 2px rgba(0, 56, 101, 0.25);
+                }
+                .ptw-work-types-section .ptw-work-type-row.is-type-disabled {
+                    opacity: 0.5;
+                    filter: grayscale(0.65);
+                    background: #f8fafc !important;
+                }
+                .ptw-work-types-section .ptw-work-type-row.is-type-disabled .ptw-work-type-row__opts {
+                    pointer-events: none;
+                }
                 /* القسم الثالث فقط — كل القواعد تحت .ptw-work-types-section */
                 .ptw-work-types-section {
                     direction: rtl;
@@ -11542,6 +11565,7 @@ const PTW = {
                             <div id="manual-work-type-cards" class="ptw-work-type-stack" role="group" aria-label="أنواع التصريح">
                                 <div class="ptw-work-type-row" data-type="hot" id="manual-panel-hot">
                                     <div class="ptw-work-type-row__label">
+                                        <input type="checkbox" id="manual-hot-check" class="ptw-work-type-check" ${(existingEntry?.hotWorkDetails || []).length > 0 ? 'checked' : ''} title="تنشيط نوع التصريح: أعمال ساخنة" aria-label="أعمال ساخنة">
                                         <span class="ptw-work-type-row__icon" style="background:#fef2f2;color:#dc2626;"><i class="fas fa-fire" aria-hidden="true"></i></span>
                                         <span class="ptw-work-type-row__name">أعمال ساخنة</span>
                                     </div>
@@ -11553,6 +11577,7 @@ const PTW = {
                                 </div>
                                 <div class="ptw-work-type-row" data-type="confined" id="manual-panel-confined">
                                     <div class="ptw-work-type-row__label">
+                                        <input type="checkbox" id="manual-confined-check" class="ptw-work-type-check" ${(existingEntry?.confinedSpaceDetails || []).length > 0 ? 'checked' : ''} title="تنشيط نوع التصريح: أماكن مغلقة" aria-label="أماكن مغلقة">
                                         <span class="ptw-work-type-row__icon" style="background:#f8fafc;color:#475569;"><i class="fas fa-box" aria-hidden="true"></i></span>
                                         <span class="ptw-work-type-row__name">أماكن مغلقة</span>
                                     </div>
@@ -11564,6 +11589,7 @@ const PTW = {
                                 </div>
                                 <div class="ptw-work-type-row" data-type="height" id="manual-panel-height">
                                     <div class="ptw-work-type-row__label">
+                                        <input type="checkbox" id="manual-height-check" class="ptw-work-type-check" ${(existingEntry?.heightWorkDetails || []).length > 0 ? 'checked' : ''} title="تنشيط نوع التصريح: عمل على ارتفاع" aria-label="عمل على ارتفاع">
                                         <span class="ptw-work-type-row__icon" style="background:#eff6ff;color:#2563eb;"><i class="fas fa-arrow-up" aria-hidden="true"></i></span>
                                         <span class="ptw-work-type-row__name">عمل على ارتفاع</span>
                                     </div>
@@ -11575,11 +11601,11 @@ const PTW = {
                                 </div>
                                 <div class="ptw-work-type-row" data-type="excavation" id="manual-panel-excavation">
                                     <div class="ptw-work-type-row__label">
+                                        <input type="checkbox" id="manual-excavation-check" class="ptw-work-type-check" ${(existingEntry?.excavationLength || existingEntry?.excavationWidth || existingEntry?.excavationDepth || existingEntry?.soilType) ? 'checked' : ''} title="تنشيط نوع التصريح: أعمال حفر" aria-label="أعمال حفر">
                                         <span class="ptw-work-type-row__icon" style="background:#fffbeb;color:#d97706;"><i class="fas fa-mountain" aria-hidden="true"></i></span>
                                         <span class="ptw-work-type-row__name">أعمال حفر</span>
                                     </div>
                                     <div class="ptw-work-type-row__opts ptw-work-type-row__opts--fields">
-                                        <label class="ptw-work-subopt"><input type="checkbox" id="manual-excavation-check" class="form-checkbox text-yellow-600" ${(existingEntry?.excavationLength || existingEntry?.excavationWidth || existingEntry?.excavationDepth || existingEntry?.soilType) ? 'checked' : ''}><span>تطبيق</span></label>
                                         <input type="text" id="manual-excavation-length" class="form-input ptw-work-subopt-input" value="${Utils.escapeHTML(existingEntry?.excavationLength || '')}" placeholder="طول">
                                         <input type="text" id="manual-excavation-width" class="form-input ptw-work-subopt-input" value="${Utils.escapeHTML(existingEntry?.excavationWidth || '')}" placeholder="عرض">
                                         <input type="text" id="manual-excavation-depth" class="form-input ptw-work-subopt-input" value="${Utils.escapeHTML(existingEntry?.excavationDepth || '')}" placeholder="عمق">
@@ -11589,6 +11615,7 @@ const PTW = {
                                 </div>
                                 <div class="ptw-work-type-row" data-type="electrical" id="manual-panel-electrical">
                                     <div class="ptw-work-type-row__label">
+                                        <input type="checkbox" id="manual-electrical-check" class="ptw-work-type-check" ${(existingEntry?.electricalWorkType || '').trim() ? 'checked' : ''} title="تنشيط نوع التصريح: أعمال كهرباء" aria-label="أعمال كهرباء">
                                         <span class="ptw-work-type-row__icon" style="background:#f5f3ff;color:#7c3aed;"><i class="fas fa-bolt" aria-hidden="true"></i></span>
                                         <span class="ptw-work-type-row__name">أعمال كهرباء</span>
                                     </div>
@@ -11598,6 +11625,7 @@ const PTW = {
                                 </div>
                                 <div class="ptw-work-type-row" data-type="cold" id="manual-panel-cold">
                                     <div class="ptw-work-type-row__label">
+                                        <input type="checkbox" id="manual-cold-check" class="ptw-work-type-check" ${(existingEntry?.coldWorkType || '').trim() ? 'checked' : ''} title="تنشيط نوع التصريح: أعمال على البارد" aria-label="أعمال على البارد">
                                         <span class="ptw-work-type-row__icon" style="background:#ecfeff;color:#0891b2;"><i class="fas fa-snowflake" aria-hidden="true"></i></span>
                                         <span class="ptw-work-type-row__name">أعمال على البارد</span>
                                     </div>
@@ -11607,6 +11635,7 @@ const PTW = {
                                 </div>
                                 <div class="ptw-work-type-row" data-type="other" id="manual-panel-other">
                                     <div class="ptw-work-type-row__label">
+                                        <input type="checkbox" id="manual-other-check" class="ptw-work-type-check" ${(existingEntry?.otherWorkType || '').trim() ? 'checked' : ''} title="تنشيط نوع التصريح: أعمال أخرى" aria-label="أعمال أخرى">
                                         <span class="ptw-work-type-row__icon" style="background:#f1f5f9;color:#475569;"><i class="fas fa-ellipsis" aria-hidden="true"></i></span>
                                         <span class="ptw-work-type-row__name">أعمال أخرى</span>
                                     </div>
@@ -12260,13 +12289,27 @@ const PTW = {
         // لأن الشخص الذي يفتح التصريح قد يختلف عن الشخص الذي يغلق التصريح من فريق السلامة
 
         // صفوف أنواع التصريح ظاهرة دائماً — تعليم الصف المملوء فقط (بدون لوحة منبثقة)
+        // مربع النوع (تشك بوكس) يتحكم بتفعيل الصف:
+        // - يوجد بيانات في الصف مع مربع غير مفعّل → يفعَّل المربع تلقائياً (توافق مع السجلات القديمة)
+        // - إلغاء تحديد المربع → يُعطَّل الصف (يشمل تعطيل مدخلاته) ولا يُحتسب نوعه عند الحفظ
         const typeCardsRoot = modal.querySelector('#manual-work-type-cards') || modal.querySelector('.ptw-work-type-stack');
         const syncWorkTypeRowsFilled = () => {
             if (!typeCardsRoot) return;
             typeCardsRoot.querySelectorAll('.ptw-work-type-row').forEach((row) => {
-                const hasChecked = !!row.querySelector('input[type="checkbox"]:checked');
-                const hasText = Array.from(row.querySelectorAll('input[type="text"]')).some((inp) => String(inp.value || '').trim() !== '');
-                row.classList.toggle('is-filled', hasChecked || hasText);
+                const typeCheck = row.querySelector('.ptw-work-type-check');
+                const hasChecked = !!row.querySelector('.ptw-work-type-row__opts input[type="checkbox"]:checked');
+                const hasText = Array.from(row.querySelectorAll('.ptw-work-type-row__opts input[type="text"]')).some((inp) => String(inp.value || '').trim() !== '');
+                const hasData = hasChecked || hasText;
+                if (typeCheck) {
+                    if (!typeCheck.checked && hasData) typeCheck.checked = true;
+                    const enabled = typeCheck.checked;
+                    row.classList.toggle('is-type-checked', enabled);
+                    row.classList.toggle('is-type-disabled', !enabled);
+                    row.classList.toggle('is-filled', enabled && hasData);
+                    row.querySelectorAll('.ptw-work-type-row__opts input').forEach((inp) => { inp.disabled = !enabled; });
+                } else {
+                    row.classList.toggle('is-filled', hasData);
+                }
             });
         };
         if (typeCardsRoot) {
@@ -12518,16 +12561,20 @@ const PTW = {
         const confinedSpaceDetails = Array.from(modal.querySelectorAll('input[name="manual-confined-space"]:checked')).map((cb) => cb.value);
         const heightWorkDetails = Array.from(modal.querySelectorAll('input[name="manual-height-work"]:checked')).map((cb) => cb.value);
 
+        const typeEnabled = (id) => {
+            const box = modal.querySelector(id);
+            return !box || box.checked;
+        };
         const derivedPermitTypes = [];
-        if (hotWorkDetails.length) derivedPermitTypes.push('أعمال ساخنة');
-        if (confinedSpaceDetails.length) derivedPermitTypes.push('أعمال في الأماكن المغلقة');
-        if (heightWorkDetails.length) derivedPermitTypes.push('أعمال في الارتفاعات');
+        if (hotWorkDetails.length || typeEnabled('#manual-hot-check')) derivedPermitTypes.push('أعمال ساخنة');
+        if (confinedSpaceDetails.length || typeEnabled('#manual-confined-check')) derivedPermitTypes.push('أعمال في الأماكن المغلقة');
+        if (heightWorkDetails.length || typeEnabled('#manual-height-check')) derivedPermitTypes.push('أعمال في الارتفاعات');
         const hasExcavation = modal.querySelector('#manual-excavation-check')?.checked
             || modal.querySelector('#manual-excavation-length')?.value?.trim();
-        if (hasExcavation) derivedPermitTypes.push('أعمال حفر');
-        if (modal.querySelector('#manual-electrical-check')?.checked || modal.querySelector('#manual-electrical-work-type')?.value?.trim()) derivedPermitTypes.push('أعمال كهربائية');
-        if (modal.querySelector('#manual-cold-check')?.checked || modal.querySelector('#manual-cold-work-type')?.value?.trim()) derivedPermitTypes.push('أعمال باردة');
-        if (modal.querySelector('#manual-other-check')?.checked || modal.querySelector('#manual-other-work-type')?.value?.trim()) derivedPermitTypes.push('أعمال أخرى');
+        if (hasExcavation || typeEnabled('#manual-excavation-check')) derivedPermitTypes.push('أعمال حفر');
+        if (modal.querySelector('#manual-electrical-check')?.checked || modal.querySelector('#manual-electrical-work-type')?.value?.trim() || typeEnabled('#manual-electrical-check')) derivedPermitTypes.push('أعمال كهربائية');
+        if (modal.querySelector('#manual-cold-check')?.checked || modal.querySelector('#manual-cold-work-type')?.value?.trim() || typeEnabled('#manual-cold-check')) derivedPermitTypes.push('أعمال باردة');
+        if (modal.querySelector('#manual-other-check')?.checked || modal.querySelector('#manual-other-work-type')?.value?.trim() || typeEnabled('#manual-other-check')) derivedPermitTypes.push('أعمال أخرى');
         const finalPermitTypes = derivedPermitTypes.length ? derivedPermitTypes : ['أعمال أخرى'];
 
         const closureTimeVal = modal.querySelector('#manual-closure-time')?.value || '';
@@ -12816,16 +12863,20 @@ const PTW = {
                 return { role, name: nameEl?.value?.trim() || '', signature: sigEl?.value?.trim() || '', date: '', notes: '' };
             });
 
-            // تحديد أنواع التصريح بناءً على طبيعة الأعمال المحددة
+            // تحديد أنواع التصريح بناءً على طبيعة الأعمال المحددة (مربعات الأنواع + التفاصيل)
+            const typeEnabled = (id) => {
+                const box = modal.querySelector(id);
+                return !box || box.checked;
+            };
             const derivedPermitTypes = [];
-            if (hotWorkDetails.length > 0) derivedPermitTypes.push('أعمال ساخنة');
-            if (confinedSpaceDetails.length > 0) derivedPermitTypes.push('أعمال في الأماكن المغلقة');
-            if (heightWorkDetails.length > 0) derivedPermitTypes.push('أعمال في الارتفاعات');
+            if (hotWorkDetails.length > 0 || typeEnabled('#manual-hot-check')) derivedPermitTypes.push('أعمال ساخنة');
+            if (confinedSpaceDetails.length > 0 || typeEnabled('#manual-confined-check')) derivedPermitTypes.push('أعمال في الأماكن المغلقة');
+            if (heightWorkDetails.length > 0 || typeEnabled('#manual-height-check')) derivedPermitTypes.push('أعمال في الارتفاعات');
             const hasExcavation = modal.querySelector('#manual-excavation-check')?.checked || modal.querySelector('#manual-excavation-length')?.value?.trim() || modal.querySelector('#manual-excavation-width')?.value?.trim() || modal.querySelector('#manual-excavation-depth')?.value?.trim() || modal.querySelector('#manual-excavation-soil')?.value?.trim();
             if (hasExcavation) derivedPermitTypes.push('أعمال حفر');
-            if (modal.querySelector('#manual-electrical-check')?.checked || modal.querySelector('#manual-electrical-work-type')?.value?.trim()) derivedPermitTypes.push('أعمال كهربائية');
-            if (modal.querySelector('#manual-cold-check')?.checked || modal.querySelector('#manual-cold-work-type')?.value?.trim()) derivedPermitTypes.push('أعمال باردة');
-            if (modal.querySelector('#manual-other-check')?.checked || modal.querySelector('#manual-other-work-type')?.value?.trim()) derivedPermitTypes.push('أعمال أخرى');
+            if (modal.querySelector('#manual-electrical-check')?.checked || modal.querySelector('#manual-electrical-work-type')?.value?.trim() || typeEnabled('#manual-electrical-check')) derivedPermitTypes.push('أعمال كهربائية');
+            if (modal.querySelector('#manual-cold-check')?.checked || modal.querySelector('#manual-cold-work-type')?.value?.trim() || typeEnabled('#manual-cold-check')) derivedPermitTypes.push('أعمال باردة');
+            if (modal.querySelector('#manual-other-check')?.checked || modal.querySelector('#manual-other-work-type')?.value?.trim() || typeEnabled('#manual-other-check')) derivedPermitTypes.push('أعمال أخرى');
             
             // إذا لم يتم تحديد أي نوع، استخدم "أعمال أخرى"
             const finalPermitTypes = derivedPermitTypes.length > 0 ? derivedPermitTypes : ['أعمال أخرى'];
@@ -15144,6 +15195,29 @@ const PTW = {
                 .ptw-work-types-section .ptw-work-type-row[data-type="electrical"] .ptw-check-option:has(input:checked) { background: #7c3aed !important; border-color: #7c3aed !important; }
                 .ptw-work-types-section .ptw-work-type-row[data-type="cold"] .ptw-work-subopt:has(input:checked),
                 .ptw-work-types-section .ptw-work-type-row[data-type="cold"] .ptw-check-option:has(input:checked) { background: #0891b2 !important; border-color: #0891b2 !important; }
+                /* محدد نوع التصريح: مربع اختيار واضح (تشك بوكس) على رأس كل صف نوع — النموذج التلقائي */
+                .ptw-work-types-section .ptw-work-type-check {
+                    width: 20px;
+                    height: 20px;
+                    min-width: 20px;
+                    margin: 0 !important;
+                    border-radius: 6px;
+                    accent-color: #003865;
+                    cursor: pointer;
+                    flex-shrink: 0;
+                }
+                .ptw-work-types-section .ptw-work-type-row__label { cursor: pointer; }
+                .ptw-work-types-section .ptw-work-type-row.is-type-checked {
+                    box-shadow: inset 0 0 0 2px rgba(0, 56, 101, 0.25);
+                }
+                .ptw-work-types-section .ptw-work-type-row.is-type-disabled {
+                    opacity: 0.5;
+                    filter: grayscale(0.65);
+                    background: #f8fafc !important;
+                }
+                .ptw-work-types-section .ptw-work-type-row.is-type-disabled .ptw-work-type-row__opts {
+                    pointer-events: none;
+                }
                 .ptw-work-types-section .ptw-work-subopt input,
                 .ptw-work-types-section .ptw-check-option input { margin: 0 !important; width: 0.9rem; height: 0.9rem; accent-color: #003865; }
                 .ptw-work-types-section .ptw-work-subopt-input {
@@ -15581,6 +15655,7 @@ const PTW = {
                             <div class="ptw-work-type-stack">
                                 <div class="ptw-work-type-row" data-type="hot">
                                     <div class="ptw-work-type-row__label">
+                                        <input type="checkbox" id="ptw-hot-check" class="ptw-work-type-check" ${(hotWorkDetails && hotWorkDetails.length) ? 'checked' : ''} title="تنشيط نوع التصريح: أعمال ساخنة" aria-label="أعمال ساخنة">
                                         <span class="ptw-work-type-row__icon" style="background:#fef2f2;color:#dc2626;"><i class="fas fa-fire" aria-hidden="true"></i></span>
                                         <span class="ptw-work-type-row__name">أعمال ساخنة</span>
                                     </div>
@@ -15590,6 +15665,7 @@ const PTW = {
                                 </div>
                                 <div class="ptw-work-type-row" data-type="confined">
                                     <div class="ptw-work-type-row__label">
+                                        <input type="checkbox" id="ptw-confined-check" class="ptw-work-type-check" ${(confinedSpaceDetails && confinedSpaceDetails.length) ? 'checked' : ''} title="تنشيط نوع التصريح: أماكن مغلقة" aria-label="أماكن مغلقة">
                                         <span class="ptw-work-type-row__icon" style="background:#f8fafc;color:#475569;"><i class="fas fa-box" aria-hidden="true"></i></span>
                                         <span class="ptw-work-type-row__name">أماكن مغلقة</span>
                                     </div>
@@ -15599,6 +15675,7 @@ const PTW = {
                                 </div>
                                 <div class="ptw-work-type-row" data-type="height">
                                     <div class="ptw-work-type-row__label">
+                                        <input type="checkbox" id="ptw-height-check" class="ptw-work-type-check" ${(heightWorkDetails && heightWorkDetails.length) ? 'checked' : ''} title="تنشيط نوع التصريح: عمل على ارتفاع" aria-label="عمل على ارتفاع">
                                         <span class="ptw-work-type-row__icon" style="background:#eff6ff;color:#2563eb;"><i class="fas fa-arrow-up" aria-hidden="true"></i></span>
                                         <span class="ptw-work-type-row__name">عمل على ارتفاع</span>
                                     </div>
@@ -15608,6 +15685,7 @@ const PTW = {
                                 </div>
                                 <div class="ptw-work-type-row" data-type="electrical">
                                     <div class="ptw-work-type-row__label">
+                                        <input type="checkbox" id="ptw-electrical-check" class="ptw-work-type-check" ${(ptwData?.electricalWorkType || '').trim() ? 'checked' : ''} title="تنشيط نوع التصريح: أعمال كهرباء" aria-label="أعمال كهرباء">
                                         <span class="ptw-work-type-row__icon" style="background:#f5f3ff;color:#7c3aed;"><i class="fas fa-bolt" aria-hidden="true"></i></span>
                                         <span class="ptw-work-type-row__name">أعمال كهرباء</span>
                                     </div>
@@ -15617,6 +15695,7 @@ const PTW = {
                                 </div>
                                 <div class="ptw-work-type-row" data-type="cold">
                                     <div class="ptw-work-type-row__label">
+                                        <input type="checkbox" id="ptw-cold-check" class="ptw-work-type-check" ${(ptwData?.coldWorkType || '').trim() ? 'checked' : ''} title="تنشيط نوع التصريح: أعمال على البارد" aria-label="أعمال على البارد">
                                         <span class="ptw-work-type-row__icon" style="background:#ecfeff;color:#0891b2;"><i class="fas fa-snowflake" aria-hidden="true"></i></span>
                                         <span class="ptw-work-type-row__name">أعمال على البارد</span>
                                     </div>
@@ -15626,6 +15705,7 @@ const PTW = {
                                 </div>
                                 <div class="ptw-work-type-row" data-type="other">
                                     <div class="ptw-work-type-row__label">
+                                        <input type="checkbox" id="ptw-other-check" class="ptw-work-type-check" ${(ptwData?.otherWorkType || '').trim() ? 'checked' : ''} title="تنشيط نوع التصريح: أعمال أخرى" aria-label="أعمال أخرى">
                                         <span class="ptw-work-type-row__icon" style="background:#f1f5f9;color:#475569;"><i class="fas fa-ellipsis" aria-hidden="true"></i></span>
                                         <span class="ptw-work-type-row__name">أعمال أخرى</span>
                                     </div>
@@ -15635,6 +15715,7 @@ const PTW = {
                                 </div>
                                 <div class="ptw-work-type-row" data-type="excavation">
                                     <div class="ptw-work-type-row__label">
+                                        <input type="checkbox" id="ptw-excavation-check" class="ptw-work-type-check" ${(ptwData?.excavationLength || ptwData?.excavationWidth || ptwData?.excavationDepth || ptwData?.soilType) ? 'checked' : ''} title="تنشيط نوع التصريح: أعمال حفر" aria-label="أعمال حفر">
                                         <span class="ptw-work-type-row__icon" style="background:#fffbeb;color:#d97706;"><i class="fas fa-mountain" aria-hidden="true"></i></span>
                                         <span class="ptw-work-type-row__name">أعمال حفر</span>
                                     </div>
@@ -16489,6 +16570,26 @@ const PTW = {
             this._attachWorkTypeSuggestions('ptw-cold-work-type', 'coldWorkType', modal, ['لحام بارد', 'فك وتركيب مواسير', 'صيانة ميكانيكية', 'أعمال ربط وتجميع', 'قطع وتشكيل']);
             this._attachWorkTypeSuggestions('ptw-electrical-work-type', 'electricalWorkType', modal, ['تركيب', 'صيانة', 'فك', 'تمديد كابلات', 'لوحات توزيع', 'إنارة وتوصيلات']);
             this._attachWorkTypeSuggestions('ptw-other-work-type', 'otherWorkType', modal, ['صيانة عامة', 'فحص دوري', 'أعمال نظافة', 'أعمال دهان', 'تشطيب']);
+            // مزامنة مربعات أنواع التصريح (تشك بوكس) في القسم الثالث: تفعيل/تعطيل الصف وفق المربع
+            const autoTypeRoot = modal.querySelector('.ptw-work-types-section .ptw-work-type-stack');
+            if (autoTypeRoot) {
+                const syncAutoTypeRows = () => {
+                    autoTypeRoot.querySelectorAll('.ptw-work-type-row').forEach((row) => {
+                        const typeCheck = row.querySelector('.ptw-work-type-check');
+                        if (!typeCheck) return;
+                        const hasChecked = !!row.querySelector('.ptw-work-type-row__opts input[type="checkbox"]:checked');
+                        const hasText = Array.from(row.querySelectorAll('.ptw-work-type-row__opts input[type="text"]')).some(inp => String(inp.value || '').trim() !== '');
+                        if (!typeCheck.checked && (hasChecked || hasText)) typeCheck.checked = true;
+                        const enabled = typeCheck.checked;
+                        row.classList.toggle('is-type-checked', enabled);
+                        row.classList.toggle('is-type-disabled', !enabled);
+                        row.querySelectorAll('.ptw-work-type-row__opts input').forEach(inp => { inp.disabled = !enabled; });
+                    });
+                };
+                autoTypeRoot.addEventListener('change', syncAutoTypeRows);
+                autoTypeRoot.addEventListener('input', syncAutoTypeRows);
+                syncAutoTypeRows();
+            }
         }, 0);
 
         // إعداد مستمعي الأحداث
@@ -16806,6 +16907,20 @@ const PTW = {
             approvalCircuitOwnerId: this.formCircuitOwnerId || existingPermit?.approvalCircuitOwnerId || '__default__',
             approvalCircuitName: this.formCircuitName || existingPermit?.approvalCircuitName || ''
         };
+
+        // تحديد أنواع التصريح من مربعات القسم الثالث (تشك بوكس) + تفاصيل الأعمال المحددة
+        const autoTypeOn = (id) => { const box = document.getElementById(id); return !box || box.checked; };
+        const autoPermitTypes = [];
+        if (hotSelections.length || autoTypeOn('ptw-hot-check')) autoPermitTypes.push('أعمال ساخنة');
+        if (confinedSelections.length || autoTypeOn('ptw-confined-check')) autoPermitTypes.push('أعمال في الأماكن المغلقة');
+        if (heightSelections.length || autoTypeOn('ptw-height-check')) autoPermitTypes.push('أعمال في الارتفاعات');
+        if ((document.getElementById('ptw-excavation-length')?.value.trim() || document.getElementById('ptw-excavation-width')?.value.trim() || document.getElementById('ptw-excavation-depth')?.value.trim() || document.getElementById('ptw-excavation-soil')?.value.trim()) || autoTypeOn('ptw-excavation-check')) autoPermitTypes.push('أعمال حفر');
+        if ((document.getElementById('ptw-excavation-length')?.value.trim() || document.getElementById('ptw-excavation-width')?.value.trim() || document.getElementById('ptw-excavation-depth')?.value.trim() || document.getElementById('ptw-excavation-soil')?.value.trim()) || autoTypeOn('ptw-excavation-check')) autoPermitTypes.push('أعمال حفر');
+        if (document.getElementById('ptw-electrical-work-type')?.value.trim() || autoTypeOn('ptw-electrical-check')) autoPermitTypes.push('أعمال كهربائية');
+        if (document.getElementById('ptw-cold-work-type')?.value.trim() || autoTypeOn('ptw-cold-check')) autoPermitTypes.push('أعمال باردة');
+        if (document.getElementById('ptw-other-work-type')?.value.trim() || autoTypeOn('ptw-other-check')) autoPermitTypes.push('أعمال أخرى');
+        formData.permitType = autoPermitTypes.length ? autoPermitTypes : ['أعمال أخرى'];
+        formData.permitTypeDisplay = formData.permitType.join('، ');
 
         this.updatePermitStatus(formData);
         if (isNewPermit) {

@@ -1,11 +1,11 @@
 {
-  "version": "1.0.928",
+  "version": "1.0.932",
   "highlights": {
     "ar": [
-      "تصريح العمل اليدوي: قسم أسماء القائمين بالعمل — زر حذف لكل صف، ويظهر صفان فارغان افتراضياً عند فتح نموذج جديد (مع بقاء الأسماء المحفوظة عند التعديل)."
+      "تصريح العمل: مربع اختيار واضح (تشك بوكس) لكل نوع تصريح في القسم الثالث (النموذجين اليدوي والتلقائي) — تفعيل مربع النوع يفتح تفاصيله، وإلغاؤه يغلقها، والنوع المختار يُسجل تلقائياً في التصريح."
     ],
     "en": [
-      "Manual work permit: team members section now has a delete button per row, and two empty rows appear by default when opening a new form (saved members are kept when editing)."
+      "Work permit: a clear checkbox for every permit type in section 3 (both manual and automatic forms) — checking a type enables its details, unchecking disables them, and the selected types are recorded automatically."
     ]
   }
 }
