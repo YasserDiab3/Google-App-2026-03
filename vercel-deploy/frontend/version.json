@@ -2,10 +2,10 @@
   "version": "1.0.927",
   "highlights": {
     "ar": [
-      "تصاريح العمل: حقل وصف العمل يعرض الآن اقتراحات الأوصاف المستخدمة سابقاً (يدوي وآلي) — يمكن الاختيار منها أو كتابة وصف جديد، تماماً مثل اقتراحات الأسماء."
+      "تصريح العمل اليدوي: قسم أسماء القائمين بالعمل — زر حذف لكل صف، ويظهر صفان فارغان افتراضياً عند فتح نموذج جديد (مع بقاء الأسماء المحفوظة عند التعديل)."
     ],
     "en": [
-      "Work permits: the work description field now suggests previously used descriptions (manual & auto permits) — pick one like the names suggestions, or type a new one."
+      "Manual work permit: team members section now has a delete button per row, and two empty rows appear by default when opening a new form (saved members are kept when editing)."
     ]
   }
 }
