@@ -323,9 +323,19 @@ function updateUserInSheet(userId, updateData, actorUserData, options) {
  * لا تُمسح الأعمدة الموجودة في الورقة — كل صف يُدمج فوق بياناته الحالية،
  * ولا يُحذف أي مستخدم غير وارد في الحمولة.
  */
-function saveUsersMergedToSheet_(spreadsheet, sheet, payloadRows) {
+function saveUsersMergedToSheet_(spreadsheet, sheet, payloadRows, options) {
     try {
         const rows = Array.isArray(payloadRows) ? payloadRows : [];
+        const deletedSet = {};
+        if (options && Array.isArray(options.deletedIds)) {
+            options.deletedIds.forEach(function (id) {
+                if (id) deletedSet[String(id).trim().toLowerCase()] = true;
+            });
+        }
+        const isDeletedId = function (obj) {
+            const id = String((obj && obj.id) || '').trim().toLowerCase();
+            return id ? !!deletedSet[id] : false;
+        };
         const defaultHeaders = getDefaultHeaders('Users');
         const unionHeaders = defaultHeaders.slice();
         const unionSet = {};
@@ -378,6 +388,7 @@ function saveUsersMergedToSheet_(spreadsheet, sheet, payloadRows) {
             let existing = null;
             const rowId = String(row.id || '').trim();
             const rowEmail = String(row.email || '').trim().toLowerCase();
+            if (isDeletedId(row)) return; // صف محذوف عمداً — لا يُدمج ولا يُعاد
             for (var i = 0; i < existingObjs.length; i++) {
                 if (usedExisting[i]) continue;
                 const exId = String(existingObjs[i].id || '').trim();
@@ -427,8 +438,9 @@ function saveUsersMergedToSheet_(spreadsheet, sheet, payloadRows) {
         });
 
         // المستخدمون الموجودون في الورقة ولم تأتِ حمولتهم: يُحفظون كما هم (لا حذف)
+        // — إلا من طُلب حذفه صراحةً عبر options.deletedIds
         for (var j = 0; j < existingObjs.length; j++) {
-            if (!usedExisting[j]) {
+            if (!usedExisting[j] && !isDeletedId(existingObjs[j])) {
                 mergedObjs.push(normalizeOutgoing(existingObjs[j]));
             }
         }
@@ -614,19 +626,21 @@ function deleteUserFromSheet(userId, userData) {
         }
         
         // حفظ البيانات المحدثة
-        const saveResult = saveToSheet(sheetName, filteredData, spreadsheetId);
-        
+        // ✅ دمج مقصود: الحذف يُمرّر صراحةً (tombstone) حتى لا يُعيد الدمج المحذوف
+        const spread = spreadsheet;
+        const saveResult = (typeof saveUsersMergedToSheet_ === 'function')
+            ? saveUsersMergedToSheet_(spread, sheet, filteredData, { deletedIds: [String(userId)] })
+            : saveToSheet(sheetName, filteredData, spreadsheetId);
+
         if (saveResult && saveResult.success) {
             Logger.log('User deleted successfully: ' + userId);
             markUsersUpdated_();
-            return { 
-                success: true, 
-                message: 'تم حذف المستخدم بنجاح'
-            };
+            saveResult.message = 'تم حذف المستخدم بنجاح';
+            return saveResult;
         } else {
             Logger.log('Error saving after user deletion: ' + (saveResult?.message || 'Unknown error'));
-            return { 
-                success: false, 
+            return {
+                success: false,
                 message: 'فشل حفظ التغييرات بعد حذف المستخدم: ' + (saveResult?.message || 'خطأ غير معروف')
             };
         }
