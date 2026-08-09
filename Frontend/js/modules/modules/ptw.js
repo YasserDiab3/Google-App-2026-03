@@ -11920,6 +11920,7 @@ const PTW = {
         `;
 
         document.body.appendChild(modal);
+        setTimeout(() => this._attachWorkDescriptionSuggestions('manual-permit-work-description', modal), 0);
         const close = () => modal.remove();
         modal.querySelector('.modal-close')?.addEventListener('click', close);
         modal.querySelector('[data-action="close"]')?.addEventListener('click', close);
@@ -16299,6 +16300,80 @@ const PTW = {
 
     currentEditId: null,
 
+    /**
+     * اقتراحات سابقة لوصف العمل (يدوي + آلي): يعرض أوصاف الأعمال المدخلة سابقاً
+     * من ptw + ptwRegistry (الأحدث أولاً) للاختيار عند بدء حقل وصف العمل.
+     * textarea لا يدعم datalist — فقائمة منسدلة خفيفة تُبنى تحت الحقل.
+     */
+    _attachWorkDescriptionSuggestions(inputId, rootEl = null) {
+        const input = (rootEl || document).querySelector('#' + inputId);
+        if (!input || input.tagName !== 'TEXTAREA') return;
+        if (input.dataset.workDescSuggest === '1') return;
+        input.dataset.workDescSuggest = '1';
+
+        const popup = document.createElement('div');
+        popup.className = 'ptw-workdesc-suggest-popup';
+        popup.style.cssText = 'display:none; position:fixed; z-index:999999; background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; box-shadow:0 10px 25px rgba(0,0,0,0.15); max-height:220px; overflow-y:auto; min-width:300px; max-width:520px; direction:rtl; text-align:right;';
+        document.body.appendChild(popup);
+
+        const getCandidates = () => {
+            const sources = [];
+            const addFrom = (arr) => {
+                if (!Array.isArray(arr)) return;
+                arr.forEach((p) => {
+                    const d = String((p && p.workDescription) || '').trim();
+                    if (!d || d === '—' || d === 'غير محدد') return;
+                    sources.push({ d, t: new Date((p && (p.createdAt || p.updatedAt)) || 0).getTime() });
+                });
+            };
+            addFrom(AppState && AppState.appData && AppState.appData.ptw);
+            addFrom(AppState && AppState.appData && AppState.appData.ptwRegistry);
+            const seen = {};
+            const uniq = [];
+            sources.sort((a, b) => b.t - a.t).forEach((s) => {
+                if (s.d && !seen[s.d]) { seen[s.d] = 1; uniq.push(s.d); }
+            });
+            return uniq.slice(0, 15);
+        };
+
+        const updatePopup = () => {
+            const query = String(input.value || '').trim().toLowerCase();
+            const items = getCandidates().filter((d) => {
+                if (!query) return true;
+                return String(d).toLowerCase().includes(query);
+            }).slice(0, 8);
+            const rect = input.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + 230 > window.innerHeight) top = Math.max(6, rect.top - Math.min(230, rect.top) - 6);
+            popup.style.top = top + 'px';
+            popup.style.left = Math.min(Math.max(8, rect.left), Math.max(8, window.innerWidth - popup.offsetWidth - 8)) + 'px';
+
+            if (!items.length) { popup.style.display = 'none'; return; }
+            popup.innerHTML = items.map((d) =>
+                `<div style="padding:8px 12px; cursor:pointer; font-size:0.875rem; color:#1f2937; border-bottom:1px solid #f1f5f9; white-space:pre-wrap; word-break:break-word;" data-value="${Utils.escapeHTML(d).replace(/"/g, '&quot;')}">${Utils.escapeHTML(d)}</div>`
+            ).join('') + `<div style="padding:6px 12px; font-size:0.72rem; color:#94a3b8; background:#f8fafc; border-radius:0 0 10px 10px;">اختر وصــفاً سابقاً أو اكتب جديداً</div>`;
+            popup.style.display = 'block';
+        };
+
+        const hidePopup = () => { popup.style.display = 'none'; };
+
+        input.addEventListener('focus', updatePopup);
+        input.addEventListener('input', updatePopup);
+        input.addEventListener('blur', () => setTimeout(hidePopup, 120));
+        input.addEventListener('keydown', (e) => { if (e.key === 'Escape') hidePopup(); });
+        popup.addEventListener('mousedown', (e) => e.preventDefault());
+        popup.addEventListener('click', (e) => {
+            const opt = e.target && e.target.closest ? e.target.closest('[data-value]') : null;
+            if (!opt) return;
+            input.value = opt.getAttribute('data-value');
+            hidePopup();
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.focus();
+        });
+        const scrollHost = rootEl || document;
+        scrollHost.addEventListener('scroll', hidePopup, { passive: true });
+    },
+
     async showForm(data = null) {
         const isReadOnly = typeof Permissions !== 'undefined' && typeof Permissions.isReadOnlyRole === 'function' && Permissions.isReadOnlyRole();
         if (isReadOnly || !this.hasDetailedPermission('ptw-list')) {
@@ -16356,6 +16431,7 @@ const PTW = {
 
         // إضافة المودال إلى الصفحة
         document.body.appendChild(modal);
+        setTimeout(() => this._attachWorkDescriptionSuggestions('ptw-workDescription', modal), 0);
 
         // إعداد مستمعي الأحداث
         this.setupEventListeners(data);
