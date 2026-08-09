@@ -11593,7 +11593,7 @@ const PTW = {
                                         <span class="ptw-work-type-row__name">أعمال كهرباء</span>
                                     </div>
                                     <div class="ptw-work-type-row__opts">
-                                        <input type="text" id="manual-electrical-work-type" class="form-input ptw-work-subopt-input ptw-work-subopt-input--wide" value="${Utils.escapeHTML(existingEntry?.electricalWorkType || '')}" placeholder="نوع العمل (تركيب، صيانة، فك...)">
+                                        <input type="text" id="manual-electrical-work-type" class="form-input ptw-work-subopt-input ptw-work-subopt-input--wide" value="${Utils.escapeHTML(existingEntry?.electricalWorkType || '')}" placeholder="نوع العمل — اختر من المقترحات أو اكتب (تركيب، صيانة، فك...)">
                                     </div>
                                 </div>
                                 <div class="ptw-work-type-row" data-type="cold" id="manual-panel-cold">
@@ -11602,7 +11602,7 @@ const PTW = {
                                         <span class="ptw-work-type-row__name">أعمال على البارد</span>
                                     </div>
                                     <div class="ptw-work-type-row__opts">
-                                        <input type="text" id="manual-cold-work-type" class="form-input ptw-work-subopt-input ptw-work-subopt-input--wide" value="${Utils.escapeHTML(existingEntry?.coldWorkType || '')}" placeholder="نوع العمل (لحام بارد...)">
+                                        <input type="text" id="manual-cold-work-type" class="form-input ptw-work-subopt-input ptw-work-subopt-input--wide" value="${Utils.escapeHTML(existingEntry?.coldWorkType || '')}" placeholder="نوع العمل — اختر من المقترحات أو اكتب (لحام بارد...)">
                                     </div>
                                 </div>
                                 <div class="ptw-work-type-row" data-type="other" id="manual-panel-other">
@@ -11611,7 +11611,7 @@ const PTW = {
                                         <span class="ptw-work-type-row__name">أعمال أخرى</span>
                                     </div>
                                     <div class="ptw-work-type-row__opts">
-                                        <input type="text" id="manual-other-work-type" class="form-input ptw-work-subopt-input ptw-work-subopt-input--wide" value="${Utils.escapeHTML(existingEntry?.otherWorkType || '')}" placeholder="اذكر نوع العمل">
+                                        <input type="text" id="manual-other-work-type" class="form-input ptw-work-subopt-input ptw-work-subopt-input--wide" value="${Utils.escapeHTML(existingEntry?.otherWorkType || '')}" placeholder="اذكر نوع العمل — أو اختر من المقترحات">
                                     </div>
                                 </div>
                             </div>
@@ -11924,7 +11924,12 @@ const PTW = {
         `;
 
         document.body.appendChild(modal);
-        setTimeout(() => this._attachWorkDescriptionSuggestions('manual-permit-work-description', modal), 0);
+        setTimeout(() => {
+            this._attachWorkDescriptionSuggestions('manual-permit-work-description', modal);
+            this._attachWorkTypeSuggestions('manual-cold-work-type', 'coldWorkType', modal, ['لحام بارد', 'فك وتركيب مواسير', 'صيانة ميكانيكية', 'أعمال ربط وتجميع', 'قطع وتشكيل']);
+            this._attachWorkTypeSuggestions('manual-electrical-work-type', 'electricalWorkType', modal, ['تركيب', 'صيانة', 'فك', 'تمديد كابلات', 'لوحات توزيع', 'إنارة وتوصيلات']);
+            this._attachWorkTypeSuggestions('manual-other-work-type', 'otherWorkType', modal, ['صيانة عامة', 'فحص دوري', 'أعمال نظافة', 'أعمال دهان', 'تشطيب']);
+        }, 0);
         const close = () => modal.remove();
         modal.querySelector('.modal-close')?.addEventListener('click', close);
         modal.querySelector('[data-action="close"]')?.addEventListener('click', close);
@@ -15607,7 +15612,7 @@ const PTW = {
                                         <span class="ptw-work-type-row__name">أعمال كهرباء</span>
                                     </div>
                                     <div class="ptw-work-type-row__opts">
-                                        <input type="text" id="ptw-electrical-work-type" class="form-input ptw-work-subopt-input ptw-work-subopt-input--wide" value="${escapeHTML(ptwData?.electricalWorkType)}" placeholder="نوع العمل (تركيب، صيانة، فك...)">
+                                        <input type="text" id="ptw-electrical-work-type" class="form-input ptw-work-subopt-input ptw-work-subopt-input--wide" value="${escapeHTML(ptwData?.electricalWorkType)}" placeholder="نوع العمل — اختر من المقترحات أو اكتب (تركيب، صيانة، فك...)">
                                     </div>
                                 </div>
                                 <div class="ptw-work-type-row" data-type="cold">
@@ -15616,7 +15621,7 @@ const PTW = {
                                         <span class="ptw-work-type-row__name">أعمال على البارد</span>
                                     </div>
                                     <div class="ptw-work-type-row__opts">
-                                        <input type="text" id="ptw-cold-work-type" class="form-input ptw-work-subopt-input ptw-work-subopt-input--wide" value="${escapeHTML(ptwData?.coldWorkType)}" placeholder="نوع العمل (لحام بارد...)">
+                                        <input type="text" id="ptw-cold-work-type" class="form-input ptw-work-subopt-input ptw-work-subopt-input--wide" value="${escapeHTML(ptwData?.coldWorkType)}" placeholder="نوع العمل — اختر من المقترحات أو اكتب (لحام بارد...)">
                                     </div>
                                 </div>
                                 <div class="ptw-work-type-row" data-type="other">
@@ -15625,7 +15630,7 @@ const PTW = {
                                         <span class="ptw-work-type-row__name">أعمال أخرى</span>
                                     </div>
                                     <div class="ptw-work-type-row__opts">
-                                        <input type="text" id="ptw-other-work-type" class="form-input ptw-work-subopt-input ptw-work-subopt-input--wide" value="${escapeHTML(ptwData?.otherWorkType)}" placeholder="اذكر تفاصيل أعمال أخرى">
+                                        <input type="text" id="ptw-other-work-type" class="form-input ptw-work-subopt-input ptw-work-subopt-input--wide" value="${escapeHTML(ptwData?.otherWorkType)}" placeholder="اذكر نوع العمل — أو اختر من المقترحات">
                                     </div>
                                 </div>
                                 <div class="ptw-work-type-row" data-type="excavation">
@@ -16306,44 +16311,28 @@ const PTW = {
     currentEditId: null,
 
     /**
-     * اقتراحات سابقة لوصف العمل (يدوي + آلي): يعرض أوصاف الأعمال المدخلة سابقاً
-     * من ptw + ptwRegistry (الأحدث أولاً) للاختيار عند بدء حقل وصف العمل.
-     * textarea لا يدعم datalist — فقائمة منسدلة خفيفة تُبنى تحت الحقل.
+     * قائمة اقتراحات خفيفة لحقل (input/textarea) — تظهر عند التركيز/الكتابة.
+     * textarea لا يدعم datalist — قائمة منسدلة مخصصة.
+     * @param {string} inputId - معرّف الحقل
+     * @param {HTMLElement|null} rootEl - سياق النموذج (المودال)
+     * @param {Function} getCandidates - ترجع مصفوفة نصوص الاقتراحات (الأحدث أولاً)
+     * @param {string} footerHint - سطر إرشادي أسفل القائمة
      */
-    _attachWorkDescriptionSuggestions(inputId, rootEl = null) {
+    _attachSuggestionList(inputId, rootEl = null, getCandidates, footerHint = '') {
         const input = (rootEl || document).querySelector('#' + inputId);
-        if (!input || input.tagName !== 'TEXTAREA') return;
-        if (input.dataset.workDescSuggest === '1') return;
-        input.dataset.workDescSuggest = '1';
+        if (!input) return;
+        const attachKey = '_hseSug_' + inputId.replace(/[^a-zA-Z0-9_]/g, '_');
+        if (input.dataset[attachKey] === '1') return;
+        input.dataset[attachKey] = '1';
 
         const popup = document.createElement('div');
         popup.className = 'ptw-workdesc-suggest-popup';
         popup.style.cssText = 'display:none; position:fixed; z-index:999999; background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; box-shadow:0 10px 25px rgba(0,0,0,0.15); max-height:220px; overflow-y:auto; min-width:300px; max-width:520px; direction:rtl; text-align:right;';
         document.body.appendChild(popup);
 
-        const getCandidates = () => {
-            const sources = [];
-            const addFrom = (arr) => {
-                if (!Array.isArray(arr)) return;
-                arr.forEach((p) => {
-                    const d = String((p && p.workDescription) || '').trim();
-                    if (!d || d === '—' || d === 'غير محدد') return;
-                    sources.push({ d, t: new Date((p && (p.createdAt || p.updatedAt)) || 0).getTime() });
-                });
-            };
-            addFrom(AppState && AppState.appData && AppState.appData.ptw);
-            addFrom(AppState && AppState.appData && AppState.appData.ptwRegistry);
-            const seen = {};
-            const uniq = [];
-            sources.sort((a, b) => b.t - a.t).forEach((s) => {
-                if (s.d && !seen[s.d]) { seen[s.d] = 1; uniq.push(s.d); }
-            });
-            return uniq.slice(0, 15);
-        };
-
         const updatePopup = () => {
             const query = String(input.value || '').trim().toLowerCase();
-            const items = getCandidates().filter((d) => {
+            const items = (getCandidates() || []).filter((d) => {
                 if (!query) return true;
                 return String(d).toLowerCase().includes(query);
             }).slice(0, 8);
@@ -16356,7 +16345,7 @@ const PTW = {
             if (!items.length) { popup.style.display = 'none'; return; }
             popup.innerHTML = items.map((d) =>
                 `<div style="padding:8px 12px; cursor:pointer; font-size:0.875rem; color:#1f2937; border-bottom:1px solid #f1f5f9; white-space:pre-wrap; word-break:break-word;" data-value="${Utils.escapeHTML(d).replace(/"/g, '&quot;')}">${Utils.escapeHTML(d)}</div>`
-            ).join('') + `<div style="padding:6px 12px; font-size:0.72rem; color:#94a3b8; background:#f8fafc; border-radius:0 0 10px 10px;">اختر وصــفاً سابقاً أو اكتب جديداً</div>`;
+            ).join('') + (footerHint ? `<div style="padding:6px 12px; font-size:0.72rem; color:#94a3b8; background:#f8fafc; border-radius:0 0 10px 10px;">${Utils.escapeHTML(footerHint)}</div>` : '');
             popup.style.display = 'block';
         };
 
@@ -16377,6 +16366,65 @@ const PTW = {
         });
         const scrollHost = rootEl || document;
         scrollHost.addEventListener('scroll', hidePopup, { passive: true });
+    },
+
+    /**
+     * اقتراحات سابقة لوصف العمل (يدوي + آلي): أوصاف الأعمال المدخلة سابقاً
+     * من ptw + ptwRegistry (الأحدث أولاً).
+     */
+    _attachWorkDescriptionSuggestions(inputId, rootEl = null) {
+        this._attachSuggestionList(inputId, rootEl, () => {
+            const sources = [];
+            const addFrom = (arr) => {
+                if (!Array.isArray(arr)) return;
+                arr.forEach((p) => {
+                    const d = String((p && p.workDescription) || '').trim();
+                    if (!d || d === '—' || d === 'غير محدد') return;
+                    sources.push({ d, t: new Date((p && (p.createdAt || p.updatedAt)) || 0).getTime() });
+                });
+            };
+            addFrom(AppState && AppState.appData && AppState.appData.ptw);
+            addFrom(AppState && AppState.appData && AppState.appData.ptwRegistry);
+            const seen = {};
+            const uniq = [];
+            sources.sort((a, b) => b.t - a.t).forEach((s) => {
+                if (s.d && !seen[s.d]) { seen[s.d] = 1; uniq.push(s.d); }
+            });
+            return uniq.slice(0, 15);
+        }, 'اختر وصــفاً سابقاً أو اكتب جديداً');
+    },
+
+    /**
+     * مقترحات أنواع الأعمال الحرة (بارد/كهرباء/أخرى): قيم سابقة من السجل + قائمة شائعة جاهزة.
+     * @param {string} inputId - معرّف الحقل
+     * @param {string} field - اسم العمود في السجلات (coldWorkType/electricalWorkType/otherWorkType)
+     * @param {HTMLElement|null} rootEl
+     * @param {string[]} presets - مقترحات شائعة افتراضية
+     */
+    _attachWorkTypeSuggestions(inputId, field, rootEl = null, presets = []) {
+        this._attachSuggestionList(inputId, rootEl, () => {
+            const sources = [];
+            const addFrom = (arr) => {
+                if (!Array.isArray(arr)) return;
+                arr.forEach((p) => {
+                    const v = String((p && p[field]) || '').trim();
+                    if (!v || v === '—') return;
+                    sources.push({ v, t: new Date((p && (p.createdAt || p.updatedAt)) || 0).getTime() });
+                });
+            };
+            const appData = AppState && AppState.appData;
+            addFrom(appData && appData.ptw);
+            addFrom(appData && appData.ptwRegistry);
+            const seenSet = {};
+            const out = [];
+            sources.sort((a, b) => b.t - a.t).forEach((s) => {
+                if (s.v && !seenSet[s.v]) { seenSet[s.v] = 1; out.push(s.v); }
+            });
+            (presets || []).forEach((v) => {
+                if (v && !seenSet[v]) { seenSet[v] = 1; out.push(v); }
+            });
+            return out.slice(0, 15);
+        }, 'اختر من المقترحات أو اكتب يدوياً');
     },
 
     async showForm(data = null) {
@@ -16436,7 +16484,12 @@ const PTW = {
 
         // إضافة المودال إلى الصفحة
         document.body.appendChild(modal);
-        setTimeout(() => this._attachWorkDescriptionSuggestions('ptw-workDescription', modal), 0);
+        setTimeout(() => {
+            this._attachWorkDescriptionSuggestions('ptw-workDescription', modal);
+            this._attachWorkTypeSuggestions('ptw-cold-work-type', 'coldWorkType', modal, ['لحام بارد', 'فك وتركيب مواسير', 'صيانة ميكانيكية', 'أعمال ربط وتجميع', 'قطع وتشكيل']);
+            this._attachWorkTypeSuggestions('ptw-electrical-work-type', 'electricalWorkType', modal, ['تركيب', 'صيانة', 'فك', 'تمديد كابلات', 'لوحات توزيع', 'إنارة وتوصيلات']);
+            this._attachWorkTypeSuggestions('ptw-other-work-type', 'otherWorkType', modal, ['صيانة عامة', 'فحص دوري', 'أعمال نظافة', 'أعمال دهان', 'تشطيب']);
+        }, 0);
 
         // إعداد مستمعي الأحداث
         this.setupEventListeners(data);
