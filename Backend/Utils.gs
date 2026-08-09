@@ -5210,44 +5210,57 @@ function generateNextObservationIdentity(sheetName, spreadsheetId, skipLock) {
  * @param {string} id - معرف الملاحظة (مثل DOB-NNNN)
  * @returns {string} رقم الملاحظة OBS-YYYYMM-NNNN للتسجيل في الخلية
  */
-function getObservationIsoCodeFromId(id) {
-    if (!id || typeof id !== 'string') {
+function getObservationIsoCodeFromId(id, existingIsoCode, dateValue) {
+    if (!id || typeof id !== 'string') id = '';
+    var strId = id.toString().trim();
+    
+    var idNum = null;
+    var mDob = strId.match(/^DOB-(\d+)$/i);
+    if (mDob) {
+        idNum = parseInt(mDob[1], 10);
+    } else {
+        var mObs = strId.match(/^OBS-\d{6}-(\d+)$/i);
+        if (mObs) {
+            idNum = parseInt(mObs[1], 10);
+        } else {
+            var mTrail = strId.match(/(\d+)$/);
+            if (mTrail) idNum = parseInt(mTrail[1], 10);
+        }
+    }
+
+    if (idNum === null || isNaN(idNum)) {
+        var mIsoTrail = String(existingIsoCode || '').match(/(\d+)$/);
+        if (mIsoTrail) idNum = parseInt(mIsoTrail[1], 10);
+    }
+
+    if (idNum === null || isNaN(idNum)) idNum = 0;
+    
+    var numStr = String(idNum);
+    while (numStr.length < 4) numStr = '0' + numStr;
+
+    var yyyymm = '';
+    var mMonthIso = String(existingIsoCode || '').match(/^OBS-(\d{6})-/i);
+    if (mMonthIso) {
+        yyyymm = mMonthIso[1];
+    } else if (dateValue) {
+        var d = new Date(dateValue);
+        if (!isNaN(d.getTime())) {
+            var y = d.getFullYear();
+            var m = String(d.getMonth() + 1);
+            if (m.length === 1) m = '0' + m;
+            yyyymm = y + '' + m;
+        }
+    }
+    
+    if (!yyyymm || !/^\d{6}$/.test(yyyymm)) {
         var now = new Date();
-        var yyyy = now.getFullYear();
-        var mm = String(now.getMonth() + 1);
-        if (mm.length === 1) mm = '0' + mm;
-        return 'OBS-' + yyyy + mm + '-0000';
+        var yNow = now.getFullYear();
+        var mNow = String(now.getMonth() + 1);
+        if (mNow.length === 1) mNow = '0' + mNow;
+        yyyymm = yNow + '' + mNow;
     }
-    var str = id.toString().trim();
-    
-    // لـ DOB-NNNN نحوله إلى OBS-YYYYMM-NNNN
-    var dobMatch = str.match(/^DOB-(\d+)$/i);
-    if (dobMatch) {
-        var now = new Date();
-        var yyyy = now.getFullYear();
-        var mm = String(now.getMonth() + 1);
-        if (mm.length === 1) mm = '0' + mm;
-        var num = dobMatch[1];
-        return 'OBS-' + yyyy + mm + '-' + num;
-    }
-    
-    // إذا كان OBS-YYYYMM-NNNN بالفعل
-    var obsMatch = str.match(/^OBS-\d{6}-(\d+)$/i);
-    if (obsMatch) {
-        return str;
-    }
-    
-    // أي رقم في النهاية
-    var matchAny = str.match(/(\d+)$/);
-    if (matchAny) {
-        var now = new Date();
-        var yyyy = now.getFullYear();
-        var mm = String(now.getMonth() + 1);
-        if (mm.length === 1) mm = '0' + mm;
-        return 'OBS-' + yyyy + mm + '-' + matchAny[1];
-    }
-    
-    return 'OBS-' + new Date().getFullYear() + String(new Date().getMonth() + 1).padStart(2, '0') + '-0000';
+
+    return 'OBS-' + yyyymm + '-' + numStr;
 }
 
 /**
