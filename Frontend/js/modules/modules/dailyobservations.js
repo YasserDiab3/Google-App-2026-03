@@ -7097,12 +7097,26 @@ const DailyObservations = {
                 const flagKey = 'hse_dobs_seq_repair_v' + ver;
                 if (typeof localStorage !== 'undefined' && !localStorage.getItem(flagKey)) {
                     localStorage.setItem(flagKey, 'running');
-                    GoogleIntegration.sendRequest({ action: 'repairObservationSequence', data: {} }).then((res) => {
+                    GoogleIntegration.sendRequest({ action: 'repairObservationSequence', data: {} }).then(async (res) => {
                         if (res && res.success) {
                             const d = res.data || {};
                             if ((d.renumberedCount || 0) > 0 || (d.fixedIsoCodeCount || 0) > 0) {
                                 Notification.success('تم إصلاح تسلسل أرقام الملاحظات: ' + d.renumberedCount + ' معاد ترقيمها، ' + d.fixedIsoCodeCount + ' تصحيح isoCode');
                             }
+                        }
+                        // إعادة مزامنة البيانات من الخادم بعد الإصلاح حتى تظهر الأرقام المصححة فوراً
+                        try {
+                            if (typeof this.ensureDailyObservationsDataLoaded === 'function') {
+                                await this.ensureDailyObservationsDataLoaded({ force: true }).catch(() => {});
+                            }
+                            if (typeof this.loadObservationsList === 'function') {
+                                this.loadObservationsList();
+                            }
+                            if (typeof this.renderStatsCards === 'function') {
+                                this.renderStatsCards();
+                            }
+                        } catch (syncErr) {
+                            Utils.safeWarn('خطأ في إعادة مزامنة الملاحظات بعد الإصلاح:', syncErr);
                         }
                         localStorage.setItem(flagKey, 'done');
                     }).catch(() => {
