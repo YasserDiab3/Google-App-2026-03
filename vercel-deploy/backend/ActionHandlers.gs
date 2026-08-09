@@ -6591,4 +6591,20 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'repairDailySafetyCheckListSequence': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action);
+            if (adminFail) { result = adminFail; return; }
+
+            if (typeof repairDailySafetyCheckListSequence !== 'function') {
+                result = { success: false, message: 'دالة repairDailySafetyCheckListSequence غير متوفرة' };
+                return;
+            }
+
+            result = repairDailySafetyCheckListSequence();
+            return;
+        })();
+        return result;
+    },
 };

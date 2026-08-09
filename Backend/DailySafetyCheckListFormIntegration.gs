@@ -166,7 +166,17 @@ function getFactoriesForFormRow(rowData, headers) {
  * يُعالج كل الصفوف الجديدة من lastProcessedRow+1 حتى آخر صف (وليس آخر صف فقط).
  */
 function processFormDataFromSheet() {
+  var lock = null;
   try {
+    try {
+      lock = LockService.getScriptLock();
+      if (!lock.waitLock(15000)) {
+        return { success: true, skipped: true, message: 'عملية مزامنة أخرى قيد التشغيل' };
+      }
+    } catch (lockEx) {
+      Logger.log('processFormDataFromSheet lock timeout: ' + lockEx.toString());
+    }
+
     // إصلاح ذاتي: لو المشغّل الزمني ضاع (redeploy جديد) نعيد تثبيته قبل المعالجة
     try { ensureDailySafetySyncTrigger_(); } catch (e) {}
 
@@ -197,6 +207,10 @@ function processFormDataFromSheet() {
   } catch (error) {
     Logger.log('processFormDataFromSheet (DSC): ' + error.toString());
     return { success: false, message: 'حدث خطأ: ' + error.toString() };
+  } finally {
+    if (lock) {
+      try { lock.releaseLock(); } catch (e) {}
+    }
   }
 }
 
@@ -582,12 +596,148 @@ function saveDailySafetyCheckListToAppSheet(recordData) {
       }
     }
 
-    return typeof appendToSheet === 'function'
+    var res = typeof appendToSheet === 'function'
       ? appendToSheet(sheetName, recordData, APP_SPREADSHEET_ID)
       : { success: false, message: 'دالة appendToSheet غير متوفرة' };
+
+    if (res && res.success) {
+      try { invalidateHseSheetCaches(sheetName); } catch (e) {}
+    }
+    return res;
   } catch (error) {
     Logger.log('saveDailySafetyCheckListToAppSheet: ' + error.toString());
     return { success: false, message: 'حدث خطأ: ' + error.toString() };
+  }
+}
+
+/**
+ * إصلاح تسلسل أرقام ومتطلبات DailySafetyCheckList
+ * - يصلح المعرفات المكررة (DSC_0655) والمشوهة بمنحها id جديد فريد (DSC_0656)
+ * - يضمن أن reportNumber فريد لكل تقرير
+ */
+function repairDailySafetyCheckListSequence() {
+  var lock = null;
+  try {
+    try {
+      lock = LockService.getScriptLock();
+      lock.waitLock(30000);
+    } catch (e) {}
+
+    var sheetName = 'DailySafetyCheckList';
+    try { invalidateHseSheetCaches(sheetName); } catch (e) {}
+    
+    var spreadsheet = SpreadsheetApp.openById(APP_SPREADSHEET_ID);
+    var sheet = spreadsheet.getSheetByName(sheetName);
+    if (!sheet) return { success: false, message: 'الورقة غير موجودة' };
+
+    var values = sheet.getDataRange().getValues();
+    if (!values || values.length < 2) {
+      return { success: true, message: 'لا توجد صفوف لإصلاحها', data: { fixedCount: 0 } };
+    }
+
+    var headers = values[0].map(function(h) { return String(h || '').trim(); });
+    var idCol = headers.indexOf('id');
+    var reportNoCol = headers.indexOf('reportNumber');
+    var siteCol = headers.indexOf('siteName');
+    var dateCol = headers.indexOf('date');
+    var inspectorCol = headers.indexOf('inspectorName');
+    var shiftCol = headers.indexOf('shift');
+    var formTsCol = headers.indexOf('formSubmittedAt');
+
+    if (idCol < 0) return { success: false, message: 'عمود id غير موجود' };
+
+    var usedIds = {};
+    var usedReportNums = {};
+    var maxNum = 0;
+
+    for (var r1 = 1; r1 < values.length; r1++) {
+      var curId = String(values[r1][idCol] || '').trim();
+      var m = curId.match(/^DSC_(\d+)$/i);
+      if (m) {
+        var n = parseInt(m[1], 10);
+        if (!isNaN(n) && n > maxNum) maxNum = n;
+      }
+    }
+
+    var nextFreeId = maxNum + 1;
+    var fixedCount = 0;
+    var seenRecordKeys = {};
+    var rowsToDelete = [];
+
+    for (var r2 = 1; r2 < values.length; r2++) {
+      var row = values[r2];
+      var rId = String(row[idCol] || '').trim();
+      var rRepNo = reportNoCol >= 0 ? String(row[reportNoCol] || '').trim() : '';
+      var rDate = dateCol >= 0 ? formatDateOnly(row[dateCol]) : '';
+      var rSite = siteCol >= 0 ? String(row[siteCol] || '').trim() : '';
+      var rInsp = inspectorCol >= 0 ? String(row[inspectorCol] || '').trim() : '';
+      var rShift = shiftCol >= 0 ? String(row[shiftCol] || '').trim() : '';
+      var rTs = formTsCol >= 0 ? String(row[formTsCol] || '').trim() : '';
+
+      // 1) فحص التكرار التام ونفس طابع الوقت
+      var dupKey = rDate + '|' + rSite + '|' + rInsp + '|' + rShift + '|' + rTs;
+      if (rDate && rSite && rInsp && seenRecordKeys[dupKey]) {
+        rowsToDelete.push(r2 + 1);
+        fixedCount++;
+        continue;
+      }
+      seenRecordKeys[dupKey] = true;
+
+      // 2) إصلاح ID المكرر
+      var idNum = null;
+      var idMatch = rId.match(/^DSC_(\d+)$/i);
+      if (idMatch) idNum = parseInt(idMatch[1], 10);
+
+      var needNewId = (!rId || idNum === null || usedIds[rId]);
+      if (needNewId) {
+        var freshPadded = String(nextFreeId).padStart(4, '0');
+        var newId = 'DSC_' + freshPadded;
+        nextFreeId++;
+        sheet.getRange(r2 + 1, idCol + 1).setValue(newId);
+        usedIds[newId] = true;
+        fixedCount++;
+      } else {
+        usedIds[rId] = true;
+      }
+
+      // 3) إصلاح reportNumber المكرر
+      if (reportNoCol >= 0) {
+        var needNewRepNo = (!rRepNo || usedReportNums[rRepNo]);
+        if (needNewRepNo) {
+          var shiftMap = { 'الأولى': '1', 'الثانية': '2', 'الثالثة': '3' };
+          var dp = dscExtractDateParts(rDate);
+          var ck = dp.y + '-' + dp.m + '-' + dp.d;
+          var sh2 = shiftMap[rShift] || '0';
+          var baseRep = 'DSC-' + ck + '-' + sh2 + '-';
+
+          var subNo = 1;
+          while (usedReportNums[baseRep + String(subNo).padStart(2, '0')]) {
+            subNo++;
+          }
+          var newRepNo = baseRep + String(subNo).padStart(2, '0');
+          sheet.getRange(r2 + 1, reportNoCol + 1).setValue(newRepNo);
+          usedReportNums[newRepNo] = true;
+          fixedCount++;
+        } else {
+          usedReportNums[rRepNo] = true;
+        }
+      }
+    }
+
+    // حذف الصفوف المكررة من الأسفل للأعلى
+    if (rowsToDelete.length > 0) {
+      for (var d = rowsToDelete.length - 1; d >= 0; d--) {
+        sheet.deleteRow(rowsToDelete[d]);
+      }
+    }
+
+    try { invalidateHseSheetCaches(sheetName); } catch (e) {}
+    return { success: true, message: 'تم إصلاح أرقام الملاحظات وتصفية التكرارات بنجاح', data: { fixedCount: fixedCount, deletedRows: rowsToDelete.length } };
+  } catch (err) {
+    Logger.log('repairDailySafetyCheckListSequence error: ' + err.toString());
+    return { success: false, message: 'حدث خطأ أثناء الإصلاح: ' + err.toString() };
+  } finally {
+    if (lock) { try { lock.releaseLock(); } catch (e) {} }
   }
 }
 

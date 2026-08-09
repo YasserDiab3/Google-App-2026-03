@@ -4026,6 +4026,27 @@ const PeriodicInspections = {
     },
 
     async renderDailySafetyCheckListContent() {
+        try {
+            const user = AppState.currentUser;
+            const isAdmin = user && (user.role === 'admin' || user.role === 'system_admin');
+            const ver = (window.AppUtils && window.AppUtils.appVersion) || '1.0.941';
+            const flagKey = 'hse_dsc_seq_repair_v' + ver;
+            if (isAdmin && typeof localStorage !== 'undefined' && !localStorage.getItem(flagKey)) {
+                localStorage.setItem(flagKey, 'running');
+                GoogleIntegration.sendRequest({ action: 'repairDailySafetyCheckListSequence', data: {} }).then((res) => {
+                    if (res && res.success) {
+                        const d = res.data || {};
+                        if ((d.fixedCount || 0) > 0 || (d.deletedRows || 0) > 0) {
+                            Notification.success('تم إصلاح تسلسل تقارير المرور اليومي وتصفية ' + (d.deletedRows || 0) + ' تقارير مكررة');
+                        }
+                    }
+                    localStorage.setItem(flagKey, 'done');
+                }).catch(() => {
+                    localStorage.setItem(flagKey, 'done');
+                });
+            }
+        } catch (e) {}
+
         const records = this.getDailySafetyCheckListRecords();
         const filteredRecords = this.applyDailySafetyFilters(records);
         const stats = this.getDailySafetyCheckListStats(filteredRecords);
