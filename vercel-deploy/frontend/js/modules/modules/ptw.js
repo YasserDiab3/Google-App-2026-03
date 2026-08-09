@@ -11496,17 +11496,21 @@ const PTW = {
                                 <table class="w-full ptw-paper-grid-table" style="border-collapse: collapse; border: 1px solid #000;">
                                     <thead>
                                         <tr style="background: linear-gradient(135deg, #b3e5fc 0%, #81d4fa 100%);">
-                                            <th class="p-3 text-center font-bold text-gray-900 border border-gray-800" style="width: 50%;">أسماء القائمين بالعمل</th>
-                                            <th class="p-3 text-center font-bold text-gray-900 border border-gray-800" style="width: 50%; border-right: 4px solid #1e3a8a;">التوقيع</th>
+                                            <th class="p-3 text-center font-bold text-gray-900 border border-gray-800" style="width: 45%;">أسماء القائمين بالعمل</th>
+                                            <th class="p-3 text-center font-bold text-gray-900 border border-gray-800" style="width: 45%; border-right: 4px solid #1e3a8a;">التوقيع</th>
+                                            <th class="p-3 text-center font-bold text-gray-900 border border-gray-800" style="width: 10%;">حذف</th>
                                         </tr>
                                     </thead>
                                     <tbody id="manual-team-members-list">
                                         ${(() => {
-            const members = (existingEntry?.teamMembers && existingEntry.teamMembers.length) ? existingEntry.teamMembers : [{ name: '', signature: '' }];
+            // صفان افترضيان دائماً عند الفتح (إضافة جديدة) — عند التعديل تُحفظ الأسماء الفعلية
+            const hasRealMembers = Array.isArray(existingEntry?.teamMembers) && existingEntry.teamMembers.some(m => (m && (m.name || m.signature || m.id)));
+            const members = hasRealMembers ? existingEntry.teamMembers : [{ name: '', signature: '' }, { name: '', signature: '' }];
             return members.map((member) => `
                                         <tr class="manual-team-member-row">
-                                            <td class="p-2 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-team-member-name border-0 focus:ring-0" placeholder="الاسم" value="${Utils.escapeHTML(member.name || '')}"></td>
-                                            <td class="p-2 border border-gray-800" style="border-right: 4px solid #1e3a8a;"><input type="text" class="form-input text-sm w-full manual-team-member-signature border-0 focus:ring-0" placeholder="التوقيع" value="${Utils.escapeHTML(member.signature || member.id || '')}"></td>
+                                            <td class="p-2 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-team-member-name border-0 focus:ring-0" placeholder="الاسم" value="${Utils.escapeHTML((member && member.name) || '')}"></td>
+                                            <td class="p-2 border border-gray-800" style="border-right: 4px solid #1e3a8a;"><input type="text" class="form-input text-sm w-full manual-team-member-signature border-0 focus:ring-0" placeholder="التوقيع" value="${Utils.escapeHTML((member && (member.signature || member.id)) || '')}"></td>
+                                            <td class="p-2 text-center border border-gray-800"><button type="button" class="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-full transition-colors" onclick="this.closest('tr').remove()" title="حذف"><i class="fas fa-trash-alt"></i></button></td>
                                         </tr>
                                     `).join('');
         })()}
@@ -12295,6 +12299,7 @@ const PTW = {
             tr.innerHTML = `
                 <td class="p-2 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-team-member-name border-0 focus:ring-0" list="manual-team-member-names-datalist" autocomplete="off" placeholder="الاسم" value=""></td>
                 <td class="p-2 border border-gray-800" style="border-right: 4px solid #1e3a8a;"><input type="text" class="form-input text-sm w-full manual-team-member-signature border-0 focus:ring-0" placeholder="التوقيع" value=""></td>
+                <td class="p-2 text-center border border-gray-800"><button type="button" class="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-full transition-colors" onclick="this.closest('tr').remove()" title="حذف"><i class="fas fa-trash-alt"></i></button></td>
             `;
             tbody.appendChild(tr);
             if (typeof modal._attachManualTeamRowLookup === 'function') {
