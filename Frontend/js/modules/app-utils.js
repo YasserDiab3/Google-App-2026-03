@@ -3133,13 +3133,52 @@ const Permissions = {
             return hasAccess;
         }
 
-        // fallback إلى الصلاحيات الافتراضية للدور في حال عدم وجود تخصيص صريح
+        // fallback إلى الصلاحيات الافتراضية للدور — يُطبَّق فقط بعد التأكد من حالة قاعدة المستخدمين:
+        // 1) أثناء أول ثواني الإقلاع (قبل اكتمال مزامنة جدول المستخدمين) لا نعرض أي موديول افتراضي —
+        //    كان هذا هو سبب ظهور موديولات (طلبات/ملاحظات/تقويم/طوارئ/ذكاء اصطناعي) لمستخدم لم تُمنح له،
+        //    ثم اختفائها بعد وصول جدول المستخدمين (صلاحياته الصريحة) — تسريب مؤقت قبل استقرار المزامنة.
+        // 2) المستخدم المُثبَّت وجوده في الجدول بصلاحيات صريحة → تلتزم صلاحياته حصراً (لا افتراضيات).
+        // 3) المستخدم المُثبَّت وجوده بصلاحيات فارغة/غير محددة → صلاحيات الدور الافتراضية (توافق للحسابات القديمة).
+        // 4) مستخدم غير موجود في الجدول إطلاقاً → لا صلاحيات افتراضية.
+        const appUsersList = (AppState.appData && Array.isArray(AppState.appData.users))
+            ? AppState.appData.users
+            : null;
+        const usersListLoaded = Array.isArray(appUsersList) && appUsersList.length > 0;
+        const dbUserMatch = usersListLoaded
+            ? appUsersList.find(candidate => candidate.email && user.email &&
+                candidate.email.toString().toLowerCase().trim() === user.email.toString().toLowerCase().trim())
+            : null;
+        const dbPermissionsHere = this.getDatabasePermissions(user);
+        const dbUserHasExplicit = dbPermissionsHere && typeof dbPermissionsHere === 'object' &&
+            !Array.isArray(dbPermissionsHere) && Object.keys(dbPermissionsHere).length > 0;
+
+        if (!usersListLoaded) {
+            if (AppState.debugMode) {
+                Utils.safeLog(`🔒 hasAccess(${moduleName}): قائمة المستخدمين غير مكتملة بعد - لا صلاحيات افتراضية للإقلاع (منع تسريب)`);
+            }
+            return false;
+        }
+
+        if (dbUserHasExplicit) {
+            if (AppState.debugMode) {
+                Utils.safeLog(`🔒 hasAccess(${moduleName}): المستخدم في جدول المستخدمين بصلاحيات صريحة - لا صلاحيات افتراضية`);
+            }
+            return false;
+        }
+
+        if (!dbUserMatch) {
+            if (AppState.debugMode) {
+                Utils.safeLog(`🔒 hasAccess(${moduleName}): المستخدم غير موجود في جدول المستخدمين - لا صلاحيات افتراضية`);
+            }
+            return false;
+        }
+
         const userRole = String(user.role || 'user').toLowerCase().trim();
         const roleDefaults = DEFAULT_ROLE_PERMISSIONS[userRole] || DEFAULT_ROLE_PERMISSIONS['user'] || {};
         if (Object.prototype.hasOwnProperty.call(roleDefaults, moduleName)) {
             const hasAccess = roleDefaults[moduleName] === true;
             if (AppState.debugMode) {
-                Utils.safeLog(`🔍 hasAccess(${moduleName}): ${hasAccess ? '✅ مسموح' : '❌ غير مسموح'} (من صلاحيات الدور الافتراضية)`);
+                Utils.safeLog(`🔍 hasAccess(${moduleName}): ${hasAccess ? '✅ مسموح' : '❌ غير مسموح'} (من صلاحيات الدور الافتراضية - مستخدم قديم بصلاحيات فارغة)`);
             }
             return hasAccess;
         }

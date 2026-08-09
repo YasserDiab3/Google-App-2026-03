@@ -1,11 +1,11 @@
 {
-  "version": "1.0.928",
+  "version": "1.0.929",
   "highlights": {
-"ar": [
-      "القسم الثالث في تصريح العمل: عند اختيار بارد / كهرباء / أخرى تظهر مقترحات نوع العمل (من سجلات سابقة + قائمة شائعة جاهزة) مع تلميحات أوضح للحقول — بدون تغيير التصميم."
+    "ar": [
+      "إصلاح تسرب صلاحيات مؤقت: أثناء أول ثوانٍ من فتح التطبيق وقبل اكتمال مزامنة جدول المستخدمين لم تعد الموديولات الافتراضية (طلبات/ملاحظات/تقويم/طوارئ/ذكاء اصطناعي) تظهر لمستخدمين لم تُمنح لهم — القائمة تُبنى بناءً على حالة المستخدم في قاعدة البيانات فقط."
     ],
     "en": [
-      "Work permit section 3: cold / electrical / other types now show selectable suggestions (from previous records plus common presets) with clearer field hints — no design change."
+      "Fixed a transient permissions leak: on app boot, before the users sheet finishes syncing, default-basic modules (requests/observations/calendar/emergency/AI assistant) shown by mistake no longer appear — the menu now renders strictly from the user's row in the database."
     ]
   }
 }
