@@ -224,17 +224,9 @@ function deleteBehavior(behaviorId) {
         if (!behaviorId) {
             return { success: false, message: 'معرف السجل غير محدد' };
         }
-        
-        const sheetName = 'BehaviorMonitoring';
-        const spreadsheetId = getSpreadsheetId();
-        const data = readFromSheet(sheetName, spreadsheetId);
-        const filteredData = data.filter(b => b.id !== behaviorId);
-        
-        if (filteredData.length === data.length) {
-            return { success: false, message: 'السجل غير موجود' };
-        }
-        
-        return saveToSheet(sheetName, filteredData, spreadsheetId);
+
+        // حذف الصف فعلياً من الورقة — saveToSheet لا يحذف الصفوف (upsert فقط)
+        return deleteRowById('BehaviorMonitoring', String(behaviorId).trim(), getSpreadsheetId());
     } catch (error) {
         Logger.log('Error deleting behavior: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء حذف السجل: ' + error.toString() };
@@ -398,17 +390,84 @@ function deleteContractorBehavior(behaviorId) {
         if (!behaviorId) {
             return { success: false, message: 'معرف السجل غير محدد' };
         }
-        var sheetName = 'ContractorBehaviorMonitoring';
-        var spreadsheetId = getSpreadsheetId();
-        var data = readFromSheet(sheetName, spreadsheetId);
-        var filteredData = data.filter(function (b) { return b.id !== behaviorId; });
-        if (filteredData.length === data.length) {
-            return { success: false, message: 'السجل غير موجود' };
-        }
-        return saveToSheet(sheetName, filteredData, spreadsheetId);
+        // حذف الصف فعلياً من الورقة — saveToSheet لا يحذف الصفوف (upsert فقط)
+        return deleteRowById('ContractorBehaviorMonitoring', String(behaviorId).trim(), getSpreadsheetId());
     } catch (error) {
         Logger.log('Error deleting contractor behavior: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء حذف السجل: ' + error.toString() };
     }
+}
+
+/**
+ * حذف جماعي لسجلات مراقبة سلوك الموظفين من الورقة (يحذف الصفوف فعلياً).
+ * @param {Array<String>} ids - قائمة معرفات السجلات المراد حذفها
+ * @returns {Object} نتيجة العملية
+ */
+function deleteBehaviorsBatch(ids) {
+    try {
+        if (!ids || !Array.isArray(ids)) {
+            return { success: false, message: 'معرفات غير صالحة' };
+        }
+        return deleteBehaviorRowsFromSheet_('BehaviorMonitoring', ids);
+    } catch (error) {
+        Logger.log('Error in deleteBehaviorsBatch: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء حذف السجلات: ' + error.toString() };
+    }
+}
+
+/**
+ * حذف جماعي لسجلات تصرفات المقاولين من الورقة (يحذف الصفوف فعلياً).
+ * @param {Array<String>} ids - قائمة معرفات السجلات المراد حذفها
+ * @returns {Object} نتيجة العملية
+ */
+function deleteContractorBehaviorsBatch(ids) {
+    try {
+        if (!ids || !Array.isArray(ids)) {
+            return { success: false, message: 'معرفات غير صالحة' };
+        }
+        return deleteBehaviorRowsFromSheet_('ContractorBehaviorMonitoring', ids);
+    } catch (error) {
+        Logger.log('Error in deleteContractorBehaviorsBatch: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء حذف السجلات: ' + error.toString() };
+    }
+}
+
+/**
+ * تنفيذ الحذف الجماعي عبر deleteRowById مع جمع النتائج.
+ * @param {String} sheetName - اسم الورقة
+ * @param {Array<String>} ids - قائمة المعرفات
+ * @returns {Object} نتيجة العملية
+ */
+function deleteBehaviorRowsFromSheet_(sheetName, ids) {
+    var spreadsheetId = getSpreadsheetId();
+    var deletedCount = 0;
+    var notFoundCount = 0;
+    var realErrors = [];
+    for (var i = 0; i < ids.length; i++) {
+        var id = String(ids[i] || '').trim();
+        if (!id) continue;
+        try {
+            var res = deleteRowById(sheetName, id, spreadsheetId);
+            if (res && res.success) {
+                deletedCount++;
+                continue;
+            }
+            var msg = (res && res.message) || 'خطأ غير معروف';
+            if (String(msg).indexOf('غير موجود') !== -1) {
+                notFoundCount++;
+            } else {
+                realErrors.push(id + ': ' + msg);
+            }
+        } catch (err) {
+            realErrors.push(id + ': ' + err.toString());
+        }
+    }
+    return {
+        success: realErrors.length === 0,
+        deletedCount: deletedCount,
+        notFoundCount: notFoundCount,
+        realErrors: realErrors,
+        message: 'تم حذف ' + deletedCount + ' سجل' + (notFoundCount ? ' — ' + notFoundCount + ' غير موجود' : '') + (realErrors.length ? ' — ' + realErrors.length + ' فشل' : '')
+    };
 }
 

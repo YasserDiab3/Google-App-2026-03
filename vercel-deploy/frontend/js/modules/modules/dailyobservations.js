@@ -21,26 +21,30 @@ function generateDailyObservationId(existingData) {
     
     if (existingData && Array.isArray(existingData)) {
         existingData.forEach(function (record) {
-            if (!record || !record.id) return;
-            const id = String(record.id).trim();
-            let num = 0;
-            
-            // التحقق من DOB-NNNN أولاً
-            const mDob = id.match(patternDob);
-            if (mDob) {
-                num = parseInt(mDob[1], 10);
-            } else {
-                // التحقق من OBS-YYYYMM-NNNN
-                const mObs = id.match(patternObs);
-                if (mObs) {
-                    num = parseInt(mObs[1], 10);
+            if (!record) return;
+            const candidates = [];
+            if (record.id) candidates.push(String(record.id).trim());
+            if (record.isoCode) candidates.push(String(record.isoCode).trim());
+            candidates.forEach(function (id) {
+                let num = 0;
+                
+                // التحقق من DOB-NNNN أولاً
+                const mDob = id.match(patternDob);
+                if (mDob) {
+                    num = parseInt(mDob[1], 10);
                 } else {
-                    // أي رقم في النهاية
-                    const mTrail = id.match(patternTrailingNum);
-                    if (mTrail) num = parseInt(mTrail[1], 10);
+                    // التحقق من OBS-YYYYMM-NNNN
+                    const mObs = id.match(patternObs);
+                    if (mObs) {
+                        num = parseInt(mObs[1], 10);
+                    } else {
+                        // أي رقم في النهاية
+                        const mTrail = id.match(patternTrailingNum);
+                        if (mTrail) num = parseInt(mTrail[1], 10);
+                    }
                 }
-            }
-            if (!isNaN(num) && num > maxNum) maxNum = num;
+                if (!isNaN(num) && num > maxNum) maxNum = num;
+            });
         });
     }
     const nextNum = maxNum + 1;
@@ -84,6 +88,29 @@ function getObservationIsoCodeFromId(id) {
     }
     
     return 'OBS-' + new Date().getFullYear() + String(new Date().getMonth() + 1).padStart(2, '0') + '-0000';
+}
+
+/**
+ * طلب معرف الملاحظة التالي من الخادم (مصدر الحقيقة) لضمان تسلسل مستمر بدون تكرار/قفزات.
+ * يعود null عند الفشل أو عدم توفر الخادم ليتمكن المتصل من استخدام التوليد المحلي كاحتياط.
+ * @returns {Promise<{id: string, isoCode: string}|null>} المعرف الجديد من الخادم أو null
+ */
+async function getNextObservationIdFromBackend() {
+    try {
+        if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
+            return null;
+        }
+        const result = await GoogleIntegration.sendRequest({ action: 'getNextObservationId', data: {} });
+        if (result && result.success && result.data && result.data.id) {
+            return { id: result.data.id, isoCode: result.data.isoCode || getObservationIsoCodeFromId(result.data.id) };
+        }
+        return null;
+    } catch (error) {
+        if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+            Utils.safeWarn('تعذر الحصول على رقم الملاحظة من الخادم، سيتم التوليد محلياً:', error);
+        }
+        return null;
+    }
 }
 
 const DailyObservations = {
@@ -9594,11 +9621,21 @@ const DailyObservations = {
             return;
         }
 
-        // تعديل: نحتفظ بنفس id دون تغيير. جديد: نولّد id ثم نشتق isoCode من أرقامه فقط
-        const recordId = editId || generateDailyObservationId(AppState.appData.dailyObservations || []);
-        const isoCode = editId
-            ? (existingRecord?.isoCode || getObservationIsoCodeFromId(recordId))
-            : getObservationIsoCodeFromId(recordId);
+        // تعديل: نحتفظ بنفس id دون تغيير. جديد: نولّد id من الخادم (مصدر الحقيقة) لضمان تسلسل مستمر بدون تكرار/قفزات، ثم نشتق isoCode من أرقامه فقط
+        let recordId = editId;
+        let isoCode = '';
+        if (editId) {
+            isoCode = existingRecord?.isoCode || getObservationIsoCodeFromId(recordId);
+        } else {
+            const remoteIdentity = await getNextObservationIdFromBackend();
+            if (remoteIdentity && remoteIdentity.id) {
+                recordId = remoteIdentity.id;
+                isoCode = remoteIdentity.isoCode || getObservationIsoCodeFromId(recordId);
+            } else {
+                recordId = generateDailyObservationId(AppState.appData.dailyObservations || []);
+                isoCode = getObservationIsoCodeFromId(recordId);
+            }
+        }
 
         // حساب Overdays (الوقت الحالي - تاريخ تسجيل الملاحظة)
         const observationDate = isoDate;
@@ -11324,7 +11361,7 @@ const DailyObservations = {
                         continue;
                     }
 
-                    const record = this.mapImportedObservationRow(row);
+                    const record = await this.mapImportedObservationRow(row);
                     if (!record) {
                         skippedCount += 1;
                         errors.push(`صف ${index + 2}: فشل في تحويل البيانات`);
@@ -11404,7 +11441,7 @@ const DailyObservations = {
         this.loadObservationsList();
     },
 
-    mapImportedObservationRow(row) {
+    async mapImportedObservationRow(row) {
         if (!row || typeof row !== 'object') return null;
 
         const normalizedKeyMap = new Map();
@@ -11702,8 +11739,24 @@ const DailyObservations = {
             status = 'مفتوح';
         }
 
-        const recordId = generateDailyObservationId(AppState.appData.dailyObservations || []);
-        const iso = isoCode || getObservationIsoCodeFromId(recordId);
+        // توليد رقم الملاحظة من الخادم (مصدر الحقيقة) لضمان تسلسل مستمر بدون تكرار/قفزات، مع احتياط محلي
+        let recordId = '';
+        let iso = '';
+        if (isoCode) {
+            recordId = String(isoCode).match(/^OBS-\d{6}-(\d+)$/i)
+                ? 'DOB-' + String(isoCode).match(/^OBS-\d{6}-(\d+)$/i)[1]
+                : generateDailyObservationId(AppState.appData.dailyObservations || []);
+            iso = isoCode;
+        } else {
+            const remoteIdentity = await getNextObservationIdFromBackend();
+            if (remoteIdentity && remoteIdentity.id) {
+                recordId = remoteIdentity.id;
+                iso = remoteIdentity.isoCode || getObservationIsoCodeFromId(recordId);
+            } else {
+                recordId = generateDailyObservationId(AppState.appData.dailyObservations || []);
+                iso = getObservationIsoCodeFromId(recordId);
+            }
+        }
         const now = new Date().toISOString();
 
         const payload = {

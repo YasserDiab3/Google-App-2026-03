@@ -5074,15 +5074,47 @@ function upsertIdMapping_(sheetName, idField, prefix, oldId, newId, spreadsheetI
  * @returns {string} معرف جديد مثل DOB-2999
  */
 function generateDailyObservationId(sheetName, spreadsheetId) {
+    var identity = generateNextObservationIdentity(sheetName, spreadsheetId);
+    return identity.id;
+}
+
+/**
+ * توليد معرف ملاحظة يومية (DOB-NNNN) مع isoCode (OBS-YYYYMM-NNNN) بضمان التسلسل المستمر.
+ * - يقفل بواسطة Script Lock لمنع تكرار الرقم مع استدعاءات متزامنة (مستخدمين متعددين).
+ * - يمسح كاش الورقة ويقرأ مباشرة من الجدول (مصدر الحقيقة) لضمان رقم غير مكرر.
+ * - يفحص عمودي id و isoCode لاستخراج أكبر رقم مستخدم.
+ * @param {string} sheetName - اسم الورقة (مثل DailyObservations)
+ * @param {string} spreadsheetId - معرف الجدول (اختياري)
+ * @returns {{id: string, isoCode: string}} معرف جديد مثل { id: 'DOB-2999', isoCode: 'OBS-202602-2999' }
+ */
+function generateNextObservationIdentity(sheetName, spreadsheetId) {
+    var lock = null;
     try {
         var targetSpreadsheetId = spreadsheetId || getSpreadsheetId();
-        if (!targetSpreadsheetId || !sheetName) return Utilities.getUuid();
+        if (!targetSpreadsheetId || !sheetName) {
+            var uuidId = 'DOB-' + String(Utilities.getUuid()).replace(/[^0-9]/g, '').substring(0, 4);
+            return { id: uuidId, isoCode: getObservationIsoCodeFromId(uuidId) };
+        }
+        
+        // قفل تسلسلي لمنع رقمين متطابقين عند الاستدعاء المتزامن
+        try {
+            lock = LockService.getScriptLock();
+            lock.waitLock(15000);
+        } catch (lockEx) {
+            Logger.log('generateNextObservationIdentity lock failed: ' + lockEx.toString());
+        }
+        
+        // مسح الكاش وقراءة مباشرة من الورقة (بدون فلتر أمان) كمصدر حقيقة
+        try {
+            invalidateHseSheetCaches(sheetName);
+        } catch (e) {}
         var existingData = [];
         try {
-            existingData = readFromSheet(sheetName, targetSpreadsheetId);
+            existingData = readFromSheet(sheetName, targetSpreadsheetId, true);
         } catch (e) {
             existingData = [];
         }
+        
         var patternDob = /^DOB-(\d+)$/i;
         var patternObs = /^OBS-\d{6}-(\d+)$/i;
         var patternTrailingNum = /(\d+)$/;
@@ -5090,34 +5122,42 @@ function generateDailyObservationId(sheetName, spreadsheetId) {
         
         for (var i = 0; i < (existingData || []).length; i++) {
             var rec = existingData[i];
-            if (!rec || !rec.id) continue;
-            var id = String(rec.id).trim();
-            var num = 0;
-            
-            // التحقق من DOB-NNNN أولاً
-            var mDob = id.match(patternDob);
-            if (mDob) {
-                num = parseInt(mDob[1], 10);
-            } else {
-                // التحقق من OBS-YYYYMM-NNNN
-                var mObs = id.match(patternObs);
-                if (mObs) {
-                    num = parseInt(mObs[1], 10);
+            if (!rec) continue;
+            var candidates = [];
+            if (rec.id) candidates.push(String(rec.id).trim());
+            if (rec.isoCode) candidates.push(String(rec.isoCode).trim());
+            for (var c = 0; c < candidates.length; c++) {
+                var val = candidates[c];
+                var num = 0;
+                var mDob = val.match(patternDob);
+                if (mDob) {
+                    num = parseInt(mDob[1], 10);
                 } else {
-                    // أي رقم في النهاية
-                    var mTrail = id.match(patternTrailingNum);
-                    if (mTrail) num = parseInt(mTrail[1], 10);
+                    var mObs = val.match(patternObs);
+                    if (mObs) {
+                        num = parseInt(mObs[1], 10);
+                    } else {
+                        var mTrail = val.match(patternTrailingNum);
+                        if (mTrail) num = parseInt(mTrail[1], 10);
+                    }
                 }
+                if (!isNaN(num) && num > maxNum) maxNum = num;
             }
-            if (!isNaN(num) && num > maxNum) maxNum = num;
         }
+        
         var nextNum = maxNum + 1;
         var numStr = nextNum.toString();
         while (numStr.length < 4) numStr = '0' + numStr;
-        return 'DOB-' + numStr;
+        var id = 'DOB-' + numStr;
+        return { id: id, isoCode: getObservationIsoCodeFromId(id) };
     } catch (err) {
-        Logger.log('generateDailyObservationId: ' + err.toString());
-        return Utilities.getUuid();
+        Logger.log('generateNextObservationIdentity: ' + err.toString());
+        var fallbackId = 'DOB-' + String(Utilities.getUuid()).replace(/[^0-9]/g, '').substring(0, 4);
+        return { id: fallbackId, isoCode: getObservationIsoCodeFromId(fallbackId) };
+    } finally {
+        try {
+            if (lock) lock.releaseLock();
+        } catch (releaseEx) {}
     }
 }
 

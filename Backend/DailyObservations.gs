@@ -14,6 +14,37 @@
 
 /**
  * ============================================
+ * الحصول على معرف الملاحظة التالي من الخادم (مصدر الحقيقة)
+ * ============================================
+ * 
+ * يُستخدم من الواجهة عند إنشاء ملاحظة جديدة لضمان تسلسل مستمر بدون تكرار أو قفزات،
+ * حتى مع وجود بيانات محلية قديمة أو مستخدمين متزامنين.
+ * 
+ * @param {Object} payload - بيانات إضافية (غير مطلوبة)
+ * @returns {Object} نتيجة العملية مع id و isoCode
+ */
+function getNextObservationId(payload) {
+    try {
+        var sheetName = 'DailyObservations';
+        var identity = generateNextObservationIdentity(sheetName);
+        if (!identity || !identity.id) {
+            return { success: false, message: 'تعذر توليد رقم الملاحظة' };
+        }
+        return {
+            success: true,
+            data: {
+                id: identity.id,
+                isoCode: identity.isoCode || getObservationIsoCodeFromId(identity.id)
+            }
+        };
+    } catch (err) {
+        Logger.log('getNextObservationId: ' + err.toString());
+        return { success: false, message: 'خطأ في توليد رقم الملاحظة: ' + err.toString() };
+    }
+}
+
+/**
+ * ============================================
  * إضافة ملاحظة يومية
  * ============================================
  * 

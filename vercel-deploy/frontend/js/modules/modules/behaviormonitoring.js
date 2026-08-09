@@ -934,6 +934,41 @@ const BehaviorMonitoring = {
         }
     },
 
+    // حذف سجل واحد من Google Sheets فعلياً (autoSave/upsert لا يحذف الصفوف من الورقة)
+    async _callRemoteBehaviorDeleteOne(behaviorKind, id) {
+        if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
+            return { success: false, shouldDefer: true };
+        }
+        try {
+            const action = behaviorKind === 'contractor' ? 'deleteContractorBehavior' : 'deleteBehavior';
+            const res = await GoogleIntegration.sendRequest({ action, data: { behaviorId: id } });
+            if (res && res.success) return res;
+            Utils?.safeWarn?.('⚠️ فشل حذف التصرف من الخادم: ' + (res?.message || ''));
+            return { success: false, shouldDefer: true, message: res?.message || '' };
+        } catch (error) {
+            Utils?.safeWarn?.('⚠️ تعذر حذف التصرف من الخادم: ' + (error?.message || error));
+            return { success: false, shouldDefer: true, message: error?.message || String(error) };
+        }
+    },
+
+    // حذف جماعي من Google Sheets فعلياً — مطلوب حتى لا تعود المكررات بعد إعادة التحميل
+    async _callRemoteBehaviorDelete(behaviorKind, ids) {
+        if (!Array.isArray(ids) || !ids.length) return { success: true };
+        if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
+            return { success: false, shouldDefer: true };
+        }
+        try {
+            const action = behaviorKind === 'contractor' ? 'deleteContractorBehaviorsBatch' : 'deleteBehaviorsBatch';
+            const res = await GoogleIntegration.sendRequest({ action, data: { ids } });
+            if (res && res.success) return res;
+            Utils?.safeWarn?.('⚠️ فشل حذف السجلات من الخادم: ' + (res?.message || ''), res);
+            return { success: false, shouldDefer: true, message: res?.message || '' };
+        } catch (error) {
+            Utils?.safeWarn?.('⚠️ تعذر حذف السجلات من الخادم: ' + (error?.message || error));
+            return { success: false, shouldDefer: true, message: error?.message || String(error) };
+        }
+    },
+
     async deleteBehaviorById(id) {
         if (!this.canDeleteBehavior()) {
             Notification.error('الحذف متاح للمدير فقط');
@@ -951,6 +986,7 @@ const BehaviorMonitoring = {
 
         Loading.show();
         try {
+            await this._callRemoteBehaviorDeleteOne('employee', behaviorId);
             AppState.appData.behaviorMonitoring = (AppState.appData.behaviorMonitoring || []).filter((b) => b && b.id !== behaviorId);
             await this.persistBehaviorList('BehaviorMonitoring', 'behaviorMonitoring');
             Notification.success('تم حذف التصرف');
@@ -984,6 +1020,7 @@ const BehaviorMonitoring = {
 
         Loading.show();
         try {
+            await this._callRemoteBehaviorDeleteOne('contractor', behaviorId);
             AppState.appData.contractorBehaviorMonitoring = (AppState.appData.contractorBehaviorMonitoring || [])
                 .filter((b) => b && b.id !== behaviorId);
             await this.persistBehaviorList('ContractorBehaviorMonitoring', 'contractorBehaviorMonitoring');
@@ -1014,6 +1051,7 @@ const BehaviorMonitoring = {
 
         Loading.show();
         try {
+            await this._callRemoteBehaviorDelete('employee', removeIds);
             const removeSet = new Set(removeIds.map(String));
             AppState.appData.behaviorMonitoring = list.filter((b) => b && !removeSet.has(String(b.id)));
             await this.persistBehaviorList('BehaviorMonitoring', 'behaviorMonitoring');
@@ -1044,6 +1082,7 @@ const BehaviorMonitoring = {
 
         Loading.show();
         try {
+            await this._callRemoteBehaviorDelete('contractor', removeIds);
             const removeSet = new Set(removeIds.map(String));
             AppState.appData.contractorBehaviorMonitoring = list.filter((b) => b && !removeSet.has(String(b.id)));
             await this.persistBehaviorList('ContractorBehaviorMonitoring', 'contractorBehaviorMonitoring');

@@ -2800,6 +2800,26 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'deleteBehaviorsBatch': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    result = deleteBehaviorsBatch(payload.ids || payload);
+                    return;
+
+        })();
+        return result;
+    },
+    'deleteContractorBehaviorsBatch': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    result = deleteContractorBehaviorsBatch(payload.ids || payload);
+                    return;
+
+        })();
+        return result;
+    },
     'addChemicalSafety': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
@@ -2855,6 +2875,16 @@ var ActionHandlers = {
         (function() {
 
                     result = addObservationToSheet(payload);
+                    return;
+
+        })();
+        return result;
+    },
+    'getNextObservationId': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    result = getNextObservationId(payload || {});
                     return;
 
         })();
