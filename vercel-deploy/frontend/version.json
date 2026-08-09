@@ -1,11 +1,13 @@
 {
-  "version": "1.0.932",
+  "version": "1.0.934",
   "highlights": {
     "ar": [
-      "تصريح العمل: مربع اختيار واضح (تشك بوكس) لكل نوع تصريح في القسم الثالث (النموذجين اليدوي والتلقائي) — تفعيل مربع النوع يفتح تفاصيله، وإلغاؤه يغلقها، والنوع المختار يُسجل تلقائياً في التصريح."
+      "تصريح العمل: مربع اختيار واضح (تشك بوكس) لكل نوع تصريح في القسم الثالث (النموذجين اليدوي والتلقائي) — تفعيل مربع النوع يفتح تفاصيله، وإلغاؤه يغلقها، والنوع المختار يُسجل تلقائياً في التصريح.",
+      "تصريح العمل: عند تفعيل «قائمة التحقق بقرار بدء العمل» أو «تطبيق نظام العزل LOTO» في القسم الرابع يظهر حقل منمق لإدخال رقم قائمة التحقق أو رقم تصريح العزل، مع إلزامية الإدخال وعرض الرقم في الطباعة والتفاصيل."
     ],
     "en": [
-      "Work permit: a clear checkbox for every permit type in section 3 (both manual and automatic forms) — checking a type enables its details, unchecking disables them, and the selected types are recorded automatically."
+      "Work permit: a clear checkbox for every permit type in section 3 (both manual and automatic forms) — checking a type enables its details, unchecking disables them, and the selected types are recorded automatically.",
+      "Work permit: enabling \"Pre-start checklist\" or \"LOTO isolation\" in section 4 now reveals a styled field to enter the checklist number or the LOTO permit number — entry is required, and the number appears in prints and details."
     ]
   }
 }

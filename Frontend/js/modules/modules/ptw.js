@@ -205,6 +205,9 @@ const PTW = {
             confinedSpaceDetails: entry.confinedSpaceDetails,
             heightWorkDetails: entry.heightWorkDetails,
             lotoApplied: entry.lotoApplied,
+            lotoNumber: entry.lotoNumber || '',
+            preStartChecklist: entry.preStartChecklist,
+            preStartChecklistNumber: entry.preStartChecklistNumber || '',
             coldWorkType: entry.coldWorkType,
             excavationLength: entry.excavationLength,
             excavationWidth: entry.excavationWidth,
@@ -7325,7 +7328,9 @@ const PTW = {
             excavationDepth: document.getElementById('ptw-excavation-depth')?.value.trim() || '',
             soilType: document.getElementById('ptw-excavation-soil')?.value.trim() || '',
             preStartChecklist: document.getElementById('ptw-preStartChecklist')?.checked || false,
+            preStartChecklistNumber: (document.getElementById('ptw-preStartChecklist')?.checked ? String(document.getElementById('ptw-preStartChecklistNumber')?.value || '').trim() : ''),
             lotoApplied: document.getElementById('ptw-lotoApplied')?.checked || false,
+            lotoNumber: (document.getElementById('ptw-lotoApplied')?.checked ? String(document.getElementById('ptw-lotoNumber')?.value || '').trim() : ''),
             governmentPermits: document.getElementById('ptw-governmentPermits')?.checked || false,
             riskAssessmentAttached: document.getElementById('ptw-riskAssessmentAttached')?.checked || false,
             gasTesting: document.getElementById('ptw-gasTesting')?.checked || false,
@@ -7463,8 +7468,8 @@ const PTW = {
 
         // بناء قائمة المتطلبات
         const requirements = [];
-        if (formData.preStartChecklist) requirements.push('قائمة التحقق بقرار بدء العمل');
-        if (formData.lotoApplied) requirements.push('تطبيق نظام العزل LOTO');
+        if (formData.preStartChecklist) requirements.push('قائمة التحقق بقرار بدء العمل' + (formData.preStartChecklistNumber ? ` (رقم: ${formData.preStartChecklistNumber})` : ''));
+        if (formData.lotoApplied) requirements.push('تطبيق نظام العزل LOTO' + (formData.lotoNumber ? ` (رقم: ${formData.lotoNumber})` : ''));
         if (formData.governmentPermits) requirements.push('تصاريح جهات حكومية');
         if (formData.riskAssessmentAttached) requirements.push('تحليل المخاطر ووسائل التحكم');
         if (formData.gasTesting) requirements.push('قياس الغازات');
@@ -7923,7 +7928,9 @@ const PTW = {
             excavationDepth: entry.excavationDepth || '',
             soilType: entry.soilType || '',
             preStartChecklist: parseBool(entry.preStartChecklist),
+            preStartChecklistNumber: String(entry.preStartChecklistNumber || '').trim(),
             lotoApplied: parseBool(entry.lotoApplied),
+            lotoNumber: String(entry.lotoNumber || '').trim(),
             governmentPermits: parseBool(entry.governmentPermits),
             riskAssessmentAttached: parseBool(entry.riskAssessmentAttached),
             gasTesting: parseBool(entry.gasTesting),
@@ -7977,7 +7984,9 @@ const PTW = {
             excavationDepth: item.excavationDepth || '',
             soilType: item.soilType || '',
             preStartChecklist: item.preStartChecklist || false,
+            preStartChecklistNumber: String(item.preStartChecklistNumber || '').trim(),
             lotoApplied: item.lotoApplied || false,
+            lotoNumber: String(item.lotoNumber || '').trim(),
             governmentPermits: item.governmentPermits || false,
             riskAssessmentAttached: item.riskAssessmentAttached || false,
             gasTesting: item.gasTesting || false,
@@ -8480,6 +8489,7 @@ const PTW = {
             .manual-print-req-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
             .manual-print-req-item { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; font-size: 11px; }
             .manual-print-req-item.on { border-color: #f97316; background: #fff7ed; font-weight: 600; }
+            .manual-print-req-num { display: block; margin-top: 3px; font-size: 9px; font-weight: 700; color: #b45309; background: #ffedd5; border-radius: 4px; padding: 1px 4px; }
             .ptw-manual-ppe-print-matrix {
                 background: #fff; border: 1.5px solid #64748b; border-radius: 8px;
                 padding: 12px 10px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
@@ -8707,7 +8717,9 @@ const PTW = {
         const parseBool = (v) => v === true || v === 'true' || v === 1 || v === '1';
         const reqHtml = reqItems.map((item) => {
             const on = parseBool(e[item.key]);
-            return `<div class="manual-print-req-item${on ? ' on' : ''}">${on ? '☑' : '☐'} ${esc(item.label)}</div>`;
+            const numKey = item.key === 'preStartChecklist' ? 'preStartChecklistNumber' : (item.key === 'lotoApplied' ? 'lotoNumber' : null);
+            const num = numKey && on ? String(e[numKey] || '').trim() : '';
+            return `<div class="manual-print-req-item${on ? ' on' : ''}">${on ? '☑' : '☐'} ${esc(item.label)}${num ? `<span class="manual-print-req-num">رقم: ${esc(num)}</span>` : ''}</div>`;
         }).join('');
 
         const workBlocks = [];
@@ -10572,6 +10584,45 @@ const PTW = {
                 .ptw-work-types-section .ptw-work-type-row.is-type-disabled .ptw-work-type-row__opts {
                     pointer-events: none;
                 }
+                /* القسم الرابع: حقل رقم قائمة التحقق / رقم تصريح العزل */
+                .ptw-req-card { cursor: default; }
+                .ptw-req-card label { min-width: 0; }
+                .ptw-req-number-wrap {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    margin-top: 10px;
+                    padding-top: 10px;
+                    border-top: 1px dashed #d9e6f2;
+                }
+                .ptw-req-number-label {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 5px;
+                    font-size: 0.72rem;
+                    font-weight: 600;
+                    color: #64748b;
+                    white-space: nowrap;
+                }
+                .ptw-req-number-label i { color: #003865; }
+                .ptw-req-number-input {
+                    width: 100%;
+                    min-width: 0;
+                    border: 1px solid #d4e4f2;
+                    border-radius: 8px;
+                    padding: 6px 10px;
+                    font-size: 0.85rem;
+                    background: #f8fafc;
+                    color: #0f172a;
+                    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+                }
+                .ptw-req-number-input::placeholder { color: #94a3b8; }
+                .ptw-req-number-input:focus {
+                    outline: none;
+                    border-color: #f97316;
+                    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+                    background: #fff;
+                }
                 /* القسم الثالث فقط — كل القواعد تحت .ptw-work-types-section */
                 .ptw-work-types-section {
                     direction: rtl;
@@ -11664,12 +11715,24 @@ const PTW = {
                         <div class="ptw-manual-form-section manual-section-4">
                             <h3><i class="fas fa-tasks"></i><span>القسم الرابع : المتطلبات والمرفقات</span></h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <label class="flex items-center p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-orange-50 hover:border-orange-300 transition-all bg-white">
-                                    <input type="checkbox" id="manual-permit-preStartChecklist" class="form-checkbox h-5 w-5 text-orange-600 rounded ml-3" ${existingEntry?.preStartChecklist ? 'checked' : ''}><span class="font-medium">قائمة التحقق بقرار بدء العمل</span>
-                                </label>
-                                <label class="flex items-center p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-orange-50 hover:border-orange-300 transition-all bg-white">
-                                    <input type="checkbox" id="manual-permit-lotoApplied" class="form-checkbox h-5 w-5 text-orange-600 rounded ml-3" ${existingEntry?.lotoApplied ? 'checked' : ''}><span class="font-medium">تطبيق نظام العزل LOTO</span>
-                                </label>
+                                <div class="ptw-req-card p-3 rounded-lg border border-gray-200 transition-all bg-white ${existingEntry?.preStartChecklist ? 'border-orange-300' : ''}">
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="checkbox" id="manual-permit-preStartChecklist" class="form-checkbox h-5 w-5 text-orange-600 rounded ml-3" ${existingEntry?.preStartChecklist ? 'checked' : ''}><span class="font-medium">قائمة التحقق بقرار بدء العمل</span>
+                                    </label>
+                                    <div class="ptw-req-number-wrap ${existingEntry?.preStartChecklist ? '' : 'hidden'}">
+                                        <span class="ptw-req-number-label"><i class="fas fa-list-check" aria-hidden="true"></i> رقم قائمة التحقق</span>
+                                        <input type="text" id="manual-permit-preStartChecklistNumber" class="ptw-req-number-input" value="${Utils.escapeHTML(existingEntry?.preStartChecklistNumber || '')}" placeholder="مثال: QA-PSC-001">
+                                    </div>
+                                </div>
+                                <div class="ptw-req-card p-3 rounded-lg border border-gray-200 transition-all bg-white ${existingEntry?.lotoApplied ? 'border-orange-300' : ''}">
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="checkbox" id="manual-permit-lotoApplied" class="form-checkbox h-5 w-5 text-orange-600 rounded ml-3" ${existingEntry?.lotoApplied ? 'checked' : ''}><span class="font-medium">تطبيق نظام العزل LOTO</span>
+                                    </label>
+                                    <div class="ptw-req-number-wrap ${existingEntry?.lotoApplied ? '' : 'hidden'}">
+                                        <span class="ptw-req-number-label"><i class="fas fa-lock" aria-hidden="true"></i> رقم تصريح العزل</span>
+                                        <input type="text" id="manual-permit-lotoNumber" class="ptw-req-number-input" value="${Utils.escapeHTML(existingEntry?.lotoNumber || '')}" placeholder="مثال: LOTO-2026-001">
+                                    </div>
+                                </div>
                                 <label class="flex items-center p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-orange-50 hover:border-orange-300 transition-all bg-white">
                                     <input type="checkbox" id="manual-permit-governmentPermits" class="form-checkbox h-5 w-5 text-orange-600 rounded ml-3" ${existingEntry?.governmentPermits ? 'checked' : ''}><span class="font-medium">تصاريح جهات حكومية</span>
                                 </label>
@@ -12317,6 +12380,28 @@ const PTW = {
             typeCardsRoot.addEventListener('input', syncWorkTypeRowsFilled);
             syncWorkTypeRowsFilled();
         }
+        // القسم الرابع: إظهار/إخفاء حقل رقم قائمة التحقق ورقم تصريح العزل عند تفعيل مربعه
+        const manualReqSection = modal.querySelector('.manual-section-4');
+        const syncManualReqNumberFields = () => {
+            if (!manualReqSection) return;
+            [
+                ['#manual-permit-preStartChecklist', '#manual-permit-preStartChecklistNumber'],
+                ['#manual-permit-lotoApplied', '#manual-permit-lotoNumber']
+            ].forEach(([cbSel, numSel]) => {
+                const cb = manualReqSection.querySelector(cbSel);
+                const num = manualReqSection.querySelector(numSel);
+                if (!cb || !num) return;
+                const on = cb.checked;
+                num.closest('.ptw-req-number-wrap')?.classList.toggle('hidden', !on);
+                num.closest('.ptw-req-card')?.classList.toggle('border-orange-300', on);
+            });
+        };
+        if (manualReqSection) {
+            manualReqSection.addEventListener('change', (event) => {
+                if (event.target.matches('#manual-permit-preStartChecklist, #manual-permit-lotoApplied')) syncManualReqNumberFields();
+            });
+            syncManualReqNumberFields();
+        }
         // التحقق من اختيار حالة التصريح وتطبيق التنسيق الفاخر
         const statusRadios = modal.querySelectorAll('input[name="manual-permit-status-radio"]');
         const statusHiddenInput = modal.querySelector('#manual-permit-status');
@@ -12728,6 +12813,29 @@ const PTW = {
                 return;
             }
 
+            // التحقق من إدخال رقم قائمة التحقق / رقم تصريح العزل عند تفعيل المربع
+            const reqNumberChecks = [];
+            const preReqCb = modal.querySelector('#manual-permit-preStartChecklist');
+            const preReqNum = modal.querySelector('#manual-permit-preStartChecklistNumber');
+            const lotoReqCb = modal.querySelector('#manual-permit-lotoApplied');
+            const lotoReqNum = modal.querySelector('#manual-permit-lotoNumber');
+            if (preReqCb?.checked && !String(preReqNum?.value || '').trim()) reqNumberChecks.push('رقم قائمة التحقق بقرار بدء العمل');
+            if (lotoReqCb?.checked && !String(lotoReqNum?.value || '').trim()) reqNumberChecks.push('رقم تصريح العزل LOTO');
+            if (reqNumberChecks.length > 0) {
+                [preReqNum, lotoReqNum].forEach(el => { if (el) { el.style.border = '2px solid #e53e3e'; el.style.boxShadow = '0 0 0 3px rgba(229,62,62,0.15)'; } });
+                const firstReqNum = (reqNumberChecks[0] === 'رقم قائمة التحقق بقرار بدء العمل') ? preReqNum : lotoReqNum;
+                if (firstReqNum && typeof firstReqNum.focus === 'function') {
+                    firstReqNum.focus();
+                    firstReqNum.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                Notification.warning(
+                    this._t('module.ptw.notify.manualReqNumberRequired', 'بعد تفعيل المربع يجب إدخال:\n{fields}')
+                        .replace('{fields}', reqNumberChecks.map(item => `• ${item}`).join('\n'))
+                );
+                this._isSavingManualPermit = false;
+                return;
+            }
+
             let selectedLocationEntries = [];
             if (locationEntriesInput?.value) {
                 try {
@@ -12923,7 +13031,9 @@ const PTW = {
                 soilType: modal.querySelector('#manual-excavation-soil')?.value.trim() || '',
                 // المتطلبات والمرفقات
                 preStartChecklist: modal.querySelector('#manual-permit-preStartChecklist')?.checked || false,
+                preStartChecklistNumber: (modal.querySelector('#manual-permit-preStartChecklist')?.checked ? String(modal.querySelector('#manual-permit-preStartChecklistNumber')?.value || '').trim() : ''),
                 lotoApplied: modal.querySelector('#manual-permit-lotoApplied')?.checked || false,
+                lotoNumber: (modal.querySelector('#manual-permit-lotoApplied')?.checked ? String(modal.querySelector('#manual-permit-lotoNumber')?.value || '').trim() : ''),
                 governmentPermits: modal.querySelector('#manual-permit-governmentPermits')?.checked || false,
                 riskAssessmentAttached: modal.querySelector('#manual-permit-riskAssessmentAttached')?.checked || false,
                 gasTesting: modal.querySelector('#manual-permit-gasTesting')?.checked || false,
@@ -13112,7 +13222,9 @@ const PTW = {
                 soilType: formData.soilType,
                 // المتطلبات والمرفقات
                 preStartChecklist: formData.preStartChecklist,
+                preStartChecklistNumber: formData.preStartChecklistNumber || '',
                 lotoApplied: formData.lotoApplied,
+                lotoNumber: formData.lotoNumber || '',
                 governmentPermits: formData.governmentPermits,
                 riskAssessmentAttached: formData.riskAssessmentAttached,
                 gasTesting: formData.gasTesting,
@@ -13240,7 +13352,9 @@ const PTW = {
                 coldWorkType: entry.coldWorkType || '',
                 otherWorkType: entry.otherWorkType || '',
                 preStartChecklist: entry.preStartChecklist || false,
+                preStartChecklistNumber: String(entry.preStartChecklistNumber || '').trim(),
                 lotoApplied: entry.lotoApplied || false,
+                lotoNumber: String(entry.lotoNumber || '').trim(),
                 governmentPermits: entry.governmentPermits || false,
                 riskAssessmentAttached: entry.riskAssessmentAttached || false,
                 gasTesting: entry.gasTesting || false,
@@ -15218,6 +15332,45 @@ const PTW = {
                 .ptw-work-types-section .ptw-work-type-row.is-type-disabled .ptw-work-type-row__opts {
                     pointer-events: none;
                 }
+                /* القسم الرابع (تلقائي): حقل رقم قائمة التحقق / رقم تصريح العزل */
+                .ptw-section-4 .ptw-req-card { cursor: default; }
+                .ptw-section-4 .ptw-req-card label { min-width: 0; }
+                .ptw-section-4 .ptw-req-number-wrap {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    margin-top: 10px;
+                    padding-top: 10px;
+                    border-top: 1px dashed #e5e0f5;
+                }
+                .ptw-section-4 .ptw-req-number-label {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 5px;
+                    font-size: 0.72rem;
+                    font-weight: 600;
+                    color: #7c6baa;
+                    white-space: nowrap;
+                }
+                .ptw-section-4 .ptw-req-number-label i { color: #6d28d9; }
+                .ptw-section-4 .ptw-req-number-input {
+                    width: 100%;
+                    min-width: 0;
+                    border: 1px solid #e5e0f5;
+                    border-radius: 8px;
+                    padding: 6px 10px;
+                    font-size: 0.85rem;
+                    background: #faf9ff;
+                    color: #0f172a;
+                    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+                }
+                .ptw-section-4 .ptw-req-number-input::placeholder { color: #a5a0c0; }
+                .ptw-section-4 .ptw-req-number-input:focus {
+                    outline: none;
+                    border-color: #8b5cf6;
+                    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+                    background: #fff;
+                }
                 .ptw-work-types-section .ptw-work-subopt input,
                 .ptw-work-types-section .ptw-check-option input { margin: 0 !important; width: 0.9rem; height: 0.9rem; accent-color: #003865; }
                 .ptw-work-types-section .ptw-work-subopt-input {
@@ -15736,14 +15889,26 @@ const PTW = {
                                 <span>القسم الرابع : المتطلبات والمرفقات</span>
                             </h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <label class="ptw-check-card flex items-center p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-purple-50 hover:border-purple-300 transition-all">
-                                    <input type="checkbox" id="ptw-preStartChecklist" class="form-checkbox h-5 w-5 text-purple-600 rounded ml-3" ${ptwData?.preStartChecklist ? 'checked' : ''}>
-                                    <span class="font-medium">قائمة التحقق بقرار بدء العمل</span>
-                                </label>
-                                <label class="ptw-check-card flex items-center p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-purple-50 hover:border-purple-300 transition-all">
-                                    <input type="checkbox" id="ptw-lotoApplied" class="form-checkbox h-5 w-5 text-purple-600 rounded ml-3" ${ptwData?.lotoApplied ? 'checked' : ''}>
-                                    <span class="font-medium">تطبيق نظام العزل LOTO</span>
-                                </label>
+                                <div class="ptw-req-card p-3 rounded-lg border border-gray-200 transition-all bg-white ${ptwData?.preStartChecklist ? 'border-purple-300' : ''}">
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="checkbox" id="ptw-preStartChecklist" class="form-checkbox h-5 w-5 text-purple-600 rounded ml-3" ${ptwData?.preStartChecklist ? 'checked' : ''}>
+                                        <span class="font-medium">قائمة التحقق بقرار بدء العمل</span>
+                                    </label>
+                                    <div class="ptw-req-number-wrap ${ptwData?.preStartChecklist ? '' : 'hidden'}">
+                                        <span class="ptw-req-number-label"><i class="fas fa-list-check" aria-hidden="true"></i> رقم قائمة التحقق</span>
+                                        <input type="text" id="ptw-preStartChecklistNumber" class="ptw-req-number-input" value="${escapeHTML(ptwData?.preStartChecklistNumber || '')}" placeholder="مثال: QA-PSC-001">
+                                    </div>
+                                </div>
+                                <div class="ptw-req-card p-3 rounded-lg border border-gray-200 transition-all bg-white ${ptwData?.lotoApplied ? 'border-purple-300' : ''}">
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="checkbox" id="ptw-lotoApplied" class="form-checkbox h-5 w-5 text-purple-600 rounded ml-3" ${ptwData?.lotoApplied ? 'checked' : ''}>
+                                        <span class="font-medium">تطبيق نظام العزل LOTO</span>
+                                    </label>
+                                    <div class="ptw-req-number-wrap ${ptwData?.lotoApplied ? '' : 'hidden'}">
+                                        <span class="ptw-req-number-label"><i class="fas fa-lock" aria-hidden="true"></i> رقم تصريح العزل</span>
+                                        <input type="text" id="ptw-lotoNumber" class="ptw-req-number-input" value="${escapeHTML(ptwData?.lotoNumber || '')}" placeholder="مثال: LOTO-2026-001">
+                                    </div>
+                                </div>
                                 <label class="ptw-check-card flex items-center p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-purple-50 hover:border-purple-300 transition-all">
                                     <input type="checkbox" id="ptw-governmentPermits" class="form-checkbox h-5 w-5 text-purple-600 rounded ml-3" ${ptwData?.governmentPermits ? 'checked' : ''}>
                                     <span class="font-medium">تصاريح جهات حكومية</span>
@@ -16590,6 +16755,28 @@ const PTW = {
                 autoTypeRoot.addEventListener('input', syncAutoTypeRows);
                 syncAutoTypeRows();
             }
+            // القسم الرابع (تلقائي): إظهار/إخفاء حقل رقم قائمة التحقق ورقم تصريح العزل عند تفعيل مربعه
+            const autoReqSection = modal.querySelector('.ptw-section-4');
+            const syncAutoReqNumberFields = () => {
+                if (!autoReqSection) return;
+                [
+                    ['#ptw-preStartChecklist', '#ptw-preStartChecklistNumber'],
+                    ['#ptw-lotoApplied', '#ptw-lotoNumber']
+                ].forEach(([cbSel, numSel]) => {
+                    const cb = autoReqSection.querySelector(cbSel);
+                    const num = autoReqSection.querySelector(numSel);
+                    if (!cb || !num) return;
+                    const on = cb.checked;
+                    num.closest('.ptw-req-number-wrap')?.classList.toggle('hidden', !on);
+                    num.closest('.ptw-req-card')?.classList.toggle('border-purple-300', on);
+                });
+            };
+            if (autoReqSection) {
+                autoReqSection.addEventListener('change', (event) => {
+                    if (event.target.matches('#ptw-preStartChecklist, #ptw-lotoApplied')) syncAutoReqNumberFields();
+                });
+                syncAutoReqNumberFields();
+            }
         }, 0);
 
         // إعداد مستمعي الأحداث
@@ -16880,7 +17067,9 @@ const PTW = {
             excavationDepth: document.getElementById('ptw-excavation-depth')?.value.trim() || '',
             soilType: document.getElementById('ptw-excavation-soil')?.value.trim() || '',
             preStartChecklist: document.getElementById('ptw-preStartChecklist')?.checked || false,
+            preStartChecklistNumber: (document.getElementById('ptw-preStartChecklist')?.checked ? String(document.getElementById('ptw-preStartChecklistNumber')?.value || '').trim() : ''),
             lotoApplied: document.getElementById('ptw-lotoApplied')?.checked || false,
+            lotoNumber: (document.getElementById('ptw-lotoApplied')?.checked ? String(document.getElementById('ptw-lotoNumber')?.value || '').trim() : ''),
             governmentPermits: document.getElementById('ptw-governmentPermits')?.checked || false,
             riskAssessmentAttached: document.getElementById('ptw-riskAssessmentAttached')?.checked || false,
             gasTesting: document.getElementById('ptw-gasTesting')?.checked || false,
@@ -16945,6 +17134,22 @@ const PTW = {
 
         if (!formData.workDescription || !formData.location || !formData.status) {
             Notification.error(this._t('module.ptw.notify.fillRequired', 'يرجى ملء جميع الحقول المطلوبة'));
+            this._isSubmitting = false;
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+            return;
+        }
+
+        // التحقق من إدخال رقم قائمة التحقق / رقم تصريح العزل عند تفعيل المربع
+        const reqNumErrors = [];
+        if (formData.preStartChecklist && !String(formData.preStartChecklistNumber || '').trim()) reqNumErrors.push('رقم قائمة التحقق بقرار بدء العمل');
+        if (formData.lotoApplied && !String(formData.lotoNumber || '').trim()) reqNumErrors.push('رقم تصريح العزل LOTO');
+        if (reqNumErrors.length > 0) {
+            document.getElementById('ptw-preStartChecklistNumber')?.style.setProperty('border-color', '#e53e3e', 'important');
+            document.getElementById('ptw-lotoNumber')?.style.setProperty('border-color', '#e53e3e', 'important');
+            Notification.warning('بعد تفعيل المربع يجب إدخال:\n' + reqNumErrors.map(item => `• ${item}`).join('\n'));
             this._isSubmitting = false;
             if (submitBtn) {
                 submitBtn.disabled = false;
@@ -17421,7 +17626,9 @@ const PTW = {
                     coldWorkType: registryEntry.coldWorkType || '',
                     otherWorkType: registryEntry.otherWorkType || '',
                     preStartChecklist: registryEntry.preStartChecklist || false,
+                    preStartChecklistNumber: String(registryEntry.preStartChecklistNumber || '').trim(),
                     lotoApplied: registryEntry.lotoApplied || false,
+                    lotoNumber: String(registryEntry.lotoNumber || '').trim(),
                     governmentPermits: registryEntry.governmentPermits || false,
                     riskAssessmentAttached: registryEntry.riskAssessmentAttached || false,
                     gasTesting: registryEntry.gasTesting || false,
@@ -17559,7 +17766,23 @@ const PTW = {
         };
 
         // متغيرات أخرى للعرض (افتراضية إذا لم تكن موجودة)
-        const attachmentsHTML = '';
+        const reqFlags = [
+            { key: 'preStartChecklist', label: 'قائمة التحقق بقرار بدء العمل', numKey: 'preStartChecklistNumber' },
+            { key: 'lotoApplied', label: 'تطبيق نظام العزل LOTO', numKey: 'lotoNumber' },
+            { key: 'governmentPermits', label: 'تصاريح جهات حكومية', numKey: null },
+            { key: 'riskAssessmentAttached', label: 'تحليل المخاطر ووسائل التحكم', numKey: null },
+            { key: 'gasTesting', label: 'قياس الغازات', numKey: null },
+            { key: 'mocRequest', label: 'طلب تغيير فني (MOC)', numKey: null }
+        ];
+        const attachmentsHTML = reqFlags.map((r) => {
+            const on = item[r.key] === true || item[r.key] === 'true' || item[r.key] === 1;
+            const num = r.numKey && on ? String(item[r.numKey] || '').trim() : '';
+            return `<div class="flex items-center gap-2 p-2 rounded border ${on ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-gray-50'}">
+                <span class="${on ? 'text-green-600' : 'text-gray-400'}">${on ? '☑' : '☐'}</span>
+                <span class="text-sm ${on ? 'font-semibold text-gray-800' : 'text-gray-500'}">${Utils.escapeHTML(r.label)}</span>
+                ${num ? `<span class="text-xs font-bold text-green-700 bg-green-100 rounded px-1.5 py-0.5" dir="auto">رقم: ${Utils.escapeHTML(num)}</span>` : ''}
+            </div>`;
+        }).join('');
         const requiredPPEHTML = '';
         const riskAssessmentHTML = '';
         const closureStatusLabel = item.status === 'مغلق' ? 'مغلق' : 'غير مغلق';
