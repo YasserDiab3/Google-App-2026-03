@@ -2,12 +2,10 @@
   "version": "1.0.925",
   "highlights": {
     "ar": [
-      "قاعدة بيانات معدات الحريق: كروت KPI تفاعلية جديدة (الإجمالي/صالح/صيانة/خارج الخدمة) تتحدث فورياً مع الفلاتر مع شريط نسبة لكل حالة.",
-      "فلتر ذكي: عدادات داخل خيارات الأنواع/الحالات/المواقع، شرائح سريعة للحالة، شارة عرض النتائج، وزر مسح الفلاتر."
+      "إصلاح الاستقرار: منع تكرار مسح كلمات المرور — تأمين كتابة المستخدمين بقفل لأي كتابة متزامنة، وإيقاف إعادة كتابة جميع المستخدمين عند كل مزامنة (تُكتب فقط عند استعادة كلمات مرور فعلية)."
     ],
     "en": [
-      "Fire Equipment database: new interactive KPI cards (total / ready / maintenance / out-of-service) that live-update with the filter along a per-status ratio bar.",
-      "Smarter filter: counts inside type/status/location options, quick status chips, results badge, and a clear-filters button."
+      "Stability fix: prevent a repeat of the global password wipe — users writes are now lock-protected, and the auto full-rewrite of all users on every sync is stopped (only runs when real passwords are restored)."
     ]
   }
 }
