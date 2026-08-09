@@ -17726,7 +17726,9 @@ const PTW = {
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
-        const isManual = item.isManualEntry === true;
+        const isManual = item.isManualEntry === true
+            || item.skipApprovalFlow === true
+            || String(item.approvalCircuitOwnerId || '').trim() === '__manual__';
         
         // التصريح اليدوي لا يعرض دائرة اعتمادات - يظهر حالة مغلقة مباشرة
         const approvals = isManual ? [] : this.normalizeApprovals(item.approvals || []);
@@ -18104,7 +18106,16 @@ const PTW = {
                             })()}
                         </div>
                         ` : ''}
-                        ${approvals.length > 0 ? `
+                        ${isManual ? `
+                        <div class="border-t pt-4 mt-4">
+                            <h3 class="text-lg font-bold text-gray-800 mb-3"><i class="fas fa-check-circle text-green-600 ml-2"></i> دائرة الاعتمادات</h3>
+                            <div class="flex items-center gap-2 p-3 rounded-lg border border-green-300 bg-green-50">
+                                <i class="fas fa-check-double text-green-600" aria-hidden="true"></i>
+                                <span class="badge badge-success">مكتمل</span>
+                                <span class="text-sm text-gray-600">التصريح اليدوي — الاعتمادات مسجلة من النموذج (بدون دائرة إلكترونية)</span>
+                            </div>
+                        </div>
+                        ` : approvals.length > 0 ? `
                         <div class="border-t pt-4 mt-4">
                             <h3 class="text-lg font-bold text-gray-800 mb-4">دائرة الاعتمادات</h3>
                             <div class="table-wrapper">
