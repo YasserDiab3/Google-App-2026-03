@@ -2,12 +2,12 @@
   "version": "1.0.923",
   "highlights": {
     "ar": [
-      "إصلاح جذري لفقدان ربط الكود الوظيفي (employeeCode): حفظ جدول المستخدمين أصبح دمجاً حكيماً — أي نسخة قديمة أو قيم فارغة لا تمسح الأكواد المربوطة بعد الآن.",
-      "فك الربط أصبح صريحاً: مسح حقل الكود من نموذج المستخدم يحذف الربط عن قصد فقط، وليس تلقائياً من بيانات قديمة."
+      "موديول معدات الحريق: كروت الإحصائيات أصبحت بهوية النظام الموحّدة (أيقونات ملونة + شريط نسبة لكل حالة) في تبويب السجل.",
+      "النماذج والنوافذ أصبحت بهوية موحّدة: رأس متدرج كحلي داكن، حقول بإطار كهرماني عند التركيز، وأزرار حفظ كهرمانية."
     ],
     "en": [
-      "Root-cause fix for lost employeeCode links: Users sheet writes are now merge-protected — stale copies or empty values can no longer wipe linked codes.",
-      "Unlink is now explicit: clearing the code field in the user form intentionally removes the link, instead of old snapshots silently erasing it."
+      "Fire Equipment module: KPI cards now follow the unified HSE identity (colored icon chips + ratio bar per status) in the register tab.",
+      "Forms and modals got the identity treatment: navy gradient headers, focused field styling, and amber action buttons."
     ]
   }
 }
