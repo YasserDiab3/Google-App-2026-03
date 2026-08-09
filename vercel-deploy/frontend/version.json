@@ -1,11 +1,11 @@
 {
   "version": "1.0.928",
   "highlights": {
-    "ar": [
-      "تصريح العمل اليدوي: قسم أسماء القائمين بالعمل — زر حذف لكل صف، ويظهر صفان فارغان افتراضياً عند فتح نموذج جديد (مع بقاء الأسماء المحفوظة عند التعديل)."
+"ar": [
+      "القسم الثالث في تصريح العمل: عند اختيار بارد / كهرباء / أخرى تظهر مقترحات نوع العمل (من سجلات سابقة + قائمة شائعة جاهزة) مع تلميحات أوضح للحقول — بدون تغيير التصميم."
     ],
     "en": [
-      "Manual work permit: team members section now has a delete button per row, and two empty rows appear by default when opening a new form (saved members are kept when editing)."
+      "Work permit section 3: cold / electrical / other types now show selectable suggestions (from previous records plus common presets) with clearer field hints — no design change."
     ]
   }
 }
