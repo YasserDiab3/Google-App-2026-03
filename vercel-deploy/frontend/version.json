@@ -1,12 +1,14 @@
 {
-  "version": "1.0.935",
+  "version": "1.0.936",
   "highlights": {
     "ar": [
+      "تصريح العمل: التقييم التلقائي لمصفوفة المخاطر (القسم السادس) في النموذجين اليدوي والتلقائي — يُحسب مستوى الخطر تلقائياً من أنواع الأعمال المختارة (ساخنة/مغلقة/ارتفاع/كهرباء/حفر...) مع سجلات المخاطر السابقة خلال 180 يوماً، وتُخصم فعالية ضوابط التحكم (قائمة التحقق، LOTO، قياس الغازات)، وتُملأ الخلية المحددة في المصفوفة مع عرض أساس الحساب وزر إعادة الحساب، مع تحذير عند الحفظ بمستوى أدنى من المحسوب.",
       "تصريح العمل: تصحيحية لعرض «دائرة الاعتمادات» في تفاصيل التصريح — التصريح اليدوي يعرض الحالة «مكتمل» بدل «قيد الاعتماد»، والكشف اليدوي يشمل التصاريح المحفوظة سابقاً عبر المؤشرات اليدوية (isManualEntry، skipApprovalFlow، مالك الدائرة اليدوي).",
       "تصريح العمل: عند تفعيل «قائمة التحقق بقرار بدء العمل» أو «تطبيق نظام العزل LOTO» في القسم الرابع يظهر حقل منمق لإدخال رقم قائمة التحقق أو رقم تصريح العزل، مع إلزامية الإدخال وعرض الرقم في الطباعة والتفاصيل.",
       "تصريح العمل: مربع اختيار واضح (تشك بوكس) لكل نوع تصريح في القسم الثالث (النموذجين اليدوي والتلقائي) — تفعيل مربع النوع يفتح تفاصيله، وإلغاؤه يغلقها، والنوع المختار يُسجل تلقائياً في التصريح."
     ],
     "en": [
+      "Work permit: automatic risk-matrix assessment (section 6) in both manual and automatic forms — risk level is computed from the selected work types (hot/confined/height/electrical/excavation...), past risk records within 180 days, and the effectiveness of controls (pre-start checklist, LOTO, gas testing); the computed cell is auto-selected with calculation rationale and a recompute button, plus a warning when saving at a lower level than computed.",
       "Work permit: fixed the \"Approval circuit\" display in permit details — manual permits now show \"Complete\" instead of pending, and manual detection covers previously saved permits (isManualEntry, skipApprovalFlow, manual circuit owner).",
       "Work permit: enabling \"Pre-start checklist\" or \"LOTO isolation\" in section 4 now reveals a styled field to enter the checklist number or the LOTO permit number — entry is required, and the number appears in prints and details.",
       "Work permit: a clear checkbox for every permit type in section 3 (both manual and automatic forms) — checking a type enables its details, unchecking disables them, and the selected types are recorded automatically."

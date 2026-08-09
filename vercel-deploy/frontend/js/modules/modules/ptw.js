@@ -12443,67 +12443,13 @@ const PTW = {
         // معالجة الضغط على مصفوفة المخاطر (التصنيف اللوني العالمي)
         modal.querySelectorAll('.manual-risk-cell').forEach(cell => {
             cell.addEventListener('click', () => {
-                const likelihood = cell.dataset.likelihood;
-                const consequence = cell.dataset.consequence;
-                const score = cell.dataset.score;
-                const level = cell.dataset.level;
-                const bgColor = cell.dataset.bg || '#22c55e';
-                const textColor = cell.dataset.text || '#ffffff';
-                
-                // إزالة التحديد من جميع الخلايا
-                modal.querySelectorAll('.manual-risk-cell').forEach(c => {
-                    c.classList.remove('ring-4', 'ring-blue-500', 'ring-blue-600', 'ring-inset');
-                });
-                
-                // تحديد الخلية المختارة
-                cell.classList.add('ring-4', 'ring-blue-600', 'ring-inset');
-                
-                // تحديث الحقول المخفية
-                modal.querySelector('#manual-risk-likelihood').value = likelihood;
-                modal.querySelector('#manual-risk-consequence').value = consequence;
-                modal.querySelector('#manual-risk-score').value = score;
-                modal.querySelector('#manual-risk-level').value = level;
-                
-                // تحديث العرض
-                const resultDiv = modal.querySelector('#manual-risk-result');
-                if (resultDiv) resultDiv.classList.remove('hidden');
-                
-                const scoreEl = modal.querySelector('#manual-risk-score-display');
-                const levelEl = modal.querySelector('#manual-risk-level-display');
-                const likeEl = modal.querySelector('#manual-risk-likelihood-display');
-                const consEl = modal.querySelector('#manual-risk-consequence-display');
-                if (scoreEl) scoreEl.textContent = score;
-                if (levelEl) levelEl.textContent = level;
-                if (likeEl) likeEl.textContent = likelihood;
-                if (consEl) consEl.textContent = consequence;
-                
-                // تحديث لون الشارة حسب التصنيف اللوني العالمي
-                const badge = modal.querySelector('#manual-risk-result-badge');
-                if (badge) {
-                    badge.style.background = bgColor;
-                    badge.style.color = textColor;
-                    badge.textContent = score;
-                }
-
-                // توليد وصف تلقائي في ملاحظات التقييم بناءً على الخلية المختارة
-                const riskNotesInput = modal.querySelector('#manual-risk-notes');
-                if (riskNotesInput) {
-                    const recommendationByLevel = {
-                        'منخفض': 'يمكن تنفيذ العمل مع الالتزام بالضوابط الأساسية والمتابعة الدورية.',
-                        'متوسط': 'يلزم تعزيز الضوابط الوقائية والمتابعة الميدانية قبل وأثناء التنفيذ.',
-                        'مرتفع': 'لا يبدأ العمل قبل اعتماد ضوابط إضافية واضحة ومتابعة إشرافية مباشرة.',
-                        'حرج': 'إيقاف التنفيذ فوراً حتى إزالة/خفض الخطر واعتماد خطة تحكم مشددة.'
-                    };
-                    const autoText = `تقييم تلقائي: مستوى الخطر ${level} (درجة ${score}) — الاحتمالية ${likelihood} × الخطورة ${consequence}. ${recommendationByLevel[level] || ''}`.trim();
-                    const existingNotes = String(riskNotesInput.value || '').trim();
-                    const previousAuto = String(riskNotesInput.dataset.autoRiskText || '').trim();
-                    if (!existingNotes || existingNotes === previousAuto || existingNotes.startsWith('تقييم تلقائي:')) {
-                        riskNotesInput.value = autoText;
-                        riskNotesInput.dataset.autoRiskText = autoText;
-                    }
-                }
+                modal._riskManualOverride = true;
+                this._selectManualRiskCell(modal, cell);
             });
         });
+
+        // التقييم التلقائي لمصفوفة المخاطر (القسم السادس)
+        this._wireAutoRiskAssessment(modal, true, existingEntry);
 
         // معالجة إضافة اعتماد جديد (تصميم جدول)
         modal.querySelector('#manual-add-approval-btn')?.addEventListener('click', () => {
@@ -12719,6 +12665,434 @@ const PTW = {
             permitType: finalPermitTypes,
             permitTypeDisplay: finalPermitTypes.join('، '),
             isManualEntry: true
+        };
+    },
+
+    // ====== التقييم التلقائي لمصفوفة المخاطر (القسم السادس) ======
+
+    _riskLevelRank(value) {
+        const s = String(value || '').trim().toLowerCase();
+        const map = {
+            'منخفض': 1, 'low': 1,
+            'متوسط': 2, 'medium': 2,
+            'مرتفع': 3, 'عالي': 3, 'high': 3,
+            'حرج': 4, 'critical': 4
+        };
+        if (map[s] !== undefined) return map[s];
+        const n = parseInt(value, 10);
+        if (Number.isFinite(n) && n > 0) {
+            if (n >= 15) return 4;
+            if (n >= 10) return 3;
+            if (n >= 5) return 2;
+            return 1;
+        }
+        return 0;
+    },
+
+    _riskLevelForScore(score, mode = 'manual') {
+        const s = parseInt(score, 10) || 0;
+        if (mode === 'auto') {
+            if (s >= 15) return { rank: 4, label: 'حرج', key: 'critical' };
+            if (s >= 10) return { rank: 3, label: 'عالي', key: 'high' };
+            if (s >= 5) return { rank: 2, label: 'متوسط', key: 'medium' };
+            return { rank: 1, label: 'منخفض', key: 'low' };
+        }
+        if (s >= 17) return { rank: 4, label: 'حرج', key: 'critical' };
+        if (s >= 10) return { rank: 3, label: 'مرتفع', key: 'high' };
+        if (s >= 5) return { rank: 2, label: 'متوسط', key: 'medium' };
+        return { rank: 1, label: 'منخفض', key: 'low' };
+    },
+
+    _riskLevelColor(rank) {
+        if (rank >= 4) return { bg: '#dc2626', fg: '#ffffff' };
+        if (rank === 3) return { bg: '#f97316', fg: '#ffffff' };
+        if (rank === 2) return { bg: '#eab308', fg: '#1c1917' };
+        return { bg: '#22c55e', fg: '#ffffff' };
+    },
+
+    _riskHistoryModifier(input) {
+        try {
+            const assessments = (AppState && AppState.appData && Array.isArray(AppState.appData.riskAssessments))
+                ? AppState.appData.riskAssessments
+                : [];
+            if (!assessments.length) return { bonus: 0, count: 0, urgent: false };
+
+            const keywords = [];
+            if (input.hot && input.hot.length) keywords.push('حريق', 'لحام', 'ساخن', 'اشتعال', 'لهب');
+            if (input.confined && input.confined.length) keywords.push('مغلقة', 'اختناق', 'غاز', 'خزان', 'محصور', 'نقص أكسجين');
+            if (input.height && input.height.length) keywords.push('ارتفاع', 'سقوط', 'سقال');
+            if (input.electrical) keywords.push('كهرباء', 'صدمة', 'جهد');
+            if (input.excavationDepth || input.excavationLength) keywords.push('حفر', 'انهيار', 'مرافق');
+            if (input.cold) keywords.push('بارد', 'ميكانيك');
+            if (!keywords.length) return { bonus: 0, count: 0, urgent: false };
+
+            const cutoff = Date.now() - (180 * 24 * 60 * 60 * 1000);
+            let count = 0;
+            let urgent = false;
+            assessments.forEach((rec) => {
+                let recTime = 0;
+                const ts = rec && (rec.createdAt || rec.updatedAt || rec.date);
+                if (ts) { try { recTime = new Date(ts).getTime(); } catch (_) { recTime = 0; } }
+                if (recTime && recTime < cutoff) return;
+                const haystack = String(rec.hazard || '') + ' ' + String(rec.location || '');
+                const matched = keywords.some((k) => haystack.indexOf(k) !== -1);
+                if (matched) {
+                    count += 1;
+                    if (String(rec.status || '') === 'يتطلب إجراء') urgent = true;
+                }
+            });
+            if (!count) return { bonus: 0, count: 0, urgent: false };
+            let bonus = 0;
+            if (count >= 3) bonus = 2;
+            else if (count >= 1) bonus = 1;
+            if (urgent) bonus += 1;
+            return { bonus, count, urgent };
+        } catch (e) {
+            Utils.safeWarn('risk history modifier:', e);
+            return { bonus: 0, count: 0, urgent: false };
+        }
+    },
+
+    _autoAssessRisk(input, mode = 'manual') {
+        if (!input) return null;
+        const profiles = [];
+        if (input.hot && input.hot.length) {
+            profiles.push({ consequence: 4, likelihood: 3, label: 'حريق / اشتعال — أعمال ساخنة' });
+        }
+        if (input.confined && input.confined.length) {
+            const nasty = input.confined.some((l) => /خزان|تنك|مجاري|مصرف/.test(String(l || '')));
+            profiles.push({
+                consequence: nasty ? 5 : 4,
+                likelihood: nasty ? 4 : 3,
+                label: nasty ? 'اختناق / غازات سامة — أماكن مغلقة' : 'جو محصور — أماكن مغلقة'
+            });
+        }
+        if (input.height && input.height.length) {
+            profiles.push({ consequence: 4, likelihood: 3, label: 'سقوط من ارتفاع' });
+        }
+        const electricalText = String(input.electrical || '').trim();
+        if (electricalText) {
+            const hv = /جهد عالي|جهد مرتفع|HV|متوسط الجهد|شدة عالية/.test(electricalText);
+            profiles.push({ consequence: hv ? 5 : 4, likelihood: 3, label: 'صدمة كهربائية' });
+        }
+        if (input.excavationDepth || input.excavationLength || input.excavationWidth) {
+            const depth = parseFloat(input.excavationDepth);
+            const deep = Number.isFinite(depth) && depth > 1.5;
+            profiles.push({
+                consequence: deep ? 5 : 4,
+                likelihood: 3,
+                label: deep ? 'انهيار حفر / مرافق مدفونة (عمق > 1.5م)' : 'انهيار حفر / إصابة مرافق مدفونة'
+            });
+        }
+        if (String(input.cold || '').trim()) profiles.push({ consequence: 3, likelihood: 2, label: 'مخاطر ميكانيكية — أعمال على البارد' });
+        if (String(input.other || '').trim()) profiles.push({ consequence: 2, likelihood: 2, label: 'مخاطر عامة — أعمال أخرى' });
+        if (!profiles.length) return null;
+
+        let dominant = profiles[0];
+        profiles.forEach((p) => {
+            if (p.consequence * p.likelihood > dominant.consequence * dominant.likelihood) dominant = p;
+        });
+
+        let likelihood = dominant.likelihood;
+        const consequence = dominant.consequence;
+
+        const rationale = [];
+        rationale.push(`${dominant.label} — خطورة ${consequence} × احتمال أساسي ${likelihood}`);
+
+        if (profiles.length > 1) {
+            const bonus = Math.min(profiles.length - 1, 2);
+            likelihood += bonus;
+            rationale.push(`${profiles.length} أنواع أعمال متزامنة (+${bonus} للاحتمالية)`);
+        }
+
+        const history = this._riskHistoryModifier(input);
+        if (history.bonus > 0) {
+            likelihood += history.bonus;
+            rationale.push(`${history.count} سجل مخاطر مرتبط خلال 180 يوماً (+${history.bonus} للاحتمالية)${history.urgent ? ' — أحدها «يتطلب إجراء»' : ''}`);
+        }
+
+        const activeControls = [];
+        if (input.preStartChecklist) activeControls.push('قائمة التحقق بقرار بدء العمل');
+        if (input.lotoApplied) activeControls.push('نظام العزل LOTO');
+        if (input.gasTesting) activeControls.push('قياس الغازات');
+        if (input.riskAssessmentAttached) activeControls.push('تحليل المخاطر المرفق');
+        if (activeControls.length) {
+            const deduction = Math.min(activeControls.length, Math.max(likelihood - 1, 0));
+            likelihood -= deduction;
+            rationale.push(`ضوابط تخفض الاحتمالية (−${deduction}): ${activeControls.join('، ')}`);
+        }
+        likelihood = Math.max(1, Math.min(5, likelihood));
+
+        const score = likelihood * consequence;
+        const level = this._riskLevelForScore(score, mode);
+        rationale.push(`النتيجة: احتمال ${likelihood} × خطورة ${consequence} = ${score} — مستوى ${level.label}`);
+
+        return {
+            likelihood,
+            consequence,
+            score,
+            level,
+            dominant: dominant.label,
+            rationale,
+            historyCount: history.count
+        };
+    },
+
+    _autoAssessRiskFromData(data, mode = 'manual') {
+        if (!data) return null;
+        return this._autoAssessRisk({
+            hot: Array.isArray(data.hotWorkDetails) ? data.hotWorkDetails : [],
+            confined: Array.isArray(data.confinedSpaceDetails) ? data.confinedSpaceDetails : [],
+            height: Array.isArray(data.heightWorkDetails) ? data.heightWorkDetails : [],
+            electrical: data.electricalWorkType || '',
+            cold: data.coldWorkType || '',
+            other: data.otherWorkType || '',
+            excavationDepth: data.excavationDepth || '',
+            excavationLength: data.excavationLength || '',
+            excavationWidth: data.excavationWidth || '',
+            preStartChecklist: !!data.preStartChecklist,
+            lotoApplied: !!data.lotoApplied,
+            gasTesting: !!data.gasTesting,
+            riskAssessmentAttached: !!data.riskAssessmentAttached,
+            location: data.location || '',
+            workDescription: data.workDescription || ''
+        }, mode);
+    },
+
+    _readManualRiskInputs(modal) {
+        const v = (sel) => { const el = modal.querySelector(sel); return el ? String(el.value || '').trim() : ''; };
+        const ck = (sel) => { const el = modal.querySelector(sel); return !!el && el.checked; };
+        const cbs = (name) => Array.from(modal.querySelectorAll(`input[name="${name}"]:checked`)).map((cb) => cb.value || cb.getAttribute('data-label') || '');
+        return {
+            hot: cbs('manual-hot-work'),
+            confined: cbs('manual-confined-space'),
+            height: cbs('manual-height-work'),
+            electrical: v('#manual-electrical-work-type'),
+            cold: v('#manual-cold-work-type'),
+            other: v('#manual-other-work-type'),
+            excavationDepth: v('#manual-excavation-depth'),
+            excavationLength: v('#manual-excavation-length'),
+            excavationWidth: v('#manual-excavation-width'),
+            preStartChecklist: ck('#manual-permit-preStartChecklist'),
+            lotoApplied: ck('#manual-permit-lotoApplied'),
+            gasTesting: ck('#manual-permit-gasTesting'),
+            riskAssessmentAttached: ck('#manual-permit-riskAssessmentAttached'),
+            location: v('#manual-permit-location'),
+            workDescription: v('#manual-permit-work-description')
+        };
+    },
+
+    _readAutoRiskInputs(modal) {
+        const v = (sel) => { const el = modal.querySelector(sel); return el ? String(el.value || '').trim() : ''; };
+        const ck = (sel) => { const el = modal.querySelector(sel); return !!el && el.checked; };
+        const cbs = (name) => Array.from(modal.querySelectorAll(`input[name="${name}"]:checked`)).map((cb) => cb.getAttribute('data-label') || cb.value || '');
+        return {
+            hot: cbs('ptw-hot-option'),
+            confined: cbs('ptw-confined-option'),
+            height: cbs('ptw-height-option'),
+            electrical: v('#ptw-electrical-work-type'),
+            cold: v('#ptw-cold-work-type'),
+            other: v('#ptw-other-work-type'),
+            excavationDepth: v('#ptw-excavation-depth'),
+            excavationLength: v('#ptw-excavation-length'),
+            excavationWidth: v('#ptw-excavation-width'),
+            preStartChecklist: ck('#ptw-preStartChecklist'),
+            lotoApplied: ck('#ptw-lotoApplied'),
+            gasTesting: ck('#ptw-gasTesting'),
+            riskAssessmentAttached: ck('#ptw-riskAssessmentAttached'),
+            location: v('#ptw-location'),
+            workDescription: v('#ptw-workDescription')
+        };
+    },
+
+    _selectManualRiskCell(modal, cell) {
+        if (!cell) return;
+        const likelihood = cell.dataset.likelihood;
+        const consequence = cell.dataset.consequence;
+        const score = cell.dataset.score;
+        const level = cell.dataset.level;
+        const bgColor = cell.dataset.bg || '#22c55e';
+        const textColor = cell.dataset.text || '#ffffff';
+        modal.querySelectorAll('.manual-risk-cell').forEach((c) => c.classList.remove('ring-4', 'ring-blue-500', 'ring-blue-600', 'ring-inset'));
+        cell.classList.add('ring-4', 'ring-blue-600', 'ring-inset');
+        const setV = (sel, val) => { const el = modal.querySelector(sel); if (el) el.value = val; };
+        setV('#manual-risk-likelihood', likelihood);
+        setV('#manual-risk-consequence', consequence);
+        setV('#manual-risk-score', score);
+        setV('#manual-risk-level', level);
+        const resultDiv = modal.querySelector('#manual-risk-result');
+        if (resultDiv) resultDiv.classList.remove('hidden');
+        const setT = (sel, val) => { const el = modal.querySelector(sel); if (el) el.textContent = val; };
+        setT('#manual-risk-score-display', score);
+        setT('#manual-risk-level-display', level);
+        setT('#manual-risk-likelihood-display', likelihood);
+        setT('#manual-risk-consequence-display', consequence);
+        const badge = modal.querySelector('#manual-risk-result-badge');
+        if (badge) { badge.style.background = bgColor; badge.style.color = textColor; badge.textContent = score; }
+        const riskNotesInput = modal.querySelector('#manual-risk-notes');
+        if (riskNotesInput) {
+            const recommendationByLevel = {
+                'منخفض': 'يمكن تنفيذ العمل مع الالتزام بالضوابط الأساسية والمتابعة الدورية.',
+                'متوسط': 'يلزم تعزيز الضوابط الوقائية والمتابعة الميدانية قبل وأثناء التنفيذ.',
+                'مرتفع': 'لا يبدأ العمل قبل اعتماد ضوابط إضافية واضحة ومتابعة إشرافية مباشرة.',
+                'حرج': 'إيقاف التنفيذ فوراً حتى إزالة/خفض الخطر واعتماد خطة تحكم مشددة.'
+            };
+            const autoText = `تقييم تلقائي: مستوى الخطر ${level} (درجة ${score}) — الاحتمالية ${likelihood} × الخطورة ${consequence}. ${recommendationByLevel[level] || ''}`.trim();
+            const existingNotes = String(riskNotesInput.value || '').trim();
+            const previousAuto = String(riskNotesInput.dataset.autoRiskText || '').trim();
+            if (!existingNotes || existingNotes === previousAuto || existingNotes.startsWith('تقييم تلقائي:')) {
+                riskNotesInput.value = autoText;
+                riskNotesInput.dataset.autoRiskText = autoText;
+            }
+        }
+    },
+
+    _applyAutoRiskAssessment(modal, isManual, input) {
+        const computed = this._autoAssessRisk(input, isManual ? 'manual' : 'auto');
+        let summary = modal.querySelector('#ptw-auto-risk-summary');
+        if (!summary) return;
+
+        const hasSelection = isManual
+            ? !!(modal.querySelector('#manual-risk-score') && modal.querySelector('#manual-risk-score').value)
+            : !!(modal.querySelector('#ptw-risk-likelihood') && modal.querySelector('#ptw-risk-likelihood').value);
+
+        if (computed && !modal._riskManualOverride) {
+            if (isManual) {
+                const cell = modal.querySelector(`.manual-risk-cell[data-likelihood="${computed.likelihood}"][data-consequence="${computed.consequence}"]`);
+                if (cell) this._selectManualRiskCell(modal, cell);
+            } else if (typeof RiskMatrix !== 'undefined') {
+                const cell = modal.querySelector(`#ptw-risk-matrix .risk-cell[data-likelihood="${computed.likelihood}"][data-consequence="${computed.consequence}"]`);
+                if (cell) RiskMatrix.selectCell(cell, 'ptw-risk-matrix');
+            }
+        }
+
+        if (!computed) {
+            summary.innerHTML = `
+                <div class="p-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 text-sm text-gray-600">
+                    <i class="fas fa-robot ml-1"></i>
+                    الحساب التلقائي للمخاطر: املأ بيانات العمل (أنواع الأعمال والمتطلبات) لحساب المصفوفة تلقائياً.
+                </div>`;
+            return;
+        }
+
+        const colors = this._riskLevelColor(computed.level.rank);
+        let currentNote = '';
+        if (modal._riskManualOverride && hasSelection) {
+            currentNote = `<div class="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2"><i class="fas fa-hand-pointer ml-1"></i> اخترت خلية يدوياً — الحساب التلقائي متوقف لحين الضغط على «إعادة الحساب التلقائي».</div>`;
+        }
+        const rationaleHtml = computed.rationale.map((r) => Utils.escapeHTML(r)).map((r) => `<li>${r}</li>`).join('');
+        summary.innerHTML = `
+            <div class="p-3 rounded-lg border-2" style="border-color: ${colors.bg};">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <div class="flex items-center gap-3">
+                        <div style="width:44px;height:44px;border-radius:50%;background:${colors.bg};color:${colors.fg};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;">${computed.score}</div>
+                        <div>
+                            <p class="font-bold text-gray-800">مستوى المخاطر المحسوب: <span style="color:${colors.bg};">${computed.level.label}</span></p>
+                            <p class="text-xs text-gray-600">الاحتمالية ${computed.likelihood} × الخطورة ${computed.consequence} — <span class="font-semibold">تقييم تلقائي</span></p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-secondary btn-sm" onclick="PTW._recomputeRisk('${isManual ? 'manual' : 'auto'}', this)">
+                        <i class="fas fa-sync-alt ml-1"></i> إعادة الحساب التلقائي
+                    </button>
+                </div>
+                ${currentNote}
+                <ul class="mt-2 text-xs text-gray-600 list-disc pr-4 space-y-0.5">${rationaleHtml}</ul>
+            </div>`;
+    },
+
+    _recomputeRisk(kind, btn) {
+        const modal = btn ? btn.closest('.modal-overlay') : null;
+        if (!modal) return;
+        modal._riskManualOverride = false;
+        this._applyAutoRiskAssessment(modal, kind === 'manual', kind === 'manual' ? this._readManualRiskInputs(modal) : this._readAutoRiskInputs(modal));
+    },
+
+    _wireAutoRiskAssessment(modal, isManual, initialData = null) {
+        if (!modal) return;
+        const matrixSel = isManual ? '#manual-risk-matrix-table' : '#ptw-risk-matrix';
+        if (!modal.querySelector(matrixSel)) return;
+
+        const savedRisk = isManual
+            ? !!(initialData && (initialData.riskLikelihood || initialData.riskScore))
+            : !!(initialData && initialData.riskAssessment && (initialData.riskAssessment.likelihood || initialData.riskAssessment.consequence));
+        modal._riskManualOverride = !!savedRisk;
+
+        if (!modal.querySelector('#ptw-auto-risk-summary')) {
+            const summary = document.createElement('div');
+            summary.id = 'ptw-auto-risk-summary';
+            summary.style.marginTop = '12px';
+            const section = modal.querySelector(isManual ? '.manual-section-6' : '.ptw-section-6');
+            if (section) section.appendChild(summary);
+        }
+
+        const matrixRoot = modal.querySelector(matrixSel);
+        if (matrixRoot) {
+            matrixRoot.addEventListener('click', (e) => {
+                if (e.target.closest('.risk-cell, .manual-risk-cell')) modal._riskManualOverride = true;
+            });
+        }
+
+        const schedule = () => {
+            if (modal._riskAutoTimer) clearTimeout(modal._riskAutoTimer);
+            modal._riskAutoTimer = setTimeout(() => {
+                this._applyAutoRiskAssessment(modal, isManual, isManual ? this._readManualRiskInputs(modal) : this._readAutoRiskInputs(modal));
+            }, 300);
+        };
+
+        const changeSelector = isManual
+            ? '#manual-hot-check, #manual-confined-check, #manual-height-check, #manual-excavation-check, #manual-electrical-check, #manual-cold-check, #manual-other-check, input[name="manual-hot-work"], input[name="manual-confined-space"], input[name="manual-height-work"], #manual-hot-work-other, #manual-confined-space-other, #manual-height-work-other, #manual-electrical-work-type, #manual-cold-work-type, #manual-other-work-type, #manual-excavation-depth, #manual-excavation-length, #manual-excavation-width, #manual-permit-preStartChecklist, #manual-permit-lotoApplied, #manual-permit-gasTesting, #manual-permit-riskAssessmentAttached, #manual-add-team-member-btn, #manual-ppe-matrix'
+            : '#ptw-hot-check, #ptw-confined-check, #ptw-height-check, #ptw-electrical-check, #ptw-cold-check, #ptw-other-check, #ptw-excavation-check, input[name="ptw-hot-option"], input[name="ptw-confined-option"], input[name="ptw-height-option"], #ptw-electrical-work-type, #ptw-cold-work-type, #ptw-other-work-type, #ptw-excavation-depth, #ptw-excavation-length, #ptw-excavation-width, #ptw-preStartChecklist, #ptw-lotoApplied, #ptw-gasTesting, #ptw-riskAssessmentAttached, #add-team-member-btn, #ptw-equipment-matrix';
+
+        modal.addEventListener('change', (e) => {
+            if (e.target.matches(changeSelector)) schedule();
+        });
+        modal.addEventListener('input', (e) => {
+            if (e.target.matches(changeSelector)) schedule();
+        });
+
+        setTimeout(() => {
+            this._applyAutoRiskAssessment(modal, isManual, isManual ? this._readManualRiskInputs(modal) : this._readAutoRiskInputs(modal));
+        }, 600);
+    },
+
+    _riskLoweringWarning(permitLike, mode = 'manual') {
+        const computed = this._autoAssessRiskFromData(permitLike, mode);
+        if (!computed) return null;
+        let savedRank = 0;
+        let savedLabel = '';
+        let savedScore = null;
+        if (mode === 'manual') {
+            savedLabel = String(permitLike.riskLevel || '').trim();
+            savedRank = this._riskLevelRank(savedLabel);
+            const s = parseInt(permitLike.riskScore, 10);
+            if (Number.isFinite(s) && s > 0) savedScore = s;
+            if (!savedRank && savedScore !== null) {
+                const lv = this._riskLevelForScore(savedScore, 'manual');
+                savedLabel = lv.label;
+                savedRank = lv.rank;
+            }
+        } else {
+            const ra = permitLike.riskAssessment || {};
+            const s = parseInt(ra.riskLevel, 10);
+            const calc = parseInt(ra.likelihood, 10) * parseInt(ra.consequence, 10);
+            const score = (Number.isFinite(s) && s > 0) ? s : ((Number.isFinite(calc) && calc > 0) ? calc : 0);
+            if (score > 0) {
+                const lv = this._riskLevelForScore(score, 'auto');
+                savedLabel = lv.label;
+                savedRank = lv.rank;
+                savedScore = score;
+            } else {
+                savedRank = this._riskLevelRank(String(ra.riskLevel || ''));
+                savedLabel = savedRank ? String(ra.riskLevel) : 'غير محدد';
+            }
+        }
+        if (!savedRank) return null;
+        if (savedRank >= computed.level.rank) return null;
+        return {
+            computed,
+            savedLabel,
+            savedScore,
+            message: `مستوى المخاطر المحدد «${savedLabel}${savedScore ? ' (درجة ' + savedScore + ')' : ''}» أدنى من المستوى المحسوب تلقائياً «${computed.level.label} (درجة ${computed.score})».\n\nهل تريد المتابعة والحفظ بالمستوى المحدد أم التراجع؟`
         };
     },
 
@@ -13158,6 +13532,21 @@ const PTW = {
                 }
 
                 if (!userConfirmed) {
+                    this._isSavingManualPermit = false;
+                    return;
+                }
+            }
+
+            // تحذير عند خفض مستوى المخاطر المحسوب تلقائياً
+            const manualRiskWarning = this._riskLoweringWarning(formData, 'manual');
+            if (manualRiskWarning) {
+                let proceed = false;
+                if (typeof Utils !== 'undefined' && typeof Utils.confirmDialog === 'function') {
+                    proceed = await Utils.confirmDialog('تحذير: مستوى المخاطر المحدد أدنى من المحسوب', manualRiskWarning.message, 'متابعة الحفظ', 'التراجع');
+                } else {
+                    proceed = window.confirm(manualRiskWarning.message);
+                }
+                if (!proceed) {
                     this._isSavingManualPermit = false;
                     return;
                 }
@@ -16777,6 +17166,8 @@ const PTW = {
                 });
                 syncAutoReqNumberFields();
             }
+            // التقييم التلقائي لمصفوفة المخاطر (القسم السادس)
+            this._wireAutoRiskAssessment(modal, false, data);
         }, 0);
 
         // إعداد مستمعي الأحداث
@@ -17168,6 +17559,25 @@ const PTW = {
                     'لا يوجد أشخاص مصرح لهم بالتوقيع على هذا النوع من التصاريح. ' +
                     'يرجى مراجعة قائمة المصرح لهم بالتوقيع (Issuing Authorities) أو التنسيق مع مدير النظام.'
                 );
+                this._isSubmitting = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+                return;
+            }
+        }
+
+        // تحذير عند خفض مستوى المخاطر المحسوب تلقائياً
+        const autoRiskWarning = this._riskLoweringWarning(formData, 'auto');
+        if (autoRiskWarning) {
+            let proceed = false;
+            if (typeof Utils !== 'undefined' && typeof Utils.confirmDialog === 'function') {
+                proceed = await Utils.confirmDialog('تحذير: مستوى المخاطر المحدد أدنى من المحسوب', autoRiskWarning.message, 'متابعة الحفظ', 'التراجع');
+            } else {
+                proceed = window.confirm(autoRiskWarning.message);
+            }
+            if (!proceed) {
                 this._isSubmitting = false;
                 if (submitBtn) {
                     submitBtn.disabled = false;
