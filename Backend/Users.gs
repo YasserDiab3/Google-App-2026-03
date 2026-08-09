@@ -731,7 +731,7 @@ function isUserEffectivelyOnline_(user, presence) {
 function sanitizeUserRecordForClient_(user, isAdmin, actorEmail, presence) {
     if (!user || typeof user !== 'object') return null;
     var out = {};
-    var safeFields = ['id', 'name', 'email', 'department', 'active', 'role', 'jobTitle', 'phone', 'photo', 'isOnline', 'lastLogin', 'lastLogout', 'lastPresenceAt', 'passwordChanged', 'forcePasswordChange', 'updatedAt', 'createdAt', 'mfaEnabled'];
+    var safeFields = ['id', 'name', 'email', 'department', 'active', 'role', 'jobTitle', 'phone', 'photo', 'isOnline', 'lastLogin', 'lastLogout', 'lastPresenceAt', 'passwordChanged', 'forcePasswordChange', 'updatedAt', 'createdAt', 'mfaEnabled', 'employeeCode', 'employeeNumber'];
     for (var i = 0; i < safeFields.length; i++) {
         var f = safeFields[i];
         if (user[f] !== undefined) out[f] = user[f];
