@@ -181,6 +181,52 @@ FireEquipment = {
                 }
                 #fire-equipment-section .data-table tbody tr:hover td { background: #f2f7ff !important; }
                 #fire-equipment-section .data-table td { vertical-align: middle; }
+                /* ✅ الهوية — كروت الإحصائيات (نمط KPI الموحّد) */
+                #fire-equipment-section .fire-stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 22px; }
+                @media (max-width: 1100px) { #fire-equipment-section .fire-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+                @media (max-width: 540px) { #fire-equipment-section .fire-stat-grid { grid-template-columns: 1fr; } }
+                #fire-equipment-section .fire-stat {
+                    position: relative; overflow: hidden; border-radius: 16px; padding: 18px 18px 20px;
+                    background: linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%);
+                    border: 1px solid #dce7f5; display: flex; gap: 14px; align-items: flex-start;
+                    box-shadow: 0 8px 24px rgba(15,47,90,.07);
+                    transition: transform .2s ease, box-shadow .2s ease;
+                }
+                #fire-equipment-section .fire-stat:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(15,47,90,.13); }
+                #fire-equipment-section .fire-stat::before {
+                    content: ""; position: absolute; inset-inline-start: 0; top: 14px; bottom: 14px; width: 4px;
+                    border-radius: 4px; background: var(--fs-tone, #2563eb);
+                }
+                #fire-equipment-section .fire-stat__icon {
+                    flex: 0 0 auto; width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center;
+                    font-size: 20px; color: #fff;
+                    background: linear-gradient(135deg, var(--fs-tone, #1e40af), var(--fs-tone2, #2563eb));
+                }
+                #fire-equipment-section .fire-stat--blue   { --fs-tone: #1e40af; --fs-tone2: #2563eb; }
+                #fire-equipment-section .fire-stat--green  { --fs-tone: #15803d; --fs-tone2: #16a34a; }
+                #fire-equipment-section .fire-stat--amber  { --fs-tone: #d97706; --fs-tone2: #f59e0b; }
+                #fire-equipment-section .fire-stat--red    { --fs-tone: #b91c1c; --fs-tone2: #dc2626; }
+                #fire-equipment-section .fire-stat__body { min-width: 0; flex: 1; }
+                #fire-equipment-section .fire-stat__label { display: block; font-size: .74rem; font-weight: 800; color: #475569; margin-bottom: 4px; }
+                #fire-equipment-section .fire-stat__value { display: block; font-size: 1.9rem; font-weight: 800; line-height: 1.05; color: var(--fs-tone, #1e40af); }
+                #fire-equipment-section .fire-stat__sub { display: block; margin-top: 4px; font-size: .68rem; font-weight: 600; color: #94a3b8; }
+                #fire-equipment-section .fire-stat__bar { position: absolute; inset-inline: 0; bottom: 0; height: 4px; background: #e8eef7; }
+                #fire-equipment-section .fire-stat__bar-fill { display: block; height: 100%; width: var(--fs-pct, 0%); background: linear-gradient(90deg, var(--fs-tone, #1e40af), var(--fs-tone2, #2563eb)); transition: width .5s ease; }
+                /* ✅ الهوية — النماذج (الروابط الديناميكية داخل modals) */
+                .fire-modal .modal-content { border: 1px solid #d5e2ef; border-top-width: 5px; border-top-style: solid; border-top-color: #1e40af; border-radius: 18px; box-shadow: 0 24px 60px rgba(15,23,42,.25); }
+                .fire-modal .modal-header { background: linear-gradient(130deg, #0b2a55 0%, #1e40af 60%, #2563eb 100%); }
+                .fire-modal .modal-title { color: #fff !important; }
+                .fire-modal .modal-close { color: rgba(255,255,255,.85); background: rgba(255,255,255,.14); border-radius: 50%; transition: background .2s ease, color .2s ease; }
+                .fire-modal .modal-close:hover { background: rgba(255,255,255,.28); color: #fff; }
+                .fire-modal .form-label { font-size: .72rem; font-weight: 800; color: #334155; letter-spacing: .02em; }
+                .fire-modal .form-input, .fire-modal select.form-input, .fire-modal input.form-input {
+                    border: 1px solid #cbd5e1; border-radius: 10px; padding: .6rem .8rem; min-height: 44px;
+                    background: #fbfdff; color: #0f172a; transition: border .2s ease, box-shadow .2s ease, background .2s ease;
+                }
+                .fire-modal .form-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.14); background: #fff; outline: none; }
+                .fire-modal .btn-primary { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #7c2d12; border: none; font-weight: 800; border-radius: 10px; box-shadow: 0 8px 16px -8px rgba(245,158,11,.55); }
+                .fire-modal .btn-primary:hover { filter: brightness(1.05); transform: translateY(-1px); }
+                .fire-modal .btn-secondary { border-radius: 10px; font-weight: 700; }
             `;
             document.head.appendChild(style);
         } catch (e) {
@@ -1141,67 +1187,48 @@ FireEquipment = {
      */
     renderRegisterStatisticsCards() {
         const stats = this.getRegisterStatistics();
+        const pct = (v) => stats.total ? Math.round((Number(v) || 0) / stats.total * 100) : 0;
         
         return `
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div class="content-card bg-gradient-to-br from-blue-50 to-blue-100 border-l-4 border-blue-500 hover:shadow-lg transition-shadow duration-300">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-gray-600 mb-1">إجمالي الأجهزة</p>
-                            <p class="text-3xl font-bold text-blue-600" id="register-stat-total">${stats.total}</p>
-                        </div>
-                        <div class="bg-blue-500 rounded-full p-4">
-                            <i class="fas fa-fire-extinguisher text-white text-2xl"></i>
-                        </div>
+            <div class="fire-stat-grid">
+                <div class="fire-stat fire-stat--blue">
+                    <div class="fire-stat__icon"><i class="fas fa-fire-extinguisher"></i></div>
+                    <div class="fire-stat__body">
+                        <span class="fire-stat__label">إجمالي الأجهزة</span>
+                        <span class="fire-stat__value" id="register-stat-total">${stats.total}</span>
+                        <span class="fire-stat__sub">جميع المعدات المسجلة في النظام</span>
                     </div>
-                    <div class="mt-4">
-                        <p class="text-xs text-gray-500">جميع المعدات المسجلة</p>
-                    </div>
+                    <div class="fire-stat__bar"><span class="fire-stat__bar-fill" style="--fs-pct:${pct(stats.total)}%"></span></div>
                 </div>
-                
-                <div class="content-card bg-gradient-to-br from-green-50 to-green-100 border-l-4 border-green-500 hover:shadow-lg transition-shadow duration-300">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-gray-600 mb-1">الأجهزة الصالحة</p>
-                            <p class="text-3xl font-bold text-green-600" id="register-stat-operational">${stats.operational}</p>
-                        </div>
-                        <div class="bg-green-500 rounded-full p-4">
-                            <i class="fas fa-check-circle text-white text-2xl"></i>
-                        </div>
+
+                <div class="fire-stat fire-stat--green">
+                    <div class="fire-stat__icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="fire-stat__body">
+                        <span class="fire-stat__label">الأجهزة الصالحة</span>
+                        <span class="fire-stat__value" id="register-stat-operational">${stats.operational}</span>
+                        <span class="fire-stat__sub">جاهزة للاستخدام الفوري</span>
                     </div>
-                    <div class="mt-4">
-                        <p class="text-xs text-gray-500">جاهزة للاستخدام</p>
-                    </div>
+                    <div class="fire-stat__bar"><span class="fire-stat__bar-fill" style="--fs-pct:${pct(stats.operational)}%"></span></div>
                 </div>
-                
-                <div class="content-card bg-gradient-to-br from-yellow-50 to-yellow-100 border-l-4 border-yellow-500 hover:shadow-lg transition-shadow duration-300">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-gray-600 mb-1">تحتاج صيانة</p>
-                            <p class="text-3xl font-bold text-yellow-600" id="register-stat-needs-maintenance">${stats.needsMaintenance}</p>
-                        </div>
-                        <div class="bg-yellow-500 rounded-full p-4">
-                            <i class="fas fa-tools text-white text-2xl"></i>
-                        </div>
+
+                <div class="fire-stat fire-stat--amber">
+                    <div class="fire-stat__icon"><i class="fas fa-tools"></i></div>
+                    <div class="fire-stat__body">
+                        <span class="fire-stat__label">تحتاج صيانة</span>
+                        <span class="fire-stat__value" id="register-stat-needs-maintenance">${stats.needsMaintenance}</span>
+                        <span class="fire-stat__sub">تتطلب متابعة وإصلاح</span>
                     </div>
-                    <div class="mt-4">
-                        <p class="text-xs text-gray-500">تتطلب متابعة</p>
-                    </div>
+                    <div class="fire-stat__bar"><span class="fire-stat__bar-fill" style="--fs-pct:${pct(stats.needsMaintenance)}%"></span></div>
                 </div>
-                
-                <div class="content-card bg-gradient-to-br from-red-50 to-red-100 border-l-4 border-red-500 hover:shadow-lg transition-shadow duration-300">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-gray-600 mb-1">خارج الخدمة</p>
-                            <p class="text-3xl font-bold text-red-600" id="register-stat-out-of-service">${stats.outOfService}</p>
-                        </div>
-                        <div class="bg-red-500 rounded-full p-4">
-                            <i class="fas fa-ban text-white text-2xl"></i>
-                        </div>
+
+                <div class="fire-stat fire-stat--red">
+                    <div class="fire-stat__icon"><i class="fas fa-ban"></i></div>
+                    <div class="fire-stat__body">
+                        <span class="fire-stat__label">خارج الخدمة</span>
+                        <span class="fire-stat__value" id="register-stat-out-of-service">${stats.outOfService}</span>
+                        <span class="fire-stat__sub">غير متاحة للاستخدام</span>
                     </div>
-                    <div class="mt-4">
-                        <p class="text-xs text-gray-500">غير متاحة للاستخدام</p>
-                    </div>
+                    <div class="fire-stat__bar"><span class="fire-stat__bar-fill" style="--fs-pct:${pct(stats.outOfService)}%"></span></div>
                 </div>
             </div>
         `;
@@ -1595,7 +1622,7 @@ FireEquipment = {
         const assetLabel = asset ? `${asset.number || asset.id} - ${asset.location || ''}` : inspection.assetId;
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay fire-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header modal-header-centered">
@@ -2417,7 +2444,7 @@ FireEquipment = {
         }
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay fire-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 760px;">
                 <div class="modal-header modal-header-centered">
@@ -2746,7 +2773,7 @@ FireEquipment = {
         }
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay fire-modal';
         modal.innerHTML = `
             <style>
                 .qr-scanner-modal {
@@ -3404,7 +3431,7 @@ FireEquipment = {
             : new Date().toISOString().slice(0, 10);
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay fire-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header modal-header-centered">
@@ -3691,7 +3718,7 @@ FireEquipment = {
             : new Date().toISOString().slice(0, 10);
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay fire-modal';
         modal.innerHTML = `
             <style>
                 .mobile-inspection-modal {
@@ -4152,7 +4179,7 @@ FireEquipment = {
         const assetJson = JSON.stringify(asset).replace(/"/g, '&quot;');
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay fire-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 820px;">
                 <div class="modal-header modal-header-centered">
@@ -4448,7 +4475,7 @@ FireEquipment = {
      */
     showManageTypesModal() {
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay fire-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header modal-header-centered">
@@ -4548,7 +4575,7 @@ FireEquipment = {
      */
     showImportExcelModal() {
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay fire-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 800px;">
                 <div class="modal-header">
@@ -6492,7 +6519,7 @@ FireEquipment = {
                         : 'طلب غير محدد';
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay fire-modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header modal-header-centered">
