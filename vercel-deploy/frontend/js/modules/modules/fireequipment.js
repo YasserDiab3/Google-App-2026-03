@@ -227,6 +227,37 @@ FireEquipment = {
                 .fire-modal .btn-primary { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #7c2d12; border: none; font-weight: 800; border-radius: 10px; box-shadow: 0 8px 16px -8px rgba(245,158,11,.55); }
                 .fire-modal .btn-primary:hover { filter: brightness(1.05); transform: translateY(-1px); }
                 .fire-modal .btn-secondary { border-radius: 10px; font-weight: 700; }
+                /* ✅ الهوية — بطاقة التصفية التفاعلية */
+                #fire-equipment-section .fire-filter-card { border-radius: 16px; border-color: #dce7f5 !important; box-shadow: 0 8px 24px rgba(15,47,90,.07); }
+                #fire-equipment-section .fire-filter-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+                #fire-equipment-section .fire-clear-btn { display: none; border-radius: 10px; font-weight: 700; color: #dc2626; border-color: #fecaca; background: #fef2f2; }
+                #fire-equipment-section .fire-clear-btn:hover { background: #fee2e2; }
+                #fire-equipment-section .fire-clear-btn.visible { display: inline-flex; align-items: center; }
+                #fire-equipment-section .fire-filter-select option { font-weight: 600; }
+                #fire-equipment-section .fire-filter-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+                #fire-equipment-section .fire-status-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+                #fire-equipment-section .fire-chip {
+                    display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; cursor: pointer;
+                    border: 1px solid #d8e2f0; border-radius: 999px; background: #f6faff; color: #475569;
+                    font-size: .74rem; font-weight: 800; transition: all .2s ease;
+                }
+                #fire-equipment-section .fire-chip:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(15,47,90,.12); }
+                #fire-equipment-section .fire-chip.active {
+                    border-color: #1e40af; color: #fff;
+                    background: linear-gradient(135deg, #1e40af, #2563eb);
+                    box-shadow: 0 8px 18px -6px rgba(37,99,235,.5);
+                }
+                #fire-equipment-section .fire-chip--green.active { border-color: #15803d; background: linear-gradient(135deg, #15803d, #16a34a); box-shadow: 0 8px 18px -6px rgba(22,163,74,.5); }
+                #fire-equipment-section .fire-chip--amber.active { border-color: #d97706; background: linear-gradient(135deg, #d97706, #f59e0b); box-shadow: 0 8px 18px -6px rgba(245,158,11,.5); }
+                #fire-equipment-section .fire-chip--red.active { border-color: #b91c1c; background: linear-gradient(135deg, #b91c1c, #dc2626); box-shadow: 0 8px 18px -6px rgba(220,38,38,.5); }
+                #fire-equipment-section .fire-filter-results {
+                    display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px;
+                    border: 1px solid #dbe7f5; border-radius: 999px; background: #f8fbff; color: #64748b;
+                    font-size: .74rem; font-weight: 800; white-space: nowrap;
+                }
+                #fire-equipment-section .fire-filter-results i { color: #2563eb; }
+                #fire-equipment-section .fire-filter-results.is-filtered { border-color: #fbbf24; background: #fffbeb; color: #92400e; }
+                #fire-equipment-section .fire-filter-results.is-filtered i { color: #f59e0b; }
             `;
             document.head.appendChild(style);
         } catch (e) {
@@ -1114,53 +1145,87 @@ FireEquipment = {
     async renderDatabaseTab() {
         // إرجاع HTML أولاً
         return `
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="content-card">
-                    <div class="text-center">
-                        <p class="text-sm text-gray-500">إجمالي الأجهزة</p>
-                        <p class="text-2xl font-bold" id="fire-summary-total">0</p>
+            <div class="fire-stat-grid" id="fire-db-kpis">
+                <div class="fire-stat fire-stat--blue">
+                    <div class="fire-stat__icon"><i class="fas fa-fire-extinguisher"></i></div>
+                    <div class="fire-stat__body">
+                        <span class="fire-stat__label">إجمالي الأجهزة</span>
+                        <span class="fire-stat__value" id="fire-summary-total">0</span>
+                        <span class="fire-stat__sub">جميع الأجهزة المسجلة</span>
                     </div>
+                    <div class="fire-stat__bar"><span class="fire-stat__bar-fill" id="fire-bar-total" style="--fs-pct:0%"></span></div>
                 </div>
-                <div class="content-card">
-                    <div class="text-center">
-                        <p class="text-sm text-gray-500">أجهزة فعّالة</p>
-                        <p class="text-2xl font-bold text-green-600" id="fire-summary-active">0</p>
+                <div class="fire-stat fire-stat--green">
+                    <div class="fire-stat__icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="fire-stat__body">
+                        <span class="fire-stat__label">أجهزة صالحة</span>
+                        <span class="fire-stat__value" id="fire-summary-active">0</span>
+                        <span class="fire-stat__sub">جاهزة للاستخدام الفوري</span>
                     </div>
+                    <div class="fire-stat__bar"><span class="fire-stat__bar-fill" id="fire-bar-active" style="--fs-pct:0%"></span></div>
                 </div>
-                <div class="content-card">
-                    <div class="text-center">
-                        <p class="text-sm text-gray-500">بحاجة إلى متابعة</p>
-                        <p class="text-2xl font-bold text-yellow-600" id="fire-summary-maintenance">0</p>
+                <div class="fire-stat fire-stat--amber">
+                    <div class="fire-stat__icon"><i class="fas fa-tools"></i></div>
+                    <div class="fire-stat__body">
+                        <span class="fire-stat__label">تحتاج صيانة</span>
+                        <span class="fire-stat__value" id="fire-summary-maintenance">0</span>
+                        <span class="fire-stat__sub">تتطلب متابعة وإصلاح</span>
                     </div>
+                    <div class="fire-stat__bar"><span class="fire-stat__bar-fill" id="fire-bar-maintenance" style="--fs-pct:0%"></span></div>
+                </div>
+                <div class="fire-stat fire-stat--red">
+                    <div class="fire-stat__icon"><i class="fas fa-ban"></i></div>
+                    <div class="fire-stat__body">
+                        <span class="fire-stat__label">خارج الخدمة</span>
+                        <span class="fire-stat__value" id="fire-summary-out">0</span>
+                        <span class="fire-stat__sub">غير متاحة للاستخدام</span>
+                    </div>
+                    <div class="fire-stat__bar"><span class="fire-stat__bar-fill" id="fire-bar-out" style="--fs-pct:0%"></span></div>
                 </div>
             </div>
-            <div class="content-card mt-6">
-                <div class="card-header">
+            <div class="content-card fire-filter-card mt-6">
+                <div class="card-header fire-filter-head">
                     <h2 class="card-title"><i class="fas fa-filter ml-2"></i>تصفية السجل</h2>
+                    <button type="button" id="fire-clear-filters" class="btn-secondary fire-clear-btn">
+                        <i class="fas fa-rotate-left ml-1"></i>
+                        مسح الفلاتر
+                    </button>
                 </div>
                 <div class="card-body">
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                             <label class="form-label">بحث</label>
-                            <input type="text" id="fire-assets-search" class="form-input" placeholder="بحث برقم الجهاز، النوع، الموقع...">
+                            <input type="text" id="fire-assets-search" class="form-input" placeholder="رقم الجهاز، النوع، الموقع، المسؤول...">
                         </div>
                         <div>
                             <label class="form-label">النوع</label>
-                            <select id="fire-assets-type" class="form-input">
+                            <select id="fire-assets-type" class="form-input fire-filter-select">
                                 <option value="all">جميع الأنواع</option>
                             </select>
                         </div>
                         <div>
                             <label class="form-label">الحالة</label>
-                            <select id="fire-assets-status" class="form-input">
+                            <select id="fire-assets-status" class="form-input fire-filter-select">
                                 <option value="all">جميع الحالات</option>
                             </select>
                         </div>
                         <div>
                             <label class="form-label">الموقع</label>
-                            <select id="fire-assets-location" class="form-input">
+                            <select id="fire-assets-location" class="form-input fire-filter-select">
                                 <option value="all">جميع المواقع</option>
                             </select>
+                        </div>
+                    </div>
+                    <div class="fire-filter-row">
+                        <div class="fire-status-chips" id="fire-status-chips">
+                            <button type="button" class="fire-chip active" data-status="all"><i class="fas fa-th-list"></i> الكل</button>
+                            <button type="button" class="fire-chip fire-chip--green" data-status="صالح"><i class="fas fa-check-circle"></i> صالح</button>
+                            <button type="button" class="fire-chip fire-chip--amber" data-status="يحتاج صيانة"><i class="fas fa-tools"></i> صيانة</button>
+                            <button type="button" class="fire-chip fire-chip--red" data-status="خارج الخدمة"><i class="fas fa-ban"></i> خارج الخدمة</button>
+                        </div>
+                        <div class="fire-filter-results" id="fire-results-chip">
+                            <i class="fas fa-chart-line ml-1"></i>
+                            <span id="fire-results-text">-</span>
                         </div>
                     </div>
                 </div>
@@ -2012,7 +2077,7 @@ FireEquipment = {
             const types = Array.from(new Set(assets.map(asset => asset.type).filter(Boolean)));
             typeSelect.innerHTML = [
                 '<option value="all">جميع الأنواع</option>',
-                ...types.map(type => `<option value="${Utils.escapeHTML(type)}">${Utils.escapeHTML(type)}</option>`)
+                ...types.map(type => `<option value="${Utils.escapeHTML(type)}">${Utils.escapeHTML(type)} (${assets.filter(a => a.type === type).length})</option>`)
             ].join('');
             typeSelect.value = types.includes(current) ? current : 'all';
             this.state.filters.type = typeSelect.value;
@@ -2022,7 +2087,7 @@ FireEquipment = {
             const current = this.state.filters.status;
             statusSelect.innerHTML = [
                 '<option value="all">جميع الحالات</option>',
-                ...this.statusOptions.map(option => `<option value="${option.value}">${option.label}</option>`)
+                ...this.statusOptions.map(option => `<option value="${option.value}">${option.label} (${assets.filter(a => a.status === option.value).length})</option>`)
             ].join('');
             statusSelect.value = this.statusOptions.some(option => option.value === current) ? current : 'all';
             this.state.filters.status = statusSelect.value;
@@ -2033,7 +2098,7 @@ FireEquipment = {
             const locations = Array.from(new Set(assets.map(asset => asset.location).filter(Boolean)));
             locationSelect.innerHTML = [
                 '<option value="all">جميع المواقع</option>',
-                ...locations.map(location => `<option value="${Utils.escapeHTML(location)}">${Utils.escapeHTML(location)}</option>`)
+                ...locations.map(location => `<option value="${Utils.escapeHTML(location)}">${Utils.escapeHTML(location)} (${assets.filter(a => a.location === location).length})</option>`)
             ].join('');
             locationSelect.value = locations.includes(current) ? current : 'all';
             this.state.filters.location = locationSelect.value;
@@ -2041,14 +2106,51 @@ FireEquipment = {
     },
 
     renderSummary() {
-        const stats = this.getAssetStats();
+        const all = this.getAssets();
+        const filtered = this.getFilteredAssets();
+        const stats = this.getAssetStatsForList(filtered);
+        const base = Math.max(filtered.length, 1);
+
+        const setBar = (id, v) => {
+            const bar = document.getElementById(id);
+            if (bar) bar.style.setProperty('--fs-pct', `${Math.round((Number(v) || 0) / base * 100)}%`);
+        };
+
         const totalEl = document.getElementById('fire-summary-total');
         const activeEl = document.getElementById('fire-summary-active');
         const maintenanceEl = document.getElementById('fire-summary-maintenance');
-
-        if (totalEl) totalEl.textContent = stats.total;
+        const outEl = document.getElementById('fire-summary-out');
+        if (totalEl) totalEl.textContent = filtered.length;
         if (activeEl) activeEl.textContent = stats.active;
         if (maintenanceEl) maintenanceEl.textContent = stats.needsMaintenance;
+        if (outEl) outEl.textContent = stats.outOfService;
+        setBar('fire-bar-total', filtered.length);
+        setBar('fire-bar-active', stats.active);
+        setBar('fire-bar-maintenance', stats.needsMaintenance);
+        setBar('fire-bar-out', stats.outOfService);
+
+        // ✅ تفاعلية: شارة النتائج + شريحة الحالة النشطة + زر مسح الفلاتر
+        const hasFilter = !!(this.state.filters.search || this.state.filters.type !== 'all' || this.state.filters.status !== 'all' || this.state.filters.location !== 'all');
+        const resultsText = document.getElementById('fire-results-text');
+        if (resultsText) {
+            resultsText.textContent = hasFilter ? `${filtered.length} من أصل ${all.length} جهاز` : `عرض ${filtered.length} جهاز`;
+        }
+        const resultsChip = document.getElementById('fire-results-chip');
+        if (resultsChip) resultsChip.classList.toggle('is-filtered', hasFilter);
+        const clearBtn = document.getElementById('fire-clear-filters');
+        if (clearBtn) clearBtn.classList.toggle('visible', hasFilter);
+        document.querySelectorAll('#fire-status-chips .fire-chip').forEach(chip => {
+            chip.classList.toggle('active', chip.dataset.status === (this.state.filters.status || 'all'));
+        });
+    },
+
+    getAssetStatsForList(list) {
+        list = list || [];
+        const total = list.length;
+        const active = list.filter(asset => asset.status === 'صالح').length;
+        const needsMaintenance = list.filter(asset => asset.status === 'يحتاج صيانة').length;
+        const outOfService = list.filter(asset => asset.status === 'خارج الخدمة').length;
+        return { total, active, needsMaintenance, outOfService };
     },
 
     renderAssetsTable(assets) {
@@ -2313,6 +2415,44 @@ FireEquipment = {
                 const newLocationSelect = locationSelect.cloneNode(true);
                 locationSelect.parentNode.replaceChild(newLocationSelect, locationSelect);
                 newLocationSelect.addEventListener('change', () => this.applyFilters());
+            }
+
+            // ✅ تفاعلية: شرائح الحالة السريعة (سريعة فوق القائمة)
+            const chipsWrap = document.getElementById('fire-status-chips');
+            if (chipsWrap) {
+                const newChips = chipsWrap.cloneNode(true);
+                chipsWrap.parentNode.replaceChild(newChips, chipsWrap);
+                newChips.addEventListener('click', (e) => {
+                    const chip = e.target.closest('.fire-chip');
+                    if (!chip) return;
+                    this.state.filters.status = chip.dataset.status || 'all';
+                    const statusSelect = document.getElementById('fire-assets-status');
+                    if (statusSelect) statusSelect.value = this.state.filters.status;
+                    this.applyFilters();
+                });
+            }
+
+            // ✅ تفاعلية: زر مسح جميع الفلاتر
+            const clearFiltersBtn = document.getElementById('fire-clear-filters');
+            if (clearFiltersBtn) {
+                const newClearBtn = clearFiltersBtn.cloneNode(true);
+                clearFiltersBtn.parentNode.replaceChild(newClearBtn, clearFiltersBtn);
+                newClearBtn.addEventListener('click', () => {
+                    this.state.filters = { search: '', type: 'all', status: 'all', location: 'all' };
+                    const searchInput = document.getElementById('fire-assets-search');
+                    if (searchInput) searchInput.value = '';
+                    const typeSelect = document.getElementById('fire-assets-type');
+                    if (typeSelect) typeSelect.value = 'all';
+                    const statusSelect = document.getElementById('fire-assets-status');
+                    if (statusSelect) statusSelect.value = 'all';
+                    const locationSelect = document.getElementById('fire-assets-location');
+                    if (locationSelect) locationSelect.value = 'all';
+                    this.renderAssets();
+                    // نتيجة بعد إنهاء التصفية
+                    if (typeof Notification !== 'undefined' && Notification.info) {
+                        Notification.info('تمت إزالة جميع الفلاتر');
+                    }
+                });
             }
         } else if (tabName === 'inspections') {
             // أحداث تبويب الفحوصات الشهرية
@@ -4312,8 +4452,9 @@ FireEquipment = {
         const assets = this.getAssets();
         const total = assets.length;
         const active = assets.filter(asset => asset.status === 'صالح').length;
-        const needsMaintenance = assets.filter(asset => asset.status && asset.status !== 'صالح').length;
-        return { total, active, needsMaintenance };
+        const needsMaintenance = assets.filter(asset => asset.status === 'يحتاج صيانة').length;
+        const outOfService = assets.filter(asset => asset.status === 'خارج الخدمة').length;
+        return { total, active, needsMaintenance, outOfService };
     },
 
     /**
