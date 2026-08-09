@@ -1,13 +1,13 @@
 {
-  "version": "1.0.924",
+  "version": "1.0.925",
   "highlights": {
     "ar": [
-      "موديول معدات الحريق: كروت الإحصائيات أصبحت بهوية النظام الموحّدة (أيقونات ملونة + شريط نسبة لكل حالة) في تبويب السجل.",
-      "النماذج والنوافذ أصبحت بهوية موحّدة: رأس متدرج كحلي داكن، حقول بإطار كهرماني عند التركيز، وأزرار حفظ كهرمانية."
+      "قاعدة بيانات معدات الحريق: كروت KPI تفاعلية جديدة (الإجمالي/صالح/صيانة/خارج الخدمة) تتحدث فورياً مع الفلاتر مع شريط نسبة لكل حالة.",
+      "فلتر ذكي: عدادات داخل خيارات الأنواع/الحالات/المواقع، شرائح سريعة للحالة، شارة عرض النتائج، وزر مسح الفلاتر."
     ],
     "en": [
-      "Fire Equipment module: KPI cards now follow the unified HSE identity (colored icon chips + ratio bar per status) in the register tab.",
-      "Forms and modals got the identity treatment: navy gradient headers, focused field styling, and amber action buttons."
+      "Fire Equipment database: new interactive KPI cards (total / ready / maintenance / out-of-service) that live-update with the filter along a per-status ratio bar.",
+      "Smarter filter: counts inside type/status/location options, quick status chips, results badge, and a clear-filters button."
     ]
   }
 }

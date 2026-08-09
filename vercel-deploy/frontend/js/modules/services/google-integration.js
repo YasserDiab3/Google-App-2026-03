@@ -2957,10 +2957,11 @@ const GoogleIntegration = {
 
                 // تحديث passwordHash في Google Sheets إذا لزم الأمر
                 // تحديث البيانات في Google Sheets إذا تم إنشاء hash جديد
-                const needsPasswordUpdate = restoredPasswords || normalizedUsers.some(u => {
-                    const hash = (u.passwordHash || '').trim();
-                    return !hash || !Utils.isSha256Hex(hash);
-                });
+                // ⚠️ إصلاح: لا نُعيد كتابة كل المستخدمين عند كل مزامنة.
+                // الشرط القديم كان دائم true (سيرفر لا يرسل passwordHash في البيانات المصفّاة)
+                // → autoSave('Users') كاملة بلا هاش → مع النسخ القديمة غير المحمية كانت تمسح الهاش لجميع المستخدمين.
+                // الآن الكتابة فقط عند استعادة كلمات مرور نصية فعلية من الكاش المحلي.
+                const needsPasswordUpdate = restoredPasswords === true;
 
                 if (needsPasswordUpdate) {
                     setTimeout(() => {

@@ -325,6 +325,19 @@ function updateUserInSheet(userId, updateData, actorUserData, options) {
  */
 function saveUsersMergedToSheet_(spreadsheet, sheet, payloadRows, options) {
     try {
+        // قفل كتابة: الدمج يمسح الورقة ويعيد كتابتها كاملة — كتابتان متزامنتان تتنازعان
+        // وتفقدان البيانات (وهاش) — lock يجبر التسلسل
+        let writeLock = null;
+        try { writeLock = LockService.getScriptLock(); } catch (_lk) { /* ignore */ }
+        let lockHeld = false;
+        if (writeLock) {
+            try { lockHeld = writeLock.tryLock(20000); } catch (_lt) { lockHeld = false; }
+        }
+        const releaseWriteLock = function () {
+            if (lockHeld && writeLock) {
+                try { writeLock.releaseLock(); } catch (_rl) { /* ignore */ }
+            }
+        };
         const rows = Array.isArray(payloadRows) ? payloadRows : [];
         const deletedSet = {};
         if (options && Array.isArray(options.deletedIds)) {
@@ -471,9 +484,11 @@ function saveUsersMergedToSheet_(spreadsheet, sheet, payloadRows, options) {
         if (typeof invalidateHseSheetCaches === 'function') {
             try { invalidateHseSheetCaches('Users'); } catch (ec) { /* ignore */ }
         }
+        releaseWriteLock();
         return { success: true, message: 'تم حفظ المستخدمين بنجاح (دمج)', count: mergedObjs.length };
     } catch (error) {
         Logger.log('saveUsersMergedToSheet_ error: ' + error.toString());
+        try { if (typeof releaseWriteLock === 'function') releaseWriteLock(); } catch (_rl2) { /* ignore */ }
         return { success: false, message: 'حدث خطأ أثناء حفظ المستخدمين: ' + error.toString() };
     }
 }
