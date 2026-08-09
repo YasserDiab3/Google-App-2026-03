@@ -2185,6 +2185,16 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
                 return { success: false, message: 'ازدحام على توليد رقم التصريح. أعد المحاولة بعد لحظات.' };
             }
         }
+        var _dailyObsScriptLock = null;
+        if (sheetName === 'DailyObservations') {
+            _dailyObsScriptLock = LockService.getScriptLock();
+            try {
+                _dailyObsScriptLock.waitLock(45000);
+            } catch (lockEx) {
+                Logger.log('DailyObservations saveToSheet lock timeout: ' + lockEx.toString());
+                return { success: false, message: 'ازدحام على حفظ الملاحظات اليومية. أعد المحاولة بعد لحظات.' };
+            }
+        }
         var resolvedPTWRegistryForResponse = null;
         try {
 
@@ -2463,11 +2473,34 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
                 } else if (processedItem.id) {
                     recordId = String(processedItem.id).trim();
                 }
-                const existingRow = recordId && idToRow[recordId] ? idToRow[recordId] : null;
+                let existingRow = recordId && idToRow[recordId] ? idToRow[recordId] : null;
+                let existingRowVals = null;
+                if (existingRow) {
+                    existingRowVals = sheet.getRange(existingRow, 1, 1, headerRow.length).getValues()[0];
+                }
+
+                // ✅ DailyObservations: ضمان مطابقة رقم isoCode لرقم id + منع تكرار الأرقام نهائياً
+                if (sheetName === 'DailyObservations') {
+                    const isoColIdx = headerRow.indexOf('isoCode');
+                    const existingIsoVal = (existingRow && existingRowVals && isoColIdx >= 0) ? existingRowVals[isoColIdx] : processedItem.isoCode;
+                    ensureObservationIsoCodeMatchesId_(processedItem, existingIsoVal);
+
+                    // سجل جديد يحمل id موجود سابقاً ببيانات مختلفة (سباق/بيانات قديمة/أوفلاين) → نولّد رقماً جديداً بدل الاستبدال
+                    if (existingRow && !observationSameIdentity_(existingRowVals, headerRow, processedItem)) {
+                        const freshIdentity = generateNextObservationIdentity(sheetName, spreadsheetId, true);
+                        if (freshIdentity && freshIdentity.id) {
+                            processedItem.id = freshIdentity.id;
+                            processedItem.isoCode = freshIdentity.isoCode;
+                            recordId = freshIdentity.id;
+                            existingRow = null;
+                            existingRowVals = null;
+                            Logger.log('DailyObservations collision: record id re-assigned to ' + freshIdentity.id);
+                        }
+                    }
+                }
 
                 if (existingRow) {
                     // Partial update: only keys present in processedItem
-                    const rowVals = sheet.getRange(existingRow, 1, 1, headerRow.length).getValues()[0];
                     headerRow.forEach((h, idx) => {
                         if (!h) return;
                         if (processedItem.hasOwnProperty(h)) {
@@ -2479,10 +2512,10 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
                                     return; // الاحتفاظ بالقيمة الحالية في الشيت
                                 }
                             }
-                            rowVals[idx] = toSheetCellValue_(h, processedItem[h], sheetName);
+                            existingRowVals[idx] = toSheetCellValue_(h, processedItem[h], sheetName);
                         }
                     });
-                    sheet.getRange(existingRow, 1, 1, headerRow.length).setValues([rowVals]);
+                    sheet.getRange(existingRow, 1, 1, headerRow.length).setValues([existingRowVals]);
                 } else {
                     // Append new row
                     const rowValues = headerRow.map(h => {
@@ -2548,6 +2581,13 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
                     _ptwRegistryScriptLock.releaseLock();
                 } catch (relEx) {
                     Logger.log('saveToSheet releaseLock: ' + relEx.toString());
+                }
+            }
+            if (_dailyObsScriptLock) {
+                try {
+                    _dailyObsScriptLock.releaseLock();
+                } catch (relEx) {
+                    Logger.log('saveToSheet releaseLock (daily obs): ' + relEx.toString());
                 }
             }
         }
@@ -5087,7 +5127,7 @@ function generateDailyObservationId(sheetName, spreadsheetId) {
  * @param {string} spreadsheetId - معرف الجدول (اختياري)
  * @returns {{id: string, isoCode: string}} معرف جديد مثل { id: 'DOB-2999', isoCode: 'OBS-202602-2999' }
  */
-function generateNextObservationIdentity(sheetName, spreadsheetId) {
+function generateNextObservationIdentity(sheetName, spreadsheetId, skipLock) {
     var lock = null;
     try {
         var targetSpreadsheetId = spreadsheetId || getSpreadsheetId();
@@ -5096,12 +5136,14 @@ function generateNextObservationIdentity(sheetName, spreadsheetId) {
             return { id: uuidId, isoCode: getObservationIsoCodeFromId(uuidId) };
         }
         
-        // قفل تسلسلي لمنع رقمين متطابقين عند الاستدعاء المتزامن
-        try {
-            lock = LockService.getScriptLock();
-            lock.waitLock(15000);
-        } catch (lockEx) {
-            Logger.log('generateNextObservationIdentity lock failed: ' + lockEx.toString());
+        // قفل تسلسلي لمنع رقمين متطابقين عند الاستدعاء المتزامن (يمكن تخطيه إذا كان المتصل يحمل القفل أصلاً)
+        if (!skipLock) {
+            try {
+                lock = LockService.getScriptLock();
+                lock.waitLock(15000);
+            } catch (lockEx) {
+                Logger.log('generateNextObservationIdentity lock failed: ' + lockEx.toString());
+            }
         }
         
         // مسح الكاش وقراءة مباشرة من الورقة (بدون فلتر أمان) كمصدر حقيقة
@@ -5206,6 +5248,99 @@ function getObservationIsoCodeFromId(id) {
     }
     
     return 'OBS-' + new Date().getFullYear() + String(new Date().getMonth() + 1).padStart(2, '0') + '-0000';
+}
+
+/**
+ * استخراج الرقم من id أو isoCode بالتنسيق القياسي فقط: DOB-NNNN أو OBS-YYYYMM-NNNN.
+ * المعرّفات المشوّهة (DOB-101_dup_.. أو UUID) ترجع null.
+ * @param {*} s - id أو isoCode
+ * @returns {number|null} الرقم أو null
+ */
+function extractObservationIdNumber_(s) {
+    try {
+        var str = String(s || '').trim();
+        if (!str) return null;
+        var m = str.match(/^(?:DOB-|OBS-\d{6}-)(\d+)$/i);
+        return m ? parseInt(m[1], 10) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * إصلاح isoCode ليطابق رقم id دائماً (مع الحفاظ على الشهر YYYYMM الأصلي إن وُجد).
+ * يضمن أن isoCode = OBS-<الشهر>-<رقم id> عند كل حفظ — يمنع عدم التطابق مستقبلاً.
+ * @param {Object} processedItem - السجل قبل الكتابة (يُعدَّل isoCode داخله)
+ * @param {*} existingIsoCode - قيمة isoCode الموجودة في الورقة (لتثبيت الشهر)
+ */
+function ensureObservationIsoCodeMatchesId_(processedItem, existingIsoCode) {
+    try {
+        if (!processedItem || !processedItem.id) return;
+        var idNum = extractObservationIdNumber_(String(processedItem.id).trim());
+        if (idNum === null) return; // لا يمكن اشتقاق الرقم → يُعالج في الإصلاح الشامل
+        var month = null;
+        var mObs = String(processedItem.isoCode || existingIsoCode || '').trim().match(/^OBS-(\d{6})-/i);
+        if (mObs) month = mObs[1];
+        if (!month) {
+            var now = new Date();
+            var mm = String(now.getMonth() + 1);
+            month = String(now.getFullYear()) + (mm.length === 1 ? '0' + mm : mm);
+        }
+        var numStr = String(idNum);
+        while (numStr.length < 4) numStr = '0' + numStr;
+        var target = 'OBS-' + month + '-' + numStr;
+        if (processedItem.isoCode !== target) {
+            processedItem.isoCode = target;
+        }
+    } catch (e) {
+        Logger.log('ensureObservationIsoCodeMatchesId_: ' + e.toString());
+    }
+}
+
+/**
+ * تحديد هل سجل وارد بنفس id هو نفس السجل الموجود (تحديث عادي) أم سجل جديد بتعارض رقم.
+ * يُقارن createdAt بتحمّل 3 ثوانٍ (Sheets قد يقطع الدقائق/الثواني عند التخزين).
+ * @param {Array} existingRowVals - قيم الصف الموجود في الورقة
+ * @param {Array} headerRow - الرؤوس
+ * @param {Object} processedItem - السجل الوارد
+ * @returns {boolean} true إذا كانا نفس السجل (تحديث عادي) وإلا false (تعارض → إعادة ترقيم)
+ */
+function observationSameIdentity_(existingRowVals, headerRow, processedItem) {
+    try {
+        var idx = headerRow.indexOf('createdAt');
+        if (idx < 0) return true; // بدون عمود createdAt → نعاملها كتحديث عادي
+        var sheetVal = existingRowVals ? existingRowVals[idx] : null;
+        var incomingVal = processedItem ? processedItem.createdAt : null;
+        var hasSheet = !(sheetVal === null || sheetVal === undefined || String(sheetVal).trim() === '');
+        var hasIncoming = !(incomingVal === null || incomingVal === undefined || String(incomingVal).trim() === '');
+        if (!hasSheet && !hasIncoming) return true;
+        if (!hasSheet && hasIncoming) return false; // سجل جديد ببيانات مختلفة على id موجود → تعارض
+        if (hasSheet && !hasIncoming) return true;
+        var t1 = obsDateToEpochMs_(sheetVal);
+        var t2 = obsDateToEpochMs_(incomingVal);
+        if (isNaN(t1) || isNaN(t2)) return true; // لا يمكن المقارنة → لا نعيد الترقيم
+        return Math.abs(t1 - t2) < 3000;
+    } catch (e) {
+        return true;
+    }
+}
+
+/**
+ * تحويل قيمة تاريخ من الورقة/الفرونت إلى epoch بالمللي ثانية.
+ * @param {*} v - Date object أو رقم أو نص ISO
+ * @returns {number} epoch ms أو NaN
+ */
+function obsDateToEpochMs_(v) {
+    try {
+        if (v instanceof Date) return v.getTime();
+        if (typeof v === 'number') return v;
+        var s = String(v || '').trim();
+        if (!s) return NaN;
+        var t = Date.parse(s);
+        return isNaN(t) ? NaN : t;
+    } catch (e) {
+        return NaN;
+    }
 }
 
 /**

@@ -7090,6 +7090,30 @@ const DailyObservations = {
             return;
         }
 
+        // إصلاح ذاتي لتسلسل أرقام الملاحظات (مرة واحدة لكل إصدار، للمدير فقط)
+        try {
+            if (this.isCurrentUserAdmin && typeof this.isCurrentUserAdmin === 'function' && this.isCurrentUserAdmin()) {
+                const ver = (typeof AppState !== 'undefined' && AppState.appVersion) ? String(AppState.appVersion) : 'unknown';
+                const flagKey = 'hse_dobs_seq_repair_v' + ver;
+                if (typeof localStorage !== 'undefined' && !localStorage.getItem(flagKey)) {
+                    localStorage.setItem(flagKey, 'running');
+                    GoogleIntegration.sendRequest({ action: 'repairObservationSequence', data: {} }).then((res) => {
+                        if (res && res.success) {
+                            const d = res.data || {};
+                            if ((d.renumberedCount || 0) > 0 || (d.fixedIsoCodeCount || 0) > 0) {
+                                Notification.success('تم إصلاح تسلسل أرقام الملاحظات: ' + d.renumberedCount + ' معاد ترقيمها، ' + d.fixedIsoCodeCount + ' تصحيح isoCode');
+                            }
+                        }
+                        localStorage.setItem(flagKey, 'done');
+                    }).catch(() => {
+                        localStorage.setItem(flagKey, 'done');
+                    });
+                }
+            }
+        } catch (repairErr) {
+            Utils.safeWarn('خطأ في تشغيل إصلاح التسلسل:', repairErr);
+        }
+
         const observationsRaw = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
             ? this.getDailyObservationsVisibleToCurrentUser()
             : (Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : []);

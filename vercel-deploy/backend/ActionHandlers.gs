@@ -2890,6 +2890,16 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'repairObservationSequence': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    result = repairObservationSequence(payload || {});
+                    return;
+
+        })();
+        return result;
+    },
     'updateObservation': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

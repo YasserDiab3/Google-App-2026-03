@@ -45,6 +45,163 @@ function getNextObservationId(payload) {
 
 /**
  * ============================================
+ * إصلاح تسلسل أرقام الملاحظات اليومية (صفوف قديمة)
+ * ============================================
+ * 
+ * - يضمن أن رقم isoCode يطابق رقم id لكل صف (مع حفظ الشهر YYYYMM الأصلي).
+ * - يصلح التكرارات (نفس الرقم لصفّين) والمعرّفات المشوّهة (DOB-101_dup_.. / UUID)
+ *   بإعادة ترقيم الصفوف الأحدث برقم جديد مستمر (يُحفظ السجل الأقدم).
+ * - لا يعيد ترقيم الصفوف السليمة ولا يضغط الأرقام (لا يتلف المراجع القديمة).
+ * 
+ * @param {Object} payload - { spreadsheetId (اختياري) }
+ * @returns {Object} نتيجة العملية مع تقرير { fixedIsoCodeCount, renumberedCount, totalRows }
+ */
+function repairObservationSequence(payload) {
+    var result = { success: false, message: '' };
+    var lock = null;
+    try {
+        var sheetName = 'DailyObservations';
+        var targetSpreadsheetId = (payload && payload.spreadsheetId) || getSpreadsheetId();
+        if (!targetSpreadsheetId) {
+            return { success: false, message: 'Spreadsheet ID غير محدد' };
+        }
+
+        try {
+            lock = LockService.getScriptLock();
+            lock.waitLock(30000);
+        } catch (lockEx) {
+            Logger.log('repairObservationSequence lock failed: ' + lockEx.toString());
+        }
+
+        try {
+            invalidateHseSheetCaches(sheetName);
+        } catch (e) {}
+        var spreadsheet = SpreadsheetApp.openById(targetSpreadsheetId);
+        var sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            return { success: false, message: 'الورقة غير موجودة: ' + sheetName };
+        }
+
+        var range = sheet.getDataRange();
+        var values = range.getValues();
+        if (!values || values.length < 2) {
+            return { success: true, message: 'لا توجد صفوف لإصلاحها', data: { fixedIsoCodeCount: 0, renumberedCount: 0, totalRows: 0 } };
+        }
+
+        var headerRow = values[0].map(function(h) { return String(h || '').trim(); });
+        var idCol = headerRow.indexOf('id');
+        var isoCol = headerRow.indexOf('isoCode');
+        if (idCol < 0) {
+            return { success: false, message: 'عمود id غير موجود في الورقة' };
+        }
+
+        var now = new Date();
+        var curMonth = String(now.getFullYear()) + (String(now.getMonth() + 1).length === 1 ? '0' + String(now.getMonth() + 1) : String(now.getMonth() + 1));
+
+        // جمع كل الأرقام المستخدمة (من id و isoCode) لضمان عدم إعادة استخدام أي رقم
+        var usedNums = {};
+        function markNum(n) {
+            if (n !== null && !isNaN(n) && n > 0) usedNums[n] = true;
+        }
+        for (var r1 = 1; r1 < values.length; r1++) {
+            markNum(extractObservationIdNumber_(values[r1][idCol]));
+            if (isoCol >= 0) markNum(extractObservationIdNumber_(values[r1][isoCol]));
+        }
+        var maxUsed = 0;
+        for (var key in usedNums) {
+            if (usedNums[key]) {
+                var numVal = parseInt(key, 10);
+                if (numVal > maxUsed) maxUsed = numVal;
+            }
+        }
+        var nextFree = maxUsed + 1;
+        function takeNextFree() {
+            while (usedNums[nextFree]) nextFree += 1;
+            usedNums[nextFree] = true;
+            return nextFree;
+        }
+
+        var seenIds = {};
+        var fixedIsoCodeCount = 0;
+        var renumberedCount = 0;
+        var updatedRows = [];
+
+        for (var r2 = 1; r2 < values.length; r2++) {
+            var row = values[r2];
+            var curId = (row[idCol] === null || row[idCol] === undefined) ? '' : String(row[idCol]).trim();
+            var curIso = (isoCol >= 0 && row[isoCol] !== null && row[isoCol] !== undefined) ? String(row[isoCol]).trim() : '';
+            if (!curId && !curIso) continue; // صف فارغ
+
+            var idNum = extractObservationIdNumber_(curId);
+            var newId = curId;
+            var newIso = curIso;
+            var changed = false;
+
+            // 1) id مكرر (نفس الرقم لصفّين) أو id مشوّه → إعادة ترقيم برقم جديد مستمر
+            if (idNum === null || seenIds[idNum]) {
+                var freshNum = takeNextFree();
+                var numStr = String(freshNum);
+                while (numStr.length < 4) numStr = '0' + numStr;
+                var monthM = String(curIso || '').match(/^OBS-(\d{6})-/i);
+                var monthKeep = monthM ? monthM[1] : curMonth;
+                newId = 'DOB-' + numStr;
+                newIso = 'OBS-' + monthKeep + '-' + numStr;
+                changed = true;
+                renumberedCount += 1;
+            } else {
+                seenIds[idNum] = true;
+                // 2) رقم isoCode لا يطابق رقم id → تصحيح isoCode (مع الحفاظ على الشهر)
+                if (isoCol >= 0) {
+                    var isoNum = extractObservationIdNumber_(curIso);
+                    if (isoNum !== idNum) {
+                        var monthM2 = String(curIso || '').match(/^OBS-(\d{6})-/i);
+                        var monthKeep2 = monthM2 ? monthM2[1] : curMonth;
+                        var numStr2 = String(idNum);
+                        while (numStr2.length < 4) numStr2 = '0' + numStr2;
+                        newIso = 'OBS-' + monthKeep2 + '-' + numStr2;
+                        changed = true;
+                        fixedIsoCodeCount += 1;
+                    }
+                }
+            }
+
+            if (changed) {
+                updatedRows.push({ row: r2 + 1, id: newId, iso: isoCol >= 0 ? newIso : '' });
+            }
+        }
+
+        // كتابة التغييرات (الصفوف المتغيرة فقط)
+        for (var u = 0; u < updatedRows.length; u++) {
+            var upd = updatedRows[u];
+            sheet.getRange(upd.row, idCol + 1).setValue(upd.id);
+            if (isoCol >= 0 && upd.iso) {
+                sheet.getRange(upd.row, isoCol + 1).setValue(upd.iso);
+            }
+        }
+
+        try {
+            invalidateHseSheetCaches(sheetName);
+        } catch (e) {}
+
+        result = {
+            success: true,
+            message: 'تم إصلاح تسلسل أرقام الملاحظات بنجاح',
+            data: { fixedIsoCodeCount: fixedIsoCodeCount, renumberedCount: renumberedCount, totalRows: values.length - 1 }
+        };
+        Logger.log('repairObservationSequence: fixedIso=' + fixedIsoCodeCount + ', renumbered=' + renumberedCount + ', totalRows=' + (values.length - 1));
+        return result;
+    } catch (err) {
+        Logger.log('repairObservationSequence: ' + err.toString());
+        return { success: false, message: 'خطأ في إصلاح التسلسل: ' + err.toString() };
+    } finally {
+        try {
+            if (lock) lock.releaseLock();
+        } catch (relEx) {}
+    }
+}
+
+/**
+ * ============================================
  * إضافة ملاحظة يومية
  * ============================================
  * 
