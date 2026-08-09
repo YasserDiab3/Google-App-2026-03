@@ -2,10 +2,10 @@
   "version": "1.0.926",
   "highlights": {
     "ar": [
-      "إصلاح الاستقرار: منع تكرار مسح كلمات المرور — تأمين كتابة المستخدمين بقفل لأي كتابة متزامنة، وإيقاف إعادة كتابة جميع المستخدمين عند كل مزامنة (تُكتب فقط عند استعادة كلمات مرور فعلية)."
+      "تصاريح العمل: حقل وصف العمل يعرض الآن اقتراحات الأوصاف المستخدمة سابقاً (يدوي وآلي) — يمكن الاختيار منها أو كتابة وصف جديد، تماماً مثل اقتراحات الأسماء."
     ],
     "en": [
-      "Stability fix: prevent a repeat of the global password wipe — users writes are now lock-protected, and the auto full-rewrite of all users on every sync is stopped (only runs when real passwords are restored)."
+      "Work permits: the work description field now suggests previously used descriptions (manual & auto permits) — pick one like the names suggestions, or type a new one."
     ]
   }
 }
