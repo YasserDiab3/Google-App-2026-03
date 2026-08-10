@@ -200,6 +200,14 @@ function doPost(e) {
             return setCorsHeaders(ContentService.createTextOutput(JSON.stringify(mfaSelfTest_())));
         }
 
+        // إعادة بناء وتزامن نموذج المرور اليومي من الخادم تلقائياً
+        if (action === 'triggerDailySafetyFormSync') {
+            var syncRes = (typeof rebuildAndRepairDailySafetyCheckListFromForm === 'function')
+                ? rebuildAndRepairDailySafetyCheckListFromForm()
+                : (typeof processFormDataFromSheet === 'function' ? processFormDataFromSheet() : { success: false, message: 'DNE' });
+            return setCorsHeaders(ContentService.createTextOutput(JSON.stringify(syncRes)));
+        }
+
         // SEC: mfaClearUser / mfaClearCorruptSecrets لم تعد تُنفَّذ هنا بدون مصادقة.
         // المسار الآمن: ActionHandlers + جلسة + CSRF + مدير نظام (strictAdminActions).
         // الاستعادة الطارئة بدون جلسة: clasp run emergencyClearUserMfa / emergencyClearCorruptMfaSecrets
@@ -290,6 +298,7 @@ function doPost(e) {
             'getAuthBootstrapPolicy',
             // ✅ مؤشر تحديثات المستخدمين (للـ sync الفوري بين الأجهزة)
             'getUsersMeta',
+            'triggerDailySafetyFormSync',
             // ✅ طلبات موافقة العيادة — أُخرجت من readOnly (P0.3)
             // getAllMedicationDeletionRequests, getAllSupplyRequests, getAllClinicVisitDeletionRequests
             // ✅ P2.2: أُخرج — getContractorDetailedAnalytics, getEmployeeByCode,
@@ -328,7 +337,7 @@ function doPost(e) {
 
         // العمليات المعفاة من CSRF (pre-authentication — لا يمكن أن تملك CSRF token صالح)
         // SEC: أُزيل fixClinicSheetHeaders / mfaClear* — تتطلب جلسة مدير + CSRF
-        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke'];
+        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync'];
         const isCsrfExempt = csrfExemptActions.includes(action);
 
         // التحقق من CSRF Token - إلزامي لجميع العمليات غير القراءة

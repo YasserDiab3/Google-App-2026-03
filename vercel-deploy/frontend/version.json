@@ -1,11 +1,11 @@
 {
-  "version": "1.0.965",
+  "version": "1.0.967",
   "highlights": {
     "ar": [
-      "جدول المرور اليومي: إصلاح التزامن المباشر وجلب أحدث التقارير المترحلة من Google Sheets فور فتح التبويب تلقائياً وتحديث كاش الواجهة."
+      "تسجيل الخروج: إزالة التأخير الزمني والانتقال الفوري المباشر إلى شاشة تسجيل الدخول فور الضغط دون الحاجة لإعادة تحميل الصفحة."
     ],
     "en": [
-      "Daily Safety Checklist: fixed live sync to force fetch latest migrated Google Form reports from Google Sheets automatically upon tab render."
+      "Logout: eliminated blocking network delay on logout, providing instant UI transition to the login screen without requiring manual page refresh."
     ]
   }
 }

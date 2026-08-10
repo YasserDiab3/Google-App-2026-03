@@ -1530,26 +1530,28 @@ window.Auth = {
             }
         }
 
-        // تسجيل حركة تسجيل الخروج قبل حذف بيانات المستخدم
+        // تسجيل حركة تسجيل الخروج بالخلفية بدون تعطيل ترحيل الواجهة إلى شاشة تسجيل الدخول
         if (AppState.currentUser && typeof UserActivityLog !== 'undefined') {
             const userName = AppState.currentUser.name || AppState.currentUser.email || 'مستخدم غير معروف';
             UserActivityLog.log('logout', 'Authentication', null, {
                 description: `تسجيل خروج المستخدم ${userName}`
-            }).catch(() => { }); // لا ننتظر حتى لا نبطئ عملية تسجيل الخروج
+            }).catch(() => { });
         }
-        const attendanceP = this._recordClinicStaffAttendance('logout', { wait: true });
+        try {
+            this._recordClinicStaffAttendance('logout', { wait: false });
+        } catch (_attErr) {}
 
-        const continueAfterAttendance = () => {
-        // إبطال جلسة الخادم (أفضل جهد — لا يعيق الخروج)
+        // إبطال جلسة الخادم (أفضل جهد بالخلفية — لا يعيق الخروج)
         try {
             const st = sessionStorage.getItem('hse_server_session_token');
             if (st && typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
                 GoogleIntegration.sendRequest({
                     action: 'invalidateServerSession',
-                    data: { sessionToken: st, __timeoutMs: 8000, __highPriority: true }
+                    data: { sessionToken: st, __timeoutMs: 5000, __highPriority: true }
                 }).catch(() => {});
             }
         } catch (_inv) { /* ignore */ }
+
         this._clearServerSessionToken();
         this.stopPresenceHeartbeat();
         try { localStorage.removeItem('hse_presence_tabs'); } catch (_pt) { /* ignore */ }
@@ -1562,29 +1564,25 @@ window.Auth = {
                 users[userIndex].isOnline = false;
                 users[userIndex].lastLogout = new Date().toISOString();
                 users[userIndex].lastPresenceAt = users[userIndex].lastLogout;
-                users[userIndex].activeSessionId = null; // مسح معرف الجلسة عند تسجيل الخروج
+                users[userIndex].activeSessionId = null;
                 AppState.appData.users = users;
                 
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.saveImmediate) {
                     window.DataManager.saveImmediate();
                 }
 
-                // markUserOffline متاح لكل مستخدم (لا يتطلب Admin مثل updateUser)
                 this.markPresenceOffline();
             
-            // تحديث جدول المستخدمين فوراً إذا كان مفتوحاً
                 if (typeof Users !== 'undefined' && typeof Users.updateUserStatus === 'function') {
                     setTimeout(() => {
                         Users.updateUserStatus(users[userIndex].id);
-                    }, 100);
+                    }, 50);
                 }
                 
-                // تحديث زر حالة الاتصال في الشريط الجانبي
                 if (typeof UI !== 'undefined' && typeof UI.updateUserConnectionStatus === 'function') {
                     UI.updateUserConnectionStatus();
                 }
                 
-                // إيقاف التحديث التلقائي لحالة الاتصال
                 if (typeof UI !== 'undefined' && typeof UI.stopAutoRefreshConnectionStatus === 'function') {
                     UI.stopAutoRefreshConnectionStatus();
                 }
@@ -1593,7 +1591,6 @@ window.Auth = {
 
         AppState.currentUser = null;
 
-        // إعادة تعيين حالة جلب سجل التردد الكامل في العيادة (جلسة جديدة = جلب من الخادم مرة أخرى عند الحاجة)
         if (typeof window !== 'undefined' && window.Clinic && typeof window.Clinic === 'object') {
             try { window.Clinic._visitsBackendFetchOk = false; } catch (e) {}
         }
@@ -1622,7 +1619,7 @@ window.Auth = {
             localStorage.removeItem('hse_last_user_email');
             sessionStorage.removeItem('hse_current_session');
             sessionStorage.removeItem('hse_current_section');
-            sessionStorage.removeItem('hse_session_id'); // مسح معرف الجلسة
+            sessionStorage.removeItem('hse_session_id');
             sessionStorage.removeItem('hse_server_session_token');
             sessionStorage.removeItem('hse_server_session_expires_at');
             if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.purgeLocalAppData === 'function') {
@@ -1637,18 +1634,11 @@ window.Auth = {
             Notification.info('تم تسجيل الخروج بنجاح');
         }
         
+        // الترحيل الفوري للشاشة إلى تسجيل الدخول
         if (typeof UI !== 'undefined') {
             UI.toggleSidebar(false);
             UI.updateUserProfile();
             UI.showLoginScreen();
-        }
-        };
-
-        const waitMs = new Promise((resolve) => setTimeout(resolve, 12000));
-        if (attendanceP && typeof attendanceP.then === 'function') {
-            Promise.race([attendanceP, waitMs]).then(continueAfterAttendance).catch(continueAfterAttendance);
-        } else {
-            continueAfterAttendance();
         }
     },
 
