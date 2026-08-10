@@ -875,17 +875,15 @@ function exportDailyObservationsPptReport(payload) {
         }
         
         if (!templateId) {
-            return {
-                success: false,
-                message: 'لم يتم ضبط Template ID. يرجى إضافة DAILY_OBSERVATIONS_PPT_TEMPLATE_ID في Script Properties أو تمرير templateId في payload.\n\n' +
-                         'لضبط Script Properties:\n' +
-                         '1. افتح Google Apps Script Editor\n' +
-                         '2. اذهب إلى Project Settings > Script Properties\n' +
-                         '3. أضف خاصية جديدة:\n' +
-                         '   Key: DAILY_OBSERVATIONS_PPT_TEMPLATE_ID\n' +
-                         '   Value: [File ID من Google Slides Template]\n\n' +
-                         'أو استخدم دالة setDailyObservationsPptTemplateId(templateId) لضبطها برمجياً.'
-            };
+            var autoCreateRes = createDefaultDailyObservationsPptTemplate();
+            if (autoCreateRes && autoCreateRes.success && autoCreateRes.templateId) {
+                templateId = autoCreateRes.templateId;
+            } else {
+                return {
+                    success: false,
+                    message: 'لم يتم ضبط Template ID وفشل التوليد التلقائي: ' + ((autoCreateRes && autoCreateRes.message) || '')
+                };
+            }
         }
 
         const outputFolderId = String(props.getProperty('REPORTS_OUTPUT_FOLDER_ID') || '').trim();
