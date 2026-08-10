@@ -7854,8 +7854,8 @@ const DailyObservations = {
                 payload.templateId = savedTemplateId;
             }
 
-            Loading.show('جاري إنشاء تقرير PPT...');
-            const result = await GoogleIntegration.sendToAppsScript('exportDailyObservationsPptReport', payload);
+            Loading.show('جاري إنشاء تقرير PPT (قد يستغرق تحويل ملف PowerPoint دقيقة)...');
+            const result = await GoogleIntegration.sendToAppsScript('exportDailyObservationsPptReport', payload, 120000);
             Loading.hide();
 
             if (!result || result.success === false) {
