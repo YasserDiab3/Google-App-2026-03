@@ -4396,7 +4396,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.967',
+    appVersion: '1.0.969',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -7640,7 +7640,8 @@ const Loading = {
         const overlay = document.getElementById('loading-overlay');
         if (!overlay) return;
 
-        this.currentProgress = Math.max(0, Math.min(100, percentage));
+        const rawP = parseFloat(percentage);
+        this.currentProgress = Number.isFinite(rawP) ? Math.max(0, Math.min(100, rawP)) : 0;
 
         const messageEl = overlay.querySelector('.loading-message') || overlay.querySelector('p');
 
@@ -7695,7 +7696,8 @@ const Loading = {
         }
 
         if (progressText) {
-            progressText.textContent = `${Math.round(this.currentProgress)}%`;
+            const valStr = Number.isFinite(this.currentProgress) ? Math.round(this.currentProgress) : 0;
+            progressText.textContent = `${valStr}%`;
             progressText.style.color = '#374151';
         }
     },

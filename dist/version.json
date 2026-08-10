@@ -1,11 +1,11 @@
 {
-  "version": "1.0.967",
+  "version": "1.0.969",
   "highlights": {
     "ar": [
-      "تسجيل الخروج: إزالة التأخير الزمني والانتقال الفوري المباشر إلى شاشة تسجيل الدخول فور الضغط دون الحاجة لإعادة تحميل الصفحة."
+      "تصدير التقارير بالخلفية: إمكانية التصفح والعمل الحر الكامل على النظام أثناء تصدير تقارير PPT مع كارت عائم لمتابعة التصدير ومعالجة %NaN."
     ],
     "en": [
-      "Logout: eliminated blocking network delay on logout, providing instant UI transition to the login screen without requiring manual page refresh."
+      "Background Export: non-blocking background PPT export with floating task card allowing full uninterrupted application usage during generation."
     ]
   }
 }

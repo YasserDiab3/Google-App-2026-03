@@ -7371,62 +7371,6 @@ const DailyObservations = {
                     });
                 }
             });
-
-            // ✅ ربط فلتر التاريخ (نطاق زمني)
-            const dateFromInput = document.getElementById('observation-date-from');
-            const dateToInput = document.getElementById('observation-date-to');
-            
-            if (dateFromInput) {
-                dateFromInput.replaceWith(dateFromInput.cloneNode(true));
-                const newDateFrom = document.getElementById('observation-date-from');
-                newDateFrom.addEventListener('change', () => {
-                    this.loadObservationsList();
-                });
-            }
-            
-            if (dateToInput) {
-                dateToInput.replaceWith(dateToInput.cloneNode(true));
-                const newDateTo = document.getElementById('observation-date-to');
-                newDateTo.addEventListener('change', () => {
-                    this.loadObservationsList();
-                });
-            }
-
-            // زر إعادة التعيين
-            const resetFiltersBtn = document.getElementById('observation-reset-filters');
-            if (resetFiltersBtn) {
-                resetFiltersBtn.replaceWith(resetFiltersBtn.cloneNode(true));
-                document.getElementById('observation-reset-filters').addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.resetFilters();
-                });
-            }
-
-            // ✅ إضافة مستمع لفلتر التاريخ
-            const dateFilter = document.getElementById('observation-filter-date');
-            if (dateFilter) {
-                dateFilter.addEventListener('change', () => {
-                    this.loadObservationsList();
-                });
-            }
-
-            // إضافة مستمع لزر إضافة بند تحليل جديد
-            const addAnalysisItemBtn = document.getElementById('add-analysis-item-btn');
-            if (addAnalysisItemBtn) {
-                addAnalysisItemBtn.addEventListener('click', () => this.addAnalysisItem());
-            }
-
-            // إضافة مستمع لإدخال Enter في حقل إضافة بند جديد
-            const newAnalysisItemInput = document.getElementById('new-analysis-item');
-            if (newAnalysisItemInput) {
-                newAnalysisItemInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        this.addAnalysisItem();
-                    }
-                });
-            }
-
             // ✅ ربط أزرار فلتر الفترة الزمنية في لوحة التحليل
             const analyticsRoot = document.getElementById('obs-analytics-root');
             if (analyticsRoot) {
@@ -7786,6 +7730,40 @@ const DailyObservations = {
         return img.directLink || img.shareableLink || img.cloudLink?.url || img.url || img.data || img.driveUrl || img.link || '';
     },
 
+    showBackgroundExportWidget(taskId, title) {
+        const existing = document.getElementById(taskId);
+        if (existing) existing.remove();
+
+        const widget = document.createElement('div');
+        widget.id = taskId;
+        widget.className = 'background-export-widget fixed bottom-5 left-5 bg-white border border-blue-200 shadow-2xl rounded-xl p-4 flex items-center gap-3 transition-all duration-300 transform translate-y-0';
+        widget.style.zIndex = '999999';
+        widget.style.maxWidth = '380px';
+        widget.innerHTML = `
+            <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <i class="fas fa-spinner fa-spin text-lg"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="text-xs font-semibold text-blue-600 mb-0.5">تصدير بالخلفية</div>
+                <div class="text-sm font-bold text-gray-800 truncate">${Utils.escapeHTML(title)}</div>
+                <div class="text-xs text-gray-500 mt-0.5">يمكنك الاستمرار في العمل على النظام بحرية</div>
+            </div>
+            <button type="button" onclick="document.getElementById('${taskId}')?.remove()" class="text-gray-400 hover:text-gray-600 text-sm p-1">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        document.body.appendChild(widget);
+    },
+
+    removeBackgroundExportWidget(taskId) {
+        const widget = document.getElementById(taskId);
+        if (widget) {
+            widget.style.opacity = '0';
+            widget.style.transform = 'translateY(20px)';
+            setTimeout(() => widget.remove(), 300);
+        }
+    },
+
     async exportPptReport({ department, reportDate, fromDate, toDate }) {
         try {
             if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
@@ -7854,34 +7832,46 @@ const DailyObservations = {
             };
 
             payload.__timeoutMs = 240000;
-            Loading.show(`جاري تصميم وتصدير تقرير PPT (${exportBatch.length} ملاحظة)...`);
-            const result = await GoogleIntegration.sendToAppsScript('exportDailyObservationsPptReport', payload);
-            Loading.hide();
+            const taskId = 'ppt_export_' + Date.now();
+            const taskTitle = `جاري تصميم وتصدير تقرير PPT (${exportBatch.length} ملاحظة)...`;
 
-            if (!result || result.success === false) {
-                const errorMsg = result?.message || 'فشل إنشاء تقرير PPT';
-                Notification.error('⚠️ فشل تصدير التقرير: ' + errorMsg);
-                return;
-            }
+            const optModal = document.getElementById('ppt-export-options-modal');
+            if (optModal) optModal.remove();
 
-            const downloadUrl = result.downloadUrl || result.url || result.viewUrl || '';
-            const viewUrl = result.viewUrl || downloadUrl || '';
+            this.showBackgroundExportWidget(taskId, taskTitle);
+            Notification.info('🚀 بدأ التصدير بالخلفية! يمكنك مواصلة العمل بالنظام بحرية.');
 
-            // تنزيل الملف تلقائياً + إشعار نجاح
-            if (downloadUrl) {
-                try {
-                    const a = document.createElement('a');
-                    a.href = downloadUrl;
-                    a.target = '_blank';
-                    a.download = '';
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                } catch(e) {}
-            }
-            Notification.success(`✅ تم تصدير تقرير PPT بنجاح! (${exportBatch.length} ملاحظة) — ${dept}`);
+            GoogleIntegration.sendToAppsScript('exportDailyObservationsPptReport', payload).then((result) => {
+                this.removeBackgroundExportWidget(taskId);
+                if (!result || result.success === false) {
+                    const errorMsg = result?.message || 'فشل إنشاء تقرير PPT';
+                    Notification.error('⚠️ فشل تصدير التقرير: ' + errorMsg);
+                    return;
+                }
+
+                const downloadUrl = result.downloadUrl || result.url || result.viewUrl || '';
+                const viewUrl = result.viewUrl || downloadUrl || '';
+
+                if (downloadUrl) {
+                    try {
+                        const a = document.createElement('a');
+                        a.href = downloadUrl;
+                        a.target = '_blank';
+                        a.download = '';
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                    } catch (e) { }
+                }
+                Notification.success(`✅ تم تصدير تقرير PPT بنجاح! (${exportBatch.length} ملاحظة) — ${dept}`);
+                this.showPptExportSuccessModal(downloadUrl, viewUrl, dept);
+            }).catch((error) => {
+                this.removeBackgroundExportWidget(taskId);
+                Utils.safeError('فشل تصدير PPT:', error);
+                const errorMsg = error?.message || 'خطأ غير معروف';
+                Notification.error('❌ فشل تصدير PPT: ' + errorMsg);
+            });
         } catch (error) {
-            Loading.hide();
             Utils.safeError('فشل تصدير PPT:', error);
             const errorMsg = error?.message || 'خطأ غير معروف';
             Notification.error('❌ فشل تصدير PPT: ' + errorMsg);
