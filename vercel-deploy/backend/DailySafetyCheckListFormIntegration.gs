@@ -153,10 +153,23 @@ function isSiteNameFactory1(siteName) {
  * @returns {boolean[]} مصفوفة: false = مصنع 1، true = مصنع 2
  */
 function getFactoriesForFormRow(rowData, headers) {
+  if (!rowData || rowData.length === 0) return [false];
+  
+  var siteB = (rowData[COL_B] !== undefined && rowData[COL_B] !== null) ? String(rowData[COL_B]).trim() : '';
+  var isF2Site = isSiteNameFactory2(siteB);
+  var isF1Site = isSiteNameFactory1(siteB);
+
   var hasF1 = hasFactory1QuestionData(rowData);
   var hasF2 = hasFactory2QuestionData(rowData);
+
   if (hasF1 && hasF2) {
     return [false, true];
+  }
+  if (isF2Site && !isF1Site) {
+    return [true];
+  }
+  if (isF1Site && !isF2Site) {
+    return [false];
   }
   if (hasF2 && !hasF1) {
     return [true];
@@ -164,7 +177,7 @@ function getFactoriesForFormRow(rowData, headers) {
   if (hasF1 && !hasF2) {
     return [false];
   }
-  return [isFactory2Row(rowData, headers)];
+  return [isF2Site];
 }
 
 /**
@@ -397,10 +410,11 @@ function mapFormRowToDailySafetyCheckList(rowData, headers, forceFactory2) {
     ? String(rowData[4]).trim() : '';
 
   dateStr = formatDateOnly(dateStr);
-  if (rawShift === 'الاولي' || rawShift === 'الأولى') rawShift = 'الأولى';
-  if (rawShift === 'الثانية') rawShift = 'الثانية';
-  if (rawShift === 'الثالية' || rawShift === 'الثالثة') rawShift = 'الثالثة';
-  if (rawShift === 'مطابق' || rawShift === 'غير مطابق') rawShift = '';
+  var shiftLower = rawShift.toLowerCase().trim();
+  if (shiftLower.indexOf('اول') >= 0 || shiftLower.indexOf('أول') >= 0 || shiftLower === '1') rawShift = 'الأولى';
+  else if (shiftLower.indexOf('ثان') >= 0 || shiftLower === '2') rawShift = 'الثانية';
+  else if (shiftLower.indexOf('ثال') >= 0 || shiftLower === '3') rawShift = 'الثالثة';
+  else if (rawShift === 'مطابق' || rawShift === 'غير مطابق') rawShift = '';
 
   var rawFormTimestamp = (rowData[COL_A] !== undefined && rowData[COL_A] !== null)
     ? normalizeFormSubmittedAt_(rowData[COL_A])
