@@ -1082,17 +1082,20 @@ function createDefaultDailyObservationsPptTemplate() {
 
         const bodyTxt = rightBodyBox.getText();
         bodyTxt.setText(
-            '{{OBS_NO}} : رقم الملاحظة\n' +
-            '{{OBS_DATE}} : التاريخ\n' +
-            '{{OBS_LOCATION}} : المكان\n' +
-            ' : الملاحظة\n' +
+            'رقم الملاحظة : {{OBS_NO}}\n' +
+            'التاريخ : {{OBS_DATE}}\n' +
+            'المكان : {{OBS_LOCATION}}\n' +
+            '\n' +
+            'الملاحظة :\n' +
             '{{OBS_DETAILS}}\n' +
-            ' : الإجراء التصحيحي\n' +
+            '\n' +
+            'الإجراء التصحيحي :\n' +
             '{{CORRECTIVE_ACTION}}\n' +
-            '{{RISK_LEVEL}} : مدى الخطورة\n' +
-            '{{TARGET_DATE}} : تاريخ التنفيذ المقترح\n' +
-            '{{RESPONSIBLE}} : المسئول عن التنفيذ\n' +
-            '{{STATUS}} : الحالة'
+            '\n' +
+            'مدى الخطورة : {{RISK_LEVEL}}\n' +
+            'تاريخ التنفيذ المقترح : {{TARGET_DATE}}\n' +
+            'المسئول عن التنفيذ : {{RESPONSIBLE}}\n' +
+            'الحالة : {{STATUS}}'
         );
 
         try {
