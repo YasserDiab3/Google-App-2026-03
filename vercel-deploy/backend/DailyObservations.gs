@@ -814,22 +814,34 @@ function createDefaultDailyObservationsPptTemplate() {
             rightBodyBox.setMarginBottom(10);
         } catch (mErr) { /* ignore */ }
 
+        const RLM = '\u200F'; // Right-to-Left Mark لإجبار اتجاه المحاذاة العربي من اليمين لليسار
         const bodyTxt = rightBodyBox.getText();
         bodyTxt.setText(
-            'رقم الملاحظة : {{OBS_NO}}\n' +
-            'التاريخ : {{OBS_DATE}}\n' +
-            'المكان : {{OBS_LOCATION}}\n' +
-            'الملاحظة :\n' +
-            '{{OBS_DETAILS}}\n' +
-            'الإجراء التصحيحي :\n' +
-            '{{CORRECTIVE_ACTION}}\n' +
-            'مدى الخطورة : {{RISK_LEVEL}}\n' +
-            'تاريخ التنفيذ المقترح: {{TARGET_DATE}}\n' +
-            'المسئول عن التنفيذ : {{RESPONSIBLE}}\n' +
-            'الحالة: {{STATUS}}'
+            RLM + 'رقم الملاحظة : {{OBS_NO}}\n' +
+            RLM + 'التاريخ : {{OBS_DATE}}\n' +
+            RLM + 'المكان : {{OBS_LOCATION}}\n' +
+            RLM + 'الملاحظة :\n' +
+            RLM + '{{OBS_DETAILS}}\n' +
+            RLM + 'الإجراء التصحيحي :\n' +
+            RLM + '{{CORRECTIVE_ACTION}}\n' +
+            RLM + 'مدى الخطورة : {{RISK_LEVEL}}\n' +
+            RLM + 'تاريخ التنفيذ المقترح: {{TARGET_DATE}}\n' +
+            RLM + 'المسئول عن التنفيذ : {{RESPONSIBLE}}\n' +
+            RLM + 'الحالة: {{STATUS}}'
         );
 
-        // تنسيق عام للنص كاملاً باللون الأسود دون أي خلفية خضراء متسربة
+        // محاذاة النص لليمين مباشرة على مستوى الصندوق وعلى كل فقرة
+        try {
+            bodyTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT);
+            const paras = bodyTxt.getParagraphs();
+            for (let i = 0; i < paras.length; i++) {
+                paras[i].getRange().getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT);
+            }
+        } catch (alignErr) {
+            Logger.log('Alignment error: ' + alignErr);
+        }
+
+        // تنسيق عام للنص كاملاً باللون الأسود دون أي خلفيات
         bodyTxt.getTextStyle()
             .setFontFamily('Cairo')
             .setFontSize(11)
@@ -837,19 +849,7 @@ function createDefaultDailyObservationsPptTemplate() {
             .setUnderline(false)
             .setForegroundColor('#000000');
 
-        // محاذاة كل الفقرات لليمين (RTL Right-Aligned)
-        try {
-            const paragraphs = bodyTxt.getParagraphs();
-            paragraphs.forEach(function(p) {
-                if (p.getRange && p.getRange().getParagraphStyle) {
-                    p.getRange().getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT);
-                }
-            });
-        } catch (alignErr) {
-            Logger.log('Alignment error: ' + alignErr);
-        }
-
-        // تلوين وتسريحة العناوين بالأحمر + خط سفلي
+        // تلوين وتسريحة العناوين بالأحمر + خط سفلي (مطابق للصورة 2)
         const redLabels = [
             'رقم الملاحظة :',
             'التاريخ :',
@@ -877,22 +877,6 @@ function createDefaultDailyObservationsPptTemplate() {
                 }
             } catch (lblErr) { /* ignore */ }
         });
-
-        // تمييز {{OBS_NO}} بـ خلفية خضراء صغيرة ونص أبيض كالصورة 2
-        try {
-            const obsNoMatches = bodyTxt.find('{{OBS_NO}}');
-            if (obsNoMatches && obsNoMatches.length) {
-                obsNoMatches.forEach(function(m) {
-                    m.getTextStyle()
-                        .setFontFamily('Cairo')
-                        .setFontSize(11)
-                        .setBold(true)
-                        .setUnderline(false)
-                        .setForegroundColor('#ffffff')
-                        .setBackgroundColor('#16a34a');
-                });
-            }
-        } catch (obsErr) { /* ignore */ }
 
         // 4) الجانب الأيسر: صورة واحدة كبيرة تشمل كل الجانب الأيسر (مطابق للصورة تماماً)
         const leftBodyBox = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 10, 52, 340, 340);
