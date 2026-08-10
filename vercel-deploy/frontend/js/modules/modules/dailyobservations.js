@@ -7681,15 +7681,9 @@ const DailyObservations = {
                 </div>
                 <div class="modal-body space-y-4">
                     <div class="bg-blue-50 border border-blue-200 rounded p-4">
-                        <div class="flex items-start justify-between">
-                            <p class="text-sm text-blue-800">
-                                سيتم تصدير التقرير <strong>حسب الإدارة المختارة</strong> وبنفس تصميم الشرائح (Template) في Google Slides ثم تنزيله بصيغة PPT.
-                            </p>
-                            <button type="button" class="btn-secondary text-xs ml-2" id="ppt-template-id-settings-btn">
-                                <i class="fas fa-cog ml-1"></i>
-                                إعدادات Template
-                            </button>
-                        </div>
+                        <p class="text-sm text-blue-800">
+                            سيتم تصدير التقرير <strong>حسب الإدارة المختارة</strong> وبنفس تصميم الشرائح الاحترافي في Google Slides ثم تنزيله مباشرة بصيغة PPT.
+                        </p>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -7734,12 +7728,6 @@ const DailyObservations = {
         modal.querySelector('#dailyobs-ppt-cancel-btn')?.addEventListener('click', close);
         modal.addEventListener('click', (e) => {
             if (e.target === modal) close();
-        });
-
-        // زر إعدادات Template ID
-        modal.querySelector('#ppt-template-id-settings-btn')?.addEventListener('click', async () => {
-            close();
-            await this.showPptTemplateIdSetupModal();
         });
 
         modal.querySelector('#dailyobs-ppt-export-btn')?.addEventListener('click', async () => {
@@ -7879,14 +7867,6 @@ const DailyObservations = {
 
             if (!result || result.success === false) {
                 const errorMsg = result?.message || 'فشل إنشاء تقرير PPT';
-                
-                // إذا كان الخطأ متعلقاً بـ Template ID، عرض نافذة الإعداد
-                if (errorMsg.includes('Template ID') || errorMsg.includes('DAILY_OBSERVATIONS_PPT_TEMPLATE_ID')) {
-                    Notification.warning('يجب إعداد Template ID أولاً');
-                    await this.showPptTemplateIdSetupModal();
-                    return;
-                }
-                
                 Notification.error(errorMsg);
                 return;
             }
@@ -7910,12 +7890,7 @@ const DailyObservations = {
             Loading.hide();
             Utils.safeError('فشل تصدير PPT:', error);
             const errorMsg = error?.message || 'خطأ غير معروف';
-            if (errorMsg.includes('Template ID') || errorMsg.includes('DAILY_OBSERVATIONS_PPT_TEMPLATE_ID')) {
-                Notification.warning('يجب إعداد Template ID أولاً');
-                await this.showPptTemplateIdSetupModal();
-            } else {
-                Notification.error('فشل تصدير PPT: ' + errorMsg);
-            }
+            Notification.error('فشل تصدير PPT: ' + errorMsg);
         }
     },
 
