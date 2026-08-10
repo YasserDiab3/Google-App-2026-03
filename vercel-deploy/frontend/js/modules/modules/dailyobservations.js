@@ -7755,8 +7755,9 @@ const DailyObservations = {
             const fromDate = modal.querySelector('#dailyobs-ppt-from-date')?.value || '';
             const toDate = modal.querySelector('#dailyobs-ppt-to-date')?.value || '';
 
-            await this.exportPptReport({ department: dept, reportDate, fromDate, toDate });
+            // إغلاق نافذة التصدير فوراً قبل بدء العملية — المستخدم يرى فقط Loading
             close();
+            await this.exportPptReport({ department: dept, reportDate, fromDate, toDate });
         });
     },
 
@@ -7873,20 +7874,31 @@ const DailyObservations = {
 
             if (!result || result.success === false) {
                 const errorMsg = result?.message || 'فشل إنشاء تقرير PPT';
-                Notification.error(errorMsg);
+                Notification.error('⚠️ فشل تصدير التقرير: ' + errorMsg);
                 return;
             }
 
             const downloadUrl = result.downloadUrl || result.url || result.viewUrl || '';
             const viewUrl = result.viewUrl || downloadUrl || '';
 
-            Notification.success('تم إنشاء تقرير PPT بنجاح!');
-            this.showPptExportSuccessModal(downloadUrl, viewUrl, dept);
+            // تنزيل الملف تلقائياً + إشعار نجاح
+            if (downloadUrl) {
+                try {
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.target = '_blank';
+                    a.download = '';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                } catch(e) {}
+            }
+            Notification.success(`✅ تم تصدير تقرير PPT بنجاح! (${exportBatch.length} ملاحظة) — ${dept}`);
         } catch (error) {
             Loading.hide();
             Utils.safeError('فشل تصدير PPT:', error);
             const errorMsg = error?.message || 'خطأ غير معروف';
-            Notification.error('فشل تصدير PPT: ' + errorMsg);
+            Notification.error('❌ فشل تصدير PPT: ' + errorMsg);
         }
     },
 
