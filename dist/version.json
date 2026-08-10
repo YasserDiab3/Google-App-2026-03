@@ -1,13 +1,13 @@
 {
-  "version": "1.0.954",
+  "version": "1.0.955",
   "highlights": {
     "ar": [
-      "سجل الملاحظات اليومية: إصلاح تسلسل أرقام الملاحظات — ترقيم عام مستمر بدل الترقيم الشهري المتكرر، مع إصلاح تلقائي للسجلات القديمة وتصحيح الأرقام المكررة في قاعدة البيانات.",
-      "سجل الملاحظات اليومية: بعد تنفيذ الإصلاح التلقائي تتم إعادة مزامنة البيانات من الخادم فوراً لتظهر الأرقام المصححة في الواجهة مباشرة دون انتظار."
+      "إصلاح نظام الصلاحيات: معالجة تسريب موديولات السلامة والمساعد الذكي للمستخدمين ذوي الصلاحيات المخصصة — الموديولات الممنوحة صراحة فقط هي التي تظهر الآن للمستخدم.",
+      "إدارة المستخدمين: تحسين التحقق من الصلاحيات التفصيلية وتطبيق حظر إجباري للموديولات غير المفعّلة لمنع استخدام الصلاحيات الافتراضية."
     ],
     "en": [
-      "Daily observations: fixed the observation numbering sequence — continuous global numbering instead of the per-month reset, with automatic repair of legacy records and duplicate numbers in the database.",
-      "Daily observations: after the automatic repair runs, data is re-synced from the server immediately so corrected numbers appear in the UI right away."
+      "Permissions system fix: resolved access leakage of safety modules and AI assistant for users with custom permissions — only explicitly granted modules are now visible.",
+      "User management: improved detailed permissions verification and enforced strict fail-closed access for non-granted modules."
     ]
   }
 }
