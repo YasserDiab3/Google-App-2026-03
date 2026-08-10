@@ -800,20 +800,62 @@ function createDefaultDailyObservationsPptTemplate() {
         rightBodyBox.getBorder().getLineFill().setSolidFill('#000000');
 
         const bodyTxt = rightBodyBox.getText();
-        bodyTxt.setText(
-            'رقم الملاحظة : {{OBS_NO}}\n' +
-            'التاريخ : {{OBS_DATE}}\n' +
-            'المكان : {{OBS_LOCATION}}\n' +
-            'الملاحظة :\n' +
-            '{{OBS_DETAILS}}\n' +
-            'الإجراء التصحيحي :\n' +
-            '{{CORRECTIVE_ACTION}}\n' +
-            'مدى الخطورة : {{RISK_LEVEL}}\n' +
-            'تاريخ التنفيذ المقترح: {{TARGET_DATE}}\n' +
-            'المسئول عن التنفيذ : {{RESPONSIBLE}}\n' +
-            'الحالة: {{STATUS}}'
-        );
-        bodyTxt.getTextStyle().setFontFamily('Cairo').setFontSize(12).setBold(true).setForegroundColor('#000000');
+        bodyTxt.setText(''); // تفريغ الأول
+
+        const fields = [
+            { label: 'رقم الملاحظة :', val: '{{OBS_NO}}', isBlock: false, isGreenBadge: true },
+            { label: 'التاريخ :', val: '{{OBS_DATE}}', isBlock: false },
+            { label: 'المكان :', val: '{{OBS_LOCATION}}', isBlock: false },
+            { label: 'الملاحظة :', val: '{{OBS_DETAILS}}', isBlock: true },
+            { label: 'الإجراء التصحيحي :', val: '{{CORRECTIVE_ACTION}}', isBlock: true },
+            { label: 'مدى الخطورة :', val: '{{RISK_LEVEL}}', isBlock: false },
+            { label: 'تاريخ التنفيذ المقترح:', val: '{{TARGET_DATE}}', isBlock: false },
+            { label: 'المسئول عن التنفيذ :', val: '{{RESPONSIBLE}}', isBlock: false },
+            { label: 'الحالة:', val: '{{STATUS}}', isBlock: false }
+        ];
+
+        fields.forEach(function(f, idx) {
+            const startIdx = bodyTxt.getLength();
+            const textToAppend = (idx > 0 ? '\n' : '') + f.label + (f.isBlock ? '\n' : ' ') + f.val;
+            bodyTxt.appendText(textToAppend);
+            
+            // تنسيق عنوان الحقل (أحمر + تحته خط + عريض)
+            const labelStart = startIdx + (idx > 0 ? 1 : 0);
+            const labelRange = bodyTxt.getRange(labelStart, labelStart + f.label.length);
+            labelRange.getTextStyle()
+                .setFontFamily('Cairo')
+                .setFontSize(11)
+                .setBold(true)
+                .setUnderline(true)
+                .setForegroundColor('#dc2626');
+
+            // تنسيق القيمة (أسود عريض أو رقعة خضراء لـ OBS_NO)
+            const valStart = labelStart + f.label.length + (f.isBlock ? 1 : 1);
+            const valRange = bodyTxt.getRange(valStart, valStart + f.val.length);
+            valRange.getTextStyle()
+                .setFontFamily('Cairo')
+                .setFontSize(11)
+                .setBold(true)
+                .setUnderline(false);
+
+            if (f.isGreenBadge) {
+                valRange.getTextStyle()
+                    .setForegroundColor('#ffffff')
+                    .setBackgroundColor('#16a34a');
+            } else {
+                valRange.getTextStyle()
+                    .setForegroundColor('#000000');
+            }
+        });
+
+        // محاذاة النص لليمين (RTL)
+        try {
+            if (SlidesApp.ParagraphAlignment && SlidesApp.ParagraphAlignment.RIGHT) {
+                bodyTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT);
+            }
+        } catch (alignErr) {
+            Logger.log('Alignment error: ' + alignErr);
+        }
 
         // 4) الجانب الأيسر للصور
         const leftBodyBox = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 10, 52, 340, 340);
