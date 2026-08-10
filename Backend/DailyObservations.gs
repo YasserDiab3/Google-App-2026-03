@@ -799,63 +799,102 @@ function createDefaultDailyObservationsPptTemplate() {
         rightBodyBox.getBorder().setWeight(1.5);
         rightBodyBox.getBorder().getLineFill().setSolidFill('#000000');
 
-        const bodyTxt = rightBodyBox.getText();
-        bodyTxt.setText(''); // تفريغ الأول
-
-        const fields = [
-            { label: 'رقم الملاحظة :', val: '{{OBS_NO}}', isBlock: false, isGreenBadge: true },
-            { label: 'التاريخ :', val: '{{OBS_DATE}}', isBlock: false },
-            { label: 'المكان :', val: '{{OBS_LOCATION}}', isBlock: false },
-            { label: 'الملاحظة :', val: '{{OBS_DETAILS}}', isBlock: true },
-            { label: 'الإجراء التصحيحي :', val: '{{CORRECTIVE_ACTION}}', isBlock: true },
-            { label: 'مدى الخطورة :', val: '{{RISK_LEVEL}}', isBlock: false },
-            { label: 'تاريخ التنفيذ المقترح:', val: '{{TARGET_DATE}}', isBlock: false },
-            { label: 'المسئول عن التنفيذ :', val: '{{RESPONSIBLE}}', isBlock: false },
-            { label: 'الحالة:', val: '{{STATUS}}', isBlock: false }
-        ];
-
-        fields.forEach(function(f, idx) {
-            const startIdx = bodyTxt.getLength();
-            const textToAppend = (idx > 0 ? '\n' : '') + f.label + (f.isBlock ? '\n' : ' ') + f.val;
-            bodyTxt.appendText(textToAppend);
-            
-            // تنسيق عنوان الحقل (أحمر + تحته خط + عريض)
-            const labelStart = startIdx + (idx > 0 ? 1 : 0);
-            const labelRange = bodyTxt.getRange(labelStart, labelStart + f.label.length);
-            labelRange.getTextStyle()
-                .setFontFamily('Cairo')
-                .setFontSize(11)
-                .setBold(true)
-                .setUnderline(true)
-                .setForegroundColor('#dc2626');
-
-            // تنسيق القيمة (أسود عريض أو رقعة خضراء لـ OBS_NO)
-            const valStart = labelStart + f.label.length + (f.isBlock ? 1 : 1);
-            const valRange = bodyTxt.getRange(valStart, valStart + f.val.length);
-            valRange.getTextStyle()
-                .setFontFamily('Cairo')
-                .setFontSize(11)
-                .setBold(true)
-                .setUnderline(false);
-
-            if (f.isGreenBadge) {
-                valRange.getTextStyle()
-                    .setForegroundColor('#ffffff')
-                    .setBackgroundColor('#16a34a');
-            } else {
-                valRange.getTextStyle()
-                    .setForegroundColor('#000000');
-            }
-        });
-
-        // محاذاة النص لليمين (RTL)
+        // محاذاة المحتوى لأعلى الصندوق (القمة بدلاً من المنتصف)
         try {
-            if (SlidesApp.ParagraphAlignment && SlidesApp.ParagraphAlignment.RIGHT) {
-                bodyTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT);
+            if (SlidesApp.ContentAlignment && SlidesApp.ContentAlignment.TOP) {
+                rightBodyBox.setContentAlignment(SlidesApp.ContentAlignment.TOP);
             }
+        } catch (cErr) { /* ignore */ }
+
+        // الهوامش الخارجية داخل الصندوق
+        try {
+            rightBodyBox.setMarginLeft(12);
+            rightBodyBox.setMarginRight(12);
+            rightBodyBox.setMarginTop(10);
+            rightBodyBox.setMarginBottom(10);
+        } catch (mErr) { /* ignore */ }
+
+        const bodyTxt = rightBodyBox.getText();
+        bodyTxt.setText(
+            'رقم الملاحظة : {{OBS_NO}}\n' +
+            'التاريخ : {{OBS_DATE}}\n' +
+            'المكان : {{OBS_LOCATION}}\n' +
+            'الملاحظة :\n' +
+            '{{OBS_DETAILS}}\n' +
+            'الإجراء التصحيحي :\n' +
+            '{{CORRECTIVE_ACTION}}\n' +
+            'مدى الخطورة : {{RISK_LEVEL}}\n' +
+            'تاريخ التنفيذ المقترح: {{TARGET_DATE}}\n' +
+            'المسئول عن التنفيذ : {{RESPONSIBLE}}\n' +
+            'الحالة: {{STATUS}}'
+        );
+
+        // تنسيق عام للنص كاملاً باللون الأسود دون أي خلفية خضراء متسربة
+        bodyTxt.getTextStyle()
+            .setFontFamily('Cairo')
+            .setFontSize(11)
+            .setBold(true)
+            .setUnderline(false)
+            .setForegroundColor('#000000')
+            .setBackgroundColor(null);
+
+        // محاذاة كل الفقرات لليمين (RTL Right-Aligned)
+        try {
+            const paragraphs = bodyTxt.getParagraphs();
+            paragraphs.forEach(function(p) {
+                if (p.getRange && p.getRange().getParagraphStyle) {
+                    p.getRange().getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT);
+                }
+            });
         } catch (alignErr) {
             Logger.log('Alignment error: ' + alignErr);
         }
+
+        // تلوين وتسريحة العناوين بالأحمر + خط سفلي
+        const redLabels = [
+            'رقم الملاحظة :',
+            'التاريخ :',
+            'المكان :',
+            'الملاحظة :',
+            'الإجراء التصحيحي :',
+            'مدى الخطورة :',
+            'تاريخ التنفيذ المقترح:',
+            'المسئول عن التنفيذ :',
+            'الحالة:'
+        ];
+
+        redLabels.forEach(function(lbl) {
+            try {
+                const matches = bodyTxt.find(lbl);
+                if (matches && matches.length) {
+                    matches.forEach(function(m) {
+                        m.getTextStyle()
+                            .setFontFamily('Cairo')
+                            .setFontSize(11)
+                            .setBold(true)
+                            .setUnderline(true)
+                            .setForegroundColor('#dc2626')
+                            .setBackgroundColor(null);
+                    });
+                }
+            } catch (lblErr) { /* ignore */ }
+        });
+
+        // تمييز {{OBS_NO}} بـ خلفية خضراء صغيرة ونص أبيض كالصورة 2
+        try {
+            const obsNoMatches = bodyTxt.find('{{OBS_NO}}');
+            if (obsNoMatches && obsNoMatches.length) {
+                obsNoMatches.forEach(function(m) {
+                    m.getTextStyle()
+                        .setFontFamily('Cairo')
+                        .setFontSize(11)
+                        .setBold(true)
+                        .setUnderline(false)
+                        .setForegroundColor('#ffffff')
+                        .setBackgroundColor('#16a34a');
+                });
+            }
+        } catch (obsErr) { /* ignore */ }
 
         // 4) الجانب الأيسر للصور
         const leftBodyBox = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 10, 52, 340, 340);
