@@ -432,6 +432,7 @@ function saveUsersMergedToSheet_(spreadsheet, sheet, payloadRows, options) {
                     }
                     if (k === 'password' && String(v || '').trim() === '***') return; // لا تمسح كلمة المرور
                     if (k === 'passwordHash' && String(v || '').trim() === '***') return;
+                    if ((k === 'mfaSecretEnc' || k === 'mfaEnrolledAt') && (v === '' || v === null || v === undefined)) return; // لا تمسح مفاتيح MFA إذا أُرسلت فارغة في التحديث الإداري
                     // قاعدة عامة: قيمة فارغة لا تُكتب فوق قيمة قائمة (يحمي department/role/name أيضاً)
                     if (v === '' || v === null || v === undefined) return;
                     merged[k] = v;
@@ -1443,24 +1444,15 @@ function loginUser(email, password) {
                     }
                 } catch (_refMfa) { /* ignore */ }
             }
-            // سر تالف/فارغ بعد كلمة مرور صحيحة = حظر دائم بدون ذنب المستخدم.
-            // عطّل MFA تلقائياً وأكمل الدخول ثم يُعاد التفعيل من الملف الشخصي.
+            // إذا كان MFA مفعلاً لكن السر غير صالح أو مفقود: لا تتخطَّ الرمز وتمرر الدخول أمنياً!
+            // ارفض الدخول واطلب من المستخدم تواصل مع الأدمن أو إعادة تفعيل MFA من ملفه الشخصي.
             if (!secretEncLogin || !secretCandidates.length) {
-                try {
-                    if (typeof _fastWriteUserMfaFields_ === 'function') {
-                        _fastWriteUserMfaFields_(user.id || e, {
-                            mfaEnabled: false,
-                            mfaSecretEnc: '',
-                            mfaEnrolledAt: ''
-                        });
-                    }
-                    if (typeof invalidateUsersAuthCache_ === 'function') invalidateUsersAuthCache_(e);
-                    if (typeof clearMfaFailures_ === 'function') clearMfaFailures_(e);
-                    Logger.log('loginUser: cleared corrupt MFA for ' + e);
-                } catch (_clr) {
-                    Logger.log('loginUser corrupt MFA clear failed: ' + _clr.toString());
-                }
-                // تابع كدخول عادي بدون MFA
+                Logger.log('loginUser: corrupt/missing MFA secret for ' + e + ' — blocking direct login');
+                return {
+                    success: false,
+                    message: 'حسابك يتطلب مصادقة ثنائية لكن كود التفعيل غير مكتمل. يرجى التواصل مع مدير النظام لإعادة ضبط المصادقة الثنائية.',
+                    errorCode: 'MFA_SECRET_CORRUPT'
+                };
             } else {
                 // كلمة المرور صحيحة — امسح قفل MFA القديم (محاولات فاشلة بسبب خطأ فك السر سابقاً)
                 if (typeof clearMfaFailures_ === 'function') clearMfaFailures_(e);
