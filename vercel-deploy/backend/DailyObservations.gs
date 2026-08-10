@@ -1,4 +1,11 @@
 /**
+ * إنشاء وتطبيق قالب PPT افتراضي تلقائياً — تظهر بأعلى قائمة Apps Script (a_...)
+ */
+function a_createDefaultPptTemplate() {
+    return createDefaultDailyObservationsPptTemplate();
+}
+
+/**
  * Google Apps Script for HSE System - Daily Observations Module
  * 
  * موديول الملاحظات اليومية - النسخة المنفصلة والمحسنة
@@ -710,8 +717,12 @@ function createDefaultDailyObservationsPptTemplate() {
         dateText.setText('تاريخ التقرير: {{REPORT_DATE}}');
         dateText.getTextStyle().setFontFamily('Cairo').setFontSize(18).setForegroundColor('#94a3b8');
 
+        const blankLayout = (typeof SlidesApp !== 'undefined' && SlidesApp.PredefinedLayout && SlidesApp.PredefinedLayout.BLANK) 
+            ? SlidesApp.PredefinedLayout.BLANK 
+            : undefined;
+
         // الشريحة الثانية (شريحة الملاحظة التي ستتكرر)
-        const obsSlide = presentation.appendSlide(SlidesApp.SlideLayout.BLANK);
+        const obsSlide = blankLayout ? presentation.appendSlide(blankLayout) : presentation.appendSlide();
         
         // شريط علوي أنيق
         const headerBar = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 0, 0, 720, 50);
@@ -748,7 +759,7 @@ function createDefaultDailyObservationsPptTemplate() {
         imgText.getTextStyle().setFontFamily('Cairo').setFontSize(11).setForegroundColor('#64748b');
 
         // الشريحة الثالثة (النهاية)
-        const endSlide = presentation.appendSlide(SlidesApp.SlideLayout.BLANK);
+        const endSlide = blankLayout ? presentation.appendSlide(blankLayout) : presentation.appendSlide();
         endSlide.getBackground().setSolidFill('#0f172a');
         const endShape = endSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 50, 150, 620, 100);
         endShape.getFill().setTransparent();
