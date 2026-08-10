@@ -1383,6 +1383,7 @@ function exportDailyObservationsPptReport(payload) {
 
         const language = String(payload.language || 'ar').toLowerCase();
         const isEnglish = (language === 'en');
+        Logger.log('PPT Export: language=' + language + ', isEnglish=' + isEnglish);
         const deptLabel = isEnglish ? _dob_translateToEnglish_(department) : department;
 
         // 1) تعبئة الغلاف
@@ -1409,7 +1410,7 @@ function exportDailyObservationsPptReport(payload) {
         var imageBlobCache = {};
         observations.forEach(function (obs, idx) {
             const slide = itemTemplateSlide.duplicate();
-            const obsNo = String(idx + 1);
+            const obsNo = String(obs.isoCode || obs.id || (idx + 1));
             const obsDate = _dob_formatDateTimeSafe_(obs.date, tz);
             const targetDate = _dob_formatDateSafe_(obs.expectedCompletionDate, tz);
 
@@ -1660,12 +1661,17 @@ function _dob_replaceAllTextSafe_(presentation, slide, replacements, isEnglish) 
                         if (!isEnglish) {
                             try {
                                 var curTxt = txt.asString();
-                                var revRegex = new RegExp('^([^\\n:]+)\\s*:\\s*(' + lbl + ')\\s*$', 'gm');
-                                if (revRegex.test(curTxt)) {
+                                // Regex: match lines where value comes BEFORE label (inverted order)
+                                // e.g. "القيمة : العنوان" → should be "العنوان : القيمة"
+                                var escapedLbl = lbl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                var revRegex = new RegExp('([^\n:]+?)\\s*:\\s*(' + escapedLbl + ')\\s*$', 'gm');
+                                var testStr = curTxt;
+                                if (revRegex.test(testStr)) {
+                                    revRegex.lastIndex = 0; // reset after test
                                     var fixedTxt = curTxt.replace(revRegex, rlm + '$2 : ' + rlm + '$1');
                                     txt.setText(fixedTxt);
                                 }
-                            } catch(_revErr) {}
+                            } catch(_revErr) { Logger.log('Regex fix error for "' + lbl + '": ' + _revErr); }
                         }
 
                         try {
@@ -1749,14 +1755,42 @@ function _dob_getImageBlobFromUrl_(url) {
         }
     }
 
-    // 2) Google Drive File ID (جلب مباشر عبر DriveApp)
+    // 2) Google Drive File ID (جلب مباشر عبر DriveApp مع fallback OAuth)
     const fileId = _dob_extractDriveFileId_(url);
     if (fileId) {
+        // محاولة 1: DriveApp مباشر
         try {
-            const file = DriveApp.getFileById(fileId);
+            var file = DriveApp.getFileById(fileId);
             if (file) return file.getBlob();
         } catch(driveErr) {
             Logger.log('DriveApp fetch error for fileId ' + fileId + ': ' + driveErr);
+        }
+        // محاولة 2: تنزيل مباشر عبر OAuth token (يحل مشكلة الصلاحيات)
+        try {
+            var directUrl = 'https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media';
+            var resp = UrlFetchApp.fetch(directUrl, {
+                headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+                muteHttpExceptions: true
+            });
+            if (resp.getResponseCode() === 200) {
+                Logger.log('Drive image fetched via OAuth for fileId: ' + fileId);
+                return resp.getBlob();
+            } else {
+                Logger.log('Drive OAuth fetch status ' + resp.getResponseCode() + ' for fileId: ' + fileId);
+            }
+        } catch(oauthErr) {
+            Logger.log('Drive OAuth fetch error for fileId ' + fileId + ': ' + oauthErr);
+        }
+        // محاولة 3: رابط التنزيل المباشر العام
+        try {
+            var publicUrl = 'https://drive.google.com/uc?export=download&id=' + fileId;
+            var resp2 = UrlFetchApp.fetch(publicUrl, { muteHttpExceptions: true, followRedirects: true });
+            if (resp2.getResponseCode() === 200) {
+                var ct = resp2.getHeaders()['Content-Type'] || '';
+                if (ct.indexOf('image') !== -1) return resp2.getBlob();
+            }
+        } catch(pubErr) {
+            Logger.log('Drive public download error for fileId ' + fileId + ': ' + pubErr);
         }
         return null;
     }
