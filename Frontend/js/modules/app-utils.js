@@ -3115,14 +3115,35 @@ const Permissions = {
         const hasAnyExplicitPermission = effectivePermissions &&
             typeof effectivePermissions === 'object' &&
             !Array.isArray(effectivePermissions) &&
-            Object.keys(effectivePermissions).some(k => !k.endsWith('Permissions') && k !== '__isAdmin');
+            Object.keys(effectivePermissions).some(k => k !== '__isAdmin');
 
         if (hasAnyExplicitPermission) {
-            const hasAccess = effectivePermissions[moduleName] === true;
-            if (AppState.debugMode) {
-                Utils.safeLog(`🔍 hasAccess(${moduleName}): ${hasAccess ? '✅ مسموح' : '❌ غير مسموح'} (من الصلاحيات الفعالة المخصصة)`);
+            // 1. فحص التفعيل المباشر للموديول (Boolean true)
+            if (effectivePermissions[moduleName] === true) {
+                if (AppState.debugMode) {
+                    Utils.safeLog(`🔍 hasAccess(${moduleName}): ✅ مسموح (صلاحية مخصصة صريحة)`);
+                }
+                return true;
             }
-            return hasAccess;
+
+            // 2. فحص الصلاحيات التفصيلية للموديول (مثال: clinicPermissions { view: true })
+            const detailedKey = `${moduleName}Permissions`;
+            if (effectivePermissions[detailedKey] && typeof effectivePermissions[detailedKey] === 'object') {
+                const detailedObj = effectivePermissions[detailedKey];
+                const hasAnyDetailedTrue = Object.values(detailedObj).some(val => val === true);
+                if (hasAnyDetailedTrue) {
+                    if (AppState.debugMode) {
+                        Utils.safeLog(`🔍 hasAccess(${moduleName}): ✅ مسموح (صلاحيات تفصيلية فرعية)`);
+                    }
+                    return true;
+                }
+            }
+
+            // 3. المستخدم لديه كائن صلاحيات مخصص — أي موديول غير مفعّل صراحةً يُمنع عنه حصراً (منع التسريب)
+            if (AppState.debugMode) {
+                Utils.safeLog(`🔍 hasAccess(${moduleName}): ❌ غير مسموح (غير محدد في الصلاحيات المخصصة)`);
+            }
+            return false;
         }
 
         if (Object.prototype.hasOwnProperty.call(effectivePermissions, moduleName)) {
@@ -3134,12 +3155,6 @@ const Permissions = {
         }
 
         // fallback إلى الصلاحيات الافتراضية للدور — يُطبَّق فقط بعد التأكد من حالة قاعدة المستخدمين:
-        // 1) أثناء أول ثواني الإقلاع (قبل اكتمال مزامنة جدول المستخدمين) لا نعرض أي موديول افتراضي —
-        //    كان هذا هو سبب ظهور موديولات (طلبات/ملاحظات/تقويم/طوارئ/ذكاء اصطناعي) لمستخدم لم تُمنح له،
-        //    ثم اختفائها بعد وصول جدول المستخدمين (صلاحياته الصريحة) — تسريب مؤقت قبل استقرار المزامنة.
-        // 2) المستخدم المُثبَّت وجوده في الجدول بصلاحيات صريحة → تلتزم صلاحياته حصراً (لا افتراضيات).
-        // 3) المستخدم المُثبَّت وجوده بصلاحيات فارغة/غير محددة → صلاحيات الدور الافتراضية (توافق للحسابات القديمة).
-        // 4) مستخدم غير موجود في الجدول إطلاقاً → لا صلاحيات افتراضية.
         const appUsersList = (AppState.appData && Array.isArray(AppState.appData.users))
             ? AppState.appData.users
             : null;
