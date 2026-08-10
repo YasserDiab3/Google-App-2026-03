@@ -707,10 +707,24 @@ function _dob_buildCoverSlide_(coverSlide, department, dateLabel, logoUrl) {
                 const logoBlob = _dob_getImageBlobFromUrl_(logoUrl);
                 if (logoBlob) {
                     const img = coverSlide.insertImage(logoBlob);
-                    img.setLeft(30);
-                    img.setTop(18);
-                    img.setWidth(160);
-                    img.setHeight(50);
+                    const origW = img.getWidth();
+                    const origH = img.getHeight();
+                    const maxW = 180;
+                    const maxH = 55;
+                    if (origW > 0 && origH > 0) {
+                        const ratio = Math.min(maxW / origW, maxH / origH);
+                        const newW = origW * ratio;
+                        const newH = origH * ratio;
+                        img.setWidth(newW);
+                        img.setHeight(newH);
+                        img.setLeft(30);
+                        img.setTop(18 + (maxH - newH) / 2);
+                    } else {
+                        img.setLeft(30);
+                        img.setTop(18);
+                        img.setWidth(maxW);
+                        img.setHeight(maxH);
+                    }
                     img.setTitle('COVER_LOGO');
                     img.setDescription('COVER_LOGO');
                     insertedLeftLogo = true;
@@ -1688,10 +1702,22 @@ function _dob_replaceImagePlaceholder_(slide, imageBlob, placeholderKey) {
 
     try {
         const img = slide.insertImage(imageBlob);
-        img.setLeft(left);
-        img.setTop(top);
-        img.setWidth(width);
-        img.setHeight(height);
+        const origW = img.getWidth();
+        const origH = img.getHeight();
+        if (origW > 0 && origH > 0 && width > 0 && height > 0) {
+            const ratio = Math.min(width / origW, height / origH);
+            const newW = origW * ratio;
+            const newH = origH * ratio;
+            img.setWidth(newW);
+            img.setHeight(newH);
+            img.setLeft(left + (width - newW) / 2);
+            img.setTop(top + (height - newH) / 2);
+        } else {
+            img.setLeft(left);
+            img.setTop(top);
+            img.setWidth(width);
+            img.setHeight(height);
+        }
     } catch(insertErr) {
         Logger.log('Error inserting image into slide: ' + insertErr);
     }
