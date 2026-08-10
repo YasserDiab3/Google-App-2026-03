@@ -1,11 +1,11 @@
 {
-  "version": "1.0.975",
+  "version": "1.0.976",
   "highlights": {
     "ar": [
-      "إعادة تصميم نافذة إعداد التقرير (PPT Modal): توزيع مريح واسع من عمودين يمنع التداخل أو الازدحام مع تصميم عصري فاخر ورسومات واضحة."
+      "إصلاح 4 مشاكل في تصدير PPT: الرقم التسلسلي أصبح يطابق النظام (isoCode)، إصلاح ظهور الصور عبر OAuth، تصحيح اتجاه النصوص المعكوسة، وتفعيل الترجمة الإنجليزية."
     ],
     "en": [
-      "Redesigned PPT Export Modal: uncrowded 2-column spacious layout preventing field overlaps with modern glassmorphism UI."
+      "Fixed 4 PPT export bugs: serial number now matches system isoCode, images fetched via OAuth fallback, inverted text direction fixed, and English translation activated."
     ]
   }
 }
