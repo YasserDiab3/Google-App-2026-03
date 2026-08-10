@@ -7859,9 +7859,8 @@ const DailyObservations = {
                 }))
             };
 
-            // إضافة Template ID إذا كان موجوداً
-            payload.__timeoutMs = 120000;
-            Loading.show('جاري إنشاء تقرير PPT (قد يستغرق تحويل وتوليد الشرائح دقيقة)...');
+            payload.__timeoutMs = 240000;
+            Loading.show('جاري إنشاء وتصدير تقرير PPT بسرعة فائق...');
             const result = await GoogleIntegration.sendToAppsScript('exportDailyObservationsPptReport', payload);
             Loading.hide();
 

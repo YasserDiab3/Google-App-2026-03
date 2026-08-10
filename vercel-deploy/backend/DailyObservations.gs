@@ -1381,35 +1381,27 @@ function exportDailyObservationsPptReport(payload) {
                 '{{OBSERVER}}': String(obs.observerName || '')
             });
 
-            // الصور (تجميع كافة روابط الصور من الملاحظة)
-            var imageList = [];
-            if (obs.imageUrl) imageList.push(obs.imageUrl);
-            if (obs.image) imageList.push(obs.image);
-            if (obs.photo) imageList.push(obs.photo);
-            if (obs.fileUrl) imageList.push(obs.fileUrl);
-            if (obs.picture) imageList.push(obs.picture);
-            if (Array.isArray(obs.images)) {
-                obs.images.forEach(function(u){ if (u && imageList.indexOf(u) === -1) imageList.push(u); });
+            // الصورة الرئيسية للملاحظة (جلب فوري للمنع التاخير وانقضاء مهلة الاتصال)
+            var primaryImageUrl = obs.imageUrl || obs.image || obs.photo || obs.fileUrl || obs.picture || '';
+            if (!primaryImageUrl && Array.isArray(obs.images) && obs.images.length > 0) {
+                primaryImageUrl = obs.images[0];
             }
-            if (Array.isArray(obs.photos)) {
-                obs.photos.forEach(function(u){ if (u && imageList.indexOf(u) === -1) imageList.push(u); });
+            if (!primaryImageUrl && Array.isArray(obs.photos) && obs.photos.length > 0) {
+                primaryImageUrl = obs.photos[0];
             }
-            if (Array.isArray(obs.attachments)) {
-                obs.attachments.forEach(function(a){
-                    var u = (a && typeof a === 'object') ? (a.directLink || a.shareableLink || a.url || (a.cloudLink && a.cloudLink.url) || a.data || '') : String(a || '');
-                    if (u && imageList.indexOf(u) === -1) imageList.push(u);
-                });
+            if (!primaryImageUrl && Array.isArray(obs.attachments) && obs.attachments.length > 0) {
+                var a = obs.attachments[0];
+                primaryImageUrl = (a && typeof a === 'object') ? (a.directLink || a.shareableLink || a.url || (a.cloudLink && a.cloudLink.url) || a.data || '') : String(a || '');
             }
 
-            var keys = ['OBS_IMAGE', 'OBS_IMAGE_2', 'OBS_IMAGE_3'];
-            for (var imgIdx = 0; imgIdx < imageList.length && imgIdx < keys.length; imgIdx++) {
+            if (primaryImageUrl) {
                 try {
-                    var blob = _dob_getImageBlobFromUrl_(imageList[imgIdx]);
+                    var blob = _dob_getImageBlobFromUrl_(primaryImageUrl);
                     if (blob) {
-                        _dob_replaceImagePlaceholder_(slide, blob, keys[imgIdx]);
+                        _dob_replaceImagePlaceholder_(slide, blob, 'OBS_IMAGE');
                     }
                 } catch (imgErr) {
-                    Logger.log('PPT Export: failed to insert image ' + imgIdx + ' for obs ' + obsNo + ': ' + imgErr);
+                    Logger.log('PPT Export: failed to insert image for obs ' + obsNo + ': ' + imgErr);
                 }
             }
         });
@@ -1525,10 +1517,6 @@ function _dob_joinLocation_(siteName, locationName) {
 function _dob_extractDriveFileId_(url) {
     if (!url) return '';
     const s = String(url);
-    // patterns:
-    // - https://drive.google.com/file/d/<ID>/view
-    // - https://drive.google.com/uc?export=view&id=<ID>
-    // - https://drive.google.com/open?id=<ID>
     const match1 = s.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (match1 && match1[1]) return match1[1];
     const match2 = s.match(/[?&]id=([a-zA-Z0-9_-]+)/);
@@ -1541,7 +1529,7 @@ function _dob_getImageBlobFromUrl_(url) {
     url = url.trim();
     if (!url) return null;
 
-    // 1) Base64 Data URL
+    // 1) Base64 Data URL (فك تشفير سريع)
     if (url.startsWith('data:image/')) {
         try {
             const parts = url.split(',');
@@ -1554,7 +1542,7 @@ function _dob_getImageBlobFromUrl_(url) {
         }
     }
 
-    // 2) Google Drive File ID
+    // 2) Google Drive File ID (جلب مباشر عبر DriveApp)
     const fileId = _dob_extractDriveFileId_(url);
     if (fileId) {
         try {
@@ -1563,12 +1551,17 @@ function _dob_getImageBlobFromUrl_(url) {
         } catch(driveErr) {
             Logger.log('DriveApp fetch error for fileId ' + fileId + ': ' + driveErr);
         }
+        return null;
     }
 
-    // 3) HTTP / HTTPS direct URL fallback (Cloudinary, AWS S3, Google Cloud Storage, etc.)
+    // 3) HTTP / HTTPS direct URL fallback
     if (url.startsWith('http://') || url.startsWith('https://')) {
         try {
-            const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+            const resp = UrlFetchApp.fetch(url, {
+                muteHttpExceptions: true,
+                followRedirects: true,
+                validateHttpsCertificates: false
+            });
             if (resp.getResponseCode() === 200) {
                 return resp.getBlob();
             }
