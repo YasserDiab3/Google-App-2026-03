@@ -7822,23 +7822,16 @@ const DailyObservations = {
                 return;
             }
 
-            // محاولة الحصول على Template ID المحفوظ
-            let savedTemplateId = null;
-            try {
-                const templateResult = await GoogleIntegration.sendToAppsScript('getDailyObservationsPptTemplateId', {});
-                if (templateResult && templateResult.success && templateResult.templateId) {
-                    savedTemplateId = templateResult.templateId;
-                }
-            } catch (e) {
-                // تجاهل الخطأ - سيتم التعامل معه لاحقاً
-            }
+            // اقتطاع أحدث 30 ملاحظة لضمان سرعة الاستجابة ومنع انتهاء مهلة الاتصال
+            const exportBatch = filtered.slice(0, 30);
 
             const payload = {
                 department: dept,
                 reportDate: reportDate ? new Date(reportDate).toISOString() : new Date().toISOString(),
                 fromDate: fromDate ? new Date(fromDate).toISOString() : '',
                 toDate: toDate ? new Date(toDate).toISOString() : '',
-                observations: filtered.map((o) => ({
+                logoUrl: AppState.companySettings?.logo || AppState.companySettings?.logoUrl || '',
+                observations: exportBatch.map((o) => ({
                     id: o.id || '',
                     isoCode: o.isoCode || '',
                     siteName: o.siteName || '',
@@ -7860,7 +7853,7 @@ const DailyObservations = {
             };
 
             payload.__timeoutMs = 240000;
-            Loading.show('جاري إنشاء وتصدير تقرير PPT بسرعة فائق...');
+            Loading.show(`جاري تصميم وتصدير تقرير PPT (${exportBatch.length} ملاحظة)...`);
             const result = await GoogleIntegration.sendToAppsScript('exportDailyObservationsPptReport', payload);
             Loading.hide();
 
@@ -7871,25 +7864,71 @@ const DailyObservations = {
             }
 
             const downloadUrl = result.downloadUrl || result.url || result.viewUrl || '';
-            if (downloadUrl) {
-                const win = window.open(downloadUrl, '_blank');
-                if (!win) {
-                    const a = document.createElement('a');
-                    a.href = downloadUrl;
-                    a.target = '_blank';
-                    a.rel = 'noopener noreferrer';
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                }
-            }
+            const viewUrl = result.viewUrl || downloadUrl || '';
 
-            Notification.success('تم إنشاء تقرير PPT بنجاح.');
+            Notification.success('تم إنشاء تقرير PPT بنجاح!');
+            this.showPptExportSuccessModal(downloadUrl, viewUrl, dept);
         } catch (error) {
             Loading.hide();
             Utils.safeError('فشل تصدير PPT:', error);
             const errorMsg = error?.message || 'خطأ غير معروف';
             Notification.error('فشل تصدير PPT: ' + errorMsg);
+        }
+    },
+
+    showPptExportSuccessModal(downloadUrl, viewUrl, department) {
+        const existing = document.getElementById('ppt-export-success-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'ppt-export-success-modal';
+        modal.className = 'modal-overlay active';
+        modal.style.zIndex = '99999';
+
+        const dUrl = downloadUrl || viewUrl || '';
+        const vUrl = viewUrl || downloadUrl || '';
+
+        modal.innerHTML = `
+            <div class="modal-container max-w-md text-center p-6 bg-white rounded-lg shadow-xl relative">
+                <button type="button" class="absolute top-3 left-3 text-gray-400 hover:text-gray-600 text-xl modal-close-btn">&times;</button>
+                <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                    <i class="fas fa-file-powerpoint"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">تم إنشاء تقرير PPTX بنجاح!</h3>
+                <p class="text-sm text-gray-600 mb-6">
+                    تم إنشاء التقرير الخاص بـ <strong>${Utils.escapeHTML(department || '')}</strong> كاملاً بالداشبورد الإحصائي والملخص التنفيذي.
+                </p>
+                <div class="space-y-3">
+                    ${dUrl ? `<a href="${Utils.escapeHTML(dUrl)}" download target="_blank" class="btn-primary w-full flex items-center justify-center py-3 rounded-lg font-bold shadow text-white bg-blue-600 hover:bg-blue-700">
+                        <i class="fas fa-download ml-2 text-lg"></i> تنزيل ملف التقرير (PPTX)
+                    </a>` : ''}
+                    ${vUrl ? `<a href="${Utils.escapeHTML(vUrl)}" target="_blank" class="btn-secondary w-full flex items-center justify-center py-2.5 rounded-lg text-sm text-gray-700 bg-gray-100 hover:bg-gray-200">
+                        <i class="fas fa-external-link-alt ml-2"></i> معاينة العرض في Google Slides
+                    </a>` : ''}
+                </div>
+                <button type="button" class="mt-4 text-xs text-gray-500 hover:text-gray-800 modal-close-btn">إغلاق النافذة</button>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const close = () => modal.remove();
+        modal.querySelectorAll('.modal-close-btn').forEach(btn => btn.addEventListener('click', close));
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) close();
+        });
+
+        // محاولة التحميل التلقائي الفوري
+        if (dUrl) {
+            try {
+                const a = document.createElement('a');
+                a.href = dUrl;
+                a.target = '_blank';
+                a.download = '';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            } catch(e) {}
         }
     },
 
