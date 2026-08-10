@@ -814,20 +814,19 @@ function createDefaultDailyObservationsPptTemplate() {
             rightBodyBox.setMarginBottom(10);
         } catch (mErr) { /* ignore */ }
 
-        const RLM = '\u200F'; // Right-to-Left Mark لإجبار اتجاه المحاذاة العربي من اليمين لليسار
         const bodyTxt = rightBodyBox.getText();
         bodyTxt.setText(
-            RLM + 'رقم الملاحظة : {{OBS_NO}}\n' +
-            RLM + 'التاريخ : {{OBS_DATE}}\n' +
-            RLM + 'المكان : {{OBS_LOCATION}}\n' +
-            RLM + 'الملاحظة :\n' +
-            RLM + '{{OBS_DETAILS}}\n' +
-            RLM + 'الإجراء التصحيحي :\n' +
-            RLM + '{{CORRECTIVE_ACTION}}\n' +
-            RLM + 'مدى الخطورة : {{RISK_LEVEL}}\n' +
-            RLM + 'تاريخ التنفيذ المقترح: {{TARGET_DATE}}\n' +
-            RLM + 'المسئول عن التنفيذ : {{RESPONSIBLE}}\n' +
-            RLM + 'الحالة: {{STATUS}}'
+            '{{OBS_NO}} : رقم الملاحظة\n' +
+            '{{OBS_DATE}} : التاريخ\n' +
+            '{{OBS_LOCATION}} : المكان\n' +
+            ' : الملاحظة\n' +
+            '{{OBS_DETAILS}}\n' +
+            ' : الإجراء التصحيحي\n' +
+            '{{CORRECTIVE_ACTION}}\n' +
+            '{{RISK_LEVEL}} : مدى الخطورة\n' +
+            '{{TARGET_DATE}} : تاريخ التنفيذ المقترح\n' +
+            '{{RESPONSIBLE}} : المسئول عن التنفيذ\n' +
+            '{{STATUS}} : الحالة'
         );
 
         // محاذاة النص لليمين مباشرة على مستوى الصندوق وعلى كل فقرة
@@ -851,15 +850,15 @@ function createDefaultDailyObservationsPptTemplate() {
 
         // تلوين وتسريحة العناوين بالأحمر + خط سفلي (مطابق للصورة 2)
         const redLabels = [
-            'رقم الملاحظة :',
-            'التاريخ :',
-            'المكان :',
-            'الملاحظة :',
-            'الإجراء التصحيحي :',
-            'مدى الخطورة :',
-            'تاريخ التنفيذ المقترح:',
-            'المسئول عن التنفيذ :',
-            'الحالة:'
+            'رقم الملاحظة',
+            'التاريخ',
+            'المكان',
+            'الملاحظة',
+            'الإجراء التصحيحي',
+            'مدى الخطورة',
+            'تاريخ التنفيذ المقترح',
+            'المسئول عن التنفيذ',
+            'الحالة'
         ];
 
         redLabels.forEach(function(lbl) {
