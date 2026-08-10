@@ -488,10 +488,23 @@ function dailySafetyFormRecordExists(recordData) {
         String(r.siteName || r.siteId || '').trim() === site &&
         String(r.inspectorName || '').trim() === inspector &&
         String(r.shift || '').trim() === shift) {
-      // مفتاح ثانوي: طابع زمني للإرسال من الفورم.
-      // إذا كان موجوداً في السجلين، يجب أن يتطابق حتى نعتبره تكراراً (يميّز تقارير متعددة لنفس اليوم/الموقع/المفتش/الوردية).
+      
       var existingTs = String(r.formSubmittedAt || '').trim();
-      if (!formTs || !existingTs || formTs === existingTs) {
+      // إذا كان لدى السجلين طابع زمني من الفورم: يتطابقان = مكرر مؤكد، يختلفان = تقرير جديد مستقل
+      if (formTs && existingTs) {
+        if (formTs === existingTs) return true;
+        continue;
+      }
+
+      // إذا كانت التواريخ والمواقع والورديات متطابقة والسر غير مؤكد بالتاريخ الزمني:
+      // طالما الملاحظات أو وقت الإرسال يختلفان، يعتبر تقريراً جديداً ولا يُتخطى
+      var existingNotes = String(r.notes || '').trim();
+      var newNotes = String(recordData.notes || '').trim();
+      if (formTs && !existingTs) {
+        // تقرير جديد صريح برقم زمني مقابل سجل قديم بلا طابع → ليس مكرراً
+        continue;
+      }
+      if (existingNotes === newNotes) {
         return true;
       }
     }
