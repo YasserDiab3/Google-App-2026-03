@@ -7850,12 +7850,9 @@ const DailyObservations = {
             };
 
             // إضافة Template ID إذا كان موجوداً
-            if (savedTemplateId) {
-                payload.templateId = savedTemplateId;
-            }
-
-            Loading.show('جاري إنشاء تقرير PPT (قد يستغرق تحويل ملف PowerPoint دقيقة)...');
-            const result = await GoogleIntegration.sendToAppsScript('exportDailyObservationsPptReport', payload, 120000);
+            payload.__timeoutMs = 120000;
+            Loading.show('جاري إنشاء تقرير PPT (قد يستغرق تحويل وتوليد الشرائح دقيقة)...');
+            const result = await GoogleIntegration.sendToAppsScript('exportDailyObservationsPptReport', payload);
             Loading.hide();
 
             if (!result || result.success === false) {

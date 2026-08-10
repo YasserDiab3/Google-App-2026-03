@@ -1,4 +1,4 @@
-﻿/**
+/**
  * طبقة الاتصال بـ Google Apps Script (Web App) كخلفية للمزامنة مع Google Sheets.
  */
 
@@ -1032,7 +1032,8 @@ const GoogleIntegration = {
                 'getAllClinicVisits',
                 'getAllEmployees',
                 'getUserVersionsDashboard', 'getAllUserVersions', 'getUserVersionStats',
-                'saveFormSettings', 'getFormSettings', 'deleteSite', 'deletePlace', 'initFormSettingsTables'
+                'saveFormSettings', 'getFormSettings', 'deleteSite', 'deletePlace', 'initFormSettingsTables',
+                'exportDailyObservationsPptReport', 'createDefaultDailyObservationsPptTemplate', 'exportPpt'
             ];
             const mediumOperations = [
                 'getData', 'readData', 'loadData', 'fetchData', 'add', 'update'
