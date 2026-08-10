@@ -114,7 +114,8 @@ function hasFactory1QuestionData(rowData) {
  */
 function hasFactory2QuestionData(rowData) {
   if (!rowData || rowData.length <= COL_Y) return false;
-  for (var c = COL_Y; c < Math.min(COL_Y + QUESTION_COUNT + 2, rowData.length); c++) {
+  var qCount = (typeof QUESTION_COUNT !== 'undefined' && QUESTION_COUNT) ? QUESTION_COUNT : 17;
+  for (var c = COL_Y; c < Math.min(COL_Y + qCount + 2, rowData.length); c++) {
     if (rowData[c] !== null && rowData[c] !== undefined && String(rowData[c]).trim() !== '') {
       return true;
     }
@@ -455,7 +456,8 @@ function mapFormRowToDailySafetyCheckList(rowData, headers, forceFactory2) {
     notesValue = String(rowData[notesColIndex]).trim();
   } else {
     var notesStart = useFactory2 ? COL_Y : 0;
-    var notesEnd = useFactory2 ? Math.min(COL_Y + QUESTION_COUNT + 5, headers.length) : headers.length;
+    var qCount = (typeof QUESTION_COUNT !== 'undefined' && QUESTION_COUNT) ? QUESTION_COUNT : 17;
+    var notesEnd = useFactory2 ? Math.min(COL_Y + qCount + 5, headers.length) : headers.length;
     for (var c = notesStart; c < notesEnd && c < headers.length; c++) {
       var h = (headers[c] || '').toString().trim();
       if (h === 'الملاحظات الموجودة أثناء المرور' || h.indexOf('ملاحظات') >= 0 || h.toLowerCase() === 'notes') {
