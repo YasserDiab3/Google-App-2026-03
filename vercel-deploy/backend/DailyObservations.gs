@@ -1315,15 +1315,22 @@ function exportDailyObservationsPptReport(payload) {
                 '{{OBSERVER}}': String(obs.observerName || '')
             });
 
-            // الصور (حتى 3 صور للملاحظة)
+            // الصور (تجميع كافة روابط الصور من الملاحظة)
             var imageList = [];
             if (obs.imageUrl) imageList.push(obs.imageUrl);
+            if (obs.image) imageList.push(obs.image);
+            if (obs.photo) imageList.push(obs.photo);
+            if (obs.fileUrl) imageList.push(obs.fileUrl);
+            if (obs.picture) imageList.push(obs.picture);
             if (Array.isArray(obs.images)) {
                 obs.images.forEach(function(u){ if (u && imageList.indexOf(u) === -1) imageList.push(u); });
             }
+            if (Array.isArray(obs.photos)) {
+                obs.photos.forEach(function(u){ if (u && imageList.indexOf(u) === -1) imageList.push(u); });
+            }
             if (Array.isArray(obs.attachments)) {
                 obs.attachments.forEach(function(a){
-                    var u = (a && typeof a === 'object') ? (a.directLink || a.shareableLink || (a.cloudLink && a.cloudLink.url) || a.data || '') : String(a || '');
+                    var u = (a && typeof a === 'object') ? (a.directLink || a.shareableLink || a.url || (a.cloudLink && a.cloudLink.url) || a.data || '') : String(a || '');
                     if (u && imageList.indexOf(u) === -1) imageList.push(u);
                 });
             }
@@ -1456,11 +1463,48 @@ function _dob_extractDriveFileId_(url) {
     return '';
 }
 
-function _dob_getImageBlobFromUrl_(imageUrl) {
-    const fileId = _dob_extractDriveFileId_(imageUrl);
-    if (!fileId) return null;
-    const file = DriveApp.getFileById(fileId);
-    return file ? file.getBlob() : null;
+function _dob_getImageBlobFromUrl_(url) {
+    if (!url || typeof url !== 'string') return null;
+    url = url.trim();
+    if (!url) return null;
+
+    // 1) Base64 Data URL
+    if (url.startsWith('data:image/')) {
+        try {
+            const parts = url.split(',');
+            const mimeMatch = parts[0].match(/:(.*?);/);
+            const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+            const bytes = Utilities.base64Decode(parts[1]);
+            return Utilities.newBlob(bytes, mime, 'obs_image');
+        } catch(b64Err) {
+            Logger.log('Base64 image decode error: ' + b64Err);
+        }
+    }
+
+    // 2) Google Drive File ID
+    const fileId = _dob_extractDriveFileId_(url);
+    if (fileId) {
+        try {
+            const file = DriveApp.getFileById(fileId);
+            if (file) return file.getBlob();
+        } catch(driveErr) {
+            Logger.log('DriveApp fetch error for fileId ' + fileId + ': ' + driveErr);
+        }
+    }
+
+    // 3) HTTP / HTTPS direct URL fallback (Cloudinary, AWS S3, Google Cloud Storage, etc.)
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        try {
+            const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+            if (resp.getResponseCode() === 200) {
+                return resp.getBlob();
+            }
+        } catch(fetchErr) {
+            Logger.log('UrlFetchApp fetch error for ' + url + ': ' + fetchErr);
+        }
+    }
+
+    return null;
 }
 
 function _dob_replaceImagePlaceholder_(slide, imageBlob, placeholderKey) {
@@ -1474,14 +1518,14 @@ function _dob_replaceImagePlaceholder_(slide, imageBlob, placeholderKey) {
         try {
             const title = String(el.getTitle && el.getTitle() ? el.getTitle() : '').trim();
             const desc = String(el.getDescription && el.getDescription() ? el.getDescription() : '').trim();
-            if (title === targetKey || desc === targetKey || title === '{{' + targetKey + '}}' || desc === '{{' + targetKey + '}}') {
+            if (title === targetKey || desc === targetKey || title.indexOf(targetKey) !== -1 || desc.indexOf(targetKey) !== -1) {
                 placeholder = el;
                 break;
             }
-            // دعم placeholder كنص داخل shape
+            // دعم placeholder كنص داخل shape (مثل [OBS_IMAGE] أو صورة الملاحظة)
             if (el.getPageElementType && el.getPageElementType() === SlidesApp.PageElementType.SHAPE) {
                 const txt = el.asShape().getText().asString();
-                if (txt && (txt.indexOf(targetKey) !== -1 || txt.indexOf('{{' + targetKey + '}}') !== -1)) {
+                if (txt && (txt.indexOf(targetKey) !== -1 || txt.indexOf('OBS_IMAGE') !== -1 || txt.indexOf('صورة الملاحظة') !== -1)) {
                     placeholder = el;
                     break;
                 }
@@ -1504,11 +1548,15 @@ function _dob_replaceImagePlaceholder_(slide, imageBlob, placeholderKey) {
         // ignore
     }
 
-    const img = slide.insertImage(imageBlob);
-    img.setLeft(left);
-    img.setTop(top);
-    img.setWidth(width);
-    img.setHeight(height);
+    try {
+        const img = slide.insertImage(imageBlob);
+        img.setLeft(left);
+        img.setTop(top);
+        img.setWidth(width);
+        img.setHeight(height);
+    } catch(insertErr) {
+        Logger.log('Error inserting image into slide: ' + insertErr);
+    }
 }
 
 /**

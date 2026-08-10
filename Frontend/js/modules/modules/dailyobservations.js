@@ -7759,16 +7759,36 @@ const DailyObservations = {
     },
 
     _getObservationPrimaryImageUrl(observation) {
+        if (!observation) return '';
+        if (typeof observation.imageUrl === 'string' && observation.imageUrl.trim()) return observation.imageUrl.trim();
+        if (typeof observation.image === 'string' && observation.image.trim()) return observation.image.trim();
+        if (typeof observation.photo === 'string' && observation.photo.trim()) return observation.photo.trim();
+        if (typeof observation.fileUrl === 'string' && observation.fileUrl.trim()) return observation.fileUrl.trim();
+        if (typeof observation.picture === 'string' && observation.picture.trim()) return observation.picture.trim();
+
+        if (Array.isArray(observation.images) && observation.images.length > 0) {
+            const firstImg = observation.images.find(u => typeof u === 'string' && u.trim());
+            if (firstImg) return firstImg.trim();
+        }
+
+        if (Array.isArray(observation.photos) && observation.photos.length > 0) {
+            const firstImg = observation.photos.find(u => typeof u === 'string' && u.trim());
+            if (firstImg) return firstImg.trim();
+        }
+
         const attachments = Array.isArray(observation?.attachments) ? observation.attachments : [];
         const img = attachments.find((a) => {
+            if (!a) return false;
+            if (typeof a === 'string' && a.trim()) return true;
             const type = String(a?.type || '').toLowerCase();
             const name = String(a?.name || '').toLowerCase();
-            const isImg = type.startsWith('image/') || /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(name);
+            const isImg = type.startsWith('image/') || /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(name) || (!type && !name);
             if (!isImg) return false;
-            return Boolean(a?.directLink || a?.shareableLink || a?.cloudLink?.url || a?.data);
+            return Boolean(a?.directLink || a?.shareableLink || a?.cloudLink?.url || a?.url || a?.data || a?.driveUrl || a?.link);
         });
         if (!img) return '';
-        return img.directLink || img.shareableLink || img.cloudLink?.url || img.data || '';
+        if (typeof img === 'string') return img.trim();
+        return img.directLink || img.shareableLink || img.cloudLink?.url || img.url || img.data || img.driveUrl || img.link || '';
     },
 
     async exportPptReport({ department, reportDate, fromDate, toDate }) {
@@ -7845,7 +7865,9 @@ const DailyObservations = {
                     expectedCompletionDate: o.expectedCompletionDate || '',
                     details: o.details || '',
                     correctiveAction: o.correctiveAction || '',
-                    imageUrl: this._getObservationPrimaryImageUrl(o)
+                    imageUrl: this._getObservationPrimaryImageUrl(o),
+                    images: Array.isArray(o.images) ? o.images : (o.imageUrl ? [o.imageUrl] : []),
+                    attachments: Array.isArray(o.attachments) ? o.attachments : []
                 }))
             };
 
