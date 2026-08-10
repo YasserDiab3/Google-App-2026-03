@@ -1268,6 +1268,7 @@ const PeriodicInspections = {
             case 'list':
             default:
                 if (this.state.currentTab === 'daily-safety-checklist') {
+                    try { await this.ensureDailySafetyDataLoaded(true); } catch (_eDsc) {}
                     return await this.renderDailySafetyCheckListContent();
                 }
                 if (this.state.currentTab === 'daily-safety-analytics') {

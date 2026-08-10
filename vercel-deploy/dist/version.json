@@ -1,11 +1,11 @@
 {
-  "version": "1.0.963",
+  "version": "1.0.965",
   "highlights": {
     "ar": [
-      "تصدير PPT: إصلاح تكرار أسماء الإدارات في قائمة الاختيار وشرائح العرض من خلال دمج المسميات المكررة وتطبيع النصوص العربية والمسافات."
+      "جدول المرور اليومي: إصلاح التزامن المباشر وجلب أحدث التقارير المترحلة من Google Sheets فور فتح التبويب تلقائياً وتحديث كاش الواجهة."
     ],
     "en": [
-      "PPT Export: fixed duplicate department names in selection dropdown and presentation slides by applying normalized text merging and removing redundant label prefixes."
+      "Daily Safety Checklist: fixed live sync to force fetch latest migrated Google Form reports from Google Sheets automatically upon tab render."
     ]
   }
 }
