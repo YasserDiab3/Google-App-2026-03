@@ -1505,6 +1505,53 @@ function _dob_replaceAllTextSafe_(presentation, slide, replacements) {
             // تجاهل - قد تكون الشريحة لا تحتوي على النص
         }
     });
+
+    // ✅ إعادة ضبط وتثبيت اتجاه النص والمحاذاة لليمين تلقائياً بعد استبدال القيم
+    if (slide && typeof slide.getShapes === 'function') {
+        try {
+            var shapes = slide.getShapes();
+            var redLabels = [
+                'رقم الملاحظة', 'التاريخ', 'المكان', 'الملاحظة',
+                'الإجراء التصحيحي', 'مدى الخطورة', 'تاريخ التنفيذ المقترح',
+                'المسئول عن التنفيذ', 'الحالة'
+            ];
+            for (var i = 0; i < shapes.length; i++) {
+                var sh = shapes[i];
+                if (!sh || !sh.getText) continue;
+                var txt = sh.getText();
+                var str = txt.asString();
+                if (!str) continue;
+
+                var isObsBox = redLabels.some(function(lbl) { return str.indexOf(lbl) !== -1; });
+                if (isObsBox) {
+                    try {
+                        txt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT);
+                        var paras = txt.getParagraphs();
+                        for (var p = 0; p < paras.length; p++) {
+                            paras[p].getRange().getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT);
+                        }
+                    } catch (_aErr) {}
+
+                    redLabels.forEach(function(lbl) {
+                        try {
+                            const matches = txt.find(lbl);
+                            if (matches && matches.length) {
+                                matches.forEach(function(m) {
+                                    m.getTextStyle()
+                                        .setFontFamily('Cairo')
+                                        .setBold(true)
+                                        .setUnderline(true)
+                                        .setForegroundColor('#dc2626');
+                                });
+                            }
+                        } catch (_lErr) {}
+                    });
+                }
+            }
+        } catch (_shErr) {
+            Logger.log('Post-replacement styling error: ' + _shErr);
+        }
+    }
 }
 
 function _dob_formatDateTimeSafe_(value, tz) {
