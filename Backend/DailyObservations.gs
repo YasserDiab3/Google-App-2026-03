@@ -695,12 +695,12 @@ function _dob_buildCoverSlide_(coverSlide, department, dateLabel, logoUrl) {
         coverSlide.getPageElements().forEach(function(el) { try { el.remove(); } catch(e) {} });
         coverSlide.getBackground().setSolidFill('#ffffff');
 
-        // 1) خط ذهبي نحيف في أعلى الشريحة
-        const topStripe = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 0, 0, 720, 4);
+        // 1) شريط ذهبي علوي نحيف
+        const topStripe = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 0, 0, 720, 5);
         topStripe.getFill().setSolidFill('#d97706');
         topStripe.getBorder().setTransparent();
 
-        // 2) الشعار الأيسر (أو صورة الشعار المسجلة في الإعدادات)
+        // 2) الشعار الأيسر (تناسب الأبعاد 100% بدون تشويه)
         let insertedLeftLogo = false;
         if (logoUrl) {
             try {
@@ -717,11 +717,11 @@ function _dob_buildCoverSlide_(coverSlide, department, dateLabel, logoUrl) {
                         const newH = origH * ratio;
                         img.setWidth(newW);
                         img.setHeight(newH);
-                        img.setLeft(30);
-                        img.setTop(18 + (maxH - newH) / 2);
+                        img.setLeft(35);
+                        img.setTop(20 + (maxH - newH) / 2);
                     } else {
-                        img.setLeft(30);
-                        img.setTop(18);
+                        img.setLeft(35);
+                        img.setTop(20);
                         img.setWidth(maxW);
                         img.setHeight(maxH);
                     }
@@ -735,7 +735,7 @@ function _dob_buildCoverSlide_(coverSlide, department, dateLabel, logoUrl) {
         }
 
         if (!insertedLeftLogo) {
-            const logoLeft = coverSlide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 30, 20, 160, 45);
+            const logoLeft = coverSlide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 35, 22, 170, 48);
             logoLeft.getFill().setSolidFill('#ffffff');
             logoLeft.getBorder().setWeight(2);
             logoLeft.getBorder().getLineFill().setSolidFill('#dc2626');
@@ -743,50 +743,57 @@ function _dob_buildCoverSlide_(coverSlide, department, dateLabel, logoUrl) {
             logoLeft.setDescription('COVER_LOGO');
             const logoLeftTxt = logoLeft.getText();
             logoLeftTxt.setText('AMERICANA');
-            logoLeftTxt.getTextStyle().setFontFamily('Arial').setFontSize(18).setBold(true).setForegroundColor('#dc2626');
+            logoLeftTxt.getTextStyle().setFontFamily('Cairo').setFontSize(18).setBold(true).setForegroundColor('#dc2626');
             try { logoLeftTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER); } catch(e) {}
         }
 
-        // 3) الشعار/النص الأيمن (ICAPP)
-        const logoRight = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 510, 18, 180, 48);
+        // 3) عنوان النظام الأيمن العلوي
+        const logoRight = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 450, 22, 235, 48);
         logoRight.getFill().setTransparent();
         logoRight.getBorder().setTransparent();
         const logoRightTxt = logoRight.getText();
-        logoRightTxt.setText('ICAPP\nFRESHNESS DELIVERED DAILY');
-        logoRightTxt.getTextStyle().setFontFamily('Arial').setFontSize(13).setBold(true).setForegroundColor('#047857');
+        logoRightTxt.setText('نظام السلامة والصحة المهنية\nHSE Management System');
+        logoRightTxt.getTextStyle().setFontFamily('Cairo').setFontSize(12).setBold(true).setForegroundColor('#047857');
         try { logoRightTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT); } catch(e) {}
 
-        // 4) الشكل البيضاوي الأوسط (Oval Capsule)
-        const centerOval = coverSlide.insertShape(SlidesApp.ShapeType.ELLIPSE, 130, 110, 460, 145);
-        centerOval.getFill().setSolidFill('#e2e8f0');
-        centerOval.getBorder().setWeight(1);
-        centerOval.getBorder().getLineFill().setSolidFill('#cbd5e1');
-        const ovalText = centerOval.getText();
-        ovalText.setText('Safety Observation Report\nReport\nNear Miss');
-        ovalText.getTextStyle().setFontFamily('Arial').setFontSize(25).setBold(true).setForegroundColor('#000000');
-        try { ovalText.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER); } catch(e) {}
+        // 4) كارت العنوان الرئيسي في الأوسط (تصميم تنفيذي راقٍ)
+        const centerCard = coverSlide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 60, 110, 600, 155);
+        centerCard.getFill().setSolidFill('#0f172a');
+        centerCard.getBorder().setWeight(2);
+        centerCard.getBorder().getLineFill().setSolidFill('#d97706');
+        const cardText = centerCard.getText();
+        cardText.setText('تقرير الملاحظات والحيودات اليومية\nDaily Safety Observations Report\nمجموعة أمريكانا - Americana Group');
+        
+        try {
+            cardText.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER);
+            var cardParas = cardText.getParagraphs();
+            if (cardParas.length >= 1) {
+                cardParas[0].getRange().getTextStyle().setFontFamily('Cairo').setFontSize(24).setBold(true).setForegroundColor('#ffffff');
+            }
+            if (cardParas.length >= 2) {
+                cardParas[1].getRange().getTextStyle().setFontFamily('Arial').setFontSize(16).setBold(true).setForegroundColor('#fbbf24');
+            }
+            if (cardParas.length >= 3) {
+                cardParas[2].getRange().getTextStyle().setFontFamily('Cairo').setFontSize(13).setBold(false).setForegroundColor('#94a3b8');
+            }
+        } catch(pErr) {
+            cardText.getTextStyle().setFontFamily('Cairo').setFontSize(20).setBold(true).setForegroundColor('#ffffff');
+        }
 
-        // 5) شارة فرعية تحت البيضاوي
-        const subBadge = coverSlide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 290, 265, 140, 35);
-        subBadge.getFill().setSolidFill('#ffffff');
-        subBadge.getBorder().setWeight(1.5);
-        subBadge.getBorder().getLineFill().setSolidFill('#dc2626');
-        const subBadgeTxt = subBadge.getText();
-        subBadgeTxt.setText('AMERICANA');
-        subBadgeTxt.getTextStyle().setFontFamily('Arial').setFontSize(12).setBold(true).setForegroundColor('#dc2626');
-        try { subBadgeTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER); } catch(e) {}
-
-        // 6) كارت بيانات الإدارة والتاريخ (أزرق ملكي)
-        const blueBox = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 470, 305, 240, 90);
-        blueBox.getFill().setSolidFill('#2563eb');
-        blueBox.getBorder().setTransparent();
+        // 5) كارت بيانات الإدارة والتاريخ (أزرق ملكي بأسفل اليمين)
+        const blueBox = coverSlide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 410, 285, 250, 95);
+        blueBox.getFill().setSolidFill('#1e40af');
+        blueBox.getBorder().setWeight(1.5);
+        blueBox.getBorder().getLineFill().setSolidFill('#3b82f6');
         const blueBoxTxt = blueBox.getText();
-        blueBoxTxt.setText(`${department || '{{DEPARTMENT}}'}\n\nmonthly Report up to\n${dateLabel || '{{REPORT_DATE}}'}`);
-        blueBoxTxt.getTextStyle().setFontFamily('Arial').setFontSize(12).setBold(true).setForegroundColor('#ffffff');
-        try { blueBoxTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER); } catch(e) {}
+        blueBoxTxt.setText(`الإدارة : ${department || '{{DEPARTMENT}}'}\n\nتاريخ التقرير : ${dateLabel || '{{REPORT_DATE}}'}`);
+        blueBoxTxt.getTextStyle().setFontFamily('Cairo').setFontSize(13).setBold(true).setForegroundColor('#ffffff');
+        try {
+            blueBoxTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER);
+        } catch(e) {}
 
-        // 7) شريط كحلي أسفل الشريحة
-        const bottomStripe = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 0, 400, 720, 5);
+        // 6) شريط كحلي سفلي
+        const bottomStripe = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 0, 405, 720, 5);
         bottomStripe.getFill().setSolidFill('#0f172a');
         bottomStripe.getBorder().setTransparent();
 
@@ -1426,20 +1433,20 @@ function exportDailyObservationsPptReport(payload) {
                 primaryImageUrl = (a && typeof a === 'object') ? (a.directLink || a.shareableLink || a.url || (a.cloudLink && a.cloudLink.url) || a.data || '') : String(a || '');
             }
 
+            var blob = null;
             if (primaryImageUrl) {
                 try {
-                    var blob = imageBlobCache[primaryImageUrl];
+                    blob = imageBlobCache[primaryImageUrl];
                     if (!blob) {
                         blob = _dob_getImageBlobFromUrl_(primaryImageUrl);
                         if (blob) imageBlobCache[primaryImageUrl] = blob;
                     }
-                    if (blob) {
-                        _dob_replaceImagePlaceholder_(slide, blob, 'OBS_IMAGE');
-                    }
                 } catch (imgErr) {
-                    Logger.log('PPT Export: failed to insert image for obs ' + obsNo + ': ' + imgErr);
+                    Logger.log('PPT Export: failed to fetch image for obs ' + obsNo + ': ' + imgErr);
                 }
             }
+            // دائماً استدعاء _dob_replaceImagePlaceholder_ إما لزرع الصورة أو إزالة وسم [OBS_IMAGE]
+            _dob_replaceImagePlaceholder_(slide, blob, 'OBS_IMAGE');
         });
 
         // 4) حذف نموذج الشريحة الأصلي غير المعبأ
@@ -1551,6 +1558,16 @@ function _dob_replaceAllTextSafe_(presentation, slide, replacements) {
 
                     redLabels.forEach(function(lbl) {
                         try {
+                            // تصحيح انحراف الأسطر المعكوسة تلقائياً: إذا كان النص يظهر بالشكل [القيم] : [العنوان]
+                            var curTxt = txt.asString();
+                            var revRegex = new RegExp('^([^\\n:]+)\\s*:\\s*(' + lbl + ')\\s*$', 'gm');
+                            if (revRegex.test(curTxt)) {
+                                var fixedTxt = curTxt.replace(revRegex, rlm + '$2 : ' + rlm + '$1');
+                                txt.setText(fixedTxt);
+                            }
+                        } catch(_revErr) {}
+
+                        try {
                             const matches = txt.find(lbl);
                             if (matches && matches.length) {
                                 matches.forEach(function(m) {
@@ -1602,11 +1619,14 @@ function _dob_joinLocation_(siteName, locationName) {
 
 function _dob_extractDriveFileId_(url) {
     if (!url) return '';
-    const s = String(url);
-    const match1 = s.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    const s = String(url).trim();
+    const match1 = s.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/);
     if (match1 && match1[1]) return match1[1];
-    const match2 = s.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    const match2 = s.match(/[?&]id=([a-zA-Z0-9_-]{20,})/);
     if (match2 && match2[1]) return match2[1];
+    const match3 = s.match(/\/d\/([a-zA-Z0-9_-]{20,})/);
+    if (match3 && match3[1]) return match3[1];
+    if (/^[a-zA-Z0-9_-]{20,80}$/.test(s)) return s;
     return '';
 }
 
@@ -1640,7 +1660,19 @@ function _dob_getImageBlobFromUrl_(url) {
         return null;
     }
 
-    // 3) HTTP / HTTPS direct URL fallback
+    // 3) المسارات النسبية للصور (المرفوعة بالنظام)
+    if (url.startsWith('/') || url.startsWith('uploads/')) {
+        var domain = 'https://clinic-repo.vercel.app';
+        try {
+            var fullUrl = domain + (url.startsWith('/') ? url : '/' + url);
+            var resp = UrlFetchApp.fetch(fullUrl, { muteHttpExceptions: true });
+            if (resp.getResponseCode() === 200) return resp.getBlob();
+        } catch(relErr) {
+            Logger.log('Relative image fetch error: ' + relErr);
+        }
+    }
+
+    // 4) HTTP / HTTPS direct URL fallback
     if (url.startsWith('http://') || url.startsWith('https://')) {
         try {
             const resp = UrlFetchApp.fetch(url, {
@@ -1660,7 +1692,7 @@ function _dob_getImageBlobFromUrl_(url) {
 }
 
 function _dob_replaceImagePlaceholder_(slide, imageBlob, placeholderKey) {
-    if (!slide || !imageBlob) return;
+    if (!slide) return;
     const targetKey = placeholderKey || 'OBS_IMAGE';
 
     const elements = slide.getPageElements();
@@ -1688,6 +1720,20 @@ function _dob_replaceImagePlaceholder_(slide, imageBlob, placeholderKey) {
     }
 
     if (!placeholder) return;
+
+    if (!imageBlob) {
+        // إذا لم تتوفر صورة أو فشل الجلب، نقوم بتفريغ نص [OBS_IMAGE] حتى لا تظهر كلمة الرمز بالتقرير
+        try {
+            if (placeholder.getPageElementType && placeholder.getPageElementType() === SlidesApp.PageElementType.SHAPE) {
+                placeholder.asShape().getText().setText('لا توجد صورة مرفقة للملاحظة');
+                try {
+                    placeholder.asShape().getText().getTextStyle().setFontFamily('Cairo').setFontSize(13).setForegroundColor('#94a3b8').setBold(false);
+                    placeholder.asShape().getText().getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER);
+                } catch(_stErr) {}
+            }
+        } catch(e) {}
+        return;
+    }
 
     const left = placeholder.getLeft();
     const top = placeholder.getTop();
