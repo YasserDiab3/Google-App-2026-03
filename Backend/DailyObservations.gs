@@ -696,77 +696,166 @@ function createDefaultDailyObservationsPptTemplate() {
             return { success: false, message: 'خدمة SlidesApp غير متوفرة في المشروع.' };
         }
 
-        const presentation = SlidesApp.create('قالب تقارير الملاحظات اليومية (Daily Observations Template)');
+        const presentation = SlidesApp.create('قالب تقارير الملاحظات اليومية (Americana / ICAPP Template)');
         const slides = presentation.getSlides();
-        
-        // الشريحة الأولى (الغلاف)
-        const coverSlide = slides[0];
-        coverSlide.getBackground().setSolidFill('#1e293b'); // كحلي غامق أنيق
-        
-        const titleShape = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 50, 100, 620, 150);
-        titleShape.getFill().setTransparent();
-        titleShape.getBorder().setTransparent();
-        const titleText = titleShape.getText();
-        titleText.setText('تقرير الملاحظات اليومية\n{{DEPARTMENT}}');
-        titleText.getTextStyle().setFontFamily('Cairo').setFontSize(32).setBold(true).setForegroundColor('#ffffff');
-        
-        const dateShape = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 50, 270, 620, 50);
-        dateShape.getFill().setTransparent();
-        dateShape.getBorder().setTransparent();
-        const dateText = dateShape.getText();
-        dateText.setText('تاريخ التقرير: {{REPORT_DATE}}');
-        dateText.getTextStyle().setFontFamily('Cairo').setFontSize(18).setForegroundColor('#94a3b8');
-
         const blankLayout = (typeof SlidesApp !== 'undefined' && SlidesApp.PredefinedLayout && SlidesApp.PredefinedLayout.BLANK) 
             ? SlidesApp.PredefinedLayout.BLANK 
             : undefined;
+        
+        // ==========================================
+        // الشريحة الأولى (الغلاف - مثل الصورة 2)
+        // ==========================================
+        const coverSlide = slides[0];
+        coverSlide.getBackground().setSolidFill('#ffffff'); // خلفية بيضاء
+        
+        // الشعار الأيسر (Americana Badge)
+        const logoLeft = coverSlide.insertShape(SlidesApp.ShapeType.ROUNDED_RECTANGLE, 30, 20, 160, 45);
+        logoLeft.getFill().setSolidFill('#ffffff');
+        logoLeft.getBorder().setWeight(2);
+        logoLeft.getBorder().getLineFill().setSolidFill('#dc2626');
+        const logoLeftTxt = logoLeft.getText();
+        logoLeftTxt.setText('AMERICANA');
+        logoLeftTxt.getTextStyle().setFontFamily('Arial').setFontSize(18).setBold(true).setForegroundColor('#dc2626');
+        
+        // الشعار الأيمن (ICAPP Badge)
+        const logoRight = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 520, 20, 170, 45);
+        logoRight.getFill().setTransparent();
+        logoRight.getBorder().setTransparent();
+        const logoRightTxt = logoRight.getText();
+        logoRightTxt.setText('ICAPP\nFRESHNESS DELIVERED DAILY');
+        logoRightTxt.getTextStyle().setFontFamily('Arial').setFontSize(14).setBold(true).setForegroundColor('#047857');
 
-        // الشريحة الثانية (شريحة الملاحظة التي ستتكرر)
+        // الشكل البيضاوي الأوسط (Oval / Capsule)
+        const centerOval = coverSlide.insertShape(SlidesApp.ShapeType.ELLIPSE, 130, 115, 460, 140);
+        centerOval.getFill().setSolidFill('#e2e8f0'); // رمادي فاتح
+        centerOval.getBorder().setTransparent();
+        const ovalText = centerOval.getText();
+        ovalText.setText('Safety Observation Report\nNear Miss');
+        ovalText.getTextStyle().setFontFamily('Arial').setFontSize(26).setBold(true).setForegroundColor('#000000');
+
+        // شارة إضافية تحت الشكل البيضاوي
+        const subBadge = coverSlide.insertShape(SlidesApp.ShapeType.ROUNDED_RECTANGLE, 290, 265, 140, 35);
+        subBadge.getFill().setSolidFill('#ffffff');
+        subBadge.getBorder().setWeight(1.5);
+        subBadge.getBorder().getLineFill().setSolidFill('#dc2626');
+        const subBadgeTxt = subBadge.getText();
+        subBadgeTxt.setText('AMERICANA');
+        subBadgeTxt.getTextStyle().setFontFamily('Arial').setFontSize(12).setBold(true).setForegroundColor('#dc2626');
+
+        // الصندوق الأيمن السفلي (أزرق - Department & Date)
+        const blueBox = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 470, 305, 240, 90);
+        blueBox.getFill().setSolidFill('#2563eb'); // أزرق ممتاز
+        blueBox.getBorder().setTransparent();
+        const blueBoxTxt = blueBox.getText();
+        blueBoxTxt.setText('Department : {{DEPARTMENT}}\n\nmonthly Report up to\n{{REPORT_DATE}}');
+        blueBoxTxt.getTextStyle().setFontFamily('Arial').setFontSize(13).setBold(true).setForegroundColor('#ffffff');
+
+        // شارة Safety اليسرى في الأسفل
+        const safetyBadge = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 10, 290, 70, 25);
+        safetyBadge.getFill().setSolidFill('#cbd5e1');
+        safetyBadge.getBorder().setTransparent();
+        const safetyTxt = safetyBadge.getText();
+        safetyTxt.setText('Safety');
+        safetyTxt.getTextStyle().setFontFamily('Arial').setFontSize(11).setBold(true).setForegroundColor('#000000');
+
+        // شارة First اليمنى في الأسفل
+        const firstBadge = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 640, 290, 70, 25);
+        firstBadge.getFill().setSolidFill('#cbd5e1');
+        firstBadge.getBorder().setTransparent();
+        const firstTxt = firstBadge.getText();
+        firstTxt.setText('First');
+        firstTxt.getTextStyle().setFontFamily('Arial').setFontSize(11).setBold(true).setForegroundColor('#000000');
+
+
+        // ==========================================
+        // الشريحة الثانية (تفاصيل الملاحظة - مثل الصورة 1)
+        // ==========================================
         const obsSlide = blankLayout ? presentation.appendSlide(blankLayout) : presentation.appendSlide();
-        
-        // شريط علوي أنيق
-        const headerBar = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 0, 0, 720, 50);
-        headerBar.getFill().setSolidFill('#0f172a');
-        headerBar.getBorder().setTransparent();
-        const headerText = headerBar.getText();
-        headerText.setText('ملاحظة رقم: {{OBS_NO}} ({{ISO_CODE}}) | {{OBS_DATE}}');
-        headerText.getTextStyle().setFontFamily('Cairo').setFontSize(14).setBold(true).setForegroundColor('#ffffff');
+        obsSlide.getBackground().setSolidFill('#ffffff');
 
-        // صندوق تفاصيل الملاحظة
-        const bodyBox = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 30, 70, 660, 290);
-        bodyBox.getFill().setSolidFill('#f8fafc');
-        bodyBox.getBorder().setWeight(1);
-        bodyBox.getBorder().getLineFill().setSolidFill('#cbd5e1');
-        
-        const bodyText = bodyBox.getText();
-        bodyText.setText(
-            'الموقع: {{OBS_LOCATION}} | الوردية: {{SHIFT}} | القائم بالمرور: {{OBSERVER}}\n' +
-            'نوع الملاحظة: {{OBS_TYPE}} | مستوى الخطر: {{RISK_LEVEL}} | الحالة: {{STATUS}}\n\n' +
-            'تفاصيل الملاحظة:\n{{OBS_DETAILS}}\n\n' +
-            'الإجراء التصحيحي المطلوب:\n{{CORRECTIVE_ACTION}}\n\n' +
-            'المسؤول: {{RESPONSIBLE}} | تاريخ الإنجاز المتوقع: {{TARGET_DATE}}'
+        // 1) الهيدر الأيمن: "وصف الملاحظة" (رمادي مع برقع أسود)
+        const rightHeader = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 360, 10, 345, 38);
+        rightHeader.getFill().setSolidFill('#94a3b8');
+        rightHeader.getBorder().setWeight(1.5);
+        rightHeader.getBorder().getLineFill().setSolidFill('#000000');
+        const rHeadTxt = rightHeader.getText();
+        rHeadTxt.setText('وصف الملاحظة');
+        rHeadTxt.getTextStyle().setFontFamily('Cairo').setFontSize(20).setBold(true).setForegroundColor('#000000');
+
+        // 2) الهيدر الأيسر: "الصورة التوضيحية" (رمادي مع برقع أسود)
+        const leftHeader = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 10, 10, 340, 38);
+        leftHeader.getFill().setSolidFill('#94a3b8');
+        leftHeader.getBorder().setWeight(1.5);
+        leftHeader.getBorder().getLineFill().setSolidFill('#000000');
+        const lHeadTxt = leftHeader.getText();
+        lHeadTxt.setText('الصورة التوضيحية');
+        lHeadTxt.getTextStyle().setFontFamily('Cairo').setFontSize(20).setBold(true).setForegroundColor('#000000');
+
+        // 3) الصندوق الأيمن لبيانات الملاحظة (خلفية سماوية #bfdbfe)
+        const rightBodyBox = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 360, 52, 345, 340);
+        rightBodyBox.getFill().setSolidFill('#bfdbfe'); // سماوي مثل الصورة
+        rightBodyBox.getBorder().setWeight(1.5);
+        rightBodyBox.getBorder().getLineFill().setSolidFill('#000000');
+
+        const bodyTxt = rightBodyBox.getText();
+        bodyTxt.setText(
+            'رقم الملاحظة : {{OBS_NO}}\n' +
+            'التاريخ : {{OBS_DATE}}\n' +
+            'المكان : {{OBS_LOCATION}}\n' +
+            'الملاحظة :\n' +
+            '{{OBS_DETAILS}}\n' +
+            'الإجراء التصحيحي :\n' +
+            '{{CORRECTIVE_ACTION}}\n' +
+            'مدى الخطورة : {{RISK_LEVEL}}\n' +
+            'تاريخ التنفيذ المقترح: {{TARGET_DATE}}\n' +
+            'المسئول عن التنفيذ : {{RESPONSIBLE}}\n' +
+            'الحالة: {{STATUS}}'
         );
-        bodyText.getTextStyle().setFontFamily('Cairo').setFontSize(13).setForegroundColor('#334155');
+        bodyTxt.getTextStyle().setFontFamily('Cairo').setFontSize(12).setBold(true).setForegroundColor('#000000');
 
-        // عنصر صورة الملاحظة (Shape مع عنوان OBS_IMAGE)
-        const imagePlaceholder = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 480, 130, 190, 190);
-        imagePlaceholder.setTitle('OBS_IMAGE');
-        imagePlaceholder.getFill().setSolidFill('#e2e8f0');
-        imagePlaceholder.getBorder().setWeight(1);
-        imagePlaceholder.getBorder().getLineFill().setSolidFill('#cbd5e1');
-        const imgText = imagePlaceholder.getText();
-        imgText.setText('صورة الملاحظة\n[OBS_IMAGE]');
-        imgText.getTextStyle().setFontFamily('Cairo').setFontSize(11).setForegroundColor('#64748b');
+        // 4) الجانب الأيسر للصور
+        const leftBodyBox = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 10, 52, 340, 340);
+        leftBodyBox.getFill().setTransparent();
+        leftBodyBox.getBorder().setWeight(1.5);
+        leftBodyBox.getBorder().getLineFill().setSolidFill('#000000');
 
+        // الصورة الأولى (الكبيرة العلوية)
+        const img1 = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 15, 57, 330, 160);
+        img1.setTitle('OBS_IMAGE');
+        img1.getFill().setSolidFill('#f1f5f9');
+        img1.getBorder().setWeight(1);
+        img1.getBorder().getLineFill().setSolidFill('#000000');
+        img1.getText().setText('صورة 1 [OBS_IMAGE]').getTextStyle().setFontSize(10).setForegroundColor('#64748b');
+
+        // الصورة الثانية (سفلية يسار)
+        const img2 = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 15, 222, 160, 165);
+        img2.setTitle('OBS_IMAGE_2');
+        img2.getFill().setSolidFill('#f1f5f9');
+        img2.getBorder().setWeight(1);
+        img2.getBorder().getLineFill().setSolidFill('#000000');
+        img2.getText().setText('صورة 2 [OBS_IMAGE_2]').getTextStyle().setFontSize(10).setForegroundColor('#64748b');
+
+        // الصورة الثالثة (سفلية يمين)
+        const img3 = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 185, 222, 160, 165);
+        img3.setTitle('OBS_IMAGE_3');
+        img3.getFill().setSolidFill('#f1f5f9');
+        img3.getBorder().setWeight(1);
+        img3.getBorder().getLineFill().setSolidFill('#000000');
+        img3.getText().setText('صورة 3 [OBS_IMAGE_3]').getTextStyle().setFontSize(10).setForegroundColor('#64748b');
+
+
+        // ==========================================
         // الشريحة الثالثة (النهاية)
+        // ==========================================
         const endSlide = blankLayout ? presentation.appendSlide(blankLayout) : presentation.appendSlide();
-        endSlide.getBackground().setSolidFill('#0f172a');
-        const endShape = endSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 50, 150, 620, 100);
-        endShape.getFill().setTransparent();
+        endSlide.getBackground().setSolidFill('#ffffff');
+        
+        const endShape = endSlide.insertShape(SlidesApp.ShapeType.ELLIPSE, 130, 120, 460, 140);
+        endShape.getFill().setSolidFill('#e2e8f0');
         endShape.getBorder().setTransparent();
         const endText = endShape.getText();
-        endText.setText('شكراً لالتزامكم بمعايير السلامة وصحة مكان العمل');
-        endText.getTextStyle().setFontFamily('Cairo').setFontSize(24).setBold(true).setForegroundColor('#38bdf8');
+        endText.setText('شكراً لالتزامكم بمعايير السلامة والصحة المهنية\nSafety First');
+        endText.getTextStyle().setFontFamily('Cairo').setFontSize(22).setBold(true).setForegroundColor('#000000');
 
         presentation.saveAndClose();
 
@@ -777,7 +866,7 @@ function createDefaultDailyObservationsPptTemplate() {
 
         return {
             success: true,
-            message: 'تم إنشاء القالب الافتراضي في Google Drive وتطبيقه بنجاح.',
+            message: 'تم إنشاء القالب المطابق للتصميم في Google Drive وتطبيقه بنجاح.',
             templateId: templateId,
             presentationUrl: presentation.getUrl()
         };
@@ -954,16 +1043,28 @@ function exportDailyObservationsPptReport(payload) {
                 '{{OBSERVER}}': String(obs.observerName || '')
             });
 
-            // الصورة
-            const imageUrl = String(obs.imageUrl || '').trim();
-            if (imageUrl) {
+            // الصور (حتى 3 صور للملاحظة)
+            var imageList = [];
+            if (obs.imageUrl) imageList.push(obs.imageUrl);
+            if (Array.isArray(obs.images)) {
+                obs.images.forEach(function(u){ if (u && imageList.indexOf(u) === -1) imageList.push(u); });
+            }
+            if (Array.isArray(obs.attachments)) {
+                obs.attachments.forEach(function(a){
+                    var u = (a && typeof a === 'object') ? (a.directLink || a.shareableLink || (a.cloudLink && a.cloudLink.url) || a.data || '') : String(a || '');
+                    if (u && imageList.indexOf(u) === -1) imageList.push(u);
+                });
+            }
+
+            var keys = ['OBS_IMAGE', 'OBS_IMAGE_2', 'OBS_IMAGE_3'];
+            for (var imgIdx = 0; imgIdx < imageList.length && imgIdx < keys.length; imgIdx++) {
                 try {
-                    const blob = _dob_getImageBlobFromUrl_(imageUrl);
+                    var blob = _dob_getImageBlobFromUrl_(imageList[imgIdx]);
                     if (blob) {
-                        _dob_replaceImagePlaceholder_(slide, blob);
+                        _dob_replaceImagePlaceholder_(slide, blob, keys[imgIdx]);
                     }
                 } catch (imgErr) {
-                    Logger.log('PPT Export: failed to insert image for obs ' + obsNo + ': ' + imgErr);
+                    Logger.log('PPT Export: failed to insert image ' + imgIdx + ' for obs ' + obsNo + ': ' + imgErr);
                 }
             }
         });
@@ -1082,8 +1183,9 @@ function _dob_getImageBlobFromUrl_(imageUrl) {
     return file ? file.getBlob() : null;
 }
 
-function _dob_replaceImagePlaceholder_(slide, imageBlob) {
+function _dob_replaceImagePlaceholder_(slide, imageBlob, placeholderKey) {
     if (!slide || !imageBlob) return;
+    const targetKey = placeholderKey || 'OBS_IMAGE';
 
     const elements = slide.getPageElements();
     let placeholder = null;
@@ -1092,14 +1194,14 @@ function _dob_replaceImagePlaceholder_(slide, imageBlob) {
         try {
             const title = String(el.getTitle && el.getTitle() ? el.getTitle() : '').trim();
             const desc = String(el.getDescription && el.getDescription() ? el.getDescription() : '').trim();
-            if (title === 'OBS_IMAGE' || desc === 'OBS_IMAGE' || title === '{{OBS_IMAGE}}' || desc === '{{OBS_IMAGE}}') {
+            if (title === targetKey || desc === targetKey || title === '{{' + targetKey + '}}' || desc === '{{' + targetKey + '}}') {
                 placeholder = el;
                 break;
             }
             // دعم placeholder كنص داخل shape
             if (el.getPageElementType && el.getPageElementType() === SlidesApp.PageElementType.SHAPE) {
                 const txt = el.asShape().getText().asString();
-                if (txt && (txt.indexOf('OBS_IMAGE') !== -1 || txt.indexOf('{{OBS_IMAGE}}') !== -1)) {
+                if (txt && (txt.indexOf(targetKey) !== -1 || txt.indexOf('{{' + targetKey + '}}') !== -1)) {
                     placeholder = el;
                     break;
                 }
