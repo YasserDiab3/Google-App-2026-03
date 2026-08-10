@@ -689,7 +689,7 @@ function setDailyObservationsPptTemplateId(templateIdOrPayload) {
 /**
  * بناء شريحة "الغلاف" (Cover Slide) بشكل احترافي مع دعم إضافة شعار الشركة تلقائياً
  */
-function _dob_buildCoverSlide_(coverSlide, department, dateLabel, logoUrl) {
+function _dob_buildCoverSlide_(coverSlide, department, dateLabel, logoUrl, isEnglish) {
     if (!coverSlide) return;
     try {
         coverSlide.getPageElements().forEach(function(el) { try { el.remove(); } catch(e) {} });
@@ -743,18 +743,18 @@ function _dob_buildCoverSlide_(coverSlide, department, dateLabel, logoUrl) {
             logoLeft.setDescription('COVER_LOGO');
             const logoLeftTxt = logoLeft.getText();
             logoLeftTxt.setText('AMERICANA');
-            logoLeftTxt.getTextStyle().setFontFamily('Cairo').setFontSize(18).setBold(true).setForegroundColor('#dc2626');
+            logoLeftTxt.getTextStyle().setFontFamily(isEnglish ? 'Arial' : 'Cairo').setFontSize(18).setBold(true).setForegroundColor('#dc2626');
             try { logoLeftTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER); } catch(e) {}
         }
 
         // 3) عنوان النظام الأيمن العلوي
-        const logoRight = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 450, 22, 235, 48);
+        const logoRight = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 440, 22, 245, 48);
         logoRight.getFill().setTransparent();
         logoRight.getBorder().setTransparent();
         const logoRightTxt = logoRight.getText();
-        logoRightTxt.setText('نظام السلامة والصحة المهنية\nHSE Management System');
-        logoRightTxt.getTextStyle().setFontFamily('Cairo').setFontSize(12).setBold(true).setForegroundColor('#047857');
-        try { logoRightTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT); } catch(e) {}
+        logoRightTxt.setText(isEnglish ? 'HSE Management System\nSafety & Health Department' : 'نظام السلامة والصحة المهنية\nHSE Management System');
+        logoRightTxt.getTextStyle().setFontFamily(isEnglish ? 'Arial' : 'Cairo').setFontSize(12).setBold(true).setForegroundColor('#047857');
+        try { logoRightTxt.getParagraphStyle().setParagraphAlignment(isEnglish ? SlidesApp.ParagraphAlignment.LEFT : SlidesApp.ParagraphAlignment.RIGHT); } catch(e) {}
 
         // 4) كارت العنوان الرئيسي في الأوسط (تصميم تنفيذي راقٍ)
         const centerCard = coverSlide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 60, 110, 600, 155);
@@ -762,32 +762,36 @@ function _dob_buildCoverSlide_(coverSlide, department, dateLabel, logoUrl) {
         centerCard.getBorder().setWeight(2);
         centerCard.getBorder().getLineFill().setSolidFill('#d97706');
         const cardText = centerCard.getText();
-        cardText.setText('تقرير الملاحظات والحيودات اليومية\nDaily Safety Observations Report\nمجموعة أمريكانا - Americana Group');
+        cardText.setText(isEnglish 
+            ? 'Daily Safety Observations Report\nMonthly Summary & Action Plan\nAmericana Group'
+            : 'تقرير الملاحظات والحيودات اليومية\nDaily Safety Observations Report\nمجموعة أمريكانا - Americana Group');
         
         try {
             cardText.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER);
             var cardParas = cardText.getParagraphs();
             if (cardParas.length >= 1) {
-                cardParas[0].getRange().getTextStyle().setFontFamily('Cairo').setFontSize(24).setBold(true).setForegroundColor('#ffffff');
+                cardParas[0].getRange().getTextStyle().setFontFamily(isEnglish ? 'Arial' : 'Cairo').setFontSize(24).setBold(true).setForegroundColor('#ffffff');
             }
             if (cardParas.length >= 2) {
                 cardParas[1].getRange().getTextStyle().setFontFamily('Arial').setFontSize(16).setBold(true).setForegroundColor('#fbbf24');
             }
             if (cardParas.length >= 3) {
-                cardParas[2].getRange().getTextStyle().setFontFamily('Cairo').setFontSize(13).setBold(false).setForegroundColor('#94a3b8');
+                cardParas[2].getRange().getTextStyle().setFontFamily(isEnglish ? 'Arial' : 'Cairo').setFontSize(13).setBold(false).setForegroundColor('#94a3b8');
             }
         } catch(pErr) {
-            cardText.getTextStyle().setFontFamily('Cairo').setFontSize(20).setBold(true).setForegroundColor('#ffffff');
+            cardText.getTextStyle().setFontFamily(isEnglish ? 'Arial' : 'Cairo').setFontSize(20).setBold(true).setForegroundColor('#ffffff');
         }
 
-        // 5) كارت بيانات الإدارة والتاريخ (أزرق ملكي بأسفل اليمين)
-        const blueBox = coverSlide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 410, 285, 250, 95);
+        // 5) كارت بيانات الإدارة والتاريخ
+        const blueBox = coverSlide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, isEnglish ? 60 : 410, 285, 250, 95);
         blueBox.getFill().setSolidFill('#1e40af');
         blueBox.getBorder().setWeight(1.5);
         blueBox.getBorder().getLineFill().setSolidFill('#3b82f6');
         const blueBoxTxt = blueBox.getText();
-        blueBoxTxt.setText(`الإدارة : ${department || '{{DEPARTMENT}}'}\n\nتاريخ التقرير : ${dateLabel || '{{REPORT_DATE}}'}`);
-        blueBoxTxt.getTextStyle().setFontFamily('Cairo').setFontSize(13).setBold(true).setForegroundColor('#ffffff');
+        blueBoxTxt.setText(isEnglish 
+            ? `Department : ${department || '{{DEPARTMENT}}'}\n\nReport Date : ${dateLabel || '{{REPORT_DATE}}'}`
+            : `الإدارة : ${department || '{{DEPARTMENT}}'}\n\nتاريخ التقرير : ${dateLabel || '{{REPORT_DATE}}'}`);
+        blueBoxTxt.getTextStyle().setFontFamily(isEnglish ? 'Arial' : 'Cairo').setFontSize(13).setBold(true).setForegroundColor('#ffffff');
         try {
             blueBoxTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER);
         } catch(e) {}
@@ -1377,11 +1381,17 @@ function exportDailyObservationsPptReport(payload) {
             } catch(csErr) {}
         }
 
-        // 1) تعبئة الغلاف من القالب مباشرة (بدون إعادة بناء — تعديلات المستخدم محفوظة)
+        const language = String(payload.language || 'ar').toLowerCase();
+        const isEnglish = (language === 'en');
+        const deptLabel = isEnglish ? _dob_translateToEnglish_(department) : department;
+
+        // 1) تعبئة الغلاف
+        _dob_buildCoverSlide_(coverSlide, deptLabel, dateLabel, logoUrl, isEnglish);
         _dob_replaceAllTextSafe_(presentation, coverSlide, {
-            '{{DEPARTMENT}}': department || '',
+            '{{DEPARTMENT}}': deptLabel || '',
             '{{REPORT_DATE}}': dateLabel || ''
-        });
+        }, isEnglish);
+
         // زرع الشعار في placeholder إن وُجد
         if (logoUrl) {
             try {
@@ -1392,7 +1402,7 @@ function exportDailyObservationsPptReport(payload) {
 
         // 2) تحديث شريحة النظرة العامة (الداشبورد 1)
         if (overviewSlide) {
-            _dob_buildOverviewSlide_(overviewSlide, observations, department, dateLabel);
+            _dob_buildOverviewSlide_(overviewSlide, observations, deptLabel, dateLabel);
         }
 
         // 3) تجهيز شرائح الملاحظات عبر تكرار نموذج الشريحة الأصلي لكل ملاحظة مستقلة
@@ -1401,24 +1411,34 @@ function exportDailyObservationsPptReport(payload) {
             const slide = itemTemplateSlide.duplicate();
             const obsNo = String(idx + 1);
             const obsDate = _dob_formatDateTimeSafe_(obs.date, tz);
-            const location = _dob_joinLocation_(obs.siteName, obs.locationName);
             const targetDate = _dob_formatDateSafe_(obs.expectedCompletionDate, tz);
+
+            var details = isEnglish ? _dob_translateToEnglish_(obs.details) : String(obs.details || '');
+            var correctiveAction = isEnglish ? _dob_translateToEnglish_(obs.correctiveAction) : String(obs.correctiveAction || '');
+            var riskLevel = isEnglish ? _dob_translateToEnglish_(obs.riskLevel) : String(obs.riskLevel || '');
+            var responsible = isEnglish ? _dob_translateToEnglish_(obs.responsibleDepartment) : String(obs.responsibleDepartment || '');
+            var status = isEnglish ? _dob_translateToEnglish_(obs.status) : String(obs.status || '');
+            var shift = isEnglish ? _dob_translateToEnglish_(obs.shift) : String(obs.shift || '');
+            var obsType = isEnglish ? _dob_translateToEnglish_(obs.observationType) : String(obs.observationType || '');
+            var siteName = isEnglish ? _dob_translateToEnglish_(obs.siteName) : String(obs.siteName || '');
+            var locationName = isEnglish ? _dob_translateToEnglish_(obs.locationName) : String(obs.locationName || '');
+            var location = _dob_joinLocation_(siteName, locationName);
 
             _dob_replaceAllTextSafe_(presentation, slide, {
                 '{{OBS_NO}}': obsNo,
                 '{{ISO_CODE}}': String(obs.isoCode || ''),
                 '{{OBS_DATE}}': obsDate,
                 '{{OBS_LOCATION}}': location,
-                '{{OBS_TYPE}}': String(obs.observationType || ''),
-                '{{OBS_DETAILS}}': String(obs.details || ''),
-                '{{CORRECTIVE_ACTION}}': String(obs.correctiveAction || ''),
-                '{{RISK_LEVEL}}': String(obs.riskLevel || ''),
+                '{{OBS_TYPE}}': obsType,
+                '{{OBS_DETAILS}}': details,
+                '{{CORRECTIVE_ACTION}}': correctiveAction,
+                '{{RISK_LEVEL}}': riskLevel,
                 '{{TARGET_DATE}}': targetDate,
-                '{{RESPONSIBLE}}': String(obs.responsibleDepartment || ''),
-                '{{STATUS}}': String(obs.status || ''),
-                '{{SHIFT}}': String(obs.shift || ''),
+                '{{RESPONSIBLE}}': responsible,
+                '{{STATUS}}': status,
+                '{{SHIFT}}': shift,
                 '{{OBSERVER}}': String(obs.observerName || '')
-            });
+            }, isEnglish);
 
             // الصورة الرئيسية للملاحظة (جلب فوري ومؤطّر يمنع التأخير وانقضاء المهلة)
             var primaryImageUrl = obs.imageUrl || obs.image || obs.photo || obs.fileUrl || obs.picture || '';
@@ -1512,13 +1532,61 @@ function exportDailyObservationsPptReport(payload) {
     }
 }
 
-function _dob_replaceAllTextSafe_(presentation, slide, replacements) {
+function _dob_translateToEnglish_(text) {
+    if (!text || typeof text !== 'string') return '';
+    text = text.trim();
+    if (!text) return '';
+
+    const dictionary = {
+        'مفتوح': 'Open',
+        'مغلق': 'Closed',
+        'قيد التنفيذ': 'In Progress',
+        'تحت المراجعة': 'Under Review',
+        'منخفض': 'Low',
+        'متوسط': 'Medium',
+        'عالي': 'High',
+        'حرج': 'Critical',
+        'الأولى': '1st Shift',
+        'الثانية': '2nd Shift',
+        'الثالثة': '3rd Shift',
+        'الاولى': '1st Shift',
+        'إدارة الخدمات': 'Services Dept.',
+        'إدارة المخازن': 'Warehouse Dept.',
+        'إدارة الصيانة': 'Maintenance Dept.',
+        'إدارة الإنتاج': 'Production Dept.',
+        'إدارة السلامة والصحة المهنية': 'HSE Dept.',
+        'إدارة الجودة': 'Quality Dept.',
+        'رقم الملاحظة': 'Observation No.',
+        'التاريخ': 'Date',
+        'المكان': 'Location',
+        'الملاحظة': 'Observation Details',
+        'الإجراء التصحيحي': 'Corrective Action',
+        'مدى الخطورة': 'Risk Level',
+        'تاريخ التنفيذ المقترح': 'Target Date',
+        'المسئول عن التنفيذ': 'Responsible Dept.',
+        'الحالة': 'Status',
+        'وصف الملاحظة': 'Observation Description',
+        'الصورة التوضيحية': 'Photo / Evidence'
+    };
+
+    if (dictionary[text]) return dictionary[text];
+
+    try {
+        if (typeof LanguageApp !== 'undefined' && LanguageApp.translate) {
+            return LanguageApp.translate(text, 'ar', 'en');
+        }
+    } catch(e) {
+        Logger.log('LanguageApp translation error for "' + text + '": ' + e);
+    }
+    return text;
+}
+
+function _dob_replaceAllTextSafe_(presentation, slide, replacements, isEnglish) {
     if (!replacements) return;
-    const rlm = '\u200F'; // Unicode Right-to-Left Mark لفرض الاتجاه العربي يميناً
+    const rlm = isEnglish ? '' : '\u200F'; // Unicode Right-to-Left Mark لفرض الاتجاه العربي يميناً
     Object.keys(replacements).forEach(function (key) {
         let rawVal = replacements[key] === null || replacements[key] === undefined ? '' : String(replacements[key]).trim();
-        // إضافة وسم RLM لمنع تداخل الإنجليزية والأرقام مع الاتجاه العربي
-        const value = rawVal ? (rlm + rawVal + rlm) : '';
+        const value = rawVal ? (isEnglish ? rawVal : (rlm + rawVal + rlm)) : '';
         try {
             if (slide && typeof slide.replaceAllText === 'function') {
                 slide.replaceAllText(key, value);
@@ -1530,15 +1598,19 @@ function _dob_replaceAllTextSafe_(presentation, slide, replacements) {
         }
     });
 
-    // ✅ إعادة ضبط وتثبيت اتجاه النص والمحاذاة لليمين تلقائياً بعد استبدال القيم
     if (slide && typeof slide.getShapes === 'function') {
         try {
             var shapes = slide.getShapes();
-            var redLabels = [
+            var redLabels = isEnglish ? [
+                'Observation No.', 'Date', 'Location', 'Observation Details',
+                'Corrective Action', 'Risk Level', 'Target Date',
+                'Responsible Dept.', 'Status'
+            ] : [
                 'رقم الملاحظة', 'التاريخ', 'المكان', 'الملاحظة',
                 'الإجراء التصحيحي', 'مدى الخطورة', 'تاريخ التنفيذ المقترح',
                 'المسئول عن التنفيذ', 'الحالة'
             ];
+
             for (var i = 0; i < shapes.length; i++) {
                 var sh = shapes[i];
                 if (!sh || !sh.getText) continue;
@@ -1546,33 +1618,62 @@ function _dob_replaceAllTextSafe_(presentation, slide, replacements) {
                 var str = txt.asString();
                 if (!str) continue;
 
+                if (isEnglish) {
+                    var labelMap = {
+                        'رقم الملاحظة': 'Observation No.',
+                        'التاريخ': 'Date',
+                        'المكان': 'Location',
+                        'الملاحظة': 'Observation Details',
+                        'الإجراء التصحيحي': 'Corrective Action',
+                        'مدى الخطورة': 'Risk Level',
+                        'تاريخ التنفيذ المقترح': 'Target Date',
+                        'المسئول عن التنفيذ': 'Responsible Dept.',
+                        'الحالة': 'Status',
+                        'وصف الملاحظة': 'Observation Description',
+                        'الصورة التوضيحية': 'Photo / Evidence'
+                    };
+                    Object.keys(labelMap).forEach(function(arK) {
+                        if (str.indexOf(arK) !== -1) {
+                            try {
+                                if (slide && typeof slide.replaceAllText === 'function') {
+                                    slide.replaceAllText(arK, labelMap[arK]);
+                                }
+                            } catch(e) {}
+                        }
+                    });
+                    txt = sh.getText();
+                    str = txt.asString();
+                }
+
                 var isObsBox = redLabels.some(function(lbl) { return str.indexOf(lbl) !== -1; });
                 if (isObsBox) {
                     try {
-                        txt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT);
+                        var align = isEnglish ? SlidesApp.ParagraphAlignment.LEFT : SlidesApp.ParagraphAlignment.RIGHT;
+                        txt.getParagraphStyle().setParagraphAlignment(align);
                         var paras = txt.getParagraphs();
                         for (var p = 0; p < paras.length; p++) {
-                            paras[p].getRange().getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT);
+                            paras[p].getRange().getParagraphStyle().setParagraphAlignment(align);
                         }
                     } catch (_aErr) {}
 
                     redLabels.forEach(function(lbl) {
-                        try {
-                            // تصحيح انحراف الأسطر المعكوسة تلقائياً: إذا كان النص يظهر بالشكل [القيم] : [العنوان]
-                            var curTxt = txt.asString();
-                            var revRegex = new RegExp('^([^\\n:]+)\\s*:\\s*(' + lbl + ')\\s*$', 'gm');
-                            if (revRegex.test(curTxt)) {
-                                var fixedTxt = curTxt.replace(revRegex, rlm + '$2 : ' + rlm + '$1');
-                                txt.setText(fixedTxt);
-                            }
-                        } catch(_revErr) {}
+                        if (!isEnglish) {
+                            try {
+                                var curTxt = txt.asString();
+                                var revRegex = new RegExp('^([^\\n:]+)\\s*:\\s*(' + lbl + ')\\s*$', 'gm');
+                                if (revRegex.test(curTxt)) {
+                                    var fixedTxt = curTxt.replace(revRegex, rlm + '$2 : ' + rlm + '$1');
+                                    txt.setText(fixedTxt);
+                                }
+                            } catch(_revErr) {}
+                        }
 
                         try {
                             const matches = txt.find(lbl);
                             if (matches && matches.length) {
                                 matches.forEach(function(m) {
                                     m.getTextStyle()
-                                        .setFontFamily('Cairo')
+                                        .setFontFamily(isEnglish ? 'Arial' : 'Cairo')
                                         .setBold(true)
                                         .setUnderline(true)
                                         .setForegroundColor('#dc2626');

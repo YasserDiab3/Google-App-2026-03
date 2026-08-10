@@ -7629,12 +7629,19 @@ const DailyObservations = {
                         ` : ''}
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">الإدارة *</label>
                             <select id="dailyobs-ppt-department" class="form-input">
                                 <option value="">اختر الإدارة</option>
                                 ${departmentOptions.map((d) => `<option value="${Utils.escapeHTML(d)}">${Utils.escapeHTML(d)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">لغة التقرير (Language) *</label>
+                            <select id="dailyobs-ppt-language" class="form-input font-bold text-blue-800">
+                                <option value="ar" selected>🇪🇬 العربية (Arabic - AR)</option>
+                                <option value="en">🇬🇧 English (English - EN)</option>
                             </select>
                         </div>
                         <div>
@@ -7658,7 +7665,7 @@ const DailyObservations = {
                     <button type="button" class="btn-secondary" id="dailyobs-ppt-cancel-btn">إلغاء</button>
                     <button type="button" class="btn-primary" id="dailyobs-ppt-export-btn">
                         <i class="fas fa-download ml-2"></i>
-                        تصدير
+                        تصدير التقرير
                     </button>
                 </div>
             </div>
@@ -7687,13 +7694,14 @@ const DailyObservations = {
                 return;
             }
 
+            const lang = modal.querySelector('#dailyobs-ppt-language')?.value || 'ar';
             const reportDate = modal.querySelector('#dailyobs-ppt-report-date')?.value || '';
             const fromDate = modal.querySelector('#dailyobs-ppt-from-date')?.value || '';
             const toDate = modal.querySelector('#dailyobs-ppt-to-date')?.value || '';
 
-            // إغلاق نافذة التصدير فوراً قبل بدء العملية — المستخدم يرى فقط Loading
+            // إغلاق نافذة التصدير فوراً قبل بدء العملية
             close();
-            await this.exportPptReport({ department: dept, reportDate, fromDate, toDate });
+            await this.exportPptReport({ department: dept, language: lang, reportDate, fromDate, toDate });
         });
     },
 
@@ -7764,7 +7772,7 @@ const DailyObservations = {
         }
     },
 
-    async exportPptReport({ department, reportDate, fromDate, toDate }) {
+    async exportPptReport({ department, language = 'ar', reportDate, fromDate, toDate }) {
         try {
             if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
                 Notification.error('Google Apps Script غير مفعّل. يرجى تفعيله في الإعدادات أولاً.');
@@ -7806,6 +7814,7 @@ const DailyObservations = {
 
             const payload = {
                 department: dept,
+                language: String(language || 'ar').toLowerCase(),
                 reportDate: reportDate ? new Date(reportDate).toISOString() : new Date().toISOString(),
                 fromDate: fromDate ? new Date(fromDate).toISOString() : '',
                 toDate: toDate ? new Date(toDate).toISOString() : '',

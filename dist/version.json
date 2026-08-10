@@ -1,11 +1,11 @@
 {
-  "version": "1.0.971",
+  "version": "1.0.973",
   "highlights": {
     "ar": [
-      "إعادة تصميم نافذة نجاح التصدير: تصميم عصري زجاجي فائق الأناقة، أزرار تفاعلية بمتدرج ألوان سلس، وإلغاء أطر المتصفح الافتراضية حول الأزرار والإغلاق."
+      "تصدير التقرير باللغتين (AR/EN): ميزة اختيار لغة التقرير (عربي / إنجليزي) عند تصدير PPT مع ترجمة فورية كاملة للنصوص والعناوين والحالات بالإنجليزية بتنسيق LTR."
     ],
     "en": [
-      "Redesigned Export Success Modal: premium modern glassmorphic card design with vibrant gradient buttons and clean zero-border controls."
+      "Bilingual PPT Export (AR/EN): added language selection for PPT report export with automatic English translation for fields, statuses, risk levels, and LTR text alignment."
     ]
   }
 }
