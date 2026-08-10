@@ -7956,62 +7956,32 @@ const DailyObservations = {
             }
             return;
         }
-        // محاولة الحصول على Template ID الحالي
-        let currentTemplateId = null;
-        let currentTemplateInfo = null;
-        
-        try {
-            const templateResult = await GoogleIntegration.sendToAppsScript('getDailyObservationsPptTemplateId', {});
-            if (templateResult && templateResult.success) {
-                currentTemplateId = templateResult.templateId;
-                currentTemplateInfo = {
-                    fileName: templateResult.fileName || '',
-                    fileUrl: templateResult.fileUrl || ''
-                };
-            }
-        } catch (e) {
-            // تجاهل الخطأ - يعني أن Template ID غير موجود
-        }
 
+        // إنشاء وعرض النافذة فوراً بدون أي تأخير شبكة (0ms responsiveness)
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay active';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
-                        <i class="fas fa-file-powerpoint ml-2"></i>
+                        <i class="fas fa-file-powerpoint ml-2 text-orange-500"></i>
                         إعداد Template ID لتصدير PPT
                     </h2>
-                    <button class="modal-close" aria-label="إغلاق">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    <button class="modal-close" aria-label="إغلاق">&times;</button>
                 </div>
                 <div class="modal-body space-y-4">
                     <div class="bg-yellow-50 border border-yellow-200 rounded p-4">
-                        <p class="text-sm text-yellow-800 mb-2">
-                            <strong>ملاحظة مهمة:</strong> يجب إعداد ملف Google Slides Template قبل تصدير التقارير.
+                        <p class="text-sm text-yellow-800 mb-1">
+                            <strong>ملاحظة مهمة:</strong> يتم توليد التقارير وتصميمها تلقائياً بدون الحاجة لإعداد أي قالب.
                         </p>
-                        <p class="text-sm text-yellow-700">
-                            يجب أن يحتوي Template على 3 شرائح على الأقل: شريحة الغلاف، شريحة الملاحظة (سيتم تكرارها)، وشريحة ثابتة.
+                        <p class="text-xs text-yellow-700">
+                            يمكنك تخصيص القالب الخاص بشركتك بإدخال File ID الخاص بملف Google Slides الخاص بك أدناه.
                         </p>
                     </div>
 
-                    ${currentTemplateId ? `
-                        <div class="bg-green-50 border border-green-200 rounded p-4">
-                            <p class="text-sm text-green-800 mb-2">
-                                <strong>Template ID الحالي:</strong>
-                            </p>
-                            <p class="text-sm font-mono text-green-700 mb-2">${Utils.escapeHTML(currentTemplateId)}</p>
-                            ${currentTemplateInfo.fileName ? `<p class="text-sm text-green-700">الملف: <strong>${Utils.escapeHTML(currentTemplateInfo.fileName)}</strong></p>` : ''}
-                            ${currentTemplateInfo.fileUrl ? `<p class="text-sm mt-2"><a href="${Utils.escapeHTML(currentTemplateInfo.fileUrl)}" target="_blank" class="text-blue-600 hover:underline">فتح الملف في Google Slides</a></p>` : ''}
-                        </div>
-                    ` : `
-                        <div class="bg-red-50 border border-red-200 rounded p-4">
-                            <p class="text-sm text-red-800">
-                                <strong>لم يتم ضبط Template ID بعد.</strong> يرجى إدخال File ID لملف Google Slides Template أدناه.
-                            </p>
-                        </div>
-                    `}
+                    <div id="ppt-template-status-container" class="bg-gray-50 border border-gray-200 rounded p-3 text-sm text-gray-600 flex items-center justify-between">
+                        <span><i class="fas fa-spinner fa-spin ml-2 text-blue-600"></i>جاري فحص حالة القالب الحالي...</span>
+                    </div>
 
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
@@ -8023,7 +7993,7 @@ const DailyObservations = {
                             id="ppt-template-id-input" 
                             class="form-input font-mono text-sm" 
                             placeholder="أدخل File ID من رابط Google Slides"
-                            value="${currentTemplateId ? Utils.escapeHTML(currentTemplateId) : ''}"
+                            value=""
                         >
                         <p class="text-xs text-gray-500 mt-2">
                             <i class="fas fa-info-circle ml-1"></i>
@@ -8037,8 +8007,7 @@ const DailyObservations = {
                         <ol class="text-sm text-blue-800 space-y-1 list-decimal list-inside">
                             <li>أنشئ ملف Google Slides جديد</li>
                             <li>الشريحة الأولى: شريحة الغلاف تحتوي على {{DEPARTMENT}} و {{REPORT_DATE}}</li>
-                            <li>الشريحة الثانية: شريحة الملاحظة تحتوي على جميع Placeholders مثل {{OBS_NO}}, {{OBS_DATE}}, {{OBS_DETAILS}}, إلخ</li>
-                            <li>الشريحة الثالثة: شريحة ثابتة (اختياري)</li>
+                            <li>الشريحة الثانية: شريحة الملاحظة تحتوي على Placeholders مثل {{OBS_NO}}, {{OBS_DATE}}, {{OBS_DETAILS}}, إلخ</li>
                             <li>انسخ File ID من رابط الملف وأدخله أعلاه</li>
                         </ol>
                     </div>
@@ -8049,12 +8018,10 @@ const DailyObservations = {
                             <i class="fas fa-magic ml-1"></i>
                             إنشاء آلي
                         </button>
-                        ${currentTemplateId ? `
-                            <button type="button" class="btn-secondary bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-2 rounded shadow-sm" id="ppt-template-id-test-btn">
-                                <i class="fas fa-check-circle ml-1"></i>
-                                اختبار القالب
-                            </button>
-                        ` : ''}
+                        <button type="button" class="btn-secondary bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-2 rounded shadow-sm hidden" id="ppt-template-id-test-btn">
+                            <i class="fas fa-check-circle ml-1"></i>
+                            اختبار القالب
+                        </button>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         <button type="button" class="btn-secondary text-xs px-4 py-2 rounded" id="ppt-template-id-cancel-btn">إلغاء</button>
@@ -8072,6 +8039,44 @@ const DailyObservations = {
         const close = () => modal.remove();
         modal.querySelector('.modal-close')?.addEventListener('click', close);
         modal.querySelector('#ppt-template-id-cancel-btn')?.addEventListener('click', close);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) close();
+        });
+
+        // جلب حالة القالب الحالي في الخلفية دون تعطيل ظهور النافذة
+        (async () => {
+            try {
+                const templateResult = await GoogleIntegration.sendToAppsScript('getDailyObservationsPptTemplateId', {});
+                const statusContainer = modal.querySelector('#ppt-template-status-container');
+                const inputEl = modal.querySelector('#ppt-template-id-input');
+                const testBtn = modal.querySelector('#ppt-template-id-test-btn');
+
+                if (templateResult && templateResult.success && templateResult.templateId) {
+                    if (inputEl) inputEl.value = templateResult.templateId;
+                    if (testBtn) testBtn.classList.remove('hidden');
+                    if (statusContainer) {
+                        statusContainer.className = 'bg-green-50 border border-green-200 rounded p-3 text-sm text-green-800';
+                        statusContainer.innerHTML = `
+                            <div>
+                                <strong>Template ID الحالي:</strong>
+                                <span class="font-mono text-xs block text-green-700 mt-1">${Utils.escapeHTML(templateResult.templateId)}</span>
+                                ${templateResult.fileName ? `<span class="block text-xs mt-1">الملف: <strong>${Utils.escapeHTML(templateResult.fileName)}</strong></span>` : ''}
+                                ${templateResult.fileUrl ? `<a href="${Utils.escapeHTML(templateResult.fileUrl)}" target="_blank" class="text-xs text-blue-600 hover:underline mt-1 inline-block">فتح الملف في Google Slides</a>` : ''}
+                            </div>
+                        `;
+                    }
+                } else if (statusContainer) {
+                    statusContainer.className = 'bg-gray-50 border border-gray-200 rounded p-3 text-xs text-gray-600';
+                    statusContainer.innerHTML = `<span><i class="fas fa-info-circle ml-1 text-blue-500"></i>يتم استخدام القالب الموّحد التلقائي حالياً (يمكنك إدخال ID خاص أدناه).</span>`;
+                }
+            } catch (e) {
+                const statusContainer = modal.querySelector('#ppt-template-status-container');
+                if (statusContainer) {
+                    statusContainer.className = 'bg-gray-50 border border-gray-200 rounded p-3 text-xs text-gray-600';
+                    statusContainer.innerHTML = `<span><i class="fas fa-info-circle ml-1 text-blue-500"></i>يتم استخدام القالب الموّحد التلقائي حالياً.</span>`;
+                }
+            }
+        })();
         modal.addEventListener('click', (e) => {
             if (e.target === modal) close();
         });
