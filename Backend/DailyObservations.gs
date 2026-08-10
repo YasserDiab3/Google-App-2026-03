@@ -896,35 +896,16 @@ function createDefaultDailyObservationsPptTemplate() {
             }
         } catch (obsErr) { /* ignore */ }
 
-        // 4) الجانب الأيسر للصور
+        // 4) الجانب الأيسر: صورة واحدة كبيرة تشمل كل الجانب الأيسر (مطابق للصورة تماماً)
         const leftBodyBox = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 10, 52, 340, 340);
-        leftBodyBox.getFill().setTransparent();
+        leftBodyBox.getFill().setSolidFill('#f8fafc');
         leftBodyBox.getBorder().setWeight(1.5);
         leftBodyBox.getBorder().getLineFill().setSolidFill('#000000');
-
-        // الصورة الأولى (الكبيرة العلوية)
-        const img1 = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 15, 57, 330, 160);
-        img1.setTitle('OBS_IMAGE');
-        img1.getFill().setSolidFill('#f1f5f9');
-        img1.getBorder().setWeight(1);
-        img1.getBorder().getLineFill().setSolidFill('#000000');
-        img1.getText().setText('صورة 1 [OBS_IMAGE]').getTextStyle().setFontSize(10).setForegroundColor('#64748b');
-
-        // الصورة الثانية (سفلية يسار)
-        const img2 = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 15, 222, 160, 165);
-        img2.setTitle('OBS_IMAGE_2');
-        img2.getFill().setSolidFill('#f1f5f9');
-        img2.getBorder().setWeight(1);
-        img2.getBorder().getLineFill().setSolidFill('#000000');
-        img2.getText().setText('صورة 2 [OBS_IMAGE_2]').getTextStyle().setFontSize(10).setForegroundColor('#64748b');
-
-        // الصورة الثالثة (سفلية يمين)
-        const img3 = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 185, 222, 160, 165);
-        img3.setTitle('OBS_IMAGE_3');
-        img3.getFill().setSolidFill('#f1f5f9');
-        img3.getBorder().setWeight(1);
-        img3.getBorder().getLineFill().setSolidFill('#000000');
-        img3.getText().setText('صورة 3 [OBS_IMAGE_3]').getTextStyle().setFontSize(10).setForegroundColor('#64748b');
+        leftBodyBox.setTitle('OBS_IMAGE');
+        leftBodyBox.setDescription('OBS_IMAGE');
+        const leftTxt = leftBodyBox.getText();
+        leftTxt.setText('صورة الملاحظة\n[OBS_IMAGE]');
+        leftTxt.getTextStyle().setFontFamily('Cairo').setFontSize(14).setForegroundColor('#94a3b8').setBold(true);
 
 
         // ==========================================
