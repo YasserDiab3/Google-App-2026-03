@@ -1,11 +1,11 @@
 {
-  "version": "1.0.973",
+  "version": "1.0.975",
   "highlights": {
     "ar": [
-      "تصدير التقرير باللغتين (AR/EN): ميزة اختيار لغة التقرير (عربي / إنجليزي) عند تصدير PPT مع ترجمة فورية كاملة للنصوص والعناوين والحالات بالإنجليزية بتنسيق LTR."
+      "إعادة تصميم نافذة إعداد التقرير (PPT Modal): توزيع مريح واسع من عمودين يمنع التداخل أو الازدحام مع تصميم عصري فاخر ورسومات واضحة."
     ],
     "en": [
-      "Bilingual PPT Export (AR/EN): added language selection for PPT report export with automatic English translation for fields, statuses, risk levels, and LTR text alignment."
+      "Redesigned PPT Export Modal: uncrowded 2-column spacious layout preventing field overlaps with modern glassmorphism UI."
     ]
   }
 }

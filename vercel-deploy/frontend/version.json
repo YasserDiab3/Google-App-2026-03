@@ -1,11 +1,11 @@
 {
-  "version": "1.0.973",
+  "version": "1.0.975",
   "highlights": {
     "ar": [
-      "إعادة تصميم نافذة نجاح التصدير: تصميم عصري زجاجي فائق الأناقة، أزرار تفاعلية بمتدرج ألوان سلس، وإلغاء أطر المتصفح الافتراضية حول الأزرار والإغلاق."
+      "إعادة تصميم نافذة إعداد التقرير (PPT Modal): توزيع مريح واسع من عمودين يمنع التداخل أو الازدحام مع تصميم عصري فاخر ورسومات واضحة."
     ],
     "en": [
-      "Redesigned Export Success Modal: premium modern glassmorphic card design with vibrant gradient buttons and clean zero-border controls."
+      "Redesigned PPT Export Modal: uncrowded 2-column spacious layout preventing field overlaps with modern glassmorphism UI."
     ]
   }
 }
