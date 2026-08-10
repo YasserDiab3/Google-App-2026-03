@@ -1,11 +1,11 @@
 {
-  "version": "1.0.969",
+  "version": "1.0.971",
   "highlights": {
     "ar": [
-      "تصدير التقارير بالخلفية: إمكانية التصفح والعمل الحر الكامل على النظام أثناء تصدير تقارير PPT مع كارت عائم لمتابعة التصدير ومعالجة %NaN."
+      "إعادة تصميم نافذة نجاح التصدير: تصميم عصري زجاجي فائق الأناقة، أزرار تفاعلية بمتدرج ألوان سلس، وإلغاء أطر المتصفح الافتراضية حول الأزرار والإغلاق."
     ],
     "en": [
-      "Background Export: non-blocking background PPT export with floating task card allowing full uninterrupted application usage during generation."
+      "Redesigned Export Success Modal: premium modern glassmorphic card design with vibrant gradient buttons and clean zero-border controls."
     ]
   }
 }

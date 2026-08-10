@@ -7885,30 +7885,35 @@ const DailyObservations = {
         const modal = document.createElement('div');
         modal.id = 'ppt-export-success-modal';
         modal.className = 'modal-overlay active';
-        modal.style.zIndex = '99999';
+        modal.style.cssText = 'position: fixed; inset: 0; z-index: 999999; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); animation: fadeIn 0.2s ease;';
 
         const dUrl = downloadUrl || viewUrl || '';
         const vUrl = viewUrl || downloadUrl || '';
 
         modal.innerHTML = `
-            <div class="modal-container max-w-md text-center p-6 bg-white rounded-lg shadow-xl relative">
-                <button type="button" class="absolute top-3 left-3 text-gray-400 hover:text-gray-600 text-xl modal-close-btn">&times;</button>
-                <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+            <div style="max-width: 440px; width: 92%; background: #ffffff; border-radius: 24px; padding: 32px 24px 24px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid rgba(226, 232, 240, 0.8); position: relative;">
+                <button type="button" class="modal-close-btn" style="position: absolute; top: 16px; left: 16px; width: 36px; height: 36px; border-radius: 50%; border: none; outline: none; background: #f1f5f9; color: #64748b; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#64748b';">&times;</button>
+                
+                <div style="width: 72px; height: 72px; background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%); border-radius: 20px; color: #2563eb; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 32px; box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.25);">
                     <i class="fas fa-file-powerpoint"></i>
                 </div>
-                <h3 class="text-xl font-bold text-gray-900 mb-2">تم إنشاء تقرير PPTX بنجاح!</h3>
-                <p class="text-sm text-gray-600 mb-6">
-                    تم إنشاء التقرير الخاص بـ <strong>${Utils.escapeHTML(department || '')}</strong> كاملاً بالداشبورد الإحصائي والملخص التنفيذي.
+
+                <h3 style="font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 8px; font-family: Cairo, Tahoma, sans-serif;">تم إنشاء تقرير PPTX بنجاح!</h3>
+                
+                <p style="font-size: 14px; color: #475569; line-height: 1.6; margin-bottom: 24px; font-family: Cairo, Tahoma, sans-serif;">
+                    تم إنشاء وتجهيز التقرير الخاص بـ <strong style="color: #1e40af;">${Utils.escapeHTML(department || '')}</strong> كاملاً بالداشبورد الإحصائي والملخص التنفيذي.
                 </p>
-                <div class="space-y-3">
-                    ${dUrl ? `<a href="${Utils.escapeHTML(dUrl)}" download target="_blank" class="btn-primary w-full flex items-center justify-center py-3 rounded-lg font-bold shadow text-white bg-blue-600 hover:bg-blue-700">
-                        <i class="fas fa-download ml-2 text-lg"></i> تنزيل ملف التقرير (PPTX)
+
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    ${dUrl ? `<a href="${Utils.escapeHTML(dUrl)}" download target="_blank" style="display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 14px 20px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; font-weight: 700; font-size: 15px; border-radius: 14px; border: none; outline: none; text-decoration: none; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35); transition: all 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(37, 99, 235, 0.5)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 14px rgba(37, 99, 235, 0.35)';">
+                        <i class="fas fa-download" style="font-size: 18px;"></i> تنزيل ملف التقرير (PPTX)
                     </a>` : ''}
-                    ${vUrl ? `<a href="${Utils.escapeHTML(vUrl)}" target="_blank" class="btn-secondary w-full flex items-center justify-center py-2.5 rounded-lg text-sm text-gray-700 bg-gray-100 hover:bg-gray-200">
-                        <i class="fas fa-external-link-alt ml-2"></i> معاينة العرض في Google Slides
+                    ${vUrl ? `<a href="${Utils.escapeHTML(vUrl)}" target="_blank" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px 18px; background: #f8fafc; color: #334155; font-weight: 600; font-size: 14px; border-radius: 14px; border: 1px solid #cbd5e1; outline: none; text-decoration: none; transition: all 0.2s ease;" onmouseover="this.style.background='#f1f5f9'; this.style.color='#0f172a'; this.style.borderColor='#94a3b8';" onmouseout="this.style.background='#f8fafc'; this.style.color='#334155'; this.style.borderColor='#cbd5e1';">
+                        <i class="fas fa-external-link-alt"></i> معاينة العرض في Google Slides
                     </a>` : ''}
                 </div>
-                <button type="button" class="mt-4 text-xs text-gray-500 hover:text-gray-800 modal-close-btn">إغلاق النافذة</button>
+
+                <button type="button" class="modal-close-btn" style="background: transparent; border: none; outline: none; color: #64748b; font-size: 13px; font-weight: 600; cursor: pointer; padding: 10px 16px; margin-top: 14px; transition: color 0.2s; font-family: Cairo, Tahoma, sans-serif;" onmouseover="this.style.color='#0f172a';" onmouseout="this.style.color='#64748b';">إغلاق النافذة</button>
             </div>
         `;
 
