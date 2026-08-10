@@ -687,6 +687,241 @@ function setDailyObservationsPptTemplateId(templateIdOrPayload) {
 }
 
 /**
+ * بناء شريحة "نظرة عامة على التقرير" (الداشبورد الإحصائي الأول)
+ */
+function _dob_buildOverviewSlide_(slide, observations, department, reportDateStr) {
+    if (!slide) return;
+    try {
+        slide.getPageElements().forEach(function(el) { try { el.remove(); } catch(e) {} });
+        slide.getBackground().setSolidFill('#f8fafc');
+
+        const total = (observations && observations.length) ? observations.length : 0;
+        let high = 0, med = 0, low = 0;
+        let open = 0, prog = 0, closed = 0;
+
+        if (Array.isArray(observations)) {
+            observations.forEach(function(o) {
+                const r = String(o.riskLevel || '').toLowerCase();
+                const s = String(o.status || '').toLowerCase();
+                if (r.includes('عالي') || r.includes('حرجة') || r.includes('high') || r.includes('critical')) high++;
+                else if (r.includes('متوسط') || r.includes('medium')) med++;
+                else low++;
+
+                if (s.includes('مغلق') || s.includes('closed') || s.includes('مكتمل')) closed++;
+                else if (s.includes('جاري') || s.includes('progress') || s.includes('قيد')) prog++;
+                else open++;
+            });
+        }
+
+        // 1) الهيدر الكحلي العلوي
+        const header = slide.insertShape(SlidesApp.ShapeType.RECTANGLE, 0, 0, 720, 45);
+        header.getFill().setSolidFill('#0f172a');
+        header.getBorder().setTransparent();
+        const hTxt = header.getText();
+        hTxt.setText('نظرة عامة على التقرير');
+        hTxt.getTextStyle().setFontFamily('Cairo').setFontSize(20).setBold(true).setForegroundColor('#ffffff');
+        try { hTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT); } catch(e) {}
+
+        // خط ذهبي تحت الهيدر
+        const stripe = slide.insertShape(SlidesApp.ShapeType.RECTANGLE, 0, 45, 720, 4);
+        stripe.getFill().setSolidFill('#d97706');
+        stripe.getBorder().setTransparent();
+
+        // 2) السطر الفرعي
+        const subTitle = slide.insertShape(SlidesApp.ShapeType.RECTANGLE, 10, 52, 700, 20);
+        subTitle.getFill().setTransparent();
+        subTitle.getBorder().setTransparent();
+        const subTxt = subTitle.getText();
+        subTxt.setText(`نوع التقرير: الملاحظات اليومية  ·  الإدارة: ${department}  ·  تاريخ التقرير: ${reportDateStr}`);
+        subTxt.getTextStyle().setFontFamily('Cairo').setFontSize(10).setForegroundColor('#64748b');
+        try { subTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT); } catch(e) {}
+
+        // 3) 4 كروت إحصائية علوية
+        const cardsData = [
+            { label: 'إجمالي الملاحظات', val: total, color: '#0f172a', left: 540 },
+            { label: 'أولوية عالية / حرجة', val: high, color: '#dc2626', left: 365 },
+            { label: 'أولوية متوسطة', val: med, color: '#d97706', left: 190 },
+            { label: 'حالات مفتوحة', val: open, color: '#0284c7', left: 15 }
+        ];
+
+        cardsData.forEach(function(c) {
+            const card = slide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, c.left, 75, 165, 80);
+            card.getFill().setSolidFill('#ffffff');
+            card.getBorder().setWeight(1);
+            card.getBorder().getLineFill().setSolidFill('#cbd5e1');
+
+            const topBar = slide.insertShape(SlidesApp.ShapeType.RECTANGLE, c.left + 5, 77, 155, 4);
+            topBar.getFill().setSolidFill(c.color);
+            topBar.getBorder().setTransparent();
+
+            const cTxt = card.getText();
+            cTxt.setText(`${c.val}\n${c.label}`);
+            cTxt.getTextStyle().setFontFamily('Cairo').setFontSize(10).setForegroundColor('#64748b');
+            try { cTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER); } catch(e) {}
+
+            const valRange = cTxt.getRange(0, String(c.val).length);
+            valRange.getTextStyle().setFontSize(24).setBold(true).setForegroundColor(c.color);
+        });
+
+        // 4) صندوقان إحصائيان سفليان
+        // الصندوق الأيمن: توزيع الحالات
+        const statusBox = slide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 365, 165, 340, 150);
+        statusBox.getFill().setSolidFill('#ffffff');
+        statusBox.getBorder().setWeight(1);
+        statusBox.getBorder().getLineFill().setSolidFill('#cbd5e1');
+        const sTxt = statusBox.getText();
+        sTxt.setText(`توزيع الحالات\n\n- مفتوح : ${open}\n- جاري العمل : ${prog}\n- مغلق : ${closed}`);
+        sTxt.getTextStyle().setFontFamily('Cairo').setFontSize(12).setBold(true).setForegroundColor('#1e293b');
+        try { sTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT); } catch(e) {}
+
+        // الصندوق الأيسر: توزيع الأولويات
+        const prioBox = slide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 15, 165, 340, 150);
+        prioBox.getFill().setSolidFill('#ffffff');
+        prioBox.getBorder().setWeight(1);
+        prioBox.getBorder().getLineFill().setSolidFill('#cbd5e1');
+        const pTxt = prioBox.getText();
+        pTxt.setText(`توزيع الأولويات\n\n- عالي / حرج : ${high}\n- متوسط : ${med}\n- منخفض : ${low}`);
+        pTxt.getTextStyle().setFontFamily('Cairo').setFontSize(12).setBold(true).setForegroundColor('#1e293b');
+        try { pTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT); } catch(e) {}
+
+        // 5) صندوق تنبيه سفلي
+        const alertBox = slide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 15, 325, 690, 40);
+        alertBox.getFill().setSolidFill(high > 0 ? '#fef2f2' : '#f0fdf4');
+        alertBox.getBorder().setWeight(1.5);
+        alertBox.getBorder().getLineFill().setSolidFill(high > 0 ? '#fca5a5' : '#86efac');
+        const aTxt = alertBox.getText();
+        aTxt.setText(high > 0 ? `⚠️ ملاحظات عالية الأولوية مفتوحة ( ${high} ) : تتطلب متابعة وإغلاق عاجل` : `✅ جميع الملاحظات ذات الأولوية العالية تم معالجتها بشكل تام.`);
+        aTxt.getTextStyle().setFontFamily('Cairo').setFontSize(12).setBold(true).setForegroundColor(high > 0 ? '#991b1b' : '#166534');
+        try { aTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER); } catch(e) {}
+    } catch(err) {
+        Logger.log('_dob_buildOverviewSlide_ error: ' + err);
+    }
+}
+
+/**
+ * بناء شريحة "ملخص تنفيذي للملاحظات" (الداشبورد الإحصائي الثاني)
+ */
+function _dob_buildExecutiveSummarySlide_(slide, observations, department, reportDateStr) {
+    if (!slide) return;
+    try {
+        slide.getPageElements().forEach(function(el) { try { el.remove(); } catch(e) {} });
+        slide.getBackground().setSolidFill('#f8fafc');
+
+        const total = (observations && observations.length) ? observations.length : 0;
+        let high = 0, med = 0, low = 0;
+        let open = 0, prog = 0, closed = 0;
+
+        if (Array.isArray(observations)) {
+            observations.forEach(function(o) {
+                const r = String(o.riskLevel || '').toLowerCase();
+                const s = String(o.status || '').toLowerCase();
+                if (r.includes('عالي') || r.includes('حرجة') || r.includes('high') || r.includes('critical')) high++;
+                else if (r.includes('متوسط') || r.includes('medium')) med++;
+                else low++;
+
+                if (s.includes('مغلق') || s.includes('closed') || s.includes('مكتمل')) closed++;
+                else if (s.includes('جاري') || s.includes('progress') || s.includes('قيد')) prog++;
+                else open++;
+            });
+        }
+
+        const closedRate = total > 0 ? Math.round((closed / total) * 100) : 0;
+        const openWorkload = open + prog;
+
+        // 1) الهيدر الكحلي العلوي
+        const header = slide.insertShape(SlidesApp.ShapeType.RECTANGLE, 0, 0, 720, 45);
+        header.getFill().setSolidFill('#0f172a');
+        header.getBorder().setTransparent();
+        const hTxt = header.getText();
+        hTxt.setText('ملخص تنفيذي للملاحظات');
+        hTxt.getTextStyle().setFontFamily('Cairo').setFontSize(20).setBold(true).setForegroundColor('#ffffff');
+        try { hTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT); } catch(e) {}
+
+        // خط ذهبي تحت الهيدر
+        const stripe = slide.insertShape(SlidesApp.ShapeType.RECTANGLE, 0, 45, 720, 4);
+        stripe.getFill().setSolidFill('#d97706');
+        stripe.getBorder().setTransparent();
+
+        // 2) السطر الفرعي
+        const subTitle = slide.insertShape(SlidesApp.ShapeType.RECTANGLE, 10, 52, 700, 20);
+        subTitle.getFill().setTransparent();
+        subTitle.getBorder().setTransparent();
+        const subTxt = subTitle.getText();
+        subTxt.setText('لوحة دعم القرار — مؤشرات مخاطر وإغلاق للمساءلة الإدارية');
+        subTxt.getTextStyle().setFontFamily('Cairo').setFontSize(10).setForegroundColor('#64748b');
+        try { subTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT); } catch(e) {}
+
+        // 3) 4 كروت إحصائية علوية
+        const cardsData = [
+            { label: 'معدل الإغلاق', val: `${closedRate}%`, color: '#d97706', left: 540 },
+            { label: 'حرج مفتوح', val: high, color: '#dc2626', left: 365 },
+            { label: 'عبء العمل المتبقي', val: openWorkload, color: '#0284c7', left: 190 },
+            { label: 'إجمالي الملاحظات', val: total, color: '#0f172a', left: 15 }
+        ];
+
+        cardsData.forEach(function(c) {
+            const card = slide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, c.left, 75, 165, 75);
+            card.getFill().setSolidFill('#ffffff');
+            card.getBorder().setWeight(1);
+            card.getBorder().getLineFill().setSolidFill('#cbd5e1');
+
+            const topBar = slide.insertShape(SlidesApp.ShapeType.RECTANGLE, c.left + 5, 77, 155, 4);
+            topBar.getFill().setSolidFill(c.color);
+            topBar.getBorder().setTransparent();
+
+            const cTxt = card.getText();
+            cTxt.setText(`${c.val}\n${c.label}`);
+            cTxt.getTextStyle().setFontFamily('Cairo').setFontSize(10).setForegroundColor('#64748b');
+            try { cTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER); } catch(e) {}
+
+            const valRange = cTxt.getRange(0, String(c.val).length);
+            valRange.getTextStyle().setFontSize(22).setBold(true).setForegroundColor(c.color);
+        });
+
+        // 4) مصفوفة المخاطر والتوزيع التنفيذي
+        const matrixBox = slide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 365, 160, 340, 135);
+        matrixBox.getFill().setSolidFill('#ffffff');
+        matrixBox.getBorder().setWeight(1);
+        matrixBox.getBorder().getLineFill().setSolidFill('#cbd5e1');
+        const mTxt = matrixBox.getText();
+        mTxt.setText(`مصفوفة المخاطر (أولوية × حالة)\n\n- عالي / حرج :  مفتوح (${high})  |  جاري (0)  |  مغلق (0)\n- متوسط :  مفتوح (${med})  |  جاري (0)  |  مغلق (0)\n- منخفض :  مفتوح (${low})  |  جاري (0)  |  مغلق (0)`);
+        mTxt.getTextStyle().setFontFamily('Cairo').setFontSize(10).setBold(true).setForegroundColor('#1e293b');
+        try { mTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT); } catch(e) {}
+
+        const statusChartBox = slide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 15, 160, 340, 135);
+        statusChartBox.getFill().setSolidFill('#ffffff');
+        statusChartBox.getBorder().setWeight(1);
+        statusChartBox.getBorder().getLineFill().setSolidFill('#cbd5e1');
+        const scTxt = statusChartBox.getText();
+        scTxt.setText(`توزيع الحالات (أعمدة)\n\n- إجمالي الملاحظات: ${total}\n- الملاحظات المفتوحة: ${open}\n- الملاحظات المغلقة: ${closed}`);
+        scTxt.getTextStyle().setFontFamily('Cairo').setFontSize(10).setBold(true).setForegroundColor('#1e293b');
+        try { scTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT); } catch(e) {}
+
+        // 5) توصيات للإدارة
+        const recBox = slide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 15, 305, 690, 80);
+        recBox.getFill().setSolidFill('#eff6ff');
+        recBox.getBorder().setWeight(1.5);
+        recBox.getBorder().getLineFill().setSolidFill('#3b82f6');
+        const rTxt = recBox.getText();
+        rTxt.setText(
+            'توصيات للإدارة:\n' +
+            `1. تصعيد فوري لـ ${high} ملاحظة عالية الأولوية ما زالت مفتوحة وتحديد مالك وموعد خلال 48 ساعة.\n` +
+            `2. معدل الإغلاق الحالي (${closedRate}%) دون المستهدف التشغيلي — مراجعة عوائق التنفيذ أسبوعياً.\n` +
+            `3. عبء العمل المتبقي ${openWorkload} ملاحظة — توزيع المسؤوليات بين الإدارات وتفعيل المتابعة.`
+        );
+        rTxt.getTextStyle().setFontFamily('Cairo').setFontSize(10).setForegroundColor('#1e3a8a');
+        try { rTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT); } catch(e) {}
+
+        const headerRange = rTxt.find('توصيات للإدارة:');
+        if (headerRange && headerRange.length) {
+            headerRange[0].getTextStyle().setFontSize(11).setBold(true).setUnderline(true).setForegroundColor('#1d4ed8');
+        }
+    } catch(err) {
+        Logger.log('_dob_buildExecutiveSummarySlide_ error: ' + err);
+    }
+}
+
+/**
  * إنشاء قالب Google Slides افتراضي وتطبيقه تلقائياً
  * @returns {Object} نتيجة التوليد مضافاً إليها templateId و presentationUrl
  */
@@ -703,14 +938,12 @@ function createDefaultDailyObservationsPptTemplate() {
             : undefined;
         
         // ==========================================
-        // الشريحة الأولى (الغلاف - مثل الصورة 2)
+        // الشريحة الأولى (الغلاف)
         // ==========================================
         const coverSlide = slides[0];
-        // تنظيف العناصر الافتراضية للغلاف (Click to add title)
         coverSlide.getPageElements().forEach(function(el) { try { el.remove(); } catch(e) {} });
-        coverSlide.getBackground().setSolidFill('#ffffff'); // خلفية بيضاء
+        coverSlide.getBackground().setSolidFill('#ffffff');
         
-        // الشعار الأيسر (Americana Badge)
         const logoLeft = coverSlide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 30, 20, 160, 45);
         logoLeft.getFill().setSolidFill('#ffffff');
         logoLeft.getBorder().setWeight(2);
@@ -719,7 +952,6 @@ function createDefaultDailyObservationsPptTemplate() {
         logoLeftTxt.setText('AMERICANA');
         logoLeftTxt.getTextStyle().setFontFamily('Arial').setFontSize(18).setBold(true).setForegroundColor('#dc2626');
         
-        // الشعار الأيمن (ICAPP Badge)
         const logoRight = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 520, 20, 170, 45);
         logoRight.getFill().setTransparent();
         logoRight.getBorder().setTransparent();
@@ -727,15 +959,13 @@ function createDefaultDailyObservationsPptTemplate() {
         logoRightTxt.setText('ICAPP\nFRESHNESS DELIVERED DAILY');
         logoRightTxt.getTextStyle().setFontFamily('Arial').setFontSize(14).setBold(true).setForegroundColor('#047857');
 
-        // الشكل البيضاوي الأوسط (Oval / Capsule)
         const centerOval = coverSlide.insertShape(SlidesApp.ShapeType.ELLIPSE, 130, 115, 460, 140);
-        centerOval.getFill().setSolidFill('#e2e8f0'); // رمادي فاتح
+        centerOval.getFill().setSolidFill('#e2e8f0');
         centerOval.getBorder().setTransparent();
         const ovalText = centerOval.getText();
         ovalText.setText('Safety Observation Report\nNear Miss');
         ovalText.getTextStyle().setFontFamily('Arial').setFontSize(26).setBold(true).setForegroundColor('#000000');
 
-        // شارة إضافية تحت الشكل البيضاوي
         const subBadge = coverSlide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 290, 265, 140, 35);
         subBadge.getFill().setSolidFill('#ffffff');
         subBadge.getBorder().setWeight(1.5);
@@ -744,39 +974,26 @@ function createDefaultDailyObservationsPptTemplate() {
         subBadgeTxt.setText('AMERICANA');
         subBadgeTxt.getTextStyle().setFontFamily('Arial').setFontSize(12).setBold(true).setForegroundColor('#dc2626');
 
-        // الصندوق الأيمن السفلي (أزرق - Department & Date)
         const blueBox = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 470, 305, 240, 90);
-        blueBox.getFill().setSolidFill('#2563eb'); // أزرق ممتاز
+        blueBox.getFill().setSolidFill('#2563eb');
         blueBox.getBorder().setTransparent();
         const blueBoxTxt = blueBox.getText();
         blueBoxTxt.setText('Department : {{DEPARTMENT}}\n\nmonthly Report up to\n{{REPORT_DATE}}');
         blueBoxTxt.getTextStyle().setFontFamily('Arial').setFontSize(13).setBold(true).setForegroundColor('#ffffff');
 
-        // شارة Safety اليسرى في الأسفل
-        const safetyBadge = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 10, 290, 70, 25);
-        safetyBadge.getFill().setSolidFill('#cbd5e1');
-        safetyBadge.getBorder().setTransparent();
-        const safetyTxt = safetyBadge.getText();
-        safetyTxt.setText('Safety');
-        safetyTxt.getTextStyle().setFontFamily('Arial').setFontSize(11).setBold(true).setForegroundColor('#000000');
-
-        // شارة First اليمنى في الأسفل
-        const firstBadge = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 640, 290, 70, 25);
-        firstBadge.getFill().setSolidFill('#cbd5e1');
-        firstBadge.getBorder().setTransparent();
-        const firstTxt = firstBadge.getText();
-        firstTxt.setText('First');
-        firstTxt.getTextStyle().setFontFamily('Arial').setFontSize(11).setBold(true).setForegroundColor('#000000');
-
+        // ==========================================
+        // الشريحة الثانية (نظرة عامة على التقرير - الداشبورد 1)
+        // ==========================================
+        const overviewSlide = blankLayout ? presentation.appendSlide(blankLayout) : presentation.appendSlide();
+        _dob_buildOverviewSlide_(overviewSlide, [], '{{DEPARTMENT}}', '{{REPORT_DATE}}');
 
         // ==========================================
-        // الشريحة الثانية (تفاصيل الملاحظة - مثل الصورة 1)
+        // الشريحة الثالثة (نموذج تفاصيل الملاحظة)
         // ==========================================
-        const obsSlide = blankLayout ? presentation.appendSlide(blankLayout) : presentation.appendSlide();
-        obsSlide.getBackground().setSolidFill('#ffffff');
+        const itemTemplateSlide = blankLayout ? presentation.appendSlide(blankLayout) : presentation.appendSlide();
+        itemTemplateSlide.getBackground().setSolidFill('#ffffff');
 
-        // 1) الهيدر الأيمن: "وصف الملاحظة" (رمادي مع برقع أسود)
-        const rightHeader = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 360, 10, 345, 38);
+        const rightHeader = itemTemplateSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 360, 10, 345, 38);
         rightHeader.getFill().setSolidFill('#94a3b8');
         rightHeader.getBorder().setWeight(1.5);
         rightHeader.getBorder().getLineFill().setSolidFill('#000000');
@@ -784,8 +1001,7 @@ function createDefaultDailyObservationsPptTemplate() {
         rHeadTxt.setText('وصف الملاحظة');
         rHeadTxt.getTextStyle().setFontFamily('Cairo').setFontSize(20).setBold(true).setForegroundColor('#000000');
 
-        // 2) الهيدر الأيسر: "الصورة التوضيحية" (رمادي مع برقع أسود)
-        const leftHeader = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 10, 10, 340, 38);
+        const leftHeader = itemTemplateSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 10, 10, 340, 38);
         leftHeader.getFill().setSolidFill('#94a3b8');
         leftHeader.getBorder().setWeight(1.5);
         leftHeader.getBorder().getLineFill().setSolidFill('#000000');
@@ -793,20 +1009,17 @@ function createDefaultDailyObservationsPptTemplate() {
         lHeadTxt.setText('الصورة التوضيحية');
         lHeadTxt.getTextStyle().setFontFamily('Cairo').setFontSize(20).setBold(true).setForegroundColor('#000000');
 
-        // 3) الصندوق الأيمن لبيانات الملاحظة (خلفية سماوية #bfdbfe)
-        const rightBodyBox = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 360, 52, 345, 340);
-        rightBodyBox.getFill().setSolidFill('#bfdbfe'); // سماوي مثل الصورة
+        const rightBodyBox = itemTemplateSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 360, 52, 345, 340);
+        rightBodyBox.getFill().setSolidFill('#bfdbfe');
         rightBodyBox.getBorder().setWeight(1.5);
         rightBodyBox.getBorder().getLineFill().setSolidFill('#000000');
 
-        // محاذاة المحتوى لأعلى الصندوق (القمة بدلاً من المنتصف)
         try {
             if (SlidesApp.ContentAlignment && SlidesApp.ContentAlignment.TOP) {
                 rightBodyBox.setContentAlignment(SlidesApp.ContentAlignment.TOP);
             }
         } catch (cErr) { /* ignore */ }
 
-        // الهوامش الخارجية داخل الصندوق
         try {
             rightBodyBox.setMarginLeft(12);
             rightBodyBox.setMarginRight(12);
@@ -829,7 +1042,6 @@ function createDefaultDailyObservationsPptTemplate() {
             '{{STATUS}} : الحالة'
         );
 
-        // محاذاة النص لليمين مباشرة على مستوى الصندوق وعلى كل فقرة
         try {
             bodyTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT);
             const paras = bodyTxt.getParagraphs();
@@ -840,7 +1052,6 @@ function createDefaultDailyObservationsPptTemplate() {
             Logger.log('Alignment error: ' + alignErr);
         }
 
-        // تنسيق عام للنص كاملاً باللون الأسود دون أي خلفيات
         bodyTxt.getTextStyle()
             .setFontFamily('Cairo')
             .setFontSize(11)
@@ -848,7 +1059,6 @@ function createDefaultDailyObservationsPptTemplate() {
             .setUnderline(false)
             .setForegroundColor('#000000');
 
-        // تلوين وتسريحة العناوين بالأحمر + خط سفلي (مطابق للصورة 2)
         const redLabels = [
             'رقم الملاحظة',
             'التاريخ',
@@ -877,8 +1087,7 @@ function createDefaultDailyObservationsPptTemplate() {
             } catch (lblErr) { /* ignore */ }
         });
 
-        // 4) الجانب الأيسر: صورة واحدة كبيرة تشمل كل الجانب الأيسر (مطابق للصورة تماماً)
-        const leftBodyBox = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 10, 52, 340, 340);
+        const leftBodyBox = itemTemplateSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 10, 52, 340, 340);
         leftBodyBox.getFill().setSolidFill('#f8fafc');
         leftBodyBox.getBorder().setWeight(1.5);
         leftBodyBox.getBorder().getLineFill().setSolidFill('#000000');
@@ -888,9 +1097,14 @@ function createDefaultDailyObservationsPptTemplate() {
         leftTxt.setText('صورة الملاحظة\n[OBS_IMAGE]');
         leftTxt.getTextStyle().setFontFamily('Cairo').setFontSize(14).setForegroundColor('#94a3b8').setBold(true);
 
+        // ==========================================
+        // الشريحة الرابعة (الملخص التنفيذي)
+        // ==========================================
+        const execSummarySlide = blankLayout ? presentation.appendSlide(blankLayout) : presentation.appendSlide();
+        _dob_buildExecutiveSummarySlide_(execSummarySlide, [], '{{DEPARTMENT}}', '{{REPORT_DATE}}');
 
         // ==========================================
-        // الشريحة الثالثة (النهاية)
+        // الشريحة الخامسة (النهاية)
         // ==========================================
         const endSlide = blankLayout ? presentation.appendSlide(blankLayout) : presentation.appendSlide();
         endSlide.getBackground().setSolidFill('#ffffff');
@@ -1054,8 +1268,17 @@ function exportDailyObservationsPptReport(payload) {
         }
 
         const coverSlide = slides[0];
-        const itemTemplateSlide = slides[1];
-        // الشريحة الأخيرة ثابتة (نتركها كما هي)
+        let overviewSlide = null;
+        let itemTemplateSlide = null;
+        let execSummarySlide = null;
+
+        if (slides.length >= 5) {
+            overviewSlide = slides[1];
+            itemTemplateSlide = slides[2];
+            execSummarySlide = slides[3];
+        } else {
+            itemTemplateSlide = slides[1];
+        }
 
         // تعبئة الغلاف
         _dob_replaceAllTextSafe_(presentation, coverSlide, {
@@ -1063,8 +1286,12 @@ function exportDailyObservationsPptReport(payload) {
             '{{REPORT_DATE}}': dateLabel
         });
 
+        // تحديث شريحة النظرة العامة (الداشبورد 1)
+        if (overviewSlide) {
+            _dob_buildOverviewSlide_(overviewSlide, observations, department, dateLabel);
+        }
+
         // تجهيز شرائح الملاحظات
-        // استخدم الشريحة الثانية لأول ملاحظة ثم كررها للباقي
         observations.forEach(function (obs, idx) {
             const slide = (idx === 0) ? itemTemplateSlide : itemTemplateSlide.duplicate();
             const obsNo = String(idx + 1);
@@ -1113,6 +1340,14 @@ function exportDailyObservationsPptReport(payload) {
                 }
             }
         });
+
+        // تحديث شريحة الملخص التنفيذي (الداشبورد 2) ونقلها قبل الشريحة الأخيرة
+        if (execSummarySlide) {
+            _dob_buildExecutiveSummarySlide_(execSummarySlide, observations, department, dateLabel);
+            try {
+                execSummarySlide.move(presentation.getSlides().length - 1);
+            } catch(mErr) { /* ignore */ }
+        }
 
         presentation.saveAndClose();
 
