@@ -687,6 +687,97 @@ function setDailyObservationsPptTemplateId(templateIdOrPayload) {
 }
 
 /**
+ * بناء شريحة "الغلاف" (Cover Slide) بشكل احترافي مع دعم إضافة شعار الشركة تلقائياً
+ */
+function _dob_buildCoverSlide_(coverSlide, department, dateLabel, logoUrl) {
+    if (!coverSlide) return;
+    try {
+        coverSlide.getPageElements().forEach(function(el) { try { el.remove(); } catch(e) {} });
+        coverSlide.getBackground().setSolidFill('#ffffff');
+
+        // 1) خط ذهبي نحيف في أعلى الشريحة
+        const topStripe = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 0, 0, 720, 4);
+        topStripe.getFill().setSolidFill('#d97706');
+        topStripe.getBorder().setTransparent();
+
+        // 2) الشعار الأيسر (أو صورة الشعار المسجلة في الإعدادات)
+        let insertedLeftLogo = false;
+        if (logoUrl) {
+            try {
+                const logoBlob = _dob_getImageBlobFromUrl_(logoUrl);
+                if (logoBlob) {
+                    const img = coverSlide.insertImage(logoBlob);
+                    img.setLeft(30);
+                    img.setTop(18);
+                    img.setWidth(160);
+                    img.setHeight(50);
+                    insertedLeftLogo = true;
+                }
+            } catch(lErr) {
+                Logger.log('Cover Slide Logo insertion error: ' + lErr);
+            }
+        }
+
+        if (!insertedLeftLogo) {
+            const logoLeft = coverSlide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 30, 20, 160, 45);
+            logoLeft.getFill().setSolidFill('#ffffff');
+            logoLeft.getBorder().setWeight(2);
+            logoLeft.getBorder().getLineFill().setSolidFill('#dc2626');
+            const logoLeftTxt = logoLeft.getText();
+            logoLeftTxt.setText('AMERICANA');
+            logoLeftTxt.getTextStyle().setFontFamily('Arial').setFontSize(18).setBold(true).setForegroundColor('#dc2626');
+            try { logoLeftTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER); } catch(e) {}
+        }
+
+        // 3) الشعار/النص الأيمن (ICAPP)
+        const logoRight = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 510, 18, 180, 48);
+        logoRight.getFill().setTransparent();
+        logoRight.getBorder().setTransparent();
+        const logoRightTxt = logoRight.getText();
+        logoRightTxt.setText('ICAPP\nFRESHNESS DELIVERED DAILY');
+        logoRightTxt.getTextStyle().setFontFamily('Arial').setFontSize(13).setBold(true).setForegroundColor('#047857');
+        try { logoRightTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT); } catch(e) {}
+
+        // 4) الشكل البيضاوي الأوسط (Oval Capsule)
+        const centerOval = coverSlide.insertShape(SlidesApp.ShapeType.ELLIPSE, 130, 110, 460, 145);
+        centerOval.getFill().setSolidFill('#e2e8f0');
+        centerOval.getBorder().setWeight(1);
+        centerOval.getBorder().getLineFill().setSolidFill('#cbd5e1');
+        const ovalText = centerOval.getText();
+        ovalText.setText('Safety Observation Report\nReport\nNear Miss');
+        ovalText.getTextStyle().setFontFamily('Arial').setFontSize(25).setBold(true).setForegroundColor('#000000');
+        try { ovalText.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER); } catch(e) {}
+
+        // 5) شارة فرعية تحت البيضاوي
+        const subBadge = coverSlide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 290, 265, 140, 35);
+        subBadge.getFill().setSolidFill('#ffffff');
+        subBadge.getBorder().setWeight(1.5);
+        subBadge.getBorder().getLineFill().setSolidFill('#dc2626');
+        const subBadgeTxt = subBadge.getText();
+        subBadgeTxt.setText('AMERICANA');
+        subBadgeTxt.getTextStyle().setFontFamily('Arial').setFontSize(12).setBold(true).setForegroundColor('#dc2626');
+        try { subBadgeTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER); } catch(e) {}
+
+        // 6) كارت بيانات الإدارة والتاريخ (أزرق ملكي)
+        const blueBox = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 470, 305, 240, 90);
+        blueBox.getFill().setSolidFill('#2563eb');
+        blueBox.getBorder().setTransparent();
+        const blueBoxTxt = blueBox.getText();
+        blueBoxTxt.setText(`Department : ${department || '{{DEPARTMENT}}'}\n\nmonthly Report up to\n${dateLabel || '{{REPORT_DATE}}'}`);
+        blueBoxTxt.getTextStyle().setFontFamily('Arial').setFontSize(12).setBold(true).setForegroundColor('#ffffff');
+        try { blueBoxTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER); } catch(e) {}
+
+        // 7) شريط كحلي أسفل الشريحة
+        const bottomStripe = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 0, 400, 720, 5);
+        bottomStripe.getFill().setSolidFill('#0f172a');
+        bottomStripe.getBorder().setTransparent();
+
+    } catch(err) {
+        Logger.log('_dob_buildCoverSlide_ error: ' + err);
+    }
+}
+
+/**
  * بناء شريحة "نظرة عامة على التقرير" (الداشبورد الإحصائي الأول)
  */
 function _dob_buildOverviewSlide_(slide, observations, department, reportDateStr) {
@@ -941,45 +1032,7 @@ function createDefaultDailyObservationsPptTemplate() {
         // الشريحة الأولى (الغلاف)
         // ==========================================
         const coverSlide = slides[0];
-        coverSlide.getPageElements().forEach(function(el) { try { el.remove(); } catch(e) {} });
-        coverSlide.getBackground().setSolidFill('#ffffff');
-        
-        const logoLeft = coverSlide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 30, 20, 160, 45);
-        logoLeft.getFill().setSolidFill('#ffffff');
-        logoLeft.getBorder().setWeight(2);
-        logoLeft.getBorder().getLineFill().setSolidFill('#dc2626');
-        const logoLeftTxt = logoLeft.getText();
-        logoLeftTxt.setText('AMERICANA');
-        logoLeftTxt.getTextStyle().setFontFamily('Arial').setFontSize(18).setBold(true).setForegroundColor('#dc2626');
-        
-        const logoRight = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 520, 20, 170, 45);
-        logoRight.getFill().setTransparent();
-        logoRight.getBorder().setTransparent();
-        const logoRightTxt = logoRight.getText();
-        logoRightTxt.setText('ICAPP\nFRESHNESS DELIVERED DAILY');
-        logoRightTxt.getTextStyle().setFontFamily('Arial').setFontSize(14).setBold(true).setForegroundColor('#047857');
-
-        const centerOval = coverSlide.insertShape(SlidesApp.ShapeType.ELLIPSE, 130, 115, 460, 140);
-        centerOval.getFill().setSolidFill('#e2e8f0');
-        centerOval.getBorder().setTransparent();
-        const ovalText = centerOval.getText();
-        ovalText.setText('Safety Observation Report\nNear Miss');
-        ovalText.getTextStyle().setFontFamily('Arial').setFontSize(26).setBold(true).setForegroundColor('#000000');
-
-        const subBadge = coverSlide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 290, 265, 140, 35);
-        subBadge.getFill().setSolidFill('#ffffff');
-        subBadge.getBorder().setWeight(1.5);
-        subBadge.getBorder().getLineFill().setSolidFill('#dc2626');
-        const subBadgeTxt = subBadge.getText();
-        subBadgeTxt.setText('AMERICANA');
-        subBadgeTxt.getTextStyle().setFontFamily('Arial').setFontSize(12).setBold(true).setForegroundColor('#dc2626');
-
-        const blueBox = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 470, 305, 240, 90);
-        blueBox.getFill().setSolidFill('#2563eb');
-        blueBox.getBorder().setTransparent();
-        const blueBoxTxt = blueBox.getText();
-        blueBoxTxt.setText('Department : {{DEPARTMENT}}\n\nmonthly Report up to\n{{REPORT_DATE}}');
-        blueBoxTxt.getTextStyle().setFontFamily('Arial').setFontSize(13).setBold(true).setForegroundColor('#ffffff');
+        _dob_buildCoverSlide_(coverSlide, '{{DEPARTMENT}}', '{{REPORT_DATE}}', null);
 
         // ==========================================
         // الشريحة الثانية (نظرة عامة على التقرير - الداشبورد 1)
@@ -1280,11 +1333,18 @@ function exportDailyObservationsPptReport(payload) {
             itemTemplateSlide = slides[1];
         }
 
-        // تعبئة الغلاف
-        _dob_replaceAllTextSafe_(presentation, coverSlide, {
-            '{{DEPARTMENT}}': department,
-            '{{REPORT_DATE}}': dateLabel
-        });
+        let logoUrl = String(payload.logoUrl || payload.logo || '').trim();
+        if (!logoUrl) {
+            try {
+                if (typeof getCompanySettings === 'function') {
+                    const cSettings = getCompanySettings();
+                    if (cSettings && cSettings.logo) logoUrl = cSettings.logo;
+                }
+            } catch(csErr) {}
+        }
+
+        // تعبئة وتجميل الغلاف تلقائياً مع زرع الشعار
+        _dob_buildCoverSlide_(coverSlide, department, dateLabel, logoUrl);
 
         // تحديث شريحة النظرة العامة (الداشبورد 1)
         if (overviewSlide) {
