@@ -711,7 +711,7 @@ function createDefaultDailyObservationsPptTemplate() {
         coverSlide.getBackground().setSolidFill('#ffffff'); // خلفية بيضاء
         
         // الشعار الأيسر (Americana Badge)
-        const logoLeft = coverSlide.insertShape(SlidesApp.ShapeType.ROUNDED_RECTANGLE, 30, 20, 160, 45);
+        const logoLeft = coverSlide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 30, 20, 160, 45);
         logoLeft.getFill().setSolidFill('#ffffff');
         logoLeft.getBorder().setWeight(2);
         logoLeft.getBorder().getLineFill().setSolidFill('#dc2626');
@@ -736,7 +736,7 @@ function createDefaultDailyObservationsPptTemplate() {
         ovalText.getTextStyle().setFontFamily('Arial').setFontSize(26).setBold(true).setForegroundColor('#000000');
 
         // شارة إضافية تحت الشكل البيضاوي
-        const subBadge = coverSlide.insertShape(SlidesApp.ShapeType.ROUNDED_RECTANGLE, 290, 265, 140, 35);
+        const subBadge = coverSlide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, 290, 265, 140, 35);
         subBadge.getFill().setSolidFill('#ffffff');
         subBadge.getBorder().setWeight(1.5);
         subBadge.getBorder().getLineFill().setSolidFill('#dc2626');
