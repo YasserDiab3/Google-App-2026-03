@@ -6617,4 +6617,36 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'syncDailySafetyCheckListForm': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action);
+            if (adminFail) { result = adminFail; return; }
+
+            if (typeof processFormDataFromSheet !== 'function') {
+                result = { success: false, message: 'دالة processFormDataFromSheet غير متوفرة' };
+                return;
+            }
+
+            result = processFormDataFromSheet();
+            return;
+        })();
+        return result;
+    },
+    'rebuildDailySafetyCheckListFromForm': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action);
+            if (adminFail) { result = adminFail; return; }
+
+            if (typeof rebuildAndRepairDailySafetyCheckListFromForm !== 'function') {
+                result = { success: false, message: 'دالة rebuildAndRepairDailySafetyCheckListFromForm غير متوفرة' };
+                return;
+            }
+
+            result = rebuildAndRepairDailySafetyCheckListFromForm();
+            return;
+        })();
+        return result;
+    },
 };
