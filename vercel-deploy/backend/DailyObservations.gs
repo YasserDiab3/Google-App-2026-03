@@ -1493,8 +1493,11 @@ function exportDailyObservationsPptReport(payload) {
 
 function _dob_replaceAllTextSafe_(presentation, slide, replacements) {
     if (!replacements) return;
+    const rlm = '\u200F'; // Unicode Right-to-Left Mark لفرض الاتجاه العربي يميناً
     Object.keys(replacements).forEach(function (key) {
-        const value = replacements[key] === null || replacements[key] === undefined ? '' : String(replacements[key]);
+        let rawVal = replacements[key] === null || replacements[key] === undefined ? '' : String(replacements[key]).trim();
+        // إضافة وسم RLM لمنع تداخل الإنجليزية والأرقام مع الاتجاه العربي
+        const value = rawVal ? (rlm + rawVal + rlm) : '';
         try {
             if (slide && typeof slide.replaceAllText === 'function') {
                 slide.replaceAllText(key, value);
