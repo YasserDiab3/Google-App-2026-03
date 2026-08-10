@@ -8043,22 +8043,26 @@ const DailyObservations = {
                         </ol>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary" id="ppt-template-id-cancel-btn">إلغاء</button>
-                    <button type="button" class="btn-secondary bg-emerald-600 hover:bg-emerald-700 text-white" id="ppt-template-id-auto-create-btn" title="إنشاء وتنسيق قالب Google Slides جديد تلقائياً في Drive">
-                        <i class="fas fa-magic ml-2"></i>
-                        إنشاء Template تلقائياً
-                    </button>
-                    <button type="button" class="btn-primary" id="ppt-template-id-save-btn">
-                        <i class="fas fa-save ml-2"></i>
-                        حفظ Template ID
-                    </button>
-                    ${currentTemplateId ? `
-                        <button type="button" class="btn-secondary bg-red-600 hover:bg-red-700" id="ppt-template-id-test-btn">
-                            <i class="fas fa-check ml-2"></i>
-                            اختبار Template
+                <div class="modal-footer flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-gray-200">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" class="btn-secondary bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-2 rounded shadow-sm" id="ppt-template-id-auto-create-btn" title="إنشاء وتنسيق قالب Google Slides جديد تلقائياً في Drive">
+                            <i class="fas fa-magic ml-1"></i>
+                            إنشاء آلي
                         </button>
-                    ` : ''}
+                        ${currentTemplateId ? `
+                            <button type="button" class="btn-secondary bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-2 rounded shadow-sm" id="ppt-template-id-test-btn">
+                                <i class="fas fa-check-circle ml-1"></i>
+                                اختبار القالب
+                            </button>
+                        ` : ''}
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" class="btn-secondary text-xs px-4 py-2 rounded" id="ppt-template-id-cancel-btn">إلغاء</button>
+                        <button type="button" class="btn-primary text-xs px-4 py-2 rounded font-bold shadow-sm" id="ppt-template-id-save-btn">
+                            <i class="fas fa-save ml-1"></i>
+                            حفظ Template ID
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
