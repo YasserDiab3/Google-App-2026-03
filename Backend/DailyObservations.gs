@@ -706,6 +706,8 @@ function createDefaultDailyObservationsPptTemplate() {
         // الشريحة الأولى (الغلاف - مثل الصورة 2)
         // ==========================================
         const coverSlide = slides[0];
+        // تنظيف العناصر الافتراضية للغلاف (Click to add title)
+        coverSlide.getPageElements().forEach(function(el) { try { el.remove(); } catch(e) {} });
         coverSlide.getBackground().setSolidFill('#ffffff'); // خلفية بيضاء
         
         // الشعار الأيسر (Americana Badge)
