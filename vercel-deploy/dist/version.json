@@ -1,13 +1,11 @@
 {
-  "version": "1.0.954",
+  "version": "1.0.957",
   "highlights": {
     "ar": [
-      "سجل الملاحظات اليومية: إصلاح تسلسل أرقام الملاحظات — ترقيم عام مستمر بدل الترقيم الشهري المتكرر، مع إصلاح تلقائي للسجلات القديمة وتصحيح الأرقام المكررة في قاعدة البيانات.",
-      "سجل الملاحظات اليومية: بعد تنفيذ الإصلاح التلقائي تتم إعادة مزامنة البيانات من الخادم فوراً لتظهر الأرقام المصححة في الواجهة مباشرة دون انتظار."
+      "إصلاح الإشعارات المكررة: منع تكرار ظهور إشعار وبانر «النسخة المحلية مختصرة (حد التخزين)» عند كل حفظ تلقائي في الخلفية — يظهر مرة واحدة فقط في الجلسة لمنع الإزعاج."
     ],
     "en": [
-      "Daily observations: fixed the observation numbering sequence — continuous global numbering instead of the per-month reset, with automatic repair of legacy records and duplicate numbers in the database.",
-      "Daily observations: after the automatic repair runs, data is re-synced from the server immediately so corrected numbers appear in the UI right away."
+      "Notification fix: suppressed repetitive 'Local copy is shortened (storage limit)' banner and toast on automatic background saves — now shown at most once per session."
     ]
   }
 }

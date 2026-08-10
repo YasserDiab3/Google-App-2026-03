@@ -198,11 +198,18 @@ const DataManager = {
      */
     _notifyLightLocalSave(reason) {
         try {
+            // إظهار التنبيه مرة واحدة فقط لكل جلسة متصفح بدلاً من إزعاجه عند كل حفظ خلفي تلقائي
+            if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hse_light_notice_shown')) {
+                return;
+            }
+            if (typeof sessionStorage !== 'undefined') {
+                try { sessionStorage.setItem('hse_light_notice_shown', 'true'); } catch (_) {}
+            }
+
             if (typeof OfflineBanner !== 'undefined' && typeof OfflineBanner.setLightLocalData === 'function') {
                 OfflineBanner.setLightLocalData(true);
             }
             const now = Date.now();
-            // مرة واحدة كل 10 دقائق كحد أقصى — تجنب الإزعاج
             if (now - (this._lastLightSaveNotification || 0) < 10 * 60 * 1000) return;
             this._lastLightSaveNotification = now;
             const isEn = (typeof I18n !== 'undefined' && typeof I18n.isEn === 'function')
@@ -212,9 +219,9 @@ const DataManager = {
                 ? 'Local storage is limited — a shortened copy was saved.'
                 : 'التخزين المحلي محدود — حُفظت نسخة مختصرة.';
             if (typeof Notification !== 'undefined' && typeof Notification.info === 'function') {
-                Notification.info(msg, { duration: 5500 });
+                Notification.info(msg, { duration: 4000 });
             } else if (typeof Notification !== 'undefined' && typeof Notification.warning === 'function') {
-                Notification.warning(msg, { duration: 5500 });
+                Notification.warning(msg, { duration: 4000 });
             }
             Utils.safeLog('ℹ️ [DataManager] light save notified:', reason || '');
         } catch (_e) { /* ignore */ }

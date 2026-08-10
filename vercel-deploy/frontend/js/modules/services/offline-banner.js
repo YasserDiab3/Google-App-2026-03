@@ -137,6 +137,15 @@
                 this.sync();
                 return;
             }
+
+            // إظهار البانر مرة واحدة فقط لكل جلسة متصفح لمنع التكرار المزعج عند كل حفظ محلي
+            if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hse_light_banner_shown')) {
+                return;
+            }
+            if (typeof sessionStorage !== 'undefined') {
+                try { sessionStorage.setItem('hse_light_banner_shown', 'true'); } catch (_) {}
+            }
+
             this._lightStorage = true;
             this.sync();
             if (this._lightHideTimer) {
@@ -146,9 +155,8 @@
             this._lightHideTimer = setTimeout(() => {
                 self._lightStorage = false;
                 self._lightHideTimer = null;
-                // لا تمسح _lastToastKey=light هنا إن أردنا منع إعادة الـ toast فوراً — نُبقي المفتاح حتى يزول وضع آخر
                 try { self.sync(); } catch (_e3) { /* ignore */ }
-            }, 7000);
+            }, 5000);
         },
 
         init() {

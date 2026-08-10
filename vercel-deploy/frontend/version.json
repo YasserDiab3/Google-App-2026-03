@@ -1,13 +1,11 @@
 {
-  "version": "1.0.955",
+  "version": "1.0.957",
   "highlights": {
     "ar": [
-      "إصلاح نظام الصلاحيات: معالجة تسريب موديولات السلامة والمساعد الذكي للمستخدمين ذوي الصلاحيات المخصصة — الموديولات الممنوحة صراحة فقط هي التي تظهر الآن للمستخدم.",
-      "إدارة المستخدمين: تحسين التحقق من الصلاحيات التفصيلية وتطبيق حظر إجباري للموديولات غير المفعّلة لمنع استخدام الصلاحيات الافتراضية."
+      "إصلاح الإشعارات المكررة: منع تكرار ظهور إشعار وبانر «النسخة المحلية مختصرة (حد التخزين)» عند كل حفظ تلقائي في الخلفية — يظهر مرة واحدة فقط في الجلسة لمنع الإزعاج."
     ],
     "en": [
-      "Permissions system fix: resolved access leakage of safety modules and AI assistant for users with custom permissions — only explicitly granted modules are now visible.",
-      "User management: improved detailed permissions verification and enforced strict fail-closed access for non-granted modules."
+      "Notification fix: suppressed repetitive 'Local copy is shortened (storage limit)' banner and toast on automatic background saves — now shown at most once per session."
     ]
   }
 }
