@@ -711,6 +711,8 @@ function _dob_buildCoverSlide_(coverSlide, department, dateLabel, logoUrl) {
                     img.setTop(18);
                     img.setWidth(160);
                     img.setHeight(50);
+                    img.setTitle('COVER_LOGO');
+                    img.setDescription('COVER_LOGO');
                     insertedLeftLogo = true;
                 }
             } catch(lErr) {
@@ -723,6 +725,8 @@ function _dob_buildCoverSlide_(coverSlide, department, dateLabel, logoUrl) {
             logoLeft.getFill().setSolidFill('#ffffff');
             logoLeft.getBorder().setWeight(2);
             logoLeft.getBorder().getLineFill().setSolidFill('#dc2626');
+            logoLeft.setTitle('COVER_LOGO');
+            logoLeft.setDescription('COVER_LOGO');
             const logoLeftTxt = logoLeft.getText();
             logoLeftTxt.setText('AMERICANA');
             logoLeftTxt.getTextStyle().setFontFamily('Arial').setFontSize(18).setBold(true).setForegroundColor('#dc2626');
@@ -1352,8 +1356,18 @@ function exportDailyObservationsPptReport(payload) {
             } catch(csErr) {}
         }
 
-        // 1) تعبئة وتجميل الغلاف تلقائياً مع زرع الشعار
-        _dob_buildCoverSlide_(coverSlide, department, dateLabel, logoUrl);
+        // 1) تعبئة الغلاف من القالب مباشرة (بدون إعادة بناء — تعديلات المستخدم محفوظة)
+        _dob_replaceAllTextSafe_(presentation, coverSlide, {
+            '{{DEPARTMENT}}': department || '',
+            '{{REPORT_DATE}}': dateLabel || ''
+        });
+        // زرع الشعار في placeholder إن وُجد
+        if (logoUrl) {
+            try {
+                var logoBlob = _dob_getImageBlobFromUrl_(logoUrl);
+                if (logoBlob) _dob_replaceImagePlaceholder_(coverSlide, logoBlob, 'COVER_LOGO');
+            } catch(logoErr) { Logger.log('Cover logo insert error: ' + logoErr); }
+        }
 
         // 2) تحديث شريحة النظرة العامة (الداشبورد 1)
         if (overviewSlide) {
