@@ -835,8 +835,7 @@ function createDefaultDailyObservationsPptTemplate() {
             .setFontSize(11)
             .setBold(true)
             .setUnderline(false)
-            .setForegroundColor('#000000')
-            .setBackgroundColor(null);
+            .setForegroundColor('#000000');
 
         // محاذاة كل الفقرات لليمين (RTL Right-Aligned)
         try {
@@ -873,8 +872,7 @@ function createDefaultDailyObservationsPptTemplate() {
                             .setFontSize(11)
                             .setBold(true)
                             .setUnderline(true)
-                            .setForegroundColor('#dc2626')
-                            .setBackgroundColor(null);
+                            .setForegroundColor('#dc2626');
                     });
                 }
             } catch (lblErr) { /* ignore */ }
