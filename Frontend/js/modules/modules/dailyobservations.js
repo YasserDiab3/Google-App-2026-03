@@ -7670,6 +7670,7 @@ const DailyObservations = {
         const departmentOptions = this.getDepartmentOptions();
         const today = new Date();
         const todayStr = today.toISOString().slice(0, 10);
+        const isAdmin = this.canDailyObservationsFullAdminUi();
 
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 720px;">
@@ -7680,10 +7681,16 @@ const DailyObservations = {
                     </button>
                 </div>
                 <div class="modal-body space-y-4">
-                    <div class="bg-blue-50 border border-blue-200 rounded p-4">
+                    <div class="bg-blue-50 border border-blue-200 rounded p-4 flex items-center justify-between">
                         <p class="text-sm text-blue-800">
                             سيتم تصدير التقرير <strong>حسب الإدارة المختارة</strong> وبنفس تصميم الشرائح الاحترافي في Google Slides ثم تنزيله مباشرة بصيغة PPT.
                         </p>
+                        ${isAdmin ? `
+                        <button type="button" class="btn-secondary text-xs ml-2 whitespace-nowrap" id="ppt-template-id-settings-btn">
+                            <i class="fas fa-cog ml-1"></i>
+                            إعدادات Template
+                        </button>
+                        ` : ''}
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -7729,6 +7736,13 @@ const DailyObservations = {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) close();
         });
+
+        if (isAdmin) {
+            modal.querySelector('#ppt-template-id-settings-btn')?.addEventListener('click', async () => {
+                close();
+                await this.showPptTemplateIdSetupModal();
+            });
+        }
 
         modal.querySelector('#dailyobs-ppt-export-btn')?.addEventListener('click', async () => {
             const dept = (modal.querySelector('#dailyobs-ppt-department')?.value || '').trim();

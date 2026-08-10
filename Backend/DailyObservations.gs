@@ -1358,6 +1358,7 @@ function exportDailyObservationsPptReport(payload) {
         }
 
         // 3) تجهيز شرائح الملاحظات عبر تكرار نموذج الشريحة الأصلي لكل ملاحظة مستقلة
+        var imageBlobCache = {};
         observations.forEach(function (obs, idx) {
             const slide = itemTemplateSlide.duplicate();
             const obsNo = String(idx + 1);
@@ -1381,7 +1382,7 @@ function exportDailyObservationsPptReport(payload) {
                 '{{OBSERVER}}': String(obs.observerName || '')
             });
 
-            // الصورة الرئيسية للملاحظة (جلب فوري للمنع التاخير وانقضاء مهلة الاتصال)
+            // الصورة الرئيسية للملاحظة (جلب فوري ومؤطّر يمنع التأخير وانقضاء المهلة)
             var primaryImageUrl = obs.imageUrl || obs.image || obs.photo || obs.fileUrl || obs.picture || '';
             if (!primaryImageUrl && Array.isArray(obs.images) && obs.images.length > 0) {
                 primaryImageUrl = obs.images[0];
@@ -1396,7 +1397,11 @@ function exportDailyObservationsPptReport(payload) {
 
             if (primaryImageUrl) {
                 try {
-                    var blob = _dob_getImageBlobFromUrl_(primaryImageUrl);
+                    var blob = imageBlobCache[primaryImageUrl];
+                    if (!blob) {
+                        blob = _dob_getImageBlobFromUrl_(primaryImageUrl);
+                        if (blob) imageBlobCache[primaryImageUrl] = blob;
+                    }
                     if (blob) {
                         _dob_replaceImagePlaceholder_(slide, blob, 'OBS_IMAGE');
                     }
