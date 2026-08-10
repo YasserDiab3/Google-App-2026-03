@@ -8588,7 +8588,24 @@ const DailyObservations = {
     },
 
     getDepartmentOptions() {
-        const set = new Set();
+        const normalizedMap = new Map();
+
+        const addDepartment = (raw) => {
+            if (!raw) return;
+            const str = String(raw).trim().replace(/\s+/g, ' ');
+            if (!str) return;
+            // مفتاح تطبيع للدمج الذكي (تجاهل الهمزات والمسافات الزائدة والحركات)
+            const normKey = str
+                .toLowerCase()
+                .replace(/[أإآ]/g, 'ا')
+                .replace(/ة/g, 'ه')
+                .replace(/ى/g, 'ي')
+                .replace(/[^\w\u0600-\u06FF]/g, '');
+
+            if (normKey && !normalizedMap.has(normKey)) {
+                normalizedMap.set(normKey, str);
+            }
+        };
 
         const companySettings = AppState.companySettings || {};
 
@@ -8597,51 +8614,25 @@ const DailyObservations = {
             : (typeof companySettings.formDepartments === 'string'
                 ? companySettings.formDepartments.split(/\n|,/).map((item) => item.trim()).filter(Boolean)
                 : []);
-
-        formDepartments.forEach((department) => {
-            const value = (department || '').toString().trim();
-            if (value) set.add(value);
-        });
+        formDepartments.forEach(addDepartment);
 
         const legacyDepartments = Array.isArray(companySettings.departments)
             ? companySettings.departments
             : (typeof companySettings.departments === 'string'
                 ? companySettings.departments.split(/\n|,/).map((item) => item.trim()).filter(Boolean)
                 : []);
-
-        legacyDepartments.forEach((department) => {
-            const value = (department || '').toString().trim();
-            if (value) set.add(value);
-        });
+        legacyDepartments.forEach(addDepartment);
 
         if (Array.isArray(AppState.companySettings?.departments)) {
-            AppState.companySettings.departments.forEach((department) => {
-                const value = (department || '').toString().trim();
-                if (value) set.add(value);
-            });
+            AppState.companySettings.departments.forEach(addDepartment);
         }
 
-        (AppState.appData.employees || []).forEach((employee) => {
-            const value = (employee.department || '').trim();
-            if (value) set.add(value);
-        });
+        (AppState.appData.employees || []).forEach((employee) => addDepartment(employee.department));
+        (AppState.appData.nearmiss || []).forEach((record) => addDepartment(record.department || record.responsibleDepartment));
+        (AppState.appData.incidents || []).forEach((record) => addDepartment(record.affectedDepartment || record.department));
+        (AppState.appData.dailyObservations || []).forEach((record) => addDepartment(record.responsibleDepartment));
 
-        (AppState.appData.nearmiss || []).forEach((record) => {
-            const value = (record.department || record.responsibleDepartment || '').trim();
-            if (value) set.add(value);
-        });
-
-        (AppState.appData.incidents || []).forEach((record) => {
-            const value = (record.affectedDepartment || record.department || '').trim();
-            if (value) set.add(value);
-        });
-
-        (AppState.appData.dailyObservations || []).forEach((record) => {
-            const value = (record.responsibleDepartment || '').trim();
-            if (value) set.add(value);
-        });
-
-        return Array.from(set).filter(Boolean).sort((a, b) => a.localeCompare(b, 'ar'));
+        return Array.from(normalizedMap.values()).filter(Boolean).sort((a, b) => a.localeCompare(b, 'ar'));
     },
 
     /** مصدر واحد: Training.getSafetyTeamMembers (يُحمَّل training.js قبل dailyobservations.js في index.html) */

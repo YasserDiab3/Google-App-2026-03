@@ -767,7 +767,7 @@ function _dob_buildCoverSlide_(coverSlide, department, dateLabel, logoUrl) {
         blueBox.getFill().setSolidFill('#2563eb');
         blueBox.getBorder().setTransparent();
         const blueBoxTxt = blueBox.getText();
-        blueBoxTxt.setText(`Department : ${department || '{{DEPARTMENT}}'}\n\nmonthly Report up to\n${dateLabel || '{{REPORT_DATE}}'}`);
+        blueBoxTxt.setText(`${department || '{{DEPARTMENT}}'}\n\nmonthly Report up to\n${dateLabel || '{{REPORT_DATE}}'}`);
         blueBoxTxt.getTextStyle().setFontFamily('Arial').setFontSize(12).setBold(true).setForegroundColor('#ffffff');
         try { blueBoxTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER); } catch(e) {}
 

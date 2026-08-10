@@ -1,11 +1,11 @@
 {
-  "version": "1.0.961",
+  "version": "1.0.963",
   "highlights": {
     "ar": [
-      "المصادقة الثنائية (MFA): السماح لجميع المستخدمين بتسجيل الدخول السلس دون حظر الحسابات، مع إبراز تذكير أمني لطيف للحسابات غير المفعلة يوجههم لتفعيل المصادقة الثنائية من الملف الشخصي."
+      "تصدير PPT: إصلاح تكرار أسماء الإدارات في قائمة الاختيار وشرائح العرض من خلال دمج المسميات المكررة وتطبيع النصوص العربية والمسافات."
     ],
     "en": [
-      "Two-Factor Authentication (MFA): Enabled smooth login for non-enrolled users with a helpful post-login security reminder encouraging MFA enrollment from Profile without blocking access."
+      "PPT Export: fixed duplicate department names in selection dropdown and presentation slides by applying normalized text merging and removing redundant label prefixes."
     ]
   }
 }
