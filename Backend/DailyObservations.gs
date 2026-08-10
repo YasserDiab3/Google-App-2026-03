@@ -970,9 +970,30 @@ function exportDailyObservationsPptReport(payload) {
 
         presentation.saveAndClose();
 
-        // تصدير كـ PPTX
-        const pptBlob = DriveApp.getFileById(presId).getAs(MimeType.MICROSOFT_POWERPOINT);
-        pptBlob.setName(baseName + '.pptx');
+        // تصدير كـ PPTX عبر UrlFetchApp export URL
+        let pptBlob = null;
+        try {
+            const exportUrl = 'https://docs.google.com/presentation/d/' + presId + '/export/pptx';
+            const response = UrlFetchApp.fetch(exportUrl, {
+                headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+                muteHttpExceptions: true
+            });
+            if (response.getResponseCode() === 200) {
+                pptBlob = response.getBlob().setName(baseName + '.pptx');
+            } else {
+                Logger.log('PPT Export HTTP status: ' + response.getResponseCode());
+            }
+        } catch (fetchErr) {
+            Logger.log('PPT Export UrlFetchApp error: ' + fetchErr.toString());
+        }
+
+        if (!pptBlob) {
+            try {
+                pptBlob = DriveApp.getFileById(presId).getAs(MimeType.PDF).setName(baseName + '.pdf');
+            } catch (pdfErr) {
+                pptBlob = DriveApp.getFileById(presId).getBlob().setName(baseName);
+            }
+        }
 
         const pptFile = outputFolder ? outputFolder.createFile(pptBlob) : DriveApp.createFile(pptBlob);
         try {
