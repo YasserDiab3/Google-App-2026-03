@@ -3055,6 +3055,16 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'createDefaultDailyObservationsPptTemplate': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    result = createDefaultDailyObservationsPptTemplate();
+                    return;
+
+        })();
+        return result;
+    },
     'addObservationSite': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

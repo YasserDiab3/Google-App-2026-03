@@ -7999,6 +7999,10 @@ const DailyObservations = {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-secondary" id="ppt-template-id-cancel-btn">إلغاء</button>
+                    <button type="button" class="btn-secondary bg-emerald-600 hover:bg-emerald-700 text-white" id="ppt-template-id-auto-create-btn" title="إنشاء وتنسيق قالب Google Slides جديد تلقائياً في Drive">
+                        <i class="fas fa-magic ml-2"></i>
+                        إنشاء Template تلقائياً
+                    </button>
                     <button type="button" class="btn-primary" id="ppt-template-id-save-btn">
                         <i class="fas fa-save ml-2"></i>
                         حفظ Template ID
@@ -8020,6 +8024,31 @@ const DailyObservations = {
         modal.querySelector('#ppt-template-id-cancel-btn')?.addEventListener('click', close);
         modal.addEventListener('click', (e) => {
             if (e.target === modal) close();
+        });
+
+        // إنشاء Template تلقائياً
+        modal.querySelector('#ppt-template-id-auto-create-btn')?.addEventListener('click', async () => {
+            Loading.show('جاري إنشاء قالب Google Slides تلقائياً في Google Drive...');
+            try {
+                const result = await GoogleIntegration.sendToAppsScript('createDefaultDailyObservationsPptTemplate', {});
+                Loading.hide();
+
+                if (result && result.success && result.templateId) {
+                    const input = modal.querySelector('#ppt-template-id-input');
+                    if (input) input.value = result.templateId;
+                    Notification.success('تم إنشاء القالب الافتراضي وتطبيقه بنجاح!');
+                    if (result.presentationUrl) {
+                        window.open(result.presentationUrl, '_blank');
+                    }
+                    close();
+                } else {
+                    Notification.error(result?.message || 'فشل إنشاء القالب التلقائي');
+                }
+            } catch (error) {
+                Loading.hide();
+                Utils.safeError('فشل إنشاء القالب التلقائي:', error);
+                Notification.error('فشل إنشاء القالب التلقائي: ' + (error?.message || 'خطأ غير معروف'));
+            }
         });
 
         // حفظ Template ID

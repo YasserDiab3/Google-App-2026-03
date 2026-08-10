@@ -680,6 +680,103 @@ function setDailyObservationsPptTemplateId(templateIdOrPayload) {
 }
 
 /**
+ * إنشاء قالب Google Slides افتراضي وتطبيقه تلقائياً
+ * @returns {Object} نتيجة التوليد مضافاً إليها templateId و presentationUrl
+ */
+function createDefaultDailyObservationsPptTemplate() {
+    try {
+        if (typeof SlidesApp === 'undefined') {
+            return { success: false, message: 'خدمة SlidesApp غير متوفرة في المشروع.' };
+        }
+
+        const presentation = SlidesApp.create('قالب تقارير الملاحظات اليومية (Daily Observations Template)');
+        const slides = presentation.getSlides();
+        
+        // الشريحة الأولى (الغلاف)
+        const coverSlide = slides[0];
+        coverSlide.getBackground().setSolidFill('#1e293b'); // كحلي غامق أنيق
+        
+        const titleShape = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 50, 100, 620, 150);
+        titleShape.getFill().setTransparent();
+        titleShape.getBorder().setTransparent();
+        const titleText = titleShape.getText();
+        titleText.setText('تقرير الملاحظات اليومية\n{{DEPARTMENT}}');
+        titleText.getTextStyle().setFontFamily('Cairo').setFontSize(32).setBold(true).setForegroundColor('#ffffff');
+        
+        const dateShape = coverSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 50, 270, 620, 50);
+        dateShape.getFill().setTransparent();
+        dateShape.getBorder().setTransparent();
+        const dateText = dateShape.getText();
+        dateText.setText('تاريخ التقرير: {{REPORT_DATE}}');
+        dateText.getTextStyle().setFontFamily('Cairo').setFontSize(18).setForegroundColor('#94a3b8');
+
+        // الشريحة الثانية (شريحة الملاحظة التي ستتكرر)
+        const obsSlide = presentation.appendSlide(SlidesApp.SlideLayout.BLANK);
+        
+        // شريط علوي أنيق
+        const headerBar = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 0, 0, 720, 50);
+        headerBar.getFill().setSolidFill('#0f172a');
+        headerBar.getBorder().setTransparent();
+        const headerText = headerBar.getText();
+        headerText.setText('ملاحظة رقم: {{OBS_NO}} ({{ISO_CODE}}) | {{OBS_DATE}}');
+        headerText.getTextStyle().setFontFamily('Cairo').setFontSize(14).setBold(true).setForegroundColor('#ffffff');
+
+        // صندوق تفاصيل الملاحظة
+        const bodyBox = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 30, 70, 660, 290);
+        bodyBox.getFill().setSolidFill('#f8fafc');
+        bodyBox.getBorder().setWeight(1);
+        bodyBox.getBorder().getLineFill().setSolidFill('#cbd5e1');
+        
+        const bodyText = bodyBox.getText();
+        bodyText.setText(
+            'الموقع: {{OBS_LOCATION}} | الوردية: {{SHIFT}} | القائم بالمرور: {{OBSERVER}}\n' +
+            'نوع الملاحظة: {{OBS_TYPE}} | مستوى الخطر: {{RISK_LEVEL}} | الحالة: {{STATUS}}\n\n' +
+            'تفاصيل الملاحظة:\n{{OBS_DETAILS}}\n\n' +
+            'الإجراء التصحيحي المطلوب:\n{{CORRECTIVE_ACTION}}\n\n' +
+            'المسؤول: {{RESPONSIBLE}} | تاريخ الإنجاز المتوقع: {{TARGET_DATE}}'
+        );
+        bodyText.getTextStyle().setFontFamily('Cairo').setFontSize(13).setForegroundColor('#334155');
+
+        // عنصر صورة الملاحظة (Shape مع عنوان OBS_IMAGE)
+        const imagePlaceholder = obsSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 480, 130, 190, 190);
+        imagePlaceholder.setTitle('OBS_IMAGE');
+        imagePlaceholder.getFill().setSolidFill('#e2e8f0');
+        imagePlaceholder.getBorder().setWeight(1);
+        imagePlaceholder.getBorder().getLineFill().setSolidFill('#cbd5e1');
+        const imgText = imagePlaceholder.getText();
+        imgText.setText('صورة الملاحظة\n[OBS_IMAGE]');
+        imgText.getTextStyle().setFontFamily('Cairo').setFontSize(11).setForegroundColor('#64748b');
+
+        // الشريحة الثالثة (النهاية)
+        const endSlide = presentation.appendSlide(SlidesApp.SlideLayout.BLANK);
+        endSlide.getBackground().setSolidFill('#0f172a');
+        const endShape = endSlide.insertShape(SlidesApp.ShapeType.RECTANGLE, 50, 150, 620, 100);
+        endShape.getFill().setTransparent();
+        endShape.getBorder().setTransparent();
+        const endText = endShape.getText();
+        endText.setText('شكراً لالتزامكم بمعايير السلامة وصحة مكان العمل');
+        endText.getTextStyle().setFontFamily('Cairo').setFontSize(24).setBold(true).setForegroundColor('#38bdf8');
+
+        presentation.saveAndClose();
+
+        const templateId = presentation.getId();
+        
+        // ضبط المعرف تلقائياً في Script Properties
+        setDailyObservationsPptTemplateId(templateId);
+
+        return {
+            success: true,
+            message: 'تم إنشاء القالب الافتراضي في Google Drive وتطبيقه بنجاح.',
+            templateId: templateId,
+            presentationUrl: presentation.getUrl()
+        };
+    } catch (error) {
+        Logger.log('Error in createDefaultDailyObservationsPptTemplate: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء إنشاء القالب الافتراضي: ' + error.toString() };
+    }
+}
+
+/**
  * الحصول على Template ID الحالي لتصدير PPT
  * 
  * @returns {Object} Template ID الحالي

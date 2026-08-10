@@ -26,7 +26,12 @@ var COL_X = 23; // عمود X لملاحظات مصنع 1
 var COL_F = 5;
 var COL_Y = 24;
 var COL_AQ = 42; // عمود AQ لملاحظات مصنع 2
-var QUESTION_COUNT = 18;
+/**
+ * دالة الإصلاح الرئيسية لتصفية التكرارات وإصلاح الأرقام — تظهر بأعلى القائمة (a_...)
+ */
+function a_dscRepairSequence() {
+  return dscRepairSequence();
+}
 
 /**
  * تحويل نص التاريخ (مع أو بدون وقت) إلى تاريخ فقط بصيغة YYYY-MM-DD
@@ -615,7 +620,7 @@ function saveDailySafetyCheckListToAppSheet(recordData) {
  * - يصلح المعرفات المكررة (DSC_0655) والمشوهة بمنحها id جديد فريد (DSC_0656)
  * - يضمن أن reportNumber فريد لكل تقرير
  */
-function repairDailySafetyCheckListSequence() {
+function dscRepairSequence() {
   var lock = null;
   try {
     try {
@@ -739,6 +744,10 @@ function repairDailySafetyCheckListSequence() {
   } finally {
     if (lock) { try { lock.releaseLock(); } catch (e) {} }
   }
+}
+
+function repairDailySafetyCheckListSequence() {
+  return dscRepairSequence();
 }
 
 /**
