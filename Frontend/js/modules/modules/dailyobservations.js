@@ -1997,12 +1997,10 @@ const DailyObservations = {
                                 <i class="fas fa-file-excel ml-2"></i>
                                 <span data-i18n="module.dailyobs.btn.exportExcel">تصدير Excel</span>
                             </button>
-                            ${this.canDailyObservationsFullAdminUi() ? `
                             <button id="export-observations-ppt-btn" class="btn-secondary">
                                 <i class="fas fa-file-powerpoint ml-2"></i>
                                 <span data-i18n="module.dailyobs.btn.exportPpt">تصدير PPT</span>
                             </button>
-                            ` : ''}
                             <button id="add-observation-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
                                 <span data-i18n="module.dailyobs.btn.addObservation">إضافة ملاحظة جديدة</span>
@@ -7658,12 +7656,6 @@ const DailyObservations = {
      * - الشريحة الأخيرة: ثابتة
      */
     async showExportPptModal() {
-        if (!this.canDailyObservationsFullAdminUi()) {
-            if (typeof Notification !== 'undefined' && Notification.error) {
-                Notification.error('تصدير PPT متاح لمدير النظام فقط');
-            }
-            return;
-        }
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
 
@@ -7796,12 +7788,6 @@ const DailyObservations = {
 
     async exportPptReport({ department, reportDate, fromDate, toDate }) {
         try {
-            if (!this.canDailyObservationsFullAdminUi()) {
-                if (typeof Notification !== 'undefined' && Notification.error) {
-                    Notification.error('تصدير PPT متاح لمدير النظام فقط');
-                }
-                return;
-            }
             if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
                 Notification.error('Google Apps Script غير مفعّل. يرجى تفعيله في الإعدادات أولاً.');
                 return;
