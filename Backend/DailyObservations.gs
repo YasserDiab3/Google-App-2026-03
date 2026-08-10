@@ -1329,8 +1329,14 @@ function exportDailyObservationsPptReport(payload) {
             overviewSlide = slides[1];
             itemTemplateSlide = slides[2];
             execSummarySlide = slides[3];
+        } else if (slides.length >= 3) {
+            overviewSlide = slides[1];
+            itemTemplateSlide = slides[2];
+            execSummarySlide = presentation.appendSlide();
         } else {
-            itemTemplateSlide = slides[1];
+            overviewSlide = presentation.appendSlide();
+            itemTemplateSlide = slides[1] || presentation.appendSlide();
+            execSummarySlide = presentation.appendSlide();
         }
 
         let logoUrl = String(payload.logoUrl || payload.logo || '').trim();
@@ -1343,17 +1349,17 @@ function exportDailyObservationsPptReport(payload) {
             } catch(csErr) {}
         }
 
-        // تعبئة وتجميل الغلاف تلقائياً مع زرع الشعار
+        // 1) تعبئة وتجميل الغلاف تلقائياً مع زرع الشعار
         _dob_buildCoverSlide_(coverSlide, department, dateLabel, logoUrl);
 
-        // تحديث شريحة النظرة العامة (الداشبورد 1)
+        // 2) تحديث شريحة النظرة العامة (الداشبورد 1)
         if (overviewSlide) {
             _dob_buildOverviewSlide_(overviewSlide, observations, department, dateLabel);
         }
 
-        // تجهيز شرائح الملاحظات
+        // 3) تجهيز شرائح الملاحظات عبر تكرار نموذج الشريحة الأصلي لكل ملاحظة مستقلة
         observations.forEach(function (obs, idx) {
-            const slide = (idx === 0) ? itemTemplateSlide : itemTemplateSlide.duplicate();
+            const slide = itemTemplateSlide.duplicate();
             const obsNo = String(idx + 1);
             const obsDate = _dob_formatDateTimeSafe_(obs.date, tz);
             const location = _dob_joinLocation_(obs.siteName, obs.locationName);
@@ -1408,7 +1414,14 @@ function exportDailyObservationsPptReport(payload) {
             }
         });
 
-        // تحديث شريحة الملخص التنفيذي (الداشبورد 2) ونقلها قبل الشريحة الأخيرة
+        // 4) حذف نموذج الشريحة الأصلي غير المعبأ
+        try {
+            itemTemplateSlide.remove();
+        } catch (rmErr) {
+            Logger.log('PPT Export: failed to remove itemTemplateSlide: ' + rmErr);
+        }
+
+        // 5) تحديث شريحة الملخص التنفيذي (الداشبورد 2) ونقلها قبل الشريحة الأخيرة
         if (execSummarySlide) {
             _dob_buildExecutiveSummarySlide_(execSummarySlide, observations, department, dateLabel);
             try {
