@@ -1,11 +1,11 @@
 {
-  "version": "1.0.959",
+  "version": "1.0.961",
   "highlights": {
     "ar": [
-      "الملاحظات اليومية: إتاحة زر «تصدير PPT» لجميع المستخدمين المصرح لهم بقراءة/متابعة الملاحظات اليومية، مع الإبقاء على زر «إعدادات Template» لمدير النظام فقط."
+      "المصادقة الثنائية (MFA): السماح لجميع المستخدمين بتسجيل الدخول السلس دون حظر الحسابات، مع إبراز تذكير أمني لطيف للحسابات غير المفعلة يوجههم لتفعيل المصادقة الثنائية من الملف الشخصي."
     ],
     "en": [
-      "Daily Observations: enabled 'Export PPT' button for all authorized users with access to Daily Observations, keeping the 'Template Settings' configuration restricted to System Admin only."
+      "Two-Factor Authentication (MFA): Enabled smooth login for non-enrolled users with a helpful post-login security reminder encouraging MFA enrollment from Profile without blocking access."
     ]
   }
 }

@@ -1279,6 +1279,16 @@ window.Auth = {
 
         if (!requiresPasswordChange) {
             Notification.success(`مرحباً ${user.name}`);
+            // تذكير أمني لطيف للمستخدمين الذين لم يفعلوا المصادقة الثنائية بعد (بدون حجب الدخول)
+            if (!this._isMfaEnabledForUser(AppState.currentUser)) {
+                setTimeout(() => {
+                    try {
+                        if (typeof Notification !== 'undefined' && typeof Notification.info === 'function') {
+                            Notification.info('💡 تذكير أمني: المصادقة الثنائية (MFA) غير مفعّلة على حسابك. يمكنك تفعيلها في أي وقت من الملف الشخصي لتعزيز حماية حسابك.', { duration: 7000 });
+                        }
+                    } catch (_eMfaNotif) {}
+                }, 1500);
+            }
         }
 
         // تحميل إعدادات Google بشكل دائم بعد تسجيل الدخول (يجب أن تكون متاحة لجميع المستخدمين)
