@@ -7840,9 +7840,10 @@ const DailyObservations = {
                 fromDate: fromDate ? new Date(fromDate).toISOString() : '',
                 toDate: toDate ? new Date(toDate).toISOString() : '',
                 logoUrl: AppState.companySettings?.logo || AppState.companySettings?.logoUrl || '',
-                observations: exportBatch.map((o) => ({
+                observations: exportBatch.map((o, _idx) => ({
                     id: o.id || '',
                     isoCode: o.isoCode || '',
+                    observationIndex: _idx + 1,   // رقم تسلسلي احتياطي إذا كان isoCode فارغاً
                     siteName: o.siteName || '',
                     locationName: o.locationName || '',
                     date: o.date || '',

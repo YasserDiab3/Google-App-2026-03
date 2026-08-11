@@ -1410,8 +1410,9 @@ function exportDailyObservationsPptReport(payload) {
         var imageBlobCache = {};
         observations.forEach(function (obs, idx) {
             const slide = itemTemplateSlide.duplicate();
-            // الرقم التسلسلي: isoCode من النظام أولاً، ثم id، ثم رقم تسلسلي
-            const obsNo = String(obs.isoCode || obs.id || (idx + 1));
+            // الرقم التسلسلي: isoCode من النظام أولاً، ثم id، ثم observationIndex من الفرونت، ثم idx+1
+            const obsNo = String(obs.isoCode || obs.id || obs.observationIndex || (idx + 1));
+            Logger.log('PPT obs[' + idx + '] obsNo=' + obsNo + ' isoCode=' + (obs.isoCode||'') + ' id=' + (obs.id||''));
             const obsDate = _dob_formatDateTimeSafe_(obs.date, tz);
             const targetDate = _dob_formatDateSafe_(obs.expectedCompletionDate, tz);
 
@@ -1692,6 +1693,28 @@ function _dob_replaceAllTextSafe_(presentation, slide, replacements, isEnglish) 
                             }
                         } catch (_lErr) {}
                     });
+                }
+            }
+
+            // ✅ Pass إضافي: ضبط اتجاه النص لكل الـ shapes التي تحتوي نصاً عربياً
+            // (يشمل خانة التفاصيل والإجراء التصحيحي وأي نص حر)
+            if (!isEnglish) {
+                for (var si = 0; si < shapes.length; si++) {
+                    try {
+                        var sTxt = shapes[si].getText();
+                        var sStr = sTxt.asString().trim();
+                        if (!sStr) continue;
+                        // إذا يحتوي حروفاً عربية → فرض RTL
+                        if (/[\u0600-\u06FF]/.test(sStr)) {
+                            sTxt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT);
+                            var sParas = sTxt.getParagraphs();
+                            for (var sp = 0; sp < sParas.length; sp++) {
+                                try {
+                                    sParas[sp].getRange().getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.RIGHT);
+                                } catch(_pa) {}
+                            }
+                        }
+                    } catch(_siErr) {}
                 }
             }
         } catch (_shErr) {
