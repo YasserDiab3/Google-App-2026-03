@@ -1410,9 +1410,41 @@ function exportDailyObservationsPptReport(payload) {
         var imageBlobCache = {};
         observations.forEach(function (obs, idx) {
             const slide = itemTemplateSlide.duplicate();
+            // الرقم التسلسلي: isoCode من النظام أولاً، ثم id، ثم رقم تسلسلي
             const obsNo = String(obs.isoCode || obs.id || (idx + 1));
             const obsDate = _dob_formatDateTimeSafe_(obs.date, tz);
             const targetDate = _dob_formatDateSafe_(obs.expectedCompletionDate, tz);
+
+            // *** جلب الصورة وزرعها أولاً قبل replaceAllTextSafe ***
+            // (replaceAllTextSafe يمر على كل الـ shapes وقد يمسح نص [OBS_IMAGE])
+            var primaryImageUrl = obs.imageUrl || obs.image || obs.photo || obs.fileUrl || obs.picture || '';
+            if (!primaryImageUrl && Array.isArray(obs.images) && obs.images.length > 0) {
+                primaryImageUrl = obs.images[0];
+            }
+            if (!primaryImageUrl && Array.isArray(obs.photos) && obs.photos.length > 0) {
+                primaryImageUrl = obs.photos[0];
+            }
+            if (!primaryImageUrl && Array.isArray(obs.attachments) && obs.attachments.length > 0) {
+                var a = obs.attachments[0];
+                primaryImageUrl = (a && typeof a === 'object') ? (a.directLink || a.shareableLink || a.url || (a.cloudLink && a.cloudLink.url) || a.data || '') : String(a || '');
+            }
+
+            Logger.log('PPT obs ' + obsNo + ' imageUrl: ' + (primaryImageUrl ? primaryImageUrl.substring(0, 80) : 'NONE'));
+
+            var blob = null;
+            if (primaryImageUrl) {
+                try {
+                    blob = imageBlobCache[primaryImageUrl];
+                    if (!blob) {
+                        blob = _dob_getImageBlobFromUrl_(primaryImageUrl);
+                        if (blob) imageBlobCache[primaryImageUrl] = blob;
+                    }
+                } catch (imgErr) {
+                    Logger.log('PPT Export: failed to fetch image for obs ' + obsNo + ': ' + imgErr);
+                }
+            }
+            // زرع الصورة (أو تفريغ النص) قبل أي استبدال نصي
+            _dob_replaceImagePlaceholder_(slide, blob, 'OBS_IMAGE');
 
             var details = isEnglish ? _dob_translateToEnglish_(obs.details) : String(obs.details || '');
             var correctiveAction = isEnglish ? _dob_translateToEnglish_(obs.correctiveAction) : String(obs.correctiveAction || '');
@@ -1440,35 +1472,8 @@ function exportDailyObservationsPptReport(payload) {
                 '{{SHIFT}}': shift,
                 '{{OBSERVER}}': String(obs.observerName || '')
             }, isEnglish);
-
-            // الصورة الرئيسية للملاحظة (جلب فوري ومؤطّر يمنع التأخير وانقضاء المهلة)
-            var primaryImageUrl = obs.imageUrl || obs.image || obs.photo || obs.fileUrl || obs.picture || '';
-            if (!primaryImageUrl && Array.isArray(obs.images) && obs.images.length > 0) {
-                primaryImageUrl = obs.images[0];
-            }
-            if (!primaryImageUrl && Array.isArray(obs.photos) && obs.photos.length > 0) {
-                primaryImageUrl = obs.photos[0];
-            }
-            if (!primaryImageUrl && Array.isArray(obs.attachments) && obs.attachments.length > 0) {
-                var a = obs.attachments[0];
-                primaryImageUrl = (a && typeof a === 'object') ? (a.directLink || a.shareableLink || a.url || (a.cloudLink && a.cloudLink.url) || a.data || '') : String(a || '');
-            }
-
-            var blob = null;
-            if (primaryImageUrl) {
-                try {
-                    blob = imageBlobCache[primaryImageUrl];
-                    if (!blob) {
-                        blob = _dob_getImageBlobFromUrl_(primaryImageUrl);
-                        if (blob) imageBlobCache[primaryImageUrl] = blob;
-                    }
-                } catch (imgErr) {
-                    Logger.log('PPT Export: failed to fetch image for obs ' + obsNo + ': ' + imgErr);
-                }
-            }
-            // دائماً استدعاء _dob_replaceImagePlaceholder_ إما لزرع الصورة أو إزالة وسم [OBS_IMAGE]
-            _dob_replaceImagePlaceholder_(slide, blob, 'OBS_IMAGE');
         });
+
 
         // 4) حذف نموذج الشريحة الأصلي غير المعبأ
         try {
