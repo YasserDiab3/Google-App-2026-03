@@ -4730,9 +4730,9 @@ const DailyObservations = {
             const filterWasVisible = filterPanel && filterPanel.style.display !== 'none';
             if (filterWasVisible) filterPanel.style.display = 'none';
 
-            // التقاط الصورة بدقة عالية
+            // التقاط الصورة بدقة عالية جداً (Scale 2.2)
             const canvas = await html2canvas(root, {
-                scale: 2.0,
+                scale: 2.2,
                 useCORS: true,
                 backgroundColor: '#ffffff',
                 scrollX: 0,
@@ -4743,22 +4743,24 @@ const DailyObservations = {
             if (filterWasVisible) filterPanel.style.display = '';
 
             const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            // استخدام الوضع الأفقي (Landscape) للاستفادة الكاملة من عرض الرسومات البيانية
+            const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-            const pdfW = pdf.internal.pageSize.getWidth();
-            const pdfH = pdf.internal.pageSize.getHeight();
-            const margin = 10, headerH = 20, footerH = 14;
-            const contentW = pdfW - margin * 2;
-            const contentAreaH = pdfH - headerH - footerH - margin * 0.5;
+            const pdfW = pdf.internal.pageSize.getWidth();  // 297mm
+            const pdfH = pdf.internal.pageSize.getHeight(); // 210mm
+            const margin = 8, headerH = 18, footerH = 12;
+            const contentW = pdfW - margin * 2; // 281mm
+            const contentAreaH = pdfH - headerH - footerH - 4; // 176mm
+            
             const ratio = contentW / canvas.width;
-            const pageHeightPx = contentAreaH / ratio;
+            const pageHeightPx = Math.floor(contentAreaH / ratio);
             const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
 
             const enDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
             const enTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
             for (let p = 0; p < totalPages; p++) {
-                if (p > 0) pdf.addPage();
+                if (p > 0) pdf.addPage('a4', 'landscape');
 
                 // ── ترويسة النظام الاحترافية (Header) ──
                 pdf.setFillColor(30, 58, 138); // #1e3a8a Navy
@@ -4767,23 +4769,27 @@ const DailyObservations = {
                 pdf.rect(0, headerH - 3, pdfW, 3, 'F');
 
                 pdf.setTextColor(255, 255, 255);
-                pdf.setFontSize(13); pdf.setFont(undefined, 'bold');
-                pdf.text('Daily Observations Analytics Report', margin, 9, { align: 'left' });
+                pdf.setFontSize(12); pdf.setFont(undefined, 'bold');
+                pdf.text('Daily Observations Analytics Report', margin, 8, { align: 'left' });
                 pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
-                pdf.text('SafetyHub | ICAPP — Daily Observations Analysis Dashboard', margin, 15, { align: 'left' });
+                pdf.text('SafetyHub | ICAPP — Daily Observations Analysis Dashboard', margin, 13.5, { align: 'left' });
 
-                pdf.setFontSize(8.5);
-                pdf.text(`${enDate}  ${enTime}`, pdfW - margin, 9, { align: 'right' });
-                pdf.setFontSize(9); pdf.setFont(undefined, 'bold');
-                pdf.text(`Page ${p + 1} of ${totalPages}`, pdfW - margin, 15.5, { align: 'right' });
+                pdf.setFontSize(8);
+                pdf.text(`${enDate}  ${enTime}`, pdfW - margin, 8, { align: 'right' });
+                pdf.setFontSize(8.5); pdf.setFont(undefined, 'bold');
+                pdf.text(`Page ${p + 1} of ${totalPages}`, pdfW - margin, 13.5, { align: 'right' });
                 pdf.setTextColor(0, 0, 0);
 
-                // ── محتوى الشريحة ──
+                // ── قص ومحاذاة شريحة التقرير ──
                 const sliceCanvas = document.createElement('canvas');
                 const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
                 sliceCanvas.width = canvas.width;
                 sliceCanvas.height = sliceH;
-                sliceCanvas.getContext('2d').drawImage(canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+                
+                const ctx = sliceCanvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, sliceH);
+                ctx.drawImage(canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
 
                 let sliceData = '';
                 let sliceFmt = 'JPEG';
@@ -4798,7 +4804,7 @@ const DailyObservations = {
                     sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
                 }
 
-                pdf.addImage(sliceData, sliceFmt, margin, headerH, contentW, sliceH * ratio);
+                pdf.addImage(sliceData, sliceFmt, margin, headerH + 1, contentW, sliceH * ratio);
 
                 // ── تذييل النظام الاحترافي (Footer) ──
                 const footerY = pdfH - footerH;
@@ -4809,16 +4815,16 @@ const DailyObservations = {
                 pdf.rect(0, footerY, pdfW, footerH, 'F');
 
                 pdf.setFontSize(7.5); pdf.setTextColor(29, 78, 216); pdf.setFont(undefined, 'bold');
-                pdf.text('SafetyHub | ICAPP', margin, footerY + 5, { align: 'left' });
+                pdf.text('SafetyHub | ICAPP', margin, footerY + 4.5, { align: 'left' });
                 pdf.setFont(undefined, 'normal'); pdf.setFontSize(6.5); pdf.setTextColor(100, 116, 139);
-                pdf.text('Daily Safety Observations Analysis Report — Confidential', margin, footerY + 10, { align: 'left' });
+                pdf.text('Daily Safety Observations Analysis Report — Confidential', margin, footerY + 9, { align: 'left' });
 
                 pdf.setFontSize(8); pdf.setTextColor(29, 78, 216); pdf.setFont(undefined, 'bold');
-                pdf.text(`${p + 1} / ${totalPages}`, pdfW / 2, footerY + 7.5, { align: 'center' });
+                pdf.text(`${p + 1} / ${totalPages}`, pdfW / 2, footerY + 6.5, { align: 'center' });
 
                 pdf.setFont(undefined, 'normal'); pdf.setFontSize(7); pdf.setTextColor(100, 116, 139);
-                pdf.text(enDate, pdfW - margin, footerY + 5, { align: 'right' });
-                pdf.text(enTime, pdfW - margin, footerY + 10, { align: 'right' });
+                pdf.text(enDate, pdfW - margin, footerY + 4.5, { align: 'right' });
+                pdf.text(enTime, pdfW - margin, footerY + 9, { align: 'right' });
             }
 
             const dateFile = new Date().toISOString().slice(0, 10);
