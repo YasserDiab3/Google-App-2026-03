@@ -1336,11 +1336,28 @@ function exportDailyObservationsPptReport(payload) {
         if (!templateId) {
             templateId = String(props.getProperty('DAILY_OBSERVATIONS_PPT_TEMPLATE_ID') || '').trim();
         }
-        
-        if (!templateId) {
+
+        let templateFile = null;
+        let isValidSlidesTemplate = false;
+
+        if (templateId) {
+            try {
+                templateFile = DriveApp.getFileById(templateId);
+                if (templateFile && templateFile.getMimeType() === 'application/vnd.google-apps.presentation') {
+                    isValidSlidesTemplate = true;
+                }
+            } catch (checkErr) {
+                Logger.log('Template file check error: ' + checkErr);
+            }
+        }
+
+        // إذا كان القالب غير موجود أو ليس ملف Google Slides أصلي (مثلاً ملف .pptx مفرود)، قم بتوليد قالب افتراضي أصلي
+        if (!isValidSlidesTemplate) {
+            Logger.log('DAILY_OBSERVATIONS_PPT_TEMPLATE_ID is missing or not a Google Slides presentation. Creating default template...');
             var autoCreateRes = createDefaultDailyObservationsPptTemplate();
             if (autoCreateRes && autoCreateRes.success && autoCreateRes.templateId) {
                 templateId = autoCreateRes.templateId;
+                templateFile = DriveApp.getFileById(templateId);
             } else {
                 return {
                     success: false,
@@ -1357,8 +1374,7 @@ function exportDailyObservationsPptReport(payload) {
         const safeDept = department.replace(/[\\\/:*?"<>|]/g, '-');
         const baseName = 'Daily_Observations_' + safeDept + '_' + dateLabel;
 
-        // نسخ الـ Template
-        const templateFile = DriveApp.getFileById(templateId);
+        // نسخ الـ Template الأصلي السليم
         const copiedFile = outputFolder
             ? templateFile.makeCopy(baseName + '_TEMPLATE_COPY', outputFolder)
             : templateFile.makeCopy(baseName + '_TEMPLATE_COPY');
