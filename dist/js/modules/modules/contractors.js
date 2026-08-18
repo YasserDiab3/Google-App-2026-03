@@ -349,48 +349,48 @@ const APPROVED_ENTITY_STATUS_OPTIONS={approved:"\u0645\u0639\u062A\u0645\u062F",
                     <i class="fas fa-clipboard-check text-4xl text-gray-300 mb-3"></i>
                     <p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u062C\u0647\u0627\u062A \u0645\u0639\u062A\u0645\u062F\u0629 \u0623\u0648 \u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0645\u0633\u062C\u0644\u064A\u0646 \u062D\u0627\u0644\u064A\u0627\u064B.</p>
                 </div>
-            `;const e=t.map(r=>{const o=this.getApprovedStatusBadgeClass(r.status),i=this.getApprovedStatusLabel(r.status),s=this.getApprovedTypeLabel(r.entityType),n=r.approvalDate?Utils.formatDate(r.approvalDate):"\u2014",c=r.expiryDate?Utils.formatDate(r.expiryDate):"\u2014",p=this.isApprovalExpired(r)?'<span class="badge badge-danger ml-2">\u0645\u0646\u062A\u0647\u064A</span>':"";let f=r.code||r.isoCode||r.contractorCode||r["\u0643\u0648\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644"]||r.\u0643\u0648\u062F||r.codeNumber||"";if(!f&&r.contractorId){const D=(AppState.appData.contractors||[]).find($=>$.id===r.contractorId);D&&D.code&&(f=D.code)}let u="";if(r.isRegularContractor&&r.requirementsStatus){const k=r.requirementsStatus;u=k.allMet?'<span class="badge badge-success ml-2" data-i18n-literal>\u0645\u0633\u062A\u0648\u0641\u064A</span>':`<span class="badge badge-warning ml-2">${k.completed}/${k.total}</span>`}const d=this.isEntityEnabled(r),m=d?"":'<span class="badge badge-danger ml-2" data-i18n-literal>\u063A\u064A\u0631 \u0646\u0634\u0637</span>',v=r.isRegularContractor,h=r.contractorId||r.id,A=JSON.stringify(String(r.id||"")),b=JSON.stringify(String(h||"")),w=a?d?`<button class="btn-icon btn-icon-warning" title="\u062A\u0639\u0637\u064A\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644" data-i18n-title="module.contractors.disable" onclick="Contractors.toggleEntityActive(${A}, 'inactive')">
+            `;const e=t.map(r=>{const o=this.getApprovedStatusBadgeClass(r.status),i=this.getApprovedStatusLabel(r.status),s=this.getApprovedTypeLabel(r.entityType),n=r.approvalDate?Utils.formatDate(r.approvalDate):"\u2014",c=r.expiryDate?Utils.formatDate(r.expiryDate):"\u2014",p=this.isApprovalExpired(r)?'<span class="badge badge-danger ml-2">\u0645\u0646\u062A\u0647\u064A</span>':"";let f=r.code||r.isoCode||r.contractorCode||r["\u0643\u0648\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644"]||r.\u0643\u0648\u062F||r.codeNumber||"";if(!f&&r.contractorId){const D=(AppState.appData.contractors||[]).find($=>$.id===r.contractorId);D&&D.code&&(f=D.code)}let u="";if(r.isRegularContractor&&r.requirementsStatus){const k=r.requirementsStatus;u=k.allMet?'<span class="badge badge-success ml-2" data-i18n-literal>\u0645\u0633\u062A\u0648\u0641\u064A</span>':`<span class="badge badge-warning ml-2">${k.completed}/${k.total}</span>`}const d=this.isEntityEnabled(r),m=d?"":'<span class="badge badge-danger ml-2" data-i18n-literal>\u063A\u064A\u0631 \u0646\u0634\u0637</span>',v=r.isRegularContractor,h=r.contractorId||r.id,A=String(r.id||"").replace(/'/g,"\\'"),b=String(h||"").replace(/'/g,"\\'"),w=a?d?`<button class="btn-icon btn-icon-warning" title="\u062A\u0639\u0637\u064A\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644" data-i18n-title="module.contractors.disable" onclick="Contractors.toggleEntityActive('${A}', 'inactive')">
                         <i class="fas fa-toggle-off"></i>
-                    </button>`:`<button class="btn-icon btn-icon-success" title="\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644" data-i18n-title="module.contractors.enable" onclick="Contractors.toggleEntityActive(${A}, 'active')">
+                    </button>`:`<button class="btn-icon btn-icon-success" title="\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644" data-i18n-title="module.contractors.enable" onclick="Contractors.toggleEntityActive('${A}', 'active')">
                         <i class="fas fa-toggle-on"></i>
                     </button>`:"",C=v?`
                 <div class="flex items-center gap-2">
-                    <button class="btn-icon btn-icon-primary" title="\u0639\u0631\u0636 \u0627\u0644\u0645\u0642\u0627\u0648\u0644" onclick="Contractors.viewContractor(${b})">
+                    <button class="btn-icon btn-icon-primary" title="\u0639\u0631\u0636 \u0627\u0644\u0645\u0642\u0627\u0648\u0644" onclick="Contractors.viewContractor('${b}')">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="btn-icon btn-icon-info" title="\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644" onclick="Contractors.editContractor(${b})">
+                    <button class="btn-icon btn-icon-info" title="\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644" onclick="Contractors.editContractor('${b}')">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn-icon btn-icon-success" title="\u0625\u0636\u0627\u0641\u0629 \u062A\u0642\u064A\u064A\u0645" onclick="Contractors.showEvaluationForm(${b})">
+                    <button class="btn-icon btn-icon-success" title="\u0625\u0636\u0627\u0641\u0629 \u062A\u0642\u064A\u064A\u0645" onclick="Contractors.showEvaluationForm('${b}')">
                         <i class="fas fa-clipboard-check"></i>
                     </button>
-                    <button class="btn-icon btn-icon-warning" title="\u0633\u062C\u0644 \u0627\u0644\u062A\u0642\u064A\u064A\u0645\u0627\u062A" onclick="Contractors.openEvaluationHistory(${b})">
+                    <button class="btn-icon btn-icon-warning" title="\u0633\u062C\u0644 \u0627\u0644\u062A\u0642\u064A\u064A\u0645\u0627\u062A" onclick="Contractors.openEvaluationHistory('${b}')">
                         <i class="fas fa-clipboard-list"></i>
                     </button>
                     ${w}
                     ${a?`
-                    <button class="btn-icon btn-icon-danger" title="\u062D\u0630\u0641 \u0627\u0644\u0645\u0642\u0627\u0648\u0644" onclick="Contractors.requestDeleteContractor(${b})">
+                    <button class="btn-icon btn-icon-danger" title="\u062D\u0630\u0641 \u0627\u0644\u0645\u0642\u0627\u0648\u0644" onclick="Contractors.requestDeleteContractor('${b}')">
                         <i class="fas fa-trash"></i>
                     </button>
                     `:""}
                 </div>
             `:`
                 <div class="flex items-center gap-2">
-                    <button class="btn-icon btn-icon-info" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644" onclick="Contractors.viewApprovedEntity(${A})">
+                    <button class="btn-icon btn-icon-info" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644" onclick="Contractors.viewApprovedEntity('${A}')">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="btn-icon btn-icon-primary" title="\u062A\u0639\u062F\u064A\u0644" onclick="Contractors.showApprovedEntityForm(${A})">
+                    <button class="btn-icon btn-icon-primary" title="\u062A\u0639\u062F\u064A\u0644" onclick="Contractors.showApprovedEntityForm('${A}')">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn-icon btn-icon-success" title="\u0625\u0636\u0627\u0641\u0629 \u062A\u0642\u064A\u064A\u0645" onclick="Contractors.showEvaluationFormForApproved(${A})">
+                    <button class="btn-icon btn-icon-success" title="\u0625\u0636\u0627\u0641\u0629 \u062A\u0642\u064A\u064A\u0645" onclick="Contractors.showEvaluationFormForApproved('${A}')">
                         <i class="fas fa-clipboard-check"></i>
                     </button>
-                    <button class="btn-icon btn-icon-warning" title="\u0633\u062C\u0644 \u0627\u0644\u062A\u0642\u064A\u064A\u0645\u0627\u062A" onclick="Contractors.openEvaluationHistoryForApproved(${A})">
+                    <button class="btn-icon btn-icon-warning" title="\u0633\u062C\u0644 \u0627\u0644\u062A\u0642\u064A\u064A\u0645\u0627\u062A" onclick="Contractors.openEvaluationHistoryForApproved('${A}')">
                         <i class="fas fa-clipboard-list"></i>
                     </button>
                     ${w}
                     ${a?`
-                    <button class="btn-icon btn-icon-danger" title="\u062D\u0630\u0641" onclick="Contractors.requestDeleteApprovedEntity(${A})">
+                    <button class="btn-icon btn-icon-danger" title="\u062D\u0630\u0641" onclick="Contractors.requestDeleteApprovedEntity('${A}')">
                         <i class="fas fa-trash"></i>
                     </button>
                     `:""}
