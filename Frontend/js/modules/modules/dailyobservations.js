@@ -8236,57 +8236,102 @@ const DailyObservations = {
             const logoUrl = AppState.companyLogo || AppState.companySettings?.logo || '';
             const companyName = AppState.companySettings?.name || AppState.companyName || 'الشركة العالمية للانتاج والتصنيع الزراعي';
 
-            // مساعد استخراج وتحميل الصور بدقة وأمان تام
-            const resolveDirectImageUrl = (url) => {
-                if (!url || typeof url !== 'string') return '';
-                url = url.trim();
-                if (!url || url.startsWith('data:image/')) return url;
-                
-                const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
-                                   url.match(/id=([a-zA-Z0-9_-]+)/) ||
-                                   url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
-                                   url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
-                if (driveMatch && driveMatch[1]) {
-                    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}=w1600`;
-                }
-                return url;
-            };
-
+            // مساعد استخراج وتحميل الصور وتضمينها كـ Base64 مدمج في ملف PPTX
             const formatPptxImage = async (url) => {
                 if (!url || typeof url !== 'string' || !url.trim()) return null;
                 url = url.trim();
-                if (url.startsWith('data:')) {
+                if (url.startsWith('data:image/') || url.startsWith('data:')) {
                     return { data: url };
                 }
-                const directUrl = resolveDirectImageUrl(url);
-                if (!directUrl) return null;
 
-                try {
-                    const dataUri = await new Promise((resolve) => {
-                        const img = new Image();
-                        img.crossOrigin = 'anonymous';
-                        img.onload = () => {
-                            try {
-                                const canvas = document.createElement('canvas');
-                                canvas.width = img.naturalWidth || img.width || 800;
-                                canvas.height = img.naturalHeight || img.height || 600;
-                                const ctx = canvas.getContext('2d');
-                                ctx.drawImage(img, 0, 0);
-                                resolve(canvas.toDataURL('image/jpeg', 0.90));
-                            } catch(e) {
-                                resolve(null);
+                // استخراج معرف ملف Google Drive إن وجد
+                const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+                                   url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
+                                   url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
+                                   url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+                const fileId = driveMatch ? driveMatch[1] : '';
+
+                // 1. محاولة جلب الصورة مباشرة عبر OAuth Token من Google Drive API
+                if (fileId && typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.isLoggedIn === 'function' && GoogleIntegration.isLoggedIn()) {
+                    try {
+                        const token = (typeof GoogleIntegration.getAuthToken === 'function' && GoogleIntegration.getAuthToken()) ||
+                                      (typeof gapi !== 'undefined' && gapi?.auth2?.getAuthInstance()?.currentUser?.get()?.getAuthResponse()?.access_token) ||
+                                      AppState.googleAccessToken;
+                        if (token) {
+                            const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+                                headers: { Authorization: `Bearer ${token}` }
+                            });
+                            if (res.ok) {
+                                const blob = await res.blob();
+                                const dataUrl = await new Promise((resolve) => {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => resolve(reader.result);
+                                    reader.readAsDataURL(blob);
+                                });
+                                if (dataUrl && String(dataUrl).startsWith('data:image/')) {
+                                    return { data: dataUrl };
+                                }
                             }
-                        };
-                        img.onerror = () => resolve(null);
-                        setTimeout(() => resolve(null), 3000);
-                        img.src = directUrl;
-                    });
-                    if (dataUri) return { data: dataUri };
-                } catch(e) {}
-
-                if (directUrl.startsWith('http://') || directUrl.startsWith('https://')) {
-                    return { path: directUrl };
+                        }
+                    } catch(e) {}
                 }
+
+                // 2. محاولة جلب الصورة عبر الروابط المباشرة كـ Blob
+                const candidates = [];
+                if (fileId) {
+                    candidates.push(`https://lh3.googleusercontent.com/d/${fileId}=w1200`);
+                    candidates.push(`https://drive.google.com/thumbnail?id=${fileId}&sz=w1200`);
+                    candidates.push(`https://drive.google.com/uc?export=view&id=${fileId}`);
+                }
+                if (url.startsWith('http://') || url.startsWith('https://')) {
+                    candidates.push(url);
+                }
+
+                for (const cand of candidates) {
+                    try {
+                        const res = await fetch(cand, { mode: 'cors' });
+                        if (res.ok) {
+                            const blob = await res.blob();
+                            const dataUrl = await new Promise((resolve) => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => resolve(reader.result);
+                                reader.readAsDataURL(blob);
+                            });
+                            if (dataUrl && String(dataUrl).startsWith('data:image/')) {
+                                return { data: dataUrl };
+                            }
+                        }
+                    } catch(e) {}
+                }
+
+                // 3. محاولة التحميل عبر Image + Canvas
+                for (const cand of candidates) {
+                    try {
+                        const dataUrl = await new Promise((resolve) => {
+                            const img = new Image();
+                            img.crossOrigin = 'anonymous';
+                            img.onload = () => {
+                                try {
+                                    const canvas = document.createElement('canvas');
+                                    canvas.width = img.naturalWidth || img.width || 800;
+                                    canvas.height = img.naturalHeight || img.height || 600;
+                                    const ctx = canvas.getContext('2d');
+                                    ctx.drawImage(img, 0, 0);
+                                    resolve(canvas.toDataURL('image/jpeg', 0.88));
+                                } catch(e) {
+                                    resolve(null);
+                                }
+                            };
+                            img.onerror = () => resolve(null);
+                            setTimeout(() => resolve(null), 3500);
+                            img.src = cand;
+                        });
+                        if (dataUrl && String(dataUrl).startsWith('data:image/')) {
+                            return { data: dataUrl };
+                        }
+                    } catch(e) {}
+                }
+
                 return null;
             };
 
