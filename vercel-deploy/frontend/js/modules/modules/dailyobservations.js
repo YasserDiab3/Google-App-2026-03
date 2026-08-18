@@ -3171,8 +3171,12 @@ const DailyObservations = {
                                 void this.renderDataAnalysis().then((html) => {
                                     tabContent.innerHTML = html || '';
                                     this.applyModuleI18n(tabContent);
+                                    this._bindAnalyticsEvents();
                                     return this.loadDataAnalysis();
-                                }).catch(() => this.loadDataAnalysis());
+                                }).catch(() => {
+                                    this._bindAnalyticsEvents();
+                                    this.loadDataAnalysis();
+                                });
                             } else {
                                 this.loadDataAnalysis();
                             }
@@ -3212,6 +3216,7 @@ const DailyObservations = {
             });
         }, 100);
     },
+
 
     async renderDataAnalysis() {
         this.ensureChartJSLoaded().catch(() => {});
@@ -4737,6 +4742,77 @@ const DailyObservations = {
         });
     },
 
+    // ── التحكم في الفلاتر التفاعلية لوحة التحليل ──
+    toggleAnalyticsFilters() {
+        const filterPanel = document.getElementById('obs-filter-panel');
+        const toggleFiltersBtn = document.getElementById('obs-toggle-filters-btn');
+        if (filterPanel) {
+            const isOpen = filterPanel.style.display !== 'none';
+            filterPanel.style.display = isOpen ? 'none' : 'block';
+            if (toggleFiltersBtn) {
+                toggleFiltersBtn.style.background = isOpen ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.35)';
+            }
+        }
+    },
+
+    resetAnalyticsFilters() {
+        ['obs-af-site','obs-af-observer','obs-af-type','obs-af-risk','obs-af-status','obs-af-shift','obs-af-dept'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        this.updateAnalysisResults();
+    },
+
+    setAnalysisPeriod(period) {
+        this._analysisPeriod = String(period || '0');
+        const analyticsRoot = document.getElementById('obs-analytics-root');
+        if (analyticsRoot) {
+            analyticsRoot.querySelectorAll('.obs-period-btn').forEach(b => {
+                const isActive = b.getAttribute('data-period') === String(period);
+                b.style.background = isActive ? '#fff' : 'rgba(255,255,255,0.15)';
+                b.style.color = isActive ? '#1e40af' : '#fff';
+            });
+        }
+        this.updateAnalysisResults();
+    },
+
+    _bindAnalyticsEvents() {
+        const analyticsRoot = document.getElementById('obs-analytics-root');
+        if (!analyticsRoot) return;
+
+        const toggleFiltersBtn = document.getElementById('obs-toggle-filters-btn');
+        if (toggleFiltersBtn && !toggleFiltersBtn.hasAttribute('data-event-bound')) {
+            toggleFiltersBtn.setAttribute('data-event-bound', 'true');
+            toggleFiltersBtn.addEventListener('click', () => this.toggleAnalyticsFilters());
+        }
+
+        const resetFiltersBtn = document.getElementById('obs-filter-reset-btn');
+        if (resetFiltersBtn && !resetFiltersBtn.hasAttribute('data-event-bound')) {
+            resetFiltersBtn.setAttribute('data-event-bound', 'true');
+            resetFiltersBtn.addEventListener('click', () => this.resetAnalyticsFilters());
+        }
+
+        const refreshBtn = document.getElementById('obs-analytics-refresh');
+        if (refreshBtn && !refreshBtn.hasAttribute('data-event-bound')) {
+            refreshBtn.setAttribute('data-event-bound', 'true');
+            refreshBtn.addEventListener('click', () => this.updateAnalysisResults());
+        }
+
+        const pdfBtn = document.getElementById('obs-export-pdf-btn');
+        if (pdfBtn && !pdfBtn.hasAttribute('data-event-bound')) {
+            pdfBtn.setAttribute('data-event-bound', 'true');
+            pdfBtn.addEventListener('click', () => this._exportAnalyticsPDF());
+        }
+
+        ['obs-af-site','obs-af-observer','obs-af-type','obs-af-risk','obs-af-status','obs-af-shift','obs-af-dept'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el && !el.hasAttribute('data-event-bound')) {
+                el.setAttribute('data-event-bound', 'true');
+                el.addEventListener('change', () => this.updateAnalysisResults());
+            }
+        });
+    },
+
     // ── تحديث لوحة التحليل بالكامل ──
     async updateAnalysisResults() {
         const root = document.getElementById('obs-analytics-root');
@@ -4754,6 +4830,9 @@ const DailyObservations = {
 
         // ── 3. ملء قوائم الفلاتر التفاعلية (من بيانات الفترة) ──
         this._populateAnalysisFilterOptions(obsByPeriod);
+
+        // ── 3.5. ربط أحداث العناصر التفاعلية لوحة التحليل ──
+        this._bindAnalyticsEvents();
 
         // ── 4. تطبيق الفلاتر التفاعلية ──
         const obs = this._applyAnalysisFilters(obsByPeriod);
