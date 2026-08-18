@@ -1538,7 +1538,7 @@ window.Auth = {
             }).catch(() => { });
         }
         try {
-            this._recordClinicStaffAttendance('logout', { wait: false });
+            this._recordClinicStaffAttendance('logout', { wait: true });
         } catch (_attErr) {}
 
         // إبطال جلسة الخادم (أفضل جهد بالخلفية — لا يعيق الخروج)
