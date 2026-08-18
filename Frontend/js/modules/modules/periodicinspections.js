@@ -6073,33 +6073,80 @@ const PeriodicInspections = {
             return;
         }
         const fieldToRecordKey = { q16: 'q15Reading', q17: 'q16', q18: 'q17' };
-        const fullTableRows = records.sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt)).map(r => {
+        const sorted = records.sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt));
+
+        const summaryRows = sorted.map((r, idx) => {
             const serial = this.getDailySafetyCheckListSerialNumber(r);
-            const qCells = this.DAILY_SAFETY_CHECKLIST_QUESTIONS.map(q => {
+            let compliantCount = 0;
+            let totalQuestions = 0;
+            this.DAILY_SAFETY_CHECKLIST_QUESTIONS.forEach(q => {
+                if (q.key === 'q16') return;
+                totalQuestions++;
                 const key = fieldToRecordKey[q.key] || q.key;
-                const v = r[key] != null ? String(r[key]) : '-';
-                return `<td style="padding:4px; border:1px solid #ddd; font-size:10px;">${Utils.escapeHTML(v)}</td>`;
-            }).join('');
-            return `<tr><td style="padding:4px; border:1px solid #ddd;">${Utils.escapeHTML(serial)}</td><td style="padding:4px; border:1px solid #ddd;">${Utils.escapeHTML(r.siteName || '-')}</td><td style="padding:4px; border:1px solid #ddd;">${r.date ? Utils.formatDate(r.date) : '-'}</td><td style="padding:4px; border:1px solid #ddd;">${Utils.escapeHTML(r.inspectorName || '-')}</td><td style="padding:4px; border:1px solid #ddd;">${Utils.escapeHTML(r.shift || '-')}</td>${qCells}</tr>`;
+                const val = String(r[key] || '');
+                if (val.indexOf('مطابق') !== -1 && val.indexOf('غير') === -1) {
+                    compliantCount++;
+                }
+            });
+            const pct = totalQuestions > 0 ? Math.round((compliantCount / totalQuestions) * 100) : 100;
+            const pctBadge = pct === 100 
+                ? `<span style="color:#15803d; font-weight:bold; background:#dcfce7; padding:2px 6px; border-radius:4px; font-size:10px;">100% (مطابق)</span>`
+                : `<span style="color:#b91c1c; font-weight:bold; background:#fee2e2; padding:2px 6px; border-radius:4px; font-size:10px;">${pct}% (${totalQuestions - compliantCount} غير مطابق)</span>`;
+
+            const pumpReading = r.q15Reading || r.q16 || '-';
+            return `
+                <tr style="background:${idx % 2 === 0 ? '#ffffff' : '#f8fafc'}; border-bottom:1px solid #e2e8f0;">
+                    <td style="padding:8px 6px; text-align:center; font-weight:bold; border:1px solid #e2e8f0;">${idx + 1}</td>
+                    <td style="padding:8px 6px; text-align:center; font-weight:bold; color:#1e40af; border:1px solid #e2e8f0;">${Utils.escapeHTML(serial)}</td>
+                    <td style="padding:8px 6px; text-align:center; border:1px solid #e2e8f0;">${Utils.escapeHTML(r.siteName || '-')}</td>
+                    <td style="padding:8px 6px; text-align:center; border:1px solid #e2e8f0;">${r.date ? Utils.formatDate(r.date) : '-'}</td>
+                    <td style="padding:8px 6px; text-align:center; border:1px solid #e2e8f0;">${Utils.escapeHTML(r.inspectorName || '-')}</td>
+                    <td style="padding:8px 6px; text-align:center; border:1px solid #e2e8f0;">${Utils.escapeHTML(r.shift || '-')}</td>
+                    <td style="padding:8px 6px; text-align:center; border:1px solid #e2e8f0;">${pctBadge}</td>
+                    <td style="padding:8px 6px; text-align:center; font-size:10px; border:1px solid #e2e8f0;">${Utils.escapeHTML(pumpReading)}</td>
+                </tr>
+            `;
         }).join('');
-        const qHeaders = this.DAILY_SAFETY_CHECKLIST_QUESTIONS.map(q => `<th style="padding:4px; border:1px solid #ddd; background:#003865; color:#fff; font-size:10px;">${Utils.escapeHTML(this._getDailySafetyQuestionLabel(q))}</th>`).join('');
+
+        const recordsDetailCards = sorted.map((r, idx) => {
+            const cardContent = this.getDailySafetyCheckListRecordPrintContent(r);
+            return `
+                <div style="page-break-before: always; margin-top:20px;">
+                    <div style="background:#1e40af; color:#ffffff; padding:8px 14px; border-radius:6px; font-weight:bold; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; font-size:12px;">
+                        <span>سجل تفصيلي رقم (${idx + 1}) - ${Utils.escapeHTML(this.getDailySafetyCheckListSerialNumber(r))}</span>
+                        <span>${r.date ? Utils.formatDate(r.date) : ''} | ${Utils.escapeHTML(r.siteName || '')}</span>
+                    </div>
+                    ${cardContent}
+                </div>
+            `;
+        }).join('');
+
         const content = `
             ${this._getDailySafetyCompactFooterStyle().replace('portrait', 'landscape')}
-            <p style="text-align:center; margin:0 0 12px 0; font-weight:bold;">${this._t('module.periodic.dsc.fullExportHeadingAr', 'تصدير كامل لسجل قائمة المرور اليومي للسلامة')} (${records.length} ${this._t('module.periodic.dsc.recordsWord', 'سجل')})</p>
-            <table style="width:100%; border-collapse:collapse; font-size:11px;">
+            <div style="margin-bottom:15px; text-align:center;">
+                <h2 style="margin:0 0 5px 0; color:#1e3a8a; font-size:1.25rem;">${this._t('module.periodic.dsc.fullExportHeadingAr', 'تصدير كامل لسجل قائمة المرور اليومي للسلامة')}</h2>
+                <p style="margin:0; font-size:0.85rem; color:#64748b;">إجمالي السجلات المسجلة بالنظام: <strong>${records.length} سجل</strong></p>
+            </div>
+            
+            <table style="width:100%; border-collapse:collapse; font-size:11px; margin-bottom:20px; border:1px solid #cbd5e1; table-layout:fixed;">
                 <thead>
-                    <tr style="background:#003865; color:#fff;">
-                        <th style="padding:6px; border:1px solid #ddd;">رقم التقرير</th>
-                        <th style="padding:6px; border:1px solid #ddd;">المصنع/الموقع</th>
-                        <th style="padding:6px; border:1px solid #ddd;">التاريخ</th>
-                        <th style="padding:6px; border:1px solid #ddd;">القائم بالمرور</th>
-                        <th style="padding:6px; border:1px solid #ddd;">الوردية</th>
-                        ${qHeaders}
+                    <tr style="background:linear-gradient(135deg, #0b2a55 0%, #1e40af 100%); color:#ffffff;">
+                        <th style="padding:8px 4px; border:1px solid #1e3a8a; width:35px; text-align:center;">#</th>
+                        <th style="padding:8px 6px; border:1px solid #1e3a8a; width:110px; text-align:center;">رقم التقرير</th>
+                        <th style="padding:8px 6px; border:1px solid #1e3a8a; text-align:center;">المصنع/الموقع</th>
+                        <th style="padding:8px 6px; border:1px solid #1e3a8a; width:95px; text-align:center;">التاريخ</th>
+                        <th style="padding:8px 6px; border:1px solid #1e3a8a; text-align:center;">القائم بالمرور</th>
+                        <th style="padding:8px 6px; border:1px solid #1e3a8a; width:85px; text-align:center;">الوردية</th>
+                        <th style="padding:8px 6px; border:1px solid #1e3a8a; width:140px; text-align:center;">نسبة المطابقة</th>
+                        <th style="padding:8px 6px; border:1px solid #1e3a8a; width:100px; text-align:center;">ضغط الطلمبة</th>
                     </tr>
                 </thead>
-                <tbody>${fullTableRows}</tbody>
+                <tbody>${summaryRows}</tbody>
             </table>
+            
+            ${recordsDetailCards}
         `;
+
         const formTitle = this._t('module.periodic.dsc.fullExportFormTitleAr', 'سجل قائمة المرور اليومي للسلامة - تصدير كامل');
         const rawHtmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
             ? FormHeader.generatePDFHTML('DSC-FULL-' + new Date().toISOString().slice(0, 10), formTitle, content, false, false, { source: 'DailySafetyCheckList', titleEn: this._t('module.periodic.dsc.titleEn', 'Daily Safety Report'), titleAr: this._t('module.periodic.dsc.titleAr', 'قائمة المرور اليومي للسلامة') }, new Date().toISOString(), new Date().toISOString())
@@ -6113,7 +6160,7 @@ const PeriodicInspections = {
             shiftValue: firstRecord.shift || '',
             full: true
         });
-        const ok = await this.exportDailySafetyHtmlToPdf({ htmlContent, fileName, orientation: 'l', forceSinglePage: true });
+        const ok = await this.exportDailySafetyHtmlToPdf({ htmlContent, fileName, orientation: 'l', forceSinglePage: false });
         if (ok) Notification.success(this._t('module.periodic.dsc.exportPdfSuccess', 'تم تصدير السجل إلى PDF بنجاح'));
         else Notification.error(this._t('module.periodic.dsc.exportPdfError', 'تعذر إنشاء ملف PDF بشكل مباشر.'));
     },
