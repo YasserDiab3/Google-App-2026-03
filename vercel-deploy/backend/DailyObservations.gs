@@ -1801,7 +1801,8 @@ function _dob_getImageBlobFromUrl_(url) {
             var directUrl = 'https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media';
             var resp = UrlFetchApp.fetch(directUrl, {
                 headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
-                muteHttpExceptions: true
+                muteHttpExceptions: true,
+                timeoutWithNoResponse: 3000
             });
             if (resp.getResponseCode() === 200) {
                 Logger.log('Drive image fetched via OAuth for fileId: ' + fileId);
@@ -1815,7 +1816,7 @@ function _dob_getImageBlobFromUrl_(url) {
         // محاولة 3: رابط التنزيل المباشر العام
         try {
             var publicUrl = 'https://drive.google.com/uc?export=download&id=' + fileId;
-            var resp2 = UrlFetchApp.fetch(publicUrl, { muteHttpExceptions: true, followRedirects: true });
+            var resp2 = UrlFetchApp.fetch(publicUrl, { muteHttpExceptions: true, followRedirects: true, timeoutWithNoResponse: 3000 });
             if (resp2.getResponseCode() === 200) {
                 var ct = resp2.getHeaders()['Content-Type'] || '';
                 if (ct.indexOf('image') !== -1) return resp2.getBlob();
@@ -1831,7 +1832,7 @@ function _dob_getImageBlobFromUrl_(url) {
         var domain = 'https://clinic-repo.vercel.app';
         try {
             var fullUrl = domain + (url.startsWith('/') ? url : '/' + url);
-            var resp = UrlFetchApp.fetch(fullUrl, { muteHttpExceptions: true });
+            var resp = UrlFetchApp.fetch(fullUrl, { muteHttpExceptions: true, timeoutWithNoResponse: 3000 });
             if (resp.getResponseCode() === 200) return resp.getBlob();
         } catch(relErr) {
             Logger.log('Relative image fetch error: ' + relErr);
@@ -1844,7 +1845,8 @@ function _dob_getImageBlobFromUrl_(url) {
             const resp = UrlFetchApp.fetch(url, {
                 muteHttpExceptions: true,
                 followRedirects: true,
-                validateHttpsCertificates: false
+                validateHttpsCertificates: false,
+                timeoutWithNoResponse: 3000
             });
             if (resp.getResponseCode() === 200) {
                 return resp.getBlob();
