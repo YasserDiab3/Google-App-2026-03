@@ -7380,7 +7380,7 @@ const DailyObservations = {
             const exportBtn = document.getElementById('export-observations-excel-btn');
             if (exportBtn) {
                 exportBtn.replaceWith(exportBtn.cloneNode(true));
-                document.getElementById('export-observations-excel-btn').addEventListener('click', () => this.exportExcel());
+                document.getElementById('export-observations-excel-btn').addEventListener('click', () => this.showExportExcelModal());
             }
 
             const exportPptBtn = document.getElementById('export-observations-ppt-btn');
@@ -7721,15 +7721,28 @@ const DailyObservations = {
                 <!-- حقول النموذج - شبكة مريحة من عمودين -->
                 <div style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 28px;">
                     
-                    <!-- الصف الأول: الإدارة ولغة التقرير -->
+                    <!-- الصف الأول: الحالة والإدارة -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                         <div>
-                            <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">الإدارة المختارة <span style="color: #dc2626;">*</span></label>
+                            <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">حالة الملاحظات (Status) <span style="color: #dc2626;">*</span></label>
+                            <select id="dailyobs-ppt-status" style="width: 100%; padding: 12px 16px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 14px; font-weight: 700; color: #15803d; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
+                                <option value="all" selected>جميع الملاحظات (المفتوحة والمغلقة والقائمة)</option>
+                                <option value="open">الملاحظات المفتوحة فقط (Open Only)</option>
+                                <option value="closed">الملاحظات المغلقة فقط (Closed Only)</option>
+                                <option value="in_progress">الملاحظات قيد التنفيذ فقط (In Progress)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">الإدارة المختارة</label>
                             <select id="dailyobs-ppt-department" style="width: 100%; padding: 12px 16px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 14px; font-weight: 600; color: #0f172a; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
-                                <option value="">اختر الإدارة</option>
+                                <option value="">جميع الإدارات</option>
                                 ${departmentOptions.map((d) => `<option value="${Utils.escapeHTML(d)}">${Utils.escapeHTML(d)}</option>`).join('')}
                             </select>
                         </div>
+                    </div>
+
+                    <!-- الصف الثاني: لغة التقرير وتاريخ التقرير -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                         <div>
                             <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">لغة التقرير (Language) <span style="color: #dc2626;">*</span></label>
                             <select id="dailyobs-ppt-language" style="width: 100%; padding: 12px 16px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 14px; font-weight: 700; color: #1e40af; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
@@ -7737,23 +7750,21 @@ const DailyObservations = {
                                 <option value="en">🇬🇧 الإنجليزية (English)</option>
                             </select>
                         </div>
-                    </div>
-
-                    <!-- الصف الثاني: تاريخ التقرير والنطاق الاختياري -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                         <div>
                             <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">تاريخ التقرير الرئيسي</label>
                             <input id="dailyobs-ppt-report-date" type="date" value="${todayStr}" style="width: 100%; padding: 11px 16px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 14px; font-weight: 600; color: #0f172a; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
                         </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div>
-                                <label style="display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 8px;">من تاريخ (اختياري)</label>
-                                <input id="dailyobs-ppt-from-date" type="date" value="" style="width: 100%; padding: 11px 12px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 13px; color: #0f172a; background: #ffffff; outline: none;">
-                            </div>
-                            <div>
-                                <label style="display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 8px;">إلى تاريخ (اختياري)</label>
-                                <input id="dailyobs-ppt-to-date" type="date" value="" style="width: 100%; padding: 11px 12px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 13px; color: #0f172a; background: #ffffff; outline: none;">
-                            </div>
+                    </div>
+
+                    <!-- الصف الثالث: نطاق التواريخ الاختياري -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 8px;">من تاريخ (اختياري)</label>
+                            <input id="dailyobs-ppt-from-date" type="date" value="" style="width: 100%; padding: 11px 12px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 13px; color: #0f172a; background: #ffffff; outline: none;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 8px;">إلى تاريخ (اختياري)</label>
+                            <input id="dailyobs-ppt-to-date" type="date" value="" style="width: 100%; padding: 11px 12px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 13px; color: #0f172a; background: #ffffff; outline: none;">
                         </div>
                     </div>
 
@@ -7788,12 +7799,8 @@ const DailyObservations = {
         }
 
         modal.querySelector('#dailyobs-ppt-export-btn')?.addEventListener('click', async () => {
+            const status = modal.querySelector('#dailyobs-ppt-status')?.value || 'all';
             const dept = (modal.querySelector('#dailyobs-ppt-department')?.value || '').trim();
-            if (!dept) {
-                Notification.warning('يرجى اختيار الإدارة أولاً.');
-                return;
-            }
-
             const lang = modal.querySelector('#dailyobs-ppt-language')?.value || 'ar';
             const reportDate = modal.querySelector('#dailyobs-ppt-report-date')?.value || '';
             const fromDate = modal.querySelector('#dailyobs-ppt-from-date')?.value || '';
@@ -7801,7 +7808,7 @@ const DailyObservations = {
 
             // إغلاق نافذة التصدير فوراً قبل بدء العملية
             close();
-            await this.exportPptReport({ department: dept, language: lang, reportDate, fromDate, toDate });
+            await this.exportPptReport({ department: dept, language: lang, reportDate, fromDate, toDate, status });
         });
     },
 
@@ -7872,7 +7879,7 @@ const DailyObservations = {
         }
     },
 
-    async exportPptReport({ department, language = 'ar', reportDate, fromDate, toDate }) {
+    async exportPptReport({ department = '', language = 'ar', reportDate = '', fromDate = '', toDate = '', status = 'all' } = {}) {
         try {
             if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
                 Notification.error('Google Apps Script غير مفعّل. يرجى تفعيله في الإعدادات أولاً.');
@@ -7894,8 +7901,12 @@ const DailyObservations = {
             const to = toDate ? new Date(toDate) : null;
 
             const filtered = normalized.filter((obs) => {
-                const matchesDept = String(obs.responsibleDepartment || '').trim() === dept;
-                if (!matchesDept) return false;
+                if (dept && String(obs.responsibleDepartment || '').trim() !== dept) return false;
+                
+                if (status === 'open' && (obs.status === 'مغلق')) return false;
+                if (status === 'closed' && (obs.status !== 'مغلق')) return false;
+                if (status === 'in_progress' && (obs.status !== 'جاري' && obs.status !== 'قيد التنفيذ')) return false;
+
                 if (!from && !to) return true;
                 const d = obs.date ? new Date(obs.date) : null;
                 if (!d || Number.isNaN(d.getTime())) return false;
@@ -7905,7 +7916,7 @@ const DailyObservations = {
             });
 
             if (filtered.length === 0) {
-                Notification.warning('لا توجد ملاحظات مطابقة للإدارة/التاريخ المحدد.');
+                Notification.warning('لا توجد ملاحظات مطابقة لشروط الفلترة المحددة.');
                 return;
             }
 
@@ -7921,7 +7932,7 @@ const DailyObservations = {
                 logoUrl: AppState.companySettings?.logo || AppState.companySettings?.logoUrl || '',
                 observations: exportBatch.map((o, _idx) => ({
                     id: o.id || '',
-                    isoCode: o.isoCode || '',
+                    isoCode: o.isoCode || o.code || o.id || '',
                     observationIndex: _idx + 1,   // رقم تسلسلي احتياطي إذا كان isoCode فارغاً
                     siteName: o.siteName || '',
                     locationName: o.locationName || '',
@@ -11332,7 +11343,88 @@ const DailyObservations = {
         }
     },
 
-    async exportExcel() {
+    showExportExcelModal() {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.style.cssText = 'position: fixed; inset: 0; z-index: 999999; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(8px); animation: fadeIn 0.2s ease;';
+
+        const departmentOptions = this.getDepartmentOptions();
+
+        modal.innerHTML = `
+            <div style="max-width: 580px; width: 92%; background: #ffffff; border-radius: 24px; padding: 28px 32px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid rgba(226, 232, 240, 0.8); font-family: Cairo, Tahoma, sans-serif;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid #f1f5f9;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #dcfce7 0%, #f0fdf4 100%); color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                            <i class="fas fa-file-excel"></i>
+                        </div>
+                        <div>
+                            <h3 style="font-size: 18px; font-weight: 800; color: #0f172a; margin: 0;">تصدير سجل الملاحظات إلى Excel</h3>
+                            <p style="font-size: 12px; color: #64748b; margin: 2px 0 0 0;">حدد حالة الملاحظات والنطاق المطلوب لتصدير الملف</p>
+                        </div>
+                    </div>
+                    <button type="button" class="modal-close" style="width: 32px; height: 32px; border-radius: 50%; border: none; background: #f1f5f9; color: #64748b; font-size: 16px; cursor: pointer;">&times;</button>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
+                    <div>
+                        <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;">حالة الملاحظات (Status) <span style="color: #dc2626;">*</span></label>
+                        <select id="dailyobs-excel-status" style="width: 100%; padding: 11px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13px; font-weight: 700; color: #15803d; background: #ffffff; outline: none;">
+                            <option value="all" selected>جميع الملاحظات (المفتوحة والمغلقة والقائمة)</option>
+                            <option value="open">الملاحظات المفتوحة فقط (Open Only)</option>
+                            <option value="closed">الملاحظات المغلقة فقط (Closed Only)</option>
+                            <option value="in_progress">الملاحظات قيد التنفيذ فقط (In Progress)</option>
+                        </select>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                        <div>
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px;">الإدارة المسؤولة</label>
+                            <select id="dailyobs-excel-department" style="width: 100%; padding: 10px 12px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13px; color: #0f172a; background: #ffffff; outline: none;">
+                                <option value="">جميع الإدارات</option>
+                                ${departmentOptions.map(d => `<option value="${Utils.escapeHTML(d)}">${Utils.escapeHTML(d)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px;">من تاريخ - إلى تاريخ (اختياري)</label>
+                            <div style="display: flex; gap: 6px;">
+                                <input id="dailyobs-excel-from-date" type="date" style="width: 50%; padding: 9px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 12px;">
+                                <input id="dailyobs-excel-to-date" type="date" style="width: 50%; padding: 9px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 12px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding-top: 16px; border-top: 1px solid #f1f5f9;">
+                    <button type="button" id="dailyobs-excel-cancel-btn" style="padding: 10px 20px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 13px; font-weight: 700; color: #475569; cursor: pointer;">إلغاء</button>
+                    <button type="button" id="dailyobs-excel-export-btn" style="display: flex; align-items: center; gap: 8px; padding: 10px 24px; background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: #ffffff; font-size: 14px; font-weight: 700; border-radius: 10px; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);">
+                        <i class="fas fa-file-excel"></i> تصدير Excel
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const close = () => modal.remove();
+        modal.querySelector('.modal-close')?.addEventListener('click', close);
+        modal.querySelector('#dailyobs-excel-cancel-btn')?.addEventListener('click', close);
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+
+        modal.querySelector('#dailyobs-excel-export-btn')?.addEventListener('click', async () => {
+            const status = modal.querySelector('#dailyobs-excel-status')?.value || 'all';
+            const department = (modal.querySelector('#dailyobs-excel-department')?.value || '').trim();
+            const fromDate = modal.querySelector('#dailyobs-excel-from-date')?.value || '';
+            const toDate = modal.querySelector('#dailyobs-excel-to-date')?.value || '';
+
+            close();
+            await this.exportExcel({ status, department, fromDate, toDate });
+        });
+    },
+
+    async exportExcel(options = {}) {
+        if (!options || typeof options !== 'object') options = {};
+        const { status = 'all', department = '', fromDate = '', toDate = '' } = options;
+
         const observationsRaw = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
             ? this.getDailyObservationsVisibleToCurrentUser()
             : (Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : []);
@@ -11352,8 +11444,30 @@ const DailyObservations = {
 
         try {
             const observations = observationsRaw.map((item) => this.normalizeRecord(item));
-            const excelData = observations.map((obs) => ({
-                'رقم الملاحظة': obs.isoCode || '',
+            const from = fromDate ? new Date(fromDate) : null;
+            const to = toDate ? new Date(toDate) : null;
+
+            const filtered = observations.filter((obs) => {
+                if (department && String(obs.responsibleDepartment || '').trim() !== department) return false;
+                if (status === 'open' && (obs.status === 'مغلق')) return false;
+                if (status === 'closed' && (obs.status !== 'مغلق')) return false;
+                if (status === 'in_progress' && (obs.status !== 'جاري' && obs.status !== 'قيد التنفيذ')) return false;
+
+                if (!from && !to) return true;
+                const d = obs.date ? new Date(obs.date) : null;
+                if (!d || Number.isNaN(d.getTime())) return false;
+                if (from && d < new Date(from.getFullYear(), from.getMonth(), from.getDate())) return false;
+                if (to && d > new Date(to.getFullYear(), to.getMonth(), to.getDate(), 23, 59, 59, 999)) return false;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                Notification?.warning?.('لا توجد ملاحظات مطابقة لشروط الفلترة المحددة.');
+                return;
+            }
+
+            const excelData = filtered.map((obs) => ({
+                'رقم الملاحظة': obs.isoCode || obs.code || obs.id || '',
                 'اسم الموقع': obs.siteName || '',
                 'المكان داخل الموقع': obs.locationName || '',
                 'نوع الملاحظة': obs.observationType || '',
@@ -11374,9 +11488,10 @@ const DailyObservations = {
             const worksheet = XLSX.utils.json_to_sheet(excelData);
             XLSX.utils.book_append_sheet(workbook, worksheet, 'DailyObservations');
 
-            const fileName = `Daily_Observations_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            const statusSuffix = status === 'open' ? '_Open' : status === 'closed' ? '_Closed' : '';
+            const fileName = `Daily_Observations${statusSuffix}_${new Date().toISOString().slice(0, 10)}.xlsx`;
             XLSX.writeFile(workbook, fileName);
-            Notification?.success?.('تم تصدير سجل الملاحظات اليومية إلى Excel بنجاح.');
+            Notification?.success?.(`تم تصدير ${filtered.length} ملاحظة إلى Excel بنجاح.`);
         } catch (error) {
             Utils.safeError('فشل تصدير الملاحظات اليومية إلى Excel:', error);
             Notification?.error?.('فشل تصدير الملاحظات اليومية: ' + error.message);
