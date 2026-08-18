@@ -692,7 +692,10 @@ function setDailyObservationsPptTemplateId(templateIdOrPayload) {
 function _dob_buildCoverSlide_(coverSlide, department, dateLabel, logoUrl, isEnglish) {
     if (!coverSlide) return;
     try {
-        coverSlide.getPageElements().forEach(function(el) { try { el.remove(); } catch(e) {} });
+        var elements = coverSlide.getPageElements();
+        for (var i = elements.length - 1; i >= 0; i--) {
+            try { elements[i].remove(); } catch(e) {}
+        }
         coverSlide.getBackground().setSolidFill('#ffffff');
 
         // 1) شريط ذهبي علوي نحيف
