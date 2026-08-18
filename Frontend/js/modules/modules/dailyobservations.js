@@ -4713,7 +4713,7 @@ const DailyObservations = {
         }
         const btn = document.getElementById('obs-export-pdf-btn');
         const origHtml = btn ? btn.innerHTML : '';
-        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري التصدير...'; }
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري إعداد التنزيل...'; }
 
         try {
             // استخراج صور الرسوم البيانية بدقة أصلية عالية جداً
@@ -4730,30 +4730,52 @@ const DailyObservations = {
             const imgStatus = getChartImg('obs-chart-status');
             const imgRisk = getChartImg('obs-chart-risk');
             const imgTrend = getChartImg('obs-chart-trend');
-            const imgSite = getChartImg('obs-chart-site');
+            const imgLocation = getChartImg('obs-chart-location') || getChartImg('obs-chart-site');
             const imgType = getChartImg('obs-chart-type');
             const imgDept = getChartImg('obs-chart-dept');
             const imgShift = getChartImg('obs-chart-shift');
             const imgCloseTime = getChartImg('obs-chart-closetime');
 
-            // استخراج قيم مؤشرات الأداء الرئيسية من الواجهة
-            const getKpiVal = (id) => {
-                const el = document.getElementById(id);
-                return el ? el.textContent.trim() : '0';
-            };
+            // حساب المؤشرات الإحصائية مباشرة ودقيقة 100% من بيانات الملاحظات المفلترة
+            const rawObs = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
+                ? this.getDailyObservationsVisibleToCurrentUser()
+                : (Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : []);
+            const allObs = rawObs.map(r => this.normalizeRecord(r));
+            const period = parseInt(this._analysisPeriod || '0', 10);
+            const obsByPeriod = this._filterObsByPeriod(allObs, period);
+            const obs = (typeof this._applyAnalysisFilters === 'function')
+                ? this._applyAnalysisFilters(obsByPeriod)
+                : obsByPeriod;
 
-            const kpiTotal = getKpiVal('obs-kpi-total') || '0';
-            const kpiOpen = getKpiVal('obs-kpi-open') || '0';
-            const kpiProgress = getKpiVal('obs-kpi-progress') || '0';
-            const kpiClosed = getKpiVal('obs-kpi-closed') || '0';
-            const kpiHighRisk = getKpiVal('obs-kpi-highrisk') || '0';
-            const kpiMonth = getKpiVal('obs-kpi-month') || '0';
-            const kpiRate = getKpiVal('obs-kpi-rate') || '0%';
-            const kpiAvgDays = getKpiVal('obs-kpi-avgdays') || '—';
+            const kpiTotal = obs.length;
+            const kpiOpen = obs.filter(o => o.status === 'مفتوح' || o.status === 'جديد').length;
+            const kpiClosed = obs.filter(o => o.status === 'مغلق').length;
+            const kpiProgress = obs.filter(o => o.status === 'جاري' || o.status === 'قيد التنفيذ').length;
+            const kpiHighRisk = obs.filter(o => o.riskLevel === 'عالي' || o.riskLevel === 'عالية').length;
+            const kpiMonth = obs.filter(o => { if(!o.date) return false; const d=new Date(o.date); const n=new Date(); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth(); }).length;
+            const kpiRate = kpiTotal > 0 ? (Math.round((kpiClosed / kpiTotal) * 100) + '%') : '0%';
+            const closedWithDays = obs.filter(o => o.status === 'مغلق' && o.overdays > 0);
+            const kpiAvgDays = closedWithDays.length > 0 ? (Math.round(closedWithDays.reduce((s,o) => s + (o.overdays||0), 0) / closedWithDays.length) + ' يوم') : '—';
 
-            // استخراج صفوف جدول الملاحظات الحرجة
-            const highSevTable = document.getElementById('obs-high-risk-table-body');
-            const highSevRowsHtml = highSevTable ? highSevTable.innerHTML : '';
+            // استخراج صفوف جدول الملاحظات الحرجة المفتوحة
+            const criticalObs = obs
+                .filter(o => (o.riskLevel === 'عالي' || o.riskLevel === 'عالية') && o.status !== 'مغلق')
+                .sort((a,b) => (b.overdays||0) - (a.overdays||0))
+                .slice(0, 20);
+
+            const highSevRowsHtml = criticalObs.length > 0
+                ? criticalObs.map(o => `
+                    <tr>
+                        <td style="font-weight:bold; color:#1e40af;">${Utils.escapeHTML(o.isoCode || o.id || '—')}</td>
+                        <td>${Utils.escapeHTML(String(o.date||'').slice(0, 10) || '—')}</td>
+                        <td>${Utils.escapeHTML(o.observationType || '—')}</td>
+                        <td>${Utils.escapeHTML([o.siteName, o.locationName].filter(Boolean).join(' - ') || '—')}</td>
+                        <td>${Utils.escapeHTML(o.observerName || '—')}</td>
+                        <td>${Utils.escapeHTML(o.responsibleDepartment || '—')}</td>
+                        <td><span style="display:inline-block; padding:3px 8px; border-radius:6px; font-weight:bold; ${o.status==='مغلق' ? 'background:#d1fae5;color:#047857;' : 'background:#fef3c7;color:#b45309;'}">${Utils.escapeHTML(o.status || '—')}</span></td>
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="7" style="text-align:center; padding:14px; color:#64748b;">لا توجد ملاحظات حرجة مفتوحة حالياً</td></tr>';
 
             // بناء المحتوى المنسق على صفحتين عرضيتين A4 Landscape بأعلى دقة ووضوح
             const contentHtml = `
@@ -4868,7 +4890,7 @@ const DailyObservations = {
                     <div class="obs-grid-2">
                         <div class="obs-chart-card">
                             <div class="obs-chart-title">📍 حسب الموقع / المصنع</div>
-                            ${imgSite ? `<img class="obs-chart-img" src="${imgSite}" alt="Site Chart">` : ''}
+                            ${imgLocation ? `<img class="obs-chart-img" src="${imgLocation}" alt="Location Chart">` : ''}
                         </div>
                         <div class="obs-chart-card">
                             <div class="obs-chart-title">⏱️ حسب الوردية / متوسط أيام الإغلاق</div>
@@ -4892,7 +4914,7 @@ const DailyObservations = {
                                 </tr>
                             </thead>
                             <tbody>
-                                ${highSevRowsHtml || '<tr><td colspan="7" style="text-align:center; padding:14px; color:#64748b;">لا توجد ملاحظات حرجة مفتوحة حالياً</td></tr>'}
+                                ${highSevRowsHtml}
                             </tbody>
                         </table>
                     </div>
@@ -4920,22 +4942,47 @@ const DailyObservations = {
                 )
                 : `<html dir="rtl"><head><title>تقرير التحليل</title></head><body>${contentHtml}</body></html>`;
 
-            if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {
-                const dateFile = new Date().toISOString().slice(0, 10);
-                const ok = await FormHeader.generatePDF(rawHtml, `Daily-Observations-Analytics-${dateFile}.pdf`);
-                if (ok && typeof Notification !== 'undefined' && Notification.success) {
-                    Notification.success('تم تجهيز تقرير تحليل الملاحظات اليومية بالهيدر المؤسسي بنجاح');
+            // تنزيل ملف PDF مباشرة بجهاز المستخدم
+            await this._loadAnalyticsLib(
+                'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js',
+                () => typeof html2pdf !== 'undefined'
+            );
+
+            const tempContainer = document.createElement('div');
+            tempContainer.style.position = 'fixed';
+            tempContainer.style.left = '-9999px';
+            tempContainer.style.top = '0';
+            tempContainer.style.width = '1200px';
+            tempContainer.style.background = '#ffffff';
+            tempContainer.innerHTML = rawHtml;
+            document.body.appendChild(tempContainer);
+
+            const dateFile = new Date().toISOString().slice(0, 10);
+            const pdfFilename = `تقرير-تحليل-الملاحظات-اليومية-${dateFile}.pdf`;
+
+            if (typeof html2pdf !== 'undefined') {
+                const opt = {
+                    margin: [6, 6, 6, 6],
+                    filename: pdfFilename,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                };
+                await html2pdf().set(opt).from(tempContainer).save();
+                tempContainer.remove();
+                if (typeof Notification !== 'undefined' && Notification.success) {
+                    Notification.success('✅ تم تنزيل ملف PDF التحليلي بالهيدر المؤسسي بنجاح!');
                 }
+            } else if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {
+                tempContainer.remove();
+                await FormHeader.generatePDF(rawHtml, pdfFilename);
             } else {
+                tempContainer.remove();
                 const printWindow = window.open('', '_blank');
                 if (printWindow) {
                     printWindow.document.write(rawHtml);
                     printWindow.document.close();
-                    printWindow.onload = () => {
-                        setTimeout(() => {
-                            printWindow.print();
-                        }, 500);
-                    };
+                    printWindow.onload = () => { setTimeout(() => { printWindow.print(); }, 500); };
                 }
             }
         } catch(err) {
