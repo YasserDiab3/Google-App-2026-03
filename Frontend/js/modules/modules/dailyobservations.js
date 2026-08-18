@@ -4780,35 +4780,43 @@ const DailyObservations = {
             // بناء المحتوى المنسق على صفحتين عرضيتين A4 Landscape بأعلى دقة ووضوح
             const contentHtml = `
                 <style>
-                    @page { size: A4 landscape; margin: 8mm; }
-                    @media print {
-                        @page { size: A4 landscape; margin: 8mm; }
-                        body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                        .obs-page-break { page-break-before: always !important; break-before: page !important; }
+                    @page {
+                        size: A4 landscape !important;
+                        margin: 8mm 8mm !important;
                     }
-                    .obs-pdf-section { width: 100%; margin-bottom: 18px; font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; direction: rtl; }
-                    .obs-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
-                    .obs-kpi-box { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; text-align: center; }
-                    .obs-kpi-num { font-size: 24px; font-weight: 800; line-height: 1.2; }
-                    .obs-kpi-lbl { font-size: 12px; font-weight: 700; color: #334155; margin-top: 4px; }
+                    @media print {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                        body { margin: 0 !important; padding: 0 !important; background: #ffffff !important; font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif !important; }
+                        .report-wrapper { padding: 4px 8px !important; width: 100% !important; max-width: 100% !important; box-shadow: none !important; }
+                        .obs-page-break { page-break-before: always !important; break-before: page !important; clear: both !important; display: block !important; height: 1px !important; }
+                        tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+                        .obs-chart-card, .obs-kpi-box { break-inside: avoid !important; page-break-inside: avoid !important; }
+                    }
+                    .obs-pdf-section { width: 100%; direction: rtl; font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif; }
+                    .obs-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+                    .obs-kpi-box { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; text-align: center; }
+                    .obs-kpi-num { font-size: 22px; font-weight: 800; line-height: 1.2; }
+                    .obs-kpi-lbl { font-size: 11px; font-weight: 700; color: #475569; margin-top: 3px; }
                     
-                    .obs-chart-card { background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-bottom: 14px; }
-                    .obs-chart-title { font-size: 14px; font-weight: 800; color: #1e3a8a; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #f1f5f9; padding-bottom: 6px; }
-                    .obs-chart-img { width: 100%; max-height: 230px; object-fit: contain; display: block; margin: 0 auto; }
+                    .obs-chart-card { background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
+                    .obs-chart-title { font-size: 13px; font-weight: 800; color: #1e3a8a; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 4px; }
+                    .obs-chart-img { width: 100%; max-height: 180px; object-fit: contain; display: block; margin: 0 auto; }
                     
-                    .obs-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+                    .obs-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
                     
-                    .obs-table-pdf { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
-                    .obs-table-pdf th { background: #1e3a8a; color: #ffffff; padding: 9px 10px; text-align: right; font-weight: 700; font-size: 11.5px; }
-                    .obs-table-pdf td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155; }
+                    .obs-table-pdf { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-top: 6px; }
+                    .obs-table-pdf th { background: #1e3a8a; color: #ffffff; padding: 7px 8px; text-align: right; font-weight: 700; font-size: 11px; border: 1px solid #1e40af; }
+                    .obs-table-pdf td { padding: 6px 8px; border-bottom: 1px solid #e2e8f0; border-left: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; font-size: 10.5px; color: #334155; }
                     .obs-table-pdf tr:nth-child(even) { background: #f8fafc; }
                 </style>
 
                 <!-- الصفحة الأولى: الملخص التنفيذي ومؤشرات الأداء والاتجاه الزمني -->
                 <div class="obs-pdf-section">
-                    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; border-radius: 12px; padding: 10px 18px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
-                        <div style="font-size: 16px; font-weight: 800;">📊 مؤشرات الأداء والملخص التنفيذي للملاحظات اليومية</div>
-                        <div style="font-size: 12px; font-weight: 600; opacity: 0.95;">تاريخ التصدير: ${new Date().toLocaleDateString('ar-EG')}</div>
+                    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; border-radius: 10px; padding: 9px 16px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                        <div style="font-size: 15px; font-weight: 800;">📊 مؤشرات الأداء والملخص التنفيذي للملاحظات اليومية</div>
+                        <div style="font-size: 11.5px; font-weight: 600; opacity: 0.95;">تاريخ التصدير: ${new Date().toLocaleDateString('ar-EG')}</div>
                     </div>
 
                     <!-- بطاقات المؤشرات -->
@@ -4862,18 +4870,18 @@ const DailyObservations = {
                     <!-- مخطط الاتجاه الزمني -->
                     <div class="obs-chart-card">
                         <div class="obs-chart-title">📈 الاتجاه الزمني للملاحظات (آخر 12 شهر)</div>
-                        ${imgTrend ? `<img class="obs-chart-img" style="max-height: 240px;" src="${imgTrend}" alt="Trend Chart">` : ''}
+                        ${imgTrend ? `<img class="obs-chart-img" style="max-height: 200px;" src="${imgTrend}" alt="Trend Chart">` : ''}
                     </div>
                 </div>
 
                 <!-- فاصل صفحة A4 -->
-                <div class="obs-page-break" style="margin-top: 25px;"></div>
+                <div class="obs-page-break" style="margin-top: 15px;"></div>
 
                 <!-- الصفحة الثانية: التوزيعات التفصيلية وجدول الملاحظات الحرجة -->
                 <div class="obs-pdf-section">
-                    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; border-radius: 12px; padding: 10px 18px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
-                        <div style="font-size: 16px; font-weight: 800;">📌 التحليل التفصيلي وقائمة الملاحظات الحرجة المفتوحة</div>
-                        <div style="font-size: 12px; font-weight: 600; opacity: 0.95;">الصفحة 2 من 2</div>
+                    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; border-radius: 10px; padding: 9px 16px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                        <div style="font-size: 15px; font-weight: 800;">📌 التحليل التفصيلي وقائمة الملاحظات الحرجة المفتوحة</div>
+                        <div style="font-size: 11.5px; font-weight: 600; opacity: 0.95;">الصفحة 2 من 2</div>
                     </div>
 
                     <div class="obs-grid-2">
@@ -4899,7 +4907,7 @@ const DailyObservations = {
                     </div>
 
                     <!-- جدول الملاحظات الحرجة -->
-                    <div class="obs-chart-card" style="margin-top: 8px;">
+                    <div class="obs-chart-card" style="margin-top: 6px;">
                         <div class="obs-chart-title" style="color: #b91c1c;">🚨 الملاحظات الحرجة المفتوحة (عالية الخطورة)</div>
                         <table class="obs-table-pdf">
                             <thead>
@@ -4940,61 +4948,35 @@ const DailyObservations = {
                     new Date().toISOString(),
                     new Date().toISOString()
                 )
-                : `<html dir="rtl"><head><title>تقرير التحليل</title></head><body>${contentHtml}</body></html>`;
+                : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body style="font-family:'Cairo','Segoe UI',Tahoma,Arial,sans-serif;margin:0;padding:12px;direction:rtl;">${contentHtml}</body></html>`;
 
-            // تنزيل ملف PDF مباشرة بجهاز المستخدم
-            await this._loadAnalyticsLib(
-                'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js',
-                () => typeof html2pdf !== 'undefined'
-            );
+            // استخدام طريقة الطباعة المباشرة لضمان دقة اللغة العربية 100% وعدم تشوه الرسوم أو الخطوط
+            const blob = new Blob([rawHtml], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const printWindow = window.open(url, '_blank');
 
-            const dateFile = new Date().toISOString().slice(0, 10);
-            const pdfFilename = `تقرير-تحليل-الملاحظات-اليومية-${dateFile}.pdf`;
-
-            if (typeof html2pdf !== 'undefined') {
-                const iframe = document.createElement('iframe');
-                iframe.style.position = 'fixed';
-                iframe.style.top = '0';
-                iframe.style.left = '0';
-                iframe.style.width = '1200px';
-                iframe.style.height = '1000px';
-                iframe.style.zIndex = '-99999';
-                iframe.style.opacity = '0.01';
-                iframe.style.pointerEvents = 'none';
-                iframe.style.border = 'none';
-                document.body.appendChild(iframe);
-
-                const doc = iframe.contentWindow.document;
-                doc.open();
-                doc.write(rawHtml);
-                doc.close();
-
-                // الانتظار لتحميل الخطوط والرسوم البيانية في الـ iframe
-                await new Promise(resolve => setTimeout(resolve, 800));
-
-                const opt = {
-                    margin: [6, 6, 6, 6],
-                    filename: pdfFilename,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, letterRendering: true, windowWidth: 1200 },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-                };
-
-                await html2pdf().set(opt).from(doc.body).save();
-                iframe.remove();
-
+            if (printWindow) {
+                printWindow.addEventListener('load', () => {
+                    const doPrint = () => {
+                        setTimeout(() => {
+                            printWindow.print();
+                            setTimeout(() => URL.revokeObjectURL(url), 2000);
+                        }, 400);
+                    };
+                    if (printWindow.document && printWindow.document.fonts && printWindow.document.fonts.ready) {
+                        printWindow.document.fonts.ready.then(doPrint).catch(doPrint);
+                    } else {
+                        doPrint();
+                    }
+                });
                 if (typeof Notification !== 'undefined' && Notification.success) {
-                    Notification.success('✅ تم تنزيل ملف PDF التحليلي بالهيدر المؤسسي بنجاح!');
+                    Notification.success('✅ تم فتح نافذة التقرير للطباعة وحفظ PDF — اختر "حفظ بتنسيق PDF"');
                 }
-            } else if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {
-                await FormHeader.generatePDF(rawHtml, pdfFilename);
             } else {
-                const printWindow = window.open('', '_blank');
-                if (printWindow) {
-                    printWindow.document.write(rawHtml);
-                    printWindow.document.close();
-                    printWindow.onload = () => { setTimeout(() => { printWindow.print(); }, 500); };
+                if (typeof Notification !== 'undefined' && Notification.error) {
+                    Notification.error('يرجى السماح للنوافذ المنبثقة لفتح تقرير PDF');
                 }
+                URL.revokeObjectURL(url);
             }
         } catch(err) {
             console.error('PDF export error:', err);
@@ -8129,19 +8111,31 @@ const DailyObservations = {
             if (firstImg) return firstImg.trim();
         }
 
+        if (Array.isArray(observation.afterExecutionImages) && observation.afterExecutionImages.length > 0) {
+            const firstImg = observation.afterExecutionImages.find(u => {
+                if (typeof u === 'string' && u.trim()) return true;
+                if (u && typeof u === 'object' && (u.data || u.url)) return true;
+                return false;
+            });
+            if (firstImg) {
+                return typeof firstImg === 'string' ? firstImg.trim() : (firstImg.data || firstImg.url);
+            }
+        }
+
         const attachments = Array.isArray(observation?.attachments) ? observation.attachments : [];
-        const img = attachments.find((a) => {
-            if (!a) return false;
-            if (typeof a === 'string' && a.trim()) return true;
-            const type = String(a?.type || '').toLowerCase();
-            const name = String(a?.name || '').toLowerCase();
-            const isImg = type.startsWith('image/') || /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(name) || (!type && !name);
-            if (!isImg) return false;
-            return Boolean(a?.directLink || a?.shareableLink || a?.cloudLink?.url || a?.url || a?.data || a?.driveUrl || a?.link);
-        });
-        if (!img) return '';
-        if (typeof img === 'string') return img.trim();
-        return img.directLink || img.shareableLink || img.cloudLink?.url || img.url || img.data || img.driveUrl || img.link || '';
+        for (const a of attachments) {
+            if (!a) continue;
+            if (typeof a === 'string' && a.trim()) {
+                const s = a.trim();
+                const match = s.match(/^(.+?)\s*-\s*(https?:\/\/.+)$/);
+                return match ? match[2].trim() : s;
+            }
+            if (typeof a === 'object') {
+                const dataVal = a.data || a.url || a.directLink || a.shareableLink || a.cloudLink?.url || a.driveUrl || a.link || '';
+                if (dataVal) return dataVal;
+            }
+        }
+        return '';
     },
 
     showBackgroundExportWidget(taskId, title) {
@@ -8233,7 +8227,8 @@ const DailyObservations = {
             );
 
             const pptx = new PptxGenJS();
-            pptx.layout = 'LAYOUT_16x9';
+            pptx.defineLayout({ name: 'A16x9', width: 13.333, height: 7.5 });
+            pptx.layout = 'A16x9';
 
             const isEnglish = (String(language || 'ar').toLowerCase() === 'en');
             const dateLabel = reportDate ? new Date(reportDate).toLocaleDateString(isEnglish ? 'en-US' : 'ar-EG') : new Date().toLocaleDateString(isEnglish ? 'en-US' : 'ar-EG');

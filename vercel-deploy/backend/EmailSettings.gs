@@ -29,6 +29,7 @@ function getDefaultEmailModuleCatalog_() {
         { key: 'change-management', labelAr: 'إدارة التغيّر', group: 'ops', enabled: true, manualSend: true, autoSend: false, autoEvents: [], recipients: [] },
         { key: 'periodic-inspections', labelAr: 'الفحوصات الدورية', group: 'ops', enabled: true, manualSend: true, autoSend: false, autoEvents: [], recipients: [] },
         { key: 'periodic-equipment', labelAr: 'معدات الفحص الدوري', group: 'ops', enabled: true, manualSend: true, autoSend: false, autoEvents: [], recipients: [] },
+        { key: 'daily-safety-checklist', labelAr: 'المرور اليومي للسلامة', group: 'ops', enabled: true, manualSend: true, autoSend: true, autoEvents: ['create'], recipients: [] },
         { key: 'training', labelAr: 'التدريب', group: 'ops', enabled: true, manualSend: true, autoSend: false, autoEvents: [], recipients: [] },
         { key: 'employees', labelAr: 'الموظفون', group: 'ops', enabled: true, manualSend: true, autoSend: false, autoEvents: [], recipients: [] },
         { key: 'contractors', labelAr: 'المقاولون', group: 'ops', enabled: true, manualSend: true, autoSend: false, autoEvents: [], recipients: [] },
