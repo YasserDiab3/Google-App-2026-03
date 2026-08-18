@@ -4716,129 +4716,232 @@ const DailyObservations = {
         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري التصدير...'; }
 
         try {
-            await this._loadAnalyticsLib(
-                'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
-                () => typeof html2canvas !== 'undefined'
-            );
-            await this._loadAnalyticsLib(
-                'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-                () => typeof window.jspdf !== 'undefined'
-            );
-
-            // إخفاء الفلاتر وأزرار التصدير مؤقتاً على العنصر الحي لمنع ظهور الأزرار وضمان بقاء الرسومات البيانية
-            const elementsToHide = Array.from(root.querySelectorAll('#obs-filter-panel, #obs-toggle-filters-btn, #obs-reset-filters-btn, #obs-export-pdf-btn, #obs-export-ppt-btn, .obs-analytics-filters, button'));
-            const origDisplays = elementsToHide.map(el => el.style.display);
-            elementsToHide.forEach(el => { el.style.display = 'none'; });
-
-            // التقاط عنصر الشاشة الحي بدقة فائقة Scale 2.2 (تحتفظ بكافة الرسومات البيانية والـ 2D Canvases)
-            const canvas = await html2canvas(root, {
-                scale: 2.2,
-                useCORS: true,
-                backgroundColor: '#ffffff',
-                scrollX: 0,
-                scrollY: -window.scrollY,
-                logging: false
-            });
-
-            // استعادة عرض الأزرار والفلاتر
-            elementsToHide.forEach((el, idx) => { el.style.display = origDisplays[idx]; });
-
-            const companyName = (typeof AppState !== 'undefined' && (AppState.companySettings?.name || AppState.companyName)) || 'AMERICANA GROUP';
-            const formCode = (typeof AppState !== 'undefined' && AppState.companySettings?.policyFormCode) || 'SF-HSE-DOB-02';
-
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-
-            const pdfW = pdf.internal.pageSize.getWidth();  // 297mm
-            const pdfH = pdf.internal.pageSize.getHeight(); // 210mm
-            const margin = 8, headerH = 19, footerH = 12;
-            const contentW = pdfW - margin * 2; // 281mm
-            const contentAreaH = pdfH - headerH - footerH - 4; // 175mm
-
-            const ratio = contentW / canvas.width;
-            const pageHeightPx = Math.floor(contentAreaH / ratio);
-            const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
-
-            const enDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-            const enTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-
-            for (let p = 0; p < totalPages; p++) {
-                if (p > 0) pdf.addPage('a4', 'landscape');
-
-                // ── ترويسة الهوية المؤسسية الرسمية (Vector Header) ──
-                pdf.setFillColor(30, 58, 138); // #1e3a8a Navy
-                pdf.rect(0, 0, pdfW, headerH, 'F');
-                pdf.setFillColor(29, 78, 216); // #1d4ed8 Accent
-                pdf.rect(0, headerH - 2.5, pdfW, 2.5, 'F');
-
-                pdf.setTextColor(255, 255, 255);
-                pdf.setFontSize(12); pdf.setFont(undefined, 'bold');
-                pdf.text('Daily Safety Observations Analytics Report', margin, 7.5, { align: 'left' });
-                pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
-                pdf.text(`SafetyHub | ICAPP — Form Code: ${formCode}`, margin, 13, { align: 'left' });
-
-                pdf.setFontSize(8);
-                pdf.text(`${enDate}  ${enTime}`, pdfW - margin, 7.5, { align: 'right' });
-                pdf.setFontSize(8.5); pdf.setFont(undefined, 'bold');
-                pdf.text(`Page ${p + 1} of ${totalPages}`, pdfW - margin, 13, { align: 'right' });
-                pdf.setTextColor(0, 0, 0);
-
-                // ── قص ومحاذاة شريحة التقرير الحي ──
-                const sliceCanvas = document.createElement('canvas');
-                const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
-                sliceCanvas.width = canvas.width;
-                sliceCanvas.height = sliceH;
-
-                const ctx = sliceCanvas.getContext('2d');
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvas.width, sliceH);
-                ctx.drawImage(canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-
-                let sliceData = '';
-                let sliceFmt = 'JPEG';
-                if (typeof Utils !== 'undefined' && Utils.PdfExport && Utils.PdfExport.compressCanvasToJpegDataUrl) {
-                    const compressed = Utils.PdfExport.compressCanvasToJpegDataUrl(
-                        sliceCanvas,
-                        Math.floor((Utils.PdfExport.TARGET_MAX_BYTES || 3000000) / Math.max(1, totalPages))
-                    );
-                    sliceData = compressed.dataUrl;
-                    sliceFmt = compressed.format || 'JPEG';
-                } else {
-                    sliceData = sliceCanvas.toDataURL('image/jpeg', 0.94);
+            // استخراج صور الرسوم البيانية بدقة أصلية عالية جداً
+            const getChartImg = (id) => {
+                const cv = document.getElementById(id);
+                if (cv) {
+                    try {
+                        return cv.toDataURL('image/png', 1.0);
+                    } catch(e) {}
                 }
+                return '';
+            };
 
-                pdf.addImage(sliceData, sliceFmt, margin, headerH + 1, contentW, sliceH * ratio);
+            const imgStatus = getChartImg('obs-chart-status');
+            const imgRisk = getChartImg('obs-chart-risk');
+            const imgTrend = getChartImg('obs-chart-trend');
+            const imgSite = getChartImg('obs-chart-site');
+            const imgType = getChartImg('obs-chart-type');
+            const imgDept = getChartImg('obs-chart-dept');
+            const imgShift = getChartImg('obs-chart-shift');
+            const imgCloseTime = getChartImg('obs-chart-closetime');
 
-                // ── تذييل الصفحة الرسمي (Vector Footer) ──
-                const footerY = pdfH - footerH;
-                pdf.setDrawColor(191, 219, 254);
-                pdf.setLineWidth(0.4);
-                pdf.line(0, footerY, pdfW, footerY);
-                pdf.setFillColor(239, 246, 255);
-                pdf.rect(0, footerY, pdfW, footerH, 'F');
+            // استخراج قيم مؤشرات الأداء الرئيسية من الواجهة
+            const getKpiVal = (id) => {
+                const el = document.getElementById(id);
+                return el ? el.textContent.trim() : '0';
+            };
 
-                pdf.setFontSize(7.5); pdf.setTextColor(29, 78, 216); pdf.setFont(undefined, 'bold');
-                pdf.text(`Form Code: ${formCode} — SafetyHub | ICAPP`, margin, footerY + 4.5, { align: 'left' });
-                pdf.setFont(undefined, 'normal'); pdf.setFontSize(6.5); pdf.setTextColor(100, 116, 139);
-                pdf.text('Daily Safety Observations Analysis Report — Confidential', margin, footerY + 9, { align: 'left' });
+            const kpiTotal = getKpiVal('obs-kpi-total') || '0';
+            const kpiOpen = getKpiVal('obs-kpi-open') || '0';
+            const kpiProgress = getKpiVal('obs-kpi-progress') || '0';
+            const kpiClosed = getKpiVal('obs-kpi-closed') || '0';
+            const kpiHighRisk = getKpiVal('obs-kpi-highrisk') || '0';
+            const kpiMonth = getKpiVal('obs-kpi-month') || '0';
+            const kpiRate = getKpiVal('obs-kpi-rate') || '0%';
+            const kpiAvgDays = getKpiVal('obs-kpi-avgdays') || '—';
 
-                pdf.setFontSize(8); pdf.setTextColor(29, 78, 216); pdf.setFont(undefined, 'bold');
-                pdf.text(`Page ${p + 1} of ${totalPages}`, pdfW / 2, footerY + 6.5, { align: 'center' });
+            // استخراج صفوف جدول الملاحظات الحرجة
+            const highSevTable = document.getElementById('obs-high-risk-table-body');
+            const highSevRowsHtml = highSevTable ? highSevTable.innerHTML : '';
 
-                pdf.setFont(undefined, 'normal'); pdf.setFontSize(7); pdf.setTextColor(100, 116, 139);
-                pdf.text(enDate, pdfW - margin, footerY + 4.5, { align: 'right' });
-                pdf.text(enTime, pdfW - margin, footerY + 9, { align: 'right' });
-            }
+            // بناء المحتوى المنسق على صفحتين عرضيتين A4 Landscape بأعلى دقة ووضوح
+            const contentHtml = `
+                <style>
+                    @page { size: A4 landscape; margin: 8mm; }
+                    @media print {
+                        @page { size: A4 landscape; margin: 8mm; }
+                        body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                        .obs-page-break { page-break-before: always !important; break-before: page !important; }
+                    }
+                    .obs-pdf-section { width: 100%; margin-bottom: 18px; font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; direction: rtl; }
+                    .obs-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+                    .obs-kpi-box { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; text-align: center; }
+                    .obs-kpi-num { font-size: 24px; font-weight: 800; line-height: 1.2; }
+                    .obs-kpi-lbl { font-size: 12px; font-weight: 700; color: #334155; margin-top: 4px; }
+                    
+                    .obs-chart-card { background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+                    .obs-chart-title { font-size: 14px; font-weight: 800; color: #1e3a8a; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #f1f5f9; padding-bottom: 6px; }
+                    .obs-chart-img { width: 100%; max-height: 230px; object-fit: contain; display: block; margin: 0 auto; }
+                    
+                    .obs-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+                    
+                    .obs-table-pdf { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
+                    .obs-table-pdf th { background: #1e3a8a; color: #ffffff; padding: 9px 10px; text-align: right; font-weight: 700; font-size: 11.5px; }
+                    .obs-table-pdf td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155; }
+                    .obs-table-pdf tr:nth-child(even) { background: #f8fafc; }
+                </style>
 
-            const dateFile = new Date().toISOString().slice(0, 10);
-            pdf.save(`تقرير-تحليل-الملاحظات-اليومية-${dateFile}.pdf`);
-            if (typeof Notification !== 'undefined' && Notification.success) {
-                Notification.success('تم تصدير تقرير تحليل الملاحظات اليومية PDF بنجاح');
+                <!-- الصفحة الأولى: الملخص التنفيذي ومؤشرات الأداء والاتجاه الزمني -->
+                <div class="obs-pdf-section">
+                    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; border-radius: 12px; padding: 10px 18px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+                        <div style="font-size: 16px; font-weight: 800;">📊 مؤشرات الأداء والملخص التنفيذي للملاحظات اليومية</div>
+                        <div style="font-size: 12px; font-weight: 600; opacity: 0.95;">تاريخ التصدير: ${new Date().toLocaleDateString('ar-EG')}</div>
+                    </div>
+
+                    <!-- بطاقات المؤشرات -->
+                    <div class="obs-kpi-grid">
+                        <div class="obs-kpi-box" style="border-top: 4px solid #2563eb;">
+                            <div class="obs-kpi-num" style="color: #1e3a8a;">${kpiTotal}</div>
+                            <div class="obs-kpi-lbl">إجمالي الملاحظات</div>
+                        </div>
+                        <div class="obs-kpi-box" style="border-top: 4px solid #d97706;">
+                            <div class="obs-kpi-num" style="color: #b45309;">${kpiOpen}</div>
+                            <div class="obs-kpi-lbl">ملاحظات مفتوحة</div>
+                        </div>
+                        <div class="obs-kpi-box" style="border-top: 4px solid #7c3aed;">
+                            <div class="obs-kpi-num" style="color: #6d28d9;">${kpiProgress}</div>
+                            <div class="obs-kpi-lbl">قيد التنفيذ</div>
+                        </div>
+                        <div class="obs-kpi-box" style="border-top: 4px solid #059669;">
+                            <div class="obs-kpi-num" style="color: #047857;">${kpiClosed}</div>
+                            <div class="obs-kpi-lbl">ملاحظات مغلقة</div>
+                        </div>
+                        <div class="obs-kpi-box" style="border-top: 4px solid #dc2626;">
+                            <div class="obs-kpi-num" style="color: #b91c1c;">${kpiHighRisk}</div>
+                            <div class="obs-kpi-lbl">عالية الخطورة</div>
+                        </div>
+                        <div class="obs-kpi-box" style="border-top: 4px solid #0284c7;">
+                            <div class="obs-kpi-num" style="color: #0369a1;">${kpiMonth}</div>
+                            <div class="obs-kpi-lbl">ملاحظات هذا الشهر</div>
+                        </div>
+                        <div class="obs-kpi-box" style="border-top: 4px solid #4f46e5;">
+                            <div class="obs-kpi-num" style="color: #4338ca;">${kpiRate}</div>
+                            <div class="obs-kpi-lbl">معدل الإغلاق</div>
+                        </div>
+                        <div class="obs-kpi-box" style="border-top: 4px solid #0d9488;">
+                            <div class="obs-kpi-num" style="color: #0f766e;">${kpiAvgDays}</div>
+                            <div class="obs-kpi-lbl">متوسط أيام الإغلاق</div>
+                        </div>
+                    </div>
+
+                    <!-- المخططات الدائرية -->
+                    <div class="obs-grid-2">
+                        <div class="obs-chart-card">
+                            <div class="obs-chart-title">🔘 التوزيع حسب الحالة</div>
+                            ${imgStatus ? `<img class="obs-chart-img" src="${imgStatus}" alt="Status Chart">` : ''}
+                        </div>
+                        <div class="obs-chart-card">
+                            <div class="obs-chart-title">⚠️ التوزيع حسب مستوى الخطورة</div>
+                            ${imgRisk ? `<img class="obs-chart-img" src="${imgRisk}" alt="Risk Chart">` : ''}
+                        </div>
+                    </div>
+
+                    <!-- مخطط الاتجاه الزمني -->
+                    <div class="obs-chart-card">
+                        <div class="obs-chart-title">📈 الاتجاه الزمني للملاحظات (آخر 12 شهر)</div>
+                        ${imgTrend ? `<img class="obs-chart-img" style="max-height: 240px;" src="${imgTrend}" alt="Trend Chart">` : ''}
+                    </div>
+                </div>
+
+                <!-- فاصل صفحة A4 -->
+                <div class="obs-page-break" style="margin-top: 25px;"></div>
+
+                <!-- الصفحة الثانية: التوزيعات التفصيلية وجدول الملاحظات الحرجة -->
+                <div class="obs-pdf-section">
+                    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; border-radius: 12px; padding: 10px 18px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+                        <div style="font-size: 16px; font-weight: 800;">📌 التحليل التفصيلي وقائمة الملاحظات الحرجة المفتوحة</div>
+                        <div style="font-size: 12px; font-weight: 600; opacity: 0.95;">الصفحة 2 من 2</div>
+                    </div>
+
+                    <div class="obs-grid-2">
+                        <div class="obs-chart-card">
+                            <div class="obs-chart-title">🏷️ حسب نوع الملاحظة (أعلى 10)</div>
+                            ${imgType ? `<img class="obs-chart-img" src="${imgType}" alt="Type Chart">` : ''}
+                        </div>
+                        <div class="obs-chart-card">
+                            <div class="obs-chart-title">🏢 حسب الإدارة المسؤولة (أعلى 8)</div>
+                            ${imgDept ? `<img class="obs-chart-img" src="${imgDept}" alt="Dept Chart">` : ''}
+                        </div>
+                    </div>
+
+                    <div class="obs-grid-2">
+                        <div class="obs-chart-card">
+                            <div class="obs-chart-title">📍 حسب الموقع / المصنع</div>
+                            ${imgSite ? `<img class="obs-chart-img" src="${imgSite}" alt="Site Chart">` : ''}
+                        </div>
+                        <div class="obs-chart-card">
+                            <div class="obs-chart-title">⏱️ حسب الوردية / متوسط أيام الإغلاق</div>
+                            ${imgShift ? `<img class="obs-chart-img" src="${imgShift}" alt="Shift Chart">` : (imgCloseTime ? `<img class="obs-chart-img" src="${imgCloseTime}" alt="Close Time Chart">` : '')}
+                        </div>
+                    </div>
+
+                    <!-- جدول الملاحظات الحرجة -->
+                    <div class="obs-chart-card" style="margin-top: 8px;">
+                        <div class="obs-chart-title" style="color: #b91c1c;">🚨 الملاحظات الحرجة المفتوحة (عالية الخطورة)</div>
+                        <table class="obs-table-pdf">
+                            <thead>
+                                <tr>
+                                    <th>رقم الملاحظة</th>
+                                    <th>التاريخ</th>
+                                    <th>نوع الملاحظة</th>
+                                    <th>الموقع / المصنع</th>
+                                    <th>المسؤول</th>
+                                    <th>الإدارة المسؤولة</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${highSevRowsHtml || '<tr><td colspan="7" style="text-align:center; padding:14px; color:#64748b;">لا توجد ملاحظات حرجة مفتوحة حالياً</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            const formCode = (typeof AppState !== 'undefined' && AppState.companySettings?.policyFormCode) || 'SF-HSE-DOB-02';
+            const formTitle = 'تقرير التحليل الإحصائي للملاحظات اليومية';
+
+            const rawHtml = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
+                ? FormHeader.generatePDFHTML(
+                    formCode,
+                    formTitle,
+                    contentHtml,
+                    false,
+                    true,
+                    {
+                        source: 'DailyObservationsAnalytics',
+                        titleEn: 'Daily Safety Observations Analytics Report',
+                        titleAr: 'تقرير التحليل الإحصائي للملاحظات اليومية',
+                        includeQRCode: false
+                    },
+                    new Date().toISOString(),
+                    new Date().toISOString()
+                )
+                : `<html dir="rtl"><head><title>تقرير التحليل</title></head><body>${contentHtml}</body></html>`;
+
+            if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {
+                const dateFile = new Date().toISOString().slice(0, 10);
+                const ok = await FormHeader.generatePDF(rawHtml, `Daily-Observations-Analytics-${dateFile}.pdf`);
+                if (ok && typeof Notification !== 'undefined' && Notification.success) {
+                    Notification.success('تم تجهيز تقرير تحليل الملاحظات اليومية بالهيدر المؤسسي بنجاح');
+                }
+            } else {
+                const printWindow = window.open('', '_blank');
+                if (printWindow) {
+                    printWindow.document.write(rawHtml);
+                    printWindow.document.close();
+                    printWindow.onload = () => {
+                        setTimeout(() => {
+                            printWindow.print();
+                        }, 500);
+                    };
+                }
             }
         } catch(err) {
             console.error('PDF export error:', err);
             if (typeof Notification !== 'undefined' && Notification.error) {
-                Notification.error('تعذّر تصدير PDF — تأكد من الاتصال بالإنترنت وأعد المحاولة');
+                Notification.error('تعذّر تصدير PDF: ' + err.message);
             }
         } finally {
             if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
