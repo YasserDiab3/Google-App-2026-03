@@ -1,4 +1,4 @@
-/**
+﻿/**
  * إنشاء وتطبيق قالب PPT افتراضي تلقائياً — تظهر بأعلى قائمة Apps Script (a_...)
  */
 function a_createDefaultPptTemplate() {
@@ -1367,17 +1367,37 @@ function exportDailyObservationsPptReport(payload) {
         }
 
         const outputFolderId = String(props.getProperty('REPORTS_OUTPUT_FOLDER_ID') || '').trim();
-        const outputFolder = outputFolderId ? DriveApp.getFolderById(outputFolderId) : null;
+        var outputFolder = null;
+        if (outputFolderId) {
+            try { outputFolder = DriveApp.getFolderById(outputFolderId); } catch(folderErr) {
+                Logger.log('PPT Export: REPORTS_OUTPUT_FOLDER_ID invalid, using root: ' + folderErr);
+            }
+        }
 
         const tz = Session.getScriptTimeZone();
         const dateLabel = Utilities.formatDate(reportDate, tz, 'yyyy-MM-dd');
         const safeDept = department.replace(/[\\\/:*?"<>|]/g, '-');
         const baseName = 'Daily_Observations_' + safeDept + '_' + dateLabel;
 
-        // نسخ الـ Template الأصلي السليم
-        const copiedFile = outputFolder
-            ? templateFile.makeCopy(baseName + '_TEMPLATE_COPY', outputFolder)
-            : templateFile.makeCopy(baseName + '_TEMPLATE_COPY');
+        // نسخ الـ Template مع حماية ضد أخطاء التحويل
+        var copiedFile = null;
+        try {
+            copiedFile = outputFolder
+                ? templateFile.makeCopy(baseName + '_TEMPLATE_COPY', outputFolder)
+                : templateFile.makeCopy(baseName + '_TEMPLATE_COPY');
+        } catch (copyErr) {
+            Logger.log('PPT Export: makeCopy failed (' + copyErr + '). Forcing fresh native template...');
+            try { props.deleteProperty('DAILY_OBSERVATIONS_PPT_TEMPLATE_ID'); } catch(dp){}
+            var retryCreate = createDefaultDailyObservationsPptTemplate();
+            if (!retryCreate || !retryCreate.success || !retryCreate.templateId) {
+                return { success: false, message: 'Failed to create fresh PPT template after copy error: ' + copyErr };
+            }
+            templateId = retryCreate.templateId;
+            templateFile = DriveApp.getFileById(templateId);
+            copiedFile = outputFolder
+                ? templateFile.makeCopy(baseName + '_TEMPLATE_COPY', outputFolder)
+                : templateFile.makeCopy(baseName + '_TEMPLATE_COPY');
+        }
 
         const presId = copiedFile.getId();
         const presentation = SlidesApp.openById(presId);
