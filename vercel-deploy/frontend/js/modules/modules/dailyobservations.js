@@ -8262,6 +8262,7 @@ const DailyObservations = {
             const logoUrl = AppState.companyLogo || AppState.companySettings?.logo || '';
             const companyName = AppState.companySettings?.name || AppState.companyName || 'الشركة العالمية للانتاج والتصنيع الزراعي';
 
+            const imageCache = new Map();
             // مساعد استخراج وتحميل الصور وتضمينها كـ Base64 مدمج في ملف PPTX
             const formatPptxImage = async (url) => {
                 if (!url || typeof url !== 'string' || !url.trim()) return null;
@@ -8269,6 +8270,7 @@ const DailyObservations = {
                 if (url.startsWith('data:image/') || url.startsWith('data:')) {
                     return { data: url };
                 }
+                if (imageCache.has(url)) return imageCache.get(url);
 
                 // استخراج معرف ملف Google Drive إن وجد
                 const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
@@ -8277,16 +8279,35 @@ const DailyObservations = {
                                    url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
                 const fileId = driveMatch ? driveMatch[1] : '';
 
-                // 1. محاولة جلب الصورة مباشرة عبر OAuth Token من Google Drive API
+                // 1. محاولة جلب الصورة من Google Apps Script Backend (getDriveImageDataUrl) - موثوق 100% وبدون CORS
+                if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.callBackend === 'function') {
+                    try {
+                        const targetIdOrUrl = fileId || url;
+                        const resp = await GoogleIntegration.callBackend('getDriveImageDataUrl', { fileIdOrUrl: targetIdOrUrl });
+                        if (resp && resp.success && resp.dataUrl && String(resp.dataUrl).startsWith('data:image/')) {
+                            const resObj = { data: resp.dataUrl };
+                            imageCache.set(url, resObj);
+                            return resObj;
+                        }
+                    } catch (e) {
+                        Utils.safeWarn('Backend getDriveImageDataUrl fallback:', e);
+                    }
+                }
+
+                // 2. محاولة جلب الصورة مباشرة عبر OAuth Token من Google Drive API
                 if (fileId && typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.isLoggedIn === 'function' && GoogleIntegration.isLoggedIn()) {
                     try {
                         const token = (typeof GoogleIntegration.getAuthToken === 'function' && GoogleIntegration.getAuthToken()) ||
                                       (typeof gapi !== 'undefined' && gapi?.auth2?.getAuthInstance()?.currentUser?.get()?.getAuthResponse()?.access_token) ||
                                       AppState.googleAccessToken;
                         if (token) {
+                            const controller = new AbortController();
+                            const timer = setTimeout(() => controller.abort(), 2500);
                             const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-                                headers: { Authorization: `Bearer ${token}` }
+                                headers: { Authorization: `Bearer ${token}` },
+                                signal: controller.signal
                             });
+                            clearTimeout(timer);
                             if (res.ok) {
                                 const blob = await res.blob();
                                 const dataUrl = await new Promise((resolve) => {
@@ -8295,14 +8316,16 @@ const DailyObservations = {
                                     reader.readAsDataURL(blob);
                                 });
                                 if (dataUrl && String(dataUrl).startsWith('data:image/')) {
-                                    return { data: dataUrl };
+                                    const resObj = { data: dataUrl };
+                                    imageCache.set(url, resObj);
+                                    return resObj;
                                 }
                             }
                         }
                     } catch(e) {}
                 }
 
-                // 2. محاولة جلب الصورة عبر الروابط المباشرة كـ Blob
+                // 3. محاولة جلب الصورة عبر الروابط المباشرة كـ Blob
                 const candidates = [];
                 if (fileId) {
                     candidates.push(`https://lh3.googleusercontent.com/d/${fileId}=w1200`);
@@ -8315,7 +8338,10 @@ const DailyObservations = {
 
                 for (const cand of candidates) {
                     try {
-                        const res = await fetch(cand, { mode: 'cors' });
+                        const controller = new AbortController();
+                        const timer = setTimeout(() => controller.abort(), 2000);
+                        const res = await fetch(cand, { mode: 'cors', signal: controller.signal });
+                        clearTimeout(timer);
                         if (res.ok) {
                             const blob = await res.blob();
                             const dataUrl = await new Promise((resolve) => {
@@ -8324,13 +8350,15 @@ const DailyObservations = {
                                 reader.readAsDataURL(blob);
                             });
                             if (dataUrl && String(dataUrl).startsWith('data:image/')) {
-                                return { data: dataUrl };
+                                const resObj = { data: dataUrl };
+                                imageCache.set(url, resObj);
+                                return resObj;
                             }
                         }
                     } catch(e) {}
                 }
 
-                // 3. محاولة التحميل عبر Image + Canvas
+                // 4. محاولة التحميل عبر Image + Canvas
                 for (const cand of candidates) {
                     try {
                         const dataUrl = await new Promise((resolve) => {
@@ -8354,7 +8382,9 @@ const DailyObservations = {
                             img.src = cand;
                         });
                         if (dataUrl && String(dataUrl).startsWith('data:image/')) {
-                            return { data: dataUrl };
+                            const resObj = { data: dataUrl };
+                            imageCache.set(url, resObj);
+                            return resObj;
                         }
                     } catch(e) {}
                 }
