@@ -4948,36 +4948,47 @@ const DailyObservations = {
                 () => typeof html2pdf !== 'undefined'
             );
 
-            const tempContainer = document.createElement('div');
-            tempContainer.style.position = 'fixed';
-            tempContainer.style.left = '-9999px';
-            tempContainer.style.top = '0';
-            tempContainer.style.width = '1200px';
-            tempContainer.style.background = '#ffffff';
-            tempContainer.innerHTML = rawHtml;
-            document.body.appendChild(tempContainer);
-
             const dateFile = new Date().toISOString().slice(0, 10);
             const pdfFilename = `تقرير-تحليل-الملاحظات-اليومية-${dateFile}.pdf`;
 
             if (typeof html2pdf !== 'undefined') {
+                const iframe = document.createElement('iframe');
+                iframe.style.position = 'fixed';
+                iframe.style.top = '0';
+                iframe.style.left = '0';
+                iframe.style.width = '1200px';
+                iframe.style.height = '1000px';
+                iframe.style.zIndex = '-99999';
+                iframe.style.opacity = '0.01';
+                iframe.style.pointerEvents = 'none';
+                iframe.style.border = 'none';
+                document.body.appendChild(iframe);
+
+                const doc = iframe.contentWindow.document;
+                doc.open();
+                doc.write(rawHtml);
+                doc.close();
+
+                // الانتظار لتحميل الخطوط والرسوم البيانية في الـ iframe
+                await new Promise(resolve => setTimeout(resolve, 800));
+
                 const opt = {
                     margin: [6, 6, 6, 6],
                     filename: pdfFilename,
                     image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+                    html2canvas: { scale: 2, useCORS: true, letterRendering: true, windowWidth: 1200 },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
                 };
-                await html2pdf().set(opt).from(tempContainer).save();
-                tempContainer.remove();
+
+                await html2pdf().set(opt).from(doc.body).save();
+                iframe.remove();
+
                 if (typeof Notification !== 'undefined' && Notification.success) {
                     Notification.success('✅ تم تنزيل ملف PDF التحليلي بالهيدر المؤسسي بنجاح!');
                 }
             } else if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {
-                tempContainer.remove();
                 await FormHeader.generatePDF(rawHtml, pdfFilename);
             } else {
-                tempContainer.remove();
                 const printWindow = window.open('', '_blank');
                 if (printWindow) {
                     printWindow.document.write(rawHtml);
