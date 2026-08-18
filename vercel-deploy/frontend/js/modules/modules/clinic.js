@@ -8194,6 +8194,10 @@ const Clinic = {
     mergeClinicVisitsWithLocalOnly(serverVisits, previousLocal) {
         const server = Array.isArray(serverVisits) ? serverVisits : [];
         const local = Array.isArray(previousLocal) ? previousLocal : [];
+        if (server.length === 0 && local.length > 0) {
+            // لا تستبدل محلياً غير فارغ بمصفوفة فارغة
+            return local.slice();
+        }
         const seen = new Set();
 
         // سجل المعرفات من الخادم
