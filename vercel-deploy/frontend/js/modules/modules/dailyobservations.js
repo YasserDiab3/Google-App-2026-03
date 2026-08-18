@@ -8230,6 +8230,19 @@ const DailyObservations = {
             const logoUrl = AppState.companyLogo || AppState.companySettings?.logo || '';
             const companyName = AppState.companySettings?.name || AppState.companyName || 'مجموعة أمريكانا';
 
+            // مساعد لمعالجة الصور في PptxGenJS بأمان تام
+            const formatPptxImage = (url) => {
+                if (!url || typeof url !== 'string' || !url.trim()) return null;
+                url = url.trim();
+                if (url.startsWith('data:')) {
+                    return { data: url };
+                }
+                if (url.startsWith('http://') || url.startsWith('https://')) {
+                    return { path: url };
+                }
+                return null;
+            };
+
             // ══════════════════════════════════════
             // الشريحة 1: شريحة الغلاف (Cover Slide)
             // ══════════════════════════════════════
@@ -8240,9 +8253,10 @@ const DailyObservations = {
             slide1.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.12, fill: { color: 'D97706' }, line: { color: 'D97706' } });
 
             // الشعار
-            if (logoUrl) {
+            const logoImgObj = formatPptxImage(logoUrl);
+            if (logoImgObj) {
                 try {
-                    slide1.addImage({ path: logoUrl, x: 0.6, y: 0.4, w: 2.2, h: 0.9, sizing: { type: 'contain', w: 2.2, h: 0.9 } });
+                    slide1.addImage({ ...logoImgObj, x: 0.6, y: 0.4, w: 2.2, h: 0.9, sizing: { type: 'contain', w: 2.2, h: 0.9 } });
                 } catch(e) {
                     slide1.addText(companyName, { x: 0.6, y: 0.4, w: 2.5, h: 0.8, fontSize: 16, bold: true, color: '1E3A8A', align: 'left' });
                 }
@@ -8340,6 +8354,7 @@ const DailyObservations = {
                 const obsDate = String(obs.date || '').slice(0, 10) || '—';
                 const obsLocation = [obs.siteName, obs.locationName].filter(Boolean).join(' - ') || '—';
                 const imgUrl = obs.imageUrl || (Array.isArray(obs.images) && obs.images[0]) || '';
+                const obsImgObj = formatPptxImage(imgUrl);
 
                 // ترويسة الملاحظة
                 obsSlide.addShape(pptx.ShapeType.rect, { x: 6.8, y: 0.3, w: 5.9, h: 0.6, fill: { color: '94A3B8' }, line: { color: '475569', width: 1.5 } });
@@ -8388,9 +8403,9 @@ const DailyObservations = {
 
                 // صندوق الصورة يساراً
                 obsSlide.addShape(pptx.ShapeType.rect, { x: 0.6, y: 1.0, w: 5.9, h: 5.9, fill: { color: 'F8FAFC' }, line: { color: 'CBD5E1', width: 1.5 } });
-                if (imgUrl) {
+                if (obsImgObj) {
                     try {
-                        obsSlide.addImage({ path: imgUrl, x: 0.7, y: 1.1, w: 5.7, h: 5.7, sizing: { type: 'contain', w: 5.7, h: 5.7 } });
+                        obsSlide.addImage({ ...obsImgObj, x: 0.7, y: 1.1, w: 5.7, h: 5.7, sizing: { type: 'contain', w: 5.7, h: 5.7 } });
                     } catch (imgErr) {
                         obsSlide.addText('صورة الملاحظة مرفقة\n[Image Available]', { x: 0.6, y: 1.0, w: 5.9, h: 5.9, fontSize: 14, color: '94A3B8', align: 'center', valign: 'middle' });
                     }
