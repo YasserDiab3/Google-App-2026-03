@@ -8277,6 +8277,8 @@ const DailyObservations = {
                                    url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
                                    url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
                                    url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+                const fileId = driveMatch ? driveMatch[1] : '';
+
                 // 1. محاولة جلب الصورة مباشرة عبر OAuth Token من Google Drive API
                 if (fileId && typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.isLoggedIn === 'function' && GoogleIntegration.isLoggedIn()) {
                     try {
