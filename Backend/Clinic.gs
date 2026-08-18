@@ -3820,22 +3820,36 @@ function _clinicStaffNormalizePunchTime_(dayKey, timeInput) {
         if (!timeInput) return '';
         var s = String(timeInput).trim();
         if (!s) return '';
-        if (s.indexOf('T') !== -1 || s.indexOf(' ') !== -1 || s.length > 12) {
-            var d = new Date(s);
-            if (!isNaN(d.getTime())) return d.toISOString();
+        if (/[Z+-]\d{2}:?\d{2}$/i.test(s) || /Z$/i.test(s)) {
+            var dIso = new Date(s);
+            if (!isNaN(dIso.getTime())) return dIso.toISOString();
+        }
+        var mdt = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{1,2}):(\d{2})/);
+        if (mdt) {
+            var y = parseInt(mdt[1], 10);
+            var mo = parseInt(mdt[2], 10) - 1;
+            var d = parseInt(mdt[3], 10);
+            var hh = parseInt(mdt[4], 10);
+            var mm = parseInt(mdt[5], 10);
+            if (!isNaN(y) && !isNaN(mo) && !isNaN(d) && !isNaN(hh) && !isNaN(mm)) {
+                var dtLocal = new Date(y, mo, d, hh, mm, 0, 0);
+                if (!isNaN(dtLocal.getTime())) return dtLocal.toISOString();
+            }
         }
         if (/^\d{1,2}:\d{2}/.test(s) && day) {
             var parts = s.split(':');
-            var hh = parseInt(parts[0], 10);
-            var mm = parseInt(parts[1], 10);
-            if (!isNaN(hh) && !isNaN(mm)) {
-                var base = new Date(day + 'T00:00:00');
-                if (!isNaN(base.getTime())) {
-                    base.setHours(hh, mm, 0, 0);
-                    return base.toISOString();
+            var hh2 = parseInt(parts[0], 10);
+            var mm2 = parseInt(parts[1], 10);
+            if (!isNaN(hh2) && !isNaN(mm2)) {
+                var dayParts = day.split('-');
+                if (dayParts.length === 3) {
+                    var dtLocal2 = new Date(parseInt(dayParts[0], 10), parseInt(dayParts[1], 10) - 1, parseInt(dayParts[2], 10), hh2, mm2, 0, 0);
+                    if (!isNaN(dtLocal2.getTime())) return dtLocal2.toISOString();
                 }
             }
         }
+        var dFallback = new Date(s);
+        if (!isNaN(dFallback.getTime())) return dFallback.toISOString();
         return '';
     } catch (_e) {
         return '';

@@ -15811,12 +15811,13 @@ const Clinic = {
         document.getElementById('clinic-attendance-punch-modal')?.remove();
         document.body.insertAdjacentHTML('beforeend', html);
         document.getElementById('clinic-attendance-punch-save')?.addEventListener('click', async () => {
-            const timeVal = document.getElementById('clinic-attendance-punch-time')?.value || '';
+            const timeValRaw = document.getElementById('clinic-attendance-punch-time')?.value || '';
             const notes = document.getElementById('clinic-attendance-punch-notes')?.value?.trim() || '';
-            if (!timeVal) {
+            if (!timeValRaw) {
                 Notification?.warning?.('يرجى تحديد الوقت');
                 return;
             }
+            const timeVal = this._formatLocalDatetimeToIso(timeValRaw);
             try {
                 Loading?.show?.();
                 const resp = await GoogleIntegration.sendRequest({
@@ -15842,6 +15843,21 @@ const Clinic = {
                 Loading?.hide?.();
             }
         });
+    },
+
+    _formatLocalDatetimeToIso(localStr) {
+        if (!localStr) return '';
+        const s = String(localStr).trim();
+        if (!s) return '';
+        if (/[Z+-]\d{2}:?\d{2}$/i.test(s) || /Z$/i.test(s)) return s;
+        const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{1,2}):(\d{2})/);
+        if (m) {
+            const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), 0, 0);
+            if (!isNaN(d.getTime())) return d.toISOString();
+        }
+        const dFallback = new Date(s);
+        if (!isNaN(dFallback.getTime())) return dFallback.toISOString();
+        return s;
     },
 
     getClinicShiftRules() {
@@ -16019,22 +16035,22 @@ const Clinic = {
         document.getElementById('clinic-attendance-add-save')?.addEventListener('click', async () => {
             const staffId = document.getElementById('clinic-attendance-add-staff')?.value || '';
             const date = document.getElementById('clinic-attendance-add-date')?.value || '';
-            const checkIn = document.getElementById('clinic-attendance-add-checkin')?.value || '';
-            const checkOut = document.getElementById('clinic-attendance-add-checkout')?.value || '';
+            const checkInRaw = document.getElementById('clinic-attendance-add-checkin')?.value || '';
+            const checkOutRaw = document.getElementById('clinic-attendance-add-checkout')?.value || '';
             const notes = document.getElementById('clinic-attendance-add-notes')?.value?.trim() || '';
             if (!staffId || !date) {
                 Notification?.warning?.('يرجى اختيار المسئول والتاريخ');
                 return;
             }
-            if (!checkIn && !checkOut) {
+            if (!checkInRaw && !checkOutRaw) {
                 Notification?.warning?.('أدخل وقت دخول أو خروج على الأقل');
                 return;
             }
             try {
                 Loading?.show?.();
                 const data = { staffId, date, notes };
-                if (checkIn) data.checkIn = checkIn;
-                if (checkOut) data.checkOut = checkOut;
+                if (checkInRaw) data.checkIn = this._formatLocalDatetimeToIso(checkInRaw);
+                if (checkOutRaw) data.checkOut = this._formatLocalDatetimeToIso(checkOutRaw);
                 const resp = await GoogleIntegration.sendRequest({
                     action: 'updateClinicStaffAttendance',
                     data
