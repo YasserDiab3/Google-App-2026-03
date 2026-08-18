@@ -4761,164 +4761,190 @@ const DailyObservations = {
             const criticalObs = obs
                 .filter(o => (o.riskLevel === 'عالي' || o.riskLevel === 'عالية') && o.status !== 'مغلق')
                 .sort((a,b) => (b.overdays||0) - (a.overdays||0))
-                .slice(0, 20);
+                .slice(0, 7);
 
             const highSevRowsHtml = criticalObs.length > 0
                 ? criticalObs.map(o => `
-                    <tr>
-                        <td style="font-weight:bold; color:#1e40af;">${Utils.escapeHTML(o.isoCode || o.id || '—')}</td>
-                        <td>${Utils.escapeHTML(String(o.date||'').slice(0, 10) || '—')}</td>
-                        <td>${Utils.escapeHTML(o.observationType || '—')}</td>
-                        <td>${Utils.escapeHTML([o.siteName, o.locationName].filter(Boolean).join(' - ') || '—')}</td>
-                        <td>${Utils.escapeHTML(o.observerName || '—')}</td>
-                        <td>${Utils.escapeHTML(o.responsibleDepartment || '—')}</td>
-                        <td><span style="display:inline-block; padding:3px 8px; border-radius:6px; font-weight:bold; ${o.status==='مغلق' ? 'background:#d1fae5;color:#047857;' : 'background:#fef3c7;color:#b45309;'}">${Utils.escapeHTML(o.status || '—')}</span></td>
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <td style="padding: 6px 8px; font-weight: bold; color: #1e40af; border-left: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9;">${Utils.escapeHTML(o.isoCode || o.id || '—')}</td>
+                        <td style="padding: 6px 8px; border-left: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9;">${Utils.escapeHTML(String(o.date||'').slice(0, 10) || '—')}</td>
+                        <td style="padding: 6px 8px; border-left: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9;">${Utils.escapeHTML(o.observationType || '—')}</td>
+                        <td style="padding: 6px 8px; border-left: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9;">${Utils.escapeHTML([o.siteName, o.locationName].filter(Boolean).join(' - ') || '—')}</td>
+                        <td style="padding: 6px 8px; border-left: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9;">${Utils.escapeHTML(o.observerName || '—')}</td>
+                        <td style="padding: 6px 8px; border-left: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9;">${Utils.escapeHTML(o.responsibleDepartment || '—')}</td>
+                        <td style="padding: 6px 8px; border-left: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9;"><span style="display: inline-block; padding: 2px 7px; border-radius: 5px; font-weight: bold; font-size: 9.5px; ${o.status==='مغلق' ? 'background:#d1fae5;color:#047857;' : 'background:#fef3c7;color:#b45309;'}">${Utils.escapeHTML(o.status || '—')}</span></td>
                     </tr>
                 `).join('')
-                : '<tr><td colspan="7" style="text-align:center; padding:14px; color:#64748b;">لا توجد ملاحظات حرجة مفتوحة حالياً</td></tr>';
+                : '<tr><td colspan="7" style="text-align: center; padding: 12px; color: #64748b;">لا توجد ملاحظات حرجة مفتوحة حالياً</td></tr>';
 
-            // بناء المحتوى المنسق على صفحتين عرضيتين A4 Landscape بأعلى دقة ووضوح
-            const contentHtml = `
-                <style>
-                    @page {
-                        size: A4 landscape !important;
-                        margin: 8mm 8mm !important;
-                    }
-                    @media print {
-                        -webkit-print-color-adjust: exact !important;
-                        print-color-adjust: exact !important;
-                        color-adjust: exact !important;
-                        body { margin: 0 !important; padding: 0 !important; background: #ffffff !important; font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif !important; }
-                        .report-wrapper { padding: 4px 8px !important; width: 100% !important; max-width: 100% !important; box-shadow: none !important; }
-                        .obs-page-break { page-break-before: always !important; break-before: page !important; clear: both !important; display: block !important; height: 1px !important; }
-                        tr { page-break-inside: avoid !important; break-inside: avoid !important; }
-                        .obs-chart-card, .obs-kpi-box { break-inside: avoid !important; page-break-inside: avoid !important; }
-                    }
-                    .obs-pdf-section { width: 100%; direction: rtl; font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif; }
-                    .obs-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
-                    .obs-kpi-box { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; text-align: center; }
-                    .obs-kpi-num { font-size: 22px; font-weight: 800; line-height: 1.2; }
-                    .obs-kpi-lbl { font-size: 11px; font-weight: 700; color: #475569; margin-top: 3px; }
-                    
-                    .obs-chart-card { background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
-                    .obs-chart-title { font-size: 13px; font-weight: 800; color: #1e3a8a; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 4px; }
-                    .obs-chart-img { width: 100%; max-height: 180px; object-fit: contain; display: block; margin: 0 auto; }
-                    
-                    .obs-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
-                    
-                    .obs-table-pdf { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-top: 6px; }
-                    .obs-table-pdf th { background: #1e3a8a; color: #ffffff; padding: 7px 8px; text-align: right; font-weight: 700; font-size: 11px; border: 1px solid #1e40af; }
-                    .obs-table-pdf td { padding: 6px 8px; border-bottom: 1px solid #e2e8f0; border-left: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; font-size: 10.5px; color: #334155; }
-                    .obs-table-pdf tr:nth-child(even) { background: #f8fafc; }
-                </style>
+            const companyName = String(AppState?.companySettings?.name || 'SafetyHub | ICAPP').trim();
+            const companySecondaryName = String(AppState?.companySettings?.secondaryName || 'إدارة السلامة والصحة المهنية والبيئة').trim();
+            const companyLogo = AppState?.companySettings?.logo || '';
+            const formCode = (typeof AppState !== 'undefined' && AppState.companySettings?.policyFormCode) || 'SF-HSE-DOB-02';
+            const periodLabel = period === 30 ? 'آخر 30 يوم' : period === 90 ? 'آخر 3 أشهر' : period === 180 ? 'آخر 6 أشهر' : period === 365 ? 'آخر سنة' : 'جميع الفترات';
 
-                <!-- الصفحة الأولى: الملخص التنفيذي ومؤشرات الأداء والاتجاه الزمني -->
-                <div class="obs-pdf-section">
-                    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; border-radius: 10px; padding: 9px 16px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
-                        <div style="font-size: 15px; font-weight: 800;">📊 مؤشرات الأداء والملخص التنفيذي للملاحظات اليومية</div>
-                        <div style="font-size: 11.5px; font-weight: 600; opacity: 0.95;">تاريخ التصدير: ${new Date().toLocaleDateString('ar-EG')}</div>
+            // تحميل مكتبات html2canvas و jsPDF إذا لزم الأمر
+            if (typeof html2canvas === 'undefined' || !Utils?.PdfExport?.getJsPdfConstructor?.()) {
+                await Promise.all([
+                    this._loadAnalyticsLib('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js', () => typeof html2canvas !== 'undefined'),
+                    this._loadAnalyticsLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => !!Utils?.PdfExport?.getJsPdfConstructor?.())
+                ]);
+            }
+
+            if (typeof html2canvas === 'undefined' || !Utils?.PdfExport?.getJsPdfConstructor?.()) {
+                throw new Error('تعذّر تحميل مكتبات تصدير PDF');
+            }
+
+            // بناء حاوية التقرير بصفحتين A4 Landscape مستقلتين لضمان عدم حدوث قص أو تشوه
+            const exportContainer = document.createElement('div');
+            exportContainer.style.cssText = 'position: fixed; left: -99999px; top: 0; width: 1120px; z-index: -9999; background: #ffffff; color: #0f172a; direction: rtl; font-family: "Cairo", "Segoe UI", Tahoma, Arial, sans-serif; box-sizing: border-box;';
+
+            // الصفحة الأولى
+            const page1 = document.createElement('div');
+            page1.style.cssText = 'width: 1120px; min-height: 775px; padding: 22px 26px; box-sizing: border-box; background: #ffffff; display: flex; flex-direction: column; justify-content: space-between;';
+            page1.innerHTML = `
+                <div>
+                    <!-- رأس الصفحة المؤسسي -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            ${companyLogo ? `<img src="${companyLogo}" style="height: 48px; max-width: 120px; object-fit: contain;">` : ''}
+                            <div>
+                                <div style="font-size: 16px; font-weight: 800; color: #1e3a8a;">${Utils.escapeHTML(companyName)}</div>
+                                <div style="font-size: 11px; color: #475569; font-weight: 600;">${Utils.escapeHTML(companySecondaryName)}</div>
+                            </div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 17px; font-weight: 900; color: #0f172a;">تقرير التحليل الإحصائي للملاحظات اليومية</div>
+                            <div style="font-size: 10.5px; color: #64748b; font-weight: 600;">Daily Safety Observations Analytics Report</div>
+                        </div>
+                        <div style="text-align: left; font-size: 10.5px; color: #475569; line-height: 1.4;">
+                            <div><b>كود النموذج:</b> ${Utils.escapeHTML(formCode)}</div>
+                            <div><b>تاريخ التصدير:</b> ${new Date().toLocaleDateString('ar-EG')}</div>
+                            <div><b>الفترة:</b> ${Utils.escapeHTML(periodLabel)}</div>
+                        </div>
                     </div>
 
-                    <!-- بطاقات المؤشرات -->
-                    <div class="obs-kpi-grid">
-                        <div class="obs-kpi-box" style="border-top: 4px solid #2563eb;">
-                            <div class="obs-kpi-num" style="color: #1e3a8a;">${kpiTotal}</div>
-                            <div class="obs-kpi-lbl">إجمالي الملاحظات</div>
+                    <!-- شريط الملخص التنفيذي -->
+                    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; border-radius: 8px; padding: 7px 14px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+                        <div style="font-size: 13.5px; font-weight: 800;">📊 مؤشرات الأداء والملخص التنفيذي للملاحظات اليومية</div>
+                        <div style="font-size: 11px; font-weight: 600; opacity: 0.95;">إجمالي الملاحظات المسجلة: ${kpiTotal}</div>
+                    </div>
+
+                    <!-- شبكة المؤشرات الإحصائية -->
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px;">
+                        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-top: 3.5px solid #2563eb; border-radius: 8px; padding: 8px 10px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: 800; color: #1e3a8a; line-height: 1.1;">${kpiTotal}</div>
+                            <div style="font-size: 10.5px; font-weight: 700; color: #475569; margin-top: 3px;">إجمالي الملاحظات</div>
                         </div>
-                        <div class="obs-kpi-box" style="border-top: 4px solid #d97706;">
-                            <div class="obs-kpi-num" style="color: #b45309;">${kpiOpen}</div>
-                            <div class="obs-kpi-lbl">ملاحظات مفتوحة</div>
+                        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-top: 3.5px solid #d97706; border-radius: 8px; padding: 8px 10px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: 800; color: #b45309; line-height: 1.1;">${kpiOpen}</div>
+                            <div style="font-size: 10.5px; font-weight: 700; color: #475569; margin-top: 3px;">ملاحظات مفتوحة</div>
                         </div>
-                        <div class="obs-kpi-box" style="border-top: 4px solid #7c3aed;">
-                            <div class="obs-kpi-num" style="color: #6d28d9;">${kpiProgress}</div>
-                            <div class="obs-kpi-lbl">قيد التنفيذ</div>
+                        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-top: 3.5px solid #7c3aed; border-radius: 8px; padding: 8px 10px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: 800; color: #6d28d9; line-height: 1.1;">${kpiProgress}</div>
+                            <div style="font-size: 10.5px; font-weight: 700; color: #475569; margin-top: 3px;">قيد التنفيذ</div>
                         </div>
-                        <div class="obs-kpi-box" style="border-top: 4px solid #059669;">
-                            <div class="obs-kpi-num" style="color: #047857;">${kpiClosed}</div>
-                            <div class="obs-kpi-lbl">ملاحظات مغلقة</div>
+                        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-top: 3.5px solid #059669; border-radius: 8px; padding: 8px 10px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: 800; color: #047857; line-height: 1.1;">${kpiClosed}</div>
+                            <div style="font-size: 10.5px; font-weight: 700; color: #475569; margin-top: 3px;">ملاحظات مغلقة</div>
                         </div>
-                        <div class="obs-kpi-box" style="border-top: 4px solid #dc2626;">
-                            <div class="obs-kpi-num" style="color: #b91c1c;">${kpiHighRisk}</div>
-                            <div class="obs-kpi-lbl">عالية الخطورة</div>
+                        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-top: 3.5px solid #dc2626; border-radius: 8px; padding: 8px 10px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: 800; color: #b91c1c; line-height: 1.1;">${kpiHighRisk}</div>
+                            <div style="font-size: 10.5px; font-weight: 700; color: #475569; margin-top: 3px;">عالية الخطورة</div>
                         </div>
-                        <div class="obs-kpi-box" style="border-top: 4px solid #0284c7;">
-                            <div class="obs-kpi-num" style="color: #0369a1;">${kpiMonth}</div>
-                            <div class="obs-kpi-lbl">ملاحظات هذا الشهر</div>
+                        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-top: 3.5px solid #0284c7; border-radius: 8px; padding: 8px 10px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: 800; color: #0369a1; line-height: 1.1;">${kpiMonth}</div>
+                            <div style="font-size: 10.5px; font-weight: 700; color: #475569; margin-top: 3px;">ملاحظات هذا الشهر</div>
                         </div>
-                        <div class="obs-kpi-box" style="border-top: 4px solid #4f46e5;">
-                            <div class="obs-kpi-num" style="color: #4338ca;">${kpiRate}</div>
-                            <div class="obs-kpi-lbl">معدل الإغلاق</div>
+                        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-top: 3.5px solid #4f46e5; border-radius: 8px; padding: 8px 10px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: 800; color: #4338ca; line-height: 1.1;">${kpiRate}</div>
+                            <div style="font-size: 10.5px; font-weight: 700; color: #475569; margin-top: 3px;">معدل الإغلاق</div>
                         </div>
-                        <div class="obs-kpi-box" style="border-top: 4px solid #0d9488;">
-                            <div class="obs-kpi-num" style="color: #0f766e;">${kpiAvgDays}</div>
-                            <div class="obs-kpi-lbl">متوسط أيام الإغلاق</div>
+                        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-top: 3.5px solid #0d9488; border-radius: 8px; padding: 8px 10px; text-align: center;">
+                            <div style="font-size: 20px; font-weight: 800; color: #0f766e; line-height: 1.1;">${kpiAvgDays}</div>
+                            <div style="font-size: 10.5px; font-weight: 700; color: #475569; margin-top: 3px;">متوسط أيام الإغلاق</div>
                         </div>
                     </div>
 
                     <!-- المخططات الدائرية -->
-                    <div class="obs-grid-2">
-                        <div class="obs-chart-card">
-                            <div class="obs-chart-title">🔘 التوزيع حسب الحالة</div>
-                            ${imgStatus ? `<img class="obs-chart-img" src="${imgStatus}" alt="Status Chart">` : ''}
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 8px 10px;">
+                            <div style="font-size: 11.5px; font-weight: 800; color: #1e3a8a; margin-bottom: 6px; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 4px;">🔘 التوزيع حسب الحالة</div>
+                            ${imgStatus ? `<img src="${imgStatus}" style="width: 100%; max-height: 175px; object-fit: contain; display: block; margin: 0 auto;">` : '<div style="text-align:center;color:#94a3b8;padding:20px;">لا توجد بيانات</div>'}
                         </div>
-                        <div class="obs-chart-card">
-                            <div class="obs-chart-title">⚠️ التوزيع حسب مستوى الخطورة</div>
-                            ${imgRisk ? `<img class="obs-chart-img" src="${imgRisk}" alt="Risk Chart">` : ''}
+                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 8px 10px;">
+                            <div style="font-size: 11.5px; font-weight: 800; color: #1e3a8a; margin-bottom: 6px; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 4px;">⚠️ التوزيع حسب مستوى الخطورة</div>
+                            ${imgRisk ? `<img src="${imgRisk}" style="width: 100%; max-height: 175px; object-fit: contain; display: block; margin: 0 auto;">` : '<div style="text-align:center;color:#94a3b8;padding:20px;">لا توجد بيانات</div>'}
                         </div>
                     </div>
 
                     <!-- مخطط الاتجاه الزمني -->
-                    <div class="obs-chart-card">
-                        <div class="obs-chart-title">📈 الاتجاه الزمني للملاحظات (آخر 12 شهر)</div>
-                        ${imgTrend ? `<img class="obs-chart-img" style="max-height: 200px;" src="${imgTrend}" alt="Trend Chart">` : ''}
+                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 8px 10px;">
+                        <div style="font-size: 11.5px; font-weight: 800; color: #1e3a8a; margin-bottom: 6px; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 4px;">📈 الاتجاه الزمني للملاحظات (آخر 12 شهر)</div>
+                        ${imgTrend ? `<img src="${imgTrend}" style="width: 100%; max-height: 170px; object-fit: contain; display: block; margin: 0 auto;">` : '<div style="text-align:center;color:#94a3b8;padding:20px;">لا توجد بيانات</div>'}
                     </div>
                 </div>
 
-                <!-- فاصل صفحة A4 -->
-                <div class="obs-page-break" style="margin-top: 15px;"></div>
+                <!-- تذييل الصفحة الأولى -->
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 6px; margin-top: 8px; font-size: 9.5px; color: #64748b;">
+                    <span>${Utils.escapeHTML(companyName)} — تقرير التحليل الإحصائي السري للملاحظات</span>
+                    <span>صفحة 1 من 2</span>
+                </div>
+            `;
 
-                <!-- الصفحة الثانية: التوزيعات التفصيلية وجدول الملاحظات الحرجة -->
-                <div class="obs-pdf-section">
-                    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; border-radius: 10px; padding: 9px 16px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
-                        <div style="font-size: 15px; font-weight: 800;">📌 التحليل التفصيلي وقائمة الملاحظات الحرجة المفتوحة</div>
-                        <div style="font-size: 11.5px; font-weight: 600; opacity: 0.95;">الصفحة 2 من 2</div>
-                    </div>
-
-                    <div class="obs-grid-2">
-                        <div class="obs-chart-card">
-                            <div class="obs-chart-title">🏷️ حسب نوع الملاحظة (أعلى 10)</div>
-                            ${imgType ? `<img class="obs-chart-img" src="${imgType}" alt="Type Chart">` : ''}
+            // الصفحة الثانية
+            const page2 = document.createElement('div');
+            page2.style.cssText = 'width: 1120px; min-height: 775px; padding: 22px 26px; box-sizing: border-box; background: #ffffff; display: flex; flex-direction: column; justify-content: space-between;';
+            page2.innerHTML = `
+                <div>
+                    <!-- رأس الصفحة الثانية -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            ${companyLogo ? `<img src="${companyLogo}" style="height: 38px; max-width: 100px; object-fit: contain;">` : ''}
+                            <div>
+                                <div style="font-size: 14px; font-weight: 800; color: #1e3a8a;">${Utils.escapeHTML(companyName)}</div>
+                                <div style="font-size: 10px; color: #64748b;">${Utils.escapeHTML(companySecondaryName)}</div>
+                            </div>
                         </div>
-                        <div class="obs-chart-card">
-                            <div class="obs-chart-title">🏢 حسب الإدارة المسؤولة (أعلى 8)</div>
-                            ${imgDept ? `<img class="obs-chart-img" src="${imgDept}" alt="Dept Chart">` : ''}
-                        </div>
-                    </div>
-
-                    <div class="obs-grid-2">
-                        <div class="obs-chart-card">
-                            <div class="obs-chart-title">📍 حسب الموقع / المصنع</div>
-                            ${imgLocation ? `<img class="obs-chart-img" src="${imgLocation}" alt="Location Chart">` : ''}
-                        </div>
-                        <div class="obs-chart-card">
-                            <div class="obs-chart-title">⏱️ حسب الوردية / متوسط أيام الإغلاق</div>
-                            ${imgShift ? `<img class="obs-chart-img" src="${imgShift}" alt="Shift Chart">` : (imgCloseTime ? `<img class="obs-chart-img" src="${imgCloseTime}" alt="Close Time Chart">` : '')}
+                        <div style="font-size: 15px; font-weight: 800; color: #0f172a;">التحليل التفصيلي وقائمة الملاحظات الحرجة المفتوحة</div>
+                        <div style="font-size: 10.5px; color: #475569; text-align: left;">
+                            <b>صفحة 2 من 2</b> | ${new Date().toLocaleDateString('ar-EG')}
                         </div>
                     </div>
 
-                    <!-- جدول الملاحظات الحرجة -->
-                    <div class="obs-chart-card" style="margin-top: 6px;">
-                        <div class="obs-chart-title" style="color: #b91c1c;">🚨 الملاحظات الحرجة المفتوحة (عالية الخطورة)</div>
-                        <table class="obs-table-pdf">
+                    <!-- شبكة المخططات التفصيلية 2x2 -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px 8px;">
+                            <div style="font-size: 11px; font-weight: 800; color: #1e3a8a; margin-bottom: 4px; border-bottom: 1px solid #f1f5f9; padding-bottom: 2px;">🏷️ حسب نوع الملاحظة (أعلى 10)</div>
+                            ${imgType ? `<img src="${imgType}" style="width: 100%; max-height: 140px; object-fit: contain; display: block; margin: 0 auto;">` : '<div style="text-align:center;color:#94a3b8;padding:10px;">لا توجد بيانات</div>'}
+                        </div>
+                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px 8px;">
+                            <div style="font-size: 11px; font-weight: 800; color: #1e3a8a; margin-bottom: 4px; border-bottom: 1px solid #f1f5f9; padding-bottom: 2px;">🏢 حسب الإدارة المسؤولة (أعلى 8)</div>
+                            ${imgDept ? `<img src="${imgDept}" style="width: 100%; max-height: 140px; object-fit: contain; display: block; margin: 0 auto;">` : '<div style="text-align:center;color:#94a3b8;padding:10px;">لا توجد بيانات</div>'}
+                        </div>
+                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px 8px;">
+                            <div style="font-size: 11px; font-weight: 800; color: #1e3a8a; margin-bottom: 4px; border-bottom: 1px solid #f1f5f9; padding-bottom: 2px;">📍 حسب الموقع / المصنع</div>
+                            ${imgLocation ? `<img src="${imgLocation}" style="width: 100%; max-height: 140px; object-fit: contain; display: block; margin: 0 auto;">` : '<div style="text-align:center;color:#94a3b8;padding:10px;">لا توجد بيانات</div>'}
+                        </div>
+                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px 8px;">
+                            <div style="font-size: 11px; font-weight: 800; color: #1e3a8a; margin-bottom: 4px; border-bottom: 1px solid #f1f5f9; padding-bottom: 2px;">⏱️ حسب الوردية / متوسط أيام الإغلاق</div>
+                            ${imgShift ? `<img src="${imgShift}" style="width: 100%; max-height: 140px; object-fit: contain; display: block; margin: 0 auto;">` : (imgCloseTime ? `<img src="${imgCloseTime}" style="width: 100%; max-height: 140px; object-fit: contain; display: block; margin: 0 auto;">` : '<div style="text-align:center;color:#94a3b8;padding:10px;">لا توجد بيانات</div>')}
+                        </div>
+                    </div>
+
+                    <!-- جدول الملاحظات الحرجة المفتوحة -->
+                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px 8px;">
+                        <div style="font-size: 11.5px; font-weight: 800; color: #b91c1c; margin-bottom: 4px; display: flex; align-items: center; gap: 5px;">🚨 الملاحظات الحرجة المفتوحة (عالية الخطورة)</div>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
                             <thead>
-                                <tr>
-                                    <th>رقم الملاحظة</th>
-                                    <th>التاريخ</th>
-                                    <th>نوع الملاحظة</th>
-                                    <th>الموقع / المصنع</th>
-                                    <th>المسؤول</th>
-                                    <th>الإدارة المسؤولة</th>
-                                    <th>الحالة</th>
+                                <tr style="background: #1e3a8a; color: #ffffff;">
+                                    <th style="padding: 5px 6px; text-align: right; border: 1px solid #1e40af;">رقم الملاحظة</th>
+                                    <th style="padding: 5px 6px; text-align: right; border: 1px solid #1e40af;">التاريخ</th>
+                                    <th style="padding: 5px 6px; text-align: right; border: 1px solid #1e40af;">نوع الملاحظة</th>
+                                    <th style="padding: 5px 6px; text-align: right; border: 1px solid #1e40af;">الموقع / المصنع</th>
+                                    <th style="padding: 5px 6px; text-align: right; border: 1px solid #1e40af;">المسؤول</th>
+                                    <th style="padding: 5px 6px; text-align: right; border: 1px solid #1e40af;">الإدارة المسؤولة</th>
+                                    <th style="padding: 5px 6px; text-align: right; border: 1px solid #1e40af;">الحالة</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -4927,56 +4953,56 @@ const DailyObservations = {
                         </table>
                     </div>
                 </div>
+
+                <!-- تذييل الصفحة الثانية -->
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 6px; margin-top: 8px; font-size: 9.5px; color: #64748b;">
+                    <span>${Utils.escapeHTML(companyName)} — نظام إدارة السلامة والصحة المهنية والبيئة (QHSSE)</span>
+                    <span>صفحة 2 من 2</span>
+                </div>
             `;
 
-            const formCode = (typeof AppState !== 'undefined' && AppState.companySettings?.policyFormCode) || 'SF-HSE-DOB-02';
-            const formTitle = 'تقرير التحليل الإحصائي للملاحظات اليومية';
+            exportContainer.appendChild(page1);
+            exportContainer.appendChild(page2);
+            document.body.appendChild(exportContainer);
 
-            const rawHtml = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
-                ? FormHeader.generatePDFHTML(
-                    formCode,
-                    formTitle,
-                    contentHtml,
-                    false,
-                    true,
-                    {
-                        source: 'DailyObservationsAnalytics',
-                        titleEn: 'Daily Safety Observations Analytics Report',
-                        titleAr: 'تقرير التحليل الإحصائي للملاحظات اليومية',
-                        includeQRCode: false
-                    },
-                    new Date().toISOString(),
-                    new Date().toISOString()
-                )
-                : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body style="font-family:'Cairo','Segoe UI',Tahoma,Arial,sans-serif;margin:0;padding:12px;direction:rtl;">${contentHtml}</body></html>`;
+            // مهلة بسيطة لضمان اكتمال تصيير الصور والخطوط في DOM
+            await new Promise(r => setTimeout(r, 160));
 
-            // استخدام طريقة الطباعة المباشرة لضمان دقة اللغة العربية 100% وعدم تشوه الرسوم أو الخطوط
-            const blob = new Blob([rawHtml], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
+            // التقاط كل صفحة بدقة عالية
+            const canvasOptions = { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false };
+            const page1Canvas = await html2canvas(page1, canvasOptions);
+            const page2Canvas = await html2canvas(page2, canvasOptions);
 
-            if (printWindow) {
-                printWindow.addEventListener('load', () => {
-                    const doPrint = () => {
-                        setTimeout(() => {
-                            printWindow.print();
-                            setTimeout(() => URL.revokeObjectURL(url), 2000);
-                        }, 400);
-                    };
-                    if (printWindow.document && printWindow.document.fonts && printWindow.document.fonts.ready) {
-                        printWindow.document.fonts.ready.then(doPrint).catch(doPrint);
-                    } else {
-                        doPrint();
-                    }
-                });
-                if (typeof Notification !== 'undefined' && Notification.success) {
-                    Notification.success('✅ تم فتح نافذة التقرير للطباعة وحفظ PDF — اختر "حفظ بتنسيق PDF"');
-                }
-            } else {
-                if (typeof Notification !== 'undefined' && Notification.error) {
-                    Notification.error('يرجى السماح للنوافذ المنبثقة لفتح تقرير PDF');
-                }
-                URL.revokeObjectURL(url);
+            exportContainer.remove();
+
+            // إنشاء ملف PDF بالعرض A4 Landscape
+            const pdf = Utils.PdfExport.createPdf({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            if (!pdf) throw new Error('تعذّر تهيئة محرك PDF');
+
+            const pdfW = pdf.internal.pageSize.getWidth();
+            const pdfH = pdf.internal.pageSize.getHeight();
+            const margin = 6;
+            const contentW = pdfW - margin * 2;
+            const contentH = pdfH - margin * 2;
+
+            // الصفحة الأولى
+            const p1Data = page1Canvas.toDataURL('image/jpeg', 0.94);
+            const p1DrawH = Math.min((page1Canvas.height / page1Canvas.width) * contentW, contentH);
+            pdf.addImage(p1Data, 'JPEG', margin, margin, contentW, p1DrawH);
+
+            // الصفحة الثانية
+            pdf.addPage();
+            const p2Data = page2Canvas.toDataURL('image/jpeg', 0.94);
+            const p2DrawH = Math.min((page2Canvas.height / page2Canvas.width) * contentW, contentH);
+            pdf.addImage(p2Data, 'JPEG', margin, margin, contentW, p2DrawH);
+
+            // تنزيل ملف PDF مباشرة بجهاز المستخدم
+            const dateFile = new Date().toISOString().slice(0, 10);
+            const pdfFilename = `تقرير-تحليل-الملاحظات-اليومية-${dateFile}.pdf`;
+            Utils.PdfExport.savePdf(pdf, pdfFilename);
+
+            if (typeof Notification !== 'undefined' && Notification.success) {
+                Notification.success('✅ تم تنزيل ملف PDF التحليلي مباشرة بنجاح!');
             }
         } catch(err) {
             console.error('PDF export error:', err);
@@ -8310,11 +8336,13 @@ const DailyObservations = {
                         const dataUrl = await new Promise((resolve) => {
                             const img = new Image();
                             img.crossOrigin = 'anonymous';
+                            const timer = setTimeout(() => resolve(null), 2000);
                             img.onload = () => {
+                                clearTimeout(timer);
                                 try {
                                     const canvas = document.createElement('canvas');
-                                    canvas.width = img.naturalWidth || img.width || 800;
-                                    canvas.height = img.naturalHeight || img.height || 600;
+                                    canvas.width = img.naturalWidth || 800;
+                                    canvas.height = img.naturalHeight || 600;
                                     const ctx = canvas.getContext('2d');
                                     ctx.drawImage(img, 0, 0);
                                     resolve(canvas.toDataURL('image/jpeg', 0.88));
@@ -8322,8 +8350,7 @@ const DailyObservations = {
                                     resolve(null);
                                 }
                             };
-                            img.onerror = () => resolve(null);
-                            setTimeout(() => resolve(null), 3500);
+                            img.onerror = () => { clearTimeout(timer); resolve(null); };
                             img.src = cand;
                         });
                         if (dataUrl && String(dataUrl).startsWith('data:image/')) {
@@ -8335,6 +8362,12 @@ const DailyObservations = {
                 return null;
             };
 
+            // جلب كافة صور الملاحظات دفعة واحدة بالتوازي الفائق لمنع أي تأخير في التصدير
+            const [logoImgObj, obsImages] = await Promise.all([
+                formatPptxImage(logoUrl),
+                Promise.all(exportBatch.map(obs => formatPptxImage(this._getObservationPrimaryImageUrl(obs))))
+            ]);
+
             // ══════════════════════════════════════
             // الشريحة 1: شريحة الغلاف التنفيذية (Cover Slide)
             // ══════════════════════════════════════
@@ -8345,7 +8378,6 @@ const DailyObservations = {
             slide1.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.15, fill: { color: 'D97706' }, line: { color: 'D97706' } });
 
             // الشعار
-            const logoImgObj = await formatPptxImage(logoUrl);
             if (logoImgObj) {
                 slide1.addShape(pptx.ShapeType.roundRect, { x: 0.8, y: 0.45, w: 2.6, h: 1.0, fill: { color: 'FFFFFF' }, line: { color: 'CBD5E1', width: 1 }, rectRadius: 0.1 });
                 try {
@@ -8446,10 +8478,7 @@ const DailyObservations = {
                 const obsNo = obs.isoCode || obs.id || `OBS-${i + 1}`;
                 const obsDate = String(obs.date || '').slice(0, 10) || '—';
                 const obsLocation = [obs.siteName, obs.locationName].filter(Boolean).join(' - ') || '—';
-                
-                // استخراج الصورة عبر مساعد الصور الشامل لدعم كافة الحقول ومرفقات Google Drive
-                const imgUrl = this._getObservationPrimaryImageUrl(obs);
-                const obsImgObj = await formatPptxImage(imgUrl);
+                const obsImgObj = obsImages[i];
 
                 // ترويسة الشريحة العلوية (بارتفاع 0.65 بوصة)
                 obsSlide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.65, fill: { color: '1E3A8A' } });
