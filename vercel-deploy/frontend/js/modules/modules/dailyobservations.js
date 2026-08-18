@@ -8277,24 +8277,7 @@ const DailyObservations = {
                                    url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
                                    url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
                                    url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
-                const fileId = driveMatch ? driveMatch[1] : '';
-
-                // 1. محاولة جلب الصورة من Google Apps Script Backend (getDriveImageDataUrl) - موثوق 100% وبدون CORS
-                if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.callBackend === 'function') {
-                    try {
-                        const targetIdOrUrl = fileId || url;
-                        const resp = await GoogleIntegration.callBackend('getDriveImageDataUrl', { fileIdOrUrl: targetIdOrUrl });
-                        if (resp && resp.success && resp.dataUrl && String(resp.dataUrl).startsWith('data:image/')) {
-                            const resObj = { data: resp.dataUrl };
-                            imageCache.set(url, resObj);
-                            return resObj;
-                        }
-                    } catch (e) {
-                        Utils.safeWarn('Backend getDriveImageDataUrl fallback:', e);
-                    }
-                }
-
-                // 2. محاولة جلب الصورة مباشرة عبر OAuth Token من Google Drive API
+                // 1. محاولة جلب الصورة مباشرة عبر OAuth Token من Google Drive API
                 if (fileId && typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.isLoggedIn === 'function' && GoogleIntegration.isLoggedIn()) {
                     try {
                         const token = (typeof GoogleIntegration.getAuthToken === 'function' && GoogleIntegration.getAuthToken()) ||
@@ -8302,7 +8285,7 @@ const DailyObservations = {
                                       AppState.googleAccessToken;
                         if (token) {
                             const controller = new AbortController();
-                            const timer = setTimeout(() => controller.abort(), 2500);
+                            const timer = setTimeout(() => controller.abort(), 1800);
                             const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
                                 headers: { Authorization: `Bearer ${token}` },
                                 signal: controller.signal
@@ -8325,7 +8308,7 @@ const DailyObservations = {
                     } catch(e) {}
                 }
 
-                // 3. محاولة جلب الصورة عبر الروابط المباشرة كـ Blob
+                // 2. محاولة جلب الصورة عبر الروابط المباشرة كـ Blob
                 const candidates = [];
                 if (fileId) {
                     candidates.push(`https://lh3.googleusercontent.com/d/${fileId}=w1200`);
@@ -8339,7 +8322,7 @@ const DailyObservations = {
                 for (const cand of candidates) {
                     try {
                         const controller = new AbortController();
-                        const timer = setTimeout(() => controller.abort(), 2000);
+                        const timer = setTimeout(() => controller.abort(), 1200);
                         const res = await fetch(cand, { mode: 'cors', signal: controller.signal });
                         clearTimeout(timer);
                         if (res.ok) {
@@ -8358,13 +8341,13 @@ const DailyObservations = {
                     } catch(e) {}
                 }
 
-                // 4. محاولة التحميل عبر Image + Canvas
+                // 3. محاولة التحميل عبر Image + Canvas
                 for (const cand of candidates) {
                     try {
                         const dataUrl = await new Promise((resolve) => {
                             const img = new Image();
                             img.crossOrigin = 'anonymous';
-                            const timer = setTimeout(() => resolve(null), 2000);
+                            const timer = setTimeout(() => resolve(null), 1200);
                             img.onload = () => {
                                 clearTimeout(timer);
                                 try {
