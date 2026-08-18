@@ -1411,7 +1411,6 @@ function exportDailyObservationsPptReport(payload) {
             '{{DEPARTMENT}}': deptLabel || '',
             '{{REPORT_DATE}}': dateLabel || ''
         }, isEnglish);
-
         // زرع الشعار في placeholder إن وُجد
         if (logoUrl) {
             try {
@@ -1514,43 +1513,81 @@ function exportDailyObservationsPptReport(payload) {
 
         // تصدير كـ PPTX عبر UrlFetchApp export URL
         let pptBlob = null;
+        // محاولة 1: Drive API v3 الرسمية لتصدير Google Presentation كملف pptx
         try {
-            const exportUrl = 'https://docs.google.com/presentation/d/' + presId + '/export/pptx';
-            const response = UrlFetchApp.fetch(exportUrl, {
+            var driveV3ExportUrl = 'https://www.googleapis.com/drive/v3/files/' + presId + '/export?mimeType=application/vnd.openxmlformats-officedocument.presentationml.presentation';
+            var resp1 = UrlFetchApp.fetch(driveV3ExportUrl, {
                 headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
-                muteHttpExceptions: true
+                muteHttpExceptions: true,
+                followRedirects: true
             });
-            if (response.getResponseCode() === 200) {
-                pptBlob = response.getBlob().setName(baseName + '.pptx');
+            if (resp1.getResponseCode() === 200) {
+                pptBlob = resp1.getBlob().setName(baseName + '.pptx');
             } else {
-                Logger.log('PPT Export HTTP status: ' + response.getResponseCode());
+                Logger.log('Drive API v3 PPTX export status: ' + resp1.getResponseCode());
             }
-        } catch (fetchErr) {
-            Logger.log('PPT Export UrlFetchApp error: ' + fetchErr.toString());
+        } catch(d3Err) {
+            Logger.log('Drive API v3 PPTX export error: ' + d3Err);
         }
 
+        // محاولة 2: export/pptx MimeType direct export
+        if (!pptBlob) {
+            try {
+                var exportUrl = 'https://docs.google.com/presentation/d/' + presId + '/export/pptx';
+                var resp2 = UrlFetchApp.fetch(exportUrl, {
+                    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+                    muteHttpExceptions: true,
+                    followRedirects: true
+                });
+                if (resp2.getResponseCode() === 200) {
+                    pptBlob = resp2.getBlob().setName(baseName + '.pptx');
+                }
+            } catch (fErr) {
+                Logger.log('Direct export/pptx error: ' + fErr);
+            }
+        }
+
+        // محاولة 3: التصدير كـ PDF لتفادي أي خطأ تحويل في حالة استمرار الرفض
         if (!pptBlob) {
             try {
                 pptBlob = DriveApp.getFileById(presId).getAs(MimeType.PDF).setName(baseName + '.pdf');
             } catch (pdfErr) {
-                pptBlob = DriveApp.getFileById(presId).getBlob().setName(baseName);
+                Logger.log('PDF export fallback error: ' + pdfErr);
             }
         }
 
-        const pptFile = outputFolder ? outputFolder.createFile(pptBlob) : DriveApp.createFile(pptBlob);
-        try {
-            pptFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-        } catch (shareErr) {
-            Logger.log('PPT Export: sharing failed: ' + shareErr);
+        let pptFile = null;
+        if (pptBlob) {
+            try {
+                pptFile = outputFolder ? outputFolder.createFile(pptBlob) : DriveApp.createFile(pptBlob);
+            } catch (createErr) {
+                Logger.log('createFile error: ' + createErr);
+            }
         }
 
-        const fileId = pptFile.getId();
+        const directPresViewUrl = 'https://docs.google.com/presentation/d/' + presId + '/edit';
+        const directPresDownloadUrl = 'https://docs.google.com/presentation/d/' + presId + '/export/pptx';
+
+        if (pptFile) {
+            try {
+                pptFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+            } catch (shareErr) {}
+            const fileId = pptFile.getId();
+            return {
+                success: true,
+                fileId: fileId,
+                fileName: pptFile.getName(),
+                viewUrl: 'https://drive.google.com/file/d/' + fileId + '/view',
+                downloadUrl: 'https://drive.google.com/uc?export=download&id=' + fileId
+            };
+        }
+
         return {
             success: true,
-            fileId: fileId,
-            fileName: pptFile.getName(),
-            viewUrl: 'https://drive.google.com/file/d/' + fileId + '/view',
-            downloadUrl: 'https://drive.google.com/uc?export=download&id=' + fileId
+            fileId: presId,
+            fileName: baseName + '.pptx',
+            viewUrl: directPresViewUrl,
+            downloadUrl: directPresDownloadUrl
         };
     } catch (error) {
         Logger.log('Error in exportDailyObservationsPptReport: ' + error.toString());
