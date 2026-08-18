@@ -59,26 +59,49 @@ function generateDailyObservationId(existingData) {
  * @returns {string} رقم الملاحظة OBS-YYYYMM-NNNN للتسجيل في الخلية
  */
 function getObservationIsoCodeFromId(id, existingIsoCode = '', dateValue = '') {
-    if (!id || typeof id !== 'string') id = '';
-    const strId = String(id).trim();
-    
-    let idNum = null;
-    const mDob = strId.match(/^DOB-(\d+)$/i);
-    if (mDob) {
-        idNum = parseInt(mDob[1], 10);
-    } else {
-        const mObs = strId.match(/^OBS-\d{6}-(\d+)$/i);
-        if (mObs) {
-            idNum = parseInt(mObs[1], 10);
-        } else {
-            const mTrail = strId.match(/(\d+)$/);
-            if (mTrail) idNum = parseInt(mTrail[1], 10);
+    if (existingIsoCode && typeof existingIsoCode === 'string' && existingIsoCode.trim()) {
+        const cleanIso = existingIsoCode.trim();
+        if (/^OBS-\d{6}-\d+/i.test(cleanIso) || /^DOB-\d+/i.test(cleanIso)) {
+            return cleanIso;
         }
     }
 
+    if (!id || typeof id !== 'string') id = '';
+    const strId = String(id).trim();
+    const cleanExisting = (existingIsoCode && typeof existingIsoCode === 'string') ? existingIsoCode.trim() : '';
+
+    let idNum = null;
+
+    // محاولة استخراج الرقم من existingIsoCode أولاً
+    if (cleanExisting) {
+        const mIsoObs = cleanExisting.match(/^OBS-\d{6}-(\d+)$/i);
+        if (mIsoObs) {
+            idNum = parseInt(mIsoObs[1], 10);
+        } else {
+            const mIsoDob = cleanExisting.match(/^DOB-(\d+)$/i);
+            if (mIsoDob) {
+                idNum = parseInt(mIsoDob[1], 10);
+            } else {
+                const mIsoNum = cleanExisting.match(/(\d+)$/);
+                if (mIsoNum) idNum = parseInt(mIsoNum[1], 10);
+            }
+        }
+    }
+
+    // استخراج الرقم من id إذا لم يتبين من existingIsoCode (مع تجنب MongoDB ObjectId 24-hex)
     if (idNum === null || isNaN(idNum)) {
-        const mIsoTrail = String(existingIsoCode).match(/(\d+)$/);
-        if (mIsoTrail) idNum = parseInt(mIsoTrail[1], 10);
+        const mDob = strId.match(/^DOB-(\d+)$/i);
+        if (mDob) {
+            idNum = parseInt(mDob[1], 10);
+        } else {
+            const mObs = strId.match(/^OBS-\d{6}-(\d+)$/i);
+            if (mObs) {
+                idNum = parseInt(mObs[1], 10);
+            } else if (!/^[a-f0-9]{24}$/i.test(strId)) {
+                const mTrail = strId.match(/(\d+)$/);
+                if (mTrail) idNum = parseInt(mTrail[1], 10);
+            }
+        }
     }
 
     if (idNum === null || isNaN(idNum)) idNum = 0;
@@ -87,7 +110,7 @@ function getObservationIsoCodeFromId(id, existingIsoCode = '', dateValue = '') {
     while (numStr.length < 4) numStr = '0' + numStr;
 
     let yyyymm = '';
-    const mMonthIso = String(existingIsoCode || '').match(/^OBS-(\d{6})-/i);
+    const mMonthIso = cleanExisting.match(/^OBS-(\d{6})-/i);
     if (mMonthIso) {
         yyyymm = mMonthIso[1];
     } else if (dateValue) {
@@ -9069,8 +9092,8 @@ const DailyObservations = {
 
         // الـ id لا يُغيّر أبداً — يُستخدم كما هو من قاعدة البيانات
         const recordId = record.id || record.observationId || '';
-        // isoCode: اشتقاق دائم يربط بين شهر الملاحظة الأصلي YYYYMM ورقم id لضمان التسلسل وعدم التكرار
-        const rawIso = record.isoCode || record.code || '';
+        // isoCode: الحفاظ الدقيق والكامل على رقم الملاحظة الأصلي المسجل بالنظام
+        const rawIso = record.isoCode || record.code || record.obsNumber || record.observationNumber || record.codeNumber || record.serialNumber || '';
         const isoCodeValue = getObservationIsoCodeFromId(recordId, rawIso, dateIso);
         return {
             id: recordId,
