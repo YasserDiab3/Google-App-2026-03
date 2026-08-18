@@ -343,7 +343,8 @@ const Contractors = {
         search: '',
         status: '',
         type: '',
-        validity: ''
+        validity: '',
+        activeState: ''
     },
 
     /**
@@ -2517,7 +2518,7 @@ const Contractors = {
             return [];
         }
 
-        const { search, status, type, validity } = this.approvedFilters;
+        const { search, status, type, validity, activeState } = this.approvedFilters;
         const normalizedSearch = this.normalizeApprovedSearchText(search || '');
         const hasSearch = normalizedSearch.length > 0;
 
@@ -2530,6 +2531,9 @@ const Contractors = {
                 if (!record.expiryDate) return false;
                 if (!this.isApprovalExpired(record)) return false;
             }
+
+            if (activeState === 'active' && !this.isEntityEnabled(record)) return false;
+            if (activeState === 'inactive' && this.isEntityEnabled(record)) return false;
 
             if (hasSearch && !this.matchesApprovedEntitySearch(record, normalizedSearch)) return false;
             return true;
@@ -2635,83 +2639,106 @@ const Contractors = {
     },
 
     /**
-     * رسم كارت إحصائيات قائمة المعتمدين
+     * رسم كارت إحصائيات قائمة المعتمدين بتصميم عصري متطور يطابق العيادة والتدريب
      */
     renderApprovedEntitiesStats() {
         const stats = this.getApprovedEntitiesStats();
 
         return `
-            <div style="overflow-x:auto;margin-bottom:1.5rem;">
-                <div class="contractors-kpi-grid" style="display:grid;grid-template-columns:repeat(5,minmax(170px,1fr));gap:1rem;align-items:stretch;">
-                    <div class="content-card" style="height:100%;min-height:132px;border:2px solid #bfdbfe;border-radius:14px;background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 55%,#ffffff 100%);box-shadow:0 2px 8px rgba(30,64,175,.08);padding:1rem;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;height:100%;">
-                            <div>
-                                <p style="font-size:.78rem;font-weight:700;color:#1e3a8a;margin:0 0 .5rem;">عدد المقاولين</p>
-                                <p style="font-size:2rem;font-weight:900;line-height:1;color:#1d4ed8;margin:0;">${stats.contractorsCount}</p>
-                                <p style="font-size:.74rem;color:#1e40af;margin:.5rem 0 0;">نشط</p>
+            <div style="overflow-x:auto;margin-bottom:1.25rem;">
+                <div class="contractors-kpi-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.85rem;align-items:stretch;">
+                    
+                    <!-- كارت 1: عدد المقاولين النشطين -->
+                    <div class="contractors-kpi-card" 
+                         style="background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 60%,#ffffff 100%);border:1px solid #c7d2fe;border-radius:14px;padding:1rem;display:flex;align-items:center;justify-content:space-between;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);cursor:default;"
+                         onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 22px -5px rgba(79,70,229,0.18)'" 
+                         onmouseout="this.style.transform='';this.style.boxShadow=''">
+                        <div>
+                            <div style="font-size:0.75rem;font-weight:700;color:#3730a3;margin-bottom:0.35rem;display:flex;align-items:center;gap:5px;">
+                                <span>المقاولون النشطون</span>
                             </div>
-                            <div style="width:46px;height:46px;border-radius:999px;background:linear-gradient(135deg,#dbeafe,#bfdbfe);display:flex;align-items:center;justify-content:center;">
-                                <i class="fas fa-users-cog" style="color:#1d4ed8;font-size:1.1rem;"></i>
-                            </div>
+                            <div style="font-size:1.85rem;font-weight:900;line-height:1.1;color:#4338ca;">${stats.contractorsCount}</div>
+                            <div style="font-size:0.69rem;color:#475569;margin-top:0.4rem;font-weight:600;">مقاول معتمد ونشط</div>
+                        </div>
+                        <div style="width:44px;height:44px;background:linear-gradient(135deg,#6366f1,#4f46e5);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(79,70,229,0.25);">
+                            <i class="fas fa-users-cog" style="color:#ffffff;font-size:1.1rem;"></i>
                         </div>
                     </div>
 
-                    <div class="content-card" style="height:100%;min-height:132px;border:2px solid #bbf7d0;border-radius:14px;background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 55%,#ffffff 100%);box-shadow:0 2px 8px rgba(22,101,52,.08);padding:1rem;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;height:100%;">
-                            <div>
-                                <p style="font-size:.78rem;font-weight:700;color:#14532d;margin:0 0 .5rem;">عدد الموردين</p>
-                                <p style="font-size:2rem;font-weight:900;line-height:1;color:#15803d;margin:0;">${stats.suppliersCount}</p>
-                                <p style="font-size:.74rem;color:#166534;margin:.5rem 0 0;">نشط</p>
+                    <!-- كارت 2: عدد الموردين النشطين -->
+                    <div class="contractors-kpi-card" 
+                         style="background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 60%,#ffffff 100%);border:1px solid #a7f3d0;border-radius:14px;padding:1rem;display:flex;align-items:center;justify-content:space-between;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);cursor:default;"
+                         onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 22px -5px rgba(16,185,129,0.18)'" 
+                         onmouseout="this.style.transform='';this.style.boxShadow=''">
+                        <div>
+                            <div style="font-size:0.75rem;font-weight:700;color:#065f46;margin-bottom:0.35rem;display:flex;align-items:center;gap:5px;">
+                                <span>الموردون النشطون</span>
                             </div>
-                            <div style="width:46px;height:46px;border-radius:999px;background:linear-gradient(135deg,#dcfce7,#bbf7d0);display:flex;align-items:center;justify-content:center;">
-                                <i class="fas fa-truck" style="color:#15803d;font-size:1.1rem;"></i>
-                            </div>
+                            <div style="font-size:1.85rem;font-weight:900;line-height:1.1;color:#059669;">${stats.suppliersCount}</div>
+                            <div style="font-size:0.69rem;color:#475569;margin-top:0.4rem;font-weight:600;">مورد معتمد ونشط</div>
+                        </div>
+                        <div style="width:44px;height:44px;background:linear-gradient(135deg,#10b981,#059669);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(16,185,129,0.25);">
+                            <i class="fas fa-truck-loading" style="color:#ffffff;font-size:1.1rem;"></i>
                         </div>
                     </div>
 
-                    <div class="content-card" style="height:100%;min-height:132px;border:2px solid #a7f3d0;border-radius:14px;background:linear-gradient(135deg,#ecfdf5 0%,#ffffff 50%,#fff1f2 100%);box-shadow:0 2px 8px rgba(13,148,136,.1);padding:1rem;">
-                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;height:100%;">
-                            <p style="font-size:.9rem;font-weight:800;color:#374151;margin:0 0 .5rem;">المقاولين - الموردين</p>
-                            <div style="font-size:1rem;font-weight:700;color:#374151;line-height:1.8;">
-                                نشط <span style="font-size:2rem;font-weight:900;color:#059669;vertical-align:middle;">${stats.activeCount}</span>
-                                <span style="margin:0 .4rem;font-size:1.2rem;font-weight:900;color:#6b7280;vertical-align:middle;">*</span>
-                                غير نشط <span style="font-size:2rem;font-weight:900;color:#dc2626;vertical-align:middle;">${stats.inactiveCount}</span>
+                    <!-- كارت 3: التفعيل التشغيلي -->
+                    <div class="contractors-kpi-card" 
+                         style="background:linear-gradient(135deg,#f0fdfa 0%,#ccfbf1 60%,#ffffff 100%);border:1px solid #99f6e4;border-radius:14px;padding:1rem;display:flex;align-items:center;justify-content:space-between;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);cursor:default;"
+                         onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 22px -5px rgba(13,148,136,0.18)'" 
+                         onmouseout="this.style.transform='';this.style.boxShadow=''">
+                        <div>
+                            <div style="font-size:0.75rem;font-weight:700;color:#115e59;margin-bottom:0.35rem;">التفعيل التشغيلي</div>
+                            <div style="font-size:1.15rem;font-weight:900;line-height:1.2;color:#134e4a;">
+                                <span style="color:#059669;font-size:1.4rem;">${stats.activeCount}</span> نشط
+                                <span style="color:#94a3b8;margin:0 2px;">|</span>
+                                <span style="color:#e11d48;font-size:1.1rem;">${stats.inactiveCount}</span> غير نشط
                             </div>
-                            <div style="width:40px;height:40px;margin-top:.35rem;border-radius:999px;background:linear-gradient(135deg,#d1fae5,#a7f3d0);display:flex;align-items:center;justify-content:center;">
-                                <i class="fas fa-chart-pie" style="color:#047857;font-size:1rem;"></i>
-                            </div>
+                            <div style="font-size:0.69rem;color:#475569;margin-top:0.4rem;font-weight:600;">من إجمالي ${stats.total} جهة</div>
+                        </div>
+                        <div style="width:44px;height:44px;background:linear-gradient(135deg,#14b8a6,#0d9488);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(13,148,136,0.25);">
+                            <i class="fas fa-toggle-on" style="color:#ffffff;font-size:1.1rem;"></i>
                         </div>
                     </div>
 
-                    <div class="content-card" style="height:100%;min-height:132px;border:2px solid #ddd6fe;border-radius:14px;background:linear-gradient(135deg,#f5f3ff 0%,#ede9fe 55%,#ffffff 100%);box-shadow:0 2px 8px rgba(109,40,217,.08);padding:1rem;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;height:100%;">
-                            <div>
-                                <p style="font-size:.78rem;font-weight:700;color:#5b21b6;margin:0 0 .5rem;">نوع الجهة</p>
-                                <p style="font-size:1.35rem;font-weight:900;line-height:1;color:#6d28d9;margin:0;">
-                                    ${stats.entityTypeDistribution['مقاول'] > stats.entityTypeDistribution['مورد'] ? 'مقاول' : 'مورد'}
-                                </p>
-                                <p style="font-size:.74rem;color:#6d28d9;margin:.5rem 0 0;">
-                                    ${stats.entityTypeDistribution['مقاول']} مقاول / ${stats.entityTypeDistribution['مورد']} مورد
-                                </p>
+                    <!-- كارت 4: نوع الجهة -->
+                    <div class="contractors-kpi-card" 
+                         style="background:linear-gradient(135deg,#f5f3ff 0%,#ede9fe 60%,#ffffff 100%);border:1px solid #ddd6fe;border-radius:14px;padding:1rem;display:flex;align-items:center;justify-content:space-between;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);cursor:default;"
+                         onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 22px -5px rgba(139,92,246,0.18)'" 
+                         onmouseout="this.style.transform='';this.style.boxShadow=''">
+                        <div>
+                            <div style="font-size:0.75rem;font-weight:700;color:#5b21b6;margin-bottom:0.35rem;">توزيع الفئات</div>
+                            <div style="font-size:1.15rem;font-weight:900;line-height:1.2;color:#6d28d9;">
+                                ${stats.entityTypeDistribution['مقاول'] || 0} <span style="font-size:0.75rem;font-weight:700;">مقاول</span>
+                                <span style="color:#c4b5fd;margin:0 2px;">/</span>
+                                ${stats.entityTypeDistribution['مورد'] || 0} <span style="font-size:0.75rem;font-weight:700;">مورد</span>
                             </div>
-                            <div style="width:46px;height:46px;border-radius:999px;background:linear-gradient(135deg,#ede9fe,#ddd6fe);display:flex;align-items:center;justify-content:center;">
-                                <i class="fas fa-building" style="color:#6d28d9;font-size:1.1rem;"></i>
+                            <div style="font-size:0.69rem;color:#475569;margin-top:0.4rem;font-weight:600;">
+                                السائد: ${stats.entityTypeDistribution['مقاول'] >= stats.entityTypeDistribution['مورد'] ? 'مقاولون' : 'موردون'}
                             </div>
+                        </div>
+                        <div style="width:44px;height:44px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(139,92,246,0.25);">
+                            <i class="fas fa-building" style="color:#ffffff;font-size:1.1rem;"></i>
                         </div>
                     </div>
 
-                    <div class="content-card" style="height:100%;min-height:132px;border:2px solid #fed7aa;border-radius:14px;background:linear-gradient(135deg,#fff7ed 0%,#ffedd5 55%,#ffffff 100%);box-shadow:0 2px 8px rgba(194,65,12,.08);padding:1rem;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;height:100%;">
-                            <div>
-                                <p style="font-size:.78rem;font-weight:700;color:#9a3412;margin:0 0 .5rem;">الفترة المستغرقة للاعتماد</p>
-                                <p style="font-size:2rem;font-weight:900;line-height:1;color:#c2410c;margin:0;">${stats.avgApprovalTime}</p>
-                                <p style="font-size:.74rem;color:#c2410c;margin:.5rem 0 0;">يوم (متوسط)</p>
+                    <!-- كارت 5: متوسط زمن الاعتماد -->
+                    <div class="contractors-kpi-card" 
+                         style="background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 60%,#ffffff 100%);border:1px solid #fde68a;border-radius:14px;padding:1rem;display:flex;align-items:center;justify-content:space-between;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);cursor:default;"
+                         onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 22px -5px rgba(245,158,11,0.18)'" 
+                         onmouseout="this.style.transform='';this.style.boxShadow=''">
+                        <div>
+                            <div style="font-size:0.75rem;font-weight:700;color:#92400e;margin-bottom:0.35rem;">متوسط زمن الاعتماد</div>
+                            <div style="font-size:1.85rem;font-weight:900;line-height:1.1;color:#d97706;">
+                                ${stats.avgApprovalTime} <span style="font-size:0.8rem;font-weight:700;">يوم</span>
                             </div>
-                            <div style="width:46px;height:46px;border-radius:999px;background:linear-gradient(135deg,#ffedd5,#fdba74);display:flex;align-items:center;justify-content:center;">
-                                <i class="fas fa-clock" style="color:#c2410c;font-size:1.1rem;"></i>
-                            </div>
+                            <div style="font-size:0.69rem;color:#475569;margin-top:0.4rem;font-weight:600;">من الطلب حتى الاعتماد</div>
+                        </div>
+                        <div style="width:44px;height:44px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(245,158,11,0.25);">
+                            <i class="fas fa-clock-history" style="color:#ffffff;font-size:1.1rem;"></i>
                         </div>
                     </div>
+
                 </div>
             </div>
         `;
@@ -2724,6 +2751,7 @@ const Contractors = {
         if (f.status) count++;
         if (f.type) count++;
         if (f.validity) count++;
+        if (f.activeState) count++;
         return count;
     },
 
@@ -2816,6 +2844,11 @@ const Contractors = {
                         <option value="" ${!f.validity ? 'selected' : ''}>صلاحية الاعتماد</option>
                         <option value="valid" ${f.validity === 'valid' ? 'selected' : ''}>ساري</option>
                         <option value="expired" ${f.validity === 'expired' ? 'selected' : ''}>منتهي</option>
+                    </select>
+                    <select id="approved-contractors-activestate" class="approved-filters-bar__select" aria-label="فلتر حالة التفعيل">
+                        <option value="" ${!f.activeState ? 'selected' : ''}>جميع الحالات (تفعيل)</option>
+                        <option value="active" ${f.activeState === 'active' ? 'selected' : ''}>نشط فقط</option>
+                        <option value="inactive" ${f.activeState === 'inactive' ? 'selected' : ''}>غير نشط فقط</option>
                     </select>
                     <button
                         type="button"
@@ -3077,18 +3110,21 @@ const Contractors = {
             search: '',
             status: '',
             type: '',
-            validity: ''
+            validity: '',
+            activeState: ''
         };
 
         const searchInput = document.getElementById('approved-contractors-search');
         const statusSelect = document.getElementById('approved-contractors-status');
         const typeSelect = document.getElementById('approved-contractors-type');
         const validitySelect = document.getElementById('approved-contractors-validity');
+        const activeStateSelect = document.getElementById('approved-contractors-activestate');
 
         if (searchInput) searchInput.value = '';
         if (statusSelect) statusSelect.value = '';
         if (typeSelect) typeSelect.value = '';
         if (validitySelect) validitySelect.value = '';
+        if (activeStateSelect) activeStateSelect.value = '';
 
         this.refreshApprovedEntitiesList();
     },
@@ -5150,6 +5186,14 @@ const Contractors = {
             approvedValiditySelect.setAttribute('data-listener-attached', 'true');
             approvedValiditySelect.addEventListener('change', (event) => {
                 this.handleApprovedFilterChange('validity', event.target.value || '');
+            });
+        }
+
+        const approvedActiveSelect = document.getElementById('approved-contractors-activestate');
+        if (approvedActiveSelect && !approvedActiveSelect.hasAttribute('data-listener-attached')) {
+            approvedActiveSelect.setAttribute('data-listener-attached', 'true');
+            approvedActiveSelect.addEventListener('change', (event) => {
+                this.handleApprovedFilterChange('activeState', event.target.value || '');
             });
         }
 
