@@ -8241,15 +8241,56 @@ const DailyObservations = {
             const logoUrl = AppState.companyLogo || AppState.companySettings?.logo || '';
             const companyName = AppState.companySettings?.name || AppState.companyName || 'الشركة العالمية للانتاج والتصنيع الزراعي';
 
-            // مساعد لمعالجة الصور في PptxGenJS بأمان تام
-            const formatPptxImage = (url) => {
+            // مساعد استخراج وتحميل الصور بدقة وأمان تام
+            const resolveDirectImageUrl = (url) => {
+                if (!url || typeof url !== 'string') return '';
+                url = url.trim();
+                if (!url || url.startsWith('data:image/')) return url;
+                
+                const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+                                   url.match(/id=([a-zA-Z0-9_-]+)/) ||
+                                   url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
+                                   url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+                if (driveMatch && driveMatch[1]) {
+                    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}=w1600`;
+                }
+                return url;
+            };
+
+            const formatPptxImage = async (url) => {
                 if (!url || typeof url !== 'string' || !url.trim()) return null;
                 url = url.trim();
                 if (url.startsWith('data:')) {
                     return { data: url };
                 }
-                if (url.startsWith('http://') || url.startsWith('https://')) {
-                    return { path: url };
+                const directUrl = resolveDirectImageUrl(url);
+                if (!directUrl) return null;
+
+                try {
+                    const dataUri = await new Promise((resolve) => {
+                        const img = new Image();
+                        img.crossOrigin = 'anonymous';
+                        img.onload = () => {
+                            try {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = img.naturalWidth || img.width || 800;
+                                canvas.height = img.naturalHeight || img.height || 600;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0);
+                                resolve(canvas.toDataURL('image/jpeg', 0.90));
+                            } catch(e) {
+                                resolve(null);
+                            }
+                        };
+                        img.onerror = () => resolve(null);
+                        setTimeout(() => resolve(null), 3000);
+                        img.src = directUrl;
+                    });
+                    if (dataUri) return { data: dataUri };
+                } catch(e) {}
+
+                if (directUrl.startsWith('http://') || directUrl.startsWith('https://')) {
+                    return { path: directUrl };
                 }
                 return null;
             };
@@ -8264,7 +8305,7 @@ const DailyObservations = {
             slide1.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.15, fill: { color: 'D97706' }, line: { color: 'D97706' } });
 
             // الشعار
-            const logoImgObj = formatPptxImage(logoUrl);
+            const logoImgObj = await formatPptxImage(logoUrl);
             if (logoImgObj) {
                 slide1.addShape(pptx.ShapeType.roundRect, { x: 0.8, y: 0.45, w: 2.6, h: 1.0, fill: { color: 'FFFFFF' }, line: { color: 'CBD5E1', width: 1 }, rectRadius: 0.1 });
                 try {
@@ -8304,10 +8345,10 @@ const DailyObservations = {
             // ══════════════════════════════════════
             const slide2 = pptx.addSlide();
             slide2.background = { color: 'F8FAFC' };
-            slide2.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.85, fill: { color: '1E3A8A' } });
-            slide2.addShape(pptx.ShapeType.rect, { x: 0, y: 0.85, w: '100%', h: 0.05, fill: { color: 'D97706' } });
+            slide2.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.70, fill: { color: '1E3A8A' } });
+            slide2.addShape(pptx.ShapeType.rect, { x: 0, y: 0.70, w: '100%', h: 0.04, fill: { color: 'D97706' } });
             slide2.addText(isEnglish ? 'Executive Summary & Observation Statistics' : '📊 الملخص الإحصائي والتنفيذي للملاحظات اليومية', {
-                x: 0.8, y: 0.1, w: 11.7, h: 0.65, fontSize: 18, bold: true, color: 'FFFFFF', align: 'right', fontFace: 'Arial'
+                x: 0.8, y: 0.05, w: 11.7, h: 0.60, fontSize: 17, bold: true, color: 'FFFFFF', align: 'right', fontFace: 'Arial'
             });
 
             const totalCount = exportBatch.length;
@@ -8324,11 +8365,11 @@ const DailyObservations = {
 
             kpis.forEach((k, idx) => {
                 const kx = 0.5 + idx * 3.1;
-                slide2.addShape(pptx.ShapeType.roundRect, { x: kx, y: 1.15, w: 2.85, h: 1.6, fill: { color: k.bg }, line: { color: k.color, width: 2 }, rectRadius: 0.12 });
+                slide2.addShape(pptx.ShapeType.roundRect, { x: kx, y: 0.95, w: 2.85, h: 1.55, fill: { color: k.bg }, line: { color: k.color, width: 2 }, rectRadius: 0.12 });
                 slide2.addText([
-                    { text: String(k.val) + '\n', options: { fontSize: 28, bold: true, color: k.color } },
-                    { text: k.label, options: { fontSize: 13, bold: true, color: '334155' } }
-                ], { x: kx, y: 1.2, w: 2.85, h: 1.5, align: 'center', valign: 'middle', fontFace: 'Arial' });
+                    { text: String(k.val) + '\n', options: { fontSize: 26, bold: true, color: k.color } },
+                    { text: k.label, options: { fontSize: 12.5, bold: true, color: '334155' } }
+                ], { x: kx, y: 1.0, w: 2.85, h: 1.45, align: 'center', valign: 'middle', fontFace: 'Arial' });
             });
 
             // جدول تفصيلي ملخص
@@ -8352,10 +8393,10 @@ const DailyObservations = {
                     { text: String(o.isoCode || o.id || '—'), options: { color: '1E40AF', bold: true, fontSize: 10, align: 'right' } }
                 ]);
             });
-            slide2.addTable(tableRows, { x: 0.5, y: 3.0, w: 12.33, h: 3.6, fontSize: 10, align: 'right', border: { pt: 1, color: 'CBD5E1' } });
+            slide2.addTable(tableRows, { x: 0.5, y: 2.75, w: 12.33, h: 4.2, fontSize: 10, align: 'right', border: { pt: 1, color: 'CBD5E1' } });
 
             // ══════════════════════════════════════
-            // الشرائح 3..N: شريحة لكل ملاحظة مستقلة (تصميم ثنائي الأعمدة غير قابل للعكس)
+            // الشرائح 3..N: شريحة لكل ملاحظة مستقلة (أبعاد مثالية داخل الشريحة 16x9)
             // ══════════════════════════════════════
             for (let i = 0; i < exportBatch.length; i++) {
                 const obs = exportBatch[i];
@@ -8365,98 +8406,100 @@ const DailyObservations = {
                 const obsNo = obs.isoCode || obs.id || `OBS-${i + 1}`;
                 const obsDate = String(obs.date || '').slice(0, 10) || '—';
                 const obsLocation = [obs.siteName, obs.locationName].filter(Boolean).join(' - ') || '—';
-                const imgUrl = obs.imageUrl || (Array.isArray(obs.images) && obs.images[0]) || '';
-                const obsImgObj = formatPptxImage(imgUrl);
+                
+                // استخراج الصورة عبر مساعد الصور الشامل لدعم كافة الحقول ومرفقات Google Drive
+                const imgUrl = this._getObservationPrimaryImageUrl(obs);
+                const obsImgObj = await formatPptxImage(imgUrl);
 
-                // ترويسة الشريحة العلوية
-                obsSlide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.8, fill: { color: '1E3A8A' } });
-                obsSlide.addShape(pptx.ShapeType.rect, { x: 0, y: 0.8, w: '100%', h: 0.05, fill: { color: 'D97706' } });
+                // ترويسة الشريحة العلوية (بارتفاع 0.65 بوصة)
+                obsSlide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.65, fill: { color: '1E3A8A' } });
+                obsSlide.addShape(pptx.ShapeType.rect, { x: 0, y: 0.65, w: '100%', h: 0.04, fill: { color: 'D97706' } });
                 
                 obsSlide.addText(`📋 بطاقة تفاصيل الملاحظة — ${obsLocation}`, {
-                    x: 4.5, y: 0.1, w: 8.3, h: 0.6, fontSize: 15, bold: true, color: 'FFFFFF', align: 'right', fontFace: 'Arial'
+                    x: 4.5, y: 0.05, w: 8.4, h: 0.55, fontSize: 14.5, bold: true, color: 'FFFFFF', align: 'right', fontFace: 'Arial'
                 });
                 obsSlide.addText(obsNo, {
-                    x: 0.6, y: 0.1, w: 3.5, h: 0.6, fontSize: 15, bold: true, color: 'FBBF24', align: 'left', fontFace: 'Arial'
+                    x: 0.4, y: 0.05, w: 3.8, h: 0.55, fontSize: 14.5, bold: true, color: 'FBBF24', align: 'left', fontFace: 'Arial'
                 });
 
-                // ── الصندوق الأيمن: تفاصيل الملاحظة (جدول مهيكل يمنع عكس النص العربي) ──
-                obsSlide.addShape(pptx.ShapeType.roundRect, { x: 6.8, y: 1.05, w: 6.0, h: 5.65, fill: { color: 'FFFFFF' }, line: { color: 'CBD5E1', width: 1.5 }, rectRadius: 0.1 });
-                obsSlide.addShape(pptx.ShapeType.rect, { x: 6.8, y: 1.05, w: 6.0, h: 0.42, fill: { color: '3B82F6' } });
+                // ── الصندوق الأيمن: تفاصيل الملاحظة (جدول مهيكل متناسق الارتفاع) ──
+                obsSlide.addShape(pptx.ShapeType.roundRect, { x: 6.8, y: 0.78, w: 6.1, h: 5.85, fill: { color: 'FFFFFF' }, line: { color: 'CBD5E1', width: 1.5 }, rectRadius: 0.08 });
+                obsSlide.addShape(pptx.ShapeType.rect, { x: 6.8, y: 0.78, w: 6.1, h: 0.38, fill: { color: '2563EB' } });
                 obsSlide.addText('وصف وتفاصيل الملاحظة والإجراء التصحيحي', {
-                    x: 6.8, y: 1.05, w: 6.0, h: 0.42, fontSize: 11.5, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', fontFace: 'Arial'
+                    x: 6.8, y: 0.78, w: 6.1, h: 0.38, fontSize: 11, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', fontFace: 'Arial'
                 });
 
                 const detailsRows = [
                     [
                         { text: String(obsNo), options: { bold: true, color: '1E40AF', fontSize: 10.5, align: 'right' } },
-                        { text: 'رقم الملاحظة :', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
+                        { text: 'رقم الملاحظة', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
                     ],
                     [
                         { text: String(obsDate), options: { color: '0F172A', fontSize: 10.5, align: 'right' } },
-                        { text: 'تاريخ الرصد :', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
+                        { text: 'تاريخ الرصد', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
                     ],
                     [
                         { text: String(obsLocation), options: { color: '0F172A', fontSize: 10, align: 'right' } },
-                        { text: 'المكان / الموقع :', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
+                        { text: 'المكان / الموقع', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
                     ],
                     [
                         { text: String(obs.observationType || '—'), options: { color: '0F172A', fontSize: 10, align: 'right' } },
-                        { text: 'نوع الملاحظة :', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
+                        { text: 'نوع الملاحظة', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
                     ],
                     [
                         { text: String(obs.details || '—'), options: { color: '1E293B', fontSize: 9.5, align: 'right' } },
-                        { text: 'وصف الملاحظة :', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
+                        { text: 'وصف الملاحظة', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
                     ],
                     [
                         { text: String(obs.correctiveAction || '—'), options: { color: '047857', bold: true, fontSize: 9.5, align: 'right' } },
-                        { text: 'الإجراء التصحيحي :', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
+                        { text: 'الإجراء التصحيحي', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
                     ],
                     [
                         { text: String(obs.riskLevel || '—'), options: { bold: true, color: String(obs.riskLevel||'').includes('عالي') ? 'DC2626' : '0F172A', fontSize: 10.5, align: 'right' } },
-                        { text: 'مستوى الخطورة :', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
+                        { text: 'مستوى الخطورة', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
                     ],
                     [
                         { text: String(obs.expectedCompletionDate || '—').slice(0, 10), options: { color: '0F172A', fontSize: 10, align: 'right' } },
-                        { text: 'تاريخ التنفيذ المقترح :', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
+                        { text: 'تاريخ التنفيذ المقترح', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
                     ],
                     [
                         { text: String(obs.responsibleDepartment || '—'), options: { color: '0F172A', fontSize: 10, align: 'right' } },
-                        { text: 'المسؤول عن التنفيذ :', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
+                        { text: 'المسؤول عن التنفيذ', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
                     ],
                     [
                         { text: String(obs.status || '—'), options: { bold: true, color: obs.status === 'مغلق' ? '047857' : 'B45309', fontSize: 10.5, align: 'right' } },
-                        { text: 'حالة الملاحظة :', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
+                        { text: 'حالة الملاحظة', options: { bold: true, color: 'DC2626', fontSize: 10.5, align: 'right', fill: 'F8FAFC' } }
                     ]
                 ];
 
                 obsSlide.addTable(detailsRows, {
-                    x: 6.8, y: 1.47, w: 6.0, h: 5.23, colW: [4.1, 1.9], border: { pt: 0.5, color: 'E2E8F0' }
+                    x: 6.8, y: 1.16, w: 6.1, h: 5.47, colW: [4.3, 1.8], border: { pt: 0.5, color: 'E2E8F0' }
                 });
 
-                // ── الصندوق الأيسر: الصورة التوضيحية ──
-                obsSlide.addShape(pptx.ShapeType.roundRect, { x: 0.5, y: 1.05, w: 6.0, h: 5.65, fill: { color: 'FFFFFF' }, line: { color: 'CBD5E1', width: 1.5 }, rectRadius: 0.1 });
-                obsSlide.addShape(pptx.ShapeType.rect, { x: 0.5, y: 1.05, w: 6.0, h: 0.42, fill: { color: '64748B' } });
+                // ── الصندوق الأيسر: الصورة التوضيحية (متطابق تماماً في الارتفاع والموقع) ──
+                obsSlide.addShape(pptx.ShapeType.roundRect, { x: 0.4, y: 0.78, w: 6.1, h: 5.85, fill: { color: 'FFFFFF' }, line: { color: 'CBD5E1', width: 1.5 }, rectRadius: 0.08 });
+                obsSlide.addShape(pptx.ShapeType.rect, { x: 0.4, y: 0.78, w: 6.1, h: 0.38, fill: { color: '64748B' } });
                 obsSlide.addText('الصورة التوضيحية للملاحظة', {
-                    x: 0.5, y: 1.05, w: 6.0, h: 0.42, fontSize: 11.5, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', fontFace: 'Arial'
+                    x: 0.4, y: 0.78, w: 6.1, h: 0.38, fontSize: 11, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', fontFace: 'Arial'
                 });
 
                 if (obsImgObj) {
                     try {
-                        obsSlide.addImage({ ...obsImgObj, x: 0.65, y: 1.55, w: 5.7, h: 5.0, sizing: { type: 'contain', w: 5.7, h: 5.0 } });
+                        obsSlide.addImage({ ...obsImgObj, x: 0.55, y: 1.25, w: 5.8, h: 5.25, sizing: { type: 'contain', w: 5.8, h: 5.25 } });
                     } catch (imgErr) {
-                        obsSlide.addText('صورة الملاحظة مرفقة بالنظام\n[Photo Attached]', { x: 0.5, y: 1.55, w: 6.0, h: 5.0, fontSize: 14, color: '94A3B8', align: 'center', valign: 'middle' });
+                        obsSlide.addText('صورة الملاحظة مرفقة بالنظام\n[Photo Attached]', { x: 0.4, y: 1.25, w: 6.1, h: 5.25, fontSize: 13, color: '94A3B8', align: 'center', valign: 'middle' });
                     }
                 } else {
-                    obsSlide.addText('لا توجد صورة مرفقة للملاحظة', { x: 0.5, y: 1.55, w: 6.0, h: 5.0, fontSize: 14, color: '94A3B8', align: 'center', valign: 'middle' });
+                    obsSlide.addText('لا توجد صورة مرفقة للملاحظة', { x: 0.4, y: 1.25, w: 6.1, h: 5.25, fontSize: 13, color: '94A3B8', align: 'center', valign: 'middle' });
                 }
 
-                // تذييل الشريحة السفلي
-                obsSlide.addShape(pptx.ShapeType.rect, { x: 0, y: 6.85, w: '100%', h: 0.65, fill: { color: 'F1F5F9' } });
+                // تذييل الشريحة السفلي (بارتفاع 0.55 بوصة متناسق مع أسفل الصفحة)
+                obsSlide.addShape(pptx.ShapeType.rect, { x: 0, y: 6.80, w: '100%', h: 0.55, fill: { color: 'F1F5F9' } });
                 obsSlide.addText(`${companyName} — إدارة السلامة والصحة المهنية والبيئة`, {
-                    x: 4.0, y: 6.9, w: 8.8, h: 0.5, fontSize: 9.5, color: '64748B', align: 'right', fontFace: 'Arial'
+                    x: 4.0, y: 6.82, w: 8.9, h: 0.45, fontSize: 9, color: '64748B', align: 'right', fontFace: 'Arial'
                 });
                 obsSlide.addText(`Form Code: SF-HSE-DOB-02 | شريحة ${i + 3} من ${exportBatch.length + 3}`, {
-                    x: 0.5, y: 6.9, w: 4.0, h: 0.5, fontSize: 9.5, color: '64748B', align: 'left', fontFace: 'Arial'
+                    x: 0.4, y: 6.82, w: 3.5, h: 0.45, fontSize: 9, color: '64748B', align: 'left', fontFace: 'Arial'
                 });
             }
 
