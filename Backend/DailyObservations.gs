@@ -1527,66 +1527,22 @@ function exportDailyObservationsPptReport(payload) {
 
         presentation.saveAndClose();
 
-        // تصدير التقرير: جلب ملف .pptx عبر واجهة Google Drive API v3
-        var pptBlob = null;
+        // تفعيل المشاركة لملف التقرير المولد
         try {
-            var driveV3ExportUrl = 'https://www.googleapis.com/drive/v3/files/' + presId + '/export?mimeType=application/vnd.openxmlformats-officedocument.presentationml.presentation';
-            var resp1 = UrlFetchApp.fetch(driveV3ExportUrl, {
-                headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
-                muteHttpExceptions: true,
-                followRedirects: true
-            });
-            if (resp1.getResponseCode() === 200) {
-                pptBlob = resp1.getBlob().setName(baseName + '.pptx');
-            } else {
-                Logger.log('Drive API v3 export status: ' + resp1.getResponseCode());
-            }
-        } catch(d3Err) {
-            Logger.log('Drive API v3 export error: ' + d3Err);
+            copiedFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        } catch (shareErr) {
+            Logger.log('PPT setSharing error: ' + shareErr);
         }
 
-        if (!pptBlob) {
-            try {
-                var exportUrl = 'https://docs.google.com/presentation/d/' + presId + '/export/pptx';
-                var resp2 = UrlFetchApp.fetch(exportUrl, {
-                    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
-                    muteHttpExceptions: true,
-                    followRedirects: true
-                });
-                if (resp2.getResponseCode() === 200) {
-                    pptBlob = resp2.getBlob().setName(baseName + '.pptx');
-                }
-            } catch (fErr) {
-                Logger.log('Direct exportUrl fetch error: ' + fErr);
-            }
-        }
+        const directPresViewUrl = 'https://docs.google.com/presentation/d/' + presId + '/edit';
+        const directPresDownloadUrl = 'https://docs.google.com/presentation/d/' + presId + '/export/pptx';
 
-        if (pptBlob) {
-            try {
-                var pptFile = outputFolder ? outputFolder.createFile(pptBlob) : DriveApp.createFile(pptBlob);
-                try {
-                    pptFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-                } catch (shareErr) {}
-                const fileId = pptFile.getId();
-                return {
-                    success: true,
-                    fileId: fileId,
-                    fileName: pptFile.getName(),
-                    viewUrl: 'https://drive.google.com/file/d/' + fileId + '/view',
-                    downloadUrl: 'https://drive.google.com/uc?export=download&id=' + fileId
-                };
-            } catch(createErr) {
-                Logger.log('createFile error: ' + createErr);
-            }
-        }
-
-        // العودة بروابط التنزيل والعرض المباشرة من Google Presentation لتجنب أي استثناءات تحويل
         return {
             success: true,
             fileId: presId,
             fileName: baseName + '.pptx',
-            viewUrl: 'https://docs.google.com/presentation/d/' + presId + '/edit',
-            downloadUrl: 'https://docs.google.com/presentation/d/' + presId + '/export/pptx'
+            viewUrl: directPresViewUrl,
+            downloadUrl: directPresDownloadUrl
         };
     } catch (error) {
         Logger.log('Error in exportDailyObservationsPptReport: ' + error.toString());
