@@ -3818,7 +3818,8 @@ const Contractors = {
     viewApprovedEntity(id) {
         this.injectAntiShakeStyles();
         this.ensureApprovedSetup();
-        const record = (AppState.appData.approvedContractors || []).find((item) => item.id === id);
+        const approvedList = AppState.appData.approvedContractors || [];
+        const record = approvedList.find((item) => item && (item.id === id || String(item.id) === String(id)));
         if (!record) {
             Notification.error('السجل المطلوب غير موجود');
             return;
@@ -4151,7 +4152,7 @@ const Contractors = {
      */
     async toggleEntityActive(id, enable) {
         if (!id) return;
-        if (!Permissions.isAdmin()) {
+        if (typeof Permissions === 'undefined' || !Permissions.isAdmin()) {
             Notification.error('ليس لديك صلاحية لتغيير حالة التفعيل');
             return;
         }
@@ -7417,8 +7418,12 @@ const Contractors = {
     },
 
     async viewContractor(id) {
-        const contractor = AppState.appData.contractors.find(c => c.id === id);
-        if (!contractor) return;
+        const contractorsList = AppState.appData.contractors || [];
+        const contractor = contractorsList.find(c => c.id === id);
+        if (!contractor) {
+            Notification.error('لم يتم العثور على بيانات المقاول');
+            return;
+        }
 
         // التأكد من وجود كود للمقاول، وإضافته إذا لم يكن موجوداً
         if (!contractor.code) {
