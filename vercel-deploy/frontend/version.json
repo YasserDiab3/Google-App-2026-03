@@ -2,10 +2,14 @@
   "version": "1.0.1027",
   "highlights": {
     "ar": [
-      "إصلاح 4 مشاكل في تصدير PPT: الرقم التسلسلي أصبح يطابق النظام (isoCode)، إصلاح ظهور الصور عبر OAuth، تصحيح اتجاه النصوص المعكوسة، وتفعيل الترجمة الإنجليزية."
+      "التحميل المباشر لتقرير PDF الإحصائي كملف فوري مع الهيدر المؤسسي.",
+      "حساب مؤشرات الأداء الإحصائية بدقة 100% من البيانات المفلترة دون أصفار.",
+      "تصدير تقارير PPTX الاحترافية مباشرة محلياً في المتصفح بسرعة فائقة."
     ],
     "en": [
-      "Fixed 4 PPT export bugs: serial number now matches system isoCode, images fetched via OAuth fallback, inverted text direction fixed, and English translation activated."
+      "Direct PDF download for analytics report with official corporate header.",
+      "Accurate live KPI calculations from filtered observations data.",
+      "Instant client-side PPTX PowerPoint export with zero server dependency."
     ]
   }
 }
