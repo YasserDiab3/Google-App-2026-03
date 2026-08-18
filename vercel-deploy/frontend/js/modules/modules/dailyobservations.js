@@ -4715,7 +4715,6 @@ const DailyObservations = {
         const origHtml = btn ? btn.innerHTML : '';
         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري التصدير...'; }
 
-        let tempContainer = null;
         try {
             await this._loadAnalyticsLib(
                 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
@@ -4726,100 +4725,35 @@ const DailyObservations = {
                 () => typeof window.jspdf !== 'undefined'
             );
 
-            // استخراج بيانات الهوية المؤسسية والشعار من AppState
-            const companyName = (typeof AppState !== 'undefined' && (AppState.companySettings?.name || AppState.companyName)) || 'مجموعة أمريكانا';
-            const secondaryName = (typeof AppState !== 'undefined' && AppState.companySettings?.secondaryName) || 'إدارة السلامة والصحة المهنية والحماية من الحريق';
-            const logoUrl = (typeof AppState !== 'undefined' && (AppState.companyLogo || AppState.companySettings?.logo)) || '';
-            const formCode = (typeof AppState !== 'undefined' && AppState.companySettings?.policyFormCode) || 'SF-HSE-DOB-02';
+            // إخفاء الفلاتر وأزرار التصدير مؤقتاً على العنصر الحي لمنع ظهور الأزرار وضمان بقاء الرسومات البيانية
+            const elementsToHide = Array.from(root.querySelectorAll('#obs-filter-panel, #obs-toggle-filters-btn, #obs-reset-filters-btn, #obs-export-pdf-btn, #obs-export-ppt-btn, .obs-analytics-filters, button'));
+            const origDisplays = elementsToHide.map(el => el.style.display);
+            elementsToHide.forEach(el => { el.style.display = 'none'; });
 
-            // إنشاء حاوية التصدير المؤقتة بعرض عالي الجودة وبدون عناصر تحكم أو فلاتر
-            tempContainer = document.createElement('div');
-            tempContainer.style.position = 'absolute';
-            tempContainer.style.left = '-9999px';
-            tempContainer.style.top = '0';
-            tempContainer.style.width = '1400px';
-            tempContainer.style.backgroundColor = '#ffffff';
-            tempContainer.style.padding = '24px 32px';
-            tempContainer.style.boxSizing = 'border-box';
-            tempContainer.style.direction = 'rtl';
-            tempContainer.style.fontFamily = "'Cairo', 'Inter', sans-serif";
-
-            // 1) الهيدر الرسمي الموحد للنظام
-            const headerHTML = `
-                <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:4px solid #1e3a8a; padding-bottom:16px; margin-bottom:24px; background:#ffffff; gap:20px;">
-                    <div style="flex:0 0 auto; text-align:right;">
-                        <div style="font-size:22px; font-weight:800; color:#1e3a8a; line-height:1.2;">${Utils.escapeHTML(companyName)}</div>
-                        <div style="font-size:13px; font-weight:600; color:#475569; margin-top:4px;">${Utils.escapeHTML(secondaryName)}</div>
-                    </div>
-                    <div style="flex:1; text-align:center;">
-                        <div style="font-size:24px; font-weight:800; color:#1e3a8a; letter-spacing:-0.5px;">لوحة تحليل الملاحظات اليومية</div>
-                        <div style="font-size:13px; font-weight:700; color:#2563eb; margin-top:4px; dir:ltr; text-transform:uppercase;">Daily Safety Observations Analytics Report — ${Utils.escapeHTML(formCode)}</div>
-                    </div>
-                    <div style="flex:0 0 auto; min-width:140px; text-align:left;">
-                        ${logoUrl ? `<img src="${logoUrl}" alt="Company Logo" crossorigin="anonymous" style="max-height:65px; max-width:180px; object-fit:contain;">` : '<div style="font-size:22px; font-weight:900; color:#1e3a8a; border:2.5px solid #1e3a8a; padding:6px 18px; border-radius:8px; display:inline-block;">AMERICANA</div>'}
-                    </div>
-                </div>
-            `;
-
-            // 2) استنساخ محتوى لوحة التحليل وتنظيفه من الأزرار والفلاتر
-            const clone = root.cloneNode(true);
-            
-            // حذف أشرطة الفلاتر والأزرار من النسخة
-            const selectorsToRemove = [
-                '#obs-filter-panel',
-                '#obs-toggle-filters-btn',
-                '#obs-reset-filters-btn',
-                '#obs-export-pdf-btn',
-                '#obs-export-ppt-btn',
-                '.obs-analytics-filters',
-                '.btn-group',
-                'button'
-            ];
-            selectorsToRemove.forEach(sel => {
-                clone.querySelectorAll(sel).forEach(el => el.remove());
-            });
-
-            // ضمان إظهار الجداول والرسومات البيانية بوضوح
-            clone.querySelectorAll('canvas').forEach((origCanvas, i) => {
-                const clonedCanvas = clone.querySelectorAll('canvas')[i];
-                if (clonedCanvas) {
-                    const ctx = clonedCanvas.getContext('2d');
-                    ctx.drawImage(origCanvas, 0, 0);
-                }
-            });
-
-            tempContainer.innerHTML = headerHTML + clone.outerHTML;
-            document.body.appendChild(tempContainer);
-
-            // انتظار تحميل الشعار إن وجد
-            const logoImg = tempContainer.querySelector('img');
-            if (logoImg && !logoImg.complete) {
-                await new Promise(resolve => {
-                    logoImg.onload = resolve;
-                    logoImg.onerror = resolve;
-                    setTimeout(resolve, 2000);
-                });
-            }
-
-            // التقاط اللقطة بدقة فائقة Scale 2.2
-            const canvas = await html2canvas(tempContainer, {
+            // التقاط عنصر الشاشة الحي بدقة فائقة Scale 2.2 (تحتفظ بكافة الرسومات البيانية والـ 2D Canvases)
+            const canvas = await html2canvas(root, {
                 scale: 2.2,
                 useCORS: true,
-                allowTaint: true,
                 backgroundColor: '#ffffff',
-                logging: false,
                 scrollX: 0,
-                scrollY: 0
+                scrollY: -window.scrollY,
+                logging: false
             });
+
+            // استعادة عرض الأزرار والفلاتر
+            elementsToHide.forEach((el, idx) => { el.style.display = origDisplays[idx]; });
+
+            const companyName = (typeof AppState !== 'undefined' && (AppState.companySettings?.name || AppState.companyName)) || 'AMERICANA GROUP';
+            const formCode = (typeof AppState !== 'undefined' && AppState.companySettings?.policyFormCode) || 'SF-HSE-DOB-02';
 
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
             const pdfW = pdf.internal.pageSize.getWidth();  // 297mm
             const pdfH = pdf.internal.pageSize.getHeight(); // 210mm
-            const margin = 8, footerH = 12;
+            const margin = 8, headerH = 19, footerH = 12;
             const contentW = pdfW - margin * 2; // 281mm
-            const contentAreaH = pdfH - margin - footerH - 2; // 188mm
+            const contentAreaH = pdfH - headerH - footerH - 4; // 175mm
 
             const ratio = contentW / canvas.width;
             const pageHeightPx = Math.floor(contentAreaH / ratio);
@@ -4831,7 +4765,25 @@ const DailyObservations = {
             for (let p = 0; p < totalPages; p++) {
                 if (p > 0) pdf.addPage('a4', 'landscape');
 
-                // ── قص شريحة التقرير ──
+                // ── ترويسة الهوية المؤسسية الرسمية (Vector Header) ──
+                pdf.setFillColor(30, 58, 138); // #1e3a8a Navy
+                pdf.rect(0, 0, pdfW, headerH, 'F');
+                pdf.setFillColor(29, 78, 216); // #1d4ed8 Accent
+                pdf.rect(0, headerH - 2.5, pdfW, 2.5, 'F');
+
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(12); pdf.setFont(undefined, 'bold');
+                pdf.text('Daily Safety Observations Analytics Report', margin, 7.5, { align: 'left' });
+                pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
+                pdf.text(`SafetyHub | ICAPP — Form Code: ${formCode}`, margin, 13, { align: 'left' });
+
+                pdf.setFontSize(8);
+                pdf.text(`${enDate}  ${enTime}`, pdfW - margin, 7.5, { align: 'right' });
+                pdf.setFontSize(8.5); pdf.setFont(undefined, 'bold');
+                pdf.text(`Page ${p + 1} of ${totalPages}`, pdfW - margin, 13, { align: 'right' });
+                pdf.setTextColor(0, 0, 0);
+
+                // ── قص ومحاذاة شريحة التقرير الحي ──
                 const sliceCanvas = document.createElement('canvas');
                 const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
                 sliceCanvas.width = canvas.width;
@@ -4855,27 +4807,27 @@ const DailyObservations = {
                     sliceData = sliceCanvas.toDataURL('image/jpeg', 0.94);
                 }
 
-                pdf.addImage(sliceData, sliceFmt, margin, margin, contentW, sliceH * ratio);
+                pdf.addImage(sliceData, sliceFmt, margin, headerH + 1, contentW, sliceH * ratio);
 
-                // ── تذييل الصفحة الرسمي ──
+                // ── تذييل الصفحة الرسمي (Vector Footer) ──
                 const footerY = pdfH - footerH;
                 pdf.setDrawColor(191, 219, 254);
                 pdf.setLineWidth(0.4);
                 pdf.line(0, footerY, pdfW, footerY);
-                pdf.setFillColor(248, 250, 252);
+                pdf.setFillColor(239, 246, 255);
                 pdf.rect(0, footerY, pdfW, footerH, 'F');
 
-                pdf.setFontSize(7.5); pdf.setTextColor(30, 58, 138); pdf.setFont(undefined, 'bold');
-                pdf.text(`Form Code: ${formCode} — ${companyName}`, margin, footerY + 5, { align: 'left' });
+                pdf.setFontSize(7.5); pdf.setTextColor(29, 78, 216); pdf.setFont(undefined, 'bold');
+                pdf.text(`Form Code: ${formCode} — ${companyName}`, margin, footerY + 4.5, { align: 'left' });
                 pdf.setFont(undefined, 'normal'); pdf.setFontSize(6.5); pdf.setTextColor(100, 116, 139);
-                pdf.text('Daily Safety Observations Analysis Report — Confidential', margin, footerY + 9.5, { align: 'left' });
+                pdf.text('Daily Safety Observations Analysis Report — Confidential', margin, footerY + 9, { align: 'left' });
 
                 pdf.setFontSize(8); pdf.setTextColor(29, 78, 216); pdf.setFont(undefined, 'bold');
-                pdf.text(`صفحة ${p + 1} من ${totalPages}`, pdfW / 2, footerY + 7, { align: 'center' });
+                pdf.text(`Page ${p + 1} of ${totalPages}`, pdfW / 2, footerY + 6.5, { align: 'center' });
 
                 pdf.setFont(undefined, 'normal'); pdf.setFontSize(7); pdf.setTextColor(100, 116, 139);
-                pdf.text(enDate, pdfW - margin, footerY + 5, { align: 'right' });
-                pdf.text(enTime, pdfW - margin, footerY + 9.5, { align: 'right' });
+                pdf.text(enDate, pdfW - margin, footerY + 4.5, { align: 'right' });
+                pdf.text(enTime, pdfW - margin, footerY + 9, { align: 'right' });
             }
 
             const dateFile = new Date().toISOString().slice(0, 10);
@@ -4889,7 +4841,6 @@ const DailyObservations = {
                 Notification.error('تعذّر تصدير PDF — تأكد من الاتصال بالإنترنت وأعد المحاولة');
             }
         } finally {
-            if (tempContainer && tempContainer.parentNode) tempContainer.parentNode.removeChild(tempContainer);
             if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
         }
     },
