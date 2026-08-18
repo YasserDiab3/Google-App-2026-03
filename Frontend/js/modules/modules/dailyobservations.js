@@ -7713,50 +7713,57 @@ const DailyObservations = {
         const isAdmin = this.canDailyObservationsFullAdminUi();
 
         modal.innerHTML = `
-            <div style="max-width: 650px; width: 92%; background: #ffffff; border-radius: 24px; padding: 28px 32px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid rgba(226, 232, 240, 0.8); position: relative; font-family: Cairo, Tahoma, sans-serif;">
+            <div style="max-width: 680px; width: 92%; background: #ffffff; border-radius: 24px; padding: 28px 32px; box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.3); border: 1px solid rgba(226, 232, 240, 0.9); position: relative; font-family: Cairo, Tahoma, sans-serif;">
                 
                 <!-- الهيدر -->
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9;">
                     <div style="display: flex; align-items: center; gap: 14px;">
-                        <div style="width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%); color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);">
-                            <i class="fas fa-file-powerpoint"></i>
+                        <div style="width: 50px; height: 50px; border-radius: 16px; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);">
+                            <i class="fas fa-file-powerpoint" style="color: #fb923c;"></i>
                         </div>
                         <div>
-                            <h3 style="font-size: 20px; font-weight: 800; color: #0f172a; margin: 0;">تصدير تقرير PPT الإحصائي</h3>
-                            <p style="font-size: 13px; color: #64748b; margin: 2px 0 0 0;">قم بتحديد المصنع/الموقع والإدارة والحالة للتصدير المباشر</p>
+                            <h3 style="font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                تصدير تقرير PPT الإحصائي
+                                <span style="font-size: 0.7rem; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 20px; font-weight: 700;">HSE Standard</span>
+                            </h3>
+                            <p style="font-size: 13px; color: #64748b; margin: 3px 0 0 0;">حدد الخيارات والفلترة المطلوبة لتوليد عرض تقديمـي احترافي</p>
                         </div>
                     </div>
-                    <button type="button" class="modal-close" style="width: 36px; height: 36px; border-radius: 50%; border: none; outline: none; background: #f1f5f9; color: #64748b; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';" onmouseout="this.style.background='#f1f5f9'; this.style.color='#64748b';">&times;</button>
+                    <button type="button" class="modal-close" style="width: 36px; height: 36px; border-radius: 50%; border: none; outline: none; background: #f8fafc; color: #64748b; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#fee2e2'; this.style.color='#ef4444';" onmouseout="this.style.background='#f8fafc'; this.style.color='#64748b';">&times;</button>
                 </div>
 
                 <!-- كارت الإرشادات والأزرار -->
-                <div style="background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%); border: 1px solid #bfdbfe; border-radius: 16px; padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
-                    <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #1e40af; font-weight: 600; line-height: 1.5;">
-                        <i class="fas fa-info-circle" style="font-size: 18px; color: #2563eb; flex-shrink: 0;"></i>
-                        <span>سيتم إنشاء التقرير بنفس تصميم الشرائح المعتمد وتنسيقه حسب الفلاتر المختارة.</span>
+                <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-radius: 14px; padding: 14px 18px; margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px;">
+                    <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #0369a1; font-weight: 600; line-height: 1.4;">
+                        <i class="fas fa-shield-alt" style="font-size: 18px; color: #0284c7; flex-shrink: 0;"></i>
+                        <span>سيتم إنشاء تقرير PPT بتنسيق الشرائح المعتمد وفقاً للهوية البصرية لملاحظات السلامة.</span>
                     </div>
                     ${isAdmin ? `
-                    <button type="button" id="ppt-template-id-settings-btn" style="white-space: nowrap; background: #ffffff; border: 1px solid #cbd5e1; color: #334155; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='#f1f5f9'; this.style.borderColor='#94a3b8';" onmouseout="this.style.background='#ffffff'; this.style.borderColor='#cbd5e1';">
+                    <button type="button" id="ppt-template-id-settings-btn" style="white-space: nowrap; background: #ffffff; border: 1px solid #cbd5e1; color: #334155; padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='#f1f5f9'; this.style.borderColor='#94a3b8';" onmouseout="this.style.background='#ffffff'; this.style.borderColor='#cbd5e1';">
                         <i class="fas fa-cog" style="color: #2563eb;"></i> إعدادات القالب
                     </button>
                     ` : ''}
                 </div>
 
-                <!-- حقول النموذج - شبكة مريحة من عمودين -->
-                <div style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 28px;">
+                <!-- حقول النموذج -->
+                <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
                     
-                    <!-- الصف الأول: المصنع/الموقع والحالة -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <!-- الصف الأول: الموقع والحالة -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                         <div>
-                            <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">الموقع / المصنع (Site / Plant)</label>
-                            <select id="dailyobs-ppt-site" style="width: 100%; padding: 12px 16px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 14px; font-weight: 600; color: #0f172a; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
+                            <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-industry" style="color: #2563eb; margin-left: 6px;"></i>الموقع / المصنع
+                            </label>
+                            <select id="dailyobs-ppt-site" style="width: 100%; padding: 11px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; font-weight: 600; color: #0f172a; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
                                 <option value="">جميع المواقع / المصانع</option>
                                 ${siteOptions.map((s) => `<option value="${Utils.escapeHTML(s)}">${Utils.escapeHTML(s)}</option>`).join('')}
                             </select>
                         </div>
                         <div>
-                            <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">حالة الملاحظات (Status) <span style="color: #dc2626;">*</span></label>
-                            <select id="dailyobs-ppt-status" style="width: 100%; padding: 12px 16px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 14px; font-weight: 700; color: #15803d; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
+                            <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-tasks" style="color: #16a34a; margin-left: 6px;"></i>حالة الملاحظات <span style="color: #dc2626;">*</span>
+                            </label>
+                            <select id="dailyobs-ppt-status" style="width: 100%; padding: 11px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; font-weight: 700; color: #15803d; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
                                 <option value="all" selected>جميع الملاحظات (المفتوحة والمغلقة والقائمة)</option>
                                 <option value="open">الملاحظات المفتوحة فقط (Open Only)</option>
                                 <option value="closed">الملاحظات المغلقة فقط (Closed Only)</option>
@@ -7766,58 +7773,54 @@ const DailyObservations = {
                     </div>
 
                     <!-- الصف الثاني: الإدارة ولغة التقرير -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                         <div>
-                            <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">الإدارة المختارة</label>
-                            <select id="dailyobs-ppt-department" style="width: 100%; padding: 12px 16px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 14px; font-weight: 600; color: #0f172a; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
+                            <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-building" style="color: #0284c7; margin-left: 6px;"></i>الإدارة المختارة
+                            </label>
+                            <select id="dailyobs-ppt-department" style="width: 100%; padding: 11px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; font-weight: 600; color: #0f172a; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
                                 <option value="">جميع الإدارات</option>
                                 ${departmentOptions.map((d) => `<option value="${Utils.escapeHTML(d)}">${Utils.escapeHTML(d)}</option>`).join('')}
                             </select>
                         </div>
                         <div>
-                            <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">لغة التقرير (Language) <span style="color: #dc2626;">*</span></label>
-                            <select id="dailyobs-ppt-language" style="width: 100%; padding: 12px 16px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 14px; font-weight: 700; color: #1e40af; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
+                            <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-language" style="color: #6366f1; margin-left: 6px;"></i>لغة التقرير <span style="color: #dc2626;">*</span>
+                            </label>
+                            <select id="dailyobs-ppt-language" style="width: 100%; padding: 11px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; font-weight: 700; color: #1e40af; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
                                 <option value="ar" selected>🇪🇬 العربية (Arabic)</option>
                                 <option value="en">🇬🇧 الإنجليزية (English)</option>
                             </select>
                         </div>
                     </div>
 
-                    <!-- الصف الثاني: لغة التقرير وتاريخ التقرير -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <!-- الصف الثالث: تاريخ التقرير ونطاق التواريخ -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                         <div>
-                            <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">لغة التقرير (Language) <span style="color: #dc2626;">*</span></label>
-                            <select id="dailyobs-ppt-language" style="width: 100%; padding: 12px 16px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 14px; font-weight: 700; color: #1e40af; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
-                                <option value="ar" selected>🇪🇬 العربية (Arabic)</option>
-                                <option value="en">🇬🇧 الإنجليزية (English)</option>
-                            </select>
+                            <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-calendar-day" style="color: #d97706; margin-left: 6px;"></i>تاريخ التقرير الرئيسي
+                            </label>
+                            <input id="dailyobs-ppt-report-date" type="date" value="${todayStr}" style="width: 100%; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; font-weight: 600; color: #0f172a; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
                         </div>
                         <div>
-                            <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">تاريخ التقرير الرئيسي</label>
-                            <input id="dailyobs-ppt-report-date" type="date" value="${todayStr}" style="width: 100%; padding: 11px 16px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 14px; font-weight: 600; color: #0f172a; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
-                        </div>
-                    </div>
-
-                    <!-- الصف الثالث: نطاق التواريخ الاختياري -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                        <div>
-                            <label style="display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 8px;">من تاريخ (اختياري)</label>
-                            <input id="dailyobs-ppt-from-date" type="date" value="" style="width: 100%; padding: 11px 12px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 13px; color: #0f172a; background: #ffffff; outline: none;">
-                        </div>
-                        <div>
-                            <label style="display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 8px;">إلى تاريخ (اختياري)</label>
-                            <input id="dailyobs-ppt-to-date" type="date" value="" style="width: 100%; padding: 11px 12px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 13px; color: #0f172a; background: #ffffff; outline: none;">
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 6px;">
+                                <i class="fas fa-calendar-alt" style="color: #9333ea; margin-left: 6px;"></i>من تاريخ - إلى تاريخ (اختياري)
+                            </label>
+                            <div style="display: flex; gap: 8px;">
+                                <input id="dailyobs-ppt-from-date" type="date" value="" style="width: 50%; padding: 9px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 12px; color: #0f172a;">
+                                <input id="dailyobs-ppt-to-date" type="date" value="" style="width: 50%; padding: 9px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 12px; color: #0f172a;">
+                            </div>
                         </div>
                     </div>
 
                 </div>
 
-                <!-- الفوتر والأزرار السفلية -->
-                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 1px solid #f1f5f9;">
-                    <button type="button" id="dailyobs-ppt-cancel-btn" style="padding: 12px 24px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; font-size: 14px; font-weight: 700; color: #475569; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f1f5f9'; this.style.color='#0f172a';" onmouseout="this.style.background='#f8fafc'; this.style.color='#475569';">إلغاء</button>
+                <!-- الفوتر والأزرار -->
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding-top: 18px; border-top: 1px solid #f1f5f9;">
+                    <button type="button" id="dailyobs-ppt-cancel-btn" style="padding: 11px 22px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; font-weight: 700; color: #475569; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';" onmouseout="this.style.background='#f8fafc'; this.style.color='#475569';">إلغاء</button>
                     
-                    <button type="button" id="dailyobs-ppt-export-btn" style="display: flex; align-items: center; gap: 10px; padding: 12px 28px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; font-size: 15px; font-weight: 700; border-radius: 12px; border: none; outline: none; cursor: pointer; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(37, 99, 235, 0.5)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 14px rgba(37, 99, 235, 0.35)';">
-                        <i class="fas fa-download" style="font-size: 16px;"></i> تصدير التقرير
+                    <button type="button" id="dailyobs-ppt-export-btn" style="display: flex; align-items: center; gap: 10px; padding: 11px 26px; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; font-size: 14px; font-weight: 700; border-radius: 10px; border: none; outline: none; cursor: pointer; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(37, 99, 235, 0.5)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 14px rgba(37, 99, 235, 0.35)';">
+                        <i class="fas fa-file-powerpoint" style="font-size: 16px; color: #fb923c;"></i> تصدير تقرير PPT
                     </button>
                 </div>
 
