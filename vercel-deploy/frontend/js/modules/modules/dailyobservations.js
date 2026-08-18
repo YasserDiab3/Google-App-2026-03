@@ -4818,7 +4818,7 @@ const DailyObservations = {
                 pdf.rect(0, footerY, pdfW, footerH, 'F');
 
                 pdf.setFontSize(7.5); pdf.setTextColor(29, 78, 216); pdf.setFont(undefined, 'bold');
-                pdf.text(`Form Code: ${formCode} — ${companyName}`, margin, footerY + 4.5, { align: 'left' });
+                pdf.text(`Form Code: ${formCode} — SafetyHub | ICAPP`, margin, footerY + 4.5, { align: 'left' });
                 pdf.setFont(undefined, 'normal'); pdf.setFontSize(6.5); pdf.setTextColor(100, 116, 139);
                 pdf.text('Daily Safety Observations Analysis Report — Confidential', margin, footerY + 9, { align: 'left' });
 
