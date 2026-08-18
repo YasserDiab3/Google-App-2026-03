@@ -1542,15 +1542,24 @@ function exportDailyObservationsPptReport(payload) {
     }
 }
 
-function _dob_translateToEnglish_(text) {
+var _dob_translationCache_ = {};
+
+function _dob_translateToEnglishFast_(text) {
     if (!text || typeof text !== 'string') return '';
     text = text.trim();
     if (!text) return '';
+    if (_dob_translationCache_[text]) return _dob_translationCache_[text];
+
+    if (!/[\u0600-\u06FF]/.test(text)) {
+        _dob_translationCache_[text] = text;
+        return text;
+    }
 
     const dictionary = {
         'مفتوح': 'Open',
         'مغلق': 'Closed',
         'قيد التنفيذ': 'In Progress',
+        'جاري': 'In Progress',
         'تحت المراجعة': 'Under Review',
         'منخفض': 'Low',
         'متوسط': 'Medium',
@@ -1579,16 +1588,17 @@ function _dob_translateToEnglish_(text) {
         'الصورة التوضيحية': 'Photo / Evidence'
     };
 
-    if (dictionary[text]) return dictionary[text];
-
-    try {
-        if (typeof LanguageApp !== 'undefined' && LanguageApp.translate) {
-            return LanguageApp.translate(text, 'ar', 'en');
-        }
-    } catch(e) {
-        Logger.log('LanguageApp translation error for "' + text + '": ' + e);
+    if (dictionary[text]) {
+        _dob_translationCache_[text] = dictionary[text];
+        return dictionary[text];
     }
+
+    _dob_translationCache_[text] = text;
     return text;
+}
+
+function _dob_translateToEnglish_(text) {
+    return _dob_translateToEnglishFast_(text);
 }
 
 function _dob_replaceAllTextSafe_(presentation, slide, replacements, isEnglish) {

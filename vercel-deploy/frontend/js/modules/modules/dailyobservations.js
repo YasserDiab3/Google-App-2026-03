@@ -7968,8 +7968,8 @@ const DailyObservations = {
                 return;
             }
 
-            // إذا حدد المستخدم نطاق تواريخ يتم تصدير كافة الملاحظات لتلك الفترة، وإلا يتم تصدير أحدث 50 ملاحظة للتقرير
-            const exportBatch = (fromDate || toDate) ? filtered : filtered.slice(0, 50);
+            // تصدير دفعة بحد أقصى 30 ملاحظة لضمان التوليد السريع للغاية في ثوانٍ معدودة
+            const exportBatch = filtered.slice(0, 30);
 
             const payload = {
                 department: dept,
