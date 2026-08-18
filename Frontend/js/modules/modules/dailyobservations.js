@@ -4397,14 +4397,14 @@ const DailyObservations = {
             pdf.save(`تقرير-المؤشرات-التنفيذية-${dateFile}.pdf`);
             if (typeof Notification !== 'undefined' && Notification.success) {
                 Notification.success('تم تصدير التقرير PDF بنجاح');
+                Notification.success('تم تصدير تقرير تحليل الملاحظات اليومية PDF بنجاح');
             }
-        } catch (err) {
-            console.error('Exec PDF export error:', err);
+        } catch(err) {
+            console.error('PDF export error:', err);
             if (typeof Notification !== 'undefined' && Notification.error) {
-                Notification.error('تعذّر تصدير التقرير — تأكد من الاتصال بالإنترنت وأعد المحاولة');
+                Notification.error('تعذّر تصدير PDF — تأكد من الاتصال بالإنترنت وأعد المحاولة');
             }
         } finally {
-            if (node && node.parentNode) node.parentNode.removeChild(node);
             if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
         }
     },
@@ -4705,21 +4705,21 @@ const DailyObservations = {
         this.analysisCharts[canvasId] = chart;
     },
 
-    // ── تصدير لوحة التحليل كـ PDF ──
     async _exportAnalyticsPDF() {
         const root = document.getElementById('obs-analytics-root');
-        if (!root) return;
+        if (!root) {
+            if (typeof Notification !== 'undefined' && Notification.warning) Notification.warning('عنصر التقرير غير موجود');
+            return;
+        }
         const btn = document.getElementById('obs-export-pdf-btn');
         const origHtml = btn ? btn.innerHTML : '';
-        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري التصدير...'; }
 
         try {
-            // تحميل html2canvas
             await this._loadAnalyticsLib(
                 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
                 () => typeof html2canvas !== 'undefined'
             );
-            // تحميل jsPDF
             await this._loadAnalyticsLib(
                 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
                 () => typeof window.jspdf !== 'undefined'
@@ -4730,11 +4730,11 @@ const DailyObservations = {
             const filterWasVisible = filterPanel && filterPanel.style.display !== 'none';
             if (filterWasVisible) filterPanel.style.display = 'none';
 
-            // التقاط الصورة
+            // التقاط الصورة بدقة عالية
             const canvas = await html2canvas(root, {
-                scale: 1.8,
+                scale: 2.0,
                 useCORS: true,
-                backgroundColor: '#f8fafc',
+                backgroundColor: '#ffffff',
                 scrollX: 0,
                 scrollY: -window.scrollY,
                 logging: false
@@ -4742,52 +4742,89 @@ const DailyObservations = {
 
             if (filterWasVisible) filterPanel.style.display = '';
 
-            const imgData  = canvas.toDataURL('image/jpeg', 0.90);
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-            const pdfW   = pdf.internal.pageSize.getWidth();
-            const pdfH   = pdf.internal.pageSize.getHeight();
-            const margin = 10;
+            const pdfW = pdf.internal.pageSize.getWidth();
+            const pdfH = pdf.internal.pageSize.getHeight();
+            const margin = 10, headerH = 20, footerH = 14;
             const contentW = pdfW - margin * 2;
-            const ratio  = contentW / canvas.width;
-            const totalContentH = canvas.height * ratio;
+            const contentAreaH = pdfH - headerH - footerH - margin * 0.5;
+            const ratio = contentW / canvas.width;
+            const pageHeightPx = contentAreaH / ratio;
+            const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
 
-            // ترويسة كل صفحة
-            const addHeader = (pageNum, totalPages) => {
-                pdf.setFillColor(30, 58, 138);
-                pdf.rect(0, 0, pdfW, 14, 'F');
-                pdf.setTextColor(255, 255, 255);
-                pdf.setFontSize(9);
-                pdf.setFont('helvetica', 'bold');
-                pdf.text('Daily Observations - Analytics Report', margin, 9, { align: 'left' });
-                const dateStr = new Date().toLocaleDateString('ar-SA');
-                pdf.text(`${dateStr}  |  ${pageNum}/${totalPages}`, pdfW - margin, 9, { align: 'right' });
-                pdf.setTextColor(0, 0, 0);
-            };
-
-            const pageContentH = pdfH - 14 - margin; // ارتفاع المحتوى في الصفحة
-            const totalPages = Math.ceil(totalContentH / pageContentH);
-            const pageHeightPx = pageContentH / ratio;
+            const enDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            const enTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
             for (let p = 0; p < totalPages; p++) {
                 if (p > 0) pdf.addPage();
-                addHeader(p + 1, totalPages);
-                // قص الجزء المناسب من الصورة
+
+                // ── ترويسة النظام الاحترافية (Header) ──
+                pdf.setFillColor(30, 58, 138); // #1e3a8a Navy
+                pdf.rect(0, 0, pdfW, headerH, 'F');
+                pdf.setFillColor(29, 78, 216); // #1d4ed8 Accent
+                pdf.rect(0, headerH - 3, pdfW, 3, 'F');
+
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(13); pdf.setFont(undefined, 'bold');
+                pdf.text('Daily Observations Analytics Report', margin, 9, { align: 'left' });
+                pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
+                pdf.text('SafetyHub | ICAPP — Daily Observations Analysis Dashboard', margin, 15, { align: 'left' });
+
+                pdf.setFontSize(8.5);
+                pdf.text(`${enDate}  ${enTime}`, pdfW - margin, 9, { align: 'right' });
+                pdf.setFontSize(9); pdf.setFont(undefined, 'bold');
+                pdf.text(`Page ${p + 1} of ${totalPages}`, pdfW - margin, 15.5, { align: 'right' });
+                pdf.setTextColor(0, 0, 0);
+
+                // ── محتوى الشريحة ──
                 const sliceCanvas = document.createElement('canvas');
                 const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
-                sliceCanvas.width  = canvas.width;
+                sliceCanvas.width = canvas.width;
                 sliceCanvas.height = sliceH;
-                const ctx = sliceCanvas.getContext('2d');
-                ctx.drawImage(canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-                const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.90);
-                pdf.addImage(sliceData, 'JPEG', margin, 14, contentW, sliceH * ratio);
+                sliceCanvas.getContext('2d').drawImage(canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+
+                let sliceData = '';
+                let sliceFmt = 'JPEG';
+                if (typeof Utils !== 'undefined' && Utils.PdfExport && Utils.PdfExport.compressCanvasToJpegDataUrl) {
+                    const compressed = Utils.PdfExport.compressCanvasToJpegDataUrl(
+                        sliceCanvas,
+                        Math.floor((Utils.PdfExport.TARGET_MAX_BYTES || 3000000) / Math.max(1, totalPages))
+                    );
+                    sliceData = compressed.dataUrl;
+                    sliceFmt = compressed.format || 'JPEG';
+                } else {
+                    sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
+                }
+
+                pdf.addImage(sliceData, sliceFmt, margin, headerH, contentW, sliceH * ratio);
+
+                // ── تذييل النظام الاحترافي (Footer) ──
+                const footerY = pdfH - footerH;
+                pdf.setDrawColor(191, 219, 254);
+                pdf.setLineWidth(0.4);
+                pdf.line(0, footerY, pdfW, footerY);
+                pdf.setFillColor(239, 246, 255);
+                pdf.rect(0, footerY, pdfW, footerH, 'F');
+
+                pdf.setFontSize(7.5); pdf.setTextColor(29, 78, 216); pdf.setFont(undefined, 'bold');
+                pdf.text('SafetyHub | ICAPP', margin, footerY + 5, { align: 'left' });
+                pdf.setFont(undefined, 'normal'); pdf.setFontSize(6.5); pdf.setTextColor(100, 116, 139);
+                pdf.text('Daily Safety Observations Analysis Report — Confidential', margin, footerY + 10, { align: 'left' });
+
+                pdf.setFontSize(8); pdf.setTextColor(29, 78, 216); pdf.setFont(undefined, 'bold');
+                pdf.text(`${p + 1} / ${totalPages}`, pdfW / 2, footerY + 7.5, { align: 'center' });
+
+                pdf.setFont(undefined, 'normal'); pdf.setFontSize(7); pdf.setTextColor(100, 116, 139);
+                pdf.text(enDate, pdfW - margin, footerY + 5, { align: 'right' });
+                pdf.text(enTime, pdfW - margin, footerY + 10, { align: 'right' });
             }
 
-            const dateFile = new Date().toISOString().slice(0,10);
-            pdf.save(`تقرير-الملاحظات-اليومية-${dateFile}.pdf`);
+            const dateFile = new Date().toISOString().slice(0, 10);
+            pdf.save(`تقرير-تحليل-الملاحظات-اليومية-${dateFile}.pdf`);
             if (typeof Notification !== 'undefined' && Notification.success) {
-                Notification.success('تم تصدير التقرير PDF بنجاح');
+                Notification.success('تم تصدير تقرير تحليل الملاحظات اليومية PDF بنجاح');
             }
         } catch(err) {
             console.error('PDF export error:', err);
