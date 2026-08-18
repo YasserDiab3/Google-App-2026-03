@@ -1300,6 +1300,22 @@ function getDailyObservationsPptTemplateId() {
  * 
  * يمكن تمرير templateId في payload كبديل لـ Script Properties
  */
+function _dob_formatObsNo_(obs, idx, tz) {
+    if (!obs) return String(idx + 1);
+    const iso = String(obs.isoCode || obs.code || '').trim();
+    if (/^OBS-\d{6}-\d+/i.test(iso) || /^DOB-\d+/i.test(iso)) return iso;
+    const rawId = String(obs.id || obs.observationIndex || (idx + 1)).trim();
+    if (/^OBS-\d{6}-\d+/i.test(rawId) || /^DOB-\d+/i.test(rawId)) return rawId;
+    
+    let numStr = rawId.replace(/\D/g, '') || String(idx + 1);
+    while (numStr.length < 4) numStr = '0' + numStr;
+    
+    let dateObj = obs.date ? new Date(obs.date) : new Date();
+    if (isNaN(dateObj.getTime())) dateObj = new Date();
+    const yyyymm = Utilities.formatDate(dateObj, tz || Session.getScriptTimeZone(), 'yyyyMM');
+    return 'OBS-' + yyyymm + '-' + numStr;
+}
+
 function exportDailyObservationsPptReport(payload) {
     try {
         payload = payload || {};
@@ -1414,7 +1430,7 @@ function exportDailyObservationsPptReport(payload) {
         observations.forEach(function (obs, idx) {
             const slide = itemTemplateSlide.duplicate();
             // الرقم التسلسلي: isoCode من النظام أولاً، ثم id، ثم observationIndex من الفرونت، ثم idx+1
-            const obsNo = String(obs.isoCode || obs.id || obs.observationIndex || (idx + 1));
+            const obsNo = _dob_formatObsNo_(obs, idx, tz);
             Logger.log('PPT obs[' + idx + '] obsNo=' + obsNo + ' isoCode=' + (obs.isoCode||'') + ' id=' + (obs.id||''));
             const obsDate = _dob_formatDateTimeSafe_(obs.date, tz);
             const targetDate = _dob_formatDateSafe_(obs.expectedCompletionDate, tz);

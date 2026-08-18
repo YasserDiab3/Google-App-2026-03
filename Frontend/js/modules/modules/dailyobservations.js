@@ -7981,7 +7981,7 @@ const DailyObservations = {
                 logoUrl: AppState.companySettings?.logo || AppState.companySettings?.logoUrl || '',
                 observations: exportBatch.map((o, _idx) => ({
                     id: o.id || '',
-                    isoCode: o.isoCode || o.code || o.id || '',
+                    isoCode: getObservationIsoCodeFromId(o.id, o.isoCode || o.code || o.obsNumber || '', o.date),
                     observationIndex: _idx + 1,   // رقم تسلسلي احتياطي إذا كان isoCode فارغاً
                     siteName: o.siteName || '',
                     locationName: o.locationName || '',
