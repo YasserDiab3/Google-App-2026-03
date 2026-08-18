@@ -2489,84 +2489,93 @@ const DailyObservations = {
 
         container.innerHTML = cards.map(card => {
             const isActive = activeFilter && card.filter && JSON.stringify(activeFilter) === JSON.stringify(card.filter);
-            const activeClass = isActive ? 'ring-4 ring-offset-2 ring-opacity-50' : '';
-            const activeRing = isActive ? `ring-${card.color}-300` : '';
             const clickableClass = card.filter ? 'cursor-pointer' : '';
             const onClickAttr = card.filter ? `onclick="DailyObservations.filterByCard('${card.id}', ${JSON.stringify(card.filter || {})})"` : '';
+            const percent = (total > 0 && card.value > 0) ? ((card.value / total) * 100).toFixed(1) : 0;
             
-            // إضافة تظليل أحمر للكارت في حالة وجود مواقع خطرة
-            const highRiskStyle = card.isHighRisk ? 'box-shadow: 0 0 20px rgba(239, 68, 68, 0.5), 0 4px 6px -1px rgba(0, 0, 0, 0.1); animation: pulse-red 2s ease-in-out infinite;' : '';
-            
+            let theme = {
+                badgeBg: 'bg-blue-50 text-blue-700 border-blue-200',
+                iconColor: 'text-blue-600',
+                valueColor: 'text-blue-900',
+                barColor: 'from-blue-500 to-indigo-600',
+                hoverBorder: 'hover:border-blue-300'
+            };
+            if (card.id === 'risk-levels') {
+                theme = {
+                    badgeBg: 'bg-red-50 text-red-700 border-red-200',
+                    iconColor: 'text-red-600',
+                    valueColor: 'text-red-900',
+                    barColor: 'from-red-500 to-rose-600',
+                    hoverBorder: 'hover:border-red-300'
+                };
+            } else if (card.id === 'locations') {
+                if (card.isHighRisk) {
+                    theme = {
+                        badgeBg: 'bg-red-100 text-red-800 border-red-300',
+                        iconColor: 'text-red-600',
+                        valueColor: 'text-red-900',
+                        barColor: 'from-red-500 to-red-700',
+                        hoverBorder: 'hover:border-red-400'
+                    };
+                } else {
+                    theme = {
+                        badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                        iconColor: 'text-emerald-600',
+                        valueColor: 'text-emerald-900',
+                        barColor: 'from-emerald-500 to-teal-600',
+                        hoverBorder: 'hover:border-emerald-300'
+                    };
+                }
+            } else if (card.id === 'note-types') {
+                theme = {
+                    badgeBg: 'bg-purple-50 text-purple-700 border-purple-200',
+                    iconColor: 'text-purple-600',
+                    valueColor: 'text-purple-900',
+                    barColor: 'from-purple-500 to-violet-600',
+                    hoverBorder: 'hover:border-purple-300'
+                };
+            }
+
             return `
-                <div class="stats-card content-card ${clickableClass} transform transition-all duration-300 hover:scale-105 hover:shadow-xl ${activeClass} ${activeRing} border-2 ${card.borderColor} bg-gradient-to-br ${card.bgGradient}" 
+                <div class="stat-kpi-card ${clickableClass} ${isActive ? 'active-kpi' : ''} ${theme.hoverBorder}" 
                      ${card.filter ? `data-filter='${JSON.stringify(card.filter || {})}'` : ''} 
-                     ${onClickAttr}
-                     style="position: relative; overflow: hidden; ${highRiskStyle}">
-                    <!-- Pattern overlay -->
-                    <div class="absolute top-0 right-0 w-32 h-32 opacity-10" style="background: radial-gradient(circle, rgba(0,0,0,0.1) 1px, transparent 1px); background-size: 20px 20px;"></div>
-                    ${card.isHighRisk ? `
-                    <!-- Warning overlay for high-risk sites -->
-                    <div class="absolute top-0 right-0 w-full h-full bg-red-500 opacity-5 pointer-events-none"></div>
-                    ` : ''}
+                     ${onClickAttr}>
                     
-                    <div class="relative z-10">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="${card.iconBg} p-3 rounded-xl shadow-md">
-                                <i class="${card.icon} text-${card.color}-600 text-2xl"></i>
+                    <div class="kpi-top-row ${theme.badgeBg}">
+                        <div class="flex items-center gap-2 font-bold text-xs">
+                            <i class="${card.icon} ${theme.iconColor} text-sm"></i>
+                            <span>${card.title}</span>
+                        </div>
+                        ${isActive ? `
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white shadow-sm border text-blue-700">مُفعل</span>
+                        ` : (card.isHighRisk ? `
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-600 text-white animate-pulse">تنبيه</span>
+                        ` : `
+                            <span class="text-[11px] opacity-75 font-semibold">${percent}%</span>
+                        `)}
+                    </div>
+
+                    <div class="kpi-body my-2">
+                        <div class="flex items-baseline justify-between gap-2">
+                            <div class="text-2xl lg:text-3xl font-extrabold ${theme.valueColor} tracking-tight">
+                                ${card.value.toLocaleString('en-US')}
                             </div>
-                            ${isActive ? `
-                                <div class="flex items-center gap-2 ${card.textColor}">
-                                    <i class="fas fa-filter text-sm"></i>
-                                    <span class="text-xs font-semibold">مفعل</span>
-                                </div>
-                            ` : ''}
-                            ${card.isHighRisk ? `
-                                <div class="flex items-center gap-2 text-red-600 animate-pulse">
-                                    <i class="fas fa-exclamation-triangle text-sm"></i>
-                                    <span class="text-xs font-bold">تنبيه</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                        
-                        <div class="mb-2">
-                            <h3 class="text-sm font-semibold ${card.textColor} mb-1">${card.title}</h3>
-                            <p class="text-xs text-gray-600">${card.description}</p>
-                        </div>
-                        
-                        <div class="flex items-end justify-between mt-4">
-                            <div>
-                                <div class="text-3xl font-bold ${card.textColor}">
-                                    ${card.value.toLocaleString('en-US')}
-                                </div>
-                                ${card.subtitle ? `
-                                    <div class="text-xs ${card.textColor} opacity-80 mt-2 font-medium">
-                                        ${card.subtitle}
-                                    </div>
-                                ` : ''}
+                            <div class="text-xs text-slate-500 font-medium text-left">
+                                ${card.description}
                             </div>
-                            ${total > 0 && card.value !== total ? `
-                                <div class="text-xs ${card.textColor} opacity-75">
-                                    ${((card.value / total) * 100).toFixed(1)}%
-                                </div>
-                            ` : ''}
                         </div>
-                        
-                        ${card.value > 0 && card.filter ? `
-                            <div class="mt-4 pt-3 border-t ${card.borderColor} border-opacity-30">
-                                <div class="flex items-center justify-between text-xs">
-                                    <span class="text-gray-600">انقر للفلترة</span>
-                                    <i class="fas fa-arrow-left text-${card.color}-500"></i>
-                                </div>
+
+                        ${card.subtitle ? `
+                            <div class="kpi-subtitle-pill mt-3">
+                                <i class="fas fa-chart-pie opacity-60 text-xs"></i>
+                                <span>${card.subtitle}</span>
                             </div>
                         ` : ''}
                     </div>
-                    
-                    <!-- Progress bar at bottom -->
-                    ${total > 0 && card.value > 0 ? `
-                        <div class="absolute bottom-0 right-0 left-0 h-1 bg-gray-200">
-                            <div class="h-full bg-gradient-to-r ${card.gradient}" style="width: ${(card.value / total) * 100}%"></div>
-                        </div>
-                    ` : ''}
+
+                    <div class="kpi-bottom-bar">
+                        <div class="kpi-bar-fill bg-gradient-to-r ${theme.barColor}" style="width: ${percent}%;"></div>
+                    </div>
                 </div>
             `;
         }).join('');
@@ -2703,26 +2712,63 @@ const DailyObservations = {
                     box-shadow: 0 0 30px rgba(239, 68, 68, 0.6), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
                 }
             }
-            .stats-card {
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            .stat-kpi-card {
+                background: #ffffff;
+                border: 1px solid #e2e8f0;
+                border-radius: 16px;
+                padding: 1rem 1.15rem;
                 position: relative;
+                overflow: hidden;
+                box-shadow: 0 4px 14px -2px rgba(15, 23, 42, 0.05);
+                transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                min-height: 135px;
             }
-            .stats-card:hover {
-                transform: translateY(-4px) scale(1.02);
+            .stat-kpi-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.1);
             }
-            .stats-card:active {
-                transform: translateY(-2px) scale(1.01);
+            .stat-kpi-card.active-kpi {
+                border-color: #2563eb;
+                box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
             }
-            .stats-card.ring-4 {
-                animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            .stat-kpi-card .kpi-top-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0.45rem 0.75rem;
+                border-radius: 10px;
+                border: 1px solid transparent;
             }
-            @keyframes pulse-ring {
-                0%, 100% {
-                    opacity: 1;
-                }
-                50% {
-                    opacity: 0.5;
-                }
+            .stat-kpi-card .kpi-subtitle-pill {
+                display: flex;
+                align-items: center;
+                gap: 0.4rem;
+                background: #f8fafc;
+                border: 1px solid #f1f5f9;
+                color: #475569;
+                font-size: 0.75rem;
+                font-weight: 600;
+                padding: 0.3rem 0.55rem;
+                border-radius: 8px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .stat-kpi-card .kpi-bottom-bar {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: #f1f5f9;
+            }
+            .stat-kpi-card .kpi-bar-fill {
+                height: 100%;
+                border-radius: 999px;
+                transition: width 0.6s ease;
             }
             /* أنماط الفلاتر الاحترافية */
             .observations-filters-row {
