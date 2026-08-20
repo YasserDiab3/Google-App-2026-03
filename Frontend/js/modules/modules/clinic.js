@@ -13427,16 +13427,9 @@ const Clinic = {
             </html>
         `;
 
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write(content);
-            printWindow.document.close();
-            printWindow.onload = () => {
-                setTimeout(() => {
-                    printWindow.print();
-                    Notification.success('تم تحضير السجلات للطباعة');
-                }, 250);
-            };
+        const printed = Utils.printHtmlContent('سجلات الزيارات الطبية', content);
+        if (printed) {
+            Notification.success('تم تحضير السجلات للطباعة');
         }
     },
 

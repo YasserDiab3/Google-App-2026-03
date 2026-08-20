@@ -3181,8 +3181,7 @@ const Employees = {
             if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {
                 await FormHeader.generatePDF(html, `تحليل-الموظفين-${new Date().toISOString().slice(0, 10)}.pdf`);
             } else {
-                const w = window.open('', '_blank');
-                if (w) { w.document.write(html); w.document.close(); w.print(); }
+                Utils.printHtmlContent('تحليل الموظفين', html);
             }
             Notification.success('تم إنشاء التقرير');
         } catch (e) {

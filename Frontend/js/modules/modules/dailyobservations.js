@@ -12886,18 +12886,9 @@ const DailyObservations = {
                 )
                 : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>@page { size: A4 portrait; margin: 1cm; } @media print { @page { size: A4 portrait; margin: 1cm; } body { padding: 0; } }</style><title>ملاحظة يومية</title></head><body dir="rtl" style="font-family: Arial, sans-serif;">${content}</body></html>`;
 
-            const printWindow = window.open('', '_blank');
-            if (printWindow) {
-                printWindow.document.write(htmlContent);
-                printWindow.document.close();
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        Loading.hide();
-                    }, 500);
-                };
-            } else {
-                Loading.hide();
+            const printed = Utils.printHtmlContent('ملاحظة يومية', htmlContent);
+            Loading.hide();
+            if (!printed) {
                 Notification.error('يرجى السماح بالنوافذ المنبثقة لعرض التقرير.');
             }
         } catch (error) {

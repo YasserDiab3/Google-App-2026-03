@@ -3781,18 +3781,11 @@ const SafetyPerformanceKPIs = {
                 }
             });
 
-            const printWindow = window.open('', '_blank');
-            if (!printWindow) {
+            const printed = Utils.printHtmlContent(this._t('module.kpi.targetsPdfTitle', 'مستهدفات مؤشرات السلامة والصحة المهنية'), html);
+            if (!printed) {
                 Notification.error(this._t('module.kpi.notify.pdfBlocked','يرجى السماح للنوافذ المنبثقة للطباعة'));
                 return;
             }
-
-            printWindow.document.write(html);
-            printWindow.document.close();
-
-            setTimeout(() => {
-                printWindow.print();
-            }, 500);
 
             Notification.success(this._t('module.kpi.notify.targetsSuccess','تم فتح نافذة الطباعة. يمكنك حفظها كـ PDF من قائمة الطباعة.'));
         } catch (error) {

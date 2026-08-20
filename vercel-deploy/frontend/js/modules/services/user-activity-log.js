@@ -266,12 +266,6 @@ const UserActivityLog = {
         }
 
         try {
-            const printWindow = window.open('', '_blank');
-            if (!printWindow) {
-                Notification.error('يرجى السماح للنوافذ المنبثقة، ثم اختر «حفظ كـ PDF» من مربع الطباعة');
-                return;
-            }
-
             const exportTime = Utils.formatDateTime(new Date().toISOString());
             const rowsHtml = logs.map(log => {
                 const detRaw = typeof log.details === 'string' ? log.details : JSON.stringify(log.details || {});
@@ -313,28 +307,12 @@ const UserActivityLog = {
                 '</tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
                 '</body></html>';
 
-            printWindow.document.open();
-            printWindow.document.write(html);
-            printWindow.document.close();
-
-            let didPrint = false;
-            const triggerPrintOnce = () => {
-                if (didPrint) return;
-                didPrint = true;
-                try {
-                    printWindow.focus();
-                    printWindow.print();
-                    Notification.success('استخدم «حفظ كـ PDF» أو الطابعة من مربع الحوار');
-                } catch (printErr) {
-                    Utils.safeWarn('print dialog:', printErr);
-                    Notification.warning('تم فتح التقرير في نافذة جديدة — استخدم طباعة المتصفح');
-                }
-            };
-
-            printWindow.onload = () => {
-                setTimeout(triggerPrintOnce, 900);
-            };
-            setTimeout(triggerPrintOnce, 1400);
+            const printed = Utils.printHtmlContent('سجل أنشطة المستخدمين', html);
+            if (printed) {
+                Notification.success('استخدم «حفظ كـ PDF» أو الطابعة من مربع الحوار');
+            } else {
+                Notification.error('يرجى السماح للنوافذ المنبثقة، ثم اختر «حفظ كـ PDF» من مربع الطباعة');
+            }
         } catch (error) {
             Utils.safeError('❌ خطأ في تصدير PDF:', error);
             Notification.error('❌ فشل تصدير السجلات');
