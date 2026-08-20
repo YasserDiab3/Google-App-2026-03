@@ -6142,6 +6142,10 @@ const DailyObservations = {
                     <div class="top10-hero__title" data-i18n="module.dailyobs.top10.title">Top 10</div>
                     <p class="top10-hero__sub" data-i18n="module.dailyobs.top10.subtitle">ترتيب أعلى المخاطر حسب الفئات المعيارية مع تحليل بصري تفاعلي وربط مباشر بسجل الملاحظات</p>
                     <div class="top10-hero__actions">
+                        <button id="export-top10-ppt-hero-btn" class="btn-primary" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%); border: 1px solid rgba(255,255,255,.35); box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4); font-weight: 700; cursor: pointer;">
+                            <i class="fas fa-file-powerpoint ml-2 text-white"></i>
+                            <span data-i18n="module.dailyobs.top10.btn.exportPpt">تصدير تقرير Top 10 (PPT)</span>
+                        </button>
                         ${this.canDailyObservationsFullAdminUi() ? `
                         <button id="manage-top10-categories-btn" class="btn-primary" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);">
                             <i class="fas fa-layer-group ml-2"></i>
@@ -6324,12 +6328,18 @@ const DailyObservations = {
                 <p class="text-xs text-gray-500">${Utils.escapeHTML(this._t('module.dailyobs.top10.categories.hint', 'اضغط على أي فئة لتصفية القائمة'))}</p>
             </div>
             ${filterHint}
-            <div class="mb-4">
-                <h3 class="top10-section-title">
-                    <i class="fas fa-ranking-star text-red-500"></i>
-                    ${Utils.escapeHTML(rankingTitle)}
-                </h3>
-                <p class="text-sm text-gray-500 mb-4">${Utils.escapeHTML(this._t('module.dailyobs.top10.ranking.subtitle', 'الترتيب حسب درجة المخاطر'))}</p>
+            <div class="mb-4 flex items-center justify-between flex-wrap gap-3">
+                <div>
+                    <h3 class="top10-section-title mb-1">
+                        <i class="fas fa-ranking-star text-red-500"></i>
+                        ${Utils.escapeHTML(rankingTitle)}
+                    </h3>
+                    <p class="text-sm text-gray-500 mb-0">${Utils.escapeHTML(this._t('module.dailyobs.top10.ranking.subtitle', 'الترتيب حسب درجة المخاطر والأولوية القصوى'))}</p>
+                </div>
+                <button id="export-top10-table-ppt-btn" class="btn-primary" style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); font-weight: 700; padding: 9px 18px; font-size: 13.5px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); cursor: pointer;">
+                    <i class="fas fa-file-powerpoint ml-2 text-amber-400"></i>
+                    <span>تصدير تقرير Top 10 (PPT)</span>
+                </button>
             </div>
             ${top10.length === 0 ? `
                 <div class="empty-state">
@@ -6442,6 +6452,17 @@ const DailyObservations = {
         if (top10Root) this.applyModuleI18n(top10Root);
 
         setTimeout(() => {
+            const heroPptBtn = document.getElementById('export-top10-ppt-hero-btn');
+            if (heroPptBtn && heroPptBtn.dataset.bound !== '1') {
+                heroPptBtn.dataset.bound = '1';
+                heroPptBtn.addEventListener('click', () => this.showExportPptModal());
+            }
+            const tablePptBtn = document.getElementById('export-top10-table-ppt-btn');
+            if (tablePptBtn && tablePptBtn.dataset.bound !== '1') {
+                tablePptBtn.dataset.bound = '1';
+                tablePptBtn.addEventListener('click', () => this.showExportPptModal());
+            }
+
             const manageCatBtn = document.getElementById('manage-top10-categories-btn');
             if (manageCatBtn && manageCatBtn.dataset.bound !== '1') {
                 manageCatBtn.dataset.bound = '1';

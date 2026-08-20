@@ -1527,6 +1527,10 @@ ${c}
                     <div class="top10-hero__title" data-i18n="module.dailyobs.top10.title">Top 10</div>
                     <p class="top10-hero__sub" data-i18n="module.dailyobs.top10.subtitle">\u062A\u0631\u062A\u064A\u0628 \u0623\u0639\u0644\u0649 \u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u062D\u0633\u0628 \u0627\u0644\u0641\u0626\u0627\u062A \u0627\u0644\u0645\u0639\u064A\u0627\u0631\u064A\u0629 \u0645\u0639 \u062A\u062D\u0644\u064A\u0644 \u0628\u0635\u0631\u064A \u062A\u0641\u0627\u0639\u0644\u064A \u0648\u0631\u0628\u0637 \u0645\u0628\u0627\u0634\u0631 \u0628\u0633\u062C\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A</p>
                     <div class="top10-hero__actions">
+                        <button id="export-top10-ppt-hero-btn" class="btn-primary" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%); border: 1px solid rgba(255,255,255,.35); box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4); font-weight: 700; cursor: pointer;">
+                            <i class="fas fa-file-powerpoint ml-2 text-white"></i>
+                            <span data-i18n="module.dailyobs.top10.btn.exportPpt">\u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 Top 10 (PPT)</span>
+                        </button>
                         ${this.canDailyObservationsFullAdminUi()?`
                         <button id="manage-top10-categories-btn" class="btn-primary" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);">
                             <i class="fas fa-layer-group ml-2"></i>
@@ -1635,12 +1639,18 @@ ${c}
                 <p class="text-xs text-gray-500">${Utils.escapeHTML(this._t("module.dailyobs.top10.categories.hint","\u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0623\u064A \u0641\u0626\u0629 \u0644\u062A\u0635\u0641\u064A\u0629 \u0627\u0644\u0642\u0627\u0626\u0645\u0629"))}</p>
             </div>
             ${u}
-            <div class="mb-4">
-                <h3 class="top10-section-title">
-                    <i class="fas fa-ranking-star text-red-500"></i>
-                    ${Utils.escapeHTML(g)}
-                </h3>
-                <p class="text-sm text-gray-500 mb-4">${Utils.escapeHTML(this._t("module.dailyobs.top10.ranking.subtitle","\u0627\u0644\u062A\u0631\u062A\u064A\u0628 \u062D\u0633\u0628 \u062F\u0631\u062C\u0629 \u0627\u0644\u0645\u062E\u0627\u0637\u0631"))}</p>
+            <div class="mb-4 flex items-center justify-between flex-wrap gap-3">
+                <div>
+                    <h3 class="top10-section-title mb-1">
+                        <i class="fas fa-ranking-star text-red-500"></i>
+                        ${Utils.escapeHTML(g)}
+                    </h3>
+                    <p class="text-sm text-gray-500 mb-0">${Utils.escapeHTML(this._t("module.dailyobs.top10.ranking.subtitle","\u0627\u0644\u062A\u0631\u062A\u064A\u0628 \u062D\u0633\u0628 \u062F\u0631\u062C\u0629 \u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u0648\u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0629 \u0627\u0644\u0642\u0635\u0648\u0649"))}</p>
+                </div>
+                <button id="export-top10-table-ppt-btn" class="btn-primary" style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); font-weight: 700; padding: 9px 18px; font-size: 13.5px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); cursor: pointer;">
+                    <i class="fas fa-file-powerpoint ml-2 text-amber-400"></i>
+                    <span>\u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 Top 10 (PPT)</span>
+                </button>
             </div>
             ${r.length===0?`
                 <div class="empty-state">
@@ -1735,7 +1745,7 @@ ${c}
                         </div>
                     </div>`}).join("")}
             </div>`}
-        `,this._drawTop10BuiltInCharts(a,r),this.loadTop10Charts(a,r),this._bindTopRiskCategoryCards();const x=document.getElementById("top10-module-root");x&&this.applyModuleI18n(x),setTimeout(()=>{const y=document.getElementById("manage-top10-categories-btn");y&&y.dataset.bound!=="1"&&(y.dataset.bound="1",y.addEventListener("click",()=>this.showManageTop10RiskCategoriesModal()));const A=document.getElementById("add-top10-chart-btn");A&&A.dataset.bound!=="1"&&(A.dataset.bound="1",A.addEventListener("click",()=>this.showAddTop10ChartModal()));const T=document.getElementById("manage-top10-charts-btn");T&&T.dataset.bound!=="1"&&(T.dataset.bound="1",T.addEventListener("click",()=>this.showManageTop10ChartsModal()))},100)},async loadTop10Charts(e,t){const i=document.getElementById("top10-charts-container");if(!i)return;const a="dailyObservations_top10RiskCharts";let s=[];try{if(s=JSON.parse(localStorage.getItem(a)||"[]"),!Array.isArray(s)||s.length===0){const r=JSON.parse(localStorage.getItem("dailyObservations_top10Charts")||"[]");Array.isArray(r)&&r.length>0&&r.some(c=>String(c.title||"").includes("\u0623\u0641\u0636\u0644 10"))&&(s=[])}}catch{s=[]}s.length===0&&(s=[{id:"chart_risk_category_distribution",type:"doughnut",title:this._t("module.dailyobs.top10.chart.categories","\u062A\u0648\u0632\u064A\u0639 \u0641\u0626\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0637\u0631"),field:"riskCategory",enabled:!0,useAllData:!0},{id:"chart_risk_level_top10",type:"bar",title:this._t("module.dailyobs.top10.chart.riskLevel","\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0637\u0648\u0631\u0629 (Top 10)"),field:"riskLevel",enabled:!0},{id:"chart_status_top10",type:"pie",title:this._t("module.dailyobs.top10.chart.status","\u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A (Top 10)"),field:"status",enabled:!0},{id:"chart_site_risk",type:"bar",title:this._t("module.dailyobs.top10.chart.siteRisk","\u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u062D\u0633\u0628 \u0627\u0644\u0645\u0648\u0642\u0639"),field:"siteName",enabled:!1,useAllData:!0}],localStorage.setItem(a,JSON.stringify(s)));const o=s.filter(r=>r.enabled);if(o.length===0){i.innerHTML=`
+        `,this._drawTop10BuiltInCharts(a,r),this.loadTop10Charts(a,r),this._bindTopRiskCategoryCards();const x=document.getElementById("top10-module-root");x&&this.applyModuleI18n(x),setTimeout(()=>{const y=document.getElementById("export-top10-ppt-hero-btn");y&&y.dataset.bound!=="1"&&(y.dataset.bound="1",y.addEventListener("click",()=>this.showExportPptModal()));const A=document.getElementById("export-top10-table-ppt-btn");A&&A.dataset.bound!=="1"&&(A.dataset.bound="1",A.addEventListener("click",()=>this.showExportPptModal()));const T=document.getElementById("manage-top10-categories-btn");T&&T.dataset.bound!=="1"&&(T.dataset.bound="1",T.addEventListener("click",()=>this.showManageTop10RiskCategoriesModal()));const h=document.getElementById("add-top10-chart-btn");h&&h.dataset.bound!=="1"&&(h.dataset.bound="1",h.addEventListener("click",()=>this.showAddTop10ChartModal()));const m=document.getElementById("manage-top10-charts-btn");m&&m.dataset.bound!=="1"&&(m.dataset.bound="1",m.addEventListener("click",()=>this.showManageTop10ChartsModal()))},100)},async loadTop10Charts(e,t){const i=document.getElementById("top10-charts-container");if(!i)return;const a="dailyObservations_top10RiskCharts";let s=[];try{if(s=JSON.parse(localStorage.getItem(a)||"[]"),!Array.isArray(s)||s.length===0){const r=JSON.parse(localStorage.getItem("dailyObservations_top10Charts")||"[]");Array.isArray(r)&&r.length>0&&r.some(c=>String(c.title||"").includes("\u0623\u0641\u0636\u0644 10"))&&(s=[])}}catch{s=[]}s.length===0&&(s=[{id:"chart_risk_category_distribution",type:"doughnut",title:this._t("module.dailyobs.top10.chart.categories","\u062A\u0648\u0632\u064A\u0639 \u0641\u0626\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0637\u0631"),field:"riskCategory",enabled:!0,useAllData:!0},{id:"chart_risk_level_top10",type:"bar",title:this._t("module.dailyobs.top10.chart.riskLevel","\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0637\u0648\u0631\u0629 (Top 10)"),field:"riskLevel",enabled:!0},{id:"chart_status_top10",type:"pie",title:this._t("module.dailyobs.top10.chart.status","\u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A (Top 10)"),field:"status",enabled:!0},{id:"chart_site_risk",type:"bar",title:this._t("module.dailyobs.top10.chart.siteRisk","\u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u062D\u0633\u0628 \u0627\u0644\u0645\u0648\u0642\u0639"),field:"siteName",enabled:!1,useAllData:!0}],localStorage.setItem(a,JSON.stringify(s)));const o=s.filter(r=>r.enabled);if(o.length===0){i.innerHTML=`
                 <div class="col-span-2">
                     <div class="empty-state">
                         <i class="fas fa-chart-bar text-gray-300 text-4xl mb-4"></i>
