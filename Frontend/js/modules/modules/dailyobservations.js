@@ -8300,10 +8300,7 @@ const DailyObservations = {
                     if (input.data && typeof input.data === 'string' && input.data.trim()) {
                         return { data: input.data.trim() };
                     }
-                    if (input.path && typeof input.path === 'string' && input.path.trim()) {
-                        return { path: input.path.trim() };
-                    }
-                    url = input.url || input.directLink || input.shareableLink || input.link || '';
+                    url = input.url || input.directLink || input.shareableLink || input.link || input.driveUrl || '';
                 } else if (typeof input === 'string') {
                     url = input.trim();
                 }
@@ -8328,7 +8325,22 @@ const DailyObservations = {
                                    (url.match(/^[a-zA-Z0-9_-]{25,}$/) ? [null, url] : null);
                 const fileId = driveMatch ? driveMatch[1] : '';
 
-                // 1. محاولة جلب الصورة مباشرة عبر OAuth Token من Google Drive API
+                // 1. محاولة جلب الصورة من خادم Google Apps Script (بأعلى موثوقية وبدون أي عوائق CORS)
+                if (fileId && typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
+                    try {
+                        const resp = await GoogleIntegration.sendRequest({
+                            action: 'getDriveImageDataUrl',
+                            data: { fileIdOrUrl: fileId }
+                        });
+                        if (resp && resp.success && resp.dataUrl && String(resp.dataUrl).startsWith('data:image/')) {
+                            const resObj = { data: resp.dataUrl };
+                            imageCache.set(url, resObj);
+                            return resObj;
+                        }
+                    } catch (gasErr) {}
+                }
+
+                // 2. محاولة جلب الصورة عبر OAuth Token من Google Drive API إن وجد
                 if (fileId && typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.isLoggedIn === 'function' && GoogleIntegration.isLoggedIn()) {
                     try {
                         const token = (typeof GoogleIntegration.getAuthToken === 'function' && GoogleIntegration.getAuthToken()) ||
@@ -8359,7 +8371,7 @@ const DailyObservations = {
                     } catch (e) {}
                 }
 
-                // 2. تجميع قائمة بالروابط البديلة لتحميل الصورة كـ Blob
+                // 3. تجميع قائمة بالروابط البديلة لتحميل الصورة كـ Blob
                 const candidates = [];
                 if (fileId) {
                     candidates.push(`https://lh3.googleusercontent.com/d/${fileId}=w1200`);
@@ -8396,7 +8408,7 @@ const DailyObservations = {
                     } catch (e) {}
                 }
 
-                // 3. محاولة التحميل عبر Image + Canvas
+                // 4. محاولة التحميل عبر Image + Canvas
                 for (const cand of candidates) {
                     try {
                         const dataUrl = await new Promise((resolve) => {
@@ -8425,14 +8437,6 @@ const DailyObservations = {
                             return resObj;
                         }
                     } catch (e) {}
-                }
-
-                // 4. خيار أخير: تمرير الرابط المباشر إلى PptxGenJS كـ path
-                const fallbackUrl = candidates[0] || (url.startsWith('http') ? url : '');
-                if (fallbackUrl) {
-                    const resObj = { path: fallbackUrl };
-                    imageCache.set(url, resObj);
-                    return resObj;
                 }
 
                 return null;
@@ -8628,14 +8632,16 @@ const DailyObservations = {
                     x: 0.4, y: 0.78, w: 6.1, h: 0.38, fontSize: 11, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', fontFace: 'Arial'
                 });
 
-                if (obsImgObj) {
+                if (obsImgObj && obsImgObj.data) {
                     try {
-                        obsSlide.addImage({ ...obsImgObj, x: 0.55, y: 1.25, w: 5.8, h: 5.25, sizing: { type: 'contain', w: 5.8, h: 5.25 } });
+                        obsSlide.addImage({ data: obsImgObj.data, x: 0.55, y: 1.25, w: 5.8, h: 5.25, sizing: { type: 'contain', w: 5.8, h: 5.25 } });
                     } catch (imgErr) {
-                        obsSlide.addText('صورة الملاحظة مرفقة بالنظام\n[Photo Attached]', { x: 0.4, y: 1.25, w: 6.1, h: 5.25, fontSize: 13, color: '94A3B8', align: 'center', valign: 'middle' });
+                        obsSlide.addShape(pptx.ShapeType.roundRect, { x: 0.8, y: 1.6, w: 5.3, h: 4.5, fill: { color: 'F8FAFC' }, line: { color: 'CBD5E1', width: 1 }, rectRadius: 0.1 });
+                        obsSlide.addText('📷 صورة الملاحظة مرفقة بالنظام\n[Photo Attached in System]', { x: 0.8, y: 1.6, w: 5.3, h: 4.5, fontSize: 13, color: '64748B', align: 'center', valign: 'middle', fontFace: 'Arial' });
                     }
                 } else {
-                    obsSlide.addText('لا توجد صورة مرفقة للملاحظة', { x: 0.4, y: 1.25, w: 6.1, h: 5.25, fontSize: 13, color: '94A3B8', align: 'center', valign: 'middle' });
+                    obsSlide.addShape(pptx.ShapeType.roundRect, { x: 0.8, y: 1.6, w: 5.3, h: 4.5, fill: { color: 'F8FAFC' }, line: { color: 'E2E8F0', width: 1 }, rectRadius: 0.1 });
+                    obsSlide.addText('ℹ️ لا توجد صورة مرفقة لهذه الملاحظة\n[No Image Attached]', { x: 0.8, y: 1.6, w: 5.3, h: 4.5, fontSize: 13, color: '94A3B8', align: 'center', valign: 'middle', fontFace: 'Arial' });
                 }
 
                 // تذييل الشريحة السفلي (بارتفاع 0.55 بوصة متناسق مع أسفل الصفحة)
