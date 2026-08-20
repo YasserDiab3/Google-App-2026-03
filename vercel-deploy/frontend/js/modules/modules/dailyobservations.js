@@ -8507,16 +8507,19 @@ const DailyObservations = {
                 x: 1.7, y: 1.60, w: 9.93, h: 0.04, fill: { color: 'D97706' }, line: { color: 'D97706' }
             });
 
+            const siteNameResolved = site || (exportBatch[0]?.siteName) || '';
+            const plantLabel = isEnglish ? `Plant : ${siteNameResolved || 'All Plants'}` : `المصنع : ${siteNameResolved || 'جميع المصانع'}`;
+
             slide1.addText([
-                { text: isEnglish ? 'Daily Safety Observations Report\n' : 'تقرير الملاحظات والحيودات اليومية\n', options: { fontSize: 28, bold: true, color: '1E3A8A', rtl: !isEnglish } },
-                { text: isEnglish ? 'Top 10 Executive Action Plan & Analytical Summary\n\n' : 'خطة العمل التنفيذية وملخص أبرز الملاحظات (Top 10)\n\n', options: { fontSize: 16, bold: true, color: 'D97706', rtl: !isEnglish } },
-                { text: `${companyName} — Americana Group`, options: { fontSize: 13.5, bold: false, color: '64748B' } }
+                { text: isEnglish ? 'Safety Observations Report\n\n' : 'تقرير ملاحظات السلامة\n\n', options: { fontSize: 32, bold: true, color: '1E3A8A', rtl: !isEnglish } },
+                { text: `${companyName}\n\n`, options: { fontSize: 20, bold: true, color: '0F172A', rtl: !isEnglish } },
+                { text: plantLabel, options: { fontSize: 18, bold: true, color: 'D97706', rtl: !isEnglish } }
             ], { x: 1.6, y: 1.75, w: 10.13, h: 2.80, align: 'center', valign: 'middle', fontFace: 'Arial' });
 
             // ── 3 بطاقات معلومات فرعية أسفل بطاقة العنوان ──
             const subCards = [
                 {
-                    title: isEnglish ? 'Department' : 'الإدارة المسؤولة',
+                    title: isEnglish ? 'Department' : 'الإدارة المختارة',
                     val: dept || (isEnglish ? 'All Departments' : 'كافة الإدارات'),
                     bg: 'EFF6FF', line: '93C5FD', color: '1E40AF'
                 },
@@ -8526,8 +8529,8 @@ const DailyObservations = {
                     bg: 'FEF3C7', line: 'FDE68A', color: 'B45309'
                 },
                 {
-                    title: isEnglish ? 'Report Level' : 'مستوى التقرير',
-                    val: isEnglish ? 'Executive Top 10' : 'أبرز 10 ملاحظات تنفيذية',
+                    title: isEnglish ? 'Observations Count' : 'عدد الملاحظات بالتقرير',
+                    val: isEnglish ? `${exportBatch.length} Observations` : `${exportBatch.length} ملاحظة`,
                     bg: 'ECFDF5', line: 'A7F3D0', color: '047857'
                 }
             ];
