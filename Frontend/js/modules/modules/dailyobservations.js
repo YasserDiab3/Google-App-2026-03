@@ -6146,10 +6146,6 @@ const DailyObservations = {
                             <i class="fas fa-file-pdf text-red-400"></i>
                             <span data-i18n="module.dailyobs.top10.btn.exportPdf">تصدير PDF</span>
                         </button>
-                        <button id="export-top10-ppt-hero-btn" class="btn-secondary" style="background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.35); color: #fff; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-                            <i class="fas fa-file-powerpoint text-amber-400"></i>
-                            <span data-i18n="module.dailyobs.top10.btn.exportPpt">تصدير PPT</span>
-                        </button>
                         ${this.canDailyObservationsFullAdminUi() ? `
                         <button id="manage-top10-categories-btn" class="btn-primary" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);">
                             <i class="fas fa-layer-group ml-2"></i>
@@ -6340,16 +6336,10 @@ const DailyObservations = {
                     </h3>
                     <p class="text-sm text-gray-500 mb-0">${Utils.escapeHTML(this._t('module.dailyobs.top10.ranking.subtitle', 'الترتيب حسب درجة المخاطر والأولوية القصوى'))}</p>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button id="export-top10-table-pdf-btn" class="btn-secondary" style="padding: 7px 14px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-                        <i class="fas fa-file-pdf text-red-500"></i>
-                        <span>تصدير PDF</span>
-                    </button>
-                    <button id="export-top10-table-ppt-btn" class="btn-secondary" style="padding: 7px 14px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-                        <i class="fas fa-file-powerpoint text-amber-500"></i>
-                        <span>تصدير PPT</span>
-                    </button>
-                </div>
+                <button id="export-top10-table-pdf-btn" class="btn-secondary" style="padding: 7px 14px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-file-pdf text-red-500"></i>
+                    <span>تصدير PDF</span>
+                </button>
             </div>
             ${top10.length === 0 ? `
                 <div class="empty-state">
