@@ -8306,7 +8306,7 @@ const DailyObservations = {
                 }
                 if (!url) return null;
 
-                // التعامل مع بادئات Base64 المباشرة
+                // التعامل مع بادئات Base64 المباشرة (فوري 0ms)
                 if (url.startsWith('/9j/') || url.startsWith('iVBORw') || url.startsWith('R0lGOD') || url.startsWith('UklGR')) {
                     url = 'data:image/jpeg;base64,' + url;
                 }
@@ -8325,68 +8325,60 @@ const DailyObservations = {
                                    (url.match(/^[a-zA-Z0-9_-]{25,}$/) ? [null, url] : null);
                 const fileId = driveMatch ? driveMatch[1] : '';
 
-                // 1. محاولة جلب الصورة من خادم Google Apps Script (بأعلى موثوقية وبدون أي عوائق CORS)
-                if (fileId && typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
-                    try {
-                        const resp = await GoogleIntegration.sendRequest({
-                            action: 'getDriveImageDataUrl',
-                            data: { fileIdOrUrl: fileId }
-                        });
-                        if (resp && resp.success && resp.dataUrl && String(resp.dataUrl).startsWith('data:image/')) {
-                            const resObj = { data: resp.dataUrl };
-                            imageCache.set(url, resObj);
-                            return resObj;
-                        }
-                    } catch (gasErr) {}
-                }
-
-                // 2. محاولة جلب الصورة عبر OAuth Token من Google Drive API إن وجد
-                if (fileId && typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.isLoggedIn === 'function' && GoogleIntegration.isLoggedIn()) {
-                    try {
-                        const token = (typeof GoogleIntegration.getAuthToken === 'function' && GoogleIntegration.getAuthToken()) ||
-                                      (typeof gapi !== 'undefined' && gapi?.auth2?.getAuthInstance()?.currentUser?.get()?.getAuthResponse()?.access_token) ||
-                                      AppState.googleAccessToken;
-                        if (token) {
-                            const controller = new AbortController();
-                            const timer = setTimeout(() => controller.abort(), 6000);
-                            const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-                                headers: { Authorization: `Bearer ${token}` },
-                                signal: controller.signal
-                            });
-                            clearTimeout(timer);
-                            if (res.ok) {
-                                const blob = await res.blob();
-                                const dataUrl = await new Promise((resolve) => {
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => resolve(reader.result);
-                                    reader.readAsDataURL(blob);
-                                });
-                                if (dataUrl && String(dataUrl).startsWith('data:image/')) {
-                                    const resObj = { data: dataUrl };
-                                    imageCache.set(url, resObj);
-                                    return resObj;
-                                }
-                            }
-                        }
-                    } catch (e) {}
-                }
-
-                // 3. تجميع قائمة بالروابط البديلة لتحميل الصورة كـ Blob
+                // تجميع روابط الصور المباشرة المخففة والمحسنة للحجم والسرعة
                 const candidates = [];
                 if (fileId) {
-                    candidates.push(`https://lh3.googleusercontent.com/d/${fileId}=w1200`);
-                    candidates.push(`https://drive.google.com/thumbnail?id=${fileId}&sz=w1200`);
+                    candidates.push(`https://lh3.googleusercontent.com/d/${fileId}=w800`);
+                    candidates.push(`https://drive.google.com/thumbnail?id=${fileId}&sz=w800`);
                     candidates.push(`https://drive.google.com/uc?export=download&id=${fileId}`);
-                    candidates.push(`https://drive.google.com/uc?export=view&id=${fileId}`);
                 }
                 if (url.startsWith('http://') || url.startsWith('https://')) {
                     candidates.push(url);
                 }
 
+                // 1. محاولة سريعة عبر Image + Canvas (سريعة جداً وبضغط خفيف لتسريع إنشاء ملف PPTX)
+                for (const cand of candidates) {
+                    try {
+                        const dataUrl = await new Promise((resolve) => {
+                            const img = new Image();
+                            img.crossOrigin = 'anonymous';
+                            const timer = setTimeout(() => resolve(null), 1500);
+                            img.onload = () => {
+                                clearTimeout(timer);
+                                try {
+                                    const canvas = document.createElement('canvas');
+                                    const maxW = 900;
+                                    let w = img.naturalWidth || 800;
+                                    let h = img.naturalHeight || 600;
+                                    if (w > maxW) {
+                                        h = Math.round((h * maxW) / w);
+                                        w = maxW;
+                                    }
+                                    canvas.width = w;
+                                    canvas.height = h;
+                                    const ctx = canvas.getContext('2d');
+                                    ctx.drawImage(img, 0, 0, w, h);
+                                    resolve(canvas.toDataURL('image/jpeg', 0.82));
+                                } catch (e) {
+                                    resolve(null);
+                                }
+                            };
+                            img.onerror = () => { clearTimeout(timer); resolve(null); };
+                            img.src = cand;
+                        });
+                        if (dataUrl && String(dataUrl).startsWith('data:image/')) {
+                            const resObj = { data: dataUrl };
+                            imageCache.set(url, resObj);
+                            return resObj;
+                        }
+                    } catch (e) {}
+                }
+
+                // 2. محاولة جلب مباشرة كـ Blob بمهلة سريعة جداً (1.5 ثانية كحد أقصى)
                 for (const cand of candidates) {
                     try {
                         const controller = new AbortController();
-                        const timer = setTimeout(() => controller.abort(), 5000);
+                        const timer = setTimeout(() => controller.abort(), 1500);
                         const res = await fetch(cand, { mode: 'cors', signal: controller.signal });
                         clearTimeout(timer);
                         if (res.ok) {
@@ -8408,33 +8400,33 @@ const DailyObservations = {
                     } catch (e) {}
                 }
 
-                // 4. محاولة التحميل عبر Image + Canvas
-                for (const cand of candidates) {
+                // 3. محاولة سريعة عبر OAuth Token إذا كان مسجلاً بالـ Google API
+                if (fileId && typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.isLoggedIn === 'function' && GoogleIntegration.isLoggedIn()) {
                     try {
-                        const dataUrl = await new Promise((resolve) => {
-                            const img = new Image();
-                            img.crossOrigin = 'anonymous';
-                            const timer = setTimeout(() => resolve(null), 5000);
-                            img.onload = () => {
-                                clearTimeout(timer);
-                                try {
-                                    const canvas = document.createElement('canvas');
-                                    canvas.width = img.naturalWidth || 800;
-                                    canvas.height = img.naturalHeight || 600;
-                                    const ctx = canvas.getContext('2d');
-                                    ctx.drawImage(img, 0, 0);
-                                    resolve(canvas.toDataURL('image/jpeg', 0.90));
-                                } catch (e) {
-                                    resolve(null);
+                        const token = (typeof GoogleIntegration.getAuthToken === 'function' && GoogleIntegration.getAuthToken()) ||
+                                      (typeof gapi !== 'undefined' && gapi?.auth2?.getAuthInstance()?.currentUser?.get()?.getAuthResponse()?.access_token) ||
+                                      AppState.googleAccessToken;
+                        if (token) {
+                            const controller = new AbortController();
+                            const timer = setTimeout(() => controller.abort(), 1800);
+                            const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+                                headers: { Authorization: `Bearer ${token}` },
+                                signal: controller.signal
+                            });
+                            clearTimeout(timer);
+                            if (res.ok) {
+                                const blob = await res.blob();
+                                const dataUrl = await new Promise((resolve) => {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => resolve(reader.result);
+                                    reader.readAsDataURL(blob);
+                                });
+                                if (dataUrl && String(dataUrl).startsWith('data:image/')) {
+                                    const resObj = { data: dataUrl };
+                                    imageCache.set(url, resObj);
+                                    return resObj;
                                 }
-                            };
-                            img.onerror = () => { clearTimeout(timer); resolve(null); };
-                            img.src = cand;
-                        });
-                        if (dataUrl && String(dataUrl).startsWith('data:image/')) {
-                            const resObj = { data: dataUrl };
-                            imageCache.set(url, resObj);
-                            return resObj;
+                            }
                         }
                     } catch (e) {}
                 }
