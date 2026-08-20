@@ -8354,48 +8354,78 @@ const DailyObservations = {
             ]);
 
             // ══════════════════════════════════════
-            // الشريحة 1: شريحة الغلاف التنفيذية (Cover Slide)
+            // الشريحة 1: شريحة الغلاف التنفيذية المحدثة بخلفية بيضاء راقية
             // ══════════════════════════════════════
             const slide1 = pptx.addSlide();
-            slide1.background = { color: '0F172A' };
+            slide1.background = { color: 'F8FAFC' };
 
-            // شريط علوي ذهبي
-            slide1.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.15, fill: { color: 'D97706' }, line: { color: 'D97706' } });
+            // شريط علوي تنفيذي مزدوج (كحلي ملكي + ذهبي)
+            slide1.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.90, fill: { color: '1E3A8A' } });
+            slide1.addShape(pptx.ShapeType.rect, { x: 0, y: 0.90, w: '100%', h: 0.05, fill: { color: 'D97706' } });
 
             // الشعار
             if (logoImgObj) {
-                slide1.addShape(pptx.ShapeType.roundRect, { x: 0.8, y: 0.45, w: 2.6, h: 1.0, fill: { color: 'FFFFFF' }, line: { color: 'CBD5E1', width: 1 }, rectRadius: 0.1 });
+                slide1.addShape(pptx.ShapeType.roundRect, { x: 0.8, y: 0.12, w: 2.2, h: 0.68, fill: { color: 'FFFFFF' }, line: { color: 'CBD5E1', width: 1 }, rectRadius: 0.08 });
                 try {
-                    slide1.addImage({ ...logoImgObj, x: 0.9, y: 0.5, w: 2.4, h: 0.9, sizing: { type: 'contain', w: 2.4, h: 0.9 } });
+                    slide1.addImage({ ...logoImgObj, x: 0.85, y: 0.15, w: 2.1, h: 0.62, sizing: { type: 'contain', w: 2.1, h: 0.62 } });
                 } catch(e) {}
             } else {
-                slide1.addShape(pptx.ShapeType.roundRect, { x: 0.8, y: 0.45, w: 2.6, h: 1.0, fill: { color: 'FFFFFF' }, line: { color: 'DC2626', width: 1.5 }, rectRadius: 0.1 });
-                slide1.addText('AMERICANA', { x: 0.8, y: 0.45, w: 2.6, h: 1.0, fontSize: 18, bold: true, color: 'DC2626', align: 'center', valign: 'middle' });
+                slide1.addShape(pptx.ShapeType.roundRect, { x: 0.8, y: 0.12, w: 2.2, h: 0.68, fill: { color: 'FFFFFF' }, line: { color: 'DC2626', width: 1.5 }, rectRadius: 0.08 });
+                slide1.addText('AMERICANA', { x: 0.8, y: 0.12, w: 2.2, h: 0.68, fontSize: 14, bold: true, color: 'DC2626', align: 'center', valign: 'middle' });
             }
 
-            // ترويسة النظام يميناً
-            slide1.addText(isEnglish ? 'HSE Management System\nSafety & Health Department' : 'نظام إدارة السلامة والصحة المهنية والبيئة\nإدارة السلامة والصحة المهنية', {
-                x: 6.5, y: 0.45, w: 6.0, h: 1.0, fontSize: 14, bold: true, color: 'FBBF24', align: 'right', fontFace: 'Arial'
+            // ترويسة النظام يميناً في الشريط الكحلي
+            slide1.addText(isEnglish ? 'HSE Management System — Safety & Health Department' : 'نظام إدارة السلامة والصحة المهنية والبيئة | إدارة السلامة والصحة المهنية', {
+                x: 4.0, y: 0.15, w: 8.5, h: 0.60, fontSize: 13, bold: true, color: 'FFFFFF', align: isEnglish ? 'left' : 'right', rtl: !isEnglish, fontFace: 'Arial'
             });
 
-            // بطاقة العنوان الرئيسية الوسطى
+            // ── بطاقة العنوان الرئيسية الكبرى في الوسط (خلفية بيضاء بظل وإطار أزرق فخم) ──
             slide1.addShape(pptx.ShapeType.roundRect, {
-                x: 1.5, y: 1.85, w: 10.33, h: 3.1, fill: { color: '1E293B' }, line: { color: '3B82F6', width: 2 }, rectRadius: 0.15
+                x: 1.5, y: 1.45, w: 10.33, h: 3.40, fill: { color: 'FFFFFF' }, line: { color: '3B82F6', width: 2 }, rectRadius: 0.15
             });
-            slide1.addText([
-                { text: isEnglish ? 'Daily Safety Observations Report\n' : 'تقرير الملاحظات والحيودات اليومية\n', options: { fontSize: 30, bold: true, color: 'FFFFFF' } },
-                { text: isEnglish ? 'Action Plan & Monthly Summary\n' : 'خطة العمل التنفيذية والملخص الإحصائي\n', options: { fontSize: 18, bold: true, color: 'FBBF24' } },
-                { text: `${companyName} — Americana Group`, options: { fontSize: 14, bold: false, color: '94A3B8' } }
-            ], { x: 1.6, y: 1.9, w: 10.13, h: 3.0, align: 'center', valign: 'middle', fontFace: 'Arial' });
+            slide1.addShape(pptx.ShapeType.roundRect, {
+                x: 1.7, y: 1.60, w: 9.93, h: 0.04, fill: { color: 'D97706' }, line: { color: 'D97706' }
+            });
 
-            // بطاقة الإدارة والتاريخ
-            slide1.addShape(pptx.ShapeType.roundRect, {
-                x: 3.2, y: 5.25, w: 6.9, h: 1.6, fill: { color: '1E40AF' }, line: { color: '60A5FA', width: 1.5 }, rectRadius: 0.12
-            });
             slide1.addText([
-                { text: (isEnglish ? 'Department : ' : 'الإدارة المسؤولة : ') + (dept || 'كافة الإدارات') + '\n\n', options: { fontSize: 16, bold: true, color: 'FFFFFF' } },
-                { text: (isEnglish ? 'Report Date : ' : 'تاريخ التقرير : ') + dateLabel, options: { fontSize: 13.5, bold: true, color: 'E0E7FF' } }
-            ], { x: 3.3, y: 5.3, w: 6.7, h: 1.5, align: 'center', valign: 'middle', fontFace: 'Arial' });
+                { text: isEnglish ? 'Daily Safety Observations Report\n' : 'تقرير الملاحظات والحيودات اليومية\n', options: { fontSize: 28, bold: true, color: '1E3A8A', rtl: !isEnglish } },
+                { text: isEnglish ? 'Top 10 Executive Action Plan & Analytical Summary\n\n' : 'خطة العمل التنفيذية وملخص أبرز الملاحظات (Top 10)\n\n', options: { fontSize: 16, bold: true, color: 'D97706', rtl: !isEnglish } },
+                { text: `${companyName} — Americana Group`, options: { fontSize: 13.5, bold: false, color: '64748B' } }
+            ], { x: 1.6, y: 1.75, w: 10.13, h: 2.80, align: 'center', valign: 'middle', fontFace: 'Arial' });
+
+            // ── 3 بطاقات معلومات فرعية أسفل بطاقة العنوان ──
+            const subCards = [
+                {
+                    title: isEnglish ? 'Department' : 'الإدارة المسؤولة',
+                    val: dept || (isEnglish ? 'All Departments' : 'كافة الإدارات'),
+                    bg: 'EFF6FF', line: '93C5FD', color: '1E40AF'
+                },
+                {
+                    title: isEnglish ? 'Report Date' : 'تاريخ التقرير',
+                    val: dateLabel,
+                    bg: 'FEF3C7', line: 'FDE68A', color: 'B45309'
+                },
+                {
+                    title: isEnglish ? 'Report Level' : 'مستوى التقرير',
+                    val: isEnglish ? 'Executive Top 10' : 'أبرز 10 ملاحظات تنفيذية',
+                    bg: 'ECFDF5', line: 'A7F3D0', color: '047857'
+                }
+            ];
+
+            subCards.forEach((c, idx) => {
+                const cx = isEnglish ? (1.5 + idx * 3.6) : (1.5 + (2 - idx) * 3.6);
+                slide1.addShape(pptx.ShapeType.roundRect, { x: cx, y: 5.15, w: 3.13, h: 1.40, fill: { color: c.bg }, line: { color: c.line, width: 1.5 }, rectRadius: 0.1 });
+                slide1.addText([
+                    { text: c.title + '\n', options: { fontSize: 11, bold: true, color: '64748B', rtl: !isEnglish } },
+                    { text: c.val, options: { fontSize: 13.5, bold: true, color: c.color, rtl: !isEnglish } }
+                ], { x: cx, y: 5.20, w: 3.13, h: 1.30, align: 'center', valign: 'middle', fontFace: 'Arial' });
+            });
+
+            // شريط سفلي
+            slide1.addShape(pptx.ShapeType.rect, { x: 0, y: 6.95, w: '100%', h: 0.55, fill: { color: '1E3A8A' } });
+            slide1.addText('Safety First — السلامة أولاً وبناء بيئة عمل آمنة ومستدامة', {
+                x: 0, y: 6.98, w: '100%', h: 0.48, fontSize: 11, bold: true, color: 'FBBF24', align: 'center', valign: 'middle', fontFace: 'Arial'
+            });
 
             // ══════════════════════════════════════
             // الشريحة 2: نظرة عامة على التقرير (لوحة مؤشرات تنفيذية احترافية)
@@ -8819,15 +8849,25 @@ const DailyObservations = {
             });
 
             // ══════════════════════════════════════
-            // شريحة النهاية: Thank You / Safety First
+            // شريحة النهاية: Thank You / Safety First بتصميم راقي
             // ══════════════════════════════════════
             const endSlide = pptx.addSlide();
-            endSlide.background = { color: '0F172A' };
-            endSlide.addShape(pptx.ShapeType.roundRect, { x: 2.2, y: 2.0, w: 8.93, h: 3.5, fill: { color: '1E293B' }, line: { color: 'D97706', width: 2 }, rectRadius: 0.2 });
+            endSlide.background = { color: 'F8FAFC' };
+
+            endSlide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.80, fill: { color: '1E3A8A' } });
+            endSlide.addShape(pptx.ShapeType.rect, { x: 0, y: 0.80, w: '100%', h: 0.04, fill: { color: 'D97706' } });
+
+            endSlide.addShape(pptx.ShapeType.roundRect, { x: 2.0, y: 1.80, w: 9.33, h: 3.8, fill: { color: 'FFFFFF' }, line: { color: '3B82F6', width: 2 }, rectRadius: 0.15 });
             endSlide.addText([
-                { text: isEnglish ? 'Thank you for your commitment to Safety & Health standards\n\n' : 'شكراً لالتزامكم الدائم بمعايير السلامة والصحة المهنية\n\n', options: { fontSize: 24, bold: true, color: 'FFFFFF', rtl: !isEnglish } },
-                { text: 'Safety First — السلامة أولاً', options: { fontSize: 20, bold: true, color: 'FBBF24', rtl: !isEnglish } }
-            ], { x: 2.3, y: 2.1, w: 8.73, h: 3.3, align: 'center', valign: 'middle', fontFace: 'Arial' });
+                { text: isEnglish ? 'Thank you for your continuous commitment to Safety Standards\n\n' : 'شكراً لالتزامكم الدائم والمستمر بمعايير السلامة والصحة المهنية\n\n', options: { fontSize: 22, bold: true, color: '1E3A8A', rtl: !isEnglish } },
+                { text: isEnglish ? 'Safety First — Americana Group\n' : 'السلامة أولاً — مجموعة أمريكانا\n', options: { fontSize: 18, bold: true, color: 'D97706', rtl: !isEnglish } },
+                { text: isEnglish ? 'Working Together for a Zero-Harm Environment' : 'نعمل معاً من أجل بيئة عمل خالية من الحوادث والمخاطر', options: { fontSize: 12.5, color: '64748B', rtl: !isEnglish } }
+            ], { x: 2.1, y: 1.90, w: 9.13, h: 3.6, align: 'center', valign: 'middle', fontFace: 'Arial' });
+
+            endSlide.addShape(pptx.ShapeType.rect, { x: 0, y: 6.95, w: '100%', h: 0.55, fill: { color: '1E3A8A' } });
+            endSlide.addText(`${companyName} — HSE Management`, {
+                x: 0, y: 6.98, w: '100%', h: 0.48, fontSize: 11, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', fontFace: 'Arial'
+            });
 
             // حفظ وتنزيل الملف مباشرة للمستخدم بصيغة PPTX
             const outputFilename = `Daily_Observations_${safeDept}_${new Date().toISOString().slice(0, 10)}.pptx`;
