@@ -6260,20 +6260,29 @@ const Violations = {
             <style>
                 .violation-report{--vr-navy:#102a43;--vr-red:#b91c1c;--vr-gold:#d97706;--vr-ink:#172033;direction:rtl;color:var(--vr-ink);font-family:'Cairo','Tahoma','Segoe UI',sans-serif;letter-spacing:0}
                 .violation-report *{box-sizing:border-box;letter-spacing:0}
-                .vr-banner{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;margin:0 0 14px;border-radius:12px;background:linear-gradient(125deg,var(--vr-navy),#173d6c);color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-                .vr-banner-title{font-size:18px;font-weight:800}.vr-banner-sub{margin-top:3px;color:#bfdbfe;font-size:10px}
-                .vr-code{min-width:130px;padding:8px 12px;border:1px solid rgba(255,255,255,.3);border-radius:9px;text-align:center;background:rgba(255,255,255,.09)}
-                .vr-code small{display:block;color:#bae6fd;font-size:9px}.vr-code strong{display:block;margin-top:2px;font-size:13px}
-                .vr-section{margin:0 0 12px;border:1px solid #dbe5ef;border-radius:11px;overflow:hidden;page-break-inside:avoid;background:#fff}
-                .vr-section-title{display:flex;align-items:center;gap:7px;padding:8px 12px;border-bottom:1px solid #dbe5ef;color:var(--vr-navy);background:#eff6ff;font-size:12px;font-weight:800;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-                .vr-section-title:before{content:'';width:4px;height:17px;border-radius:4px;background:#0891b2}
+                .vr-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 14px;margin:0 0 7px;border-radius:8px;background:linear-gradient(125deg,var(--vr-navy),#173d6c);color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+                .vr-banner-title{font-size:14px;font-weight:800}.vr-banner-sub{margin-top:2px;color:#bfdbfe;font-size:9px}
+                .vr-code{min-width:110px;padding:4px 8px;border:1px solid rgba(255,255,255,.3);border-radius:6px;text-align:center;background:rgba(255,255,255,.09)}
+                .vr-code small{display:block;color:#bae6fd;font-size:8px}.vr-code strong{display:block;margin-top:1px;font-size:11.5px}
+                .vr-section{margin:0 0 7px;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;page-break-inside:avoid;break-inside:avoid;background:#fff}
+                .vr-section-title{display:flex;align-items:center;gap:6px;padding:4px 10px;border-bottom:1px solid #cbd5e1;color:var(--vr-navy);background:#f1f5f9;font-size:10px;font-weight:800;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+                .vr-section-title:before{content:'';width:3px;height:12px;border-radius:3px;background:#0891b2}
                 .vr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0}
-                .vr-info{min-height:55px;padding:9px 12px;border-bottom:1px solid #edf2f7;border-left:1px solid #edf2f7}.vr-info-wide{grid-column:1/-1}
-                .vr-label{display:block;margin-bottom:4px;color:#64748b;font-size:9px;font-weight:700}.vr-value{display:block;color:#172033;font-size:11px;line-height:1.65;overflow-wrap:anywhere;white-space:pre-wrap}
-                .vr-value.vr-danger{color:#b91c1c}.vr-value.vr-success{color:#047857}.vr-value.vr-money{color:#166534;font-size:13px}
-                .vr-photo{padding:12px;text-align:center;background:#f8fafc}.vr-photo img{display:block;max-width:100%;max-height:310px;margin:auto;border:2px solid #dbe5ef;border-radius:10px;object-fit:contain}
-                .vr-signatures{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px;page-break-inside:avoid}.vr-sign{min-height:68px;padding:9px;border:1px dashed #94a3b8;border-radius:9px;text-align:center;color:#64748b;font-size:9px}.vr-sign strong{display:block;margin-bottom:28px;color:#334155;font-size:10px}
-                .vr-footnote{margin-top:10px;padding-top:8px;border-top:1px solid #e2e8f0;color:#64748b;text-align:center;font-size:8px}
+                .vr-info{min-height:36px;padding:4px 8px;border-bottom:1px solid #edf2f7;border-left:1px solid #edf2f7}.vr-info-wide{grid-column:1/-1}
+                .vr-label{display:block;margin-bottom:2px;color:#64748b;font-size:8px;font-weight:700}.vr-value{display:block;color:#172033;font-size:9.5px;line-height:1.35;overflow-wrap:anywhere;white-space:pre-wrap}
+                .vr-value.vr-danger{color:#b91c1c;font-weight:700}.vr-value.vr-success{color:#047857;font-weight:700}.vr-value.vr-money{color:#166534;font-size:11px;font-weight:700}
+                .vr-photo{padding:4px 8px;text-align:center;background:#f8fafc}.vr-photo img{display:block;max-width:100%;max-height:170px;margin:auto;border:1px solid #cbd5e1;border-radius:6px;object-fit:contain}
+                .vr-signatures{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px;page-break-inside:avoid;break-inside:avoid}
+                .vr-sign{min-height:48px;padding:5px;border:1px dashed #94a3b8;border-radius:6px;text-align:center;color:#64748b;font-size:8px}.vr-sign strong{display:block;margin-bottom:20px;color:#334155;font-size:9px}
+                .vr-footnote{margin-top:4px;padding-top:3px;border-top:1px solid #e2e8f0;color:#64748b;text-align:center;font-size:7.5px}
+                @media print {
+                    @page { size: A4 portrait; margin: 6mm 8mm; }
+                    html, body { background: #fff !important; height: auto !important; min-height: 0 !important; }
+                    .report-wrapper { padding: 8px 12px !important; box-shadow: none !important; border: none !important; border-radius: 0 !important; }
+                    .report-header { padding-bottom: 6px !important; margin-bottom: 6px !important; }
+                    .report-footer-unified { margin-top: 6px !important; padding-top: 4px !important; }
+                    .vr-section, .vr-photo, .vr-signatures, .vr-banner { page-break-inside: avoid !important; break-inside: avoid !important; }
+                }
             </style>
             <div class="violation-report">
                 <div class="vr-banner">
@@ -6315,22 +6324,12 @@ const Violations = {
                         ${infoItem('حالة المخالفة', v.status, { accent: v.status === 'محلول' ? 'vr-success' : 'vr-danger' })}
                         ${infoItem('تسلسل المخالفة خلال الشهر', v.violationSequenceInMonth)}
                         ${infoItem('القيمة المالية', this.formatFineAmount(Number(this.getEffectiveFineAmount(v))), { accent: 'vr-money' })}
-                        ${infoItem('تفاصيل المخالفة', v.violationDetails, { wide: true })}
-                        ${infoItem('الإجراء المتخذ', v.actionTaken, { wide: true })}
+                        ${v.violationDetails ? infoItem('تفاصيل المخالفة', v.violationDetails, { wide: true }) : ''}
+                        ${v.actionTaken ? infoItem('الإجراء المتخذ', v.actionTaken, { wide: true }) : ''}
                     </div>
                 </section>
 
-                <section class="vr-section">
-                    <div class="vr-section-title">بيانات التوثيق والمتابعة</div>
-                    <div class="vr-grid">
-                        ${infoItem('المعرف الداخلي للسجل', v.id)}
-                        ${infoItem('كود ISO', v.isoCode)}
-                        ${infoItem('تاريخ إنشاء السجل', formatDateTime(v.createdAt))}
-                        ${infoItem('آخر تحديث', formatDateTime(v.updatedAt))}
-                    </div>
-                </section>
-
-                ${photoUrl ? `<section class="vr-section"><div class="vr-section-title">صورة المخالفة</div><div class="vr-photo"><img src="${esc(photoUrl, '')}" alt="صورة المخالفة" onerror="this.style.display='none'"></div></section>` : ''}
+                ${photoUrl ? `<section class="vr-section"><div class="vr-section-title">صورة المخالفة</div><div class="vr-photo"><img src="${esc(photoUrl, '')}" alt="صورة المخالفة" onerror="this.closest('.vr-section').style.display='none'"></div></section>` : ''}
 
                 <div class="vr-signatures">
                     <div class="vr-sign"><strong>ممثل المقاول / المخالف</strong>الاسم والتوقيع</div>
@@ -6352,7 +6351,7 @@ const Violations = {
                 inner,
                 false,
                 false,
-                { version: '1.0', includeQRCode: false },
+                { version: '1.0', includeQRCode: false, compactPdfFooter: true },
                 v.createdAt,
                 v.updatedAt
             );
