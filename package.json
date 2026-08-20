@@ -13,6 +13,6 @@
     "test:gates": "npm run test:p3 && npm run test:e2e:smoke"
   },
   "devDependencies": {
-    "@playwright/test": "^1.54.2"
+    "@playwright/test": "^1.58.0"
   }
 }

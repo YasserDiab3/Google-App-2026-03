@@ -1607,6 +1607,18 @@ function formatObjectKeyValues_(obj, maxKeys) {
     }
 }
 
+/**
+ * SEC-02: تحييد الرموز الخطرة في بداية النصوص لمنع Spreadsheet Formula Injection
+ */
+function sanitizeSheetFormulaInjection_(val) {
+    if (typeof val !== 'string' || !val) return val;
+    var firstChar = val.charAt(0);
+    if (firstChar === '=' || firstChar === '+' || firstChar === '-' || firstChar === '@') {
+        return "'" + val;
+    }
+    return val;
+}
+
 function toSheetCellValue_(header, value, sheetName) {
     if (value === null || value === undefined) return '';
     if (value === '') return '';
@@ -1782,7 +1794,7 @@ function toSheetCellValue_(header, value, sheetName) {
         return formatObjectKeyValues_(value, 10);
     }
 
-    return String(value);
+    return sanitizeSheetFormulaInjection_(String(value));
 }
 
 /**
