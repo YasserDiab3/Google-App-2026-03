@@ -8448,10 +8448,29 @@ const DailyObservations = {
                 return null;
             };
 
+            const getObservationPrimaryImageUrl = (obs) => {
+                if (!obs) return '';
+                if (Array.isArray(obs.attachments) && obs.attachments.length > 0) {
+                    const imageAtt = obs.attachments.find(att => {
+                        const type = String(att?.type || '').toLowerCase();
+                        const name = String(att?.name || '').toLowerCase();
+                        const data = String(att?.data || att?.url || att?.directLink || '');
+                        return type.startsWith('image/') ||
+                               name.match(/\.(jpe?g|png|webp|gif|bmp)$/i) ||
+                               data.startsWith('data:image/') ||
+                               data.match(/\/d\/|\/file\/d\/|drive\.google|googleusercontent/i);
+                    }) || obs.attachments[0];
+                    if (imageAtt) {
+                        return imageAtt.data || imageAtt.directLink || imageAtt.url || imageAtt.shareableLink || imageAtt.driveUrl || imageAtt.driveId || '';
+                    }
+                }
+                return obs.image || obs.photo || obs.imageUrl || obs.photoUrl || obs.attachment || obs.directLink || '';
+            };
+
             // جلب كافة صور الملاحظات دفعة واحدة بالتوازي الفائق لمنع أي تأخير في التصدير
             const [logoImgObj, obsImages] = await Promise.all([
                 formatPptxImage(logoUrl),
-                Promise.all(exportBatch.map(obs => formatPptxImage(this._getObservationPrimaryImageUrl(obs))))
+                Promise.all(exportBatch.map(obs => formatPptxImage(getObservationPrimaryImageUrl(obs))))
             ]);
 
             // ══════════════════════════════════════
