@@ -4534,6 +4534,46 @@ const Clinic = {
         return Array.from(set);
     },
 
+    /** مقترحات وظائف المقاولين والعمالة */
+    DEFAULT_CONTRACTOR_POSITIONS: [
+        'عامل',
+        'فني كهرباء',
+        'فني ميكانيكا',
+        'لحام',
+        'براد / فني تركيبات',
+        'نجار مسلح',
+        'حداد مسلح',
+        'فني سقالات',
+        'سائق معدات',
+        'مشرف موقع',
+        'مسؤول سلامة (HSE Officer)',
+        'مهندس موقع',
+        'فني عزل',
+        'عامل نظافة / بوفيه',
+        'مساعد فني'
+    ],
+
+    /**
+     * الحصول على مقترحات وظائف المقاولين
+     * @returns {string[]}
+     */
+    getContractorPositionSuggestions() {
+        const set = new Set(this.DEFAULT_CONTRACTOR_POSITIONS || []);
+        (AppState.appData?.employees || []).forEach(emp => {
+            const p = String(emp.position || '').trim();
+            if (p) set.add(p);
+        });
+        (AppState.appData?.clinicVisits || []).forEach(v => {
+            const cp = String(v.contractorPosition || v.employeePosition || '').trim();
+            if (cp && cp.length > 1) set.add(cp);
+        });
+        (AppState.appData?.violations || []).forEach(v => {
+            const vp = String(v.contractorPosition || '').trim();
+            if (vp) set.add(vp);
+        });
+        return Array.from(set).sort((a, b) => a.localeCompare(b, 'ar', { sensitivity: 'base' }));
+    },
+
     /**
      * الحصول على قائمة أنواع الزيارة (من إعدادات المدير أو الافتراضية)
      * @returns {string[]}
@@ -10998,7 +11038,7 @@ const Clinic = {
         if (contractorPositionInput) {
             if (personType === 'contractor' || personType === 'external') {
                 contractorPositionInput.required = true;
-                contractorPositionInput.placeholder = 'أدخل الوظيفة يدوياً';
+                contractorPositionInput.placeholder = 'اختر من المقترحات أو أدخل الوظيفة يدوياً';
             } else {
                 contractorPositionInput.required = false;
                 contractorPositionInput.value = '';
@@ -12054,10 +12094,14 @@ const Clinic = {
                             </div>
                             <div id="visit-contractor-position-container" style="display: ${visitData?.personType === 'contractor' || visitData?.personType === 'external' ? 'block' : 'none'};">
                                 <label for="visit-contractor-position" class="block text-sm font-semibold text-gray-700 mb-2">الوظيفة *</label>
-                                <input type="text" id="visit-contractor-position" class="form-input"
+                                <input type="text" id="visit-contractor-position" list="visit-contractor-positions-datalist" class="form-input"
                                     value="${visitData?.contractorPosition || visitData?.employeePosition || ''}" 
-                                    placeholder="أدخل الوظيفة يدوياً"
+                                    placeholder="اختر من المقترحات أو أدخل الوظيفة يدوياً"
+                                    autocomplete="off"
                                     ${visitData?.personType === 'contractor' || visitData?.personType === 'external' ? 'required' : ''}>
+                                <datalist id="visit-contractor-positions-datalist">
+                                    ${this.getContractorPositionSuggestions().map(p => `<option value="${Utils.escapeHTML(p)}"></option>`).join('')}
+                                </datalist>
                             </div>
                             <div id="visit-contractor-factory-container" style="display: ${visitData?.personType === 'contractor' || visitData?.personType === 'external' ? 'block' : 'none'};">
                                 <label for="visit-contractor-factory" class="block text-sm font-semibold text-gray-700 mb-2">المصنع</label>
