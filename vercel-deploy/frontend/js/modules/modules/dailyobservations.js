@@ -7984,10 +7984,10 @@ const DailyObservations = {
                         </div>
                         <div>
                             <h3 style="font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
-                                تصدير تقرير PPT الإحصائي
-                                <span style="font-size: 0.7rem; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 20px; font-weight: 700;">HSE Standard</span>
+                                تصدير تقرير PPT التنفيذي (Top 10)
+                                <span style="font-size: 0.7rem; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 20px; font-weight: 700;">Executive Standard</span>
                             </h3>
-                            <p style="font-size: 13px; color: #64748b; margin: 3px 0 0 0;">حدد الخيارات والفلترة المطلوبة لتوليد عرض تقديمـي احترافي</p>
+                            <p style="font-size: 13px; color: #64748b; margin: 3px 0 0 0;">عرض تقديمي منسق ومنمق لأبرز الملاحظات ومؤشرات الأداء التنفيذية</p>
                         </div>
                     </div>
                     <button type="button" class="modal-close" style="width: 36px; height: 36px; border-radius: 50%; border: none; outline: none; background: #f8fafc; color: #64748b; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#fee2e2'; this.style.color='#ef4444';" onmouseout="this.style.background='#f8fafc'; this.style.color='#64748b';">&times;</button>
@@ -7996,8 +7996,8 @@ const DailyObservations = {
                 <!-- كارت الإرشادات والأزرار -->
                 <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-radius: 14px; padding: 14px 18px; margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px;">
                     <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #0369a1; font-weight: 600; line-height: 1.4;">
-                        <i class="fas fa-shield-alt" style="font-size: 18px; color: #0284c7; flex-shrink: 0;"></i>
-                        <span>سيتم إنشاء تقرير PPT بتنسيق الشرائح المعتمد وفقاً للهوية البصرية لملاحظات السلامة.</span>
+                        <i class="fas fa-crown" style="font-size: 18px; color: #d97706; flex-shrink: 0;"></i>
+                        <span>يتم تصدير أبرز 10 ملاحظات ذات الأولوية القصوى والخطورة العالية طبق الأصل للمؤشرات التنفيذية.</span>
                     </div>
                     ${isAdmin ? `
                     <button type="button" id="ppt-template-id-settings-btn" style="white-space: nowrap; background: #ffffff; border: 1px solid #cbd5e1; color: #334155; padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='#f1f5f9'; this.style.borderColor='#94a3b8';" onmouseout="this.style.background='#ffffff'; this.style.borderColor='#cbd5e1';">
@@ -8009,15 +8009,17 @@ const DailyObservations = {
                 <!-- حقول النموذج -->
                 <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
                     
-                    <!-- الصف الأول: الموقع والحالة -->
+                    <!-- الصف الأول: الموقع ونطاق الملاحظات -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                         <div>
                             <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;">
-                                <i class="fas fa-industry" style="color: #2563eb; margin-left: 6px;"></i>الموقع / المصنع
+                                <i class="fas fa-list-ol" style="color: #2563eb; margin-left: 6px;"></i>نطاق التقرير والعدد
                             </label>
-                            <select id="dailyobs-ppt-site" style="width: 100%; padding: 11px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; font-weight: 600; color: #0f172a; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
-                                <option value="">جميع المواقع / المصانع</option>
-                                ${siteOptions.map((s) => `<option value="${Utils.escapeHTML(s)}">${Utils.escapeHTML(s)}</option>`).join('')}
+                            <select id="dailyobs-ppt-count" style="width: 100%; padding: 11px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; font-weight: 700; color: #1e3a8a; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
+                                <option value="10" selected>🌟 أبرز 10 ملاحظات (Top 10 - الموصى به)</option>
+                                <option value="20">أبرز 20 ملاحظة (Top 20)</option>
+                                <option value="30">أبرز 30 ملاحظة (Top 30)</option>
+                                <option value="50">أبرز 50 ملاحظة (Top 50)</option>
                             </select>
                         </div>
                         <div>
@@ -8025,7 +8027,7 @@ const DailyObservations = {
                                 <i class="fas fa-tasks" style="color: #16a34a; margin-left: 6px;"></i>حالة الملاحظات <span style="color: #dc2626;">*</span>
                             </label>
                             <select id="dailyobs-ppt-status" style="width: 100%; padding: 11px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; font-weight: 700; color: #15803d; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
-                                <option value="all" selected>جميع الملاحظات (المفتوحة والمغلقة والقائمة)</option>
+                                <option value="all" selected>جميع الملاحظات (المفتوحة والمغلقة)</option>
                                 <option value="open">الملاحظات المفتوحة فقط (Open Only)</option>
                                 <option value="closed">الملاحظات المغلقة فقط (Closed Only)</option>
                                 <option value="in_progress">الملاحظات قيد التنفيذ فقط (In Progress)</option>
@@ -8033,7 +8035,7 @@ const DailyObservations = {
                         </div>
                     </div>
 
-                    <!-- الصف الثاني: الإدارة ولغة التقرير -->
+                    <!-- الصف الثاني: الإدارة والموقع -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                         <div>
                             <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;">
@@ -8046,16 +8048,16 @@ const DailyObservations = {
                         </div>
                         <div>
                             <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;">
-                                <i class="fas fa-language" style="color: #6366f1; margin-left: 6px;"></i>لغة التقرير <span style="color: #dc2626;">*</span>
+                                <i class="fas fa-industry" style="color: #6366f1; margin-left: 6px;"></i>الموقع / المصنع
                             </label>
-                            <select id="dailyobs-ppt-language" style="width: 100%; padding: 11px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; font-weight: 700; color: #1e40af; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
-                                <option value="ar" selected>🇪🇬 العربية (Arabic)</option>
-                                <option value="en">🇬🇧 الإنجليزية (English)</option>
+                            <select id="dailyobs-ppt-site" style="width: 100%; padding: 11px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; font-weight: 600; color: #0f172a; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
+                                <option value="">جميع المواقع / المصانع</option>
+                                ${siteOptions.map((s) => `<option value="${Utils.escapeHTML(s)}">${Utils.escapeHTML(s)}</option>`).join('')}
                             </select>
                         </div>
                     </div>
 
-                    <!-- الصف الثالث: تاريخ التقرير ونطاق التواريخ -->
+                    <!-- الصف الثالث: تاريخ التقرير واللغة -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                         <div>
                             <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;">
@@ -8064,13 +8066,13 @@ const DailyObservations = {
                             <input id="dailyobs-ppt-report-date" type="date" value="${todayStr}" style="width: 100%; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; font-weight: 600; color: #0f172a; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
                         </div>
                         <div>
-                            <label style="display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 6px;">
-                                <i class="fas fa-calendar-alt" style="color: #9333ea; margin-left: 6px;"></i>من تاريخ - إلى تاريخ (اختياري)
+                            <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-language" style="color: #6366f1; margin-left: 6px;"></i>لغة التقرير
                             </label>
-                            <div style="display: flex; gap: 8px;">
-                                <input id="dailyobs-ppt-from-date" type="date" value="" style="width: 50%; padding: 9px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 12px; color: #0f172a;">
-                                <input id="dailyobs-ppt-to-date" type="date" value="" style="width: 50%; padding: 9px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 12px; color: #0f172a;">
-                            </div>
+                            <select id="dailyobs-ppt-language" style="width: 100%; padding: 11px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; font-weight: 700; color: #1e40af; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
+                                <option value="ar" selected>🇪🇬 العربية (Arabic)</option>
+                                <option value="en">🇬🇧 الإنجليزية (English)</option>
+                            </select>
                         </div>
                     </div>
 
@@ -8081,7 +8083,7 @@ const DailyObservations = {
                     <button type="button" id="dailyobs-ppt-cancel-btn" style="padding: 11px 22px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; font-weight: 700; color: #475569; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a';" onmouseout="this.style.background='#f8fafc'; this.style.color='#475569';">إلغاء</button>
                     
                     <button type="button" id="dailyobs-ppt-export-btn" style="display: flex; align-items: center; gap: 10px; padding: 11px 26px; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; font-size: 14px; font-weight: 700; border-radius: 10px; border: none; outline: none; cursor: pointer; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(37, 99, 235, 0.5)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 14px rgba(37, 99, 235, 0.35)';">
-                        <i class="fas fa-file-powerpoint" style="font-size: 16px; color: #fb923c;"></i> تصدير تقرير PPT
+                        <i class="fas fa-file-powerpoint" style="font-size: 16px; color: #fb923c;"></i> تصدير تقرير Top 10
                     </button>
                 </div>
 
@@ -8105,129 +8107,19 @@ const DailyObservations = {
         }
 
         modal.querySelector('#dailyobs-ppt-export-btn')?.addEventListener('click', async () => {
+            const maxCount = parseInt(modal.querySelector('#dailyobs-ppt-count')?.value || '10', 10);
             const status = modal.querySelector('#dailyobs-ppt-status')?.value || 'all';
             const siteName = (modal.querySelector('#dailyobs-ppt-site')?.value || '').trim();
             const dept = (modal.querySelector('#dailyobs-ppt-department')?.value || '').trim();
             const lang = modal.querySelector('#dailyobs-ppt-language')?.value || 'ar';
             const reportDate = modal.querySelector('#dailyobs-ppt-report-date')?.value || '';
-            const fromDate = modal.querySelector('#dailyobs-ppt-from-date')?.value || '';
-            const toDate = modal.querySelector('#dailyobs-ppt-to-date')?.value || '';
 
-            // إغلاق نافذة التصدير فوراً قبل بدء العملية
             close();
-            await this.exportPptReport({ department: dept, siteName, language: lang, reportDate, fromDate, toDate, status });
+            await this.exportPptReport({ department: dept, siteName, language: lang, reportDate, status, maxCount });
         });
     },
 
-    _getObservationPrimaryImageUrl(observation) {
-        if (!observation) return '';
-
-        const extractFromItem = (item) => {
-            if (!item) return '';
-            if (typeof item === 'string') {
-                let s = item.trim();
-                if (!s) return '';
-                if (s.startsWith('data:image/') || s.startsWith('data:')) return s;
-                if (s.startsWith('http://') || s.startsWith('https://')) {
-                    const match = s.match(/^(.+?)\s*-\s*(https?:\/\/.+)$/);
-                    return match ? match[2].trim() : s;
-                }
-                // Check if JSON array/object encoded string
-                if (s.startsWith('{') || s.startsWith('[')) {
-                    try {
-                        const parsed = JSON.parse(s);
-                        return extractFromItem(parsed);
-                    } catch (e) {}
-                }
-                // Check raw Base64 prefix
-                if (s.startsWith('/9j/') || s.startsWith('iVBORw') || s.startsWith('R0lGOD') || s.startsWith('UklGR')) {
-                    return 'data:image/jpeg;base64,' + s;
-                }
-                // Check raw Google Drive File ID
-                if (/^[a-zA-Z0-9_-]{25,}$/.test(s)) {
-                    return `https://drive.google.com/thumbnail?id=${s}&sz=w1200`;
-                }
-                return s;
-            }
-            if (typeof item === 'object') {
-                if (Array.isArray(item)) {
-                    for (const sub of item) {
-                        const res = extractFromItem(sub);
-                        if (res) return res;
-                    }
-                    return '';
-                }
-                const val = item.data || item.url || item.directLink || item.shareableLink || item.driveUrl || item.webContentLink || item.thumbnailLink || item.link || item.cloudLink?.url || item.fileUrl || item.imageUrl || item.image || item.photo || '';
-                if (val) return extractFromItem(val);
-                const fid = item.driveFileId || item.fileId || item.id;
-                if (typeof fid === 'string' && /^[a-zA-Z0-9_-]{25,}$/.test(fid)) {
-                    return `https://drive.google.com/thumbnail?id=${fid}&sz=w1200`;
-                }
-            }
-            return '';
-        };
-
-        const fieldsToCheck = [
-            observation.imageUrl,
-            observation.image,
-            observation.photo,
-            observation.fileUrl,
-            observation.picture,
-            observation.evidence,
-            observation.img,
-            observation.actionPhoto,
-            observation.correctiveActionImage,
-            observation.attachments,
-            observation.images,
-            observation.photos,
-            observation.afterExecutionImages,
-            observation.beforeExecutionImages,
-            observation.files
-        ];
-
-        for (const f of fieldsToCheck) {
-            const res = extractFromItem(f);
-            if (res) return res;
-        }
-
-        return '';
-    },
-
-    showBackgroundExportWidget(taskId, title) {
-        const existing = document.getElementById(taskId);
-        if (existing) existing.remove();
-
-        const widget = document.createElement('div');
-        widget.id = taskId;
-        widget.className = 'background-export-widget fixed bottom-5 left-5 bg-white border border-blue-200 shadow-2xl rounded-xl p-4 flex items-center gap-3 transition-all duration-300 transform translate-y-0';
-        widget.style.zIndex = '999999';
-        widget.style.maxWidth = '380px';
-        widget.innerHTML = `
-            <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                <i class="fas fa-spinner fa-spin text-lg"></i>
-            </div>
-            <div class="flex-1 min-w-0">
-                <div class="text-xs font-semibold text-blue-600 mb-0.5">تصدير بالخلفية</div>
-                <div class="text-sm font-bold text-gray-800 truncate">${Utils.escapeHTML(title)}</div>
-                <div class="text-xs text-gray-500 mt-0.5">يمكنك الاستمرار في العمل على النظام بحرية</div>
-            </div>
-            <button type="button" onclick="document.getElementById('${taskId}')?.remove()" class="text-gray-400 hover:text-gray-600 text-sm p-1">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-        document.body.appendChild(widget);
-    },
-
-    removeBackgroundExportWidget(taskId) {
-        const widget = document.getElementById(taskId);
-        if (widget) {
-            widget.style.opacity = '0';
-            widget.style.transform = 'translateY(20px)';
-            setTimeout(() => widget.remove(), 300);
-        }
-    },
-
-    async exportPptReport({ department = '', siteName = '', language = 'ar', reportDate = '', fromDate = '', toDate = '', status = 'all' } = {}) {
+    async exportPptReport({ department = '', siteName = '', language = 'ar', reportDate = '', fromDate = '', toDate = '', status = 'all', maxCount = 10 } = {}) {
         try {
             const observationsRaw = Array.isArray(AppState.appData.dailyObservations)
                 ? AppState.appData.dailyObservations
@@ -8265,7 +8157,28 @@ const DailyObservations = {
                 return;
             }
 
-            const exportBatch = filtered.slice(0, 50);
+            // ترتيب الملاحظات لاختيار Top 10 حسب الأولوية القصوى (الخطورة العالية أولاً، ثم المفتوحة، ثم الأحدث)
+            const sorted = [...filtered].sort((a, b) => {
+                const riskScore = (r) => {
+                    const s = String(r || '').toLowerCase();
+                    if (s.includes('عالي') || s.includes('حرج') || s.includes('high') || s.includes('critical')) return 3;
+                    if (s.includes('متوسط') || s.includes('medium')) return 2;
+                    return 1;
+                };
+                const rDiff = riskScore(b.riskLevel) - riskScore(a.riskLevel);
+                if (rDiff !== 0) return rDiff;
+
+                const statusScore = (st) => (st !== 'مغلق' ? 2 : 1);
+                const sDiff = statusScore(b.status) - statusScore(a.status);
+                if (sDiff !== 0) return sDiff;
+
+                const dateA = a.date ? new Date(a.date).getTime() : 0;
+                const dateB = b.date ? new Date(b.date).getTime() : 0;
+                return dateB - dateA;
+            });
+
+            const limit = parseInt(maxCount, 10) || 10;
+            const exportBatch = sorted.slice(0, limit);
             const taskId = 'ppt_export_' + Date.now();
             const taskTitle = `جاري تصميم وتصدير تقرير PPTX (${exportBatch.length} ملاحظة)...`;
 
