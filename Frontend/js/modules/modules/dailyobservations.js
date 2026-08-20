@@ -8121,46 +8121,75 @@ const DailyObservations = {
 
     _getObservationPrimaryImageUrl(observation) {
         if (!observation) return '';
-        if (typeof observation.imageUrl === 'string' && observation.imageUrl.trim()) return observation.imageUrl.trim();
-        if (typeof observation.image === 'string' && observation.image.trim()) return observation.image.trim();
-        if (typeof observation.photo === 'string' && observation.photo.trim()) return observation.photo.trim();
-        if (typeof observation.fileUrl === 'string' && observation.fileUrl.trim()) return observation.fileUrl.trim();
-        if (typeof observation.picture === 'string' && observation.picture.trim()) return observation.picture.trim();
 
-        if (Array.isArray(observation.images) && observation.images.length > 0) {
-            const firstImg = observation.images.find(u => typeof u === 'string' && u.trim());
-            if (firstImg) return firstImg.trim();
-        }
-
-        if (Array.isArray(observation.photos) && observation.photos.length > 0) {
-            const firstImg = observation.photos.find(u => typeof u === 'string' && u.trim());
-            if (firstImg) return firstImg.trim();
-        }
-
-        if (Array.isArray(observation.afterExecutionImages) && observation.afterExecutionImages.length > 0) {
-            const firstImg = observation.afterExecutionImages.find(u => {
-                if (typeof u === 'string' && u.trim()) return true;
-                if (u && typeof u === 'object' && (u.data || u.url)) return true;
-                return false;
-            });
-            if (firstImg) {
-                return typeof firstImg === 'string' ? firstImg.trim() : (firstImg.data || firstImg.url);
+        const extractFromItem = (item) => {
+            if (!item) return '';
+            if (typeof item === 'string') {
+                let s = item.trim();
+                if (!s) return '';
+                if (s.startsWith('data:image/') || s.startsWith('data:')) return s;
+                if (s.startsWith('http://') || s.startsWith('https://')) {
+                    const match = s.match(/^(.+?)\s*-\s*(https?:\/\/.+)$/);
+                    return match ? match[2].trim() : s;
+                }
+                // Check if JSON array/object encoded string
+                if (s.startsWith('{') || s.startsWith('[')) {
+                    try {
+                        const parsed = JSON.parse(s);
+                        return extractFromItem(parsed);
+                    } catch (e) {}
+                }
+                // Check raw Base64 prefix
+                if (s.startsWith('/9j/') || s.startsWith('iVBORw') || s.startsWith('R0lGOD') || s.startsWith('UklGR')) {
+                    return 'data:image/jpeg;base64,' + s;
+                }
+                // Check raw Google Drive File ID
+                if (/^[a-zA-Z0-9_-]{25,}$/.test(s)) {
+                    return `https://drive.google.com/thumbnail?id=${s}&sz=w1200`;
+                }
+                return s;
             }
+            if (typeof item === 'object') {
+                if (Array.isArray(item)) {
+                    for (const sub of item) {
+                        const res = extractFromItem(sub);
+                        if (res) return res;
+                    }
+                    return '';
+                }
+                const val = item.data || item.url || item.directLink || item.shareableLink || item.driveUrl || item.webContentLink || item.thumbnailLink || item.link || item.cloudLink?.url || item.fileUrl || item.imageUrl || item.image || item.photo || '';
+                if (val) return extractFromItem(val);
+                const fid = item.driveFileId || item.fileId || item.id;
+                if (typeof fid === 'string' && /^[a-zA-Z0-9_-]{25,}$/.test(fid)) {
+                    return `https://drive.google.com/thumbnail?id=${fid}&sz=w1200`;
+                }
+            }
+            return '';
+        };
+
+        const fieldsToCheck = [
+            observation.imageUrl,
+            observation.image,
+            observation.photo,
+            observation.fileUrl,
+            observation.picture,
+            observation.evidence,
+            observation.img,
+            observation.actionPhoto,
+            observation.correctiveActionImage,
+            observation.attachments,
+            observation.images,
+            observation.photos,
+            observation.afterExecutionImages,
+            observation.beforeExecutionImages,
+            observation.files
+        ];
+
+        for (const f of fieldsToCheck) {
+            const res = extractFromItem(f);
+            if (res) return res;
         }
 
-        const attachments = Array.isArray(observation?.attachments) ? observation.attachments : [];
-        for (const a of attachments) {
-            if (!a) continue;
-            if (typeof a === 'string' && a.trim()) {
-                const s = a.trim();
-                const match = s.match(/^(.+?)\s*-\s*(https?:\/\/.+)$/);
-                return match ? match[2].trim() : s;
-            }
-            if (typeof a === 'object') {
-                const dataVal = a.data || a.url || a.directLink || a.shareableLink || a.cloudLink?.url || a.driveUrl || a.link || '';
-                if (dataVal) return dataVal;
-            }
-        }
         return '';
     },
 
@@ -8264,19 +8293,39 @@ const DailyObservations = {
 
             const imageCache = new Map();
             // مساعد استخراج وتحميل الصور وتضمينها كـ Base64 مدمج في ملف PPTX
-            const formatPptxImage = async (url) => {
-                if (!url || typeof url !== 'string' || !url.trim()) return null;
-                url = url.trim();
+            const formatPptxImage = async (input) => {
+                if (!input) return null;
+                let url = '';
+                if (typeof input === 'object') {
+                    if (input.data && typeof input.data === 'string' && input.data.trim()) {
+                        return { data: input.data.trim() };
+                    }
+                    if (input.path && typeof input.path === 'string' && input.path.trim()) {
+                        return { path: input.path.trim() };
+                    }
+                    url = input.url || input.directLink || input.shareableLink || input.link || '';
+                } else if (typeof input === 'string') {
+                    url = input.trim();
+                }
+                if (!url) return null;
+
+                // التعامل مع بادئات Base64 المباشرة
+                if (url.startsWith('/9j/') || url.startsWith('iVBORw') || url.startsWith('R0lGOD') || url.startsWith('UklGR')) {
+                    url = 'data:image/jpeg;base64,' + url;
+                }
+
                 if (url.startsWith('data:image/') || url.startsWith('data:')) {
                     return { data: url };
                 }
+
                 if (imageCache.has(url)) return imageCache.get(url);
 
                 // استخراج معرف ملف Google Drive إن وجد
                 const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
                                    url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
                                    url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
-                                   url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+                                   url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/) ||
+                                   (url.match(/^[a-zA-Z0-9_-]{25,}$/) ? [null, url] : null);
                 const fileId = driveMatch ? driveMatch[1] : '';
 
                 // 1. محاولة جلب الصورة مباشرة عبر OAuth Token من Google Drive API
@@ -8287,7 +8336,7 @@ const DailyObservations = {
                                       AppState.googleAccessToken;
                         if (token) {
                             const controller = new AbortController();
-                            const timer = setTimeout(() => controller.abort(), 1800);
+                            const timer = setTimeout(() => controller.abort(), 6000);
                             const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
                                 headers: { Authorization: `Bearer ${token}` },
                                 signal: controller.signal
@@ -8307,14 +8356,15 @@ const DailyObservations = {
                                 }
                             }
                         }
-                    } catch(e) {}
+                    } catch (e) {}
                 }
 
-                // 2. محاولة جلب الصورة عبر الروابط المباشرة كـ Blob
+                // 2. تجميع قائمة بالروابط البديلة لتحميل الصورة كـ Blob
                 const candidates = [];
                 if (fileId) {
                     candidates.push(`https://lh3.googleusercontent.com/d/${fileId}=w1200`);
                     candidates.push(`https://drive.google.com/thumbnail?id=${fileId}&sz=w1200`);
+                    candidates.push(`https://drive.google.com/uc?export=download&id=${fileId}`);
                     candidates.push(`https://drive.google.com/uc?export=view&id=${fileId}`);
                 }
                 if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -8324,23 +8374,26 @@ const DailyObservations = {
                 for (const cand of candidates) {
                     try {
                         const controller = new AbortController();
-                        const timer = setTimeout(() => controller.abort(), 1200);
+                        const timer = setTimeout(() => controller.abort(), 5000);
                         const res = await fetch(cand, { mode: 'cors', signal: controller.signal });
                         clearTimeout(timer);
                         if (res.ok) {
                             const blob = await res.blob();
-                            const dataUrl = await new Promise((resolve) => {
-                                const reader = new FileReader();
-                                reader.onloadend = () => resolve(reader.result);
-                                reader.readAsDataURL(blob);
-                            });
-                            if (dataUrl && String(dataUrl).startsWith('data:image/')) {
-                                const resObj = { data: dataUrl };
-                                imageCache.set(url, resObj);
-                                return resObj;
+                            if (blob && blob.size > 0) {
+                                const dataUrl = await new Promise((resolve) => {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => resolve(reader.result);
+                                    reader.readAsDataURL(blob);
+                                });
+                                if (dataUrl && (String(dataUrl).startsWith('data:image/') || String(dataUrl).startsWith('data:application/octet-stream'))) {
+                                    const cleanDataUrl = String(dataUrl).replace('data:application/octet-stream', 'data:image/jpeg');
+                                    const resObj = { data: cleanDataUrl };
+                                    imageCache.set(url, resObj);
+                                    return resObj;
+                                }
                             }
                         }
-                    } catch(e) {}
+                    } catch (e) {}
                 }
 
                 // 3. محاولة التحميل عبر Image + Canvas
@@ -8349,7 +8402,7 @@ const DailyObservations = {
                         const dataUrl = await new Promise((resolve) => {
                             const img = new Image();
                             img.crossOrigin = 'anonymous';
-                            const timer = setTimeout(() => resolve(null), 1200);
+                            const timer = setTimeout(() => resolve(null), 5000);
                             img.onload = () => {
                                 clearTimeout(timer);
                                 try {
@@ -8358,8 +8411,8 @@ const DailyObservations = {
                                     canvas.height = img.naturalHeight || 600;
                                     const ctx = canvas.getContext('2d');
                                     ctx.drawImage(img, 0, 0);
-                                    resolve(canvas.toDataURL('image/jpeg', 0.88));
-                                } catch(e) {
+                                    resolve(canvas.toDataURL('image/jpeg', 0.90));
+                                } catch (e) {
                                     resolve(null);
                                 }
                             };
@@ -8371,7 +8424,15 @@ const DailyObservations = {
                             imageCache.set(url, resObj);
                             return resObj;
                         }
-                    } catch(e) {}
+                    } catch (e) {}
+                }
+
+                // 4. خيار أخير: تمرير الرابط المباشر إلى PptxGenJS كـ path
+                const fallbackUrl = candidates[0] || (url.startsWith('http') ? url : '');
+                if (fallbackUrl) {
+                    const resObj = { path: fallbackUrl };
+                    imageCache.set(url, resObj);
+                    return resObj;
                 }
 
                 return null;
