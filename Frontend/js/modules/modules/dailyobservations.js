@@ -6142,9 +6142,13 @@ const DailyObservations = {
                     <div class="top10-hero__title" data-i18n="module.dailyobs.top10.title">Top 10</div>
                     <p class="top10-hero__sub" data-i18n="module.dailyobs.top10.subtitle">ترتيب أعلى المخاطر حسب الفئات المعيارية مع تحليل بصري تفاعلي وربط مباشر بسجل الملاحظات</p>
                     <div class="top10-hero__actions">
-                        <button id="export-top10-ppt-hero-btn" class="btn-primary" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%); border: 1px solid rgba(255,255,255,.35); box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4); font-weight: 700; cursor: pointer;">
-                            <i class="fas fa-file-powerpoint ml-2 text-white"></i>
-                            <span data-i18n="module.dailyobs.top10.btn.exportPpt">تصدير تقرير Top 10 (PPT)</span>
+                        <button id="export-top10-pdf-hero-btn" class="btn-secondary" style="background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.35); color: #fff; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-file-pdf text-red-400"></i>
+                            <span data-i18n="module.dailyobs.top10.btn.exportPdf">تصدير PDF</span>
+                        </button>
+                        <button id="export-top10-ppt-hero-btn" class="btn-secondary" style="background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.35); color: #fff; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-file-powerpoint text-amber-400"></i>
+                            <span data-i18n="module.dailyobs.top10.btn.exportPpt">تصدير PPT</span>
                         </button>
                         ${this.canDailyObservationsFullAdminUi() ? `
                         <button id="manage-top10-categories-btn" class="btn-primary" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);">
@@ -6336,10 +6340,16 @@ const DailyObservations = {
                     </h3>
                     <p class="text-sm text-gray-500 mb-0">${Utils.escapeHTML(this._t('module.dailyobs.top10.ranking.subtitle', 'الترتيب حسب درجة المخاطر والأولوية القصوى'))}</p>
                 </div>
-                <button id="export-top10-table-ppt-btn" class="btn-primary" style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); font-weight: 700; padding: 9px 18px; font-size: 13.5px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); cursor: pointer;">
-                    <i class="fas fa-file-powerpoint ml-2 text-amber-400"></i>
-                    <span>تصدير تقرير Top 10 (PPT)</span>
-                </button>
+                <div class="flex items-center gap-2">
+                    <button id="export-top10-table-pdf-btn" class="btn-secondary" style="padding: 7px 14px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-file-pdf text-red-500"></i>
+                        <span>تصدير PDF</span>
+                    </button>
+                    <button id="export-top10-table-ppt-btn" class="btn-secondary" style="padding: 7px 14px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-file-powerpoint text-amber-500"></i>
+                        <span>تصدير PPT</span>
+                    </button>
+                </div>
             </div>
             ${top10.length === 0 ? `
                 <div class="empty-state">
@@ -6452,15 +6462,28 @@ const DailyObservations = {
         if (top10Root) this.applyModuleI18n(top10Root);
 
         setTimeout(() => {
+            const heroPdfBtn = document.getElementById('export-top10-pdf-hero-btn');
+            if (heroPdfBtn && heroPdfBtn.dataset.bound !== '1') {
+                heroPdfBtn.dataset.bound = '1';
+                heroPdfBtn.addEventListener('click', () => this.exportTop10PDF());
+            }
+
             const heroPptBtn = document.getElementById('export-top10-ppt-hero-btn');
             if (heroPptBtn && heroPptBtn.dataset.bound !== '1') {
                 heroPptBtn.dataset.bound = '1';
-                heroPptBtn.addEventListener('click', () => this.showExportPptModal());
+                heroPptBtn.addEventListener('click', () => this.exportTop10PptReport());
             }
+
+            const tablePdfBtn = document.getElementById('export-top10-table-pdf-btn');
+            if (tablePdfBtn && tablePdfBtn.dataset.bound !== '1') {
+                tablePdfBtn.dataset.bound = '1';
+                tablePdfBtn.addEventListener('click', () => this.exportTop10PDF());
+            }
+
             const tablePptBtn = document.getElementById('export-top10-table-ppt-btn');
             if (tablePptBtn && tablePptBtn.dataset.bound !== '1') {
                 tablePptBtn.dataset.bound = '1';
-                tablePptBtn.addEventListener('click', () => this.showExportPptModal());
+                tablePptBtn.addEventListener('click', () => this.exportTop10PptReport());
             }
 
             const manageCatBtn = document.getElementById('manage-top10-categories-btn');
@@ -7978,11 +8001,78 @@ const DailyObservations = {
     },
 
     /**
-     * تصدير تقرير PPT (حسب الإدارة المختارة)
-     * - الشريحة الأولى: بيانات ثابتة (الإدارة + تاريخ التقرير)
-     * - كل ملاحظة: شريحة بنفس تصميم الـ Template
-     * - الشريحة الأخيرة: ثابتة
+     * تصدير تقرير Top 10 كملف PDF
      */
+    async exportTop10PDF() {
+        try {
+            Notification.info('🚀 جاري إنشاء وتجهيز تقرير Top 10 بصيغة PDF...');
+            const root = document.getElementById('top10-module-root');
+            if (!root) {
+                Notification.error('تعذر العثور على محتوى Top 10');
+                return;
+            }
+
+            await this._loadAnalyticsLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', () => typeof html2canvas !== 'undefined');
+            await this._loadAnalyticsLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => typeof window.jspdf !== 'undefined');
+
+            const canvas = await html2canvas(root, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                ignoreElements: (el) => {
+                    return el.id === 'manage-top10-categories-btn' ||
+                           el.id === 'add-top10-chart-btn' ||
+                           el.id === 'manage-top10-charts-btn' ||
+                           el.id === 'export-top10-pdf-hero-btn' ||
+                           el.id === 'export-top10-ppt-hero-btn' ||
+                           el.id === 'export-top10-table-pdf-btn' ||
+                           el.id === 'export-top10-table-ppt-btn';
+                }
+            });
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdfW = pdf.internal.pageSize.getWidth();
+            const pdfH = pdf.internal.pageSize.getHeight();
+            const margin = 8;
+            const footerH = 8;
+            const contentW = pdfW - margin * 2;
+            const ratio = contentW / canvas.width;
+            const totalContentH = canvas.height * ratio;
+            const pageContentH = pdfH - margin - footerH;
+            const totalPages = Math.max(1, Math.ceil(totalContentH / pageContentH));
+            const pageHeightPx = pageContentH / ratio;
+
+            for (let p = 0; p < totalPages; p++) {
+                if (p > 0) pdf.addPage();
+                const sliceCanvas = document.createElement('canvas');
+                const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
+                sliceCanvas.width = canvas.width;
+                sliceCanvas.height = sliceH;
+                const ctx = sliceCanvas.getContext('2d');
+                ctx.drawImage(canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+                const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
+                pdf.addImage(sliceData, 'JPEG', margin, margin, contentW, sliceH * ratio);
+
+                pdf.setDrawColor(226, 232, 240);
+                pdf.line(margin, pdfH - footerH, pdfW - margin, pdfH - footerH);
+                pdf.setTextColor(120, 120, 120);
+                pdf.setFontSize(8);
+                pdf.setFont('helvetica', 'normal');
+                pdf.text('Americana Group — HSE Top 10 Risk Report', margin, pdfH - 3);
+                pdf.text(`Page ${p + 1} / ${totalPages}`, pdfW - margin, pdfH - 3, { align: 'right' });
+            }
+
+            const dateFile = new Date().toISOString().slice(0, 10);
+            pdf.save(`تقرير-Top-10-ملاحظات-السلامة-${dateFile}.pdf`);
+            Notification.success('✅ تم تنزيل تقرير Top 10 بصيغة PDF بنجاح!');
+        } catch (err) {
+            console.error('Top 10 PDF export error:', err);
+            Notification.error('تعذر تصدير PDF — تأكد من الاتصال بالإنترنت وأعد المحاولة');
+        }
+    },
+
     async exportTop10PptReport() {
         await this.exportPptReport({ maxCount: 10, status: 'all' });
     },
@@ -8207,9 +8297,6 @@ const DailyObservations = {
             const taskTitle = `جاري تصميم وتصدير تقرير PPTX (${exportBatch.length} ملاحظة)...`;
 
             const optModal = document.getElementById('ppt-export-options-modal');
-            if (optModal) optModal.remove();
-
-            this.showBackgroundExportWidget(taskId, taskTitle);
             Notification.info('🚀 بدأ تصميم وتصدير ملف العرض التقديمي PPTX...');
 
             // تحميل مكتبة PptxGenJS محلياً في المتصفح
@@ -8896,8 +8983,6 @@ const DailyObservations = {
             // حفظ وتنزيل الملف مباشرة للمستخدم بصيغة PPTX
             const outputFilename = `Daily_Observations_${safeDept}_${new Date().toISOString().slice(0, 10)}.pptx`;
             await pptx.writeFile({ fileName: outputFilename });
-
-            this.removeBackgroundExportWidget(taskId);
             Notification.success(`✅ تم تصدير تقرير PPTX بنجاح بتصميم منسق واحترافي! (${exportBatch.length} ملاحظة)`);
         } catch (error) {
             Utils.safeError('فشل تصدير PPT:', error);
