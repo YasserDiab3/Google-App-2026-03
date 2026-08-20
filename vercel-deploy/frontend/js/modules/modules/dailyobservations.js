@@ -8485,63 +8485,191 @@ const DailyObservations = {
             ], { x: 3.3, y: 5.3, w: 6.7, h: 1.5, align: 'center', valign: 'middle', fontFace: 'Arial' });
 
             // ══════════════════════════════════════
-            // الشريحة 2: نظرة عامة على التقرير (بدون إيموجي لضمان جودة الخط)
+            // الشريحة 2: نظرة عامة على التقرير (لوحة مؤشرات تنفيذية احترافية)
             // ══════════════════════════════════════
             const slide2 = pptx.addSlide();
             slide2.background = { color: 'F8FAFC' };
+
+            // ترويسة الشريحة
             slide2.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.70, fill: { color: '1E3A8A' } });
             slide2.addShape(pptx.ShapeType.rect, { x: 0, y: 0.70, w: '100%', h: 0.04, fill: { color: 'D97706' } });
-            slide2.addText(isEnglish ? 'Report Overview & Key Metrics' : 'نظرة عامة على التقرير', {
-                x: 0.8, y: 0.05, w: 11.7, h: 0.60, fontSize: 18, bold: true, color: 'FFFFFF',
+            
+            slide2.addText(isEnglish ? 'Report Overview & Safety Performance Dashboard' : 'نظرة عامة على التقرير', {
+                x: 4.5, y: 0.05, w: 8.0, h: 0.60, fontSize: 18, bold: true, color: 'FFFFFF',
                 align: isEnglish ? 'left' : 'right', rtl: !isEnglish, fontFace: 'Arial'
             });
+            slide2.addText(isEnglish ? `Total: ${exportBatch.length} Observations` : `إجمالي الملاحظات: ${exportBatch.length} ملاحظة | التاريخ: ${dateLabel}`, {
+                x: 0.4, y: 0.05, w: 4.0, h: 0.60, fontSize: 11, bold: true, color: 'FBBF24',
+                align: isEnglish ? 'right' : 'left', rtl: !isEnglish, fontFace: 'Arial'
+            });
 
+            // حساب المؤشرات
             const totalCount = exportBatch.length;
             const openCount = exportBatch.filter(o => o.status !== 'مغلق').length;
             const closedCount = exportBatch.filter(o => o.status === 'مغلق').length;
-            const highRiskCount = exportBatch.filter(o => String(o.riskLevel || '').includes('عالية') || String(o.riskLevel || '').includes('حرجة') || o.riskLevel === 'عالي').length;
+            const highRiskCount = exportBatch.filter(o => String(o.riskLevel || '').includes('عالي') || String(o.riskLevel || '').includes('حرجة')).length;
+            const mediumRiskCount = exportBatch.filter(o => String(o.riskLevel || '').includes('متوسط')).length;
+            const lowRiskCount = Math.max(0, totalCount - highRiskCount - mediumRiskCount);
 
-            const kpis = [
-                { label: isEnglish ? 'Total Observations' : 'إجمالي الملاحظات', val: totalCount, color: '1E3A8A', bg: 'DBEAFE' },
-                { label: isEnglish ? 'Open Observations' : 'ملاحظات مفتوحة', val: openCount, color: 'B45309', bg: 'FEF3C7' },
-                { label: isEnglish ? 'Closed Observations' : 'ملاحظات مغلقة', val: closedCount, color: '047857', bg: 'D1FAE5' },
-                { label: isEnglish ? 'High Risk' : 'عالية الخطورة', val: highRiskCount, color: 'B91C1C', bg: 'FEE2E2' }
+            const closedPct = Math.round((closedCount / Math.max(1, totalCount)) * 100);
+            const openPct = Math.round((openCount / Math.max(1, totalCount)) * 100);
+            const highRiskPct = Math.round((highRiskCount / Math.max(1, totalCount)) * 100);
+
+            // توزيع أنواع الملاحظات
+            const typeCounts = {};
+            exportBatch.forEach(o => {
+                const t = String(o.observationType || (isEnglish ? 'General' : 'عام')).trim();
+                typeCounts[t] = (typeCounts[t] || 0) + 1;
+            });
+            const topTypes = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]).slice(0, 4);
+
+            // عدد المواقع الفريدة
+            const uniqueSites = new Set(exportBatch.map(o => o.siteName || o.locationName).filter(Boolean)).size || 1;
+
+            // ── الصف العلوي: 4 بطاقات مؤشرات رئيسية (KPI Cards) ──
+            const overviewKpis = [
+                {
+                    label: isEnglish ? 'Total Observations' : 'إجمالي الملاحظات',
+                    val: totalCount,
+                    sub: isEnglish ? '100% of recorded' : 'إجمالي الحالات المرصودة',
+                    color: '1E3A8A', bg: 'DBEAFE', border: '3B82F6'
+                },
+                {
+                    label: isEnglish ? 'Open Actions' : 'ملاحظات مفتوحة',
+                    val: openCount,
+                    sub: isEnglish ? `${openPct}% pending actions` : `${openPct}% قيد المتابعة والتنفيذ`,
+                    color: 'B45309', bg: 'FEF3C7', border: 'F59E0B'
+                },
+                {
+                    label: isEnglish ? 'Closed Observations' : 'ملاحظات مغلقة',
+                    val: closedCount,
+                    sub: isEnglish ? `${closedPct}% resolution rate` : `${closedPct}% نسبة الإنجاز والمعالجة`,
+                    color: '047857', bg: 'D1FAE5', border: '10B981'
+                },
+                {
+                    label: isEnglish ? 'High Risk' : 'عالية الخطورة',
+                    val: highRiskCount,
+                    sub: isEnglish ? `${highRiskPct}% critical priority` : (highRiskCount > 0 ? `${highRiskPct}% تتطلب أولوية قصوى` : 'لا توجد ملاحظات حرجة'),
+                    color: 'B91C1C', bg: 'FEE2E2', border: 'EF4444'
+                }
             ];
 
-            kpis.forEach((k, idx) => {
+            overviewKpis.forEach((k, idx) => {
                 const kx = isEnglish ? (0.5 + idx * 3.1) : (0.5 + (3 - idx) * 3.1);
-                slide2.addShape(pptx.ShapeType.roundRect, { x: kx, y: 0.95, w: 2.85, h: 1.55, fill: { color: k.bg }, line: { color: k.color, width: 2 }, rectRadius: 0.12 });
+                slide2.addShape(pptx.ShapeType.roundRect, { x: kx, y: 0.90, w: 2.85, h: 1.45, fill: { color: k.bg }, line: { color: k.border, width: 1.5 }, rectRadius: 0.1 });
                 slide2.addText([
-                    { text: String(k.val) + '\n', options: { fontSize: 26, bold: true, color: k.color } },
-                    { text: k.label, options: { fontSize: 12.5, bold: true, color: '334155', rtl: !isEnglish } }
-                ], { x: kx, y: 1.0, w: 2.85, h: 1.45, align: 'center', valign: 'middle', fontFace: 'Arial' });
+                    { text: String(k.val) + '\n', options: { fontSize: 24, bold: true, color: k.color } },
+                    { text: k.label + '\n', options: { fontSize: 12, bold: true, color: '1E293B', rtl: !isEnglish } },
+                    { text: k.sub, options: { fontSize: 9.5, color: '64748B', rtl: !isEnglish } }
+                ], { x: kx, y: 0.95, w: 2.85, h: 1.35, align: 'center', valign: 'middle', fontFace: 'Arial' });
             });
 
-            // جدول تفصيلي ملخص
-            const tableRows = [
+            // ── المنطقة الوسطى: 3 أعمدة تحليلية مهنية ومنسقة ──
+            const cardY = 2.50;
+            const cardH = 4.15;
+            const cardW = 3.95;
+
+            // 1. العمود الأيمن (في التنسيق العربي): توزيع مستويات الخطورة
+            const col1X = isEnglish ? 0.5 : 8.88;
+            slide2.addShape(pptx.ShapeType.roundRect, { x: col1X, y: cardY, w: cardW, h: cardH, fill: { color: 'FFFFFF' }, line: { color: 'CBD5E1', width: 1.5 }, rectRadius: 0.08 });
+            slide2.addShape(pptx.ShapeType.rect, { x: col1X, y: cardY, w: cardW, h: 0.38, fill: { color: '1E3A8A' } });
+            slide2.addText(isEnglish ? 'Risk Level Breakdown' : 'توزيع مستويات الخطورة', {
+                x: col1X, y: cardY, w: cardW, h: 0.38, fontSize: 11, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', rtl: !isEnglish, fontFace: 'Arial'
+            });
+
+            const riskTableRows = [
                 [
-                    { text: isEnglish ? 'Observation No' : 'رقم الملاحظة', options: { bold: true, fill: '1E3A8A', color: 'FFFFFF', align: 'center', rtl: !isEnglish } },
-                    { text: isEnglish ? 'Date' : 'التاريخ', options: { bold: true, fill: '1E3A8A', color: 'FFFFFF', align: 'center', rtl: !isEnglish } },
-                    { text: isEnglish ? 'Site / Location' : 'الموقع', options: { bold: true, fill: '1E3A8A', color: 'FFFFFF', align: 'center', rtl: !isEnglish } },
-                    { text: isEnglish ? 'Type' : 'النوع', options: { bold: true, fill: '1E3A8A', color: 'FFFFFF', align: 'center', rtl: !isEnglish } },
-                    { text: isEnglish ? 'Risk Level' : 'مستوى الخطورة', options: { bold: true, fill: '1E3A8A', color: 'FFFFFF', align: 'center', rtl: !isEnglish } },
-                    { text: isEnglish ? 'Status' : 'الحالة', options: { bold: true, fill: '1E3A8A', color: 'FFFFFF', align: 'center', rtl: !isEnglish } }
+                    { text: isEnglish ? 'Share %' : 'النسبة', options: { bold: true, fill: 'F8FAFC', color: '1E3A8A', align: 'center', rtl: !isEnglish } },
+                    { text: isEnglish ? 'Count' : 'العدد', options: { bold: true, fill: 'F8FAFC', color: '1E3A8A', align: 'center', rtl: !isEnglish } },
+                    { text: isEnglish ? 'Risk Level' : 'مستوى الخطورة', options: { bold: true, fill: 'F8FAFC', color: '1E3A8A', align: 'right', rtl: !isEnglish } }
+                ],
+                [
+                    { text: `${highRiskPct}%`, options: { color: 'B91C1C', bold: true, fontSize: 10, align: 'center' } },
+                    { text: String(highRiskCount), options: { color: 'B91C1C', bold: true, fontSize: 10, align: 'center' } },
+                    { text: isEnglish ? 'High / Critical' : 'عالية / حرجة', options: { color: 'B91C1C', bold: true, fontSize: 10, align: 'right', rtl: !isEnglish } }
+                ],
+                [
+                    { text: `${Math.round((mediumRiskCount / Math.max(1, totalCount)) * 100)}%`, options: { color: 'B45309', bold: true, fontSize: 10, align: 'center' } },
+                    { text: String(mediumRiskCount), options: { color: 'B45309', bold: true, fontSize: 10, align: 'center' } },
+                    { text: isEnglish ? 'Medium Risk' : 'متوسطة الخطورة', options: { color: 'B45309', bold: true, fontSize: 10, align: 'right', rtl: !isEnglish } }
+                ],
+                [
+                    { text: `${Math.round((lowRiskCount / Math.max(1, totalCount)) * 100)}%`, options: { color: '047857', bold: true, fontSize: 10, align: 'center' } },
+                    { text: String(lowRiskCount), options: { color: '047857', bold: true, fontSize: 10, align: 'center' } },
+                    { text: isEnglish ? 'Low Risk' : 'منخفضة الخطورة', options: { color: '047857', bold: true, fontSize: 10, align: 'right', rtl: !isEnglish } }
                 ]
             ];
-            exportBatch.slice(0, 7).forEach(o => {
-                tableRows.push([
-                    { text: String(o.isoCode || o.id || '—'), options: { color: '1E40AF', bold: true, fontSize: 10, align: 'center', rtl: !isEnglish } },
-                    { text: String(o.date || '—').slice(0, 10), options: { color: '0F172A', fontSize: 10, align: 'center', rtl: !isEnglish } },
-                    { text: String(o.siteName || '—'), options: { color: '0F172A', fontSize: 10, align: 'right', rtl: !isEnglish } },
-                    { text: String(o.observationType || '—'), options: { color: '0F172A', fontSize: 10, align: 'right', rtl: !isEnglish } },
-                    { text: String(o.riskLevel || '—'), options: { color: String(o.riskLevel || '').includes('عالي') ? 'B91C1C' : '0F172A', bold: true, fontSize: 10, align: 'center', rtl: !isEnglish } },
-                    { text: String(o.status || '—'), options: { color: o.status === 'مغلق' ? '047857' : 'B45309', bold: true, fontSize: 10, align: 'center', rtl: !isEnglish } }
+            slide2.addTable(riskTableRows, {
+                x: col1X + 0.1, y: cardY + 0.50, w: cardW - 0.2, h: 3.45,
+                colW: [1.0, 0.9, 1.85], fontSize: 10, border: { pt: 0.5, color: 'E2E8F0' }
+            });
+
+            // 2. العمود الأوسط: أبرز أنواع الملاحظات رصداً
+            const col2X = 4.69;
+            slide2.addShape(pptx.ShapeType.roundRect, { x: col2X, y: cardY, w: cardW, h: cardH, fill: { color: 'FFFFFF' }, line: { color: 'CBD5E1', width: 1.5 }, rectRadius: 0.08 });
+            slide2.addShape(pptx.ShapeType.rect, { x: col2X, y: cardY, w: cardW, h: 0.38, fill: { color: '2563EB' } });
+            slide2.addText(isEnglish ? 'Top Observation Categories' : 'أبرز مجالات وأنواع الملاحظات', {
+                x: col2X, y: cardY, w: cardW, h: 0.38, fontSize: 11, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', rtl: !isEnglish, fontFace: 'Arial'
+            });
+
+            const typesTableRows = [
+                [
+                    { text: isEnglish ? 'Share %' : 'النسبة', options: { bold: true, fill: 'F8FAFC', color: '1E3A8A', align: 'center', rtl: !isEnglish } },
+                    { text: isEnglish ? 'Count' : 'العدد', options: { bold: true, fill: 'F8FAFC', color: '1E3A8A', align: 'center', rtl: !isEnglish } },
+                    { text: isEnglish ? 'Category' : 'نوع الملاحظة', options: { bold: true, fill: 'F8FAFC', color: '1E3A8A', align: 'right', rtl: !isEnglish } }
+                ]
+            ];
+            topTypes.forEach(([tName, tCount]) => {
+                const tPct = Math.round((tCount / Math.max(1, totalCount)) * 100);
+                typesTableRows.push([
+                    { text: `${tPct}%`, options: { color: '1E40AF', bold: true, fontSize: 10, align: 'center' } },
+                    { text: String(tCount), options: { color: '0F172A', bold: true, fontSize: 10, align: 'center' } },
+                    { text: tName.length > 22 ? tName.slice(0, 22) + '…' : tName, options: { color: '0F172A', fontSize: 9.5, align: 'right', rtl: !isEnglish } }
                 ]);
             });
-            slide2.addTable(tableRows, {
-                x: 0.5, y: 2.75, w: 12.33, h: 3.9, fontSize: 10,
-                colW: [2.0, 1.6, 2.8, 2.7, 1.8, 1.43],
-                align: 'center', border: { pt: 1, color: 'CBD5E1' }
+            while (typesTableRows.length < 5) {
+                typesTableRows.push([
+                    { text: '—', options: { color: '94A3B8', fontSize: 10, align: 'center' } },
+                    { text: '—', options: { color: '94A3B8', fontSize: 10, align: 'center' } },
+                    { text: '—', options: { color: '94A3B8', fontSize: 10, align: 'center' } }
+                ]);
+            }
+            slide2.addTable(typesTableRows, {
+                x: col2X + 0.1, y: cardY + 0.50, w: cardW - 0.2, h: 3.45,
+                colW: [1.0, 0.9, 1.85], fontSize: 10, border: { pt: 0.5, color: 'E2E8F0' }
+            });
+
+            // 3. العمود الأيسر (في التنسيق العربي): ملخص تنفيذي وسياق الرصد
+            const col3X = isEnglish ? 8.88 : 0.5;
+            slide2.addShape(pptx.ShapeType.roundRect, { x: col3X, y: cardY, w: cardW, h: cardH, fill: { color: 'FFFFFF' }, line: { color: 'CBD5E1', width: 1.5 }, rectRadius: 0.08 });
+            slide2.addShape(pptx.ShapeType.rect, { x: col3X, y: cardY, w: cardW, h: 0.38, fill: { color: '059669' } });
+            slide2.addText(isEnglish ? 'Executive Summary & Context' : 'الملخص التشغيلي وسياق الرصد', {
+                x: col3X, y: cardY, w: cardW, h: 0.38, fontSize: 11, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', rtl: !isEnglish, fontFace: 'Arial'
+            });
+
+            const summaryNotes = isEnglish ? [
+                { text: '• Scope & Coverage: ', options: { bold: true, color: '1E3A8A', fontSize: 10 } },
+                { text: `${uniqueSites} sites/locations surveyed.\n\n`, options: { color: '0F172A', fontSize: 10 } },
+                { text: '• Action Status: ', options: { bold: true, color: '1E3A8A', fontSize: 10 } },
+                { text: `${closedCount} actions completed, ${openCount} in progress.\n\n`, options: { color: '0F172A', fontSize: 10 } },
+                { text: '• Compliance Target: ', options: { bold: true, color: '1E3A8A', fontSize: 10 } },
+                { text: 'Complete all pending high-priority actions on schedule.\n\n', options: { color: '0F172A', fontSize: 10 } },
+                { text: '• Verification: ', options: { bold: true, color: '1E3A8A', fontSize: 10 } },
+                { text: 'Follow up with site supervisors for documented closures.', options: { color: '0F172A', fontSize: 10 } }
+            ] : [
+                { text: '• نطاق التغطية الميدانية: ', options: { bold: true, color: '1E3A8A', fontSize: 10, rtl: true } },
+                { text: `شمل الرصد ${uniqueSites} موقعاً / منطقة عمل.\n\n`, options: { color: '0F172A', fontSize: 10, rtl: true } },
+                { text: '• حالة الإجراءات التصحيحية: ', options: { bold: true, color: '1E3A8A', fontSize: 10, rtl: true } },
+                { text: `تم إغلاق ${closedCount} ملاحظة وجاري تنفيذ ${openCount}.\n\n`, options: { color: '0F172A', fontSize: 10, rtl: true } },
+                { text: '• المستهدف الوقائي: ', options: { bold: true, color: '1E3A8A', fontSize: 10, rtl: true } },
+                { text: 'معالجة الملاحظات الحرجة وإغلاقها قبل الموعد المحدد.\n\n', options: { color: '0F172A', fontSize: 10, rtl: true } },
+                { text: '• التوثيق الميداني: ', options: { bold: true, color: '1E3A8A', fontSize: 10, rtl: true } },
+                { text: 'توثيق إجراءات الإغلاق والتصحيح بالصور والأدلة.', options: { color: '0F172A', fontSize: 10, rtl: true } }
+            ];
+
+            slide2.addText(summaryNotes, {
+                x: col3X + 0.15, y: cardY + 0.50, w: cardW - 0.3, h: 3.45,
+                align: isEnglish ? 'left' : 'right', valign: 'top', rtl: !isEnglish, fontFace: 'Arial'
             });
 
             // تذييل الشريحة 2
