@@ -5240,9 +5240,6 @@ const DailyObservations = {
         }
     },
 
-    // دوال قديمة مُحوَّلة للتوافق مع بقية الكود
-    calculateCardValues() { /* لا يستخدم — تم دمجه في updateAnalysisResults */ },
-    loadInfoCards() { /* لا يستخدم — تم دمجه في updateAnalysisResults */ },
 
     /**
      * التأكد من تحميل Chart.js

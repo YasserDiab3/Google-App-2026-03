@@ -2072,29 +2072,7 @@ const SafetyBudget = {
         this.populateYearMonthFilters('capex');
     },
 
-    populateYearMonthFilters(prefix) {
-        const transactions = AppState.appData.safetyBudgetTransactions || [];
-        const years = new Set();
-        transactions.forEach(t => {
-            const date = t.date ? new Date(t.date) : new Date(t.createdAt);
-            years.add(date.getFullYear());
-        });
 
-        const yearSelect = document.getElementById(`${prefix}-filter-year`);
-        const monthSelect = document.getElementById(`${prefix}-filter-month`);
-
-        if (yearSelect) {
-            const sortedYears = Array.from(years).sort((a, b) => b - a);
-            yearSelect.innerHTML = '<option value="">جميع السنوات</option>' +
-                sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
-        }
-
-        if (monthSelect) {
-            const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-            monthSelect.innerHTML = '<option value="">جميع الأشهر</option>' +
-                months.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('');
-        }
-    },
 
     showExpenseForm(expenseData = null, defaultCategory = null) {
         const isEdit = !!expenseData;

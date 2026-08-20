@@ -623,8 +623,7 @@ const SafetyPerformanceKPIs = {
     },
 
     switchTab(tabName) {
-        this.activeTab = tabName;
-        this.load();
+        this.switchScorecardTab(tabName);
     },
 
     renderAnnualPlanTab() {
@@ -1362,20 +1361,7 @@ const SafetyPerformanceKPIs = {
         });
     },
 
-    switchTab(tab) {
-        this.activeTab = tab === 'scorecard' ? 'scorecard' : 'overview';
-        const overview = document.getElementById('spk-overview-panel');
-        const scorecard = document.getElementById('spk-scorecard-panel');
-        document.querySelectorAll('.spk-tab-btn').forEach(button => {
-            button.classList.toggle('active', button.getAttribute('data-tab') === this.activeTab);
-        });
-        overview?.classList.toggle('hidden', this.activeTab !== 'overview');
-        scorecard?.classList.toggle('hidden', this.activeTab !== 'scorecard');
-        if (this.activeTab === 'scorecard') {
-            this.populateScorecardYearSelector();
-            this.renderScorecardTable();
-        }
-    },
+
 
     queueScorecardRefresh(force = false) {
         clearTimeout(this._scorecardRefreshTimer);

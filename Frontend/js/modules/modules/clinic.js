@@ -10723,46 +10723,7 @@ const Clinic = {
         }).length;
     },
 
-    calculateTotalTime(visitDate, exitDate) {
-        if (!visitDate || !exitDate) return '-';
-        try {
-            // تحويل التواريخ إلى كائنات Date
-            const entry = visitDate instanceof Date ? visitDate : new Date(visitDate);
-            const exit = exitDate instanceof Date ? exitDate : new Date(exitDate);
 
-            // التحقق من صحة التواريخ
-            if (isNaN(entry.getTime()) || isNaN(exit.getTime())) {
-                return '-';
-            }
-
-            // حساب الفرق بالمللي ثانية
-            const diffMs = exit.getTime() - entry.getTime();
-
-            // التحقق من أن الفرق موجب
-            if (diffMs < 0) {
-                return '-';
-            }
-
-            // حساب الساعات والدقائق
-            const totalMinutes = Math.floor(diffMs / (1000 * 60));
-            const hours = Math.floor(totalMinutes / 60);
-            const minutes = totalMinutes % 60;
-
-            // إرجاع النتيجة بصيغة مناسبة
-            if (hours > 0 && minutes > 0) {
-                return `${hours} ساعة ${minutes} دقيقة`;
-            } else if (hours > 0) {
-                return `${hours} ساعة`;
-            } else if (minutes > 0) {
-                return `${minutes} دقيقة`;
-            } else {
-                return 'أقل من دقيقة';
-            }
-        } catch (e) {
-            Utils.safeError('خطأ في حساب الوقت:', e, { visitDate, exitDate });
-            return '-';
-        }
-    },
 
     async renderVisitsList() {
         const visits = AppState.appData.clinicVisits.slice(-10).reverse();
