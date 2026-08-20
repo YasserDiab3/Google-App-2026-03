@@ -384,6 +384,7 @@
                 if (mainApp && mainApp.style.display !== 'none' && typeof window.UI !== 'undefined' && window.UI.updateCompanyLogoHeader) {
                     window.UI.updateCompanyLogoHeader();
                     if (window.UI.updateCompanyBranding) window.UI.updateCompanyBranding();
+                    if (typeof updateFaviconFromCompanyLogo === 'function') updateFaviconFromCompanyLogo();
                     log('✅ تم إظهار الهيدر مبكراً');
                 }
             } catch (e) {
