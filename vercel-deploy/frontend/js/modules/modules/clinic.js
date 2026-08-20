@@ -4575,6 +4575,71 @@ const Clinic = {
     },
 
     /**
+     * الحصول على مقترحات أسماء عمال المقاولين
+     * @param {string} [contractorName] تصفية حسب اسم المقاول إذا تم تحديده
+     * @returns {string[]}
+     */
+    getContractorWorkerSuggestions(contractorName = null) {
+        const set = new Set();
+        const norm = (s) => (s ? this.normalizeArabicText(String(s)) : '');
+        const targetNorm = contractorName ? norm(contractorName) : null;
+
+        (AppState.appData?.clinicVisits || []).forEach(v => {
+            if (v.personType === 'contractor' || v.contractorName || v.contractorWorkerName) {
+                const cName = v.contractorName || '';
+                const wName = (v.contractorWorkerName || '').trim();
+                if (wName && (!targetNorm || norm(cName).includes(targetNorm) || targetNorm.includes(norm(cName)))) {
+                    set.add(wName);
+                }
+            }
+        });
+
+        (AppState.appData?.violations || []).forEach(v => {
+            const cName = v.contractorName || '';
+            const wName = (v.contractorWorker || '').trim();
+            if (wName && (!targetNorm || norm(cName).includes(targetNorm) || targetNorm.includes(norm(cName)))) {
+                set.add(wName);
+            }
+        });
+
+        (AppState.appData?.behaviors || []).forEach(b => {
+            const cName = b.contractorName || '';
+            const wName = (b.contractorWorker || '').trim();
+            if (wName && (!targetNorm || norm(cName).includes(targetNorm) || targetNorm.includes(norm(cName)))) {
+                set.add(wName);
+            }
+        });
+
+        (AppState.appData?.ptw || []).forEach(p => {
+            const cName = p.contractorName || p.contractor || '';
+            const workers = p.workers || p.workerNames || [];
+            if (Array.isArray(workers)) {
+                workers.forEach(w => {
+                    const wName = (typeof w === 'string' ? w : w?.name || '').trim();
+                    if (wName && (!targetNorm || norm(cName).includes(targetNorm) || targetNorm.includes(norm(cName)))) {
+                        set.add(wName);
+                    }
+                });
+            }
+        });
+
+        (AppState.appData?.contractors || []).forEach(c => {
+            const cName = c.name || c.contractorName || '';
+            const workers = c.workers || c.workerNames || [];
+            if (Array.isArray(workers)) {
+                workers.forEach(w => {
+                    const wName = (typeof w === 'string' ? w : w?.name || '').trim();
+                    if (wName && (!targetNorm || norm(cName).includes(targetNorm) || targetNorm.includes(norm(cName)))) {
+                        set.add(wName);
+                    }
+                });
+            }
+        });
+
+        return Array.from(set).sort((a, b) => a.localeCompare(b, 'ar', { sensitivity: 'base' }));
+    },
+
+    /**
      * الحصول على قائمة أنواع الزيارة (من إعدادات المدير أو الافتراضية)
      * @returns {string[]}
      */
@@ -10400,6 +10465,7 @@ const Clinic = {
         if (!Array.isArray(data.clinicStaffLeaveBalances)) data.clinicStaffLeaveBalances = [];
         if (!Array.isArray(data.clinicStaffSystemActivities)) data.clinicStaffSystemActivities = [];
 
+
         // ✅ حماية حاسمة: دمج زيارات المقاولين من clinicContractorVisits إلى clinicVisits لمنع اختفائها عند إعادة تحميل الصفحة
         let visitsChanged = false;
         if (Array.isArray(data.clinicContractorVisits) && data.clinicContractorVisits.length > 0) {
@@ -11017,9 +11083,7 @@ const Clinic = {
         if (contractorWorkerInput) {
             if (personType === 'contractor' || personType === 'external') {
                 contractorWorkerInput.required = true;
-                contractorWorkerInput.placeholder = personType === 'contractor'
-                    ? 'أدخل اسم الموظف التابع للمقاول'
-                    : 'أدخل اسم العامل الخارجي';
+                contractorWorkerInput.placeholder = 'اختر من المقترحات أو أدخل اسم العامل';
             } else {
                 contractorWorkerInput.required = false;
                 contractorWorkerInput.value = '';
@@ -12122,9 +12186,13 @@ const Clinic = {
                             </div>
                             <div id="visit-contractor-worker-container" style="display: ${visitData?.personType === 'contractor' || visitData?.personType === 'external' ? 'block' : 'none'};">
                                 <label for="visit-contractor-worker" id="visit-contractor-worker-label" class="block text-sm font-semibold text-gray-700 mb-2">اسم الموظف التابع للمقاول *</label>
-                                <input type="text" id="visit-contractor-worker" class="form-input"
-                                    value="${visitData?.contractorWorkerName || ''}" placeholder="أدخل اسم العامل التابع للمقاول"
+                                <input type="text" id="visit-contractor-worker" list="visit-contractor-workers-datalist" class="form-input"
+                                    value="${visitData?.contractorWorkerName || ''}" placeholder="اختر من المقترحات أو أدخل اسم العامل"
+                                    autocomplete="off"
                                     ${visitData?.personType === 'contractor' || visitData?.personType === 'external' ? 'required' : ''}>
+                                <datalist id="visit-contractor-workers-datalist">
+                                    ${this.getContractorWorkerSuggestions(visitData?.contractorName || visitData?.employeeName).map(w => `<option value="${Utils.escapeHTML(w)}"></option>`).join('')}
+                                </datalist>
                             </div>
                             <div>
                                 <label for="visit-date" class="block text-sm font-semibold mb-2" style="color: #fc6c85; display: flex; align-items: center; gap: 5px;"><i class="fas fa-clock"></i> وقت الدخول *</label>
@@ -12346,6 +12414,18 @@ const Clinic = {
             if (typeof Clinic.setupClinicWorkplaceDatalist === 'function') {
                 Clinic.setupClinicWorkplaceDatalist('visit-factory', 'visit-employee-location', 'visit-employee-location-datalist');
                 Clinic.setupClinicWorkplaceDatalist('visit-contractor-factory', 'visit-work-area', 'visit-work-area-datalist');
+            }
+
+            const contractorSelectEl = document.getElementById('visit-contractor-name-select');
+            const workerDatalistEl = document.getElementById('visit-contractor-workers-datalist');
+            if (contractorSelectEl && workerDatalistEl) {
+                const refreshContractorWorkers = () => {
+                    const cName = (contractorSelectEl.value || '').trim();
+                    const workers = Clinic.getContractorWorkerSuggestions(cName);
+                    workerDatalistEl.innerHTML = workers.map(w => `<option value="${Utils.escapeHTML(w)}"></option>`).join('');
+                };
+                contractorSelectEl.addEventListener('input', refreshContractorWorkers);
+                contractorSelectEl.addEventListener('change', refreshContractorWorkers);
             }
 
             // تحميل قائمة الأدوية المتاحة
