@@ -4442,6 +4442,98 @@ const Clinic = {
     /** القائمة الافتراضية لأنواع الزيارة (قابلة للتعديل من مدير النظام عبر إعدادات العيادة) */
     DEFAULT_VISIT_TYPES: ['طوارئ', 'اصابة عمل', 'مرض', 'فحص دوري', 'متابعة', 'فحص ماقبل التعيين', 'تحليل مخدارت'],
 
+    /** مقترحات أسباب الزيارة الشائعة في العيادات المهنية */
+    DEFAULT_REASONS: [
+        'صداع وإرهاق',
+        'مغص وآلام بالبطن',
+        'ارتفاع في درجة الحرارة',
+        'ارتفاع ضغط الدم',
+        'هبوط / دوخة',
+        'إجهاد حراري',
+        'آلام في العضلات والمفاصل',
+        'جرح سطحي',
+        'حرق طفيف',
+        'كدمة أو التواء',
+        'حساسية جلدية / حكة',
+        'ألم بالأسنان',
+        'التهاب بالحلق وسعال',
+        'ألم بالعين / دخول جسم غريب',
+        'فحص طبي دوري',
+        'تغيير على جرح'
+    ],
+
+    /** مقترحات التشخيص الطبي الشائعة */
+    DEFAULT_DIAGNOSES: [
+        'صداع توتري (Tension Headache)',
+        'نزلة معوية حادة (Gastroenteritis)',
+        'التهاب حاد بالجهاز التنفسي العلوي (URTI)',
+        'ارتفاع ضغط الدم (Hypertension)',
+        'انخفاض ضغط الدم (Hypotension)',
+        'إجهاد عضلي حاد (Muscle Strain)',
+        'إجهاد حراري (Heat Exhaustion)',
+        'جرح قطعي سطحي (Superficial Wound)',
+        'حرق من الدرجة الأولى (First Degree Burn)',
+        'كدمة رضية (Contusion)',
+        'حساسية جلدية تلامسية (Contact Dermatitis)',
+        'التهاب لثة / ألم أسنان (Gingivitis / Toothache)',
+        'التهاب ملتحمة العين (Conjunctivitis)',
+        'حموضة وارتجاع مريئي (GERD / Gastritis)',
+        'مغص كلوي خفيف (Renal Colic)'
+    ],
+
+    /** مقترحات العلاج والإجراءات الطبية الشائعة */
+    DEFAULT_TREATMENTS: [
+        'إعطاء مسكن وملاحظة نصف ساعة ثم العودة للعمل',
+        'راحة طبية بالعيادة لمدة ساعة مع سوائل',
+        'قياس العلامات الحيوية والسكر والضغط',
+        'تطهير الجرح وعمل غيار معقم',
+        'كمادات باردة / موضعية',
+        'صرف أدوية حسب البروتوكول',
+        'إحالة لمستشفى التأمين الصحي / الخارجي',
+        'توصية بإجازة مرضية ليوم واحد',
+        'جلسة استنشاق / بخار',
+        'غسيل العين بمحلول ملحي معقم'
+    ],
+
+    /**
+     * الحصول على مقترحات أسباب الزيارة (تدمج الافتراضية + السجلات التاريخية)
+     * @returns {string[]}
+     */
+    getReasonSuggestions() {
+        const set = new Set(this.DEFAULT_REASONS || []);
+        (AppState.appData?.clinicVisits || []).forEach(v => {
+            const r = String(v.reason || '').trim();
+            if (r && r.length > 1) set.add(r);
+        });
+        return Array.from(set);
+    },
+
+    /**
+     * الحصول على مقترحات التشخيص (تدمج الافتراضية + السجلات التاريخية)
+     * @returns {string[]}
+     */
+    getDiagnosisSuggestions() {
+        const set = new Set(this.DEFAULT_DIAGNOSES || []);
+        (AppState.appData?.clinicVisits || []).forEach(v => {
+            const d = String(v.diagnosis || '').trim();
+            if (d && d.length > 1) set.add(d);
+        });
+        return Array.from(set);
+    },
+
+    /**
+     * الحصول على مقترحات العلاج (تدمج الافتراضية + السجلات التاريخية)
+     * @returns {string[]}
+     */
+    getTreatmentSuggestions() {
+        const set = new Set(this.DEFAULT_TREATMENTS || []);
+        (AppState.appData?.clinicVisits || []).forEach(v => {
+            const t = String(v.treatment || '').trim();
+            if (t && t.length > 1) set.add(t);
+        });
+        return Array.from(set);
+    },
+
     /**
      * الحصول على قائمة أنواع الزيارة (من إعدادات المدير أو الافتراضية)
      * @returns {string[]}
@@ -12014,18 +12106,27 @@ const Clinic = {
                             </div>
                             <div class="col-span-2">
                                 <label for="visit-reason" class="block text-sm font-semibold mb-2" style="color: #4facfe; display: flex; align-items: center; gap: 5px;"><i class="fas fa-question-circle"></i> سبب الزيارة *</label>
-                                <input type="text" id="visit-reason" required class="form-input" style="border: 2px solid #4facfe; border-radius: 8px;"
-                                    value="${visitData?.reason || ''}" placeholder="سبب الزيارة">
+                                <input type="text" id="visit-reason" list="visit-reasons-datalist" required class="form-input" style="border: 2px solid #4facfe; border-radius: 8px;"
+                                    value="${visitData?.reason || ''}" placeholder="اختر من المقترحات أو اكتب سبب الزيارة" autocomplete="off">
+                                <datalist id="visit-reasons-datalist">
+                                    ${this.getReasonSuggestions().map(r => `<option value="${Utils.escapeHTML(r)}"></option>`).join('')}
+                                </datalist>
                             </div>
                             <div class="col-span-2">
-                                <label class="block text-sm font-semibold mb-2" style="color: #4facfe; display: flex; align-items: center; gap: 5px;"><i class="fas fa-diagnoses"></i> التشخيص</label>
-                                <textarea id="visit-diagnosis" class="form-input" rows="3" style="border: 2px solid #4facfe; border-radius: 8px;"
-                                    placeholder="التشخيص">${visitData?.diagnosis || ''}</textarea>
+                                <label for="visit-diagnosis" class="block text-sm font-semibold mb-2" style="color: #4facfe; display: flex; align-items: center; gap: 5px;"><i class="fas fa-diagnoses"></i> التشخيص</label>
+                                <input type="text" id="visit-diagnosis" list="visit-diagnoses-datalist" class="form-input" style="border: 2px solid #4facfe; border-radius: 8px;"
+                                    value="${visitData?.diagnosis || ''}" placeholder="اختر من المقترحات أو اكتب التشخيص" autocomplete="off">
+                                <datalist id="visit-diagnoses-datalist">
+                                    ${this.getDiagnosisSuggestions().map(d => `<option value="${Utils.escapeHTML(d)}"></option>`).join('')}
+                                </datalist>
                             </div>
                             <div class="col-span-2">
-                                <label class="block text-sm font-semibold mb-2" style="color: #4facfe; display: flex; align-items: center; gap: 5px;"><i class="fas fa-pills"></i> العلاج</label>
-                                <textarea id="visit-treatment" class="form-input" rows="3" style="border: 2px solid #4facfe; border-radius: 8px;"
-                                    placeholder="العلاج الموصوف">${visitData?.treatment || ''}</textarea>
+                                <label for="visit-treatment" class="block text-sm font-semibold mb-2" style="color: #4facfe; display: flex; align-items: center; gap: 5px;"><i class="fas fa-pills"></i> العلاج</label>
+                                <input type="text" id="visit-treatment" list="visit-treatments-datalist" class="form-input" style="border: 2px solid #4facfe; border-radius: 8px;"
+                                    value="${visitData?.treatment || ''}" placeholder="اختر من المقترحات أو اكتب العلاج الموصوف" autocomplete="off">
+                                <datalist id="visit-treatments-datalist">
+                                    ${this.getTreatmentSuggestions().map(t => `<option value="${Utils.escapeHTML(t)}"></option>`).join('')}
+                                </datalist>
                             </div>
                         </div>
                         
