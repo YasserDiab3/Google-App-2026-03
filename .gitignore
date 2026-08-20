@@ -42,6 +42,11 @@ yarn-error.log*
 # Temporary files
 *.tmp
 *.temp
+*.diff
+*_debug.txt
+saveToSheet_debug.txt
+test-ptw-fix.mjs
+
 
 # Playwright MCP snapshots
 .playwright-mcp/

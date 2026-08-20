@@ -1,4 +1,4 @@
-﻿/* ========================================
+/* ========================================
    نظام السلامة المهنية - أمريكانا HSE
    app-utils.js - الدوال المساعدة والثوابت
    ======================================== */
@@ -4396,7 +4396,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1049',
+    appVersion: '1.0.1051',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -4683,6 +4683,72 @@ const Utils = {
         if (!gc || !gc.appsScript) return false;
         const url = String(gc.appsScript.scriptUrl || '').trim();
         return !!(gc.appsScript.enabled && url);
+    },
+
+    /**
+     * طباعة محتوى HTML بشكل موحد وآمن عبر نافذة منبثقة
+     * @param {string} title - عنوان المستند
+     * @param {string} htmlContent - محتوى HTML المراد طباعته
+     * @param {object} options - خيارات إضافية (rtl, landscape)
+     * @returns {boolean}
+     */
+    printHtmlContent(title, htmlContent, options = {}) {
+        try {
+            const isRtl = options.rtl !== undefined ? options.rtl : (document.documentElement.dir === 'rtl' || true);
+            const docTitle = String(title || 'Document').replace(/</g, '&lt;');
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) {
+                if (typeof Notification !== 'undefined' && Notification.error) {
+                    Notification.error('يرجى السماح بالنوافذ المنبثقة للطباعة');
+                }
+                return false;
+            }
+            
+            let fullHtml = htmlContent;
+            if (!htmlContent.includes('<html') && !htmlContent.includes('<!DOCTYPE')) {
+                fullHtml = `<!DOCTYPE html>
+<html dir="${isRtl ? 'rtl' : 'ltr'}" lang="${isRtl ? 'ar' : 'en'}">
+<head>
+    <meta charset="UTF-8">
+    <title>${docTitle}</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 20px; color: #1e293b; background: #fff; }
+        @media print {
+            body { padding: 0; }
+            @page { margin: 1cm; ${options.landscape ? 'size: landscape;' : ''} }
+        }
+    </style>
+</head>
+<body>
+    ${htmlContent}
+</body>
+</html>`;
+            }
+
+            printWindow.document.open();
+            printWindow.document.write(fullHtml);
+            printWindow.document.close();
+
+            const triggerPrint = () => {
+                try {
+                    printWindow.focus();
+                    printWindow.print();
+                } catch (e) {
+                    Utils.safeWarn('printHtmlContent print error:', e);
+                }
+            };
+
+            if (printWindow.document.readyState === 'complete') {
+                setTimeout(triggerPrint, 300);
+            } else {
+                printWindow.onload = () => setTimeout(triggerPrint, 300);
+                setTimeout(triggerPrint, 1500);
+            }
+            return true;
+        } catch (error) {
+            Utils.safeError('Utils.printHtmlContent error:', error);
+            return false;
+        }
     },
 
     /**

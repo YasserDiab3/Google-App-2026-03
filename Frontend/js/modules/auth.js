@@ -433,9 +433,33 @@ window.Auth = {
             sessionStorage.removeItem('hse_current_session');
             sessionStorage.removeItem('hse_session_id');
             sessionStorage.removeItem('hse_session_last_activity_ms');
-            localStorage.removeItem('hse_remember_user');
+            this._setRememberedUser(null);
         } catch (e) { /* ignore */ }
         try { AppState.isPageRefresh = false; } catch (e2) { /* ignore */ }
+    },
+
+    /** قراءة بيانات المستخدم المتذكر بأمان */
+    _getRememberedUser() {
+        try {
+            const raw = localStorage.getItem('hse_remember_user');
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            Utils.safeWarn('⚠️ فشل قراءة hse_remember_user:', e);
+            return null;
+        }
+    },
+
+    /** حفظ أو حذف بيانات المستخدم المتذكر بأمان */
+    _setRememberedUser(userData) {
+        try {
+            if (userData) {
+                localStorage.setItem('hse_remember_user', JSON.stringify(userData));
+            } else {
+                localStorage.removeItem('hse_remember_user');
+            }
+        } catch (e) {
+            Utils.safeWarn('⚠️ فشل حفظ hse_remember_user:', e);
+        }
     },
 
     /** إزالة passwordHash من كائن المستخدم في الذاكرة بعد المصادقة */
@@ -1265,11 +1289,11 @@ window.Auth = {
 
         // إذا اختار "تذكرني"، نحفظ في localStorage أيضاً
         if (remember) {
-            localStorage.setItem('hse_remember_user', JSON.stringify(safeUserData));
+            this._setRememberedUser(safeUserData);
             Utils.safeLog('💾 تم حفظ الجلسة في localStorage (تذكرني)');
         } else {
             // إذا لم يختر "تذكرني"، نحذف من localStorage
-            localStorage.removeItem('hse_remember_user');
+            this._setRememberedUser(null);
             Utils.safeLog('🗑 تم حذف localStorage (لم يختر تذكرني)');
         }
 
@@ -1845,10 +1869,9 @@ window.Auth = {
             }
 
             // ثانياً: التحقق من localStorage (إذا كان اختار "تذكرني")
-            const remembered = localStorage.getItem('hse_remember_user');
-            if (remembered) {
+            const user = this._getRememberedUser();
+            if (user) {
                 try {
-                    const user = JSON.parse(remembered);
                     // التحقق من صحة البيانات وأن المستخدم ما زال موجوداً
                     if (user && user.email) {
                         if (this._isSessionExpiredForRestore(user)) {
@@ -2152,9 +2175,8 @@ window.Auth = {
             Utils.safeLog('✅ تم تحديث الجلسة في sessionStorage');
 
             // تحديث localStorage إذا كان موجوداً (تذكرني)
-            const remembered = localStorage.getItem('hse_remember_user');
-            if (remembered) {
-                localStorage.setItem('hse_remember_user', JSON.stringify(safeUserData));
+            if (this._getRememberedUser()) {
+                this._setRememberedUser(safeUserData);
                 Utils.safeLog('✅ تم تحديث الجلسة في localStorage');
             }
 
