@@ -2846,7 +2846,7 @@ function getPublicObservationConfig() {
         try {
             cache = CacheService.getScriptCache();
             if (cache) {
-                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V6');
+                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V7');
                 if (cachedStr) {
                     return JSON.parse(cachedStr);
                 }
@@ -2916,7 +2916,7 @@ function getPublicObservationConfig() {
         }
         sites.sort(function(a, b) { return a.name.localeCompare(b.name, 'ar'); });
 
-        // 2. مسؤولو فريق السلامة والصحة المهنية فقط (مع توحيد الأسماء ومنع التكرار)
+        // 2. مسؤولو فريق السلامة والصحة المهنية فقط (مع الاستبعاد الصارم لأي موظف مستقيل)
         function normalizeArabicKey(name) {
             return String(name || '')
                 .trim()
@@ -2928,6 +2928,27 @@ function getPublicObservationConfig() {
                 .replace(/\s+/g, ' ');
         }
 
+        function isEmployeeResigned(emp) {
+            if (!emp) return false;
+            if (emp.isActive === false || emp.active === false || emp.isActive === 'false' || emp.active === 'false') return true;
+            var s = String(emp.status || emp.employeeStatus || emp.workStatus || emp.employmentStatus || '').trim().toLowerCase();
+            if (!s) return false;
+            return s.indexOf('مستقيل') !== -1 || s.indexOf('استقال') !== -1 || s.indexOf('منتهي') !== -1 || s.indexOf('فصل') !== -1 || s.indexOf('ترك') !== -1 || s.indexOf('resign') !== -1 || s.indexOf('terminated') !== -1 || s.indexOf('inactive') !== -1 || s.indexOf('left') !== -1;
+        }
+
+        // خريطة أسماء الموظفين المستقيلين لمنع ظهورهم نهائياً
+        var resignedNamesMap = {};
+        var employees = [];
+        try {
+            employees = readFromSheet('Employees', spreadsheetId) || [];
+            employees.forEach(function(emp) {
+                var name = String(emp.name || emp.employeeName || '').trim();
+                if (name && isEmployeeResigned(emp)) {
+                    resignedNamesMap[normalizeArabicKey(name)] = true;
+                }
+            });
+        } catch (e) {}
+
         var observersMap = {};
         var safetyMembers = [];
 
@@ -2935,7 +2956,8 @@ function getPublicObservationConfig() {
             var cleanName = String(name || '').trim();
             if (!cleanName || cleanName.indexOf('مجهول') !== -1 || cleanName.indexOf('عامة') !== -1 || cleanName.length < 3) return;
             var key = normalizeArabicKey(cleanName);
-            if (!key || observersMap[key]) return;
+            // منع المستقيلين أو المكررين
+            if (!key || observersMap[key] || resignedNamesMap[key]) return;
             observersMap[key] = true;
             safetyMembers.push({
                 name: cleanName,
@@ -2959,16 +2981,12 @@ function getPublicObservationConfig() {
         } catch (csTeamErr) {}
 
         // ب) من شيت Employees (مسؤولو السلامة وفريق HSE فقط - غير المستقيلين)
-        var employees = [];
         try {
-            employees = readFromSheet('Employees', spreadsheetId) || [];
             employees.forEach(function(emp) {
+                if (isEmployeeResigned(emp)) return;
                 var name = String(emp.name || emp.employeeName || '').trim();
                 var dept = String(emp.department || '').trim();
                 var job = String(emp.job || emp.jobTitle || emp.position || '').trim();
-                var status = String(emp.status || emp.employeeStatus || emp.workStatus || '').toLowerCase();
-                var isResigned = (status.indexOf('مستقيل') !== -1 || status.indexOf('استقال') || status.indexOf('resign') !== -1 || status.indexOf('terminated') !== -1);
-                if (isResigned) return;
 
                 var isSafety = (
                     dept.indexOf('سلامة') !== -1 || dept.toLowerCase().indexOf('hse') !== -1 || dept.indexOf('بيئة') !== -1 || dept.indexOf('صحة مهنية') !== -1 ||
@@ -2981,11 +2999,12 @@ function getPublicObservationConfig() {
             });
         } catch (empErr) {}
 
-        // ج) من شيت Users (المستخدمون ذوو أدوار السلامة أو إدارة السلامة فقط)
+        // ج) من شيت Users (المستخدمون ذوو أدوار السلامة أو إدارة السلامة فقط وغير المعطلين)
         var users = [];
         try {
             users = readFromSheet('Users', spreadsheetId) || [];
             users.forEach(function(u) {
+                if (u.isActive === false || u.active === false || u.status === 'inactive') return;
                 var name = String(u.name || u.fullName || '').trim();
                 var role = String(u.role || '').trim();
                 var dept = String(u.department || '').trim();
@@ -3067,7 +3086,7 @@ function getPublicObservationConfig() {
 
         try {
             if (cache) {
-                cache.put('PUBLIC_OBS_CONFIG_CACHE_V6', JSON.stringify(configResult), 1800);
+                cache.put('PUBLIC_OBS_CONFIG_CACHE_V7', JSON.stringify(configResult), 1800);
             }
         } catch (cPutErr) {}
 
