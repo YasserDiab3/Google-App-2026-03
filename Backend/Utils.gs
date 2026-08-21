@@ -813,10 +813,25 @@ function getCachedActorRecordByEmail_(email) {
     if (Object.prototype.hasOwnProperty.call(__AUTH_ACTOR_RECORD_CACHE_, e)) {
         return __AUTH_ACTOR_RECORD_CACHE_[e];
     }
+    // فحص كاش السكربت لتجنب فتح ورقة Users في كل قراءة
+    try {
+        var cachedStr = CacheService.getScriptCache().get('actor_rec_v1:' + e);
+        if (cachedStr) {
+            var parsed = JSON.parse(cachedStr);
+            __AUTH_ACTOR_RECORD_CACHE_[e] = parsed;
+            return parsed;
+        }
+    } catch (_cErr) {}
+
     var rec = (typeof resolveActorRecordFromUsersSheet_ === 'function')
         ? resolveActorRecordFromUsersSheet_({ email: e })
         : ((typeof getUserRecordFromUsersSheetByEmail_ === 'function') ? getUserRecordFromUsersSheetByEmail_(e) : null);
-    __AUTH_ACTOR_RECORD_CACHE_[e] = rec;
+    if (rec) {
+        __AUTH_ACTOR_RECORD_CACHE_[e] = rec;
+        try {
+            CacheService.getScriptCache().put('actor_rec_v1:' + e, JSON.stringify(rec), 3600);
+        } catch (_cErr2) {}
+    }
     return rec;
 }
 
@@ -828,11 +843,25 @@ function getCachedActorRecordForActor_(actorUserData) {
     if (email && Object.prototype.hasOwnProperty.call(__AUTH_ACTOR_RECORD_CACHE_, email)) {
         return __AUTH_ACTOR_RECORD_CACHE_[email];
     }
+    // فحص كاش السكربت أولاً
+    if (email) {
+        try {
+            var cachedStr = CacheService.getScriptCache().get('actor_rec_v1:' + email);
+            if (cachedStr) {
+                var parsed = JSON.parse(cachedStr);
+                __AUTH_ACTOR_RECORD_CACHE_[email] = parsed;
+                return parsed;
+            }
+        } catch (_cErr) {}
+    }
     var rec = (typeof resolveActorRecordFromUsersSheet_ === 'function')
         ? resolveActorRecordFromUsersSheet_(actorUserData)
         : getCachedActorRecordByEmail_(email);
-    if (email) {
+    if (email && rec) {
         __AUTH_ACTOR_RECORD_CACHE_[email] = rec;
+        try {
+            CacheService.getScriptCache().put('actor_rec_v1:' + email, JSON.stringify(rec), 3600);
+        } catch (_cErr2) {}
     }
     return rec;
 }
