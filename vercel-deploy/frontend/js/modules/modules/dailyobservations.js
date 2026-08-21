@@ -2026,7 +2026,7 @@ const DailyObservations = {
                             </button>
                             <button id="public-qr-observations-btn" class="btn-secondary" onclick="DailyObservations.openPublicQrModal()" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3); color: #2563eb; font-weight: 700;">
                                 <i class="fas fa-qrcode ml-2"></i>
-                                <span>النموذج العام ورمز QR</span>
+                                <span data-i18n="module.dailyobs.btn.publicQr">النموذج العام ورمز QR</span>
                             </button>
                             <button id="add-observation-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>

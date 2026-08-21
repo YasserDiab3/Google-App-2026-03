@@ -7363,36 +7363,58 @@ FireEquipment = {
     },
 
     /**
-     * الحصول على طلبات الموافقة
+     * الحصول على طلبات الموافقة (دمج طلبات تعديل الأجهزة والفحوصات الشهرية المعلقة)
      */
     getApprovalRequests() {
-        // ✅ التأكد من تهيئة AppState
         if (!AppState.appData) {
             AppState.appData = {};
         }
 
-        // يمكن جلبها من AppState أو من الخادم
+        let requests = [];
         if (AppState.appData.fireEquipmentApprovalRequests && Array.isArray(AppState.appData.fireEquipmentApprovalRequests)) {
-            return AppState.appData.fireEquipmentApprovalRequests;
-        }
-
-        // يمكن إرجاع قائمة فارغة أو جلبها من localStorage كبديل مؤقت
-        const stored = localStorage.getItem('fire_equipment_approval_requests');
-        if (stored) {
-            try {
-                const parsed = JSON.parse(stored);
-                if (Array.isArray(parsed)) {
-                    AppState.appData.fireEquipmentApprovalRequests = parsed;
-                    return parsed;
+            requests = [...AppState.appData.fireEquipmentApprovalRequests];
+        } else {
+            const stored = localStorage.getItem('fire_equipment_approval_requests');
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored);
+                    if (Array.isArray(parsed)) {
+                        requests = [...parsed];
+                        AppState.appData.fireEquipmentApprovalRequests = parsed;
+                    }
+                } catch (e) {
+                    Utils.safeWarn('⚠️ خطأ في تحليل طلبات الموافقة من localStorage:', e);
                 }
-            } catch (e) {
-                Utils.safeWarn('⚠️ خطأ في تحليل طلبات الموافقة من localStorage:', e);
             }
         }
 
-        // ✅ تهيئة قائمة فارغة إذا لم تكن موجودة
-        AppState.appData.fireEquipmentApprovalRequests = [];
-        return [];
+        // دمج جميع الفحوصات الشهرية الميدانية المعلقة تلقائياً
+        const inspections = this.getInspections() || [];
+        inspections.forEach(insp => {
+            const isPending = String(insp.approvalStatus || '').toLowerCase() === 'pending' || (!insp.approvalStatus && insp.submittedBy && String(insp.submittedBy).includes('Public'));
+            const isApproved = String(insp.approvalStatus || '').toLowerCase() === 'approved';
+            const isRejected = String(insp.approvalStatus || '').toLowerCase() === 'rejected';
+
+            // إضافة الفحص كطلب موافقة إذا لم يكن مضافاً مسبقاً
+            if (!requests.some(r => r.id === insp.id || r.inspectionId === insp.id)) {
+                requests.push({
+                    id: insp.id,
+                    type: 'inspection',
+                    assetId: insp.assetId,
+                    requestedBy: insp.inspector || (insp.submittedBy ? 'بوابة الفحص الميداني' : 'مسؤول السلامة'),
+                    requestedAt: insp.checkDate || insp.createdAt,
+                    status: isApproved ? 'approved' : isRejected ? 'rejected' : 'pending',
+                    approvedBy: insp.approvedBy || '',
+                    approvedAt: insp.approvedAt || '',
+                    rejectedBy: insp.rejectedBy || '',
+                    rejectionReason: insp.reviewNotes || '',
+                    comments: `فحص شهري ميداني - الحالة الفنية: ${insp.status || 'صالح'} | صمام الأمان: ${insp.sealIntact || 'سليم'} | عداد الضغط: ${insp.gaugeReading || 'سليم'} ${insp.remarks ? ' | ملاحظة: ' + insp.remarks : ''}`,
+                    inspectionRecord: insp
+                });
+            }
+        });
+
+        return requests;
     },
 
     /**
@@ -7417,24 +7439,21 @@ FireEquipment = {
         // زر التحديث
         const refreshBtn = document.getElementById('approval-requests-refresh');
         if (refreshBtn) {
-            // إزالة Event Listeners القديمة
             const newRefreshBtn = refreshBtn.cloneNode(true);
             if (refreshBtn.parentNode) {
-            refreshBtn.parentNode.replaceChild(newRefreshBtn, refreshBtn);
+                refreshBtn.parentNode.replaceChild(newRefreshBtn, refreshBtn);
             }
             newRefreshBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 try {
                     Loading.show();
-                    // تحميل الطلبات من Backend
                     await this.loadApprovalRequestsFromBackend();
-                    // تحديث الإشعارات
+                    await this.loadFireEquipmentDataAsync();
                     if (typeof AppUI !== 'undefined' && AppUI.updateNotificationsBadge) {
                         AppUI.updateNotificationsBadge();
                     }
-                    // تحديث التبويب
-                await this.switchTab('approval-requests');
+                    await this.switchTab('approval-requests');
                     Notification.success('تم تحديث الطلبات بنجاح');
                 } catch (error) {
                     Utils.safeError('خطأ في تحديث طلبات الموافقة:', error);
@@ -7477,11 +7496,18 @@ FireEquipment = {
     },
 
     /**
-     * الموافقة على طلب
+     * الموافقة على طلب (سواء فحص شهري أو تعديل أصل)
      */
     async approveRequest(requestId) {
         if (!this.isAdmin()) {
             Notification.error('ليس لديك صلاحية للموافقة على الطلبات');
+            return;
+        }
+
+        // إذا كان فحصاً شهرياً، استدعاء دالة اعتماد الفحص المباشرة
+        if (String(requestId).startsWith('FEI-') || this.getInspections().some(i => i.id === requestId)) {
+            await this.approveInspection(requestId);
+            await this.switchTab('approval-requests');
             return;
         }
 
@@ -7501,71 +7527,27 @@ FireEquipment = {
             request.approvedBy = AppState.currentUser?.name || AppState.currentUser?.email || 'مدير النظام';
             request.approvedAt = new Date().toISOString();
 
-            // حفظ التغييرات
             if (!AppState.appData) AppState.appData = {};
             AppState.appData.fireEquipmentApprovalRequests = requests;
             
-            // حفظ في localStorage
             if (typeof DataManager !== 'undefined' && DataManager.save) {
                 DataManager.save();
-            } else {
-                localStorage.setItem('fire_equipment_approval_requests', JSON.stringify(requests));
             }
 
-            // حفظ في Google Sheets إذا كان متاحاً
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                try {
-                    const updateResult = await GoogleIntegration.sendRequest({
-                        action: 'updateFireEquipmentApprovalRequest',
-                        data: { 
-                            requestId, 
-                            status: 'approved', 
-                            approvedBy: request.approvedBy,
-                            approvedAt: request.approvedAt
-                        }
-                    });
-
-                    if (updateResult && !updateResult.success) {
-                        Utils.safeWarn('⚠️ فشل حفظ التغييرات في Backend:', updateResult.message);
-                    } else {
-                        Utils.safeLog('✅ تم حفظ الموافقة في Backend بنجاح');
+                GoogleIntegration.sendRequest({
+                    action: 'updateFireEquipmentApprovalRequest',
+                    data: { 
+                        requestId, 
+                        status: 'approved', 
+                        approvedBy: request.approvedBy,
+                        approvedAt: request.approvedAt
                     }
-                } catch (error) {
-                    Utils.safeWarn('⚠️ خطأ في حفظ الموافقة في Backend:', error);
-                }
+                }).catch(e => Utils.safeWarn('Warning background sync:', e));
             }
 
             Notification.success('تمت الموافقة على الطلب بنجاح');
-            
-            // إرسال إشعار للمستخدم الذي طلب الموافقة (في الخلفية)
-            this.notifyUserAboutRequestStatus(request, 'approved').catch(error => {
-                Utils.safeWarn('⚠️ خطأ في إرسال إشعار للمستخدم:', error);
-            });
-            
-            // تحديث الإشعارات
-            if (typeof AppUI !== 'undefined' && AppUI.updateNotificationsBadge) {
-                AppUI.updateNotificationsBadge();
-            }
-
-            // إرسال إشعار Real-time
-            if (typeof RealtimeSyncManager !== 'undefined' && RealtimeSyncManager.notifyChange) {
-                RealtimeSyncManager.notifyChange('fireEquipmentApprovalRequests', 'update', requestId);
-            }
-
-            // تحديث التبويب بعد التغيير
             await this.switchTab('approval-requests');
-
-            // إذا كان الطلب للفحص الشهري، فتح نموذج الفحص تلقائياً
-            if (request.type === 'inspection' && request.assetId) {
-                // الانتظار قليلاً ثم فتح نموذج الفحص
-                setTimeout(() => {
-                    this.switchTab('inspections').then(() => {
-                        setTimeout(() => {
-                            this.showInspectionForm(null, request.assetId);
-                        }, 300);
-                    });
-                }, 500);
-            }
         } catch (error) {
             Utils.safeError('❌ خطأ في الموافقة على الطلب:', error);
             Notification.error('حدث خطأ أثناء الموافقة على الطلب');
@@ -7583,8 +7565,15 @@ FireEquipment = {
             return;
         }
 
-        const reason = prompt('أدخل سبب الرفض (اختياري):');
-        if (reason === null) return; // المستخدم ألغى
+        // إذا كان فحصاً شهرياً
+        if (String(requestId).startsWith('FEI-') || this.getInspections().some(i => i.id === requestId)) {
+            await this.rejectInspection(requestId);
+            await this.switchTab('approval-requests');
+            return;
+        }
+
+        const reason = prompt('أدخل سبب الرفض:');
+        if (reason === null) return;
 
         Loading.show();
         try {
@@ -7600,14 +7589,41 @@ FireEquipment = {
             request.rejectedAt = new Date().toISOString();
             request.rejectionReason = reason || '';
 
-            // حفظ التغييرات
             if (!AppState.appData) AppState.appData = {};
             AppState.appData.fireEquipmentApprovalRequests = requests;
             
-            // حفظ في localStorage
             if (typeof DataManager !== 'undefined' && DataManager.save) {
                 DataManager.save();
-            } else {
+            }
+
+            Notification.success('تم رفض الطلب بنجاح');
+            await this.switchTab('approval-requests');
+        } catch (error) {
+            Utils.safeError('❌ خطأ في رفض الطلب:', error);
+            Notification.error('حدث خطأ أثناء رفض الطلب');
+        } finally {
+            Loading.hide();
+        }
+    },
+
+    /**
+     * عرض تفاصيل الطلب
+     */
+    async viewRequest(requestId) {
+        if (String(requestId).startsWith('FEI-') || this.getInspections().some(i => i.id === requestId)) {
+            this.viewInspection(requestId);
+            return;
+        }
+
+        const requests = this.getApprovalRequests();
+        const request = requests.find(r => r.id === requestId);
+        if (!request) {
+            Notification.error('لم يتم العثور على الطلب');
+            return;
+        }
+
+        alert(`تفاصيل الطلب: ${request.id}\nالنوع: ${request.type}\nمقدم الطلب: ${request.requestedBy}\nالحالة: ${request.status}\nالملاحظات: ${request.comments || '-'}`);
+    },
                 localStorage.setItem('fire_equipment_approval_requests', JSON.stringify(requests));
             }
 
