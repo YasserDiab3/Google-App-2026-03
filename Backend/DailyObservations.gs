@@ -2846,7 +2846,7 @@ function getPublicObservationConfig() {
         try {
             cache = CacheService.getScriptCache();
             if (cache) {
-                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V3');
+                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V5');
                 if (cachedStr) {
                     return JSON.parse(cachedStr);
                 }
@@ -2908,7 +2908,12 @@ function getPublicObservationConfig() {
             });
         } catch (e3) {}
 
-        var sites = Object.values(sitesMap);
+        var sites = [];
+        for (var sKey in sitesMap) {
+            if (sitesMap.hasOwnProperty(sKey)) {
+                sites.push(sitesMap[sKey]);
+            }
+        }
         sites.sort(function(a, b) { return a.name.localeCompare(b.name, 'ar'); });
 
         // 2. مسؤولو السلامة والأشخاص الفعليون في النظام
@@ -3043,7 +3048,7 @@ function getPublicObservationConfig() {
 
         try {
             if (cache) {
-                cache.put('PUBLIC_OBS_CONFIG_CACHE_V3', JSON.stringify(configResult), 1800);
+                cache.put('PUBLIC_OBS_CONFIG_CACHE_V5', JSON.stringify(configResult), 1800);
             }
         } catch (cPutErr) {}
 

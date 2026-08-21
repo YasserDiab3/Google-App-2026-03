@@ -13495,31 +13495,51 @@ const DailyObservations = {
             if (inspector) queryParts.push(`inspector=${encodeURIComponent(inspector)}`);
             const qStr = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
             
-            const qrTargetUrl = `${baseUrl}${qStr}`;
-            linkInput.value = qrTargetUrl;
+            let encHash = '';
+            try {
+                const compactPayload = {
+                    s: (factories || []).map(f => [
+                        String(f.name || f.siteName || f || '').trim(),
+                        this.extractCleanPlacesList(f.places)
+                    ]).filter(x => x[0]),
+                    d: (typeof this.getDepartmentOptions === 'function') ? this.getDepartmentOptions() : [],
+                    m: (safetyMembers || []).map(m => (typeof m === 'string' ? m : m.name)).filter(Boolean)
+                };
+                encHash = '#cfg=' + encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(compactPayload)))));
+            } catch(e) {}
+
+            const fullUrl = `${baseUrl}${qStr}${encHash}`;
+            const cleanUrl = `${baseUrl}${qStr}`;
+            linkInput.value = fullUrl;
             
             // توليد الرمز محلياً بالكامل بدقة وجودة فائقة وفورية
             let localQrData = '';
+            const targetUrlForQr = (fullUrl.length < 900) ? fullUrl : cleanUrl;
             if (typeof qrcode === 'function') {
                 try {
-                    const qr = qrcode(0, 'M');
-                    qr.addData(qrTargetUrl);
+                    const qr = qrcode(0, 'L');
+                    qr.addData(targetUrlForQr);
                     qr.make();
-                    localQrData = qr.createDataURL(6, 4);
+                    localQrData = qr.createDataURL(5, 4);
                 } catch(e) {
-                    console.warn('qrcode error:', e);
+                    try {
+                        const qrFallback = qrcode(0, 'M');
+                        qrFallback.addData(cleanUrl);
+                        qrFallback.make();
+                        localQrData = qrFallback.createDataURL(5, 4);
+                    } catch(e2) {}
                 }
             }
             if (!localQrData && window.QRCode && typeof window.QRCode.generate === 'function') {
                 try {
-                    localQrData = window.QRCode.generate(qrTargetUrl, 260);
+                    localQrData = window.QRCode.generate(cleanUrl, 260);
                 } catch(e) {}
             }
             
             if (localQrData && localQrData.startsWith('data:')) {
                 qrImg.src = localQrData;
             } else {
-                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(qrTargetUrl)}`;
+                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(cleanUrl)}`;
             }
             
             let desc = 'امسح الرمز بكاميرا الهاتف لفتح نموذج الملاحظات فوراً';
