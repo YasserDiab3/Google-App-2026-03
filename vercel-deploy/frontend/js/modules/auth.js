@@ -661,7 +661,7 @@ window.Auth = {
     _isMfaEnabledForUser(user) {
         if (!user) return false;
         const v = user.mfaEnabled;
-        return v === true || v === 'true' || v === 1 || v === '1';
+        return v === true || v === 'true' || v === 'TRUE' || v === 1 || v === '1';
     },
 
     /**
@@ -1138,6 +1138,7 @@ window.Auth = {
             passwordChanged: user.passwordChanged ?? fullUserData?.passwordChanged ?? false,
             // مصدر الحقيقة: استجابة الخادم فقط — لا OR من كاش محلي قديم
             forcePasswordChange: user.forcePasswordChange === true,
+            mfaEnabled: (user && user.mfaEnabled !== undefined) ? user.mfaEnabled : (fullUserData?.mfaEnabled ?? false),
             isBootstrap: isBootstrap,
             loginTime: loginTime,
             photo: user?.photo || fullUserData?.photo || ''
@@ -1308,7 +1309,10 @@ window.Auth = {
         if (!requiresPasswordChange) {
             Notification.success(`مرحباً ${user.name}`);
             // تذكير أمني لطيف للمستخدمين الذين لم يفعلوا المصادقة الثنائية بعد (بدون حجب الدخول)
-            if (!this._isMfaEnabledForUser(AppState.currentUser)) {
+            const isMfaActive = this._isMfaEnabledForUser(AppState.currentUser) ||
+                this._isMfaEnabledForUser(user) ||
+                this._isMfaEnabledForUser(fullUserData);
+            if (!isMfaActive) {
                 setTimeout(() => {
                     try {
                         if (typeof Notification !== 'undefined' && typeof Notification.info === 'function') {
