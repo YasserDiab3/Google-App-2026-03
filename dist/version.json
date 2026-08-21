@@ -2,14 +2,14 @@
   "version": "1.0.1173",
   "highlights": {
     "ar": [
-      "إطلاق بوابة ونموذج الملاحظات الميدانية العامة بدون تسجيل دخول مع بوسترات QR Code للمصانع.",
-      "ترقية وتطوير نموذج عرض بيانات الشخص المصرح له ببروفايل تنفيذي ومصفوفة تصاريح تفاعلية.",
-      "تعزيز تجربة المستخدم على الهواتف الذكية (Mobile Web / PWA) واستقرار فائق للمزامنة."
+      "ترقية لوحة تحليل بيانات معدات الإطفاء (KPIs، كروت المواقع والمباني التفاعلية، ورسوم Chart.js المتطورة).",
+      "دمج نظام الموافقات والاعتمادات الفورية لفحوصات أجهزة الإطفاء الميدانية مع المزامنة الخلفية بدون انتظار.",
+      "تحسين كروت الفحص الشهري التفاعلية ودعم التصفية المباشرة وتصدير تقارير التحليل PDF و Excel."
     ],
     "en": [
-      "Launched Public Observation Portal without login, featuring instant camera capture & factory QR Code posters.",
-      "Redesigned Authorized Person Details modal into an executive profile view with interactive permits matrix.",
-      "Enhanced Mobile Web & PWA experience with instant touch feedback and high stability."
+      "Modernized Fire Equipment Analytics dashboard with PPE-style KPI strip, interactive location cards, and Chart.js graphs.",
+      "Integrated instant optimistic approval workflow for monthly fire inspections with zero-wait background sync.",
+      "Upgraded interactive monthly inspection stat cards, live filtering, and PDF/Excel analysis report export."
     ]
   }
 }
