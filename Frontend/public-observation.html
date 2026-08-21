@@ -1628,8 +1628,8 @@
                 const img = new Image();
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 1200;
-                    const MAX_HEIGHT = 1200;
+                    const MAX_WIDTH = 1000;
+                    const MAX_HEIGHT = 1000;
                     let width = img.width;
                     let height = img.height;
 
@@ -1650,7 +1650,7 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.75);
+                    currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.70);
                     document.getElementById('photoPreview').src = currentPhotoBase64;
                     document.getElementById('photoPreviewWrap').style.display = 'block';
                 };
@@ -1779,7 +1779,7 @@
             for (let attempt = 1; attempt <= 2; attempt++) {
                 try {
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 20000);
+                    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
                     const response = await fetch(targetApiUrl, {
                         method: 'POST',
@@ -1800,9 +1800,13 @@
                         lastErrorMsg = (result && result.message) ? result.message : 'فشل تسجيل الملاحظة من الخادم';
                     }
                 } catch (err) {
-                    lastErrorMsg = err.message || 'تعذر الاتصال بالخادم';
+                    if (err.name === 'AbortError' || String(err).includes('abort')) {
+                        lastErrorMsg = 'استغرقت عملية الإرسال وقتاً أطول من المتوقع، يرجى المحاولة مرة أخرى.';
+                    } else {
+                        lastErrorMsg = err.message || 'تعذر الاتصال بالخادم';
+                    }
                     if (attempt < 2) {
-                        await new Promise(r => setTimeout(r, 1200));
+                        await new Promise(r => setTimeout(r, 1500));
                     }
                 }
             }
