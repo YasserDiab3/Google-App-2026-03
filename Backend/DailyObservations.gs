@@ -3100,6 +3100,12 @@ function submitPublicObservation(payload) {
             observerName += ' (' + payload.reporterPhone + ')';
         }
 
+        var subCategory = (payload.subCategory || '').trim();
+        var detailsText = (payload.details || payload.description || '').trim();
+        if (subCategory && !detailsText.includes(subCategory)) {
+            detailsText = '[' + subCategory + '] ' + detailsText;
+        }
+
         var obsRecord = {
             id: obsId,
             isoCode: isoCode,
@@ -3108,9 +3114,10 @@ function submitPublicObservation(payload) {
             placeId: locationName,
             locationName: locationName,
             observationType: payload.observationType || payload.behaviorType || 'سلوك غير آمن',
+            subCategory: subCategory,
             date: dateVal,
-            shift: payload.shift || 'وردية صباحية',
-            details: (payload.details || payload.description || '').trim(),
+            shift: payload.shift || 'الأولى',
+            details: detailsText,
             correctiveAction: (payload.correctiveAction || '').trim(),
             responsibleDepartment: payload.responsibleDepartment || payload.department || 'السلامة والصحة المهنية',
             riskLevel: payload.riskLevel || 'متوسط',
@@ -3121,7 +3128,7 @@ function submitPublicObservation(payload) {
             submittedBy: 'نموذج عام (Public Form)',
             submittedByEmail: '',
             submittedAt: new Date().toISOString(),
-            remarks: 'المصدر: نموذج عام ميداني بدون تسجيل دخول',
+            remarks: subCategory ? ('التصنيف الفرعي: ' + subCategory) : 'المصدر: نموذج عام ميداني بدون تسجيل دخول',
             attachments: stringifyAttachments(attachments),
             createdAt: new Date(),
             updatedAt: new Date()
