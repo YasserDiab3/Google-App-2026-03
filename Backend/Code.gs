@@ -312,6 +312,7 @@ function doPost(e) {
             // تشخيص دخان موظفين (عدادات فقط — بدون قائمة كاملة)
             'getEmployeesSheetHealth',
             'getEmployeesLoadSmoke',
+            'getPublicObservationConfig',
             // تقرير الجلسات اليومي (قراءة فقط — يتطلب CSRF + مدير)
             // getDailyUserSessionActivityReport, getAllUserActivityLogs, getUserActivityLogs, getLogStatistics, getAllAuditLogs
             // ✅ P2.2: قراءات PPE أُخرجت — تتطلب CSRF + جلسة (مثل باقي القراءات الحساسة)
@@ -337,7 +338,7 @@ function doPost(e) {
 
         // العمليات المعفاة من CSRF (pre-authentication — لا يمكن أن تملك CSRF token صالح)
         // SEC: أُزيل fixClinicSheetHeaders / mfaClear* — تتطلب جلسة مدير + CSRF
-        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync'];
+        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig'];
         const isCsrfExempt = csrfExemptActions.includes(action);
 
         // التحقق من CSRF Token - إلزامي لجميع العمليات غير القراءة
@@ -403,7 +404,8 @@ function doPost(e) {
         const sessionExemptActions = [
             'login', 'verifyMfaLogin', 'initializeSheets',
             'testConnection', 'warmup', 'getPublicIP', 'invalidateServerSession',
-            'getAuthBootstrapPolicy', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke'
+            'getAuthBootstrapPolicy', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke',
+            'submitPublicObservation', 'getPublicObservationConfig'
         ];
         const isSessionExempt = sessionExemptActions.indexOf(action) !== -1;
         var needsSessionForWrite = !isReadOnlyAction;
@@ -513,7 +515,11 @@ function doPost(e) {
         let result = { success: false, message: '' };
 
         try {
-            if (typeof ActionHandlers[action] === 'function') {
+            if (action === 'submitPublicObservation' && typeof submitPublicObservation === 'function') {
+                result = submitPublicObservation(payload || postData.data || postData || {});
+            } else if (action === 'getPublicObservationConfig' && typeof getPublicObservationConfig === 'function') {
+                result = getPublicObservationConfig();
+            } else if (typeof ActionHandlers[action] === 'function') {
                 const spreadsheetId = getSpreadsheetId() || postData.spreadsheetId || '';
                 result = ActionHandlers[action](payload, postData, action, actorUserData, spreadsheetId);
             } else if (action === 'upsertClinicStaffLeaveQuota' && typeof upsertClinicStaffLeaveQuota === 'function') {

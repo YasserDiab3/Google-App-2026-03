@@ -1,14 +1,14 @@
 {
-  "version": "1.0.1122",
+  "version": "1.0.1124",
   "highlights": {
     "ar": [
+      "إطلاق بوابة ونموذج الملاحظات الميدانية العامة بدون تسجيل دخول مع بوسترات QR Code للمصانع.",
       "ترقية وتطوير نموذج عرض بيانات الشخص المصرح له ببروفايل تنفيذي ومصفوفة تصاريح تفاعلية.",
-      "تحسين تصميم نماذج تدريب المقاول وسجل التدريب التراكمي بكروت إحصائية حديثة.",
       "تعزيز تجربة المستخدم على الهواتف الذكية (Mobile Web / PWA) واستقرار فائق للمزامنة."
     ],
     "en": [
+      "Launched Public Observation Portal without login, featuring instant camera capture & factory QR Code posters.",
       "Redesigned Authorized Person Details modal into an executive profile view with interactive permits matrix.",
-      "Upgraded Contractor Training Details and Attendance Registry modals with modern KPI cards.",
       "Enhanced Mobile Web & PWA experience with instant touch feedback and high stability."
     ]
   }

@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1122",
+  "version": "1.0.1124",
   "highlights": {
     "ar": [
-      "ترقية تصميم نماذج تفاصيل تدريب المقاول وسجل التدريب التراكمي للموظف بكروت إحصائية حديثة.",
-      "تعزيز تجربة المستخدم على الهواتف الذكية (Mobile Web / PWA) ومنع التكبير التلقائي في Safari.",
-      "استقرار فائق وسرعة قصوى في تحميل ومزامنة بيانات الموظفين والتصاريح دون انقطاع."
+      "ترقية وتطوير نموذج عرض بيانات الشخص المصرح له ببروفايل تنفيذي ومصفوفة تصاريح تفاعلية.",
+      "تحسين تصميم نماذج تدريب المقاول وسجل التدريب التراكمي بكروت إحصائية حديثة.",
+      "تعزيز تجربة المستخدم على الهواتف الذكية (Mobile Web / PWA) واستقرار فائق للمزامنة."
     ],
     "en": [
+      "Redesigned Authorized Person Details modal into an executive profile view with interactive permits matrix.",
       "Upgraded Contractor Training Details and Attendance Registry modals with modern KPI cards.",
-      "Enhanced Mobile Web & PWA experience with instant touch feedback and Safari auto-zoom fixes.",
-      "Maximum stability and ultra-fast loading for Employees, PTW, and Training modules."
+      "Enhanced Mobile Web & PWA experience with instant touch feedback and high stability."
     ]
   }
 }

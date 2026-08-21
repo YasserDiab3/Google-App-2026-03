@@ -471,3 +471,127 @@ function deleteBehaviorRowsFromSheet_(sheetName, ids) {
     };
 }
 
+/**
+ * ============================================
+ * الحصول على تكوين نموذج الملاحظات العامة (المصانع والمواقع الفرعية)
+ * ============================================
+ */
+function getPublicObservationConfig() {
+    try {
+        var factories = [];
+        try {
+            if (typeof readFromSheet === 'function') {
+                var facData = readFromSheet('Factories', getSpreadsheetId()) || [];
+                factories = facData.map(function(f) {
+                    return { id: f.id || '', name: f.name || f.factoryName || '' };
+                }).filter(function(f) { return f.name; });
+            }
+        } catch (e) {}
+
+        if (!factories.length) {
+            factories = [
+                { id: 'FAC-1', name: 'مصنع الأغذية الرئيسي' },
+                { id: 'FAC-2', name: 'مصنع المخبوزات والحلويات' },
+                { id: 'FAC-3', name: 'المستودعات والخدمات اللوجستية' }
+            ];
+        }
+
+        return {
+            success: true,
+            factories: factories,
+            categories: [
+                { id: 'unsafe_act', name: 'سلوك غير آمن (Unsafe Act)', color: '#ef4444', icon: 'fa-user-times' },
+                { id: 'unsafe_condition', name: 'حالة غير آمنة (Unsafe Condition)', color: '#f59e0b', icon: 'fa-exclamation-triangle' },
+                { id: 'safe_behavior', name: 'سلوك آمن وإيجابي (Safe Behavior)', color: '#10b981', icon: 'fa-check-circle' },
+                { id: 'environmental', name: 'ملاحظة بيئية (Environmental)', color: '#06b6d4', icon: 'fa-leaf' }
+            ]
+        };
+    } catch (err) {
+        return { success: false, message: err.toString() };
+    }
+}
+
+/**
+ * ============================================
+ * إرسال ملاحظة من النموذج العام بدون تسجيل دخول
+ * ============================================
+ */
+function submitPublicObservation(payload) {
+    try {
+        if (!payload || typeof payload !== 'object') {
+            return { success: false, message: 'بيانات الملاحظة غير صالحة' };
+        }
+
+        // مكافحة السبام (Honeypot)
+        if (payload._hp_field || payload.website || payload.hp) {
+            return { success: true, message: 'تم إرسال الملاحظة بنجاح' };
+        }
+
+        var sheetName = 'BehaviorMonitoring';
+        var dateStr = payload.date ? String(payload.date).trim() : Utilities.formatDate(new Date(), 'GMT+2', 'yyyy-MM-dd');
+        
+        var photoUrl = '';
+        if (payload.photoBase64 && String(payload.photoBase64).length > 50) {
+            try {
+                if (typeof uploadFileToDrive === 'function') {
+                    var uploadRes = uploadFileToDrive(payload.photoBase64, 'Obs_Public_' + Date.now() + '.jpg', 'image/jpeg', 'BehaviorMonitoring');
+                    if (uploadRes && uploadRes.success && uploadRes.file && uploadRes.file.url) {
+                        photoUrl = uploadRes.file.url;
+                    }
+                }
+            } catch (imgErr) {
+                Logger.log('⚠️ تعذر رفع صورة الملاحظة العامة: ' + imgErr.toString());
+            }
+        } else if (payload.photo) {
+            photoUrl = String(payload.photo).trim();
+        }
+
+        var descText = (payload.description || '').trim();
+        if (payload.reporterPhone) {
+            descText += ' [هاتف: ' + payload.reporterPhone + ']';
+        }
+        descText += ' [المصدر: نموذج عام]';
+
+        var behaviorRecord = {
+            id: generateSequentialId('BHM', sheetName),
+            isoCode: payload.isoCode || 'ISO-45001',
+            employeeId: payload.employeeId || '',
+            employeeCode: payload.employeeCode || '',
+            employeeNumber: payload.employeeNumber || '',
+            employeeName: payload.employeeName || payload.reporterName || 'ملاحظة عامة (مجهول)',
+            department: payload.department || 'عام / ميداني',
+            job: payload.job || 'ميداني',
+            factory: payload.factory || payload.factoryName || '',
+            factoryId: payload.factoryId || '',
+            factoryName: payload.factoryName || payload.factory || '',
+            subLocation: payload.subLocation || payload.subLocationName || '',
+            subLocationId: payload.subLocationId || '',
+            subLocationName: payload.subLocationName || payload.subLocation || '',
+            behaviorType: payload.behaviorType || 'سلوك غير آمن',
+            date: dateStr,
+            rating: payload.rating || (payload.behaviorType === 'سلوك آمن وإيجابي (Safe Behavior)' || payload.behaviorType === 'سلوك آمن' ? 'آمن' : 'غير آمن'),
+            correctiveAction: payload.correctiveAction || '',
+            correctiveActionDetails: payload.correctiveActionDetails || '',
+            description: descText,
+            photo: photoUrl,
+            source: 'PUBLIC_FORM',
+            status: 'Pending',
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        var result = appendToSheet(sheetName, behaviorRecord);
+        if (result && result.success) {
+            return {
+                success: true,
+                id: behaviorRecord.id,
+                message: 'تم إرسال الملاحظة بنجاح، شكراً لمشاركتكم في الحفاظ على سلامة الجميع.'
+            };
+        }
+        return result || { success: false, message: 'فشل حفظ الملاحظة' };
+    } catch (e) {
+        Logger.log('Error in submitPublicObservation: ' + e.toString());
+        return { success: false, message: 'حدث خطأ أثناء إرسال الملاحظة: ' + e.toString() };
+    }
+}
+
