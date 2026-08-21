@@ -782,10 +782,15 @@
                 </div>
                 <div class="section-desc">حدد الجهاز من القائمة أو امسح كود QR الملصق على الطفاية</div>
 
-                <div class="form-group">
+                <div id="deviceLockedNotice" style="display: none; background: #fef2f2; border: 1.5px solid #fecaca; color: #991b1b; padding: 10px 14px; border-radius: 8px; font-weight: 800; font-size: 0.85rem; margin-bottom: 12px; align-items: center; gap: 8px;">
+                    <i class="fas fa-lock text-red-600"></i>
+                    <span id="deviceLockedNoticeText">تم قفل النموذج على هذا الجهاز المحدد بواسطة كود الـ QR</span>
+                </div>
+
+                <div class="form-group" id="deviceSelectGroup">
                     <label class="form-label">
                         <i class="fas fa-barcode text-red-600"></i>
-                        اختر جهاز الإطفاء المراد فحصه: <span class="req-star">*</span>
+                        جهاز الإطفاء المراد فحصه: <span class="req-star">*</span>
                     </label>
                     <select id="deviceSelect" class="form-select" required>
                         <option value="">— جاري تحميل قائمة الأجهزة... —</option>
@@ -1131,6 +1136,38 @@
 
         function populateDeviceSelect(assets, preselectId) {
             const select = document.getElementById('deviceSelect');
+            const lockedNotice = document.getElementById('deviceLockedNotice');
+            const lockedText = document.getElementById('deviceLockedNoticeText');
+
+            if (preselectId) {
+                const found = assets.find(a => a.id.toLowerCase() === preselectId.toLowerCase());
+                if (found) {
+                    select.innerHTML = '';
+                    const opt = document.createElement('option');
+                    opt.value = found.id;
+                    const locStr = found.location ? ` | ${found.location}` : '';
+                    const typeStr = found.type ? ` (${found.type})` : '';
+                    opt.textContent = `${found.id} — ${found.number || found.id}${typeStr}${locStr}`;
+                    select.appendChild(opt);
+                    select.value = found.id;
+                    select.disabled = true;
+                    select.style.backgroundColor = '#f8fafc';
+                    select.style.cursor = 'not-allowed';
+
+                    if (lockedNotice) {
+                        lockedNotice.style.display = 'flex';
+                        lockedText.innerHTML = `تم قفل النموذج على هذا الجهاز المحدد برمز الـ QR: <strong>${found.id}</strong> (لا يمكن اختيار أجهزة أخرى)`;
+                    }
+                    updateDeviceCard(found);
+                    return;
+                }
+            }
+
+            // في حال تم فتح الرابط العام بدون باراميتر جهاز محدد
+            if (lockedNotice) lockedNotice.style.display = 'none';
+            select.disabled = false;
+            select.style.backgroundColor = '#ffffff';
+            select.style.cursor = 'default';
             select.innerHTML = '<option value="">— اختر جهاز الإطفاء من القائمة —</option>';
             
             assets.forEach(a => {
@@ -1141,14 +1178,6 @@
                 opt.textContent = `${a.id} — ${a.number || a.id}${typeStr}${locStr}`;
                 select.appendChild(opt);
             });
-
-            if (preselectId) {
-                const found = assets.find(a => a.id.toLowerCase() === preselectId.toLowerCase());
-                if (found) {
-                    select.value = found.id;
-                    updateDeviceCard(found);
-                }
-            }
 
             select.addEventListener('change', () => {
                 const curId = select.value;
@@ -1417,11 +1446,23 @@
         }
 
         function resetFormForNextDevice() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('id') || urlParams.get('deviceId')) {
+                // عند الانتهاء من فحص جهاز عبر QR، إزالة الباراميتر للعودة للوضع العام أو مسح جهاز آخر
+                window.location.href = window.location.pathname;
+                return;
+            }
             document.getElementById('fireInspectionForm').reset();
             document.getElementById('inspectionDate').value = new Date().toISOString().split('T')[0];
             removePhoto();
             selectStatus('صالح', document.querySelector('.status-option-btn.status-valid'));
-            document.getElementById('deviceSelect').value = '';
+            const select = document.getElementById('deviceSelect');
+            select.value = '';
+            select.disabled = false;
+            select.style.backgroundColor = '#ffffff';
+            select.style.cursor = 'default';
+            const lockedNotice = document.getElementById('deviceLockedNotice');
+            if (lockedNotice) lockedNotice.style.display = 'none';
             document.getElementById('deviceCardPreview').style.display = 'none';
             document.getElementById('customInspectorGroup').style.display = 'none';
             document.getElementById('errorAlert').style.display = 'none';
