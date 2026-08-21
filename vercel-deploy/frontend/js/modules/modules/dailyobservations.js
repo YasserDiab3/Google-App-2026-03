@@ -13497,13 +13497,15 @@ const DailyObservations = {
             
             let encHash = '';
             try {
+                const companyLogoUrl = (typeof AppState !== 'undefined' && (AppState.companyLogo || AppState.companySettings?.logo)) || '';
                 const compactPayload = {
                     s: (factories || []).map(f => [
                         String(f.name || f.siteName || f || '').trim(),
                         this.extractCleanPlacesList(f.places)
                     ]).filter(x => x[0]),
                     d: (typeof this.getDepartmentOptions === 'function') ? this.getDepartmentOptions() : [],
-                    m: (safetyMembers || []).map(m => (typeof m === 'string' ? m : m.name)).filter(Boolean)
+                    m: (safetyMembers || []).map(m => (typeof m === 'string' ? m : m.name)).filter(Boolean),
+                    l: companyLogoUrl
                 };
                 encHash = '#cfg=' + encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(compactPayload)))));
             } catch(e) {}

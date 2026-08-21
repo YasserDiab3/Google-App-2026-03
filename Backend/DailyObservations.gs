@@ -3009,10 +3009,14 @@ function getPublicObservationConfig() {
             if (users) users.forEach(function(u) { registerDept(u.department); });
         } catch (e) {}
 
-        // إذا لم توجد إدارات كافية، أضف إدارات شيت CompanySettings
+        // استخراج شعار وإدارات الشركة من CompanySettings
+        var companyLogo = '';
         try {
             var compSettings = readFromSheet('CompanySettings', spreadsheetId) || [];
             compSettings.forEach(function(cs) {
+                if (cs.key === 'logo' || cs.key === 'companyLogo' || cs.logo) {
+                    companyLogo = cs.value || cs.logo || '';
+                }
                 if (cs.key === 'formDepartments' || cs.key === 'departments' || cs.departments) {
                     var list = cs.value || cs.departments || '';
                     if (typeof list === 'string') {
@@ -3027,6 +3031,7 @@ function getPublicObservationConfig() {
         var configResult = {
             success: true,
             sites: sites,
+            companyLogo: companyLogo,
             safetyMembers: safetyMembers,
             departments: departments,
             observationTypes: [

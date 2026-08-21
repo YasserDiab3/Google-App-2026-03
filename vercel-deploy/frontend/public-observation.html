@@ -81,22 +81,25 @@
         }
 
         .iso-logo-wrap {
-            width: 56px;
-            height: 56px;
+            max-width: 140px;
+            min-height: 48px;
+            max-height: 56px;
             flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
             background: #ffffff;
-            border: 1.5px solid #dbeafe;
-            border-radius: 12px;
-            padding: 4px;
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+            border: 1px solid #dbeafe;
+            border-radius: 8px;
+            padding: 3px 6px;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08);
         }
 
         .iso-logo-img {
-            max-height: 100%;
-            max-width: 100%;
+            max-height: 48px;
+            max-width: 125px;
+            width: auto;
+            height: auto;
             object-fit: contain;
         }
 
@@ -1286,9 +1289,13 @@
                             success: true,
                             sites: payload.s.map(item => ({ name: item[0], places: item[1] || [] })),
                             departments: payload.d || [],
-                            safetyMembers: (payload.m || []).map(name => ({ name, role: 'فريق السلامة والصحة المهنية' }))
+                            safetyMembers: (payload.m || []).map(name => ({ name, role: 'فريق السلامة والصحة المهنية' })),
+                            companyLogo: payload.l || ''
                         };
                         configLoadedFromUrl = true;
+                        if (payload.l) {
+                            updateCompanyLogo(payload.l);
+                        }
                         try {
                             localStorage.setItem('HSE_PUBLIC_OBS_CONFIG', JSON.stringify(loadedConfig));
                         } catch (sErr) {}
@@ -1301,6 +1308,9 @@
                 console.warn('URL config decode error:', uErr);
             }
 
+            // محاولة تحميل الشعار من الكاش المحلي أولاً
+            updateCompanyLogo();
+
             // 2. إذا لم يكن بالرابط، استرجاع من الكاش المحلي للمتصفح
             if (!configLoadedFromUrl) {
                 try {
@@ -1309,6 +1319,7 @@
                         const parsed = JSON.parse(cached);
                         if (parsed && Array.isArray(parsed.sites) && parsed.sites.length > 0) {
                             loadedConfig = parsed;
+                            if (parsed.companyLogo) updateCompanyLogo(parsed.companyLogo);
                             renderConfigData(parsed);
                             const ind = document.getElementById('loadingIndicator');
                             if (ind) ind.style.display = 'none';
@@ -1325,6 +1336,34 @@
             // 4. طلب أحدث التحديثات من الخادم بالخلفية
             loadServerConfig();
         });
+
+        function updateCompanyLogo(logoUrl) {
+            const img = document.getElementById('companyLogoImg');
+            if (!img) return;
+
+            let finalLogo = logoUrl;
+            if (!finalLogo) {
+                try {
+                    const c1 = localStorage.getItem('HSE_SETTINGS_CACHE');
+                    if (c1) {
+                        const p1 = JSON.parse(c1);
+                        finalLogo = p1.companyLogo || (p1.companySettings && p1.companySettings.logo) || (p1.settings && p1.settings.logo);
+                    }
+                    if (!finalLogo) {
+                        const c2 = localStorage.getItem('hse_company_settings');
+                        if (c2) {
+                            const p2 = JSON.parse(c2);
+                            finalLogo = p2.logo || p2.companyLogo;
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            if (finalLogo && typeof finalLogo === 'string' && finalLogo.trim().length > 5) {
+                img.src = finalLogo.trim();
+                img.style.display = 'block';
+            }
+        }
 
         async function loadServerConfig() {
             const ind = document.getElementById('loadingIndicator');
@@ -1346,6 +1385,9 @@
                 const data = await res.json();
                 if (data && data.success && Array.isArray(data.sites) && data.sites.length > 0) {
                     loadedConfig = data;
+                    if (data.companyLogo) {
+                        updateCompanyLogo(data.companyLogo);
+                    }
                     try {
                         localStorage.setItem('HSE_PUBLIC_OBS_CONFIG', JSON.stringify(data));
                     } catch (sErr) {}
