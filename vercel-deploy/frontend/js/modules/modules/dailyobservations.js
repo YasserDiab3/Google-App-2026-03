@@ -13371,11 +13371,12 @@ const DailyObservations = {
         let baseUrl = origin + window.location.pathname.replace(/\/index\.html$/i, '').replace(/\/$/, '') + '/public-observation.html';
         
         const factories = this.state && this.state.sites ? this.state.sites : (AppState.appData.observationSites || []);
+        const safetyMembers = (typeof this.getSafetyTeamMembers === 'function') ? this.getSafetyTeamMembers() : [];
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 600px; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+            <div class="modal-content" style="max-width: 620px; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
                 <div class="modal-header" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #ffffff; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between;">
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); display: flex; align-items: center; justify-content: center; color: #60a5fa; font-size: 1.25rem;">
@@ -13383,29 +13384,40 @@ const DailyObservations = {
                         </div>
                         <div>
                             <h2 class="modal-title" style="color: #ffffff; font-size: 1.15rem; font-weight: 700; margin: 0 0 2px 0;">رابط ورمز QR للملاحظات الميدانية العامة</h2>
-                            <p style="font-size: 0.8rem; color: #94a3b8; margin: 0;">تسجيل الملاحظات اليومية بدون تسجيل دخول وتوثيقها بجدول الملاحظات</p>
+                            <p style="font-size: 0.8rem; color: #94a3b8; margin: 0;">تسجيل وتوثيق الملاحظات الميدانية وربطها بالمصانع ومفتشي السلامة</p>
                         </div>
                     </div>
                     <button class="modal-close" style="color: #94a3b8; font-size: 1.25rem;" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="modal-body" style="padding: 24px; background: #f8fafc;">
-                    <!-- اختيار المصنع -->
-                    <div style="margin-bottom: 18px;">
-                        <label style="display: block; font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 6px;">
-                            <i class="fas fa-industry ml-1 text-blue-500"></i> تخصيص الرابط لمصنع / موقع محدد (اختياري):
-                        </label>
-                        <select id="qr-factory-select" class="form-select" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.95rem;">
-                            <option value="">— الرابط العام لجميع المواقع والمصانع —</option>
-                            ${(factories || []).map(f => `<option value="${Utils.escapeHTML(f.name || f.siteName || f)}">${Utils.escapeHTML(f.name || f.siteName || f)}</option>`).join('')}
-                        </select>
+                    <!-- أدوات التخصيص: المصنع + المفتش -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;">
+                        <div>
+                            <label style="display: block; font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-industry ml-1 text-blue-500"></i> المصنع / الموقع:
+                            </label>
+                            <select id="qr-factory-select" class="form-select" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem;">
+                                <option value="">— جميع المواقع والمصانع —</option>
+                                ${(factories || []).map(f => `<option value="${Utils.escapeHTML(f.name || f.siteName || f)}">${Utils.escapeHTML(f.name || f.siteName || f)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-user-shield ml-1 text-emerald-600"></i> مفتش السلامة المخصص:
+                            </label>
+                            <select id="qr-inspector-select" class="form-select" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem;">
+                                <option value="">— عام (تحديد المفتش بالنموذج) —</option>
+                                ${(safetyMembers || []).map(m => `<option value="${Utils.escapeHTML(m.name)}">${Utils.escapeHTML(m.name)}</option>`).join('')}
+                            </select>
+                        </div>
                     </div>
 
                     <!-- عرض الـ QR Code -->
                     <div style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; text-align: center; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                         <div id="qr-code-container" style="display: inline-block; padding: 12px; background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 12px;">
-                            <img id="qr-code-img" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(baseUrl)}" alt="QR Code" style="width: 180px; height: 180px; display: block;">
+                            <img id="qr-code-img" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(baseUrl)}" alt="QR Code" style="width: 180px; height: 180px; display: block;">
                         </div>
-                        <div style="font-size: 0.85rem; color: #475569; font-weight: 600;" id="qr-target-text">
+                        <div style="font-size: 0.85rem; color: #1e293b; font-weight: 700;" id="qr-target-text">
                             امسح الرمز بكاميرا الهاتف لفتح نموذج الملاحظات فوراً
                         </div>
                     </div>
@@ -13433,12 +13445,17 @@ const DailyObservations = {
         `;
         document.body.appendChild(modal);
 
-        const select = modal.querySelector('#qr-factory-select');
+        const factorySelect = modal.querySelector('#qr-factory-select');
+        const inspectorSelect = modal.querySelector('#qr-inspector-select');
         const linkInput = modal.querySelector('#public-link-input');
         const qrImg = modal.querySelector('#qr-code-img');
         const qrText = modal.querySelector('#qr-target-text');
+        const copyBtn = modal.querySelector('#copy-public-link-btn');
+        const printBtn = modal.querySelector('#print-poster-btn');
+
         const updateUrl = () => {
-            const fac = select.value;
+            const fac = factorySelect.value;
+            const inspector = inspectorSelect.value;
             let fullUrl = baseUrl;
             try {
                 const compactPayload = {
@@ -13447,20 +13464,36 @@ const DailyObservations = {
                         Array.isArray(f.places) ? f.places : (f.places ? String(f.places).split(/[\n,]/).map(p => p.trim()).filter(Boolean) : [])
                     ]).filter(x => x[0]),
                     d: (typeof this.getDepartmentOptions === 'function') ? this.getDepartmentOptions() : [],
-                    m: (typeof this.getSafetyTeamMembers === 'function') ? this.getSafetyTeamMembers().map(m => m.name).filter(Boolean) : []
+                    m: (safetyMembers || []).map(m => m.name).filter(Boolean)
                 };
                 const enc = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(compactPayload)))));
-                fullUrl = `${baseUrl}${fac ? `?factory=${encodeURIComponent(fac)}` : ''}#cfg=${enc}`;
+                
+                let queryParts = [];
+                if (fac) queryParts.push(`factory=${encodeURIComponent(fac)}`);
+                if (inspector) queryParts.push(`inspector=${encodeURIComponent(inspector)}`);
+                const qStr = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+                fullUrl = `${baseUrl}${qStr}#cfg=${enc}`;
             } catch (e) {
-                fullUrl = fac ? `${baseUrl}?factory=${encodeURIComponent(fac)}` : baseUrl;
+                let queryParts = [];
+                if (fac) queryParts.push(`factory=${encodeURIComponent(fac)}`);
+                if (inspector) queryParts.push(`inspector=${encodeURIComponent(inspector)}`);
+                const qStr = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+                fullUrl = `${baseUrl}${qStr}`;
             }
 
             linkInput.value = fullUrl;
-            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(fullUrl)}`;
-            qrText.textContent = fac ? `نموذج الإبلاغ المباشر لموقع: ${fac}` : 'امسح الرمز بكاميرا الهاتف لفتح نموذج الملاحظات فوراً';
+            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(fullUrl)}`;
+            
+            let desc = 'امسح الرمز بكاميرا الهاتف لفتح نموذج الملاحظات فوراً';
+            if (fac && inspector) desc = `الموقع: ${fac} | مفتش السلامة: ${inspector}`;
+            else if (fac) desc = `الموقع المخصص: ${fac}`;
+            else if (inspector) desc = `مفتش السلامة المخصص: ${inspector}`;
+            qrText.textContent = desc;
         };
 
-        select?.addEventListener('change', updateUrl);
+        factorySelect?.addEventListener('change', updateUrl);
+        inspectorSelect?.addEventListener('change', updateUrl);
+        updateUrl();
 
         copyBtn?.addEventListener('click', () => {
             navigator.clipboard.writeText(linkInput.value).then(() => {
@@ -13470,7 +13503,8 @@ const DailyObservations = {
         });
 
         printBtn?.addEventListener('click', () => {
-            const facName = select.value || 'جميع مصانع ومواقع الشركة';
+            const facName = factorySelect.value || 'جميع مصانع ومواقع الشركة';
+            const inspName = inspectorSelect.value || '';
             const qrSrc = qrImg.src;
             const printWin = window.open('', '_blank');
             printWin.document.write(`
@@ -13482,41 +13516,45 @@ const DailyObservations = {
                         @page { size: A4 portrait; margin: 15mm; }
                         body { font-family: 'Cairo', system-ui, sans-serif; text-align: center; color: #0f172a; margin: 0; padding: 20px; }
                         .poster-card { border: 4px solid #1e293b; border-radius: 20px; padding: 40px 30px; }
-                        .header { background: #1e293b; color: #fff; padding: 20px; border-radius: 12px; margin-bottom: 30px; }
-                        .title { font-size: 28px; font-weight: 800; margin: 0 0 10px 0; }
-                        .sub { font-size: 18px; color: #94a3b8; margin: 0; }
-                        .factory-badge { display: inline-block; background: #e0f2fe; color: #0369a1; font-size: 22px; font-weight: 700; padding: 10px 24px; border-radius: 30px; margin-bottom: 30px; }
-                        .qr-wrap { padding: 20px; border: 3px dashed #cbd5e1; border-radius: 20px; display: inline-block; margin-bottom: 30px; }
+                        .header { background: #1e293b; color: #fff; padding: 20px; border-radius: 12px; margin-bottom: 25px; }
+                        .title { font-size: 28px; font-weight: 800; margin: 0 0 8px 0; }
+                        .sub { font-size: 16px; color: #94a3b8; margin: 0; }
+                        .badges-wrap { display: flex; justify-content: center; gap: 12px; margin-bottom: 25px; flex-wrap: wrap; }
+                        .factory-badge { background: #e0f2fe; color: #0369a1; font-size: 20px; font-weight: 700; padding: 8px 20px; border-radius: 30px; }
+                        .inspector-badge { background: #dcfce7; color: #15803d; font-size: 20px; font-weight: 700; padding: 8px 20px; border-radius: 30px; }
+                        .qr-wrap { padding: 20px; border: 3px dashed #cbd5e1; border-radius: 20px; display: inline-block; margin-bottom: 25px; }
                         .qr-img { width: 260px; height: 260px; }
                         .instruction { font-size: 22px; font-weight: 700; color: #1e40af; margin-bottom: 15px; }
-                        .steps { font-size: 16px; color: #475569; line-height: 1.8; margin-bottom: 30px; }
+                        .steps { font-size: 16px; color: #475569; line-height: 1.8; margin-bottom: 25px; }
                         .footer { font-size: 14px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 15px; }
                     </style>
                 </head>
                 <body>
                     <div class="poster-card">
                         <div class="header">
-                            <h1 class="title">SafetyHub | بوابة الإبلاغ عن ملاحظات السلامة اليومية</h1>
-                            <p class="sub">معاً لبيئة عمل آمنة خالية من الحوادث والمخاطر</p>
+                            <h1 class="title">منظومة الملاحظات الميدانية اليومية</h1>
+                            <p class="sub">نظام إدارة السلامة والصحة المهنية والبيئة (HSE 360)</p>
                         </div>
-                        <div class="factory-badge">الموقع: ${facName}</div>
-                        <div>
-                            <div class="qr-wrap">
-                                <img src="${qrSrc}" class="qr-img" alt="QR Code">
-                            </div>
+                        <div class="badges-wrap">
+                            <div class="factory-badge"><i class="fas fa-industry"></i> ${facName}</div>
+                            ${inspName ? `<div class="inspector-badge"><i class="fas fa-user-shield"></i> مفتش السلامة: ${inspName}</div>` : ''}
                         </div>
-                        <div class="instruction">📱 افتح كاميرا هاتفك وامسح الرمز للإبلاغ فوراً</div>
+                        <div class="qr-wrap">
+                            <img src="${qrSrc}" alt="QR Code" class="qr-img">
+                        </div>
+                        <div class="instruction">امسح الرمز بكاميرا جوالك وسجّل الملاحظة فوراً</div>
                         <div class="steps">
-                            1. وجّه كاميرا الهاتف نحو الرمز أعلاه.<br>
-                            2. اضغط على الرابط المنبثق لفتح نموذج الملاحظات اليومية.<br>
-                            3. حدد نوع الملاحظة والتفاصيل ويمكنك التقاط صورة بالكاميرا.<br>
-                            4. اضغط «إرسال الملاحظة» لتسجيلها فوراً في جدول الملاحظات ومتابعتها.
+                            1. وجّه كاميرا الهاتف نحو رمز الاستجابة السريعة (QR Code)<br>
+                            2. اضغط على الرابط الظاهر لفتح نموذج الملاحظة بدون الحاجة لتسجيل دخول<br>
+                            3. حدد نوع الملاحظة والمكان والتقط صورة ثم اضغط إرسال
                         </div>
-                        <div class="footer">منظومة إدارة السلامة والصحة المهنية والبيئة — HSE Department</div>
+                        <div class="footer">
+                            مشاركتكم تدعم بيئة عمل آمنة وخالية من الحوادث — إدارة السلامة والصحة المهنية
+                        </div>
                     </div>
                     <script>
-                        window.onload = function() { window.print(); };
-                    <\/script>
+                        window.onload = () => { window.print(); };
+                    </script>
                 </body>
                 </html>
             `);

@@ -969,6 +969,28 @@
             otherOwnerOpt.value = '__OTHER_OWNER__';
             otherOwnerOpt.textContent = '➕ اسم آخر (إدخال يدوي)...';
             ownerSelect.appendChild(otherOwnerOpt);
+
+            // قراءة query param لمفتش السلامة المخصص
+            const inspectorParam = urlParams.get('inspector') || urlParams.get('officer') || urlParams.get('owner');
+            if (inspectorParam) {
+                document.getElementById('anonymousToggle').checked = false;
+                toggleAnonymous(false);
+                let found = false;
+                for (let i = 0; i < ownerSelect.options.length; i++) {
+                    if (ownerSelect.options[i].value === inspectorParam || ownerSelect.options[i].value.includes(inspectorParam)) {
+                        ownerSelect.selectedIndex = i;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    const customOpt = document.createElement('option');
+                    customOpt.value = inspectorParam;
+                    customOpt.textContent = `${inspectorParam} (مفتش سلامة معتمد)`;
+                    customOpt.selected = true;
+                    ownerSelect.insertBefore(customOpt, ownerSelect.firstChild);
+                }
+            }
         }
 
         function handleSiteChange(siteName) {
