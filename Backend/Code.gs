@@ -761,7 +761,8 @@ function doGet(e) {
             getPublicProfileData: true,
             publicEmergencyMap: true,
             getPublicEmergencyMapData: true,
-            publicEmergencyMapImage: true
+            publicEmergencyMapImage: true,
+            getPublicObservationConfig: true
         };
         if (action && !allowedGetActions[action]) {
             if (typeof logSecurityEvent === 'function') {
@@ -773,6 +774,14 @@ function doGet(e) {
                 errorCode: 'GET_ACTION_NOT_ALLOWED',
                 action: action
             })));
+        }
+
+        // تكوين نموذج الملاحظات العامة
+        if (action === 'getPublicObservationConfig') {
+            const configResult = (typeof getPublicObservationConfig === 'function')
+                ? getPublicObservationConfig()
+                : { success: false, message: 'getPublicObservationConfig not defined' };
+            return setCorsHeaders(ContentService.createTextOutput(JSON.stringify(configResult)).setMimeType(ContentService.MimeType.JSON));
         }
 
         // معالجة طلب getProfileImage: إرجاع صورة الملف الشخصي من Drive كـ data URI (يعمل بعد النشر)

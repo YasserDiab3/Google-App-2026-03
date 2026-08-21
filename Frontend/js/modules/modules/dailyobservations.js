@@ -13303,7 +13303,70 @@ const DailyObservations = {
         return this.convertFileToBase64(file);
     },
 
+    exportPublicConfigToLocalStorage() {
+        try {
+            const sites = [];
+            const rawSites = AppState.appData?.observationSites || [];
+            rawSites.forEach(s => {
+                const name = String(s.name || s.siteName || s).trim();
+                const places = Array.isArray(s.places) ? s.places : (s.places ? String(s.places).split(/[\n,]/).map(p => p.trim()).filter(Boolean) : []);
+                if (name && !sites.some(x => x.name === name)) {
+                    sites.push({ name, places });
+                }
+            });
+
+            if (sites.length === 0 && Array.isArray(AppState.appData?.dailyObservations)) {
+                const sMap = {};
+                AppState.appData.dailyObservations.forEach(d => {
+                    const s = String(d.siteName || d.site || '').trim();
+                    const p = String(d.locationName || d.placeId || d.place || '').trim();
+                    if (s) {
+                        if (!sMap[s]) sMap[s] = [];
+                        if (p && !sMap[s].includes(p)) sMap[s].push(p);
+                    }
+                });
+                Object.keys(sMap).forEach(k => sites.push({ name: k, places: sMap[k] }));
+            }
+
+            const departments = (typeof this.getDepartmentOptions === 'function') ? this.getDepartmentOptions() : [];
+            const rawMembers = (typeof this.getSafetyTeamMembers === 'function') ? this.getSafetyTeamMembers() : [];
+            const safetyMembers = rawMembers.map(m => ({
+                name: m.name || m.fullName || m,
+                role: m.role || m.jobTitle || 'مسؤول سلامة'
+            })).filter(m => m.name);
+
+            const payload = {
+                success: true,
+                sites: sites,
+                departments: departments,
+                safetyMembers: safetyMembers,
+                observationTypes: [
+                    { value: 'سلوك غير آمن', label: 'سلوك غير آمن' },
+                    { value: 'حالة غير آمنة', label: 'حالة غير آمنة' },
+                    { value: 'سلوك آمن وإيجابي', label: 'سلوك آمن وإيجابي' },
+                    { value: 'ملاحظة بيئية', label: 'ملاحظة بيئية' },
+                    { value: 'خطر حريق', label: 'خطر حريق' },
+                    { value: 'أخرى', label: 'أخرى' }
+                ],
+                shifts: ['وردية صباحية', 'وردية مسائية', 'وردية ليلية'],
+                riskLevels: [
+                    { value: 'منخفض', label: 'منخفض' },
+                    { value: 'متوسط', label: 'متوسط' },
+                    { value: 'عالي', label: 'عالي' },
+                    { value: 'حرج', label: 'حرج' }
+                ]
+            };
+
+            if (sites.length > 0 || departments.length > 0) {
+                localStorage.setItem('HSE_PUBLIC_OBS_CONFIG', JSON.stringify(payload));
+            }
+        } catch (e) {
+            console.warn('exportPublicConfigToLocalStorage notice:', e);
+        }
+    },
+
     openPublicQrModal() {
+        this.exportPublicConfigToLocalStorage();
         const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
         let baseUrl = origin + window.location.pathname.replace(/\/index\.html$/i, '').replace(/\/$/, '') + '/public-observation.html';
         
