@@ -16050,7 +16050,7 @@ const Clinic = {
             // 1. إغلاق النافذة فوراً في 0 ثانية
             document.getElementById('clinic-attendance-punch-modal')?.remove();
 
-            // 2. تحديث السجل محلياً فورياً
+            // 2. تحديث السجل محلياً وحفظه فورياً
             if (record) {
                 if (isCheckIn) record.checkIn = timeVal;
                 if (isCheckOut) record.checkOut = timeVal;
@@ -16064,13 +16064,16 @@ const Clinic = {
                     } catch (_) {}
                     record.status = 'present';
                 }
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                }
             }
 
             // 3. إعادة رسم الجدول فورياً
             this.renderAttendanceTab({ force: true });
-            Notification?.success?.('تم تسجيل البصمة بنجاح وجاري المزامنة...');
+            Notification?.success?.('تم تسجيل البصمة بنجاح وجاري المزامنة مع السيرفر...');
 
-            // 4. مزامنة مع السيرفر في الخلفية
+            // 4. مزامنة مع السيرفر في الخلفية بمهلة كافية
             GoogleIntegration.sendRequest({
                 action: 'updateClinicStaffAttendance',
                 data: {
@@ -16081,18 +16084,20 @@ const Clinic = {
                     date: record.date || dayKey || '',
                     punchType: type,
                     [isCheckIn ? 'checkIn' : 'checkOut']: timeVal,
-                    notes
+                    notes,
+                    __timeoutMs: 90000
                 }
             }).then((resp) => {
                 if (resp && resp.success) {
+                    Notification?.success?.('تم تأكيد المزامنة مع السيرفر بنجاح');
                     this.loadClinicAttendanceData(true).then(() => {
                         this.renderAttendanceTab({ force: true });
                     }).catch(() => {});
-                } else {
-                    Notification?.error?.(resp?.message || 'فشل المزامنة مع السيرفر');
+                } else if (resp && resp.message) {
+                    Notification?.warning?.(resp.message);
                 }
             }).catch((err) => {
-                Notification?.error?.(err?.message || 'فشل المزامنة مع السيرفر');
+                if (AppState?.debugMode) console.warn('Clinic attendance background sync notice:', err);
             });
         });
     },

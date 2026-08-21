@@ -1033,7 +1033,8 @@ const GoogleIntegration = {
                 'getAllEmployees',
                 'getUserVersionsDashboard', 'getAllUserVersions', 'getUserVersionStats',
                 'saveFormSettings', 'getFormSettings', 'deleteSite', 'deletePlace', 'initFormSettingsTables',
-                'exportDailyObservationsPptReport', 'createDefaultDailyObservationsPptTemplate', 'exportPpt'
+                'exportDailyObservationsPptReport', 'createDefaultDailyObservationsPptTemplate', 'exportPpt',
+                'updateClinicStaffAttendance'
             ];
             const mediumOperations = [
                 'getData', 'readData', 'loadData', 'fetchData', 'add', 'update'
