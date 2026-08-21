@@ -13495,44 +13495,31 @@ const DailyObservations = {
             if (inspector) queryParts.push(`inspector=${encodeURIComponent(inspector)}`);
             const qStr = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
             
-            let encHash = '';
-            try {
-                const compactPayload = {
-                    s: (factories || []).map(f => [
-                        String(f.name || f.siteName || f || '').trim(),
-                        this.extractCleanPlacesList(f.places)
-                    ]).filter(x => x[0]),
-                    d: (typeof this.getDepartmentOptions === 'function') ? this.getDepartmentOptions() : [],
-                    m: (safetyMembers || []).map(m => m.name).filter(Boolean)
-                };
-                encHash = '#cfg=' + encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(compactPayload)))));
-            } catch(e) {}
-
-            const fullUrl = `${baseUrl}${qStr}${encHash}`;
-            linkInput.value = fullUrl;
+            const qrTargetUrl = `${baseUrl}${qStr}`;
+            linkInput.value = qrTargetUrl;
             
-            // توليد الرمز محلياً بالكامل بدقة وجودة عالية وبمستوى تصحيح L للاستيعاب السريع
+            // توليد الرمز محلياً بالكامل بدقة وجودة فائقة وفورية
             let localQrData = '';
             if (typeof qrcode === 'function') {
                 try {
-                    const qr = qrcode(0, 'L');
-                    qr.addData(fullUrl);
+                    const qr = qrcode(0, 'M');
+                    qr.addData(qrTargetUrl);
                     qr.make();
-                    localQrData = qr.createDataURL(5, 4);
+                    localQrData = qr.createDataURL(6, 4);
                 } catch(e) {
-                    console.warn('qrcode compact error:', e);
+                    console.warn('qrcode error:', e);
                 }
             }
             if (!localQrData && window.QRCode && typeof window.QRCode.generate === 'function') {
                 try {
-                    localQrData = window.QRCode.generate(fullUrl, 260);
+                    localQrData = window.QRCode.generate(qrTargetUrl, 260);
                 } catch(e) {}
             }
             
             if (localQrData && localQrData.startsWith('data:')) {
                 qrImg.src = localQrData;
             } else {
-                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(fullUrl)}`;
+                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(qrTargetUrl)}`;
             }
             
             let desc = 'امسح الرمز بكاميرا الهاتف لفتح نموذج الملاحظات فوراً';
@@ -13558,7 +13545,7 @@ const DailyObservations = {
             const inspName = inspectorSelect.value || '';
             const rawUrl = linkInput.value;
             
-            // توليد رمز QR بدقة عالية للطباعة
+            // توليد رمز QR عالي الدقة وجاهز للطباعة مباشرة
             let printQrDataUrl = '';
             if (typeof qrcode === 'function') {
                 try {
@@ -13570,6 +13557,9 @@ const DailyObservations = {
             }
             if (!printQrDataUrl && qrImg.src && qrImg.src.startsWith('data:')) {
                 printQrDataUrl = qrImg.src;
+            }
+            if (!printQrDataUrl) {
+                printQrDataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(rawUrl)}`;
             }
 
             const printWin = window.open('', '_blank');
@@ -13603,7 +13593,7 @@ const DailyObservations = {
                         .factory-badge { background: #eff6ff !important; border: 1.5px solid #3b82f6; color: #1d4ed8 !important; font-size: 17px; font-weight: 800; padding: 6px 18px; border-radius: 25px; display: inline-flex; align-items: center; gap: 6px; }
                         .inspector-badge { background: #f0fdf4 !important; border: 1.5px solid #16a34a; color: #15803d !important; font-size: 17px; font-weight: 800; padding: 6px 18px; border-radius: 25px; display: inline-flex; align-items: center; gap: 6px; }
                         .qr-box { background: #ffffff; border: 3px solid #0f172a; border-radius: 16px; padding: 14px; display: inline-block; margin-bottom: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
-                        .qr-img { width: 250px; height: 250px; display: block; margin: 0 auto; }
+                        .qr-img { width: 250px; height: 250px; display: block; margin: 0 auto; object-fit: contain; }
                         .instruction-card { background: #f8fafc !important; border-right: 5px solid #2563eb; border: 1px solid #e2e8f0; border-right-width: 5px; border-radius: 8px; padding: 12px 18px; margin-bottom: 18px; text-align: right; }
                         .instruction-title { font-size: 17px; font-weight: 900; color: #1e3a8a; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
                         .steps-list { font-size: 13.5px; color: #334155; line-height: 1.8; margin: 0; padding-right: 20px; font-weight: 600; }
@@ -13635,7 +13625,7 @@ const DailyObservations = {
 
                         <div>
                             <div class="qr-box" id="qrContainer">
-                                <img id="printQrImg" src="${printQrDataUrl || ''}" alt="QR Code" class="qr-img">
+                                <img id="printQrImg" src="${printQrDataUrl}" alt="QR Code" class="qr-img">
                             </div>
                         </div>
 
@@ -13662,15 +13652,19 @@ const DailyObservations = {
                             const img = document.getElementById('printQrImg');
                             
                             function ensureQrRendered() {
-                                if (!img.src || img.src === '' || img.src === window.location.href || img.src.includes('api.qrserver.com')) {
+                                if (!img.src || img.src === '' || img.src === window.location.href || img.naturalWidth === 0) {
                                     try {
                                         if (typeof qrcode === 'function') {
                                             const qr = qrcode(0, 'M');
                                             qr.addData(rawUrl);
                                             qr.make();
                                             img.src = qr.createDataURL(8, 4);
+                                        } else {
+                                            img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(rawUrl);
                                         }
-                                    } catch(e) {}
+                                    } catch(e) {
+                                        img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(rawUrl);
+                                    }
                                 }
                             }
 
@@ -13680,7 +13674,7 @@ const DailyObservations = {
                                 ensureQrRendered();
                                 setTimeout(function() {
                                     window.print();
-                                }, 400);
+                                }, 300);
                             });
                         })();
                     <\/script>

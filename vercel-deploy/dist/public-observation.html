@@ -1114,6 +1114,25 @@
     <script>
         const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
         
+        function getEffectiveApiUrl() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const p = urlParams.get('apiUrl') || urlParams.get('api');
+                if (p && p.includes('script.google.com')) return p;
+                const s1 = localStorage.getItem('HSE_SETTINGS_CACHE');
+                if (s1) {
+                    const parsed = JSON.parse(s1);
+                    if (parsed && parsed.scriptUrl && parsed.scriptUrl.includes('script.google.com')) return parsed.scriptUrl;
+                }
+                const s2 = localStorage.getItem('hse_app_settings');
+                if (s2) {
+                    const parsed = JSON.parse(s2);
+                    if (parsed && parsed.scriptUrl && parsed.scriptUrl.includes('script.google.com')) return parsed.scriptUrl;
+                }
+            } catch(e) {}
+            return DEFAULT_API_URL;
+        }
+        
         const SUB_CATEGORIES_MAP = {
             'سلوك غير آمن': [
                 'عدم ارتداء أو الاستخدام الخاطئ لمهمات الوقاية (PPE)',
@@ -1319,11 +1338,14 @@
         async function loadServerConfig() {
             const ind = document.getElementById('loadingIndicator');
             try {
+                const targetUrl = getEffectiveApiUrl();
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 8000);
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-                const res = await fetch(DEFAULT_API_URL, {
+                const res = await fetch(targetUrl, {
                     method: 'POST',
+                    mode: 'cors',
+                    redirect: 'follow',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({ action: 'getPublicObservationConfig' }),
                     signal: controller.signal
@@ -1750,25 +1772,49 @@
                 photoBase64: currentPhotoBase64
             };
 
-            try {
-                const response = await fetch(DEFAULT_API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
-                });
+            const targetApiUrl = getEffectiveApiUrl();
+            let submitSuccess = false;
+            let resultData = null;
+            let lastErrorMsg = '';
 
-                const result = await response.json();
-                if (result && result.success) {
-                    const refCode = result.id || ('OBS-' + new Date().toISOString().slice(0,7).replace('-','') + '-0000');
-                    showSuccess(refCode, payload);
-                } else {
-                    throw new Error(result.message || 'فشل إرسال الملاحظة');
+            for (let attempt = 1; attempt <= 2; attempt++) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+                    const response = await fetch(targetApiUrl, {
+                        method: 'POST',
+                        mode: 'cors',
+                        redirect: 'follow',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload),
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+
+                    const result = await response.json();
+                    if (result && result.success) {
+                        submitSuccess = true;
+                        resultData = result;
+                        break;
+                    } else {
+                        lastErrorMsg = (result && result.message) ? result.message : 'فشل تسجيل الملاحظة من الخادم';
+                    }
+                } catch (err) {
+                    lastErrorMsg = err.message || 'تعذر الاتصال بالخادم';
+                    if (attempt < 2) {
+                        await new Promise(r => setTimeout(r, 1200));
+                    }
                 }
-            } catch (err) {
-                console.error(err);
-                errorBox.textContent = 'تعذر الاتصال بالخادم، يرجى التأكد من اتصال الإنترنت والمحاولة مرة أخرى.';
+            }
+
+            if (submitSuccess && resultData) {
+                const refCode = resultData.id || ('OBS-' + new Date().toISOString().slice(0,7).replace('-','') + '-0000');
+                showSuccess(refCode, payload);
+            } else {
+                errorBox.textContent = lastErrorMsg || 'تعذر الاتصال بالخادم، يرجى التأكد من اتصال الإنترنت والمحاولة مرة أخرى.';
                 errorBox.style.display = 'block';
-                showToast('تعذر إرسال الملاحظة، يرجى التحقق من اتصال الإنترنت', 'error', 5000);
+                showToast(lastErrorMsg || 'تعذر إرسال الملاحظة، يرجى التحقق من اتصال الإنترنت', 'error', 6000);
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> <span>تسجيل الملاحظة اليومية الآن</span>';
             }
