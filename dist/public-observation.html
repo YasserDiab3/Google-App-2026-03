@@ -59,14 +59,14 @@
         .header-card {
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
             border-radius: var(--radius-lg);
-            padding: 24px 20px;
+            padding: 22px 20px;
             color: #ffffff;
             text-align: center;
             margin-bottom: 20px;
             box-shadow: var(--shadow-lg);
             position: relative;
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
         .header-card::before {
@@ -79,6 +79,42 @@
             background: radial-gradient(circle, rgba(59,130,246,0.25) 0%, rgba(255,255,255,0) 70%);
             border-radius: 50%;
             pointer-events: none;
+        }
+
+        .header-meta-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .header-badge-code {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #cbd5e1;
+            letter-spacing: 0.5px;
+        }
+
+        .header-dept-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(37, 99, 235, 0.25);
+            border: 1px solid rgba(96, 165, 250, 0.4);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #93c5fd;
         }
 
         .brand-wrapper {
@@ -95,20 +131,20 @@
             object-fit: contain;
             filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
             background: #ffffff;
-            padding: 4px 8px;
+            padding: 4px 10px;
             border-radius: 8px;
         }
 
         .logo-icon-fallback {
-            width: 48px;
-            height: 48px;
+            width: 50px;
+            height: 50px;
             background: rgba(59, 130, 246, 0.2);
             border: 1.5px solid rgba(59, 130, 246, 0.5);
             border-radius: 12px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.4rem;
+            font-size: 1.5rem;
             color: #60a5fa;
         }
 
@@ -116,13 +152,14 @@
             font-size: 1.35rem;
             font-weight: 800;
             letter-spacing: -0.5px;
-            margin-bottom: 4px;
+            margin-bottom: 5px;
+            line-height: 1.3;
         }
 
         .header-subtitle {
-            font-size: 0.85rem;
+            font-size: 0.84rem;
             color: #94a3b8;
-            line-height: 1.4;
+            line-height: 1.5;
         }
 
         /* حالة التحميل الأولية */
@@ -158,224 +195,238 @@
             padding: 24px 20px;
             border: 1px solid #e2e8f0;
             box-shadow: var(--shadow-sm);
-            display: flex;
-            flex-direction: column;
-            gap: 22px;
         }
 
-        /* أقسام وخطوات النموذج */
         .form-section {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: var(--radius-md);
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
+            margin-bottom: 24px;
+            padding-bottom: 22px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .form-section:last-of-type {
+            border-bottom: none;
+            margin-bottom: 10px;
+            padding-bottom: 0;
         }
 
         .section-header {
             display: flex;
             align-items: center;
             gap: 10px;
-            border-bottom: 1px solid #f1f5f9;
-            padding-bottom: 10px;
-            margin-bottom: 2px;
+            margin-bottom: 6px;
         }
 
         .section-badge {
-            width: 28px;
-            height: 28px;
+            width: 26px;
+            height: 26px;
             border-radius: 50%;
             background: var(--primary-light);
             color: var(--primary);
             font-weight: 800;
             font-size: 0.85rem;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid #bfdbfe;
         }
 
         .section-title {
-            font-size: 0.95rem;
+            font-size: 1.05rem;
             font-weight: 700;
             color: #1e293b;
         }
 
         .section-desc {
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             color: var(--text-muted);
-            margin-top: -8px;
-            margin-bottom: 4px;
-        }
-
-        /* شبكات الحقول */
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        @media (max-width: 540px) {
-            .grid-2 {
-                grid-template-columns: 1fr;
-            }
+            margin-bottom: 16px;
+            margin-right: 36px;
         }
 
         .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
+            margin-bottom: 16px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
         }
 
         .form-label {
-            font-size: 0.85rem;
+            display: block;
+            font-size: 0.88rem;
             font-weight: 700;
             color: #334155;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            margin-bottom: 6px;
         }
 
         .form-label .required {
             color: #ef4444;
+            margin-right: 2px;
         }
 
         .form-control {
             width: 100%;
             padding: 11px 14px;
-            font-size: 15px; /* تجنب zoom تلقائي في iOS */
+            border-radius: var(--radius-md);
             border: 1.5px solid var(--border-color);
-            border-radius: var(--radius-sm);
             background: #ffffff;
             color: var(--text-main);
-            outline: none;
+            font-size: 0.95rem;
             transition: all 0.2s ease;
+            outline: none;
         }
 
         .form-control:focus {
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .form-control:disabled {
+            background-color: #f1f5f9;
+            color: #94a3b8;
+            cursor: not-allowed;
         }
 
         textarea.form-control {
             min-height: 90px;
             resize: vertical;
-            line-height: 1.5;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+
+        @media (min-width: 580px) {
+            .grid-2 {
+                grid-template-columns: 1fr 1fr;
+            }
         }
 
         /* كروت اختيار نوع الملاحظة */
         .types-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
         }
 
-        @media (max-width: 500px) {
+        @media (min-width: 480px) {
             .types-grid {
-                grid-template-columns: repeat(2, 1fr);
+                grid-template-columns: repeat(3, 1fr);
             }
         }
 
         .type-card {
-            border: 1.5px solid #e2e8f0;
-            border-radius: var(--radius-sm);
-            padding: 10px 8px;
+            border: 2px solid #e2e8f0;
+            border-radius: var(--radius-md);
+            padding: 12px 10px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: all 0.2s ease;
+            background: #ffffff;
+            user-select: none;
+        }
+
+        .type-card:hover {
+            border-color: #cbd5e1;
             background: #f8fafc;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-            touch-action: manipulation;
-        }
-
-        .type-card:active {
-            transform: scale(0.97);
-        }
-
-        .type-card .icon {
-            font-size: 1.2rem;
-            color: #64748b;
-        }
-
-        .type-card .title {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: #334155;
-            line-height: 1.2;
         }
 
         .type-card.selected {
             border-color: var(--primary);
-            background-color: var(--primary-light);
-            box-shadow: 0 0 0 1px var(--primary);
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            font-weight: 700;
         }
 
-        .type-card.selected .icon,
-        .type-card.selected .title {
+        .type-card .icon {
+            font-size: 1.4rem;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .type-card.selected .icon {
             color: var(--primary);
         }
 
-        /* اختيار مستوى الخطورة */
+        .type-card .title {
+            font-size: 0.82rem;
+            line-height: 1.2;
+            display: block;
+        }
+
+        /* شيبس مستوى الخطورة */
         .risk-chips {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 6px;
+            gap: 8px;
         }
 
         .risk-chip {
-            border: 1.5px solid #e2e8f0;
-            border-radius: var(--radius-sm);
-            padding: 8px 4px;
+            padding: 9px 4px;
             text-align: center;
-            font-size: 0.8rem;
+            border-radius: var(--radius-sm);
+            border: 1.5px solid #e2e8f0;
+            font-size: 0.85rem;
             font-weight: 700;
             cursor: pointer;
             background: #ffffff;
-            transition: all 0.15s ease;
+            transition: all 0.2s ease;
+            user-select: none;
         }
 
-        .risk-chip[data-risk="منخفض"].selected { background: #dcfce7; border-color: #16a34a; color: #15803d; }
-        .risk-chip[data-risk="متوسط"].selected { background: #fef3c7; border-color: #d97706; color: #b45309; }
-        .risk-chip[data-risk="عالي"].selected { background: #fee2e2; border-color: #dc2626; color: #b91c1c; }
-        .risk-chip[data-risk="حرج"].selected { background: #7f1d1d; border-color: #450a0a; color: #ffffff; }
+        .risk-chip[data-risk="منخفض"].selected {
+            background: #ecfdf5;
+            border-color: #10b981;
+            color: #047857;
+        }
 
-        /* منطقة رفع وتصوير الكاميرا */
+        .risk-chip[data-risk="متوسط"].selected {
+            background: #fffbeb;
+            border-color: #f59e0b;
+            color: #b45309;
+        }
+
+        .risk-chip[data-risk="عالي"].selected {
+            background: #fef2f2;
+            border-color: #ef4444;
+            color: #b91c1c;
+        }
+
+        .risk-chip[data-risk="حرج"].selected {
+            background: #450a0a;
+            border-color: #7f1d1d;
+            color: #ffffff;
+        }
+
+        /* منطقة رفع الصورة */
         .photo-upload-area {
-            border: 2px dashed #cbd5e1;
+            border: 2px dashed var(--border-color);
             border-radius: var(--radius-md);
-            padding: 16px;
+            padding: 18px;
             text-align: center;
             background: #f8fafc;
             cursor: pointer;
             transition: all 0.2s ease;
         }
 
-        .photo-upload-area:hover, .photo-upload-area:active {
-            background: #eff6ff;
+        .photo-upload-area:hover {
             border-color: var(--primary);
+            background: var(--primary-light);
         }
 
         .photo-preview-wrap {
             position: relative;
             margin-top: 10px;
             display: none;
-            border-radius: var(--radius-md);
-            overflow: hidden;
-            border: 1px solid #cbd5e1;
-            max-height: 250px;
         }
 
         .photo-preview-wrap img {
             width: 100%;
-            height: 100%;
-            max-height: 250px;
+            max-height: 240px;
             object-fit: cover;
-            display: block;
+            border-radius: var(--radius-md);
+            border: 1px solid #e2e8f0;
         }
 
         .remove-photo-btn {
@@ -392,101 +443,141 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            box-shadow: var(--shadow-sm);
         }
 
-        /* خيار الإبلاغ كمجهول */
+        /* سويتش مجهول الهوية */
         .toggle-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
             background: #f8fafc;
-            padding: 10px 14px;
-            border-radius: var(--radius-sm);
+            padding: 12px 14px;
+            border-radius: var(--radius-md);
             border: 1px solid #e2e8f0;
+            margin-bottom: 12px;
         }
 
         .toggle-switch {
             position: relative;
             display: inline-block;
-            width: 44px;
+            width: 46px;
             height: 24px;
         }
 
-        .toggle-switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 24px; }
-        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--primary); }
-        input:checked + .slider:before { transform: translateX(20px); }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #cbd5e1;
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
 
         /* زر الإرسال */
         .btn-submit {
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: #ffffff;
             border: none;
             border-radius: var(--radius-md);
-            padding: 15px 20px;
+            padding: 15px;
             font-size: 1.05rem;
             font-weight: 800;
             cursor: pointer;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+            transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
-            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
-            transition: all 0.2s ease;
-            touch-action: manipulation;
-            margin-top: 6px;
+            margin-top: 10px;
         }
 
-        .btn-submit:disabled { opacity: 0.65; cursor: not-allowed; }
-        .btn-submit:active:not(:disabled) { transform: scale(0.98); }
+        .btn-submit:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45);
+        }
+
+        .btn-submit:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
 
         /* شاشة النجاح */
         .success-screen {
             display: none;
             background: #ffffff;
             border-radius: var(--radius-lg);
-            padding: 36px 20px;
+            padding: 40px 24px;
             text-align: center;
             border: 1px solid #e2e8f0;
             box-shadow: var(--shadow-md);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .success-icon {
-            width: 72px;
-            height: 72px;
+            width: 70px;
+            height: 70px;
+            background: #ecfdf5;
+            color: #10b981;
             border-radius: 50%;
-            background: #dcfce7;
-            color: #16a34a;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.2rem;
+            font-size: 2rem;
             margin-bottom: 16px;
-            animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        @keyframes bounceIn {
-            0% { transform: scale(0); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
         }
 
         .ref-badge {
-            background: #eff6ff;
-            color: #1d4ed8;
-            padding: 10px 18px;
-            border-radius: 10px;
-            font-weight: 800;
-            font-size: 1.1rem;
             display: inline-block;
-            margin: 14px 0 22px;
-            border: 1.5px solid #bfdbfe;
-            direction: ltr;
+            background: #f1f5f9;
+            color: #0f172a;
+            font-family: monospace;
+            font-size: 1.1rem;
+            font-weight: 800;
+            padding: 8px 18px;
+            border-radius: var(--radius-sm);
+            margin: 14px 0 20px;
+            border: 1px dashed #cbd5e1;
         }
 
         .btn-new {
-            background: #f1f5f9;
+            background: #ffffff;
             color: #334155;
             border: 1px solid #cbd5e1;
             border-radius: var(--radius-md);
@@ -499,11 +590,16 @@
             gap: 8px;
         }
 
-        .footer-note {
+        .footer-card {
             text-align: center;
-            font-size: 0.78rem;
-            color: #94a3b8;
+            font-size: 0.8rem;
+            color: #64748b;
             margin-top: 24px;
+            line-height: 1.6;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: var(--radius-md);
+            border: 1px solid #e2e8f0;
         }
 
         .alert-error {
@@ -515,21 +611,34 @@
             font-size: 0.88rem;
             font-weight: 700;
             display: none;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- رأس الصفحة مع الشعار الرسمي -->
+        <!-- رأس الصفحة مع الشعار الرسمي المعتمد والبيانات المنظمة -->
         <div class="header-card">
+            <div class="header-meta-row">
+                <div class="header-badge-code">
+                    <i class="fas fa-certificate text-emerald-400"></i>
+                    <span>DOC-HSE-OBS-01 | Rev. 02</span>
+                </div>
+                <div class="header-dept-tag">
+                    <i class="fas fa-shield-halved"></i>
+                    <span>إدارة السلامة والصحة المهنية والبيئة</span>
+                </div>
+            </div>
+
             <div class="brand-wrapper">
                 <img src="icons/icapp-logo.png" alt="Company Logo" class="logo-img" onerror="this.style.display='none'; document.getElementById('fallbackIcon').style.display='inline-flex';">
                 <div id="fallbackIcon" class="logo-icon-fallback" style="display:none;">
                     <i class="fas fa-shield-halved"></i>
                 </div>
             </div>
-            <h1 class="header-title">منظومة الملاحظات اليومية الميدانية</h1>
-            <p class="header-subtitle">تسجيل الملاحظات الميدانية ومتابعة السلامة والصحة المهنية — HSE 360 Platform</p>
+
+            <h1 class="header-title">نموذج تسجيل الملاحظات اليومية الميدانية</h1>
+            <p class="header-subtitle">منظومة إدارة السلامة والصحة المهنية والبيئة (HSE 360 Platform) — رصد وتوثيق المخاطر والملاحظات الفورية</p>
         </div>
 
         <!-- شريط حالة التحميل -->
@@ -558,11 +667,11 @@
             <!-- Honeypot ضد السبام -->
             <input type="text" name="_hp_field" id="hpField" style="display:none;" tabindex="-1" autocomplete="off">
 
-            <!-- 1. الموقع والمكان الفعلي -->
+            <!-- 1. الموقع والمكان داخل المصنع -->
             <div class="form-section">
                 <div class="section-header">
                     <span class="section-badge">1</span>
-                    <span class="section-title">الموقع والمكان داخل المنشأة</span>
+                    <span class="section-title">الموقع والمكان داخل المصنع</span>
                 </div>
                 <p class="section-desc">اختر المصنع / الموقع ثم المكان المرتبط به من قاعدة بيانات النظام.</p>
 
@@ -619,9 +728,9 @@
                             <i class="fas fa-user-times icon"></i>
                             <span class="title">سلوك غير آمن</span>
                         </div>
-                        <div class="type-card" data-type="حالة غير آمنة" onclick="selectType(this)">
+                        <div class="type-card" data-type="وضع غير آمن" onclick="selectType(this)">
                             <i class="fas fa-triangle-exclamation icon"></i>
-                            <span class="title">حالة غير آمنة</span>
+                            <span class="title">وضع غير آمن</span>
                         </div>
                         <div class="type-card" data-type="سلوك آمن وإيجابي" onclick="selectType(this)">
                             <i class="fas fa-circle-check icon"></i>
@@ -648,7 +757,7 @@
                             <i class="fas fa-calendar-alt text-slate-600"></i>
                             تاريخ ووقت الملاحظة <span class="required">*</span>
                         </label>
-                        <input type="datetime-local" id="dateInput" class="form-control" required>
+                        <input type="datetime-local" id="dateInput" class="form-control" required onchange="handleDateChange(this.value)">
                     </div>
 
                     <div class="form-group">
@@ -657,9 +766,9 @@
                             الوردية
                         </label>
                         <select id="shiftSelect" class="form-control">
-                            <option value="وردية صباحية">وردية صباحية (Morning)</option>
-                            <option value="وردية مسائية">وردية مسائية (Evening)</option>
-                            <option value="وردية ليلية">وردية ليلية (Night)</option>
+                            <option value="الأولى">الأولى (First Shift)</option>
+                            <option value="الثانية">الثانية (Second Shift)</option>
+                            <option value="الثالثة">الثالثة (Third Shift)</option>
                         </select>
                     </div>
                 </div>
@@ -679,7 +788,7 @@
                 </div>
             </div>
 
-            <!-- 3. تفاصيل الملاحظة والإدارة المسؤولة -->
+            <!-- 3. تفاصيل الملاحظة والإدارة المسؤولة والتاريخ المتوقع -->
             <div class="form-section">
                 <div class="section-header">
                     <span class="section-badge">3</span>
@@ -694,6 +803,29 @@
                     <select id="responsibleDeptSelect" class="form-control" required>
                         <option value="">— جاري تحميل الإدارات من النظام... —</option>
                     </select>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="statusSelect">
+                            <i class="fas fa-circle-notch text-blue-600"></i>
+                            حالة الملاحظة (Status) <span class="required">*</span>
+                        </label>
+                        <select id="statusSelect" class="form-control" required>
+                            <option value="Open" selected>Open (مفتوحة)</option>
+                            <option value="In progress">In progress (قيد التنفيذ)</option>
+                            <option value="Closed">Closed (مغلقة)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="expectedDateInput">
+                            <i class="fas fa-calendar-check text-emerald-600"></i>
+                            التاريخ المتوقع للتنفيذ
+                        </label>
+                        <input type="date" id="expectedDateInput" class="form-control">
+                        <span style="font-size: 0.75rem; color: #64748b; margin-top: 3px; display: block;">يُحدد تلقائياً بنهاية الشهر الحالي إذا لم يُحدد مسبقاً</span>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -752,22 +884,16 @@
                     </label>
                 </div>
 
-                <!-- حقول صاحب الملاحظة / مسؤول السلامة الفعلي -->
+                <!-- حقول صاحب الملاحظة / مسؤول السلامة الفعلي (بدون رقم هاتف) -->
                 <div id="reporterInfoFields" style="display: none; flex-direction: column; gap: 10px;">
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <label class="form-label" for="ownerSelect">
-                                <i class="fas fa-user-shield text-blue-600"></i>
-                                اسم صاحب الملاحظة / مسؤول السلامة
-                            </label>
-                            <select id="ownerSelect" class="form-control" onchange="handleOwnerChange(this.value)">
-                                <option value="">— اختر اسمك من قائمة النظام —</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="reporterPhone">رقم الهاتف للتواصل</label>
-                            <input type="tel" id="reporterPhone" class="form-control" placeholder="01xxxxxxxxx" dir="ltr">
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label" for="ownerSelect">
+                            <i class="fas fa-user-shield text-blue-600"></i>
+                            اسم صاحب الملاحظة / مسؤول السلامة
+                        </label>
+                        <select id="ownerSelect" class="form-control" onchange="handleOwnerChange(this.value)">
+                            <option value="">— اختر اسمك من قائمة النظام —</option>
+                        </select>
                     </div>
 
                     <!-- إدخال يدوي للاسم إذا لم يكن في القائمة -->
@@ -785,8 +911,9 @@
             </button>
         </form>
 
-        <div class="footer-note">
-            SafetyHub 360 | نظام إدارة السلامة والصحة المهنية © 2026
+        <div class="footer-card">
+            <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">منظومة إدارة السلامة والصحة المهنية والبيئة (HSE 360 Platform) © 2026</div>
+            <div>نموذج معتمد طبقا لمعايير الأيزو والسلامة المهنية (ISO 45001 / HSE) — جميع الحقوق محفوظة</div>
         </div>
     </div>
 
@@ -798,7 +925,7 @@
         let selectedRiskLevel = 'متوسط';
         let currentPhotoBase64 = '';
 
-        // ضبط التاريخ والوقت الافتراضي (اللحظة الحالية)
+        // ضبط التاريخ والوقت الافتراضي وحساب نهاية الشهر للتنفيذ
         function setDefaultDateTime() {
             const now = new Date();
             const year = now.getFullYear();
@@ -806,11 +933,47 @@
             const day = String(now.getDate()).padStart(2, '0');
             const hours = String(now.getHours()).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
-            document.getElementById('dateInput').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            const dateInput = document.getElementById('dateInput');
+            if (dateInput) {
+                dateInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
+            updateDefaultExpectedDate(now);
+        }
+
+        function updateDefaultExpectedDate(baseDate) {
+            const d = (baseDate instanceof Date && !isNaN(baseDate)) ? baseDate : new Date();
+            const year = d.getFullYear();
+            const month = d.getMonth();
+            // اليوم الأخير في الشهر الحالي
+            const lastDay = new Date(year, month + 1, 0);
+            const lYear = lastDay.getFullYear();
+            const lMonth = String(lastDay.getMonth() + 1).padStart(2, '0');
+            const lDay = String(lastDay.getDate()).padStart(2, '0');
+            const expInput = document.getElementById('expectedDateInput');
+            if (expInput && (!expInput.value || expInput.dataset.autoCalculated !== 'false')) {
+                expInput.value = `${lYear}-${lMonth}-${lDay}`;
+                expInput.dataset.autoCalculated = 'true';
+            }
+        }
+
+        function handleDateChange(val) {
+            if (val) {
+                const expInput = document.getElementById('expectedDateInput');
+                if (expInput && expInput.dataset.autoCalculated !== 'false') {
+                    updateDefaultExpectedDate(new Date(val));
+                }
+            }
         }
 
         window.addEventListener('DOMContentLoaded', () => {
             setDefaultDateTime();
+
+            const expInput = document.getElementById('expectedDateInput');
+            if (expInput) {
+                expInput.addEventListener('input', function() {
+                    this.dataset.autoCalculated = 'false';
+                });
+            }
 
             // 1. قراءة التكوين المشفر الممرر بالرابط أو رمز الـ QR
             let configLoadedFromUrl = false;
@@ -1173,6 +1336,8 @@
             const dateVal = document.getElementById('dateInput').value;
             const shift = document.getElementById('shiftSelect').value;
             const dept = document.getElementById('responsibleDeptSelect').value;
+            const statusVal = document.getElementById('statusSelect').value || 'Open';
+            const expectedDateVal = document.getElementById('expectedDateInput').value || '';
             const isAnon = document.getElementById('anonymousToggle').checked;
             
             let observerName = 'ملاحظة عامة (مجهول)';
@@ -1186,7 +1351,6 @@
                     observerName = 'ملاحظة عامة';
                 }
             }
-            const reporterPhone = isAnon ? '' : document.getElementById('reporterPhone').value.trim();
 
             if (!site || !place || !details || !dept) {
                 errorBox.textContent = 'يرجى ملء جميع الحقول الإلزامية (*).';
@@ -1206,11 +1370,12 @@
                 riskLevel: selectedRiskLevel,
                 date: dateVal,
                 shift: shift,
+                status: statusVal,
+                expectedCompletionDate: expectedDateVal,
                 responsibleDepartment: dept,
                 details: details,
                 correctiveAction: corrective,
                 observerName: observerName,
-                reporterPhone: reporterPhone,
                 photoBase64: currentPhotoBase64
             };
 
@@ -1249,13 +1414,15 @@
             removePhoto();
             selectType(document.querySelector('.type-card[data-type="سلوك غير آمن"]'));
             selectRisk(document.querySelector('.risk-chip[data-risk="متوسط"]'));
+            document.getElementById('statusSelect').value = 'Open';
+            document.getElementById('customSiteGroup').style.display = 'none';
             document.getElementById('customPlaceGroup').style.display = 'none';
             document.getElementById('customOwnerGroup').style.display = 'none';
             document.getElementById('errorMessage').style.display = 'none';
             document.getElementById('submitBtn').disabled = false;
             document.getElementById('submitBtn').innerHTML = '<i class="fas fa-paper-plane"></i> <span>تسجيل الملاحظة اليومية الآن</span>';
             document.getElementById('successScreen').style.display = 'none';
-            document.getElementById('observationForm').style.display = 'flex';
+            document.getElementById('observationForm').style.display = 'block';
         }
     </script>
 </body>
