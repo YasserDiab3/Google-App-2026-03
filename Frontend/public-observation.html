@@ -1496,8 +1496,7 @@
 
                     const opt = document.createElement('option');
                     opt.value = mName;
-                    const roleText = (typeof mem === 'object' && mem.role && !mem.role.includes('مستخدم')) ? ` (${mem.role})` : '';
-                    opt.textContent = `${mName}${roleText}`;
+                    opt.textContent = mName;
                     ownerSelect.appendChild(opt);
                 });
             }
@@ -1520,7 +1519,7 @@
                 if (!found) {
                     const customOpt = document.createElement('option');
                     customOpt.value = inspectorParam;
-                    customOpt.textContent = `${inspectorParam} (مفتش سلامة معتمد)`;
+                    customOpt.textContent = inspectorParam;
                     customOpt.selected = true;
                     ownerSelect.insertBefore(customOpt, ownerSelect.firstChild);
                 }
