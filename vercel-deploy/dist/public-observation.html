@@ -125,6 +125,32 @@
             line-height: 1.4;
         }
 
+        /* حالة التحميل الأولية */
+        .loading-bar {
+            height: 3px;
+            width: 100%;
+            background: #e2e8f0;
+            position: relative;
+            overflow: hidden;
+            border-radius: 2px;
+            margin-bottom: 15px;
+        }
+
+        .loading-bar::after {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 40%;
+            background: var(--primary);
+            animation: loadingIndeterminate 1.5s infinite ease-in-out;
+        }
+
+        @keyframes loadingIndeterminate {
+            0% { left: -40%; width: 40%; }
+            50% { left: 30%; width: 60%; }
+            100% { left: 100%; width: 40%; }
+        }
+
         /* البطاقة الرئيسية للنموذج */
         .form-card {
             background: var(--bg-card);
@@ -137,7 +163,7 @@
             gap: 22px;
         }
 
-        /* خطوات وأقسام النموذج */
+        /* أقسام وخطوات النموذج */
         .form-section {
             background: #ffffff;
             border: 1px solid #e2e8f0;
@@ -506,6 +532,9 @@
             <p class="header-subtitle">تسجيل الملاحظات الميدانية ومتابعة السلامة والصحة المهنية — HSE 360 Platform</p>
         </div>
 
+        <!-- شريط حالة التحميل -->
+        <div id="loadingIndicator" class="loading-bar"></div>
+
         <!-- شاشة النجاح -->
         <div id="successScreen" class="success-screen">
             <div class="success-icon">
@@ -529,40 +558,40 @@
             <!-- Honeypot ضد السبام -->
             <input type="text" name="_hp_field" id="hpField" style="display:none;" tabindex="-1" autocomplete="off">
 
-            <!-- 1. الموقع والمكان -->
+            <!-- 1. الموقع والمكان الفعلي -->
             <div class="form-section">
                 <div class="section-header">
                     <span class="section-badge">1</span>
-                    <span class="section-title">الموقع والمكان في المنشأة</span>
+                    <span class="section-title">الموقع والمكان داخل المنشأة</span>
                 </div>
-                <p class="section-desc">حدد الموقع ثم المكان المرتبط به داخل المنشأة.</p>
+                <p class="section-desc">اختر المصنع / الموقع ثم المكان المرتبط به من قاعدة بيانات النظام.</p>
 
                 <div class="grid-2">
                     <div class="form-group">
                         <label class="form-label" for="siteSelect">
                             <i class="fas fa-industry text-blue-600"></i>
-                            اسم الموقع / المصنع <span class="required">*</span>
+                            اسم المصنع / الموقع <span class="required">*</span>
                         </label>
                         <select id="siteSelect" class="form-control" required onchange="handleSiteChange(this.value)">
-                            <option value="">— اختر الموقع / المصنع —</option>
+                            <option value="">— جاري تحميل المواقع من النظام... —</option>
                         </select>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" for="placeSelect">
                             <i class="fas fa-map-pin text-blue-600"></i>
-                            المكان داخل الموقع <span class="required">*</span>
+                            الموقع الفرعي / المكان <span class="required">*</span>
                         </label>
-                        <select id="placeSelect" class="form-control" required onchange="handlePlaceChange(this.value)">
-                            <option value="">— اختر الموقع أولاً —</option>
+                        <select id="placeSelect" class="form-control" required onchange="handlePlaceChange(this.value)" disabled>
+                            <option value="">— اختر المصنع أولاً —</option>
                         </select>
                     </div>
                 </div>
 
                 <!-- إدخال يدوي للمكان -->
                 <div id="customPlaceGroup" class="form-group" style="display: none;">
-                    <label class="form-label" for="customPlaceInput">مكان آخر (إدخال يدوي):</label>
-                    <input type="text" id="customPlaceInput" class="form-control" placeholder="مثال: خط التعبئة 4، غرفة المولدات...">
+                    <label class="form-label" for="customPlaceInput">مكان فرعي آخر (إدخال يدوي):</label>
+                    <input type="text" id="customPlaceInput" class="form-control" placeholder="اكتب المكان أو القسم بدقة...">
                 </div>
             </div>
 
@@ -648,7 +677,7 @@
             <div class="form-section">
                 <div class="section-header">
                     <span class="section-badge">3</span>
-                    <span class="section-title">تفاصيل الملاحظة والإجراء المطلوب</span>
+                    <span class="section-title">تفاصيل الملاحظة والإدارة المعنية</span>
                 </div>
 
                 <div class="form-group">
@@ -657,14 +686,7 @@
                         المسؤول عن التنفيذ / الإدارة المعنية <span class="required">*</span>
                     </label>
                     <select id="responsibleDeptSelect" class="form-control" required>
-                        <option value="السلامة والصحة المهنية">السلامة والصحة المهنية</option>
-                        <option value="الصيانة">الصيانة</option>
-                        <option value="الإنتاج والتشغيل">الإنتاج والتشغيل</option>
-                        <option value="الجودة وسلامة الغذاء">الجودة وسلامة الغذاء</option>
-                        <option value="المستودعات والخدمات اللوجستية">المستودعات والخدمات اللوجستية</option>
-                        <option value="الموارد البشرية">الموارد البشرية</option>
-                        <option value="الشؤون الإدارية">الشؤون الإدارية</option>
-                        <option value="الأمن والحراسة">الأمن والحراسة</option>
+                        <option value="">— جاري تحميل الإدارات من النظام... —</option>
                     </select>
                 </div>
 
@@ -685,11 +707,11 @@
                 </div>
             </div>
 
-            <!-- 4. الصورة وصاحب الملاحظة -->
+            <!-- 4. الصورة وصاحب الملاحظة / مسؤول السلامة -->
             <div class="form-section">
                 <div class="section-header">
                     <span class="section-badge">4</span>
-                    <span class="section-title">الصورة وبيانات المُبلّغ</span>
+                    <span class="section-title">الصورة وصاحب الملاحظة</span>
                 </div>
 
                 <!-- رفع الصورة -->
@@ -724,18 +746,28 @@
                     </label>
                 </div>
 
-                <!-- حقول صاحب الملاحظة (إذا تم إيقاف مجهول) -->
+                <!-- حقول صاحب الملاحظة / مسؤول السلامة الفعلي -->
                 <div id="reporterInfoFields" style="display: none; flex-direction: column; gap: 10px;">
                     <div class="grid-2">
                         <div class="form-group">
-                            <label class="form-label" for="ownerSelect">اسم صاحب الملاحظة / الموظف</label>
-                            <input type="text" id="ownerInput" class="form-control" list="employeesDatalist" placeholder="اكتب أو اختر اسمك">
-                            <datalist id="employeesDatalist"></datalist>
+                            <label class="form-label" for="ownerSelect">
+                                <i class="fas fa-user-shield text-blue-600"></i>
+                                اسم صاحب الملاحظة / مسؤول السلامة
+                            </label>
+                            <select id="ownerSelect" class="form-control" onchange="handleOwnerChange(this.value)">
+                                <option value="">— اختر اسمك من قائمة النظام —</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="reporterPhone">رقم الهاتف للتواصل</label>
                             <input type="tel" id="reporterPhone" class="form-control" placeholder="01xxxxxxxxx" dir="ltr">
                         </div>
+                    </div>
+
+                    <!-- إدخال يدوي للاسم إذا لم يكن في القائمة -->
+                    <div id="customOwnerGroup" class="form-group" style="display: none;">
+                        <label class="form-label" for="customOwnerInput">اسمك الكامل (إدخال يدوي):</label>
+                        <input type="text" id="customOwnerInput" class="form-control" placeholder="اكتب اسمك كاملاً...">
                     </div>
                 </div>
             </div>
@@ -760,7 +792,7 @@
         let selectedRiskLevel = 'متوسط';
         let currentPhotoBase64 = '';
 
-        // ضبط التاريخ والوقت الافتراضي (الآن)
+        // ضبط التاريخ والوقت الافتراضي (اللحظة الحالية)
         function setDefaultDateTime() {
             const now = new Date();
             const year = now.getFullYear();
@@ -777,6 +809,7 @@
         });
 
         async function loadServerConfig() {
+            const ind = document.getElementById('loadingIndicator');
             try {
                 const res = await fetch(DEFAULT_API_URL, {
                     method: 'POST',
@@ -787,44 +820,29 @@
                 if (data && data.success) {
                     loadedConfig = data;
                     renderConfigData(data);
-                } else {
-                    renderFallbackData();
                 }
             } catch (e) {
-                renderFallbackData();
+                console.error('Error loading config:', e);
+            } finally {
+                if (ind) ind.style.display = 'none';
             }
         }
 
-        function renderFallbackData() {
-            const fallback = {
-                sites: [
-                    { name: 'مصنع الأغذية الرئيسي', places: ['خط الإنتاج 1', 'خط الإنتاج 2', 'المستودع الرئيسي', 'ورشة الصيانة', 'منطقة التحميل'] },
-                    { name: 'مصنع المخبوزات والحلويات', places: ['صالة التجهيز', 'خط الأفران', 'منطقة التعبئة والتغليف', 'مستودع الخامات'] },
-                    { name: 'المستودعات والخدمات اللوجستية', places: ['مستودع التبريد', 'مستودع الجاف', 'ساحة الشاحنات'] }
-                ],
-                departments: [
-                    'السلامة والصحة المهنية', 'الصيانة', 'الإنتاج والتشغيل', 'الجودة وسلامة الغذاء',
-                    'المستودعات والخدمات اللوجستية', 'الموارد البشرية', 'الشؤون الإدارية', 'الأمن والحراسة'
-                ],
-                employees: []
-            };
-            renderConfigData(fallback);
-        }
-
         function renderConfigData(cfg) {
-            // 1. المواقع
+            // 1. المصانع والمواقع الفعلية من النظام
             const siteSelect = document.getElementById('siteSelect');
-            const currentSiteVal = siteSelect.value;
-            siteSelect.innerHTML = '<option value="">— اختر الموقع / المصنع —</option>';
+            siteSelect.innerHTML = '<option value="">— اختر المصنع / الموقع —</option>';
             
-            (cfg.sites || []).forEach(site => {
-                const opt = document.createElement('option');
-                opt.value = site.name;
-                opt.textContent = site.name;
-                siteSelect.appendChild(opt);
-            });
+            if (Array.isArray(cfg.sites) && cfg.sites.length > 0) {
+                cfg.sites.forEach(site => {
+                    const opt = document.createElement('option');
+                    opt.value = site.name;
+                    opt.textContent = site.name;
+                    siteSelect.appendChild(opt);
+                });
+            }
 
-            // قراءة query param لو موجود
+            // قراءة query param لو وُجد
             const urlParams = new URLSearchParams(window.location.search);
             const factoryParam = urlParams.get('factory') || urlParams.get('factoryName') || urlParams.get('site');
             if (factoryParam) {
@@ -839,31 +857,34 @@
                 handleSiteChange(siteSelect.value);
             }
 
-            // 2. الإدارات
+            // 2. الإدارات الفعلية من النظام
+            const deptSelect = document.getElementById('responsibleDeptSelect');
+            deptSelect.innerHTML = '<option value="">— اختر الإدارة المعنية —</option>';
             if (Array.isArray(cfg.departments) && cfg.departments.length > 0) {
-                const deptSelect = document.getElementById('responsibleDeptSelect');
-                const currDept = deptSelect.value;
-                deptSelect.innerHTML = '';
                 cfg.departments.forEach(d => {
                     const opt = document.createElement('option');
                     opt.value = d;
                     opt.textContent = d;
-                    if (d === currDept) opt.selected = true;
+                    if (d.includes('سلامة') || d.toLowerCase().includes('hse')) opt.selected = true;
                     deptSelect.appendChild(opt);
                 });
             }
 
-            // 3. الموظفون
-            if (Array.isArray(cfg.employees) && cfg.employees.length > 0) {
-                const datalist = document.getElementById('employeesDatalist');
-                datalist.innerHTML = '';
-                cfg.employees.forEach(emp => {
+            // 3. مسؤولو السلامة والأشخاص الفعليون من النظام
+            const ownerSelect = document.getElementById('ownerSelect');
+            ownerSelect.innerHTML = '<option value="">— اختر اسمك من قائمة النظام —</option>';
+            if (Array.isArray(cfg.safetyMembers) && cfg.safetyMembers.length > 0) {
+                cfg.safetyMembers.forEach(mem => {
                     const opt = document.createElement('option');
-                    opt.value = emp.name;
-                    if (emp.code) opt.label = `كود: ${emp.code}`;
-                    datalist.appendChild(opt);
+                    opt.value = mem.name;
+                    opt.textContent = `${mem.name} (${mem.role || mem.department || 'سلامة'})`;
+                    ownerSelect.appendChild(opt);
                 });
             }
+            const otherOwnerOpt = document.createElement('option');
+            otherOwnerOpt.value = '__OTHER_OWNER__';
+            otherOwnerOpt.textContent = '➕ اسم آخر (إدخال يدوي)...';
+            ownerSelect.appendChild(otherOwnerOpt);
         }
 
         function handleSiteChange(siteName) {
@@ -872,7 +893,7 @@
             customGroup.style.display = 'none';
 
             if (!siteName) {
-                placeSelect.innerHTML = '<option value="">— اختر الموقع أولاً —</option>';
+                placeSelect.innerHTML = '<option value="">— اختر المصنع أولاً —</option>';
                 placeSelect.disabled = true;
                 return;
             }
@@ -880,7 +901,7 @@
             const sites = (loadedConfig && loadedConfig.sites) ? loadedConfig.sites : [];
             const foundSite = sites.find(s => s.name === siteName);
 
-            placeSelect.innerHTML = '<option value="">— اختر المكان داخل الموقع —</option>';
+            placeSelect.innerHTML = '<option value="">— اختر الموقع الفرعي / المكان —</option>';
             if (foundSite && Array.isArray(foundSite.places) && foundSite.places.length > 0) {
                 foundSite.places.forEach(p => {
                     const opt = document.createElement('option');
@@ -889,10 +910,10 @@
                     placeSelect.appendChild(opt);
                 });
             }
-            // إضافة خيار إدخال يدوي
+            // خيار إدخال يدوي
             const otherOpt = document.createElement('option');
             otherOpt.value = '__OTHER__';
-            otherOpt.textContent = '➕ مكان آخر (إدخال يدوي)...';
+            otherOpt.textContent = '➕ مكان فرعي آخر (إدخال يدوي)...';
             placeSelect.appendChild(otherOpt);
 
             placeSelect.disabled = false;
@@ -903,6 +924,16 @@
             if (val === '__OTHER__') {
                 customGroup.style.display = 'block';
                 document.getElementById('customPlaceInput').focus();
+            } else {
+                customGroup.style.display = 'none';
+            }
+        }
+
+        function handleOwnerChange(val) {
+            const customGroup = document.getElementById('customOwnerGroup');
+            if (val === '__OTHER_OWNER__') {
+                customGroup.style.display = 'block';
+                document.getElementById('customOwnerInput').focus();
             } else {
                 customGroup.style.display = 'none';
             }
@@ -989,7 +1020,7 @@
             const site = document.getElementById('siteSelect').value;
             let place = document.getElementById('placeSelect').value;
             if (place === '__OTHER__') {
-                place = document.getElementById('customPlaceInput').value.trim() || 'مكان آخر';
+                place = document.getElementById('customPlaceInput').value.trim() || 'مكان فرعي آخر';
             }
 
             const details = document.getElementById('detailsInput').value.trim();
@@ -998,10 +1029,21 @@
             const shift = document.getElementById('shiftSelect').value;
             const dept = document.getElementById('responsibleDeptSelect').value;
             const isAnon = document.getElementById('anonymousToggle').checked;
-            const observerName = isAnon ? 'ملاحظة عامة (مجهول)' : (document.getElementById('ownerInput').value.trim() || 'ملاحظة عامة');
+            
+            let observerName = 'ملاحظة عامة (مجهول)';
+            if (!isAnon) {
+                const selOwner = document.getElementById('ownerSelect').value;
+                if (selOwner === '__OTHER_OWNER__') {
+                    observerName = document.getElementById('customOwnerInput').value.trim() || 'ملاحظة عامة';
+                } else if (selOwner) {
+                    observerName = selOwner;
+                } else {
+                    observerName = 'ملاحظة عامة';
+                }
+            }
             const reporterPhone = isAnon ? '' : document.getElementById('reporterPhone').value.trim();
 
-            if (!site || !place || !details) {
+            if (!site || !place || !details || !dept) {
                 errorBox.textContent = 'يرجى ملء جميع الحقول الإلزامية (*).';
                 errorBox.style.display = 'block';
                 return;
@@ -1063,6 +1105,7 @@
             selectType(document.querySelector('.type-card[data-type="سلوك غير آمن"]'));
             selectRisk(document.querySelector('.risk-chip[data-risk="متوسط"]'));
             document.getElementById('customPlaceGroup').style.display = 'none';
+            document.getElementById('customOwnerGroup').style.display = 'none';
             document.getElementById('errorMessage').style.display = 'none';
             document.getElementById('submitBtn').disabled = false;
             document.getElementById('submitBtn').innerHTML = '<i class="fas fa-paper-plane"></i> <span>تسجيل الملاحظة اليومية الآن</span>';

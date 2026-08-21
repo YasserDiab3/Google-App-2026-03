@@ -2836,106 +2836,182 @@ function notifyObservationWorkflowEvent(payload) {
 
 /**
  * ============================================
- * الحصول على تكوين نموذج الملاحظات العامة (المواقع، الأماكن، الإدارات، الأشخاص)
+ * الحصول على تكوين نموذج الملاحظات العامة (المواقع، الأماكن، الإدارات، مسؤولي السلامة)
+ * قراءة البيانات الفعلية الحقيقية من جداول النظام
  * ============================================
  */
 function getPublicObservationConfig() {
     try {
         var spreadsheetId = getSpreadsheetId();
-        var sites = [];
-        var employees = [];
-        var departments = [
-            'السلامة والصحة المهنية',
-            'الصيانة',
-            'الإنتاج والتشغيل',
-            'الجودة وسلامة الغذاء',
-            'المستودعات والخدمات اللوجستية',
-            'الموارد البشرية',
-            'الشؤون الإدارية',
-            'الأمن والحراسة',
-            'المشتريات والمخازن'
-        ];
+        
+        // 1. المواقع والأماكن الفعلية من النظام
+        var sitesMap = {};
 
-        // 1. جلب المواقع والأماكن من ObservationSites
+        // أ) من شيت ObservationSites
         try {
-            if (typeof readFromSheet === 'function') {
-                var sitesData = readFromSheet('ObservationSites', spreadsheetId) || [];
-                if (sitesData && sitesData.length > 0) {
-                    var sitesMap = {};
-                    sitesData.forEach(function(item) {
-                        var siteName = String(item.name || item.siteName || item.site || '').trim();
-                        var placeName = String(item.placeName || item.locationName || item.place || '').trim();
-                        if (siteName) {
-                            if (!sitesMap[siteName]) {
-                                sitesMap[siteName] = { id: item.id || item.siteId || siteName, name: siteName, places: [] };
-                            }
-                            if (placeName && sitesMap[siteName].places.indexOf(placeName) === -1) {
-                                sitesMap[siteName].places.push(placeName);
-                            }
-                        }
+            var obsSites = readFromSheet('ObservationSites', spreadsheetId) || [];
+            obsSites.forEach(function(item) {
+                var s = String(item.name || item.siteName || item.site || '').trim();
+                var p = String(item.placeName || item.locationName || item.place || '').trim();
+                if (s) {
+                    if (!sitesMap[s]) sitesMap[s] = { name: s, places: [] };
+                    if (p && sitesMap[s].places.indexOf(p) === -1) {
+                        sitesMap[s].places.push(p);
+                    }
+                }
+            });
+        } catch (e1) {}
+
+        // ب) من شيت Factories و SubLocations
+        try {
+            var factories = readFromSheet('Factories', spreadsheetId) || [];
+            factories.forEach(function(f) {
+                var fName = String(f.name || f.factoryName || '').trim();
+                if (fName && !sitesMap[fName]) {
+                    sitesMap[fName] = { name: fName, places: [] };
+                }
+            });
+            var subLocs = readFromSheet('SubLocations', spreadsheetId) || [];
+            subLocs.forEach(function(sl) {
+                var fName = String(sl.factoryName || sl.factory || sl.siteName || '').trim();
+                var slName = String(sl.name || sl.subLocationName || sl.locationName || '').trim();
+                if (fName && sitesMap[fName] && slName && sitesMap[fName].places.indexOf(slName) === -1) {
+                    sitesMap[fName].places.push(slName);
+                }
+            });
+        } catch (e2) {}
+
+        // ج) من السجلات الفعلية في DailyObservations (لضمان شمول كل المواقع والأماكن المستخدمة حقيقة)
+        var dailyObs = [];
+        try {
+            dailyObs = readFromSheet('DailyObservations', spreadsheetId) || [];
+            dailyObs.forEach(function(d) {
+                var s = String(d.siteName || d.site || '').trim();
+                var p = String(d.locationName || d.placeId || d.place || '').trim();
+                if (s) {
+                    if (!sitesMap[s]) sitesMap[s] = { name: s, places: [] };
+                    if (p && sitesMap[s].places.indexOf(p) === -1) {
+                        sitesMap[s].places.push(p);
+                    }
+                }
+            });
+        } catch (e3) {}
+
+        var sites = Object.values(sitesMap);
+        sites.sort(function(a, b) { return a.name.localeCompare(b.name, 'ar'); });
+
+        // 2. مسؤولو السلامة والأشخاص الفعليون في النظام
+        var observersMap = {};
+        var safetyMembers = [];
+
+        // أ) من شيت Users
+        var users = [];
+        try {
+            users = readFromSheet('Users', spreadsheetId) || [];
+            users.forEach(function(u) {
+                var name = String(u.name || u.fullName || '').trim();
+                var role = String(u.role || '').trim();
+                var dept = String(u.department || '').trim();
+                var isSafety = (role.toLowerCase() === 'admin' || role === 'مدير' || dept.indexOf('سلامة') !== -1 || dept.toLowerCase().indexOf('hse') !== -1);
+                if (name && !observersMap[name.toLowerCase()]) {
+                    observersMap[name.toLowerCase()] = true;
+                    safetyMembers.push({
+                        name: name,
+                        role: role || (isSafety ? 'مسؤول سلامة' : 'مستخدم'),
+                        department: dept,
+                        isSafetyTeam: isSafety
                     });
-                    sites = Object.values(sitesMap);
                 }
-            }
-        } catch (sErr) {}
+            });
+        } catch (uErr) {}
 
-        // إذا لم تتوفر مواقع، جلب من Factories أو قائمة افتراضية
-        if (!sites.length) {
-            try {
-                if (typeof readFromSheet === 'function') {
-                    var facData = readFromSheet('Factories', spreadsheetId) || [];
-                    sites = facData.map(function(f) {
-                        return {
-                            id: f.id || '',
-                            name: f.name || f.factoryName || '',
-                            places: ['خط الإنتاج الرئيسي', 'المستودع', 'ورشة الصيانة', 'منطقة التحميل والتفريغ', 'المكاتب الإدارية']
-                        };
-                    }).filter(function(f) { return f.name; });
-                }
-            } catch (fErr) {}
-        }
-
-        if (!sites.length) {
-            sites = [
-                { id: 'FAC-1', name: 'مصنع الأغذية الرئيسي', places: ['خط الإنتاج 1', 'خط الإنتاج 2', 'المستودع الرئيسي', 'ورشة الصيانة', 'منطقة الاستلام والتسليم'] },
-                { id: 'FAC-2', name: 'مصنع المخبوزات والحلويات', places: ['صالة التجهيز', 'خط الأفران', 'منطقة التعبئة والتغليف', 'مستودع الخامات'] },
-                { id: 'FAC-3', name: 'المستودعات والخدمات اللوجستية', places: ['مستودع التبريد والتجميد', 'مستودع الجاف', 'ساحة الشاحنات', 'منطقة الشحن'] }
-            ];
-        }
-
-        // 2. جلب قائمة الموظفين / الأشخاص
+        // ب) من شيت Employees (مسؤولو السلامة وفريق HSE)
+        var employees = [];
         try {
-            if (typeof readFromSheet === 'function') {
-                var empData = readFromSheet('Employees', spreadsheetId) || [];
-                if (empData && empData.length > 0) {
-                    employees = empData.map(function(e) {
-                        var name = String(e.name || e.employeeName || '').trim();
-                        var code = String(e.code || e.employeeCode || e.employeeNumber || '').trim();
-                        var dept = String(e.department || '').trim();
-                        return { name: name, code: code, department: dept };
-                    }).filter(function(e) { return e.name && e.name.length > 1; });
+            employees = readFromSheet('Employees', spreadsheetId) || [];
+            employees.forEach(function(emp) {
+                var name = String(emp.name || emp.employeeName || '').trim();
+                var dept = String(emp.department || '').trim();
+                var job = String(emp.job || emp.jobTitle || '').trim();
+                var isSafety = (dept.indexOf('سلامة') !== -1 || dept.toLowerCase().indexOf('hse') !== -1 || job.indexOf('سلامة') !== -1 || job.toLowerCase().indexOf('safety') !== -1);
+                if (name && !observersMap[name.toLowerCase()] && isSafety) {
+                    observersMap[name.toLowerCase()] = true;
+                    safetyMembers.push({
+                        name: name,
+                        role: job || 'فريق السلامة والصحة المهنية',
+                        department: dept || 'السلامة والصحة المهنية',
+                        isSafetyTeam: true
+                    });
                 }
-                
-                if (!employees.length) {
-                    var usrData = readFromSheet('Users', spreadsheetId) || [];
-                    employees = usrData.map(function(u) {
-                        var name = String(u.name || u.fullName || '').trim();
-                        var dept = String(u.department || '').trim();
-                        return { name: name, code: '', department: dept };
-                    }).filter(function(u) { return u.name && u.name.length > 1; });
-                }
-            }
-        } catch (eErr) {}
+            });
+        } catch (empErr) {}
 
-        // تقليص حجم الموظفين للسرعة إذا كانت القائمة ضخمة
-        if (employees.length > 300) {
-            employees = employees.slice(0, 300);
+        // ج) من أصحاب الملاحظات الفعليين في DailyObservations
+        try {
+            if (dailyObs && dailyObs.length > 0) {
+                dailyObs.forEach(function(d) {
+                    var obsName = String(d.observerName || '').trim();
+                    if (obsName && !obsName.includes('مجهول') && !observersMap[obsName.toLowerCase()]) {
+                        observersMap[obsName.toLowerCase()] = true;
+                        safetyMembers.push({
+                            name: obsName,
+                            role: 'مسؤول سلامة / مفتش',
+                            department: 'السلامة والصحة المهنية',
+                            isSafetyTeam: true
+                        });
+                    }
+                });
+            }
+        } catch (dErr) {}
+
+        safetyMembers.sort(function(a, b) {
+            if (a.isSafetyTeam && !b.isSafetyTeam) return -1;
+            if (!a.isSafetyTeam && b.isSafetyTeam) return 1;
+            return a.name.localeCompare(b.name, 'ar');
+        });
+
+        // 3. الإدارات الفعلية الموجودة في النظام
+        var departmentsMap = {};
+        var departments = [];
+
+        function registerDept(deptStr) {
+            if (!deptStr) return;
+            var clean = String(deptStr).trim();
+            if (clean && clean.length > 1 && !departmentsMap[clean.toLowerCase()]) {
+                departmentsMap[clean.toLowerCase()] = true;
+                departments.push(clean);
+            }
         }
+
+        try {
+            if (dailyObs) dailyObs.forEach(function(d) { registerDept(d.responsibleDepartment); });
+        } catch (e) {}
+        try {
+            if (employees) employees.forEach(function(e) { registerDept(e.department); });
+        } catch (e) {}
+        try {
+            if (users) users.forEach(function(u) { registerDept(u.department); });
+        } catch (e) {}
+
+        // إذا لم توجد إدارات كافية، أضف إدارات شيت CompanySettings
+        try {
+            var compSettings = readFromSheet('CompanySettings', spreadsheetId) || [];
+            compSettings.forEach(function(cs) {
+                if (cs.key === 'formDepartments' || cs.key === 'departments' || cs.departments) {
+                    var list = cs.value || cs.departments || '';
+                    if (typeof list === 'string') {
+                        list.split(/[\n,]/).forEach(function(item) { registerDept(item); });
+                    }
+                }
+            });
+        } catch (csErr) {}
+
+        departments.sort(function(a, b) { return a.localeCompare(b, 'ar'); });
 
         return {
             success: true,
             sites: sites,
-            employees: employees,
+            safetyMembers: safetyMembers,
             departments: departments,
             observationTypes: [
                 { value: 'سلوك غير آمن', label: 'سلوك غير آمن (Unsafe Act)', icon: 'fa-user-times', color: '#ef4444' },
@@ -2945,7 +3021,7 @@ function getPublicObservationConfig() {
                 { value: 'خطر حريق', label: 'خطر حريق (Fire Hazard)', icon: 'fa-fire-flame-curved', color: '#f97316' },
                 { value: 'أخرى', label: 'أخرى (Other)', icon: 'fa-ellipsis', color: '#64748b' }
             ],
-            shifts: ['وردية صباحية (Morning)', 'وردية مسائية (Evening)', 'وردية ليلية (Night)'],
+            shifts: ['وردية صباحية', 'وردية مسائية', 'وردية ليلية'],
             riskLevels: [
                 { value: 'منخفض', label: 'منخفض (Low)', color: '#10b981' },
                 { value: 'متوسط', label: 'متوسط (Medium)', color: '#f59e0b' },
