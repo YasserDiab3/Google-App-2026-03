@@ -782,37 +782,107 @@ function getPublicFireInspectionConfig(params) {
             };
         }).filter(function(a) { return a.id; });
 
-        // جلب مسؤولي السلامة
-        const safetyMembers = [];
-        const seenMembers = {};
-        function addSafetyMember(name, role) {
-            const clean = String(name || '').trim();
-            if (!clean || clean.length < 3 || seenMembers[clean.toLowerCase()]) return;
-            seenMembers[clean.toLowerCase()] = true;
-            safetyMembers.push({ name: clean, role: role || 'مسؤول سلامة' });
+        // 2. مسؤولو فريق السلامة والصحة المهنية فقط (مع الاستبعاد الصارم لأي موظف مستقيل أو حساب نظام)
+        function normalizeArabicKey(name) {
+            return String(name || '')
+                .trim()
+                .toLowerCase()
+                .replace(/^(م\/|أ\/|د\/|مهندس\/|أستاذ\/|دكتور\/|mr\.|eng\.)\s*/i, '')
+                .replace(/[أإآ]/g, 'ا')
+                .replace(/ة/g, 'ه')
+                .replace(/ى/g, 'ي')
+                .replace(/\s+/g, ' ');
         }
 
-        try {
-            const users = readFromSheet('Users', spreadsheetId) || [];
-            users.forEach(function(u) {
-                const name = String(u.name || u.fullName || '').trim();
-                const role = String(u.role || '').trim();
-                const dept = String(u.department || '').trim();
-                const isSafety = (role.toLowerCase() === 'admin' || role.includes('مدير') || dept.includes('سلامة') || dept.toLowerCase().includes('hse') || role.includes('سلامة'));
-                if (isSafety && name) addSafetyMember(name, role);
-            });
-        } catch (uErr) {}
+        function isEmployeeResigned(emp) {
+            if (!emp) return false;
+            if (emp.isActive === false || emp.active === false || emp.isActive === 'false' || emp.active === 'false') return true;
+            var s = String(emp.status || emp.employeeStatus || emp.workStatus || emp.employmentStatus || '').trim().toLowerCase();
+            if (!s) return false;
+            return s.indexOf('مستقيل') !== -1 || s.indexOf('استقال') !== -1 || s.indexOf('منتهي') !== -1 || s.indexOf('فصل') !== -1 || s.indexOf('ترك') !== -1 || s.indexOf('resign') !== -1 || s.indexOf('terminated') !== -1 || s.indexOf('inactive') !== -1 || s.indexOf('left') !== -1;
+        }
 
+        // خريطة أسماء الموظفين المستقيلين لمنع ظهورهم نهائياً
+        var resignedNamesMap = {};
+        var employees = [];
         try {
-            const employees = readFromSheet('Employees', spreadsheetId) || [];
+            employees = readFromSheet('Employees', spreadsheetId) || [];
             employees.forEach(function(emp) {
-                const name = String(emp.name || emp.employeeName || '').trim();
-                const dept = String(emp.department || '').trim();
-                const job = String(emp.job || emp.jobTitle || '').trim();
-                const isSafety = (dept.includes('سلامة') || dept.toLowerCase().includes('hse') || job.includes('سلامة') || job.includes('إطفاء') || job.includes('حريق') || job.includes('مفتش'));
-                if (isSafety && name) addSafetyMember(name, job);
+                var name = String(emp.name || emp.employeeName || '').trim();
+                if (name && isEmployeeResigned(emp)) {
+                    resignedNamesMap[normalizeArabicKey(name)] = true;
+                }
             });
-        } catch (eErr) {}
+        } catch (e) {}
+
+        var seenMembers = {};
+        var safetyMembers = [];
+
+        function addSafetyMember(name, role, dept) {
+            var cleanName = String(name || '').trim();
+            if (!cleanName || cleanName.indexOf('مجهول') !== -1 || cleanName.indexOf('عامة') !== -1 || cleanName.length < 3) return;
+            // استبعاد أي أسماء مستخدمين إنجليزية أو أدوات نظام
+            if (/[a-zA-Z]/.test(cleanName) || !/[\u0600-\u06FF]/.test(cleanName)) return;
+            var lower = cleanName.toLowerCase();
+            if (lower.includes('admin') || lower.includes('support') || lower.includes('system') || lower.includes('tool') || lower.includes('hse.local')) return;
+            var key = normalizeArabicKey(cleanName);
+            if (!key || seenMembers[key] || resignedNamesMap[key]) return;
+            seenMembers[key] = true;
+            safetyMembers.push({
+                name: cleanName,
+                role: role || 'فريق السلامة والصحة المهنية',
+                department: dept || 'السلامة والصحة المهنية',
+                isSafetyTeam: true
+            });
+        }
+
+        // أ) من شيت Employees (مسؤولو وفنيو إدارة السلامة والصحة المهنية فقط - غير المستقيلين)
+        try {
+            employees.forEach(function(emp) {
+                if (isEmployeeResigned(emp)) return;
+                var name = String(emp.name || emp.employeeName || '').trim();
+                var dept = String(emp.department || '').trim().toLowerCase();
+                var job = String(emp.job || emp.jobTitle || emp.position || '').trim().toLowerCase();
+
+                // استبعاد سلامة الغذاء والجودة والتصنيع
+                if (job.indexOf('غذاء') !== -1 || job.indexOf('food') !== -1 || dept.indexOf('جودة') !== -1 || dept.indexOf('تصنيع') !== -1) {
+                    return;
+                }
+
+                // إدارة السلامة والصحة المهنية حصراً
+                var isHseDept = (dept.indexOf('سلامة') !== -1 || dept.indexOf('hse') !== -1 || dept.indexOf('صحة مهنية') !== -1);
+                var isHseJob = (
+                    job.indexOf('سلامة وصحة') !== -1 || job.indexOf('سلامه وصحة') !== -1 || job.indexOf('السلامة والصحة') !== -1 ||
+                    job.indexOf('سلامة مهنية') !== -1 || job.indexOf('أخصائي سلامة') !== -1 || job.indexOf('اخصائى سلامه') !== -1 ||
+                    job.indexOf('فني سلامة') !== -1 || job.indexOf('فنى سلامة') !== -1 || job.indexOf('مشرف سلامة') !== -1 ||
+                    job.indexOf('مدير السلامة') !== -1 || job.indexOf('مفتش سلامة') !== -1 || job.indexOf('مسؤول سلامة') !== -1 ||
+                    job.indexOf('إطفاء') !== -1 || job.indexOf('حريق') !== -1 ||
+                    job.indexOf('hse officer') !== -1 || job.indexOf('hse specialist') !== -1 || job.indexOf('hse manager') !== -1
+                );
+
+                if (name && isHseDept && isHseJob) {
+                    addSafetyMember(name, emp.job || emp.jobTitle || 'أخصائي سلامة وصحة مهنية', emp.department || 'إدارة السلامة والصحة المهنية');
+                }
+            });
+        } catch (empErr) {}
+
+        // ب) من إعدادات فريق السلامة في CompanySettings (إن وُجدت أسماء إضافية معتمدة)
+        try {
+            var compSettings = readFromSheet('CompanySettings', spreadsheetId) || [];
+            compSettings.forEach(function(cs) {
+                if (cs.key === 'safetyTeam' || cs.key === 'safetyTeamMembers' || cs.key === 'hseTeam') {
+                    var rawList = cs.value || cs.safetyTeam || '';
+                    if (typeof rawList === 'string') {
+                        rawList.split(/[\n,]/).forEach(function(item) {
+                            var clean = item.trim();
+                            if (clean && !clean.toLowerCase().includes('support') && !clean.toLowerCase().includes('admin') && !clean.toLowerCase().includes('tool')) {
+                                addSafetyMember(clean, 'مسؤول سلامة وصحة مهنية');
+                            }
+                        });
+                    }
+                }
+            });
+        } catch (csTeamErr) {}
 
         safetyMembers.sort(function(a, b) { return a.name.localeCompare(b.name, 'ar'); });
 

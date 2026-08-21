@@ -1186,8 +1186,19 @@
             const select = document.getElementById('inspectorSelect');
             const customOption = select.querySelector('option[value="__CUSTOM__"]');
             
+            // تنظيف الخيارات السابقة لتجنب التكرار
+            const options = Array.from(select.querySelectorAll('option'));
+            options.forEach(opt => {
+                if (opt.value !== '' && opt.value !== '__CUSTOM__') {
+                    opt.remove();
+                }
+            });
+
+            const seen = new Set();
             members.forEach(m => {
-                const name = typeof m === 'string' ? m : m.name;
+                const name = typeof m === 'string' ? m.trim() : (m.name ? m.name.trim() : '');
+                if (!name || seen.has(name.toLowerCase())) return;
+                seen.add(name.toLowerCase());
                 const opt = document.createElement('option');
                 opt.value = name;
                 opt.textContent = name;
@@ -1195,9 +1206,9 @@
             });
 
             if (preset) {
-                const found = members.find(m => (typeof m === 'string' ? m : m.name) === preset);
+                const found = members.find(m => (typeof m === 'string' ? m.trim() : m.name?.trim()) === preset.trim());
                 if (found) {
-                    select.value = preset;
+                    select.value = preset.trim();
                 } else {
                     select.value = '__CUSTOM__';
                     document.getElementById('customInspectorGroup').style.display = 'block';

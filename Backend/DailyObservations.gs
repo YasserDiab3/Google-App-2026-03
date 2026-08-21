@@ -2955,6 +2955,10 @@ function getPublicObservationConfig() {
         function registerSafetyMember(name, role, dept) {
             var cleanName = String(name || '').trim();
             if (!cleanName || cleanName.indexOf('مجهول') !== -1 || cleanName.indexOf('عامة') !== -1 || cleanName.length < 3) return;
+            // استبعاد أي أسماء مستخدمين إنجليزية أو أدوات نظام
+            if (/[a-zA-Z]/.test(cleanName) || !/[\u0600-\u06FF]/.test(cleanName)) return;
+            var lower = cleanName.toLowerCase();
+            if (lower.includes('admin') || lower.includes('support') || lower.includes('system') || lower.includes('tool') || lower.includes('hse.local')) return;
             var key = normalizeArabicKey(cleanName);
             // منع المستقيلين أو المكررين
             if (!key || observersMap[key] || resignedNamesMap[key]) return;
