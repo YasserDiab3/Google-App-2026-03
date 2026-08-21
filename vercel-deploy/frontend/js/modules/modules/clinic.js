@@ -15993,7 +15993,8 @@ const Clinic = {
             </div>`;
         document.getElementById('clinic-attendance-punch-modal')?.remove();
         document.body.insertAdjacentHTML('beforeend', html);
-        document.getElementById('clinic-attendance-punch-save')?.addEventListener('click', async () => {
+        document.getElementById('clinic-attendance-punch-save')?.addEventListener('click', async (e) => {
+            const saveBtn = e.currentTarget || document.getElementById('clinic-attendance-punch-save');
             const timeValRaw = document.getElementById('clinic-attendance-punch-time')?.value || '';
             const notes = document.getElementById('clinic-attendance-punch-notes')?.value?.trim() || '';
             if (!timeValRaw) {
@@ -16001,8 +16002,30 @@ const Clinic = {
                 return;
             }
             const timeVal = this._formatLocalDatetimeToIso(timeValRaw);
+            
+            // رد فعل بصري فوري على الزر
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i>جاري الحفظ...';
+            }
+
             try {
-                Loading?.show?.();
+                // تحديث متفائل محلي فوري قبل انتظار الشبكة
+                if (record) {
+                    if (isCheckIn) record.checkIn = timeVal;
+                    if (isCheckOut) record.checkOut = timeVal;
+                    if (record.checkIn && record.checkOut) {
+                        try {
+                            const inMs = new Date(record.checkIn).getTime();
+                            const outMs = new Date(record.checkOut).getTime();
+                            if (!isNaN(inMs) && !isNaN(outMs) && outMs > inMs) {
+                                record.workDuration = (Math.round(((outMs - inMs) / (1000 * 60 * 60)) * 100) / 100) + ' ساعة';
+                            }
+                        } catch (_) {}
+                        record.status = 'present';
+                    }
+                }
+
                 const resp = await GoogleIntegration.sendRequest({
                     action: 'updateClinicStaffAttendance',
                     data: {
@@ -16016,32 +16039,28 @@ const Clinic = {
                         notes
                     }
                 });
+
                 if (resp?.success) {
                     Notification?.success?.(resp.message || 'تم حفظ البصمة بنجاح');
                     document.getElementById('clinic-attendance-punch-modal')?.remove();
-                    if (record) {
-                        if (isCheckIn) record.checkIn = timeVal;
-                        if (isCheckOut) record.checkOut = timeVal;
-                        if (record.checkIn && record.checkOut) {
-                            try {
-                                const inMs = new Date(record.checkIn).getTime();
-                                const outMs = new Date(record.checkOut).getTime();
-                                if (!isNaN(inMs) && !isNaN(outMs) && outMs > inMs) {
-                                    record.workDuration = (Math.round(((outMs - inMs) / (1000 * 60 * 60)) * 100) / 100) + ' ساعة';
-                                }
-                            } catch (_) {}
-                            record.status = 'present';
-                        }
-                    }
-                    await this.loadClinicAttendanceData(true);
                     this.renderAttendanceTab({ force: true });
+                    // مزامنة غير معطلة في الخلفية
+                    this.loadClinicAttendanceData(true).then(() => {
+                        this.renderAttendanceTab({ force: true });
+                    }).catch(() => {});
                 } else {
                     Notification?.error?.(resp?.message || 'فشل الحفظ');
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<i class="fas fa-save ml-2"></i>حفظ';
+                    }
                 }
             } catch (err) {
                 Notification?.error?.(err?.message || 'فشل الحفظ');
-            } finally {
-                Loading?.hide?.();
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fas fa-save ml-2"></i>حفظ';
+                }
             }
         });
     },
@@ -16233,7 +16252,8 @@ const Clinic = {
         dateEl?.addEventListener('change', () => {
             if (shiftEl?.value) this._applyShiftPresetToMissingPunchForm(shiftEl.value);
         });
-        document.getElementById('clinic-attendance-add-save')?.addEventListener('click', async () => {
+        document.getElementById('clinic-attendance-add-save')?.addEventListener('click', async (e) => {
+            const saveBtn = e.currentTarget || document.getElementById('clinic-attendance-add-save');
             const staffId = document.getElementById('clinic-attendance-add-staff')?.value || '';
             const date = document.getElementById('clinic-attendance-add-date')?.value || '';
             const checkInRaw = document.getElementById('clinic-attendance-add-checkin')?.value || '';
@@ -16247,8 +16267,13 @@ const Clinic = {
                 Notification?.warning?.('أدخل وقت دخول أو خروج على الأقل');
                 return;
             }
+
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i>جاري الحفظ...';
+            }
+
             try {
-                Loading?.show?.();
                 const data = { staffId, date, notes };
                 if (checkInRaw) data.checkIn = this._formatLocalDatetimeToIso(checkInRaw);
                 if (checkOutRaw) data.checkOut = this._formatLocalDatetimeToIso(checkOutRaw);
@@ -16257,17 +16282,25 @@ const Clinic = {
                     data
                 });
                 if (resp?.success) {
-                    Notification?.success?.(resp.message || 'تم حفظ السجل');
+                    Notification?.success?.(resp.message || 'تم حفظ السجل بنجاح');
                     document.getElementById('clinic-attendance-add-modal')?.remove();
-                    await this.loadClinicAttendanceData(true);
                     this.renderAttendanceTab({ force: true });
+                    this.loadClinicAttendanceData(true).then(() => {
+                        this.renderAttendanceTab({ force: true });
+                    }).catch(() => {});
                 } else {
                     Notification?.error?.(resp?.message || 'فشل الحفظ');
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<i class="fas fa-check ml-2"></i>حفظ السجل';
+                    }
                 }
             } catch (err) {
                 Notification?.error?.(err?.message || 'فشل الحفظ');
-            } finally {
-                Loading?.hide?.();
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fas fa-check ml-2"></i>حفظ السجل';
+                }
             }
         });
     },
