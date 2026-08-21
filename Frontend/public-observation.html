@@ -59,7 +59,7 @@
         /* ترويسة ISO المعتمدة ثلاثية الأعمدة */
         .iso-header-table {
             display: grid;
-            grid-template-columns: 210px 1fr 200px;
+            grid-template-columns: 170px 1fr 200px;
             background: #ffffff;
             border: 1px solid #cbd5e1;
             border-top: 4px solid #1e40af;
@@ -70,26 +70,28 @@
         }
 
         .iso-col-brand {
-            padding: 12px 14px;
+            padding: 14px 12px;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 10px;
+            justify-content: center;
+            gap: 8px;
             border-left: 1px solid #e2e8f0;
             background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
         }
 
         .iso-logo-wrap {
-            width: 50px;
-            height: 50px;
+            width: 56px;
+            height: 56px;
             flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
             background: #ffffff;
             border: 1.5px solid #dbeafe;
-            border-radius: 10px;
-            padding: 3px;
-            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.1);
+            border-radius: 12px;
+            padding: 4px;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
         }
 
         .iso-logo-img {
@@ -98,24 +100,12 @@
             object-fit: contain;
         }
 
-        .iso-brand-meta {
-            text-align: right;
-            overflow: hidden;
-        }
-
-        .iso-company-name {
-            font-size: 0.88rem;
-            font-weight: 900;
-            color: #0f172a;
-            line-height: 1.25;
-            margin-bottom: 3px;
-        }
-
         .iso-dept-name {
-            font-size: 0.7rem;
-            font-weight: 700;
-            color: #2563eb;
-            line-height: 1.2;
+            font-size: 0.68rem;
+            font-weight: 800;
+            color: #1e40af;
+            line-height: 1.25;
+            text-align: center;
         }
 
         .iso-col-title {
@@ -207,9 +197,11 @@
                 grid-template-columns: 1fr;
             }
             .iso-col-brand {
+                flex-direction: row;
                 border-left: none;
                 border-bottom: 1px solid #e2e8f0;
                 justify-content: center;
+                padding: 10px 14px;
             }
             .iso-col-title {
                 border-bottom: 1px solid #e2e8f0;
@@ -779,10 +771,7 @@
                 <div class="iso-logo-wrap">
                     <img id="companyLogoImg" src="icons/icapp-logo.png" alt="شعار النظام" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
                 </div>
-                <div class="iso-brand-meta">
-                    <div class="iso-company-name">مجموعة مصانع الشركة</div>
-                    <div class="iso-dept-name"><i class="fas fa-shield-halved ml-1 text-blue-600"></i> إدارة السلامة والصحة المهنية</div>
-                </div>
+                <div class="iso-dept-name"><i class="fas fa-shield-halved" style="margin-left:3px;"></i> إدارة السلامة والصحة المهنية والبيئة</div>
             </div>
 
             <!-- العمود الأوسط: عنوان النموذج المعتمد -->
